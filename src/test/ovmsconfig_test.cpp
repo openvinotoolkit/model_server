@@ -186,8 +186,7 @@ TEST_F(OvmsParamsTest, hostname_ip_regex) {
     EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip("example.com"), true);
     EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip("    "), false);
     EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip("(%$#*F"), false);
-    std::string too_long = "";
-    std::fill(too_long.begin(), too_long.begin() + 256, 'a');
+    std::string too_long(256, 'a');
     EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip(too_long), false);
 }
 

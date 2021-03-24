@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@
 #include <vector>
 
 #include <cxxopts.hpp>
+
+#include "modelconfig.hpp"
 
 namespace ovms {
 /**
@@ -255,6 +257,45 @@ public:
     }
 
     /**
+         * @brief Get stateful flag
+         *
+         * @return bool
+         */
+    bool stateful() {
+        return result->operator[]("stateful").as<bool>();
+    }
+
+    /**
+     * @brief Get idle sequence cleanup flag
+     *
+     * @return uint
+     */
+    bool idleSequenceCleanup() {
+        return result->operator[]("idle_sequence_cleanup").as<bool>();
+    }
+
+    /**
+         * @brief Get low latency transformation flag
+         *
+         * @return bool
+         */
+    bool lowLatencyTransformation() {
+        return result->operator[]("low_latency_transformation").as<bool>();
+    }
+
+    /**
+     * @brief Get max number of sequences that can be processed concurrently 
+     *
+     * @return uint
+     */
+    uint32_t maxSequenceNumber() {
+        if (!result->count("max_sequence_number")) {
+            return DEFAULT_MAX_SEQUENCE_NUMBER;
+        }
+        return result->operator[]("max_sequence_number").as<uint32_t>();
+    }
+
+    /**
         * @brief Get the log level
         *
         * @return const std::string&
@@ -288,12 +329,21 @@ public:
     }
 
     /**
-     * @brief Get the filesystem pool wait time in seconds
+     * @brief Get the filesystem poll wait time in seconds
      * 
      * @return uint 
      */
     uint filesystemPollWaitSeconds() {
         return result->operator[]("file_system_poll_wait_seconds").as<uint>();
+    }
+
+    /**
+     * @brief Get the sequence cleaner poll wait time in minutes
+     * 
+     * @return uint 
+     */
+    uint32_t sequenceCleanerPollWaitMinutes() {
+        return result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
     }
 };
 }  // namespace ovms

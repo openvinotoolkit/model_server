@@ -20,13 +20,15 @@ Review the [Architecture concept](docs/architecture.md) document for more detail
 A few key features: 
 - Support for multiple frameworks. Serve models trained in popular formats such as Caffe*, TensorFlow*, MXNet* and ONNX*.
 - Online deployment of new [model versions](docs/model_version_policy.md).
+- [Configuration updates in a runtime](docs/docker_container.md#updating-configuration-file)
 - Support for AI accelerators including [Intel Movidius Myriad VPUs](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html), 
 [GPU](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CL_DNN.html) and [HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html). 
 - The server can be enabled both on [Bare Metal Hosts](docs/host.md) or in
 [Docker containers](docs/docker_container.md).
-- [Kubernetes deployments](deploy). The server can be deployed in a Kubernetes cluster allowing the inference service to scale horizontally and ensure high availability.  
 - [Model reshaping](docs/shape_and_batch_size.md). The server supports reshaping models in runtime. 
 - [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md) Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
+- [Custom nodes in DAG pipelines](docs/custom_node_development.md) Model inference or data transformations can be implemented by a custom node C/C++ implementation loaded as an external library.
+- [Serving stateful models](docs/stateful_models.md). Serve models that operate on sequences of data and maintain state between inference requests.
 
 **Note:** OVMS has been tested on CentOS* and Ubuntu*. Publicly released docker images are based on CentOS.
 
@@ -46,6 +48,14 @@ More detailed guides to using Model Server in various scenarios can be found her
 * [Performance tuning](docs/performance_tuning.md)
 
 * [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md)
+
+* [Custom nodes development](docs/custom_node_development.md)
+
+* [Serving stateful models](docs/stateful_models.md)
+
+* [Deployment in Kubernetes using helm chart](deploy)
+
+* [Deployment using Kubernetes Operator](https://operatorhub.io/operator/ovms-operator)
 
 
 ## API documentation
@@ -97,6 +107,7 @@ Follow a [contributor guide](docs/contributing.md) and a [developer guide](docs/
 
 * [Speed and Scale AI Inference Operations Across Multiple Architectures](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) - webinar recording
 
+* [What is new in OpenVINO Model Server C++](https://www.intel.com/content/www/us/en/artificial-intelligence/posts/whats-new-openvino-model-server.html)
 
 ## Contact
 
@@ -105,6 +116,5 @@ Submit Github issue to ask question, request a feature or report a bug.
 
 ---
 \* Other names and brands may be claimed as the property of others.
-
 
 

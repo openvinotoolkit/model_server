@@ -24,7 +24,6 @@
 #include <gtest/gtest.h>
 
 #include "../ovinferrequestsqueue.hpp"
-#define DEBUG
 #include "../timer.hpp"
 
 using namespace testing;
@@ -54,7 +53,7 @@ void releaseStream(ovms::OVInferRequestsQueue& requestsQueue) {
 }
 
 TEST(OVInferRequestQueue, FullQueue) {
-    Timer timer;
+    ovms::Timer timer;
     InferenceEngine::Core engine;
     InferenceEngine::CNNNetwork network = engine.ReadNetwork(DUMMY_MODEL_PATH);
     InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");

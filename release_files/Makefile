@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,9 +14,12 @@
 # limitations under the License.
 #
 
-.PHONY: centos
-all: centos
+.PHONY: centos redhat
+all: centos redhat
 
 centos:
-	docker build -f Dockerfile.centos -t ovms --build-arg http_proxy=$(http_proxy) --build-arg https_proxy="$(https_proxy)" .
+	docker build -f Dockerfile.centos -t ovms:centos --build-arg http_proxy=$(http_proxy) --build-arg https_proxy="$(https_proxy)" .
+
+redhat:
+	docker build -f Dockerfile.redhat -t ovms:redhat --build-arg http_proxy=$(http_proxy) --build-arg https_proxy="$(https_proxy)" .
 

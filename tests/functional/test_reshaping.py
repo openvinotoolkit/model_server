@@ -37,7 +37,6 @@ fixed_shape = {'in': (1, 3, 600, 600), 'out': (1, 1, 200, 7)}
 
 
 class TestModelReshaping:
-
     def test_single_local_model_reshaping_auto(self, start_server_face_detection_model_auto_shape):
 
         _, ports = start_server_face_detection_model_auto_shape

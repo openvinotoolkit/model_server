@@ -59,6 +59,10 @@ using namespace ovms;
 
 // Time in seconds at which model status will be checked
 #define MODEL_CHECK_PERIOD 10
+
+// Custom Loader Config Keys
+#define ENABLE_FORCE_BLACKLIST_CHECK "ENABLE_FORCE_BLACKLIST_CHECK"
+
 typedef std::pair<std::string, int> model_id_t;
 
 /* 
@@ -97,6 +101,7 @@ protected:
     int watchIntervalSec = 0;
     bool watcherStarted = false;
     std::thread watcher_thread;
+    bool forceBlackListCheck = false;
 
 public:
     custSampleLoader();
@@ -136,7 +141,18 @@ custSampleLoader::~custSampleLoader() {
 }
 
 CustomLoaderStatus custSampleLoader::loaderInit(const std::string& loader_path) {
-    std::cout << "custSampleLoader: Custom loaderInit" << loader_path << std::endl;
+    if (!loader_path.empty()) {
+        std::cout << "Reading Sample Loader Config File:: " << loader_path << std::endl;
+        std::ifstream fileToRead(loader_path);
+        std::string stateStr;
+        if (fileToRead.is_open()) {
+            getline(fileToRead, stateStr);
+        }
+        if (stateStr.find(ENABLE_FORCE_BLACKLIST_CHECK) != std::string::npos) {
+            std::cout << "Force Blacklist Model Status Check Enabled" << std::endl;
+            forceBlackListCheck = true;
+        }
+    }
     return CustomLoaderStatus::OK;
 }
 
@@ -275,7 +291,7 @@ void custSampleLoader::checkModelStatus() {
         }
 
         if (stateStr == "DISABLED") {
-            std::cout << "Balcklisting Model:: " << it.first.first << std::endl;
+            std::cout << "Blacklisting Model:: " << it.first.first << std::endl;
             models_blacklist_local.insert({it.first, true});
         }
     }
@@ -333,7 +349,7 @@ CustomLoaderStatus custSampleLoader::loadModel(const std::string& modelName, con
     ret = load_files(binFile, modelFile, modelType, model, weights);
     if (ret != SAMPLE_LOADER_OK) {
         std::cout << "custSampleLoader: Could not read model files" << std::endl;
-        return CustomLoaderStatus::INTERNAL_ERROR;
+        return CustomLoaderStatus::MODEL_LOAD_ERROR;
     }
 
     /* Start the watcher thread after first moel load */
@@ -408,6 +424,10 @@ CustomLoaderStatus custSampleLoader::loaderDeInit() {
 
 CustomLoaderStatus custSampleLoader::getModelBlacklistStatus(const std::string& modelName, const int version) {
     std::cout << "custSampleLoader: Custom getModelBlacklistStatus" << std::endl;
+
+    if (forceBlackListCheck) {
+        checkModelStatus();
+    }
 
     model_id_t toFind = std::make_pair(modelName, version);
 

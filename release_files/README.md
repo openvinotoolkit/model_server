@@ -13,8 +13,14 @@ NOTE: If necessary, ensure that you have a `http_proxy` and `https_proxy` enviro
 
 ### Build image
 
+CentOS base image:
+```bash
+make docker_build
+
 ```
-make centos
+RedHat base image:
+```bash
+make docker_build BASE_OS=redhat
 ```
 
 Image will be tagged ovms:latest.

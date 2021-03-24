@@ -26,30 +26,11 @@
 #include <rapidjson/document.h>
 
 #include "model_version_policy.hpp"
+#include "shapeinfo.hpp"
 #include "status.hpp"
 
 namespace ovms {
 
-enum Mode { FIXED,
-    AUTO };
-using shape_t = std::vector<size_t>;
-
-struct ShapeInfo {
-    Mode shapeMode = FIXED;
-    shape_t shape;
-
-    operator std::string() const;
-
-    bool operator==(const ShapeInfo& rhs) const {
-        return this->shapeMode == rhs.shapeMode && this->shape == rhs.shape;
-    }
-
-    bool operator!=(const ShapeInfo& rhs) const {
-        return !(*this == rhs);
-    }
-};
-
-using shapes_map_t = std::unordered_map<std::string, ShapeInfo>;
 using layouts_map_t = std::unordered_map<std::string, std::string>;
 using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, std::string>;
@@ -57,6 +38,7 @@ using custom_loader_options_config_t = std::map<std::string, std::string>;
 
 const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
 const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
+const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
 
 /**
      * @brief This class represents model configuration
@@ -104,6 +86,31 @@ private:
     uint64_t nireq;
 
     /**
+         * @brief Flag determining if model is stateful
+         */
+    bool stateful;
+
+    /**
+         * @brief Flag determining if model will be a subject to sequence cleaner scans
+         */
+    bool idleSequenceCleanup;
+
+    /**
+         * @brief Flag determining if model will use low latency transformation
+         */
+    bool lowLatencyTransformation;
+
+    /**
+         * @brief Number of maximum frames in one sequence
+         */
+    uint32_t maxSequenceNumber;
+
+    /**
+         * @brief Model version
+         */
+    model_version_t version = -1;
+
+    /**
          * @brief Plugin config
          */
     plugin_config_t pluginConfig;
@@ -122,11 +129,6 @@ private:
          * @brief Map of layouts
          */
     layouts_map_t layouts;
-
-    /**
-         * @brief Model version
-         */
-    model_version_t version = -1;
 
     /**
          * @brief Input mapping configuration
@@ -178,6 +180,10 @@ public:
         const std::string& targetDevice = "CPU",
         const std::string& configBatchSize = "0",
         uint64_t nireq = 0,
+        bool stateful = false,
+        bool idleSequenceCleanup = true,
+        bool lowLatencyTransformation = false,
+        uint32_t maxSequenceNumber = DEFAULT_MAX_SEQUENCE_NUMBER,
         model_version_t version = 0,
         const std::string& localPath = "") :
         name(name),
@@ -186,11 +192,15 @@ public:
         targetDevice(targetDevice),
         modelVersionPolicy(ModelVersionPolicy::getDefaultVersionPolicy()),
         nireq(nireq),
+        stateful(stateful),
+        idleSequenceCleanup(idleSequenceCleanup),
+        lowLatencyTransformation(lowLatencyTransformation),
+        maxSequenceNumber(maxSequenceNumber),
+        version(version),
         pluginConfig({}),
         layout(""),
         shapes({}),
         layouts({}),
-        version(version),
         mappingInputs({}),
         mappingOutputs({}) {
         setBatchingParams(configBatchSize);
@@ -442,6 +452,78 @@ public:
          */
     void setPluginConfig(const plugin_config_t& pluginConfig) {
         this->pluginConfig = pluginConfig;
+    }
+
+    /**
+     * @brief Get stateful model flag
+     *
+     * @return bool
+     */
+    const bool isStateful() const {
+        return this->stateful;
+    }
+
+    /**
+     * @brief Set stateful model flag
+     *
+     * @return bool
+     */
+    void setStateful(bool stateful) {
+        this->stateful = stateful;
+    }
+
+    /**
+     * @brief Set stateful low latency transformation flag
+     *
+     * @return bool
+     */
+    void setLowLatencyTransformation(bool lowLatencyTransformation) {
+        this->lowLatencyTransformation = lowLatencyTransformation;
+    }
+
+    /**
+     * @brief Get stateful low latency transformation flag
+     *
+     * @return bool
+     */
+    const bool isLowLatencyTransformationUsed() const {
+        return this->lowLatencyTransformation;
+    }
+
+    /**
+     * @brief Get max number of sequences handled concurrently by the model
+     *
+     * @return uint
+     */
+    uint64_t getMaxSequenceNumber() const {
+        return this->maxSequenceNumber;
+    }
+
+    /**
+     * @brief Set max number of sequences handled concurrently by the model
+     *
+     * @return uint
+     */
+    void setMaxSequenceNumber(const uint32_t maxSequenceNumber) {
+        this->maxSequenceNumber = maxSequenceNumber;
+    }
+
+    /**
+     * @brief Get stateful sequence timeout
+     *
+     * @return uint
+     */
+    bool getIdleSequenceCleanup() const {
+        return this->idleSequenceCleanup;
+    }
+
+    /**
+     * @brief Set stateful sequence timeout
+     *
+     * @return uint
+     */
+    void setIdleSequenceCleanup(const bool idleSequenceCleanup) {
+        this->idleSequenceCleanup = idleSequenceCleanup;
     }
 
     /**

@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,35 +13,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-
 #include "ov_utils.hpp"
 
 #include <memory>
 
+#include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
 
 namespace ovms {
 
-Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const InferenceEngine::Blob::Ptr sourceBlob) {
-    auto& description = sourceBlob->getTensorDesc();
-
+Status createSharedBlob(InferenceEngine::Blob::Ptr& destinationBlob, InferenceEngine::TensorDesc tensorDesc) {
     try {
-        switch (description.getPrecision()) {
+        switch (tensorDesc.getPrecision()) {
         case InferenceEngine::Precision::FP32:
-            destinationBlob = InferenceEngine::make_shared_blob<float>(description);
+            destinationBlob = InferenceEngine::make_shared_blob<float>(tensorDesc);
+            break;
+        case InferenceEngine::Precision::FP16:
+            destinationBlob = InferenceEngine::make_shared_blob<uint16_t>(tensorDesc);
             break;
         case InferenceEngine::Precision::U8:
-            destinationBlob = InferenceEngine::make_shared_blob<uint8_t>(description);
+            destinationBlob = InferenceEngine::make_shared_blob<uint8_t>(tensorDesc);
             break;
         case InferenceEngine::Precision::I8:
-            destinationBlob = InferenceEngine::make_shared_blob<int8_t>(description);
+            destinationBlob = InferenceEngine::make_shared_blob<int8_t>(tensorDesc);
             break;
         case InferenceEngine::Precision::I16:
-            destinationBlob = InferenceEngine::make_shared_blob<int16_t>(description);
+            destinationBlob = InferenceEngine::make_shared_blob<int16_t>(tensorDesc);
+            break;
+        case InferenceEngine::Precision::U16:
+            destinationBlob = InferenceEngine::make_shared_blob<uint16_t>(tensorDesc);
             break;
         case InferenceEngine::Precision::I32:
-            destinationBlob = InferenceEngine::make_shared_blob<int32_t>(description);
+            destinationBlob = InferenceEngine::make_shared_blob<int32_t>(tensorDesc);
             break;
+        case InferenceEngine::Precision::I64:
+        case InferenceEngine::Precision::MIXED:
+        case InferenceEngine::Precision::Q78:
+        case InferenceEngine::Precision::BIN:
+        case InferenceEngine::Precision::BOOL:
+        case InferenceEngine::Precision::CUSTOM:
         default: {
             SPDLOG_ERROR("Blob clone failed, unsupported precision");
             return StatusCode::INVALID_PRECISION;
@@ -54,14 +64,7 @@ Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const InferenceEng
         SPDLOG_DEBUG("Blob clone failed; exception message: {}", e.what());
         return StatusCode::OV_CLONE_BLOB_ERROR;
     }
-
     destinationBlob->allocate();
-    if (destinationBlob->byteSize() != sourceBlob->byteSize()) {
-        destinationBlob = nullptr;
-        return StatusCode::OV_CLONE_BLOB_ERROR;
-    }
-    std::memcpy((void*)destinationBlob->buffer(), (void*)sourceBlob->buffer(), sourceBlob->byteSize());
     return StatusCode::OK;
 }
-
 }  // namespace ovms

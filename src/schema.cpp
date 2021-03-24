@@ -75,13 +75,27 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 							"type": ["object", "string"]
 						},
 						"nireq": {
-							"type": "integer"
+							"type": "integer",
+							"minimum": 0
 						},
 						"target_device": {
 							"type": "string"
 						},
 						"plugin_config": {
 							"type": "object"
+						},
+						"stateful": {
+							"type": "boolean"
+						},
+						"idle_sequence_cleanup": {
+							"type": "boolean"
+						},
+						"low_latency_transformation": {
+							"type": "boolean"
+						},
+						"max_sequence_number": {
+							"type": "integer",
+							"minimum": 0
 						},
 						"custom_loader_options": {
 							"type": "object",
@@ -135,7 +149,19 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 		},
 		"node_config": {
 			"type": "object",
-			"required": ["name", "model_name", "inputs", "outputs"],
+			"required": ["name", "type", "inputs", "outputs"],
+			"oneOf": [
+    			{
+        			"properties": { "type": { "enum": ["custom"] } },
+        			"required": ["library_name"],
+					"not": { "required": ["model_name"] }
+    			},
+    			{
+        			"properties": { "type": { "enum": ["DL model"] } },
+        			"not": { "required": ["library_name"] },
+					"required": ["model_name"]
+    			}
+  			],
 			"properties": {
 				"name": {
 					"type": "string"
@@ -143,9 +169,12 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				"model_name": {
 					"type": "string"
 				},
+				"library_name": {
+					"type": "string"
+				},
 				"type": {
 					"type": "string",
-					"enum": ["DL model", "Demultiplexer", "Batch dispatcher"]
+					"enum": ["DL model", "custom"]
 				},
 				"version": {
 					"type": "integer",
@@ -162,6 +191,18 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 					"items": {
 						"$ref": "#/definitions/output_alias"
 					}
+				},
+				"params": {
+					"type": "object",
+					"additionalProperties": { "type": "string" } 
+				},
+				"demultiply_count": {
+					"type": "integer",
+					"minimum": 0,
+					"maximum": 10000
+				},
+				"gather_from_node": {
+					"type": "string"
 				}
 			},
 			"additionalProperties": false
@@ -193,6 +234,19 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				}
 			},
 			"additionalProperties": false
+		},
+		"custom_node_library_config": {
+			"type": "object",
+			"required": ["name", "base_path"],
+			"properties": {
+				"name": {
+					"type": "string"
+				},
+				"base_path": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false
 		}
 	},
 	"type": "object",
@@ -214,6 +268,12 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 			"type": "array",
 			"items": {
 				"$ref": "#/definitions/pipeline_config"
+			}
+		},
+		"custom_node_library_config_list": {
+			"type": "array",
+			"items": {
+				"$ref": "#/definitions/custom_node_library_config"
 			}
 		}
 	},

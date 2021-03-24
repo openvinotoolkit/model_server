@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,8 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
+
+#include "mock_iinferrequest.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>
 
@@ -73,25 +75,6 @@ inline tensorflow::DataType fromInferenceEnginePrecision(Precision precision) {
         throw "Not all types mapped yet";
     }
 }
-
-class MockIInferRequest : public IInferRequest {
-public:
-    using Ptr = std::shared_ptr<MockIInferRequest>;
-    MOCK_METHOD(InferenceEngine::StatusCode, StartAsync, (InferenceEngine::ResponseDesc*), (noexcept, override));
-    MOCK_METHOD(InferenceEngine::StatusCode, SetBlob, (const char*, const Blob::Ptr&, ResponseDesc*), (noexcept, override));
-    MOCK_METHOD(InferenceEngine::StatusCode, SetBlob, (const char*, const Blob::Ptr&, const PreProcessInfo&, ResponseDesc*), (noexcept, override));
-    MOCK_METHOD(void, Release, (), (noexcept, override));
-    MOCK_METHOD(InferenceEngine::StatusCode, Infer, (ResponseDesc*), (noexcept, override));
-    MOCK_METHOD(InferenceEngine::StatusCode, Wait, (int64_t millis_timeout, ResponseDesc*), (noexcept, override));
-    MOCK_METHOD(InferenceEngine::StatusCode, GetUserData, (void**, ResponseDesc*), (noexcept, override));
-    MOCK_METHOD(InferenceEngine::StatusCode, SetUserData, (void*, ResponseDesc*), (noexcept, override));
-    MOCK_METHOD(InferenceEngine::StatusCode, SetCompletionCallback, (IInferRequest::CompletionCallback), (noexcept, override));
-    MOCK_METHOD(InferenceEngine::StatusCode, GetBlob, (const char*, Blob::Ptr&, ResponseDesc*), (noexcept, override));
-    MOCK_METHOD(InferenceEngine::StatusCode, GetPreProcess, (const char*, const PreProcessInfo**, ResponseDesc*), (noexcept, const));
-    MOCK_METHOD(InferenceEngine::StatusCode, SetBatch, (int batch, ResponseDesc*), (noexcept, override));
-    MOCK_METHOD(InferenceEngine::StatusCode, GetPerformanceCounts, ((std::map<std::string, InferenceEngineProfileInfo> & perfMap), ResponseDesc*), (noexcept, const));
-    MOCK_METHOD(InferenceEngine::StatusCode, QueryState, (IVariableState::Ptr & pState, size_t idx, ResponseDesc* resp), (noexcept, override));
-};
 
 class MockIInferRequestFailingInSetBlob : public MockIInferRequest {
     InferenceEngine::StatusCode SetBlob(const char*, const Blob::Ptr&, ResponseDesc*) noexcept override {

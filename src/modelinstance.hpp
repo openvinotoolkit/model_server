@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@
 #include "modelinstanceunloadguard.hpp"
 #include "modelversionstatus.hpp"
 #include "ovinferrequestsqueue.hpp"
+#include "sequence_processing_spec.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -76,6 +77,13 @@ class PipelineDefinition;
 class ModelInstance {
 protected:
     /**
+         * @brief Performs model loading
+         *
+         * @return status
+         */
+    virtual Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
+
+    /**
          * @brief Inference Engine core object
          */
     std::unique_ptr<InferenceEngine::Core> engine;
@@ -106,6 +114,11 @@ protected:
     const model_version_t version = -1;
 
     /**
+         * @brief A model subscription manager
+         */
+    ModelChangeSubscription subscriptionManager;
+
+    /**
          * @brief A model status
          */
     ModelVersionStatus status;
@@ -119,56 +132,6 @@ protected:
          * @brief Model batch size
          */
     size_t batchSize = 0;
-
-    /**
-         * @brief Load OV CNNNetwork ptr
-         *
-         * @return CNNNetwork ptr
-         */
-    virtual std::unique_ptr<InferenceEngine::CNNNetwork> loadOVCNNNetworkPtr(const std::string& modelFile);
-
-    /**
-         * @brief Load OV Engine
-         */
-    void loadOVEngine();
-
-    /**
-         * @brief Loads OV CNNNetwork
-         *
-         * @return Status
-         */
-    Status loadOVCNNNetwork();
-
-    /**
-         * @brief Sets OV ExecutableNetworkPtr
-         */
-    virtual void loadExecutableNetworkPtr(const plugin_config_t& pluginConfig);
-
-    /**
-         * @brief Loads OV ExecutableNetwork
-         *
-         * @return Status
-         */
-    Status loadOVExecutableNetwork(const ModelConfig& config);
-
-    /**
-         * @brief Prepares inferenceRequestsQueue
-         */
-    Status prepareInferenceRequestsQueue(const ModelConfig& config);
-
-    /**
-         * @brief Fetch model file paths
-         *
-         * @return Status
-         */
-    Status fetchModelFilepaths();
-
-    /**
-         * @brief Find file path with extension in model path
-         *
-         * @return Returns filename with desired extension if exists otherwise empty string
-         */
-    std::string findModelFilePathWithExtension(const std::string& extension) const;
 
     /**
       * @brief Stores required openVINO model files extensions to be able to load model
@@ -192,11 +155,89 @@ protected:
     ModelConfig config;
 
     /**
+         * @brief Load OV CNNNetwork ptr
+         *
+         * @return CNNNetwork ptr
+         */
+    virtual std::unique_ptr<InferenceEngine::CNNNetwork> loadOVCNNNetworkPtr(const std::string& modelFile);
+
+    /**
+         * @brief Lock to disable concurrent modelinstance load/unload/reload
+         */
+    std::recursive_mutex loadingMutex;
+
+    /**
+         * @brief Load OV Engine
+         */
+    void loadOVEngine();
+
+    /**
+         * @brief Loads OV CNNNetwork
+         *
+         * @return Status
+         */
+    Status loadOVCNNNetwork();
+
+    /**
+         * @brief Sets OV ExecutableNetworkPtr
+         */
+    virtual void loadExecutableNetworkPtr(const plugin_config_t& pluginConfig);
+
+    /**
+         * @brief Loads OV ExecutableNetwork
+         *
+         * @return Status
+         */
+    virtual Status loadOVExecutableNetwork(const ModelConfig& config);
+
+    /**
+         * @brief Prepares inferenceRequestsQueue
+         */
+    Status prepareInferenceRequestsQueue(const ModelConfig& config);
+
+    /**
+         * @brief Fetch model file paths
+         *
+         * @return Status
+         */
+    Status fetchModelFilepaths();
+
+    /**
+         * @brief Find file path with extension in model path
+         *
+         * @return Returns filename with desired extension if exists otherwise empty string
+         */
+    std::string findModelFilePathWithExtension(const std::string& extension) const;
+
+    /**
          * @brief Loads OV CNNNetwork Using the Custom Loader
          *
          * @return Status
          */
     Status loadOVCNNNetworkUsingCustomLoader();
+
+    const Status checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput);
+
+    virtual const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
+        const size_t expectedNumberOfInputs);
+
+    const Status validatePrecision(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const bool checkBatchSizeMismatch(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const bool checkShapeMismatch(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput,
+        const Mode& batchingMode);
+
+    const Status validateTensorContentSize(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    virtual const Status validate(const tensorflow::serving::PredictRequest* request);
 
 private:
     /**
@@ -227,11 +268,6 @@ private:
     std::atomic<uint64_t> predictRequestsHandlesCount = 0;
 
     /**
-         * @brief Lock to disable concurrent modelinstance load/unload/reload
-         */
-    std::recursive_mutex loadingMutex;
-
-    /**
          * @brief Internal method for loading inputs
          *
          * @param config
@@ -246,32 +282,9 @@ private:
     void loadOutputTensors(const ModelConfig& config);
 
     /**
-         * @brief Performs model loading
-         *
-         * @return status
-         */
-    Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
-
-    /**
          * @brief Configures batchsize
          */
     void configureBatchSize(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
-
-    const Status validatePrecision(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const bool checkBatchSizeMismatch(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const bool checkShapeMismatch(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput,
-        const Mode& batchingMode);
-
-    const Status validateTensorContentSize(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
 
     uint32_t getNumOfParallelInferRequests(const ModelConfig& config);
     uint32_t getNumOfParallelInferRequestsUnbounded(const ModelConfig& config);
@@ -285,7 +298,15 @@ private:
          */
     Status recoverFromReloadingError(const Status& status);
 
-    ModelChangeSubscription subscriptionManager;
+    /**
+         * @brief Perform full engine/network reload with dynamic parameter
+         * 
+         * @param status returned from reload operation
+         * @param parameter requested dynamic parameter
+         * 
+         * @return Status
+         */
+    Status reshapeWithFullReload(const Status& status, const DynamicModelParameter& parameter);
 
 public:
     /**
@@ -451,6 +472,19 @@ public:
     virtual Status reloadModel(size_t batchSize, std::map<std::string, shape_t> shape, std::unique_ptr<ModelInstanceUnloadGuard>& unloadGuardPtr);
 
     /**
+         * @brief Reloads model version if status of request validation indicates there's a need for reshape or batch size change
+         *
+         * @param validationStatus status of request validation 
+         * @param requestProto pointer to the request proto
+         * @param modelUnloadGuardPtr unloadGuardPtr
+         * 
+         * @return Status
+         */
+
+    Status reloadModelIfRequired(Status validationStatus, const tensorflow::serving::PredictRequest* requestProto,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
+
+    /**
          * @brief Unloads model version
          * @param isPermanent defines if the unload operation should be permanent and should change instance state to End after it is completed
          * otherwise model might be unloaded temporarily so the instance state should be preserved as Loading
@@ -474,6 +508,10 @@ public:
 
     const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
 
-    const Status validate(const tensorflow::serving::PredictRequest* request);
+    Status performInference(InferenceEngine::InferRequest& inferRequest);
+
+    virtual Status infer(const tensorflow::serving::PredictRequest* requestProto,
+        tensorflow::serving::PredictResponse* responseProto,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 };
 }  // namespace ovms

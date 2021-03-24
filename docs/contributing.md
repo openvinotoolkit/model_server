@@ -17,7 +17,7 @@ This guide provides steps and coding standards to follow before sending merge re
 Before sending your merge requests, make sure you followed this list.
 
 - Changes are consistent with the <a href="#coding-style">Coding Style</a>
-- Each merge request should start with the corresponding Jira Ticket Number and short task description, eg: `CVS-3111 Implement feature XY`
+- Each merge request should start with the corresponding Jira Ticket Number and short task description, e.g.: `CVS-3111 Implement feature XY`
 - The branches should also correspond to Jira Task Name and start with Jira Ticket Number
 - Write a short description what the merge request introduces/improves
 - Always include unit tests when contributing new features

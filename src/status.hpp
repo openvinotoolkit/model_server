@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,9 +33,10 @@ namespace net_http = tensorflow::serving::net_http;
 enum class StatusCode {
     OK, /*!< Success */
 
-    PATH_INVALID,     /*!< The provided path is invalid or doesn't exists */
-    FILE_INVALID,     /*!< File not found or cannot open */
-    FILESYSTEM_ERROR, /*!< Underlaying filesystem error */
+    PATH_INVALID,        /*!< The provided path is invalid or doesn't exists */
+    FILE_INVALID,        /*!< File not found or cannot open */
+    CONFIG_FILE_INVALID, /*!< Config file not found or cannot open */
+    FILESYSTEM_ERROR,    /*!< Underlaying filesystem error */
     NETWORK_NOT_LOADED,
     JSON_INVALID,             /*!< The file/content is not valid json */
     JSON_SERIALIZATION_ERROR, /*!< Data serialization to json format failed */
@@ -45,6 +46,7 @@ enum class StatusCode {
     MODEL_VERSION_POLICY_WRONG_FORMAT,    /*!< Model version policy is in wrong format */
     MODEL_VERSION_POLICY_UNSUPPORTED_KEY, /*!< Model version policy contains invalid key */
     GRPC_CHANNEL_ARG_WRONG_FORMAT,
+    CONFIG_FILE_TIMESTAMP_READING_FAILED,   /*!< Reading config file timestamp failed */
     NO_MODEL_VERSION_AVAILABLE,             /*!< No model version found in path */
     RESHAPE_ERROR,                          /*!< Impossible to perform reshape */
     RESHAPE_REQUIRED,                       /*!< Model instance needs to be reloaded with new shape */
@@ -56,12 +58,30 @@ enum class StatusCode {
     REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL,
 
     // Model management
-    MODEL_MISSING,                    /*!< Model with such name and/or version does not exist */
-    MODEL_NAME_MISSING,               /*!< Model with requested name is not found */
-    MODEL_VERSION_MISSING,            /*!< Model with requested version is not found */
-    MODEL_VERSION_NOT_LOADED_ANYMORE, /*!< Model with requested version is retired */
-    MODEL_VERSION_NOT_LOADED_YET,     /*!< Model with requested version is not loaded yet */
-    INVALID_NIREQ,                    /*!< Invalid NIREQ requested */
+    MODEL_MISSING,                                     /*!< Model with such name and/or version does not exist */
+    MODEL_CONFIG_INVALID,                              /*!< Model config is invalid */
+    MODEL_NAME_MISSING,                                /*!< Model with requested name is not found */
+    MODEL_NAME_OCCUPIED,                               /*!< Given model name is already occupied */
+    MODEL_VERSION_MISSING,                             /*!< Model with requested version is not found */
+    MODEL_VERSION_NOT_LOADED_ANYMORE,                  /*!< Model with requested version is retired */
+    MODEL_VERSION_NOT_LOADED_YET,                      /*!< Model with requested version is not loaded yet */
+    INVALID_NIREQ,                                     /*!< Invalid NIREQ requested */
+    REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL,    /*!< Dynamic shape and dynamic batch size not supported for stateful models */
+    REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL, /*!< Stateful model cannot be subscribed to pipeline */
+    REQUESTED_MODEL_TYPE_CHANGE,                       /*!< Model type cannot be changed after it's loaded */
+    INVALID_NON_STATEFUL_MODEL_PARAMETER,              /*!< Stateful model config parameter used for non stateful model */
+    INVALID_MAX_SEQUENCE_NUMBER,                       /*!< Sequence max number parameter too high */
+
+    // Sequence management
+    SEQUENCE_MISSING,                /*!< Sequence with provided ID does not exist */
+    SEQUENCE_ALREADY_EXISTS,         /*!< Sequence with provided ID already exists */
+    SEQUENCE_ID_NOT_PROVIDED,        /*!< Sequence ID has not been provided in request inputs */
+    SEQUENCE_ID_BAD_TYPE,            /*!< Wrong sequence ID type */
+    INVALID_SEQUENCE_CONTROL_INPUT,  /*!< Unexpected value of sequence control input */
+    SEQUENCE_CONTROL_INPUT_BAD_TYPE, /*!< Sequence control input in bad type */
+    SEQUENCE_TERMINATED,             /*!< Sequence last request is being processed and it's not available anymore */
+    SPECIAL_INPUT_NO_TENSOR_SHAPE,   /*!< Special input proto does not contain tensor shape information */
+    MAX_SEQUENCE_NUMBER_REACHED,     /*!< Model handles maximum number of sequences and will not accept new ones */
 
     // Predict request validation
     INVALID_NO_OF_INPUTS,           /*!< Invalid number of inputs */
@@ -133,28 +153,31 @@ enum class StatusCode {
     AS_INCORRECT_REQUESTED_OBJECT_TYPE,
 
     // REST handler
-    REST_NOT_FOUND,               /*!< Requested REST resource not found */
-    REST_COULD_NOT_PARSE_VERSION, /*!< Could not parse model version in request */
-    REST_INVALID_URL,             /*!< Malformed REST request url */
-    REST_UNSUPPORTED_METHOD,      /*!< Request sent with unsupported method */
-    REST_MALFORMED_REQUEST,       /*!< Malformed REST request */
+    REST_NOT_FOUND,                  /*!< Requested REST resource not found */
+    REST_COULD_NOT_PARSE_VERSION,    /*!< Could not parse model version in request */
+    REST_INVALID_URL,                /*!< Malformed REST request url */
+    REST_UNSUPPORTED_METHOD,         /*!< Request sent with unsupported method */
+    REST_MALFORMED_REQUEST,          /*!< Malformed REST request */
+    UNKNOWN_REQUEST_COMPONENTS_TYPE, /*!< Components type not recognized */
 
     // REST Parse
-    REST_BODY_IS_NOT_AN_OBJECT,          /*!< REST body should be JSON object */
-    REST_PREDICT_UNKNOWN_ORDER,          /*!< Could not detect order (row/column) */
-    REST_INSTANCES_NOT_AN_ARRAY,         /*!< When parsing row order, instances must be an array */
-    REST_NAMED_INSTANCE_NOT_AN_OBJECT,   /*!< When parsing named instance it needs to be an object */
-    REST_INPUT_NOT_PREALLOCATED,         /*!< When parsing no named instance, exactly one input need to be preallocated */
-    REST_NO_INSTANCES_FOUND,             /*!< Missing instances in row order */
-    REST_INSTANCES_NOT_NAMED_OR_NONAMED, /*!< Unknown instance format, neither named or nonamed */
-    REST_COULD_NOT_PARSE_INSTANCE,       /*!< Error while parsing instance content, not valid ndarray */
-    REST_INSTANCES_BATCH_SIZE_DIFFER,    /*!< In row order 0-th dimension (batch size) must be equal for all inputs */
-    REST_INPUTS_NOT_AN_OBJECT,           /*!< When parsing column order, inputs must be an object */
-    REST_NO_INPUTS_FOUND,                /*!< Missing inputs in column order */
-    REST_COULD_NOT_PARSE_INPUT,          /*!< Error while parsing input content, not valid ndarray */
-    REST_PROTO_TO_STRING_ERROR,          /*!< Error while parsing ResponseProto to JSON string */
-    REST_UNSUPPORTED_PRECISION,          /*!< Unsupported conversion from tensor_content to _val container */
-    REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE,
+    REST_BODY_IS_NOT_AN_OBJECT,                 /*!< REST body should be JSON object */
+    REST_PREDICT_UNKNOWN_ORDER,                 /*!< Could not detect order (row/column) */
+    REST_INSTANCES_NOT_AN_ARRAY,                /*!< When parsing row order, instances must be an array */
+    REST_NAMED_INSTANCE_NOT_AN_OBJECT,          /*!< When parsing named instance it needs to be an object */
+    REST_INPUT_NOT_PREALLOCATED,                /*!< When parsing no named instance, exactly one input need to be preallocated */
+    REST_NO_INSTANCES_FOUND,                    /*!< Missing instances in row order */
+    REST_INSTANCES_NOT_NAMED_OR_NONAMED,        /*!< Unknown instance format, neither named or nonamed */
+    REST_COULD_NOT_PARSE_INSTANCE,              /*!< Error while parsing instance content, not valid ndarray */
+    REST_INSTANCES_BATCH_SIZE_DIFFER,           /*!< In row order 0-th dimension (batch size) must be equal for all inputs */
+    REST_INPUTS_NOT_AN_OBJECT,                  /*!< When parsing column order, inputs must be an object */
+    REST_NO_INPUTS_FOUND,                       /*!< Missing inputs in column order */
+    REST_COULD_NOT_PARSE_INPUT,                 /*!< Error while parsing input content, not valid ndarray */
+    REST_PROTO_TO_STRING_ERROR,                 /*!< Error while parsing ResponseProto to JSON string */
+    REST_UNSUPPORTED_PRECISION,                 /*!< Unsupported conversion from tensor_content to _val container */
+    REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, /*!< Size of data in tensor_content does not match declared tensor shape */
+    REST_SERIALIZE_VAL_FIELD_INVALID_SIZE,      /*!< Number of elements in xxx_val field does not match declared tensor shape */
+    REST_SERIALIZE_NO_DATA,                     /*!< No data found in tensor_content or xxx_val field matching tensor dtype */
 
     // Pipeline validation errors
     PIPELINE_DEFINITION_ALREADY_EXIST,
@@ -178,6 +201,23 @@ enum class StatusCode {
     PIPELINE_MODEL_INPUT_CONNECTED_TO_MULTIPLE_DATA_SOURCES,
     PIPELINE_EXIT_USED_AS_NODE_DEPENDENCY,
     PIPELINE_NAME_OCCUPIED,
+    PIPELINE_DEFINITION_INVALID_NODE_LIBRARY,
+    PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE,
+    PIPELINE_INCONSISTENT_SHARD_DIMENSIONS,
+    PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY,
+    PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY,
+    PIPELINE_TRIED_TO_SET_THE_SAME_INPUT_TWICE,
+    PIPELINE_TRIED_TO_SET_INPUT_SHARD_FOR_ORDINARY_INPUT_HANDLER,
+    PIPELINE_NODE_GATHER_FROM_NOT_EXISTING_NODE,
+    PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER,
+    PIPELINE_NODE_GATHER_FROM_ENTRY_NODE,
+    PIPELINE_DEMULTIPLY_ENTRY_NODE,
+    PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT,
+    PIPELINE_MANUAL_GATHERING_FROM_MULTIPLE_NODES_NOT_SUPPORTED,
+    PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY,
+    PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY,
+    PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER,
+    PIPELINE_DEMULTIPLEXER_NO_RESULTS,
 
     // Custom Loader
     CUSTOM_LOADER_LIBRARY_INVALID,
@@ -186,6 +226,25 @@ enum class StatusCode {
     CUSTOM_LOADER_NOT_PRESENT,
     CUSTOM_LOADER_INIT_FAILED,
     CUSTOM_LOADER_ERROR,
+
+    // Custom Node
+    NODE_LIBRARY_ALREADY_LOADED,
+    NODE_LIBRARY_LOAD_FAILED_OPEN,
+    NODE_LIBRARY_LOAD_FAILED_SYM,
+    NODE_LIBRARY_MISSING,
+    NODE_LIBRARY_MISSING_OUTPUT,
+    NODE_LIBRARY_EXECUTION_FAILED,
+    NODE_LIBRARY_OUTPUTS_CORRUPTED,
+    NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT,
+    NODE_LIBRARY_INVALID_PRECISION,
+    NODE_LIBRARY_INVALID_SHAPE,
+    NODE_LIBRARY_INVALID_CONTENT_SIZE,
+    NODE_LIBRARY_METADATA_FAILED,
+    NODE_LIBRARY_OUTPUT_MISSING_NAME,
+
+    // Model control API
+    OK_NOT_RELOADED, /*!< Operation succeeded but no config reload was needed */
+    OK_RELOADED,     /*!< Operation succeeded but no config reload was needed */
 
     STATUS_CODE_END
 };
@@ -218,7 +277,7 @@ public:
     }
 
     bool ok() const {
-        return code == StatusCode::OK;
+        return (code == StatusCode::OK || code == StatusCode::OK_RELOADED || code == StatusCode::OK_NOT_RELOADED);
     }
 
     const StatusCode getCode() const {

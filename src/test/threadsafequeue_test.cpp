@@ -52,7 +52,7 @@ TEST(TestThreadSafeQueue, PushElement) {
     queue.push(i);
 }
 
-const uint WAIT_FOR_ELEMENT_TIMEOUT_MICROSECONDS = 10'000'000;
+const uint WAIT_FOR_ELEMENT_TIMEOUT_MICROSECONDS = 1'000'000;
 
 TEST(TestThreadSafeQueue, SeveralElementsInFIFOOrder) {
     const std::vector<int> elements = {1, 2, 3, 4, 5, 6};

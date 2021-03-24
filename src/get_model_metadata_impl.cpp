@@ -17,6 +17,8 @@
 
 #include <google/protobuf/util/json_util.h>
 
+#include "pipelinedefinition.hpp"
+
 using google::protobuf::util::JsonPrintOptions;
 using google::protobuf::util::MessageToJsonString;
 
@@ -102,7 +104,7 @@ void GetModelMetadataImpl::convert(
         *input.mutable_tensor_shape() = tensorflow::TensorShapeProto();
 
         for (auto dim : tensor->getShape()) {
-            input.mutable_tensor_shape()->add_dim()->set_size(dim);
+            input.mutable_tensor_shape()->add_dim()->set_size(dim ? dim : -1);
         }
     }
 }

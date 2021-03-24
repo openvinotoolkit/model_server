@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@
 #pragma GCC diagnostic pop
 
 #include "../modelmanager.hpp"
+#include "../node_library.hpp"
 #include "../tensorinfo.hpp"
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;
@@ -48,6 +49,10 @@ const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "CPU",                 // target device
     "1",                   // batchsize
     1,                     // NIREQ
+    false,                 // is stateful
+    true,                  // idle sequence cleanup enabled
+    false,                 // low latency transformation enabled
+    500,                   // steteful sequence max number
     1,                     // model_version unused since version are read from path
     dummy_model_location,  // local path
 };
@@ -58,6 +63,10 @@ const ovms::ModelConfig SUM_MODEL_CONFIG{
     "CPU",               // target device
     "1",                 // batchsize
     1,                   // NIREQ
+    false,               // is stateful
+    true,                // idle sequence cleanup enabled
+    false,               // low latency transformation enabled
+    500,                 // steteful sequence max number
     1,                   // model_version unused since version are read from path
     sum_model_location,  // local path
 };
@@ -66,6 +75,7 @@ constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
 constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
 constexpr const int DUMMY_MODEL_OUTPUT_SIZE = 10;
+constexpr const float DUMMY_ADDITION_VALUE = 1.0;
 
 constexpr const char* SUM_MODEL_INPUT_NAME_1 = "input1";
 constexpr const char* SUM_MODEL_INPUT_NAME_2 = "input2";
@@ -178,3 +188,14 @@ protected:
 };
 
 void waitForOVMSConfigReload(ovms::ModelManager& manager);
+
+template <typename T>
+static ovms::NodeLibrary createLibraryMock() {
+    return ovms::NodeLibrary{
+        T::execute,
+        T::getInputsInfo,
+        T::getOutputsInfo,
+        T::release};
+}
+
+extern bool isShapeTheSame(const tensorflow::TensorShapeProto&, const std::vector<int64_t>&&);

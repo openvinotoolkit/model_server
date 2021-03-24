@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,20 +15,22 @@
 //*****************************************************************************
 #pragma once
 
-#include "ovinferrequestsqueue.hpp"
+#include <set>
+#include <string>
+#include <unordered_map>
+
+#include "node_library.hpp"
+#include "status.hpp"
 
 namespace ovms {
-struct ExecutingStreamIdGuard {
-    ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
-        inferRequestsQueue_(inferRequestsQueue),
-        id_(inferRequestsQueue_.getIdleStream().get()) {}
-    ~ExecutingStreamIdGuard() {
-        inferRequestsQueue_.returnStream(id_);
-    }
-    int getId() { return id_; }
 
-private:
-    ovms::OVInferRequestsQueue& inferRequestsQueue_;
-    const int id_;
+class CustomNodeLibraryManager {
+    std::unordered_map<std::string, NodeLibrary> libraries;
+
+public:
+    Status loadLibrary(const std::string& name, const std::string& basePath);
+    Status getLibrary(const std::string& name, NodeLibrary& library) const;
+    void unloadLibrariesRemovedFromConfig(const std::set<std::string>& librariesInConfig);
 };
-}  //  namespace ovms
+
+}  // namespace ovms

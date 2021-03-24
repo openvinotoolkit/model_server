@@ -2,11 +2,15 @@
 
 This document contains examples to run *GetModelStatus*, *GetModelMetadata*, *Predict* functions over gRPC API and REST API.
 
+[Stateful model example](stateful) to run *Predict* functions over gRPC and REST API on stateful Kaldi model.
+
 It covers following topics:
 * <a href="#grpc-api">gRPC API Client Examples </a>
 * <a href="#rest-api">REST API Client Examples  </a>
 
 ## Requirement
+
+**Note**: Provided examples and their dependencies are updated and validated for Python 3.6+ version. For older versions of Python, dependencies versions adjustment might be required.
 
 Install client dependencies using the command below in the example_client directory:
 ```
@@ -267,7 +271,7 @@ Average latency= 19.8 ms
 ### Multiple input example for HDDL
 
 
-The purpose of this example is to show how to send inputs from multiple sources(cameras, video files) to a model served from inside the OpenVINO model server(inside docker)
+The purpose of this example is to show how to send inputs from multiple sources (cameras, video files) to a model served from inside the OpenVINO model server (inside docker)
 
 - Pre-requisite
 

@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,9 +25,10 @@
 #include <inference_engine.hpp>
 #include <stdlib.h>
 
-#include "../executinstreamidguard.hpp"
+#include "../executingstreamidguard.hpp"
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
+#include "../sequence_processing_spec.hpp"
 #include "test_utils.hpp"
 
 using testing::Each;
@@ -73,7 +74,7 @@ public:
     void testConcurrentPredicts(const int initialBatchSize, const uint waitingBeforePerformInferenceCount, const uint waitingBeforeGettingModelCount) {
         ASSERT_GE(20, waitingBeforePerformInferenceCount);
         config.setNireq(20);
-        ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+        ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
         std::vector<std::promise<void>> releaseWaitBeforeGettingModelInstance(waitingBeforeGettingModelCount);
         std::vector<std::promise<void>> releaseWaitBeforePerformInference(waitingBeforePerformInferenceCount);
@@ -123,7 +124,7 @@ public:
     void testConcurrentBsChanges(const int initialBatchSize, const uint numberOfThreads) {
         ASSERT_GE(20, numberOfThreads);
         config.setNireq(20);
-        ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+        ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
         std::vector<std::promise<void>> releaseWaitBeforeGettingModelInstance(numberOfThreads);
         std::vector<std::thread> predictThreads;
@@ -161,13 +162,13 @@ public:
     ovms::Status performInferenceWithRequest(const tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response) {
         std::shared_ptr<ovms::ModelInstance> model;
         std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
-        auto status = ovms::getModelInstance(manager, "dummy", 0, model, unload_guard);
+        auto status = manager.getModelInstance("dummy", 0, model, unload_guard);
         if (!status.ok()) {
             return status;
         }
 
         response.Clear();
-        return ovms::inference(*model, &request, &response, unload_guard);
+        return model->infer(&request, &response, unload_guard);
     }
 
     ovms::Status performInferenceWithShape(tensorflow::serving::PredictResponse& response, const ovms::shape_t& shape = {1, 10}, const tensorflow::DataType precision = tensorflow::DataType::DT_FLOAT) {
@@ -191,6 +192,15 @@ public:
     }
 };
 
+class MockModelInstance : public ovms::ModelInstance {
+public:
+    MockModelInstance() :
+        ModelInstance("UNUSED_NAME", 42) {}
+    const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
+        return validate(request);
+    }
+};
+
 void TestPredict::performPredict(const std::string modelName,
     const ovms::model_version_t modelVersion,
     const tensorflow::serving::PredictRequest& request,
@@ -211,27 +221,25 @@ void TestPredict::performPredict(const std::string modelName,
         std::cout << "Waiting before getModelInstance. Batch size: " << batchSize << std::endl;
         waitBeforeGettingModelInstance->get();
     }
-    ASSERT_EQ(getModelInstance(manager, modelName, modelVersion, modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.getModelInstance(modelName, modelVersion, modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 
     if (waitBeforePerformInference) {
         std::cout << "Waiting before performInfernce." << std::endl;
         waitBeforePerformInference->get();
     }
-    ovms::Status validationStatus = modelInstance->validate(&request);
+    ovms::Status validationStatus = (std::static_pointer_cast<MockModelInstance>(modelInstance))->mockValidate(&request);
     ASSERT_TRUE(validationStatus == ovms::StatusCode::OK ||
                 validationStatus == ovms::StatusCode::RESHAPE_REQUIRED ||
                 validationStatus == ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
-    ASSERT_EQ(reloadModelIfRequired(validationStatus, *modelInstance, &request, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(modelInstance->reloadModelIfRequired(validationStatus, &request, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 
-    ovms::OVInferRequestsQueue& inferRequestsQueue = modelInstance->getInferRequestsQueue();
-    ovms::ExecutingStreamIdGuard executingStreamIdGuard(inferRequestsQueue);
-    int executingInferId = executingStreamIdGuard.getId();
-    InferenceEngine::InferRequest& inferRequest = inferRequestsQueue.getInferRequest(executingInferId);
+    ovms::ExecutingStreamIdGuard executingStreamIdGuard(modelInstance->getInferRequestsQueue());
+    InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     std::vector<float> input(inputSize);
     std::generate(input.begin(), input.end(), []() { return 1.; });
     ASSERT_THAT(input, Each(Eq(1.)));
     deserialize(input, inferRequest, modelInstance);
-    auto status = performInference(inferRequestsQueue, executingInferId, inferRequest);
+    auto status = modelInstance->performInference(inferRequest);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     size_t outputSize = batchSize * DUMMY_MODEL_OUTPUT_SIZE;
     serializeAndCheck(outputSize, inferRequest);
@@ -243,7 +251,7 @@ TEST_F(TestPredict, SuccesfullOnDummyModel) {
             std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}});
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(1);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     performPredict(config.getName(), config.getVersion(), request);
 }
 
@@ -254,7 +262,7 @@ TEST_F(TestPredict, SuccesfullReloadFromAlreadyLoadedWithNewBatchSize) {
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     const int initialBatchSize = config.getBatchSize();
     config.setBatchSize(initialBatchSize);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     performPredict(config.getName(), config.getVersion(), request);
 }
 
@@ -269,7 +277,7 @@ TEST_F(TestPredict, SuccesfullReloadWhen1InferenceInProgress) {
 
     config.setBatchingParams("auto");
     config.setNireq(2);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     std::promise<void> releaseWaitBeforePerformInferenceBs1, releaseWaitBeforeGetModelInstanceBs2;
     std::thread t1(
@@ -301,7 +309,7 @@ TEST_F(TestPredict, SuccesfullReloadWhen1InferenceAboutToStart) {
 
     config.setBatchingParams("auto");
     config.setNireq(2);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     std::promise<void> releaseWaitBeforeGetModelInstanceBs1, releaseWaitBeforePerformInferenceBs2;
     std::thread t1(
@@ -362,12 +370,12 @@ TEST_F(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("0");
     config.parseShapeParameter("auto");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     // Get dummy model instance
     std::shared_ptr<ovms::ModelInstance> model;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
-    auto status = ovms::getModelInstance(manager, "dummy", 0, model, unload_guard);
+    auto status = manager.getModelInstance("dummy", 0, model, unload_guard);
 
     // Prepare request with 1x5 shape, expect reshape
     tensorflow::serving::PredictRequest request = preparePredictRequest(
@@ -377,7 +385,7 @@ TEST_F(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     tensorflow::serving::PredictResponse response;
 
     // Do the inference
-    ASSERT_EQ(inference(*model, &request, &response, unload_guard), ovms::StatusCode::OK);
+    ASSERT_EQ(model->infer(&request, &response, unload_guard), ovms::StatusCode::OK);
 
     // Expect reshape to 1x5
     ASSERT_EQ(response.outputs().count("a"), 1);
@@ -405,33 +413,33 @@ TEST_F(TestPredict, ReshapeViaRequestAndConfigChange) {
     ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("0");
     config.parseShapeParameter("auto");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     tensorflow::serving::PredictResponse response;
 
     // Perform reshape to (1,12) using request
-    ASSERT_EQ(performInferenceWithShape(response, {1, 12}), StatusCode::OK);
+    ASSERT_EQ(performInferenceWithShape(response, {1, 12}), ovms::StatusCode::OK);
     checkOutputShape(response, {1, 12});
 
     // Reshape with model reload to Fixed=(1,11)
     config.setBatchingParams("0");
     config.parseShapeParameter("(1,11)");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     // Cannot do the inference with (1,12)
-    ASSERT_EQ(performInferenceWithShape(response, {1, 12}), StatusCode::INVALID_SHAPE);
+    ASSERT_EQ(performInferenceWithShape(response, {1, 12}), ovms::StatusCode::INVALID_SHAPE);
 
     // Successfull inference with (1,11)
-    ASSERT_EQ(performInferenceWithShape(response, {1, 11}), StatusCode::OK);
+    ASSERT_EQ(performInferenceWithShape(response, {1, 11}), ovms::StatusCode::OK);
     checkOutputShape(response, {1, 11});
 
     // Reshape back to AUTO, internal shape is (1,10)
     config.setBatchingParams("0");
     config.parseShapeParameter("auto");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     // Perform reshape to (1,12) using request
-    ASSERT_EQ(performInferenceWithShape(response, {1, 12}), StatusCode::OK);
+    ASSERT_EQ(performInferenceWithShape(response, {1, 12}), ovms::StatusCode::OK);
     checkOutputShape(response, {1, 12});
 }
 
@@ -452,31 +460,31 @@ TEST_F(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
     // Prepare model with shape=auto (initially (1,10) shape)
     ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("auto");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     tensorflow::serving::PredictResponse response;
 
     // Perform batch size change to 3 using request
-    ASSERT_EQ(performInferenceWithBatchSize(response, 3), StatusCode::OK);
+    ASSERT_EQ(performInferenceWithBatchSize(response, 3), ovms::StatusCode::OK);
     checkOutputShape(response, {3, 10});
 
     // Change batch size with model reload to Fixed=4
     config.setBatchingParams("4");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     // Cannot do the inference with (3,10)
-    ASSERT_EQ(performInferenceWithBatchSize(response, 3), StatusCode::INVALID_BATCH_SIZE);
+    ASSERT_EQ(performInferenceWithBatchSize(response, 3), ovms::StatusCode::INVALID_BATCH_SIZE);
 
     // Successfull inference with (4,10)
-    ASSERT_EQ(performInferenceWithBatchSize(response, 4), StatusCode::OK);
+    ASSERT_EQ(performInferenceWithBatchSize(response, 4), ovms::StatusCode::OK);
     checkOutputShape(response, {4, 10});
 
     // Reshape back to AUTO, internal shape is (1,10)
     config.setBatchingParams("auto");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     // Perform batch change to 3 using request
-    ASSERT_EQ(performInferenceWithBatchSize(response, 3), StatusCode::OK);
+    ASSERT_EQ(performInferenceWithBatchSize(response, 3), ovms::StatusCode::OK);
     checkOutputShape(response, {3, 10});
 }
 #pragma GCC diagnostic pop

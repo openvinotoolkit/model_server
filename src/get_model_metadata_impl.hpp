@@ -31,6 +31,8 @@ namespace ovms {
 
 using proto_signature_map_t = google::protobuf::Map<std::string, tensorflow::TensorInfo>;
 
+class PipelineDefinition;
+
 class GetModelMetadataImpl {
 public:
     static Status validate(

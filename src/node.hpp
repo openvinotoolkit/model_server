@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020,2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -22,14 +24,17 @@
 
 #include <inference_engine.hpp>
 
+#include "aliases.hpp"
+#include "blobmap.hpp"
+#include "nodesession.hpp"
+#include "nodesessionresult.hpp"
+#include "pipelineeventqueue.hpp"
 #include "status.hpp"
-#include "threadsafequeue.hpp"
 
 namespace ovms {
 
-using BlobMap = std::unordered_map<std::string, InferenceEngine::Blob::Ptr>;
 using BlobNames = std::vector<std::string>;
-using InputPairs = std::vector<std::pair<std::string, std::string>>;
+using session_key_t = std::string;
 
 class Node {
 protected:
@@ -38,48 +43,57 @@ protected:
     std::vector<std::reference_wrapper<Node>> previous;
     std::vector<std::reference_wrapper<Node>> next;
 
-    size_t finishedDependenciesCount = 0;
-
     // Blobs ready and waiting for execution
-    BlobMap inputBlobs;
+    std::unordered_map<session_key_t, std::unique_ptr<NodeSession>> nodeSessions;
 
     // Input/Output name mapping and list of required inputs from previous nodes
-    std::unordered_map<std::string, InputPairs> blobNamesMapping;
+    std::unordered_map<std::string, Aliases> blobNamesMapping;
+
+    const std::optional<uint32_t> demultiplexCount;
+    const std::optional<std::set<std::string>> gatherFrom;
 
 public:
-    Node(const std::string& nodeName) :
-        nodeName(nodeName) {
-    }
+    Node(const std::string& nodeName, std::optional<uint32_t> demultiplyCount = std::nullopt, std::set<std::string> gatherFromNode = {});
 
     virtual ~Node() = default;
 
     const std::string& getName() const { return this->nodeName; }
 
-    virtual Status execute(ThreadSafeQueue<std::reference_wrapper<Node>>& notifyEndQueue) = 0;
-    virtual Status fetchResults(BlobMap& outputs) = 0;
+    virtual Status execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) = 0;
+    Status fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs);
 
-    Status setInputs(const Node& dependency, BlobMap& inputs);
+protected:
+    virtual Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) = 0;
+    Status demultiplyOutputs(SessionResults& nodeSessionOutputs);
 
-    virtual void addDependency(Node& node, const InputPairs& blobNamesMapping) {
+public:
+    Status setInputs(const Node& dependency, BlobMap& inputs, NodeSessionMetadata& metadata);
+    Status setInputs(const Node& dependency, SessionResults& inputs);
+
+    virtual void addDependency(Node& node, const Aliases& blobNamesMapping) {
         this->previous.emplace_back(node);
         this->blobNamesMapping[node.getName()] = blobNamesMapping;
     }
 
     virtual void addDependant(Node& node) { this->next.emplace_back(node); }
 
-    const InputPairs& getMappingByDependency(const Node& dependency) {
+    const Aliases& getMappingByDependency(const Node& dependency) {
         return blobNamesMapping.at(dependency.getName());
     }
-    bool isReady() const {
-        return finishedDependenciesCount == previous.size();
-    }
+
+    std::vector<session_key_t> getReadySessions() const;
     const std::vector<std::reference_wrapper<Node>>& getNextNodes() {
         return next;
     }
-    virtual void release() {}
-    virtual bool tryDisarmStreamIdGuard(const uint microseconds = 1) { return true; }
+    virtual void release(session_key_t sessionId) {}
+    virtual bool tryDisarm(const session_key_t& sessionKey, const uint microseconds = 1) { return true; }
 
-    static void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const InputPairs& pairs);
+    static void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const Aliases& pairs);
+
+protected:
+    NodeSession* getNodeSession(const NodeSessionMetadata& metadata);
+    NodeSession& getNodeSession(const session_key_t& sessionKey) const;
+    virtual std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails);
 };
 
 }  // namespace ovms

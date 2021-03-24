@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,15 +40,17 @@ BASE_OS_TAG ?= latest
 BASE_OS_TAG_UBUNTU ?= 18.04
 BASE_OS_TAG_CENTOS ?= 7
 BASE_OS_TAG_CLEARLINUX ?= latest
+BASE_OS_TAG_REDHAT ?= 8.2
 
 INSTALL_RPMS_FROM_URL ?=
+INSTALL_DRIVER_VERSION ?= "19.41.14441"
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= releases/2021/2
 
-DLDT_PACKAGE_URL ?= ""
+DLDT_PACKAGE_URL ?=
 OV_USE_BINARY ?= 1
 YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7
 
@@ -61,6 +63,11 @@ else
   BAZEL_DEBUG_FLAGS=" --strip=never "
 endif
 
+# Option to Override release image.
+# Release image OS *must have* glibc version >= glibc version on BASE_OS:
+DIST_OS ?= $(BASE_OS)
+DIST_OS_TAG ?= $(BASE_OS_TAG)
+
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
 endif
@@ -70,17 +77,19 @@ endif
 ifeq ($(BASE_OS),clearlinux)
   BASE_OS_TAG=$(BASE_OS_TAG_CLEARLINUX)
 endif
-
-# Option to Override release image.
-# Release image OS *must have* glibc version >= glibc version on BASE_OS:
-DIST_OS ?= $(BASE_OS)
-DIST_OS_TAG ?= $(BASE_OS_TAG)
+ifeq ($(BASE_OS),redhat)
+  BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
+  BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.2
+  DIST_OS=redhat
+  DIST_OS_TAG=$(BASE_OS_TAG_REDHAT)
+  DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino/packages/2021.3/l_openvino_toolkit_runtime_rhel8_p_2021.3.394.tgz
+endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2021.2"
+PRODUCT_VERSION ?= "2021.3"
 
 OVMS_CPP_CONTAINTER_NAME ?= server-test
 OVMS_CPP_CONTAINTER_PORT ?= 9178
@@ -188,11 +197,13 @@ endif
     	--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
     	--build-arg no_proxy=$(NO_PROXY) \
     	--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
+		--build-arg INSTALL_DRIVER_VERSION="$(INSTALL_DRIVER_VERSION)" \
     	--build-arg GPU=1 \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
     	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) && \
     	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu
 	cd extras/nginx-mtls-auth && \
-	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)" && \
+	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)" "$(BASE_OS)" && \
 	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls
 
 test_checksec:
@@ -237,7 +248,7 @@ test_perf_dummy_model: venv
 	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
 	@echo "Starting docker image"
 	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
-		-v $(PWD)/src/test/dummy/0:/dummy/1 \
+		-v $(PWD)/src/test/dummy/1:/dummy/1 \
 		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--model_name dummy --model_path /dummy --port $(OVMS_CPP_CONTAINTER_PORT); sleep 5
@@ -287,7 +298,7 @@ test_throughput_dummy_model: venv
 	@docker rm --force $(OVMS_CPP_CONTAINTER_NAME) || true
 	@echo "Starting docker image"
 	@docker run -d --name $(OVMS_CPP_CONTAINTER_NAME) \
-		-v $(PWD)/src/test/dummy/0:/dummy/1 \
+		-v $(PWD)/src/test/dummy/1:/dummy/1 \
 		-p $(OVMS_CPP_CONTAINTER_PORT):$(OVMS_CPP_CONTAINTER_PORT) \
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--model_name dummy \
@@ -312,11 +323,11 @@ test_functional: venv
 
 
 tools_get_deps:
-	cd tools/deps && docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" -t  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG) .
-	-docker rm -f $(OVMS_CPP_DOCKER_IMAGE)-deps__$(OVMS_CPP_IMAGE_TAG)
-	docker run -d --rm --name  $(OVMS_CPP_DOCKER_IMAGE)-deps__$(OVMS_CPP_IMAGE_TAG)  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG)
+	cd tools/deps/$(BASE_OS) && docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" -t  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG) .
+	-docker rm -f ovms-$(BASE_OS)-deps
+	docker run -d --rm --name  ovms-$(BASE_OS)-deps  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG)
 	sleep 5
-	docker cp $(OVMS_CPP_DOCKER_IMAGE)-deps__$(OVMS_CPP_IMAGE_TAG):/root/rpms.tar.xz ./
+	docker cp ovms-$(BASE_OS)-deps:/root/rpms.tar.xz ./
 	sleep 5
-	-docker rm -f $(OVMS_CPP_DOCKER_IMAGE)-deps__$(OVMS_CPP_IMAGE_TAG)
+	-docker rm -f ovms-$(BASE_OS)-deps
 	@echo "Success! Dependencies saved to rpms.tar.xz in this directory"

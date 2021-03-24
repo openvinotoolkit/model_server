@@ -31,6 +31,31 @@ There are two special kinds of nodes - Request and Response node. Both of them a
     Each model input needs to be mapped to some node's `data_item` - input from gRPC/REST `request` or another `DL model` output. 
     Outputs of the node may be mapped to another node's inputs or the `response` node, meaning it will be exposed in gRPC/REST response. 
 
+### Custom node type
+
+* custom - that node can be used to implement all operations on the data which can not be handled by the neural network model. It is represented by
+a C++ dynamic library implementing OVMS API defined in [custom_node_interface.h](../src/custom_node_interface.h). Custom nodes can run the data
+processing using OpenCV, which is included in OVMS, or include other third-party components. Custom node libraries are loaded into OVMS
+ by adding its definition to the pipeline configuration. The configuration includes a path to the compiled binary with `.so` extension. 
+Custom nodes are not versioned, meaning one custom node library is bound to one name. To load another version, another name needs to be used.
+
+Learn more about developing custom node in the [custom node developer guide](custom_node_development.md)
+
+## Demultiplexing data
+
+During the pipeline execution, it is possible to split a request with mulitple batches into a set of branches with a single batch.
+That way a model configured with a batch size 1, can process requests with arbitrary batch size. Internally, OVMS demultiplexer will
+divide the data, process them in parallel and combine the results. 
+
+De-multiplication of the node output is enabled in the configuration file by adding `demultiply_count`. 
+It assumes the batches are combined on the first dimension which is dropped after splitting. For example:
+- a node returns output with shape `[8,1,3,224,224]`
+- demuliplexer creates 8 requests with shape `[1,3,224,224]`
+- next model processes in parallel 8 requests with output shape `[1,1001]` each.
+- results are combined into a single output with shape `[8,1,1001]`
+
+[Learn more about demuliplexing](demultiplexing.md) 
+
 ## Configuration file <a name="configuration-file"></a>
 
 Pipelines configuration is to be placed in the same json file like the 
@@ -42,7 +67,15 @@ Nodes in the pipelines can reference only the models configured in model_config_
 Below is depicted a basic pipeline section template:
 
 ```
+
 {
+    "model_config_list": [...],
+    "custom_node_library_config_list": [
+        {
+            "name": "custom_node_lib",
+            "base_path": "/libs/libcustom_node.so"
+        }
+    ],
     "pipeline_config_list": [
         {
             "name": "<pipeline name>",
@@ -60,6 +93,23 @@ Below is depicted a basic pipeline section template:
                         {"data_item": "<model output>",
                          "alias": "<node output name>"}
                     ] 
+                },
+                {
+                    "name": "custon_node_name",
+                    "library_name": "custom_node_lib",
+                    "type": "custom",
+                    "params": {
+                        "param1": "value1",
+                        "param2": "value2",
+                    },
+                    "inputs": [
+                        {"input": {"node_name": "request",  # reference to pipeline input
+                                   "data_item": "<input1>"}}  # input name from the request
+                    ], 
+                    "outputs": [
+                        {"data_item": "<library_output>",
+                            "alias": "<node_output>"},
+                    ]
                 }
             ],
             "outputs": [      # pipeline outputs
@@ -90,6 +140,8 @@ Below is depicted a basic pipeline section template:
 |`"model_name"`|string|You can specify underlying model (needs to be defined in `model_config_list`), available only for `DL model` nodes|required for `DL model` nodes|
 |`"version"`|integer|You can specify model version for inference, available only for `DL model` nodes||
 |`"type"`|string|Node kind, currently there is only `DL model` kind available|&check;|
+|`"demultiply_count"`|integer|Splits node outputs to desired chunks and branches pipeline execution||
+|`"gather_from_node"`|string|Setups node to converge pipeline and collect results into one input before execution||
 |`"inputs"`|array|Defines list of input/output mappings between this and dependency nodes, **IMPORTANT**: Please note that output shape, precision and layout of previous node/request needs to match input of current node's model|&check;|
 |`"outputs"`|array|Defines model output name alias mapping - you can rename model output names for easier use in subsequent nodes|&check;|
 
@@ -107,6 +159,24 @@ Below is depicted a basic pipeline section template:
 |`"data_item"`|string|Is the name of resource exposed by node - for `DL model` nodes it means model output|&check;|
 |`"alias"`|string|Is a name assigned to data item, makes it easier to refer to results of this node in subsequent nodes|&check;|
 
+
+### Custom node options explained
+
+In case the pipeline definition includes the custom node, the configuration file must include `custom_node_library_config_list`
+section. It includes:
+|Option|Type|Description|Required|
+|:---|:---|:---|:---|
+|`"name"`|string|The name of the custom node library - it will be used as a reference in the custom node pipeline definition |&check;|
+|`"base_path"`|string|Path the the dynamic library with the custom node implementation|&check;|
+
+Custom node definition in the pipeline configuration is similar to the model node. Node inputs and outputs are configurable in 
+the same way. Custom node functions just like a standard mode in that respect. The differences is in extra parameters:
+
+|Option|Type|Description|Required|
+|:---|:---|:---|:---|
+|`"library_name"`|string|Name of the custom node library defined in `custom_node_library_config_list`|&check;|
+|`"type"`|string|Must be set to `custom`|&check;|
+|`"params"`| json object with string values| a list of parameters and their values which could be used in the custom node implementation||
 
 ## Using the pipelines <a name="using-pipelines"></a>
 
@@ -129,7 +199,7 @@ version parameter is ignored. Pipelines are not versioned. Though, they can refe
 
 [Face analysis with combined models](combined_model_dag.md)
 
-
+[Optical Character Recognition with custom node pipeline](east_ocr.md)
 
 ## Current limitations <a name="current-limitations"></a>
 

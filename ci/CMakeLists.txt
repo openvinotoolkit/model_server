@@ -22,6 +22,13 @@ file(GLOB ovms_SRC
     "*.cpp"
 )
 
+file(GLOB OCR_SRC
+    "custom_node_interface.hpp"
+    "custom_nodes/east_ocr/*.hpp"
+    "custom_nodes/east_ocr/*.cpp"
+)
+
+add_library(ocr ${OCR_SRC})
 add_executable(ovms ${ovms_SRC})
 
 set(BAZEL_BUILD "$ENV{BAZEL_BUILD}")
@@ -40,6 +47,7 @@ include_directories(/root/.cache/bazel/_bazel_root/${BAZEL_BUILD}/external/com_g
 include_directories(/root/.cache/bazel/_bazel_root/${BAZEL_BUILD}/external/com_github_googleapis_google_cloud_cpp_common/)
 include_directories(/root/.cache/bazel/_bazel_root/${BAZEL_BUILD}/execroot/ovms/bazel-out/k8-opt/bin/external/com_github_googleapis_google_cloud_cpp/google/cloud/storage/)
 include_directories(/root/.cache/bazel/_bazel_root/${BAZEL_BUILD}/execroot/ovms/bazel-out/k8-opt/bin/external/awssdk/_virtual_includes/core/)
+include_directories(/root/.cache/bazel/_bazel_root/${BAZEL_BUILD}/external/opencv/include)
 include_directories(/awssdk/aws-cpp-sdk-s3/include)
 
 find_package(InferenceEngine REQUIRED)
@@ -60,5 +68,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${InferenceEngine_LIBRARIES} ${Ope
 target_link_libraries(${PROJECT_NAME} azurestorage cpprest)
 target_link_libraries(${PROJECT_NAME} ${OVMS_LIBS})
 target_link_libraries(${PROJECT_NAME} stdc++fs ssl crypto uuid xml2 dl)
+
+# workaround to have OCR custom node scanned
+target_link_libraries(ovms ocr)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread")

@@ -133,7 +133,7 @@ public:
         try {
             this->setLoaderName(v["loader_name"].GetString());
             this->setLibraryPath(v["library_path"].GetString());
-            if (v.HasMember("config_path"))
+            if (v.HasMember("loader_config_file"))
                 this->setLoaderConfigFile(v["loader_config_file"].GetString());
         } catch (...) {
             SPDLOG_ERROR("There was an error parsing the custom loader config");

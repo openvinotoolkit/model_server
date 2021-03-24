@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@
 #include "modelmanager.hpp"
 #include "prediction_service.hpp"
 #include "stringutils.hpp"
+#include "version.hpp"
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -101,6 +102,8 @@ Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std::vecto
 }
 
 void logConfig(Config& config) {
+    SPDLOG_INFO(PROJECT_NAME);
+    SPDLOG_INFO("OpenVINO backend {}", OPENVINO_NAME);
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
     if (config.configPath().empty()) {
         SPDLOG_DEBUG("model_path: {}", config.modelPath());
@@ -111,16 +114,24 @@ void logConfig(Config& config) {
         SPDLOG_DEBUG("nireq: {}", config.nireq());
         SPDLOG_DEBUG("target_device: {}", config.targetDevice());
         SPDLOG_DEBUG("plugin_config: {}", config.pluginConfig());
+        SPDLOG_DEBUG("stateful: {}", config.stateful());
+        SPDLOG_DEBUG("idle_sequence_cleanup: {}", config.idleSequenceCleanup());
+        SPDLOG_DEBUG("max_sequence_number: {}", config.maxSequenceNumber());
+        SPDLOG_DEBUG("low_latency_transformation: {}", config.lowLatencyTransformation());
     } else {
         SPDLOG_DEBUG("config_path: {}", config.configPath());
     }
     SPDLOG_DEBUG("gRPC port: {}", config.port());
     SPDLOG_DEBUG("REST port: {}", config.restPort());
+    SPDLOG_DEBUG("gRPC bind address: {}", config.grpcBindAddress());
+    SPDLOG_DEBUG("REST bind address: {}", config.restBindAddress());
     SPDLOG_DEBUG("REST workers: {}", config.restWorkers());
     SPDLOG_DEBUG("gRPC workers: {}", config.grpcWorkers());
     SPDLOG_DEBUG("gRPC channel arguments: {}", config.grpcChannelArguments());
     SPDLOG_DEBUG("log level: {}", config.logLevel());
     SPDLOG_DEBUG("log path: {}", config.logPath());
+    SPDLOG_DEBUG("file system poll wait seconds: {}", config.filesystemPollWaitSeconds());
+    SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
 }
 
 void onInterrupt(int status) {
@@ -261,10 +272,13 @@ int server_main(int argc, char** argv) {
         SPDLOG_INFO("Shutting down");
         for (const auto& g : grpc) {
             g->Shutdown();
+            SPDLOG_INFO("Shutdown gRPC server");
         }
 
         if (rest != nullptr) {
             rest->Terminate();
+            rest->WaitForTermination();
+            SPDLOG_INFO("Shutdown HTTP server");
         }
 
         ModelManager::getInstance().join();

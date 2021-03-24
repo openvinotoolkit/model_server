@@ -1,0 +1,182 @@
+#
+# Copyright (c) 2020-2021 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.2
+FROM $BASE_IMAGE as base_build
+
+LABEL version="1.0.0"
+
+ARG PROJECT_NAME="OpenVINO Model Server 2021.3"
+
+LABEL description=${PROJECT_NAME}
+
+ARG ov_source_branch=releases/2021/2
+ARG ovms_metadata_file
+ARG ov_use_binary=1
+ARG DLDT_PACKAGE_URL
+ARG OPENVINO_NAME=${DLDT_PACKAGE_URL}
+ARG INSTALL_DIR=/opt/intel/openvino
+ARG TEMP_DIR=/tmp/openvino_installer
+ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
+ARG DL_DIR=/tmp
+ARG JOBS
+ARG YUM_OV_PACKAGE=intel-openvino-runtime-centos7
+# build_type=[ opt, dbg ]
+ARG build_type=dbg
+ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
+
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && yum update -d6 -y && yum install -d6 -y \
+            boost169-atomic \
+            boost169-chrono \
+            boost169-filesystem \
+            boost169-program-options \
+            boost169-thread \
+            boost169-system \
+            boost169-date-time \
+            cmake3 \
+            gcc-c++ \
+            automake \
+            autoconf \
+            curl \
+            gdb \
+            git \
+            libgusb.x86_64 \
+            libusbx \
+            libcurl-devel \
+            libtool \
+            libuuid-devel \
+            libxml2-devel \
+            make \
+            patch \
+            pkg-config \
+            pulseaudio-libs \
+            python2 \
+            python2-pip \
+            python2-devel \
+            python2-setuptools \
+            python2-virtualenv \
+            python3 \
+            python3-pip \
+            python3-devel \
+            python3-setuptools \
+            python3-virtualenv \
+            unzip \
+            wget \
+            which \
+            yum-utils \
+            unzip && \
+            yum clean all
+
+# Set up Bazel
+ENV BAZEL_VERSION 2.0.0
+WORKDIR /bazel
+RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
+    chmod +x bazel-*.sh && \
+    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    cd / && \
+    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
+
+################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
+WORKDIR /
+# OV toolkit package
+RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
+    wget $DLDT_PACKAGE_URL && \
+    mkdir /opt/intel && \
+    tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
+    ln -s /opt/intel/l_openvino_toolkit_runtime* /opt/intel/openvino
+
+
+# Build OpenVINO Model Server
+WORKDIR /ovms
+COPY .bazelrc WORKSPACE /ovms/
+COPY external /ovms/external/
+COPY third_party /ovms/third_party/
+
+RUN alternatives --set python /usr/bin/python3
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
+
+####### Azure SDK needs new boost:
+WORKDIR /boost
+RUN wget https://dl.bintray.com/boostorg/release/1.68.0/source/boost_1_68_0.tar.gz && \
+	tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
+	./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
+		--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
+		--with-random --with-thread --with-atomic --with-regex \
+		--with-log --with-locale \
+		install
+
+# OPENSSL
+WORKDIR /openssl
+
+RUN git clone https://github.com/openssl/openssl && cd openssl && git checkout tags/OpenSSL_1_1_1h
+RUN cd openssl && ./config --prefix=/usr/local/ssl --openssldir=/etc/pki/tls shared && make --jobs=$JOBS && make --jobs=$JOBS install || true && make --jobs=$JOBS install_runtime
+
+####### Azure SDK
+
+WORKDIR /azure
+RUN git clone https://github.com/Microsoft/cpprestsdk.git && cd cpprestsdk && git checkout tags/v2.10.16 -b v2.10.16 && git submodule update --init
+
+RUN git clone https://github.com/Azure/azure-storage-cpp.git && cd azure-storage-cpp/Microsoft.WindowsAzure.Storage && git checkout tags/v7.5.0 && mkdir build.release
+
+WORKDIR /
+RUN cp -rf /ovms/third_party/cpprest/rest_sdk_v2.10.16.patch /azure/cpprestsdk/
+RUN cd /azure/cpprestsdk/ && patch -p1 < rest_sdk_v2.10.16.patch
+RUN cp -rf /ovms/third_party/azure/azure_sdk.patch /azure/azure-storage-cpp/
+RUN cd /azure/azure-storage-cpp/ && patch -p1 < azure_sdk.patch
+WORKDIR /azure
+
+RUN cd cpprestsdk && mkdir Release/build.release && cd Release/build.release && cmake3 .. -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBoost_USE_STATIC_RUNTIME=ON -DBoost_USE_STATIC_LIBS=ON -DWERROR=OFF -DBUILD_SAMPLES=OFF -DBUILD_TESTS=OFF && make --jobs=$JOBS install
+RUN cd azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release && CASABLANCA_DIR=/azure/cpprestsdk cmake3 .. -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBoost_USE_STATIC_RUNTIME=ON -DBoost_USE_STATIC_LIBS=ON -DCMAKE_VERBOSE_MAKEFILE=ON && make --jobs=$JOBS && make --jobs=$JOBS install
+
+####### End of Azure SDK
+
+# WARNING - do not move this install - needed here for proper ssl linkage in rest and azure
+RUN yum install -d6 -y openssl-devel
+
+# Build AWS S3 SDK
+RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
+WORKDIR /awssdk/build
+RUN cmake3 -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
+RUN make --jobs=$JOBS
+RUN mv .deps/install/lib64 .deps/install/lib
+
+####### End of AWS S3 SDK
+
+RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
+
+WORKDIR /ovms
+
+COPY src/ /ovms/src/
+COPY release_files/ /ovms/release_files/
+
+# Set OVMS version strings
+RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | cut -d'_' -f7`#g" /ovms/src/version.hpp
+
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/:/openvino/bin/intel64/Release/lib/
+
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
+
+RUN cd /ovms/src/test/cpu_extension/ && make
+
+RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
+
+COPY ${ovms_metadata_file} metadata.json
+
+RUN ./bazel-bin/src/./ovms

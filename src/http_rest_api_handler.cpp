@@ -15,7 +15,9 @@
 //*****************************************************************************
 #include "http_rest_api_handler.hpp"
 
+#include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -23,6 +25,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include "config.hpp"
 #include "filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "model_service.hpp"
@@ -30,8 +33,6 @@
 #include "prediction_service_utils.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
-
-#define DEBUG
 #include "timer.hpp"
 
 using tensorflow::serving::PredictRequest;
@@ -39,45 +40,12 @@ using tensorflow::serving::PredictResponse;
 
 namespace ovms {
 
-const std::string HttpRestApiHandler::kPathRegexExp = R"((.?)\/v1\/models\/.*)";
 const std::string HttpRestApiHandler::predictionRegexExp =
     R"((.?)\/v1\/models\/([^\/:]+)(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+)))?:(classify|regress|predict))";
 const std::string HttpRestApiHandler::modelstatusRegexExp =
     R"((.?)\/v1\/models(?:\/([^\/:]+))?(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+)))?(?:\/(metadata))?)";
-
-Status HttpRestApiHandler::validateUrlAndMethod(
-    const std::string_view http_method,
-    const std::string& request_path,
-    std::smatch* sm) {
-
-    if (http_method != "POST" && http_method != "GET") {
-        return StatusCode::REST_UNSUPPORTED_METHOD;
-    }
-
-    if (FileSystem::isPathEscaped(request_path)) {
-        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
-        return StatusCode::PATH_INVALID;
-    }
-
-    if (!std::regex_match(request_path, *sm, sanityRegex)) {
-        return StatusCode::REST_INVALID_URL;
-    }
-
-    if (http_method == "POST") {
-        if (std::regex_match(request_path, *sm, predictionRegex)) {
-            return StatusCode::OK;
-        } else if (std::regex_match(request_path, *sm, modelstatusRegex)) {
-            return StatusCode::REST_UNSUPPORTED_METHOD;
-        }
-    } else if (http_method == "GET") {
-        if (std::regex_match(request_path, *sm, modelstatusRegex)) {
-            return StatusCode::OK;
-        } else if (std::regex_match(request_path, *sm, predictionRegex)) {
-            return StatusCode::REST_UNSUPPORTED_METHOD;
-        }
-    }
-    return StatusCode::REST_INVALID_URL;
-}
+const std::string HttpRestApiHandler::configReloadRegexExp = R"((.?)\/v1\/config\/reload)";
+const std::string HttpRestApiHandler::configStatusRegexExp = R"((.?)\/v1\/config)";
 
 Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version) {
     if (!model_version_str.empty()) {
@@ -92,34 +60,107 @@ Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std
 }
 
 Status HttpRestApiHandler::dispatchToProcessor(
-    const std::string_view request_path,
     const std::string& request_body,
     std::string* response,
     const HttpRequestComponents& request_components) {
 
-    if (FileSystem::isPathEscaped({request_path.begin(), request_path.end()})) {
-        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
-        return StatusCode::PATH_INVALID;
-    }
-
-    if (request_components.http_method == "POST") {
+    if (request_components.type == Predict) {
         if (request_components.processing_method == "predict") {
             return processPredictRequest(request_components.model_name, request_components.model_version,
                 request_components.model_version_label, request_body, response);
         } else {
-            SPDLOG_WARN("Requested REST resource {} not found", std::string(request_path));
+            SPDLOG_WARN("Requested REST resource not found");
             return StatusCode::REST_NOT_FOUND;
         }
-    } else if (request_components.http_method == "GET") {
-        if (!request_components.model_subresource.empty() && request_components.model_subresource == "metadata") {
-            return processModelMetadataRequest(request_components.model_name, request_components.model_version,
-                request_components.model_version_label, response);
-        } else {
-            return processModelStatusRequest(request_components.model_name, request_components.model_version,
-                request_components.model_version_label, response);
-        }
     }
-    return StatusCode::UNKNOWN_ERROR;
+    if (request_components.type == GetModelMetadata) {
+        return processModelMetadataRequest(request_components.model_name, request_components.model_version,
+            request_components.model_version_label, response);
+    }
+    if (request_components.type == GetModelStatus) {
+        return processModelStatusRequest(request_components.model_name, request_components.model_version,
+            request_components.model_version_label, response);
+    }
+    if (request_components.type == ConfigReload) {
+        auto& manager = ModelManager::getInstance();
+        return processConfigReloadRequest(*response, manager);
+    }
+    if (request_components.type == ConfigStatus) {
+        auto& manager = ModelManager::getInstance();
+        return processConfigStatusRequest(*response, manager);
+    }
+    return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
+}
+
+Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& requestComponents,
+    const std::string_view http_method,
+    const std::string& request_path) {
+    std::smatch sm;
+    requestComponents.http_method = http_method;
+
+    if (http_method != "POST" && http_method != "GET") {
+        return StatusCode::REST_UNSUPPORTED_METHOD;
+    }
+
+    if (FileSystem::isPathEscaped(request_path)) {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", request_path);
+        return StatusCode::PATH_INVALID;
+    }
+
+    if (http_method == "POST") {
+        if (std::regex_match(request_path, sm, predictionRegex)) {
+            requestComponents.type = Predict;
+            requestComponents.model_name = sm[2];
+
+            std::string model_version_str = sm[3];
+            auto status = parseModelVersion(model_version_str, requestComponents.model_version);
+            if (!status.ok())
+                return status;
+
+            std::string model_version_label_str = sm[4];
+            if (!model_version_label_str.empty()) {
+                requestComponents.model_version_label = model_version_label_str;
+            }
+
+            requestComponents.processing_method = sm[5];
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, configReloadRegex)) {
+            requestComponents.type = ConfigReload;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, modelstatusRegex))
+            return StatusCode::REST_UNSUPPORTED_METHOD;
+    } else if (http_method == "GET") {
+        if (std::regex_match(request_path, sm, modelstatusRegex)) {
+            requestComponents.model_name = sm[2];
+
+            std::string model_version_str = sm[3];
+            auto status = parseModelVersion(model_version_str, requestComponents.model_version);
+            if (!status.ok())
+                return status;
+
+            std::string model_version_label_str = sm[4];
+            if (!model_version_label_str.empty()) {
+                requestComponents.model_version_label = model_version_label_str;
+            }
+
+            requestComponents.model_subresource = sm[5];
+            if (!requestComponents.model_subresource.empty() && requestComponents.model_subresource == "metadata") {
+                requestComponents.type = GetModelMetadata;
+            } else {
+                requestComponents.type = GetModelStatus;
+            }
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, configStatusRegex)) {
+            requestComponents.type = ConfigStatus;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, predictionRegex))
+            return StatusCode::REST_UNSUPPORTED_METHOD;
+    }
+    return StatusCode::REST_INVALID_URL;
 }
 
 Status HttpRestApiHandler::processRequest(
@@ -136,34 +177,15 @@ Status HttpRestApiHandler::processRequest(
         return StatusCode::PATH_INVALID;
     }
 
-    auto status = validateUrlAndMethod(http_method, request_path_str, &sm);
-    if (!status.ok()) {
-        return status;
-    }
-
     headers->clear();
     response->clear();
     headers->push_back({"Content-Type", "application/json"});
 
     HttpRequestComponents requestComponents;
-    requestComponents.http_method = http_method;
-
-    requestComponents.model_name = sm[2];
-    std::string model_version_str = sm[3];
-    std::string model_version_label_str = sm[4];
-    if (requestComponents.http_method == "POST")
-        requestComponents.processing_method = sm[5];
-    else
-        requestComponents.model_subresource = sm[5];
-
-    status = parseModelVersion(model_version_str, requestComponents.model_version);
+    auto status = parseRequestComponents(requestComponents, http_method, request_path_str);
     if (!status.ok())
         return status;
-
-    if (!model_version_label_str.empty()) {
-        requestComponents.model_version_label = model_version_label_str;
-    }
-    return dispatchToProcessor(request_path, request_body, response, requestComponents);
+    return dispatchToProcessor(request_body, response, requestComponents);
 }
 
 Status HttpRestApiHandler::processPredictRequest(
@@ -216,8 +238,7 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
 
     std::shared_ptr<ModelInstance> modelInstance;
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
-    auto status = getModelInstance(
-        ModelManager::getInstance(),
+    auto status = ModelManager::getInstance().getModelInstance(
         modelName,
         modelVersion.value_or(0),
         modelInstance,
@@ -243,7 +264,7 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
     if (modelVersion.has_value()) {
         requestProto.mutable_model_spec()->mutable_version()->set_value(modelVersion.value());
     }
-    status = inference(*modelInstance, &requestProto, &responseProto, modelInstanceUnloadGuard);
+    status = modelInstance->infer(&requestProto, &responseProto, modelInstanceUnloadGuard);
     return status;
 }
 
@@ -267,7 +288,7 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
 
     tensorflow::serving::PredictRequest& requestProto = requestParser.getProto();
     requestProto.mutable_model_spec()->set_name(modelName);
-    status = getPipeline(ModelManager::getInstance(), pipelinePtr, &requestProto, &responseProto);
+    status = ModelManager::getInstance().getPipeline(pipelinePtr, &requestProto, &responseProto);
     if (!status.ok()) {
         return status;
     }
@@ -323,6 +344,92 @@ Status HttpRestApiHandler::processModelStatusRequest(
     if (!status.ok()) {
         return status;
     }
+    return StatusCode::OK;
+}
+
+std::string createErrorJsonWithMessage(std::string message) {
+    return "{\n\t\"error\": \"" + message + "\"\n}";
+}
+
+Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, ModelManager& manager) {
+    SPDLOG_DEBUG("Processing config reload request started.");
+    Status status;
+    auto& config = ovms::Config::instance();
+
+    bool reloadNeeded = false;
+    if (manager.getConfigFilename() != "") {
+        status = manager.configFileReloadNeeded(reloadNeeded);
+        if (!reloadNeeded) {
+            if (status == StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED) {
+                response = createErrorJsonWithMessage("Config file not found or cannot open.");
+                return status;
+            }
+        }
+    }
+
+    if (reloadNeeded) {
+        status = manager.loadConfig(config.configPath());
+        if (!status.ok()) {
+            response = createErrorJsonWithMessage("Reloading config file failed. Check server logs for more info.");
+            return status;
+        }
+    } else {
+        if (!status.ok()) {
+            status = manager.loadConfig(config.configPath());
+            if (!status.ok()) {
+                response = createErrorJsonWithMessage("Reloading config file failed. Check server logs for more info.");
+                return status;
+            }
+            reloadNeeded = true;
+        }
+    }
+
+    status = manager.updateConfigurationWithoutConfigFile();
+    if (!status.ok()) {
+        response = createErrorJsonWithMessage("Reloading models versions failed. Check server logs for more info.");
+        return status;
+    }
+    if (status == StatusCode::OK_RELOADED) {
+        reloadNeeded = true;
+    }
+
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
+    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
+    if (!status.ok()) {
+        response = createErrorJsonWithMessage("Retrieving all model statuses failed. Check server logs for more info.");
+        return status;
+    }
+
+    status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, response);
+    if (!status.ok()) {
+        response = createErrorJsonWithMessage("Serializing model statuses to json failed. Check server logs for more info.");
+        return status;
+    }
+
+    if (!reloadNeeded) {
+        SPDLOG_DEBUG("Config file reload was not needed.");
+        return StatusCode::OK_NOT_RELOADED;
+    }
+    return StatusCode::OK_RELOADED;
+}
+
+Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, ModelManager& manager) {
+    SPDLOG_DEBUG("Processing config status request started.");
+    Status status;
+
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
+    status = GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
+    if (!status.ok()) {
+        response = createErrorJsonWithMessage("Retrieving all model statuses failed.");
+        return status;
+    }
+
+    status = GetModelStatusImpl::serializeModelsStatuses2Json(modelsStatuses, response);
+    if (!status.ok()) {
+        response = createErrorJsonWithMessage("Serializing model statuses to json failed.");
+        return status;
+    }
+
     return StatusCode::OK;
 }
 

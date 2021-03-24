@@ -20,10 +20,9 @@
 #include <string>
 #include <vector>
 
-namespace ovms {
+#include "modelversion.hpp"
 
-using model_version_t = int64_t;
-using model_versions_t = std::vector<ovms::model_version_t>;
+namespace ovms {
 
 /**
  * @brief Base class for model version policy types
@@ -40,7 +39,7 @@ public:
      * @param versions model versions to filter
      * @return Filtered version list
      */
-    virtual std::vector<model_version_t> filter(std::vector<model_version_t> versions) const = 0;
+    virtual model_versions_t filter(model_versions_t versions) const = 0;
 
     /**
      * @brief Creates default model version policy, by default only one version (highest) should be served
@@ -72,7 +71,7 @@ public:
      * @param versions model versions to filter
      * @return Filtered version list
      */
-    std::vector<model_version_t> filter(std::vector<model_version_t> versions) const override {
+    model_versions_t filter(model_versions_t versions) const override {
         return versions;
     }
 
@@ -83,7 +82,7 @@ public:
  * @brief Model version policy for explicitely specifying which versions should be enabled
  */
 class SpecificModelVersionPolicy : public ModelVersionPolicy {
-    std::vector<model_version_t> specificVersions;
+    model_versions_t specificVersions;
 
 public:
     /**
@@ -91,7 +90,7 @@ public:
      * 
      * @param versions list of all model versions that should be served
      */
-    SpecificModelVersionPolicy(const std::vector<model_version_t>& versions) :
+    SpecificModelVersionPolicy(const model_versions_t& versions) :
         specificVersions(versions) {
         std::sort(specificVersions.begin(), specificVersions.end());
     }
@@ -102,7 +101,7 @@ public:
      * @param versions model versions to filter
      * @return Filtered version list
      */
-    std::vector<model_version_t> filter(std::vector<model_version_t> versions) const override;
+    model_versions_t filter(model_versions_t versions) const override;
 
     operator std::string() const override;
 };
@@ -128,7 +127,7 @@ public:
      * @param versions model versions to filter
      * @return Filtered version list
      */
-    std::vector<model_version_t> filter(std::vector<model_version_t> versions) const override;
+    model_versions_t filter(model_versions_t versions) const override;
 
     operator std::string() const override;
 };

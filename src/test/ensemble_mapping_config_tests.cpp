@@ -18,10 +18,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../entry_node.hpp"
+#include "../exit_node.hpp"
 #include "../modelconfig.hpp"
 #include "../modelmanager.hpp"
 #include "../pipeline.hpp"
 #include "../pipeline_factory.hpp"
+#include "../pipelinedefinition.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -63,7 +66,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
     modelConfig.setBasePath(modelPath);
-    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK);
+    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
     // Create pipeline definition
     PipelineFactory factory;
@@ -126,7 +129,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReferingToOriginalInputNameFailsC
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
     modelConfig.setBasePath(modelPath);
-    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK);
+    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
     // Create pipeline definition
     PipelineFactory factory;
@@ -161,7 +164,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReferingToOriginalOutputNameFails
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
     modelConfig.setBasePath(modelPath);
-    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK);
+    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
     // Create pipeline definition
     PipelineFactory factory;
@@ -196,7 +199,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
     modelConfig.setBasePath(modelPath);
-    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK);
+    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"vector", "vector"}}},
@@ -241,7 +244,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAd
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
     modelConfig.setBasePath(modelPath);
-    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK);
+    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
     // Create pipeline definition
     std::vector<NodeInfo> info{
@@ -320,7 +323,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReloadPipelineAfterRemovalOfModel
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
     modelConfig.setBasePath(modelPath);
-    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK);
+    ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
     // Create pipeline definition
     std::vector<NodeInfo> info{

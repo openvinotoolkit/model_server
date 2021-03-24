@@ -1,6 +1,6 @@
 #!/bin/bash -x
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ echo "==========================================================================
 echo "WARNING: For development and testing only. Please follow your organization security practices on handling and distribution of cryptography material."
 echo "===================================================================================================================================================="
 openssl req -x509 -nodes -days 1 -newkey rsa:4096 -keyout server.key -out server.pem -subj "/C=US/CN=localhost"
+# Make sure CN will match the DNS name of the OVMS endpoint used by the remote clients
 
 rm -rf ca && mkdir ca && cd ca && touch certindex && echo 01 > certserial && echo 01 > crlnumber ; cd -
 
