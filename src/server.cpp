@@ -131,6 +131,7 @@ void logConfig(Config& config) {
     SPDLOG_DEBUG("log level: {}", config.logLevel());
     SPDLOG_DEBUG("log path: {}", config.logPath());
     SPDLOG_DEBUG("file system poll wait seconds: {}", config.filesystemPollWaitSeconds());
+    SPDLOG_DEBUG("rest API timeout in miliseconds: {}", config.restTimeout());
     SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
 }
 
@@ -229,8 +230,6 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
 }
 
 std::unique_ptr<ovms::http_server> startRESTServer() {
-    const int REST_TIMEOUT = 5000;
-
     auto& config = ovms::Config::instance();
     if (config.restPort() != 0) {
         const std::string server_address = config.restBindAddress() + ":" + std::to_string(config.restPort());
@@ -238,7 +237,7 @@ std::unique_ptr<ovms::http_server> startRESTServer() {
         int workers = config.restWorkers() ? config.restWorkers() : 10;
         SPDLOG_INFO("Will start {} REST workers", workers);
 
-        std::unique_ptr<ovms::http_server> restServer = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), workers, REST_TIMEOUT);
+        std::unique_ptr<ovms::http_server> restServer = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), workers, config.restTimeout());
         if (restServer != nullptr) {
             SPDLOG_INFO("Started REST server at {}", server_address);
         } else {
