@@ -8,6 +8,13 @@ export IMG=$REGISTRY/ovms-operator:latest
 make docker-build docker-push IMG=$IMG
 ```
 
+## Deploy in Kubernetes the operator without OLM
+```bash
+export IMG=quay.io/openvino/ovms-operator:0.1.0
+make install
+make deploy IMG=$IMG
+```
+
 ## Building the test olm catalog
 
 Prerequisites:
