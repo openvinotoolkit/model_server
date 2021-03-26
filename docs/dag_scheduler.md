@@ -204,8 +204,6 @@ version parameter is ignored. Pipelines are not versioned. Though, they can refe
 ## Current limitations <a name="current-limitations"></a>
 
 - Models with ["auto" batch size or shape](shape_and_batch_size.md) cannot be referenced in pipeline
-- Connected inputs and output for subsequent node models need to exactly match each other in terms of data shape and precision - 
-there is no automatic conversion between input/output model precisions or layouts
 - REST requests with no named format (JSON body with one unnamed input) are not supported
 
 

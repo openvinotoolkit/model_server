@@ -46,7 +46,6 @@ def nchw_to_image(output_nd, name, location):
     for i in range(output_nd.shape[0]):
         out = output_nd[i][0]
         out = out.transpose(1,2,0)
-        #cv2.imwrite(location + name + '_' + str(i) + '.jpg', out)
         cv2.imwrite(os.path.join(location, name + '_' + str(i) + '.jpg'), out)
 
 def update_people_ages(output_nd, people):

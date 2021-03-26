@@ -5,7 +5,23 @@ it generates a list of detected boxes for following object recognition models.
 Each image in the output will be resized to the predefined target size to fit the next inference model in the 
 DAG pipeline.
 Additionally to the detected text boxes, in the two additional outputs are returned their coordinates with information about coordinates
-and confidence levels for the filtered list of detections.  
+and confidence levels for the filtered list of detections.
+
+# Supported models
+
+All [OpenVINO Model Zoo](!https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel) object detection models with specific output tensor `detection` with shape: `[1, 1, 200, 7]`:
+- face-detection
+- face-detection-adas
+- face-detection-retail
+- person-detection
+- person-detection-adas
+- person-detection-retail
+- vehicle-detection
+- vehicle-detection-adas
+- product-detection
+- person-vehicle-bike-detection
+- vehicle-license-plate-detection
+- pedestrian-and-vehicle-detector
 
 # Building custom node library
 
