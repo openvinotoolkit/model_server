@@ -16,20 +16,20 @@
 
 import grpc
 import cv2
+import os
 import numpy as np
 from tensorflow import make_tensor_proto, make_ndarray
 import argparse
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
-parser = argparse.ArgumentParser(description='Client for OCR pipeline')
+parser = argparse.ArgumentParser(description='Client for detailed faces analysis pipeline')
 parser.add_argument('--grpc_address', required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port', required=False, default=9178, help='Specify port to grpc service. default: 9178')
 parser.add_argument('--pipeline_name', required=False, default='ocr', help='Pipeline name to request. default: ocr')
-parser.add_argument('--image_input_name', required=False, default='image', help='Pipeline input name for input with image. default: image')
+parser.add_argument('--image_input_name', required=False, default='image', help='Pipeline input name for input with image with faces. default: image')
 parser.add_argument('--image_input_path', required=True, help='Input image path.')
-parser.add_argument('--texts_output_name', required=False, default='texts', help='Pipeline output name for output with recognized texts. default: texts')
-parser.add_argument('--text_images_output_name', required=False, default='text_images', help='Pipeline output name for cropped images with text. default: text_images')
-parser.add_argument('--text_images_save_path', required=False, default='', help='If specified, images will be saved to disk.')
+parser.add_argument('--face_images_output_name', required=False, default='face_images', help='Pipeline output name for cropped images with faces. default: face_images')
+parser.add_argument('--face_images_save_path', required=False, default='', help='If specified, face images will be saved to disk.')
 parser.add_argument('--image_width', required=False, default=1920, help='Original image width. default: 1920')
 parser.add_argument('--image_height', required=False, default=1024, help='Original image height. default: 1024')
 
@@ -46,17 +46,40 @@ def nchw_to_image(output_nd, name, location):
     for i in range(output_nd.shape[0]):
         out = output_nd[i][0]
         out = out.transpose(1,2,0)
+        #cv2.imwrite(location + name + '_' + str(i) + '.jpg', out)
         cv2.imwrite(os.path.join(location, name + '_' + str(i) + '.jpg'), out)
 
-def crnn_output_to_text(output_nd):
+def update_people_ages(output_nd, people):
     for i in range(output_nd.shape[0]):
-        data = output_nd[i]
-        alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789_'
-        preds = data.argmax(2)
-        word = ''
-        for i in range(preds.shape[0]):
-            word += alphabet[preds[i,0]]
-        print(word)
+        age = int(output_nd[i,0,0,0,0] * 100)
+        if len(people) < i + 1:
+            people.append({'age': age})
+        else:
+            people[i].update({'age': age})
+
+def update_people_genders(output_nd, people):
+    for i in range(output_nd.shape[0]):
+        gender = 'male' if output_nd[i,0,0,0,0] < output_nd[i,0,1,0,0] else 'female'
+        if len(people) < i + 1:
+            people.append({'gender': gender})
+        else:
+            people[i].update({'gender': gender})
+
+def update_people_emotions(output_nd, people):
+    emotion_names = {
+        0: 'neutral',
+        1: 'happy',
+        2: 'sad',
+        3: 'surprised',
+        4: 'angry'
+    }
+    for i in range(output_nd.shape[0]):
+        emotion_id = np.argmax(output_nd[i,0,:,0,0])
+        emotion = emotion_names[emotion_id]
+        if len(people) < i + 1:
+            people.append({'emotion': emotion})
+        else:
+            people[i].update({'emotion': emotion})
 
 
 address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
@@ -76,17 +99,29 @@ try:
     response = stub.Predict(request, 30.0)
 except grpc.RpcError as err:
     if err.code() == grpc.StatusCode.ABORTED:
-        print('No text has been found in the image')
+        print('No face has been found in the image')
         exit(1)
     else:
         raise err
+
+people = []
 
 for name in response.outputs:
     print(f"Output: name[{name}]")
     tensor_proto = response.outputs[name]
     output_nd = make_ndarray(tensor_proto)
     print(f"    numpy => shape[{output_nd.shape}] data[{output_nd.dtype}]")
-    if name == args['text_images_output_name'] and len(args['text_images_save_path']) > 0:
-        nchw_to_image(output_nd, name, args['text_images_save_path'])
-    if name == args['texts_output_name']:
-        crnn_output_to_text(output_nd)
+
+    if name == args['face_images_output_name'] and len(args['face_images_save_path']) > 0:
+        nchw_to_image(output_nd, name, args['face_images_save_path'])
+
+    if name == 'ages':
+        update_people_ages(output_nd, people)
+    if name == 'genders':
+        update_people_genders(output_nd, people)
+    if name == 'emotions':
+        update_people_emotions(output_nd, people)
+
+print('\nFound', len(people), 'faces:')
+for person in people:
+    print('Age:', person['age'], '; Gender:', person['gender'], '; Emotion:', person['emotion'])

@@ -65,12 +65,13 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
             pipelineDefinition->resetSubscriptions(manager);
             return validationResult;
         }
+    } else {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Loading pipeline definition: {} succeeded", pipelineName);
     }
 
     std::unique_lock lock(definitionsMtx);
     definitions[pipelineName] = std::move(pipelineDefinition);
 
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Loading pipeline definition: {} succeeded", pipelineName);
     return validationResult;
 }
 
