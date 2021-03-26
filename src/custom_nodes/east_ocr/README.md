@@ -17,20 +17,20 @@ It will compile the library inside a docker container and save the results in `l
 
 # Custom node inputs
 
-| Input name       | Description           | Format  |
-| ------------- |:-------------:| -----:|
-| image      | Input image in an array format. Only batch size 1 is supported and images must have 3 channels. Resolution is configurable via parameters original_image_width and original_image_height | layout 13HW, precision FP32 |
-| scores      | east-resnet50 model output `feature_fusion/Conv_7/Sigmoid` | shape: [1 1 256 480], precision: FP32 |
-| geometry | east-resnet50 model output `feature_fusion/concat_3` | shape: [1 5 256 480], precision: FP32 |
+| Input name       | Description           | Shape  | Precision |
+| ------------- |:-------------:| -----:| ------:|
+| image      | Input image in an array format. Only batch size 1 is supported and images must have 3 channels. Resolution is configurable via parameters original_image_width and original_image_height | `1,3,H,W` | FP32 |
+| scores      | east-resnet50 model output `feature_fusion/Conv_7/Sigmoid` | `1,1,256,480` | FP32 |
+| geometry | east-resnet50 model output `feature_fusion/concat_3` | `1,5,256,480` | FP32 |
 
 
 # Custom node outputs
 
-| Output name        | Description           | Format  |
-| ------------- |:-------------:| -----:|
-| text_images      | Returns images representing detected text boxes. Boxes are filtered based on confidence_threshold and overlap_threshold params. Resolution is defined by the node parameters. All images are in a single batch. Batch size depend on the number of detected objects.  | shape: [N,1,C,H,W]  precision FP32 |
-| text_coordinates      | For every detected box `N` the following info is added: x coordinate for the box center, y coordinate for the box center, box original width, box original height | [N,1,4] |
-| confidence_levels |   For every detected box `N` information about score result | [N,1,1] |
+| Output name        | Description           | Shape  | Precision |
+| ------------- |:-------------:| -----:| -------:|
+| text_images      | Returns images representing detected text boxes. Boxes are filtered based on confidence_threshold and overlap_threshold params. Resolution is defined by the node parameters. All images are in a single batch. Batch size depend on the number of detected objects.  | `N,1,C,H,W` | FP32 |
+| text_coordinates      | For every detected box `N` the following info is added: x coordinate for the box center, y coordinate for the box center, box original width, box original height | `N,1,4` | I32 |
+| confidence_levels |   For every detected box `N` information about score result | `N,1,1` | FP32 |
 
 # Custom node parameters
 

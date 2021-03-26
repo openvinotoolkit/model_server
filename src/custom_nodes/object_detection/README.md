@@ -17,19 +17,19 @@ It will compile the library inside a docker container and save the results in `l
 
 # Custom node inputs
 
-| Input name       | Description           | Format  |
-| ------------- |:-------------:| -----:|
-| image      | Input image in an array format. Only batch size 1 is supported and images must have 3 channels. Resolution is configurable via parameters original_image_width and original_image_height | layout 13HW, precision FP32 |
-| detection      | object detection model output `detection` | shape: [1 1 200 7], precision: FP32 |
+| Input name       | Description           | Shape | Precision |
+| ------------- |:-------------:| -----:| -----:|
+| image      | Input image in an array format. Only batch size 1 is supported and images must have 3 channels. Resolution is configurable via parameters `original_image_width` and `original_image_height` | `1,3,H,W` | FP32 |
+| detection      | object detection model output | `1,1,200,7` | FP32 |
 
 
 # Custom node outputs
 
-| Output name        | Description           | Format  |
-| ------------- |:-------------:| -----:|
-| images      | Returns images representing detected text boxes. Boxes are filtered based on confidence_threshold param. Resolution is defined by the node parameters. All images are in a single batch. Batch size depend on the number of detected objects.  | shape: [N,1,C,H,W]  precision FP32 |
-| coordinates      | For every detected box `N` the following info is added: x coordinate for the box center, y coordinate for the box center, box original width, box original height | [N,1,4] |
-| confidences |   For every detected box `N` information about confidence level | [N,1,1] |
+| Output name        | Description           | Shape  | Precision |
+| ------------- |:-------------:| -----:| -----:|
+| images      | Returns images representing detected text boxes. Boxes are filtered based on confidence_threshold param. Resolution is defined by the node parameters. All images are in a single batch. Batch size depend on the number of detected objects.  | `N,1,C,H,W` | FP32 |
+| coordinates      | For every detected box `N` the following info is added: x coordinate for the box center, y coordinate for the box center, box original width, box original height | `N,1,4` | I32 |
+| confidences |   For every detected box `N` information about confidence level | `N,1,1` | FP32 |
 
 # Custom node parameters
 
