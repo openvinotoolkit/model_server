@@ -461,6 +461,17 @@ TEST(ModelManager, StartFromFile) {
     modelMock.reset();
 }
 
+TEST(ModelManager, StartFromFileWhenModelFilesMissing) {
+    std::filesystem::create_directories(model_1_path);
+    std::string fileToReload = "/tmp/ovms_config_file1.json";
+    createConfigFileWithContent(config_1_model, fileToReload);
+    ConstructorEnabledModelManager manager;
+    ASSERT_TRUE(std::filesystem::is_empty(model_1_path));
+    auto status = manager.startFromFile(fileToReload);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    manager.join();
+}
+
 TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     std::filesystem::create_directories(model_1_path);
     std::filesystem::create_directories(model_2_path);
