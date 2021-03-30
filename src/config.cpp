@@ -267,7 +267,7 @@ void Config::validate() {
     if (result->count("log_level")) {
         std::vector v({"DEBUG", "INFO", "WARNING", "ERROR"});
         if (std::find(v.begin(), v.end(), this->logLevel()) == v.end()) {
-            std::cerr << "log_level should be on of: DEBUG, INFO, WARNING, ERROR" << std::endl;
+            std::cerr << "log_level should be one of: DEBUG, INFO, WARNING, ERROR" << std::endl;
             exit(EX_USAGE);
         }
     }
