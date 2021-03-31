@@ -28,7 +28,7 @@ static constexpr const char* OUTPUT_COORDINATES_TENSOR_NAME = "coordinates";
 static constexpr const char* OUTPUT_CONFIDENCES_TENSOR_NAME = "confidences";
 
 int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, bool convertToGrayScale) {
-    uint64_t outputBatch = boxes.size();
+    const uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
 
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * outputBatch;
@@ -70,7 +70,7 @@ int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<c
 }
 
 int copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
-    uint64_t outputBatch = boxes.size();
+    const uint64_t outputBatch = boxes.size();
     uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
 
     int32_t* buffer = (int32_t*)malloc(byteSize);
@@ -101,7 +101,7 @@ int copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vec
 }
 
 int copy_confidences_into_output(struct CustomNodeTensor* output, const std::vector<float>& confidences) {
-    uint64_t outputBatch = confidences.size();
+    const uint64_t outputBatch = confidences.size();
     uint64_t byteSize = sizeof(float) * outputBatch;
 
     float* buffer = (float*)malloc(byteSize);

@@ -36,7 +36,7 @@ struct BoxMetadata {
 };
 
 int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const std::vector<BoxMetadata>& metadata, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, bool convertToGrayScale, int rotationAngleThreshold) {
-    uint64_t outputBatch = boxes.size();
+    const uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
 
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * outputBatch;
@@ -79,7 +79,7 @@ int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<c
 }
 
 int copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
-    uint64_t outputBatch = boxes.size();
+    const uint64_t outputBatch = boxes.size();
     uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
 
     int32_t* buffer = (int32_t*)malloc(byteSize);
@@ -106,7 +106,7 @@ int copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vec
 }
 
 int copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<float>& scores) {
-    uint64_t outputBatch = scores.size();
+    const uint64_t outputBatch = scores.size();
     uint64_t byteSize = sizeof(float) * outputBatch;
 
     float* buffer = (float*)malloc(byteSize);

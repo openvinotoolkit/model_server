@@ -19,7 +19,7 @@ It will compile the library inside a docker container and save the results in `l
 
 | Input name       | Description           | Shape  | Precision |
 | ------------- |:-------------:| -----:| ------:|
-| image      | Input image in an array format. Only batch size 1 is supported and images must have 3 channels. Resolution is configurable via parameters original_image_width and original_image_height | `1,3,H,W` | FP32 |
+| image      | Input image in an array format. Only batch size 1 is supported and images must have 3 channels. Resolution is configurable via parameters original_image_width and original_image_height. | `1,3,H,W` | FP32 |
 | scores      | east-resnet50 model output `feature_fusion/Conv_7/Sigmoid` | `1,1,256,480` | FP32 |
 | geometry | east-resnet50 model output `feature_fusion/concat_3` | `1,5,256,480` | FP32 |
 

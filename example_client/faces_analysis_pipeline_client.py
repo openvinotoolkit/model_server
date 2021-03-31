@@ -42,7 +42,7 @@ def prepare_img_input_in_nchw_format(request, name, path, resize_to_shape):
     img = img.transpose(2,0,1).reshape(1,3,target_shape[0],target_shape[1])
     request.inputs[name].CopyFrom(make_tensor_proto(img, shape=img.shape))
 
-def nchw_to_image(output_nd, name, location):
+def save_face_images_as_jpgs(output_nd, name, location):
     for i in range(output_nd.shape[0]):
         out = output_nd[i][0]
         out = out.transpose(1,2,0)
@@ -55,6 +55,7 @@ def update_people_ages(output_nd, people):
             people.append({'age': age})
         else:
             people[i].update({'age': age})
+    return people
 
 def update_people_genders(output_nd, people):
     for i in range(output_nd.shape[0]):
@@ -63,6 +64,7 @@ def update_people_genders(output_nd, people):
             people.append({'gender': gender})
         else:
             people[i].update({'gender': gender})
+    return people
 
 def update_people_emotions(output_nd, people):
     emotion_names = {
@@ -79,6 +81,7 @@ def update_people_emotions(output_nd, people):
             people.append({'emotion': emotion})
         else:
             people[i].update({'emotion': emotion})
+    return people
 
 
 address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
@@ -112,14 +115,15 @@ for name in response.outputs:
     print(f"    numpy => shape[{output_nd.shape}] data[{output_nd.dtype}]")
 
     if name == args['face_images_output_name'] and len(args['face_images_save_path']) > 0:
-        nchw_to_image(output_nd, name, args['face_images_save_path'])
+        save_face_images_as_jpgs(output_nd, name, args['face_images_save_path'])
 
     if name == 'ages':
-        update_people_ages(output_nd, people)
+        people = update_people_ages(output_nd, people)
     if name == 'genders':
-        update_people_genders(output_nd, people)
+        people = update_people_genders(output_nd, people)
     if name == 'emotions':
-        update_people_emotions(output_nd, people)
+        people = update_people_emotions(output_nd, people)
+
 
 print('\nFound', len(people), 'faces:')
 for person in people:

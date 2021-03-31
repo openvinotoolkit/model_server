@@ -2,10 +2,9 @@
 
 This custom node analyses the response of models from OpenVINO Model Zoo. Based on the inference results and the original image,
 it generates a list of detected boxes for following object recognition models. 
-Each image in the output will be resized to the predefined target size to fit the next inference model in the 
+Each image in the output will be resized to the predefined target size to fit the input of the next model in the 
 DAG pipeline.
-Additionally to the detected text boxes, in the two additional outputs are returned their coordinates with information about coordinates
-and confidence levels for the filtered list of detections.
+Additionally to the detected text boxes, two additional outputs are returned - information about coordinates and confidence levels of each box detection.
 
 # Supported models
 
@@ -35,7 +34,7 @@ It will compile the library inside a docker container and save the results in `l
 
 | Input name       | Description           | Shape | Precision |
 | ------------- |:-------------:| -----:| -----:|
-| image      | Input image in an array format. Only batch size 1 is supported and images must have 3 channels. Resolution is configurable via parameters `original_image_width` and `original_image_height` | `1,3,H,W` | FP32 |
+| image      | Input image in an array format. Only batch size 1 is supported and images must have 3 channels. Resolution is configurable via parameters `original_image_width` and `original_image_height`. Color data required only in BGR format. | `1,3,H,W` | FP32 |
 | detection      | object detection model output | `1,1,200,7` | FP32 |
 
 
@@ -45,9 +44,10 @@ It will compile the library inside a docker container and save the results in `l
 | ------------- |:-------------:| -----:| -----:|
 | images      | Returns images representing detected text boxes. Boxes are filtered based on confidence_threshold param. Resolution is defined by the node parameters. All images are in a single batch. Batch size depend on the number of detected objects.  | `N,1,C,H,W` | FP32 |
 | coordinates      | For every detected box `N` the following info is added: x coordinate for the box center, y coordinate for the box center, box original width, box original height | `N,1,4` | I32 |
-| confidences |   For every detected box `N` information about confidence level | `N,1,1` | FP32 |
+| confidences |   For every detected box `N` information about confidence level (N - number of detected boxes; more about demultiplexing [here](./../../../docs/demultiplexing.md)) | `N,1,1` | FP32 |
 
 # Custom node parameters
+Parameters can be defined in pipeline definition in OVMS configuration file. [Read more](./../../../docs/custom_node_development.md) about node parameters.
 
 | Parameter        | Description           | Default  | Required |
 | ------------- | ------------- | ------------- | ------------ |

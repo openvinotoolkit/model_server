@@ -15,7 +15,7 @@
 #
 
 FROM centos:7
-ARG NODE_NAME=object_detection
+ARG NODE_NAME=model_zoo_intel_object_detection
 RUN yum install centos-release-scl -y && yum install -y \
     devtoolset-8-gcc*
 

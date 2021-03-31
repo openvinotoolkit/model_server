@@ -35,7 +35,7 @@ std::vector<T> reorder_to_nhwc(const T* nchwVector, int rows, int cols, int chan
     for (int y = 0; y < rows; ++y) {
         for (int x = 0; x < cols; ++x) {
             for (int c = 0; c < channels; ++c) {
-                nhwcVector[y * channels * cols + x * channels + c] = nchwVector[c * (rows * cols) + y * cols + x];
+                nhwcVector[y * channels * cols + x * channels + c] = reinterpret_cast<const T*>(nchwVector)[c * (rows * cols) + y * cols + x];
             }
         }
     }
