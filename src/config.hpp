@@ -345,7 +345,7 @@ public:
     uint restTimeout() {
         return result->operator[]("rest_timeout").as<uint>();
     }
-    
+
     /**
      * @brief Get the sequence cleaner poll wait time in minutes
      * 
