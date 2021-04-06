@@ -35,7 +35,7 @@ struct BoxMetadata {
     float originalHeight;
 };
 
-int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const std::vector<BoxMetadata>& metadata, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, bool convertToGrayScale, int rotationAngleThreshold) {
+bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const std::vector<BoxMetadata>& metadata, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, bool convertToGrayScale, int rotationAngleThreshold) {
     const uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
 
@@ -44,7 +44,7 @@ int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<c
     float* buffer = (float*)malloc(byteSize);
     NODE_ASSERT(buffer != nullptr, "malloc has failed");
     if (buffer == nullptr) {
-        return 1;
+        return false;
     }
 
     for (uint64_t i = 0; i < outputBatch; i++) {
@@ -55,7 +55,7 @@ int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<c
         if (!crop_rotate_resize(originalImage, image, boxes[i], (abs(degree) > rotationAngleThreshold) ? -degree : 0.0, metadata[i].originalWidth, metadata[i].originalHeight, targetShape)) {
             std::cout << "box is outside of original image" << std::endl;
             free(buffer);
-            return 1;
+            return false;
         }
         if (convertToGrayScale) {
             image = apply_grayscale(image);
@@ -75,10 +75,10 @@ int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<c
     output->dims[3] = targetImageHeight;
     output->dims[4] = targetImageWidth;
     output->precision = FP32;
-    return 0;
+    return true;
 }
 
-int copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
+bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
     const uint64_t outputBatch = boxes.size();
     uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
 
@@ -102,10 +102,10 @@ int copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vec
     output->dims[1] = 1;
     output->dims[2] = 4;
     output->precision = I32;
-    return 0;
+    return true;
 }
 
-int copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<float>& scores) {
+bool copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<float>& scores) {
     const uint64_t outputBatch = scores.size();
     uint64_t byteSize = sizeof(float) * outputBatch;
 
@@ -122,7 +122,7 @@ int copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<f
     output->dims[1] = 1;
     output->dims[2] = 1;
     output->precision = FP32;
-    return 0;
+    return true;
 }
 
 void cleanup(CustomNodeTensor& tensor) {
@@ -320,14 +320,14 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT((*outputs) != nullptr, "malloc has failed");
     CustomNodeTensor& textImagesTensor = (*outputs)[0];
     textImagesTensor.name = TEXT_IMAGES_TENSOR_NAME;
-    if (copy_images_into_output(&textImagesTensor, filteredBoxes, filteredMetadata, image, targetImageHeight, targetImageWidth, convertToGrayScale, rotationAngleThreshold)) {
+    if (!copy_images_into_output(&textImagesTensor, filteredBoxes, filteredMetadata, image, targetImageHeight, targetImageWidth, convertToGrayScale, rotationAngleThreshold)) {
         free(*outputs);
         return 1;
     }
 
     CustomNodeTensor& coordinatesTensor = (*outputs)[1];
     coordinatesTensor.name = COORDINATES_TENSOR_NAME;
-    if (copy_coordinates_into_output(&coordinatesTensor, filteredBoxes)) {
+    if (!copy_coordinates_into_output(&coordinatesTensor, filteredBoxes)) {
         free(*outputs);
         cleanup(textImagesTensor);
         return 1;
@@ -335,7 +335,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     CustomNodeTensor& confidenceTensor = (*outputs)[2];
     confidenceTensor.name = CONFIDENCE_TENSOR_NAME;
-    if (copy_scores_into_output(&confidenceTensor, filteredScores)) {
+    if (!copy_scores_into_output(&confidenceTensor, filteredScores)) {
         free(*outputs);
         cleanup(textImagesTensor);
         cleanup(coordinatesTensor);
