@@ -8,7 +8,7 @@ Additionally to the detected text boxes, two additional outputs are returned - i
 
 # Supported models
 
-All [OpenVINO Model Zoo](!https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel) object detection models with specific output tensor `detection` with shape: `[1, 1, 200, 7]`:
+All [OpenVINO Model Zoo](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel) object detection models with specific output tensor `detection` with shape: `[1, 1, 200, 7]`:
 - face-detection
 - face-detection-adas
 - face-detection-retail

@@ -15,7 +15,7 @@
     ],
     "custom_node_library_config_list": [
         {"name": "object_detection_image_extractor",
-            "base_path": "/ovms/src/custom_nodes/object_detection/lib/libcustom_node_model_zoo_intel_object_detection.so"}
+            "base_path": "/ovms/src/custom_nodes/model_zoo_intel_object_detection/lib/libcustom_node_model_zoo_intel_object_detection.so"}
     ],
     "pipeline_config_list": [
         {

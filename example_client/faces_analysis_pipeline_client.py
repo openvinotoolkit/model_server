@@ -83,6 +83,14 @@ def update_people_emotions(output_nd, people):
             people[i].update({'emotion': emotion})
     return people
 
+def update_people_coordinate(output_nd, people):
+    for i in range(output_nd.shape[0]):
+        if len(people) < i + 1:
+            people.append({'coordinate': output_nd[i,0,:]})
+        else:
+            people[i].update({'coordinate': output_nd[i,0,:]})
+    return people
+
 
 address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
 MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
@@ -123,8 +131,10 @@ for name in response.outputs:
         people = update_people_genders(output_nd, people)
     if name == 'emotions':
         people = update_people_emotions(output_nd, people)
+    if name == 'face_coordinates':
+        people = update_people_coordinate(output_nd, people)
 
 
 print('\nFound', len(people), 'faces:')
 for person in people:
-    print('Age:', person['age'], '; Gender:', person['gender'], '; Emotion:', person['emotion'])
+    print('Age:', person['age'], '; Gender:', person['gender'], '; Emotion:', person['emotion'], '; Original image coordinate:', person['coordinate'])

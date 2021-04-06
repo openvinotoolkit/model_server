@@ -69,8 +69,8 @@ int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<c
     return 0;
 }
 
-int copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
-    const uint64_t outputBatch = boxes.size();
+int copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Vec4f>& detections) {
+    const uint64_t outputBatch = detections.size();
     uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
 
     int32_t* buffer = (int32_t*)malloc(byteSize);
@@ -80,11 +80,8 @@ int copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vec
     }
 
     for (size_t i = 0; i < outputBatch; i++) {
-        int32_t entry[] = {
-            boxes[i].x,
-            boxes[i].y,
-            boxes[i].width,
-            boxes[i].height};
+        float entry[] = {
+            detections[i][0], detections[i][1], detections[i][2], detections[i][3]};
         std::memcpy(buffer + (i * 4), entry, byteSize / outputBatch);
     }
 
@@ -96,7 +93,7 @@ int copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vec
     output->dims[0] = outputBatch;
     output->dims[1] = 1;
     output->dims[2] = 4;
-    output->precision = I32;
+    output->precision = FP32;
     return 0;
 }
 
@@ -196,6 +193,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     uint64_t featuresCount = detectionTensor->dims[3];
 
     std::vector<cv::Rect> boxes;
+    std::vector<cv::Vec4f> detections;
     std::vector<float> confidences;
 
     for (uint64_t i = 0; i < detectionsCount; i++) {
@@ -216,6 +214,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
             }
             auto box = cv::Rect(cv::Point(xMin, yMin), cv::Point(xMax, yMax));
             boxes.emplace_back(box);
+            detections.emplace_back(detection[3], detection[4], detection[5], detection[6]);
             confidences.emplace_back(confidence);
             if (debugMode) {
                 std::cout << "Detection:\nImageID: " << imageId << "; LabelID:" << labelId << "; Confidence:" << confidence << "; Box:" << box << std::endl;
@@ -242,7 +241,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     CustomNodeTensor& coordinatesTensor = (*outputs)[1];
     coordinatesTensor.name = OUTPUT_COORDINATES_TENSOR_NAME;
-    if (copy_coordinates_into_output(&coordinatesTensor, boxes)) {
+    if (copy_coordinates_into_output(&coordinatesTensor, detections)) {
         cleanup(imagesTensor);
         free(*outputs);
         return 1;
@@ -320,8 +319,8 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     NODE_ASSERT(((*info)[1].dims) != nullptr, "malloc has failed");
     (*info)[1].dims[0] = 0;
     (*info)[1].dims[1] = 1;
-    (*info)[1].dims[2] = 5;
-    (*info)[1].precision = I32;
+    (*info)[1].dims[2] = 4;
+    (*info)[1].precision = FP32;
 
     (*info)[2].name = OUTPUT_CONFIDENCES_TENSOR_NAME;
     (*info)[2].dimsCount = 3;
