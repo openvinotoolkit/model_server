@@ -253,6 +253,10 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
                 return StatusCode::UNKNOWN_ERROR;
             }
             memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
+            std::stringstream ss;
+            ss << "Node: " << getName() << " input demultiplied: " << blobName
+               << "; Actual: " << TensorInfo::shapeToString(dividedBlob->getTensorDesc().getDims());
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
             auto it = nodeSessionOutputs.find(newSessionMetadatas[i].getSessionKey());
             if (it == nodeSessionOutputs.end()) {
                 nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{blobName, dividedBlob}}});
