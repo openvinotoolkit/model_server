@@ -22,7 +22,7 @@ import argparse
 import math
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
-from kaldi_python_io import ArchiveReader
+from kaldi_python_io import ArchiveReader, ArchiveWriter
 import importlib
 
 spec = importlib.util.spec_from_loader('client_utils', importlib.machinery.SourceFileLoader('client_utils', '../client_utils.py'))
@@ -69,8 +69,11 @@ def parse_arguments():
     parser.add_argument(
         '--score_path',
         required=False,
-        default='rm_lstm4f/test_score_1_10.ark',
         help='Path to reference scores ark file')
+    parser.add_argument(
+        '--output_path',
+        required=False,
+        help='Path to output scores ark file')
     parser.add_argument(
         '--grpc_address',
         required=False,
@@ -136,11 +139,13 @@ def prepare_processing_data(args):
         ark_reader = ArchiveReader(input_path)
         input_files.append(ark_reader)
 
-    score_paths = args.get('score_path').split(delimiter)
-    for score_path in score_paths:
-        print('Reading scores ark file {}'.format(score_path))
-        ark_reader = ArchiveReader(score_path)
-        reference_files.append(ark_reader)
+    score_path = args.get('score_path')
+    if score_path:
+        score_paths = score_path.split(delimiter)
+        for score_path in score_paths:
+            print('Reading scores ark file {}'.format(score_path))
+            ark_reader = ArchiveReader(score_path)
+            reference_files.append(ark_reader)
 
     inputs = args['input_name'].split(delimiter)
     for input in inputs:
@@ -160,7 +165,7 @@ def prepare_processing_data(args):
                 len(input_names)))
         exit(1)
 
-    if len(reference_files) != len(output_names):
+    if len(reference_files) != len(output_names) and len(reference_files) != 0:
         print(
             "ERROR: Number of output ark files {} must be equal to the number of output names {}".format(
                 len(reference_files),
@@ -230,6 +235,7 @@ def main():
     args = parse_arguments()
     global debug_mode
     debug_mode = int(args.get('debug'))
+    output_path = args.get('output_path')
 
     channel = grpc.insecure_channel(
         "{}:{}".format(
@@ -249,6 +255,8 @@ def main():
     print('Start processing:')
     print('Model name: {}'.format(args.get('model_name')))
 
+    output_scores = {}
+
     sequence_size_map, input_names, output_names, input_data, reference_scores = prepare_processing_data(
         args)
 
@@ -265,16 +273,18 @@ def main():
         print_debug('\tInput {} in shape: {}'.format(input_name, tensor_data.shape))
 
     # Output shape information
-    for output_name in output_names:
-        score_data = reference_scores[output_name][list(sequence_size_map.keys())[0]][0]
-        score_data = np.expand_dims(score_data, axis=0)
-        print_debug('\tOutput {} in shape: {}'.format(output_name, score_data.shape))
+    if reference_scores:
+        for output_name in output_names:
+            score_data = reference_scores[output_name][list(sequence_size_map.keys())[0]][0]
+            score_data = np.expand_dims(score_data, axis=0)
+            print_debug('\tOutput {} in shape: {}'.format(output_name, score_data.shape))
 
     # Main inference loop
     for sequence_name, sequence_size in sequence_size_map.items():
         print('\n\tSequence name: {}'.format(sequence_name))
         print('\tSequence size: {}'.format(sequence_size))
         print('\tSequence id: {}'.format(sequence_id))
+        output_scores[sequence_name] = {}
 
         if sequence_size == 1:
             print('\nERROR: Detected sequence with only one frame. Every sequence must contain at least 2 frames.'.format(
@@ -353,47 +363,68 @@ def main():
                 avg_rms_error_sum = 0.0
 
                 for output_name in output_names:
-                    score_data = reference_scores[output_name][sequence_name][score_index]
+                    if reference_scores:
+                        score_data = reference_scores[output_name][sequence_name][score_index]
 
                     # Parse output
                     results_array = make_ndarray(result.outputs[output_name])
+                    if output_name in output_scores[sequence_name]:
+                        output_scores[sequence_name][output_name] = np.concatenate((output_scores[sequence_name][output_name], results_array), axis=0)
+                    else:
+                        output_scores[sequence_name][output_name] = results_array
 
                     # Calculate error
-                    avg_rms_error = calculate_utterance_error(
-                        score_data, results_array[0])
-                    avg_rms_error_sum += avg_rms_error
+                    if reference_scores:
+                        avg_rms_error = calculate_utterance_error(
+                            score_data, results_array[0])
+                        avg_rms_error_sum += avg_rms_error
 
-                    # Statistics
-                    print_debug(
-                        'Output name: {} Rms error: {:.10f}\n'.format(
-                            output_name, avg_rms_error))
+                        # Statistics
+                        print_debug(
+                            'Output name: {} Rms error: {:.10f}\n'.format(
+                                output_name, avg_rms_error))
 
                 mean_avg_rms_error_sum += avg_rms_error_sum
                 # Statistics
-                print_debug(
-                    'Iteration {}; Average rms error: {:.10f} Processing time: {:.2f} ms; speed {:.2f} fps\n'.format(
-                        x, avg_rms_error_sum, round(
-                            np.average(duration), 2), round(
+                if reference_scores:
+                    print_debug(
+                        'Iteration {}; Average rms error: {:.10f} Processing time: {:.2f} ms; speed {:.2f} fps\n'.format(
+                            x, avg_rms_error_sum, round(
+                                np.average(duration), 2), round(
+                                sequence_size / np.average(duration), 2)))
+                else:
+                    print_debug(
+                        'Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps\n'.format(
+                            x, round(np.average(duration), 2), round(
                             sequence_size / np.average(duration), 2)))
                 # END output names loop
 
             score_index += 1
             # END utterance loop
 
-        seq_avg_rms_error_sum = mean_avg_rms_error_sum / (sequence_size)
-        print(
-            "\tSequence id: {} ; Sequence name: {} ; Average RMS Error: {:.10f}\n".format(
-                sequence_id,
-                sequence_name,
-                seq_avg_rms_error_sum))
-        global_avg_rms_error_sum += seq_avg_rms_error_sum
+        if reference_scores:
+            seq_avg_rms_error_sum = mean_avg_rms_error_sum / (sequence_size)
+            print(
+                "\tSequence id: {} ; Sequence name: {} ; Average RMS Error: {:.10f}\n".format(
+                    sequence_id,
+                    sequence_name,
+                    seq_avg_rms_error_sum))
+            global_avg_rms_error_sum += seq_avg_rms_error_sum
         # END input name loop
 
-    final_avg_rms_error_sum = global_avg_rms_error_sum / len(sequence_size_map)
+    if reference_scores:
+        final_avg_rms_error_sum = global_avg_rms_error_sum / len(sequence_size_map)
 
-    print("Global average rms error: {:.10f}\n".format(
-        final_avg_rms_error_sum))
+        print("Global average rms error: {:.10f}\n".format(
+            final_avg_rms_error_sum))
     client_utils.print_statistics(processing_times, sequence_size / 1000)
+
+    if output_path:
+        with ArchiveWriter(output_path) as writer:
+            for key, value in output_scores.items():
+                writer.write(key, value[list(value.keys())[0]])
+        print("Output scores saved in: {}".format(output_path))
+
     print('### Finished grpc_stateful_client.py client processing ###')
 
 
