@@ -100,6 +100,10 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
             return Status(StatusCode::INVALID_MISSING_INPUT, details);
         }
         auto& inputInfo = *inputsInfo.at(name);
+        std::stringstream ss;
+        ss << "Node: " << getName() << " input validate: " << name
+           << "; Actual: " << TensorInfo::shapeToString(inputInfo.getShape());
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
         auto status = validate(blob, inputInfo);
         if (status.ok()) {
             continue;

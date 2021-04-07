@@ -1034,7 +1034,7 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelMa
         for (auto& [inputName, inputTensorInfo] : inputsInfo) {
             shape_t newShape = inputTensorInfo->getShape();
             newShape.insert(newShape.begin(), demultiplyCount);
-            inputTensorInfo->setShape(newShape);
+            inputTensorInfo = inputTensorInfo->createCopyWithNewShape(newShape);
         }
     }
     return StatusCode::OK;
