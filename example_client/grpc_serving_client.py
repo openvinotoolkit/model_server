@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Intel Corporation
+# Copyright (c) 2018-2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,6 +52,7 @@ parser.add_argument('--model_name', default='resnet', help='Define model name, m
                     dest='model_name')
 parser.add_argument('--pipeline_name', default='', help='Define pipeline name, must be same as is in service',
                     dest='pipeline_name')
+parser.add_argument('--dag-batch-size-auto', default=False, action='store_true', help='add demultiplexer dimension at front', dest='dag-batch-size-auto')
 parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with gRPC endpoint')
 parser.add_argument('--server_cert', required=False, help='Path to server certificate')
 parser.add_argument('--client_cert', required=False, help='Path to client certificate')
@@ -120,7 +121,11 @@ while iteration <= iterations:
         img = imgs[x:(x + batch_size)]
         if args.get('labels_numpy_path') is not None:
             lb = lbs[x:(x + batch_size)]
-        request.inputs[args['input_name']].CopyFrom(make_tensor_proto(img, shape=(img.shape)))
+        if args.get('dag-batch-size-auto'):
+            newShape = img.shape[0:1] + (1,) + img.shape[1:]
+            request.inputs[args['input_name']].CopyFrom(make_tensor_proto(img, shape=newShape))
+        else:
+            request.inputs[args['input_name']].CopyFrom(make_tensor_proto(img, shape=(img.shape)))
         start_time = datetime.datetime.now()
         result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
         end_time = datetime.datetime.now()

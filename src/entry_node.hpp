@@ -45,6 +45,7 @@ public:
 
 protected:
     Status fetchResults(BlobMap& outputs);
+    Status createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, const InferenceEngine::TensorDesc& dividedBlobDesc, InferenceEngine::Blob::Ptr blob, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName) override;
 
 public:
     // Entry nodes have no dependency

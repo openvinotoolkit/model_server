@@ -243,30 +243,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         const auto step = blob->byteSize() / resultsDemultiplyCount;
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
             InferenceEngine::Blob::Ptr dividedBlob;
-            if (getName() == "request") {
-                if (tensorDesc.getPrecision() == InferenceEngine::Precision::FP32)
-                    dividedBlob = InferenceEngine::make_shared_blob<float>(dividedBlobDesc, (float*)blob->buffer() + i * step / sizeof(float));
-                if (tensorDesc.getPrecision() == InferenceEngine::Precision::U8)
-                    dividedBlob = InferenceEngine::make_shared_blob<uint8_t>(dividedBlobDesc, (uint8_t*)blob->buffer() + i * step / sizeof(uint8_t));
-                if (tensorDesc.getPrecision() == InferenceEngine::Precision::I8)
-                    dividedBlob = InferenceEngine::make_shared_blob<int8_t>(dividedBlobDesc, (int8_t*)blob->buffer() + i * step / sizeof(int8_t));
-                if (tensorDesc.getPrecision() == InferenceEngine::Precision::I16)
-                    dividedBlob = InferenceEngine::make_shared_blob<int16_t>(dividedBlobDesc, (int16_t*)blob->buffer() + i * step / sizeof(int16_t));
-                if (tensorDesc.getPrecision() == InferenceEngine::Precision::I32)
-                    dividedBlob = InferenceEngine::make_shared_blob<int32_t>(dividedBlobDesc, (int32_t*)blob->buffer() + i * step / sizeof(int32_t));
-
-            } else {
-                auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
-                if (!status.ok()) {
-                    return status;
-                }
-                if (dividedBlob->byteSize() != step) {
-                    SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created blob: {} have wrong byte size: {}, expected: {}",
-                        getName(), metadata.getSessionKey(), blobName, dividedBlob->byteSize(), step);
-                    return StatusCode::UNKNOWN_ERROR;
-                }
-                memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
-            }
+            this->createShardedBlob(dividedBlob, dividedBlobDesc, blob, i, step, metadata, blobName);
             std::stringstream ss;
             ss << "Node: " << getName() << " input demultiplied: " << blobName
                << "; Actual: " << TensorInfo::shapeToString(dividedBlob->getTensorDesc().getDims());
@@ -283,4 +260,17 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     return StatusCode::OK;
 }
 
+Status Node::createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, const InferenceEngine::TensorDesc& dividedBlobDesc, InferenceEngine::Blob::Ptr blob, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName) {
+    auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
+    if (!status.ok()) {
+        return status;
+    }
+    if (dividedBlob->byteSize() != step) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created blob: {} have wrong byte size: {}, expected: {}",
+            getName(), metadata.getSessionKey(), blobName, dividedBlob->byteSize(), step);
+        return StatusCode::UNKNOWN_ERROR;
+    }
+    memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
+    return StatusCode::OK;
+}
 }  // namespace ovms
