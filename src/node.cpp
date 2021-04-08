@@ -243,12 +243,17 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         const auto step = blob->byteSize() / resultsDemultiplyCount;
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
             InferenceEngine::Blob::Ptr dividedBlob;
-            if ((getName() == "request") &&
-                ((tensorDesc.getPrecision() == InferenceEngine::Precision::FP32) ||
-                    (tensorDesc.getPrecision() == InferenceEngine::Precision::U8) ||
-                    (tensorDesc.getPrecision() == InferenceEngine::Precision::I8) ||
-                    (tensorDesc.getPrecision() == InferenceEngine::Precision::I16) ||
-                    (tensorDesc.getPrecision() == InferenceEngine::Precision::I32))) {
+            if (getName() == "request") {
+                if (tensorDesc.getPrecision() == InferenceEngine::Precision::FP32)
+                    dividedBlob = InferenceEngine::make_shared_blob<float>(dividedBlobDesc, (float*)blob->buffer() + i * step / sizeof(float));
+                if (tensorDesc.getPrecision() == InferenceEngine::Precision::U8)
+                    dividedBlob = InferenceEngine::make_shared_blob<uint8_t>(dividedBlobDesc, (uint8_t*)blob->buffer() + i * step / sizeof(uint8_t));
+                if (tensorDesc.getPrecision() == InferenceEngine::Precision::I8)
+                    dividedBlob = InferenceEngine::make_shared_blob<int8_t>(dividedBlobDesc, (int8_t*)blob->buffer() + i * step / sizeof(int8_t));
+                if (tensorDesc.getPrecision() == InferenceEngine::Precision::I16)
+                    dividedBlob = InferenceEngine::make_shared_blob<int16_t>(dividedBlobDesc, (int16_t*)blob->buffer() + i * step / sizeof(int16_t));
+                if (tensorDesc.getPrecision() == InferenceEngine::Precision::I32)
+                    dividedBlob = InferenceEngine::make_shared_blob<int32_t>(dividedBlobDesc, (int32_t*)blob->buffer() + i * step / sizeof(int32_t));
 
             } else {
                 auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
