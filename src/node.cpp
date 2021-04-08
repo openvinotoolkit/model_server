@@ -243,16 +243,25 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         const auto step = blob->byteSize() / resultsDemultiplyCount;
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
             InferenceEngine::Blob::Ptr dividedBlob;
-            auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
-            if (!status.ok()) {
-                return status;
+            if ((getName() == "request") &&
+                ((tensorDesc.getPrecision() == InferenceEngine::Precision::FP32) ||
+                    (tensorDesc.getPrecision() == InferenceEngine::Precision::U8) ||
+                    (tensorDesc.getPrecision() == InferenceEngine::Precision::I8) ||
+                    (tensorDesc.getPrecision() == InferenceEngine::Precision::I16) ||
+                    (tensorDesc.getPrecision() == InferenceEngine::Precision::I32))) {
+
+            } else {
+                auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
+                if (!status.ok()) {
+                    return status;
+                }
+                if (dividedBlob->byteSize() != step) {
+                    SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created blob: {} have wrong byte size: {}, expected: {}",
+                        getName(), metadata.getSessionKey(), blobName, dividedBlob->byteSize(), step);
+                    return StatusCode::UNKNOWN_ERROR;
+                }
+                memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
             }
-            if (dividedBlob->byteSize() != step) {
-                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created blob: {} have wrong byte size: {}, expected: {}",
-                    getName(), metadata.getSessionKey(), blobName, dividedBlob->byteSize(), step);
-                return StatusCode::UNKNOWN_ERROR;
-            }
-            memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
             std::stringstream ss;
             ss << "Node: " << getName() << " input demultiplied: " << blobName
                << "; Actual: " << TensorInfo::shapeToString(dividedBlob->getTensorDesc().getDims());
