@@ -469,16 +469,16 @@ public:
         // If validated connection pair connects two DL model/Custom nodes,
         // check if both input/output exist and its metadata (shape, precision) matches.
         // Affect shape by demultiplexer/gather if applies.
-        const auto& tensorInput = this->inputsInfo.at(modelInputName);
         const auto& tensorOutput = this->dependencyOutputsInfo.at(modelOutputName);
-        shape_t tensorInputShape = tensorInput->getShape();
         shape_t tensorOutputShape = tensorOutput->getShape();
         if (dependencyNodeInfo.demultiplyCount) {
             auto result = influenceShapeWithDemultiplexer(tensorOutputShape, dependencyNodeInfo);
-            if (!result.ok()) {
+            if (!result.ok() || dependencyNodeInfo.kind == NodeKind::EXIT) {
                 return result;
             }
         }
+        const auto& tensorInput = this->inputsInfo.at(modelInputName);
+        shape_t tensorInputShape = tensorInput->getShape();
         if (dependantNodeInfo.gatherFromNode.size() == 1) {
             std::vector<NodeInfo>::const_iterator demultiplicatorNode;
             auto result = getDependencyNodeInfo(*dependantNodeInfo.gatherFromNode.begin(), demultiplicatorNode);
@@ -617,9 +617,7 @@ public:
                 return result;
             }
 
-            if (
-                (dependantNodeInfo.kind == NodeKind::DL || dependantNodeInfo.kind == NodeKind::CUSTOM) &&
-                (dependencyNodeInfo.kind == NodeKind::DL || dependencyNodeInfo.kind == NodeKind::CUSTOM)) {
+            if (dependencyNodeInfo.kind == NodeKind::DL || dependencyNodeInfo.kind == NodeKind::CUSTOM) {
                 result = checkConnectionMetadataCorrectness(dependencyNodeInfo, realName, dependencyNodeInfo.outputNameAliases.at(alias));
                 if (!result.ok()) {
                     return result;
