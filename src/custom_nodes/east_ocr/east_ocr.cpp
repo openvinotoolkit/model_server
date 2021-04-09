@@ -291,6 +291,9 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
             NODE_ASSERT(x2 > x1, "detected box width must be greater than 0");
             NODE_ASSERT(y2 > y1, "detected box height must be greater than 0");
 
+            NODE_ASSERT(x2 > x1, "detected box width must be greater than 0");
+            NODE_ASSERT(y2 > y1, "detected box height must be greater than 0");
+
             rects.emplace_back(x1, y1, x2 - x1, y2 - y1);
             scores.emplace_back(score);
             metadata.emplace_back(BoxMetadata{angle, w * (1.0f + boxWidthAdjustment), h * (1.0f + boxHeightAdjustment)});

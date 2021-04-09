@@ -20,8 +20,8 @@
 namespace ovms {
 
 class SequenceProcessingSpec {
-    uint32_t sequenceControlInput;
-    uint64_t sequenceId;
+    uint32_t sequenceControlInput = 0;
+    uint64_t sequenceId = 0;
 
 public:
     SequenceProcessingSpec() = default;
