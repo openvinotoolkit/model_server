@@ -32,6 +32,7 @@ parser.add_argument('--face_images_output_name', required=False, default='face_i
 parser.add_argument('--face_images_save_path', required=False, default='', help='If specified, face images will be saved to disk.')
 parser.add_argument('--image_width', required=False, default=1920, help='Original image width. default: 1920')
 parser.add_argument('--image_height', required=False, default=1024, help='Original image height. default: 1024')
+parser.add_argument('--image_layout', required=False, default='CHW', choices=['CHW', 'HWC'], help='Original image layout. default: CHW')
 
 args = vars(parser.parse_args())
 
@@ -41,6 +42,14 @@ def prepare_img_input_in_nchw_format(request, name, path, resize_to_shape):
     target_shape = (img.shape[0], img.shape[1])
     img = img.transpose(2,0,1).reshape(1,3,target_shape[0],target_shape[1])
     request.inputs[name].CopyFrom(make_tensor_proto(img, shape=img.shape))
+
+def prepare_img_input_in_nhwc_format(request, name, path, resize_to_shape):
+    img = cv2.imread(path).astype(np.float32)  # BGR color format, shape HWC
+    img = cv2.resize(img, (resize_to_shape[1], resize_to_shape[0]))
+    target_shape = (img.shape[0], img.shape[1])
+    img = img.reshape(1,target_shape[0],target_shape[1],3)
+    request.inputs[name].CopyFrom(make_tensor_proto(img, shape=img.shape))
+
 
 def save_face_images_as_jpgs(output_nd, name, location):
     for i in range(output_nd.shape[0]):
@@ -103,7 +112,14 @@ channel = grpc.insecure_channel(address,
 stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 request = predict_pb2.PredictRequest()
 request.model_spec.name = args['pipeline_name']
-prepare_img_input_in_nchw_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
+
+if args['image_layout'] == 'CHW':
+    prepare_img_input_in_nchw_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
+elif args['image_layout'] == 'HWC':
+    prepare_img_input_in_nhwc_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
+else:
+    print('layout can be CHW or HWC only')
+    exit(1)
 
 try:
     response = stub.Predict(request, 30.0)

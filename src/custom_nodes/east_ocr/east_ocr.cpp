@@ -140,8 +140,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT((originalImageWidth % 4) == 0, "original image width must be divisible by 4");
     int targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
     int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
-    NODE_ASSERT(targetImageHeight > 0, "original image height must be larger than 0");
-    NODE_ASSERT(targetImageWidth > 0, "original image width must be larger than 0");
+    NODE_ASSERT(targetImageHeight > 0, "target image height must be larger than 0");
+    NODE_ASSERT(targetImageWidth > 0, "target image width must be larger than 0");
     bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
     float confidenceThreshold = get_float_parameter("confidence_threshold", params, paramsCount, -1.0);
     NODE_ASSERT(confidenceThreshold >= 0 && confidenceThreshold <= 1.0, "confidence threshold must be in 0-1 range");
@@ -395,8 +395,8 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
 int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
     int targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
     int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
-    NODE_ASSERT(targetImageHeight > 0, "original image height must be larger than 0");
-    NODE_ASSERT(targetImageWidth > 0, "original image width must be larger than 0");
+    NODE_ASSERT(targetImageHeight > 0, "target image height must be larger than 0");
+    NODE_ASSERT(targetImageWidth > 0, "target image width must be larger than 0");
     bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
 
     *infoCount = 3;
