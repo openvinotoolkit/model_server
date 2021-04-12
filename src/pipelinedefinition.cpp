@@ -736,7 +736,7 @@ public:
         if (dependantNodeInfo.kind == NodeKind::DL || dependantNodeInfo.kind == NodeKind::CUSTOM) {
             for (const auto& [name, tensorOutput] : outputsInfo) {
                 shape_t tensorOutputShape = tensorOutput->getShape();
-                auto result = influenceShapeWithDemultiplexer(tensorOutputShape, dependantNodeInfo);
+                auto result = validateShapeWithDemultiplexer(tensorOutputShape, dependantNodeInfo);
                 if (!result.ok()) {
                     return result;
                 }
