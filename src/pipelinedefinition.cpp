@@ -471,11 +471,12 @@ public:
         // Affect shape by demultiplexer/gather if applies.
         const auto& tensorOutput = this->dependencyOutputsInfo.at(modelOutputName);
         shape_t tensorOutputShape = tensorOutput->getShape();
-        if (dependencyNodeInfo.demultiplyCount) {
-            auto result = influenceShapeWithDemultiplexer(tensorOutputShape, dependencyNodeInfo);
-            if (!result.ok() || dependencyNodeInfo.kind == NodeKind::EXIT) {
-                return result;
-            }
+        auto result = influenceShapeWithDemultiplexer(tensorOutputShape, dependencyNodeInfo);
+        if (!result.ok()) {
+            return result;
+        }
+        if (dependantNodeInfo.kind == NodeKind::EXIT) {
+            return StatusCode::OK;
         }
         const auto& tensorInput = this->inputsInfo.at(modelInputName);
         shape_t tensorInputShape = tensorInput->getShape();
@@ -617,7 +618,8 @@ public:
                 return result;
             }
 
-            if (dependencyNodeInfo.kind == NodeKind::DL || dependencyNodeInfo.kind == NodeKind::CUSTOM) {
+            if (dependantNodeInfo.kind != NodeKind::ENTRY &&
+                (dependencyNodeInfo.kind == NodeKind::DL || dependencyNodeInfo.kind == NodeKind::CUSTOM)) {
                 result = checkConnectionMetadataCorrectness(dependencyNodeInfo, realName, dependencyNodeInfo.outputNameAliases.at(alias));
                 if (!result.ok()) {
                     return result;
