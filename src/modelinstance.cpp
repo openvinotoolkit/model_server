@@ -80,6 +80,43 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         }
     }
     this->inputsInfo.clear();
+
+    for (const auto& pair : networkInputs) {
+        const auto& name = pair.first;
+        auto input = pair.second;
+        auto shape = input->getTensorDesc().getDims();
+        if (config.getBatchSize() > 0 || parameter.isBatchSizeRequested()) {
+            // leave shape untouched
+        } else if (config.isShapeAuto(name) && parameter.isShapeRequested(name)) {
+            shape = parameter.getShape(name);
+        } else if (config.getShapes().count(name) && config.getShapes().at(name).shape.size()) {
+            shape = config.getShapes().at(name).shape;
+        } else if (config.getShapes().count(ANONYMOUS_INPUT_NAME) && config.getShapes().at(ANONYMOUS_INPUT_NAME).shape.size()) {
+            shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
+        }
+
+        SPDLOG_DEBUG("Network shape for input: {} - {}; final shape {}", name, TensorInfo::shapeToString(networkShapes[name]), TensorInfo::shapeToString(shape));
+
+        if (networkShapes[name] != shape) {
+            reshapeRequired = true;
+            networkShapes[name] = shape;
+        }
+    }
+
+    // Update OV model shapes
+    if (reshapeRequired) {
+        SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs", getName(), getVersion());
+        try {
+            network->reshape(networkShapes);
+        } catch (const InferenceEngine::details::InferenceEngineException& e) {
+            SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
+            SPDLOG_DEBUG("Description: {}", e.what());
+            return StatusCode::RESHAPE_ERROR;
+        }
+    } else {
+        SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
+    }
+
     for (const auto& pair : networkInputs) {
         const auto& name = pair.first;
         auto input = pair.second;
@@ -99,23 +136,6 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         }
         input->setLayout(layout);
 
-        if (config.getBatchSize() > 0 || parameter.isBatchSizeRequested()) {
-            // leave shape untouched
-        } else if (config.isShapeAuto(name) && parameter.isShapeRequested(name)) {
-            shape = parameter.getShape(name);
-        } else if (config.getShapes().count(name) && config.getShapes().at(name).shape.size()) {
-            shape = config.getShapes().at(name).shape;
-        } else if (config.getShapes().count(ANONYMOUS_INPUT_NAME) && config.getShapes().at(ANONYMOUS_INPUT_NAME).shape.size()) {
-            shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
-        }
-
-        SPDLOG_DEBUG("Network shape - {}; Final shape - {}", TensorInfo::shapeToString(networkShapes[name]), TensorInfo::shapeToString(shape));
-
-        if (networkShapes[name] != shape) {
-            reshapeRequired = true;
-            networkShapes[name] = shape;
-        }
-
         auto mappingName = config.getMappingInputByKey(name);
         auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
         std::string precision_str = tensor->getPrecisionAsString();
@@ -124,20 +144,6 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
         SPDLOG_INFO("Input name: {}; mapping_name: {}; shape: {}; precision: {}, layout:{}",
             name, mappingName, shape_stream.str(), precision_str, TensorInfo::getStringFromLayout(input->getLayout()));
-    }
-
-    // Update OV model shapes
-    if (reshapeRequired) {
-        SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs", getName(), getVersion());
-        try {
-            network->reshape(networkShapes);
-        } catch (const InferenceEngine::details::InferenceEngineException& e) {
-            SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
-            SPDLOG_DEBUG("Description: {}", e.what());
-            return StatusCode::RESHAPE_ERROR;
-        }
-    } else {
-        SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
     }
 
     return StatusCode::OK;
