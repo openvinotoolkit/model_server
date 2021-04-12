@@ -426,7 +426,7 @@ public:
         return StatusCode::OK;
     }
 
-    Status influenceShapeWithDemultiplexer(shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) {
+    Status validateShapeWithDemultiplexer(const shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) const {
         if (!demultiplicatorNodeInfo.demultiplyCount) {
             return StatusCode::OK;
         }
@@ -461,6 +461,14 @@ public:
                 demultiplicatorNodeInfo.nodeName,
                 shape[0]);
         }
+        return StatusCode::OK;
+    }
+
+    Status influenceShapeWithDemultiplexer(shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) {
+        auto result = validateShapeWithDemultiplexer(shape, demultiplicatorNodeInfo);
+        if (!result.ok()) {
+            return result;
+        }
         shape.erase(shape.begin());
         return StatusCode::OK;
     }
@@ -469,17 +477,16 @@ public:
         // If validated connection pair connects two DL model/Custom nodes,
         // check if both input/output exist and its metadata (shape, precision) matches.
         // Affect shape by demultiplexer/gather if applies.
-        const auto& tensorOutput = this->dependencyOutputsInfo.at(modelOutputName);
-        shape_t tensorOutputShape = tensorOutput->getShape();
-        auto result = influenceShapeWithDemultiplexer(tensorOutputShape, dependencyNodeInfo);
-        if (!result.ok()) {
-            return result;
-        }
-        if (dependantNodeInfo.kind == NodeKind::EXIT) {
-            return StatusCode::OK;
-        }
         const auto& tensorInput = this->inputsInfo.at(modelInputName);
+        const auto& tensorOutput = this->dependencyOutputsInfo.at(modelOutputName);
         shape_t tensorInputShape = tensorInput->getShape();
+        shape_t tensorOutputShape = tensorOutput->getShape();
+        if (dependencyNodeInfo.demultiplyCount) {
+            auto result = influenceShapeWithDemultiplexer(tensorOutputShape, dependencyNodeInfo);
+            if (!result.ok()) {
+                return result;
+            }
+        }
         if (dependantNodeInfo.gatherFromNode.size() == 1) {
             std::vector<NodeInfo>::const_iterator demultiplicatorNode;
             auto result = getDependencyNodeInfo(*dependantNodeInfo.gatherFromNode.begin(), demultiplicatorNode);
@@ -618,7 +625,8 @@ public:
                 return result;
             }
 
-            if (dependantNodeInfo.kind != NodeKind::ENTRY &&
+            if (
+                (dependantNodeInfo.kind == NodeKind::DL || dependantNodeInfo.kind == NodeKind::CUSTOM) &&
                 (dependencyNodeInfo.kind == NodeKind::DL || dependencyNodeInfo.kind == NodeKind::CUSTOM)) {
                 result = checkConnectionMetadataCorrectness(dependencyNodeInfo, realName, dependencyNodeInfo.outputNameAliases.at(alias));
                 if (!result.ok()) {
@@ -723,6 +731,16 @@ public:
             }
 
             prepareRemainingUnconnectedDependantInputsSet();
+        }
+
+        if (dependantNodeInfo.kind == NodeKind::DL || dependantNodeInfo.kind == NodeKind::CUSTOM) {
+            for (const auto& [name, tensorOutput] : outputsInfo) {
+                shape_t tensorOutputShape = tensorOutput->getShape();
+                auto result = influenceShapeWithDemultiplexer(tensorOutputShape, dependantNodeInfo);
+                if (!result.ok()) {
+                    return result;
+                }
+            }
         }
 
         if (!dependantNodeInfo.gatherFromNode.empty()) {
