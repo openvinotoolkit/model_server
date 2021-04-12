@@ -290,7 +290,6 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     (*info)[0].dims[0] = 1;
 
     if (targetImageLayout == "HWC") {
-        // TODO: what if only height is specified but not width and otherwise?
         (*info)[0].dims[1] = targetImageHeight == -1 ? 0 : targetImageHeight;
         (*info)[0].dims[2] = targetImageWidth == -1 ? 0 : targetImageWidth;
         (*info)[0].dims[3] = targetImageColorOrder == "GRAY" ? 1 : 3;
@@ -300,7 +299,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
         (*info)[0].dims[3] = targetImageWidth == -1 ? 0 : targetImageWidth;
     }
 
-    (*info)[0].precision = FP32;  // TODO: ?
+    (*info)[0].precision = FP32;
 
     return 0;
 }
