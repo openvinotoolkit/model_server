@@ -24,15 +24,6 @@
 
 static constexpr const char* TENSOR_NAME = "image";
 
-/*
-configurable properties:
- - color channels
- - color ordering
- - layout
- - size
- - precision?
-*/
-
 template <class TimeT = std::chrono::milliseconds,
     class ClockT = std::chrono::steady_clock>
 class Timer {

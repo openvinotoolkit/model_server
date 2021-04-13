@@ -115,11 +115,8 @@ request.model_spec.name = args['pipeline_name']
 
 if args['image_layout'] == 'CHW':
     prepare_img_input_in_nchw_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
-elif args['image_layout'] == 'HWC':
-    prepare_img_input_in_nhwc_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
 else:
-    print('layout can be CHW or HWC only')
-    exit(1)
+    prepare_img_input_in_nhwc_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
 
 try:
     response = stub.Predict(request, 30.0)
