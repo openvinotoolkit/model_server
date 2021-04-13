@@ -16,6 +16,7 @@
 
 import grpc
 import cv2
+import os
 import numpy as np
 from tensorflow import make_tensor_proto, make_ndarray
 import argparse
