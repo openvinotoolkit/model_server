@@ -145,7 +145,7 @@ while iteration <= iterations:
 
         # Measuring gRPC request time
         start_time = datetime.datetime.now()
-        result = stub.Predict(request, 10.0)
+        result = stub.Predict(request, wait_for_ready=True, timeout=10.0)
         end_time = datetime.datetime.now()
 
         # Aggregating processing time statistics
