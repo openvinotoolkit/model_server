@@ -47,7 +47,7 @@ def infer(img, input_tensor, grpc_stub, model_spec_name,
     logger.info("Input shape: {}".format(img.shape))
     request.inputs[input_tensor].CopyFrom(
         make_tensor_proto(img, shape=list(img.shape)))
-    result = grpc_stub.Predict(request, 10.0)
+    result = grpc_stub.Predict(request, wait_for_ready=True, timeout=10.0)
     data = {}
     for output_tensor in output_tensors:
         data[output_tensor] = make_ndarray(result.outputs[output_tensor])
