@@ -33,6 +33,7 @@
 #include "executingstreamidguard.hpp"
 #include "filesystem.hpp"
 #include "logging.hpp"
+#include "ov_utils.hpp"
 #include "prediction_service_utils.hpp"
 #include "serialization.hpp"
 #include "stringutils.hpp"
@@ -81,6 +82,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     }
     this->inputsInfo.clear();
 
+    SPDLOG_INFO("Initial network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
     for (const auto& pair : networkInputs) {
         const auto& name = pair.first;
         auto input = pair.second;
@@ -138,14 +140,9 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
 
         auto mappingName = config.getMappingInputByKey(name);
         auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
-        std::string precision_str = tensor->getPrecisionAsString();
         this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
-        std::stringstream shape_stream;
-        std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
-        SPDLOG_INFO("Input name: {}; mapping_name: {}; shape: {}; precision: {}, layout:{}",
-            name, mappingName, shape_stream.str(), precision_str, TensorInfo::getStringFromLayout(input->getLayout()));
     }
-
+    SPDLOG_INFO("Final network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
     return StatusCode::OK;
 }
 

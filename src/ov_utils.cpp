@@ -16,9 +16,12 @@
 #include "ov_utils.hpp"
 
 #include <memory>
+#include <sstream>
 
 #include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
+
+#include "tensorinfo.hpp"
 
 namespace ovms {
 
@@ -66,5 +69,24 @@ Status createSharedBlob(InferenceEngine::Blob::Ptr& destinationBlob, InferenceEn
     }
     destinationBlob->allocate();
     return StatusCode::OK;
+}
+
+std::string getNetworkInputsInfoString(const InferenceEngine::InputsDataMap& inputsInfo, const ModelConfig& config) {
+    std::stringstream stringStream;
+
+    for (const auto& pair : inputsInfo) {
+        const auto& name = pair.first;
+        auto inputInfo = pair.second;
+
+        auto precision = inputInfo->getPrecision();
+        auto layout = inputInfo->getLayout();
+        auto shape = inputInfo->getTensorDesc().getDims();
+
+        auto mappingName = config.getMappingInputByKey(name);
+
+        stringStream << "\nInput name: " << name << "; mapping_name: " << mappingName << "; shape: " << TensorInfo::shapeToString(shape)
+                     << "; precision: " << TensorInfo::getPrecisionAsString(precision) << "; layout: " << TensorInfo::getStringFromLayout(layout);
+    }
+    return stringStream.str();
 }
 }  // namespace ovms
