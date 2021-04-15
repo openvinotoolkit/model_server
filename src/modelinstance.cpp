@@ -82,7 +82,6 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     }
     this->inputsInfo.clear();
 
-    SPDLOG_INFO("Initial network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
     for (const auto& pair : networkInputs) {
         const auto& name = pair.first;
         auto input = pair.second;
@@ -109,6 +108,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     if (reshapeRequired) {
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs", getName(), getVersion());
         try {
+            SPDLOG_INFO("Initial network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
             network->reshape(networkShapes);
         } catch (const InferenceEngine::details::InferenceEngineException& e) {
             SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
