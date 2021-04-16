@@ -447,8 +447,8 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         const auto modelName = modelConfig.getName();
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_CONFIG_INVALID);
-            if (std::find_if(this->servedModelConfigs.begin(), this->servedModelConfigs.end(), [&modelName](const auto& pair){
-                return pair.first == modelName;}) != this->servedModelConfigs.end()) {
+            if (std::find_if(this->servedModelConfigs.begin(), this->servedModelConfigs.end(),
+                    [&modelName](const auto& pair) { return pair.first == modelName; }) != this->servedModelConfigs.end()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to reload model: {}. Parsing config failed due to error: {}.", modelName, status.string());
                 modelsInConfigFile.emplace(modelName);
                 newModelConfigs.emplace(modelName, this->servedModelConfigs.at(modelName));
