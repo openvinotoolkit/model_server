@@ -444,13 +444,19 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig modelConfig;
         auto status = modelConfig.parseNode(configs["config"]);
+        const auto modelName = modelConfig.getName();
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_CONFIG_INVALID);
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed", modelConfig.getName());
+            if (std::find_if(this->servedModelConfigs.begin(), this->servedModelConfigs.end(), [&modelName](const auto& pair){
+                return pair.first == modelName;}) != this->servedModelConfigs.end()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to reload model: {}. Parsing config failed due to error: {}.", modelName, status.string());
+                modelsInConfigFile.emplace(modelName);
+                newModelConfigs.emplace(modelName, this->servedModelConfigs.at(modelName));
+            } else {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load model: {}. Parsing config failed due to error: {}", modelName, status.string());
+            }
             continue;
         }
-
-        const auto modelName = modelConfig.getName();
         if (pipelineDefinitionExists(modelName)) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by pipeline definition.", modelName);
