@@ -2003,8 +2003,7 @@ TEST_F(EnsembleConfigurationValidationWithCustomNode, CustomNodeMissingOutput) {
         {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"out", "not_existing_output"}}, std::nullopt, {}, mockedLibrary,
             parameters_t{
                 {"in_InputNumbers", "1,30,7;I32"},
-                {"out_OutputNumbers", "1,2000;FP32"},
-                {"not_existing_output", "1,2000;FP32"}}},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
