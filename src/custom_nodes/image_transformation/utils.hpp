@@ -30,28 +30,38 @@
     }
 
 template <typename T>
-std::vector<T> reorder_to_nhwc(const T* nchwVector, int rows, int cols, int channels) {
-    std::vector<T> nhwcVector(rows * cols * channels);
+void reorder_to_nhwc_2(const T* sourceNchwBuffer, T* destNhwcBuffer, int rows, int cols, int channels) {
     for (int y = 0; y < rows; ++y) {
         for (int x = 0; x < cols; ++x) {
             for (int c = 0; c < channels; ++c) {
-                nhwcVector[y * channels * cols + x * channels + c] = reinterpret_cast<const T*>(nchwVector)[c * (rows * cols) + y * cols + x];
+                destNhwcBuffer[y * channels * cols + x * channels + c] = reinterpret_cast<const T*>(sourceNchwBuffer)[c * (rows * cols) + y * cols + x];
             }
         }
     }
+}
+
+template <typename T>
+std::vector<T> reorder_to_nhwc(const T* nchwVector, int rows, int cols, int channels) {
+    std::vector<T> nhwcVector(rows * cols * channels);
+    reorder_to_nhwc_2(nchwVector, nhwcVector.data(), rows, cols, channels);
     return std::move(nhwcVector);
+}
+
+template <typename T>
+void reorder_to_nchw_2(const T* sourceNhwcBuffer, T* destNchwBuffer, int rows, int cols, int channels) {
+    for (int y = 0; y < rows; ++y) {
+        for (int x = 0; x < cols; ++x) {
+            for (int c = 0; c < channels; ++c) {
+                destNchwBuffer[c * (rows * cols) + y * cols + x] = reinterpret_cast<const T*>(sourceNhwcBuffer)[y * channels * cols + x * channels + c];
+            }
+        }
+    }
 }
 
 template <typename T>
 std::vector<T> reorder_to_nchw(const T* nhwcVector, int rows, int cols, int channels) {
     std::vector<T> nchwVector(rows * cols * channels);
-    for (int y = 0; y < rows; ++y) {
-        for (int x = 0; x < cols; ++x) {
-            for (int c = 0; c < channels; ++c) {
-                nchwVector[c * (rows * cols) + y * cols + x] = reinterpret_cast<const T*>(nhwcVector)[y * channels * cols + x * channels + c];
-            }
-        }
-    }
+    reorder_to_nchw_2(nhwcVector, nchwVector.data(), rows, cols, channels);
     return std::move(nchwVector);
 }
 

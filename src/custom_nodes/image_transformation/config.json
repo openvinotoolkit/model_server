@@ -1,0 +1,47 @@
+{
+    "model_config_list": [],
+    "custom_node_library_config_list": [
+        {"name": "image_transformation",
+            "base_path": "/ovms/src/custom_nodes/image_transformation/lib/libcustom_node_image_transformation.so"}
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "image_transformation_test",
+            "inputs": [
+                "image"
+            ],
+            "nodes": [
+                {
+                    "name": "image_transformation_node",
+                    "library_name": "image_transformation",
+                    "type": "custom",
+                    "params": {
+                        "target_image_width": "1200",
+                        "target_image_height": "800",
+
+                        "original_image_color_order": "GRAY",
+                        "target_image_color_order": "RGB",
+
+                        "original_image_layout": "CHW",
+                        "target_image_layout": "HWC",
+
+                        "debug": "true"
+
+                    },
+                    "inputs": [
+                        {"image": {
+                                "node_name": "request",
+                                "data_item": "image"}}],
+                    "outputs": [
+                        {"data_item": "image",
+                            "alias": "transformed_image"}]
+                }
+            ],
+            "outputs": [
+                {"image": {
+                        "node_name": "image_transformation_node",
+                        "data_item": "transformed_image"}}
+            ]
+        }
+    ]
+}

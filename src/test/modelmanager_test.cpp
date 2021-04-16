@@ -227,7 +227,7 @@ TEST(ModelManager, configRelodNotNeededManyThreads) {
     int numberOfThreads = 10;
     std::vector<std::thread> threads;
     std::function<void()> func = [&manager]() {
-        bool isNeeded;
+        bool isNeeded = false;
         manager.configFileReloadNeeded(isNeeded);
         EXPECT_EQ(isNeeded, false);
     };
@@ -257,7 +257,7 @@ TEST(ModelManager, configRelodNeededManyThreads) {
     int numberOfThreads = 10;
     std::vector<std::thread> threads;
 
-    bool isNeeded;
+    bool isNeeded = false;
     std::function<void()> func = [&manager, &isNeeded]() {
         manager.configFileReloadNeeded(isNeeded);
         EXPECT_EQ(isNeeded, true);
@@ -289,7 +289,7 @@ TEST(ModelManager, configReloadNeededChange) {
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    bool isNeeded;
+    bool isNeeded = false;
     manager.configFileReloadNeeded(isNeeded);
     EXPECT_EQ(isNeeded, false);
 
@@ -341,7 +341,7 @@ TEST(ModelManager, configReloadNeededBeforeConfigLoad) {
     auto status = manager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    bool isNeeded;
+    bool isNeeded = false;
     manager.configFileReloadNeeded(isNeeded);
     EXPECT_EQ(isNeeded, false);
 
@@ -461,6 +461,17 @@ TEST(ModelManager, StartFromFile) {
     modelMock.reset();
 }
 
+TEST(ModelManager, StartFromFileWhenModelFilesMissing) {
+    std::filesystem::create_directories(model_1_path);
+    std::string fileToReload = "/tmp/ovms_config_file1.json";
+    createConfigFileWithContent(config_1_model, fileToReload);
+    ConstructorEnabledModelManager manager;
+    ASSERT_TRUE(std::filesystem::is_empty(model_1_path));
+    auto status = manager.startFromFile(fileToReload);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    manager.join();
+}
+
 TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     std::filesystem::create_directories(model_1_path);
     std::filesystem::create_directories(model_2_path);
@@ -481,7 +492,7 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     });
     t.join();
     createConfigFileWithContent(config_2_models, fileToReload);
-    bool isNeeded;
+    bool isNeeded = false;
     manager.configFileReloadNeeded(isNeeded);
     ASSERT_EQ(isNeeded, true);
     std::thread s([&manager]() {

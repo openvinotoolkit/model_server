@@ -16,6 +16,7 @@
 
 import grpc
 import cv2
+import os
 import numpy as np
 from tensorflow import make_tensor_proto, make_ndarray
 import argparse
@@ -46,7 +47,7 @@ def nchw_to_image(output_nd, name, location):
     for i in range(output_nd.shape[0]):
         out = output_nd[i][0]
         out = out.transpose(1,2,0)
-        cv2.imwrite(location + name + '_' + str(i) + '.jpg', out)
+        cv2.imwrite(os.path.join(location, name + '_' + str(i) + '.jpg'), out)
 
 def crnn_output_to_text(output_nd):
     for i in range(output_nd.shape[0]):

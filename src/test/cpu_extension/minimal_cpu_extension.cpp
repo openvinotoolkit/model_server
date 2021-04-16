@@ -70,7 +70,7 @@ public:
         const ngraph::HostTensorVector& inputs) const override;
 
 private:
-    int64_t add;
+    int64_t add = 0;
 };
 
 constexpr ngraph::NodeTypeInfo OvmsOp::type_info;
