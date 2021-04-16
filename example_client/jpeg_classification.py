@@ -16,6 +16,7 @@
 
 import grpc
 import numpy as np
+import classes
 from tensorflow import make_tensor_proto, make_ndarray, make_tensor_proto
 import datetime
 import argparse
@@ -109,10 +110,14 @@ for line in lines:
     # for object classification models show imagenet class
     print('Processing time: {:.2f} ms; speed {:.2f} fps'.format(round(duration, 2), round(1000 / duration, 2)))
     ma = np.argmax(nu)
+    mark_message = ""
     if int(label) == ma:
         matched += 1
+        mark_message = "; Correct match."
+    else:
+        mark_message = "; Incorrect match. Should be {} {}".format(lb[i], classes.imagenet_classes[lb[i]] )
     i += 1
-    print("Detected:", ma, " Should be:", label)
+    print("\t",i, classes.imagenet_classes[ma],ma, mark_message)
 
 latency = np.average(processing_times)
 accuracy = matched/i

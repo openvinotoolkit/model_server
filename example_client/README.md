@@ -235,38 +235,41 @@ python jpeg_classification.py --grpc_port 9000 --input_name data --output_name p
 	Model name: resnet
 	Images list file: input_images.txt
 
+Start processing:
+	Model name: resnet
+	Images list file: input_images.txt
 images/airliner.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 20.00 ms; speed 2.00 fps 49.03
-Detected: 404  Should be: 404
+Processing time: 65.10 ms; speed 15.36 fps
+	 1 airliner 404 ; Correct match.
 images/arctic-fox.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 22.00 ms; speed 2.00 fps 45.2
-Detected: 279  Should be: 279
+Processing time: 67.53 ms; speed 14.81 fps
+	 2 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
 images/bee.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 14.00 ms; speed 2.00 fps 69.12
-Detected: 309  Should be: 309
+Processing time: 58.85 ms; speed 16.99 fps
+	 3 bee 309 ; Correct match.
 images/golden_retriever.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 22.00 ms; speed 2.00 fps 45.68
-Detected: 207  Should be: 207
+Processing time: 69.19 ms; speed 14.45 fps
+	 4 golden retriever 207 ; Correct match.
 images/gorilla.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 18.00 ms; speed 2.00 fps 56.02
-Detected: 366  Should be: 366
+Processing time: 80.73 ms; speed 12.39 fps
+	 5 gorilla, Gorilla gorilla 366 ; Correct match.
 images/magnetic_compass.jpeg (1, 3, 224, 224) ; data range: 0.0 : 247.0
-Processing time: 20.00 ms; speed 2.00 fps 50.78
-Detected: 635  Should be: 635
+Processing time: 64.87 ms; speed 15.42 fps
+	 6 magnetic compass 635 ; Correct match.
 images/peacock.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 21.00 ms; speed 2.00 fps 47.1
-Detected: 84  Should be: 84
+Processing time: 67.29 ms; speed 14.86 fps
+	 7 peacock 84 ; Correct match.
 images/pelican.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 24.00 ms; speed 2.00 fps 41.32
-Detected: 144  Should be: 144
+Processing time: 75.98 ms; speed 13.16 fps
+	 8 pelican 144 ; Correct match.
 images/snail.jpeg (1, 3, 224, 224) ; data range: 0.0 : 248.0
-Processing time: 20.00 ms; speed 2.00 fps 49.16
-Detected: 113  Should be: 113
+Processing time: 76.73 ms; speed 13.03 fps
+	 9 snail 113 ; Correct match.
 images/zebra.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 21.00 ms; speed 2.00 fps 48.16
-Detected: 340  Should be: 340
+Processing time: 81.60 ms; speed 12.25 fps
+	 10 zebra 340 ; Correct match.
 Overall accuracy= 100.0 %
-Average latency= 19.8 ms
+Average latency= 70.2 ms
 ```
 ### Multiple input example for HDDL
 
