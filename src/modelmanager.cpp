@@ -442,14 +442,14 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     std::set<std::string> modelsInConfigFile;
     std::unordered_map<std::string, ModelConfig> newModelConfigs;
     for (const auto& configs : itr->value.GetArray()) {
+        const auto modelName = configs["config"]["name"].GetString();
         ModelConfig modelConfig;
         auto status = modelConfig.parseNode(configs["config"]);
-        const auto modelName = modelConfig.getName();
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_CONFIG_INVALID);
             if (std::find_if(this->servedModelConfigs.begin(), this->servedModelConfigs.end(),
                     [&modelName](const auto& pair) { return pair.first == modelName; }) != this->servedModelConfigs.end()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to reload model: {}. Parsing config failed due to error: {}.", modelName, status.string());
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to reload model: {}. Previous versions will be kept. Parsing config failed due to error: {}.", modelName, status.string());
                 modelsInConfigFile.emplace(modelName);
                 newModelConfigs.emplace(modelName, this->servedModelConfigs.at(modelName));
             } else {
