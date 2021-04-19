@@ -22,8 +22,6 @@
 #include "tensorflow_serving/util/json_tensor.h"
 #pragma GCC diagnostic pop
 
-#include "timer.hpp"
-
 using tensorflow::DataType;
 using tensorflow::DataTypeSize;
 using tensorflow::serving::JsonPredictRequestFormat;
@@ -48,10 +46,7 @@ Status makeJsonFromPredictResponse(
         return StatusCode::REST_PREDICT_UNKNOWN_ORDER;
     }
 
-    Timer timer;
     using std::chrono::microseconds;
-
-    timer.start("convert");
 
     for (auto& kv : *response_proto.mutable_outputs()) {
         auto& tensor = kv.second;
@@ -164,17 +159,10 @@ Status makeJsonFromPredictResponse(
         }
     }
 
-    timer.stop("convert");
-    timer.start("MakeJsonFromTensors");
-
     const auto& tf_status = MakeJsonFromTensors(
         response_proto.outputs(),
         order == Order::ROW ? JsonPredictRequestFormat::kRow : JsonPredictRequestFormat::kColumnar,
         response_json);
-
-    timer.stop("MakeJsonFromTensors");
-    SPDLOG_DEBUG("tensor_content to *_val container conversion: {:.3f} ms", timer.elapsed<microseconds>("convert") / 1000);
-    SPDLOG_DEBUG("MakeJsonFromTensors call: {:.3f} ms", timer.elapsed<microseconds>("MakeJsonFromTensors") / 1000);
 
     if (!tf_status.ok()) {
         SPDLOG_ERROR("Creating json from tensors failed: {}", tf_status.error_message());

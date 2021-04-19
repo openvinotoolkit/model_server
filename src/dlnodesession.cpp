@@ -27,7 +27,6 @@
 #include "nodeoutputhandler.hpp"
 #include "nodestreamidguard.hpp"
 #include "tensorinfo.hpp"
-#include "timer.hpp"
 
 namespace ovms {
 DLNodeSession::DLNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
@@ -269,7 +268,6 @@ Status DLNodeSession::executeInference(PipelineEventQueue& notifyEndQueue, Infer
     try {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Setting completion callback for node name: {}", this->getName());
         inferRequest.SetCompletionCallback([this, &notifyEndQueue, &inferRequest, &node]() {
-            this->timer->stop("inference");
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Completion callback received for node name: {}", this->getName());
             // After inference is completed, input blobs are not needed anymore
             this->inputHandler->clearInputs();
@@ -277,7 +275,6 @@ Status DLNodeSession::executeInference(PipelineEventQueue& notifyEndQueue, Infer
             inferRequest.SetCompletionCallback([]() {});  // reset callback on infer request
         });
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Starting infer async for node name: {}", getName());
-        this->timer->start("inference");
         inferRequest.StartAsync();
     } catch (const InferenceEngine::details::InferenceEngineException& e) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception occured when starting async inference or setting completion callback on model: {}, error: {}",

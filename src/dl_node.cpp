@@ -26,7 +26,6 @@
 #include "ov_utils.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "prediction_service_utils.hpp"
-#include "timer.hpp"
 
 namespace ovms {
 
@@ -73,11 +72,6 @@ Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inf
         return StatusCode::INTERNAL_ERROR;
     }
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} infer request finished", getName(), sessionKey);
-    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Inference processing time for node {}; model name: {}; session: {} - {} ms",
-        this->getName(),
-        model.getName(),
-        sessionKey,
-        this->getNodeSession(sessionKey).getTimer().elapsed<std::chrono::microseconds>("inference") / 1000);
 
     static_cast<DLNodeSession&>(this->getNodeSession(sessionKey)).clearInputs();
     if (ov_status != InferenceEngine::StatusCode::OK) {
