@@ -14,7 +14,7 @@ Below is depicted graph implementing faces analysis pipeline execution.
 ![Faces Analysis Pipeline Graph](faces_analysis_graph.svg)
 
 It includes the following Nodes:
-- Model `face-detection` - inference execution which takes user image as input. It returns outputs including information about face coordinates and confidence levels.
+- Model `face-detection` - deep learning model which takes user image as input. Its outputs contain information about face coordinates and confidence levels.
 - Custom node `model_zoo_intel_object_detection` - it includes C++ implementation of common object detection models results processing. By analysing the output it produces cropped face images based on the configurable score level threshold. Custom node also resizes them to the target resolution and combines into a single output of a dynamic batch size. The output batch size is determined by the number of detected
 boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [model_zoo_intel_object_detection custom node](../src/custom_nodes/model_zoo_intel_object_detection).
 - demultiplexer - outputs from the custom node model_zoo_intel_object_detection have variable batch size. In order to match it with the sequential recognition models, data is split into individuial images with each batch size equal to 1.
@@ -43,7 +43,7 @@ wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/mode
 
 ## Building the Custom Node "model_zoo_intel_object_detection" Library 
 
-Custom nodes are loaded into OVMS as dynamic library implementing OVMS API from [custom_node_interface.h](../src/custom_node_interface.h).
+Custom nodes are loaded into OVMS as dynamic libraries implementing OVMS API from [custom_node_interface.h](../src/custom_node_interface.h).
 It can use OpenCV libraries included in OVMS or it could use other thirdparty components.
 
 The custom node `model_zoo_intel_object_detection` can be built inside a docker container via the following procedure:
