@@ -23,7 +23,6 @@
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "serialization.hpp"
-#include "timer.hpp"
 
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;

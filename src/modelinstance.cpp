@@ -38,7 +38,6 @@
 #include "serialization.hpp"
 #include "stringutils.hpp"
 #include "tensorinfo.hpp"
-#include "timer.hpp"
 
 using namespace InferenceEngine;
 
@@ -907,46 +906,26 @@ Status ModelInstance::performInference(InferenceEngine::InferRequest& inferReque
 Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,
     tensorflow::serving::PredictResponse* responseProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
-    Timer timer;
-    using std::chrono::microseconds;
 
     auto status = validate(requestProto);
     status = reloadModelIfRequired(status, requestProto, modelUnloadGuardPtr);
     if (!status.ok())
         return status;
 
-    timer.start("get infer request");
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
-    int executingInferId = executingStreamIdGuard.getId();
     InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
-    timer.stop("get infer request");
-    SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
 
-    timer.start("deserialize");
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inferRequest);
-    timer.stop("deserialize");
     if (!status.ok())
         return status;
-    SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
 
-    timer.start("prediction");
     status = performInference(inferRequest);
-    timer.stop("prediction");
     if (!status.ok())
         return status;
-    SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
 
-    timer.start("serialize");
     status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
-    timer.stop("serialize");
     if (!status.ok())
         return status;
-    SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
-
-    return StatusCode::OK;
+    return status;
 }
 }  // namespace ovms

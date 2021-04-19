@@ -34,7 +34,6 @@
 #include "ovinferrequestsqueue.hpp"
 #include "prediction_service_utils.hpp"
 #include "status.hpp"
-#include "timer.hpp"
 
 using grpc::ServerContext;
 
@@ -66,8 +65,6 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     ServerContext* context,
     const PredictRequest* request,
     PredictResponse* response) {
-    Timer timer;
-    timer.start("total");
     using std::chrono::microseconds;
     SPDLOG_DEBUG("Processing gRPC request for model: {}; version: {}",
         request->model_spec().name(),
@@ -98,8 +95,6 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         return status.grpc();
     }
 
-    timer.stop("total");
-    SPDLOG_DEBUG("Total gRPC request processing time: {} ms", timer.elapsed<microseconds>("total") / 1000);
     return grpc::Status::OK;
 }
 
