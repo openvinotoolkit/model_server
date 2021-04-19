@@ -147,7 +147,7 @@ Read more about *Get Model Metadata API* usage [here](./../example_client/README
 ## Predict API <a name="predict"></a>
 * Description
 
-Sends requests via TensorFlow Serving RESTful API using images in base64 encoded string or numpy format. It displays performance statistics and optionally the model accuracy.
+Sends requests via TensorFlow Serving RESTful API using images in numpy array or binary format. It displays performance statistics and optionally the model accuracy.
 
 * URL
 ```
@@ -167,7 +167,7 @@ POST http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VE
 }
 ``` 
 > **Note**
-Read [How to specify input tensors in row format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_row_format) and [How to specify input tensors in column format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_column_format) for more details. Also, explanation of using base64 encoded string instead of numpy format can be found here: [How to encode binary values](https://www.tensorflow.org/tfx/serving/api_rest#encoding_binary_values).
+Read [How to specify input tensors in row format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_row_format) and [How to specify input tensors in column format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_column_format) for more details. Check [How to encode binary values](https://www.tensorflow.org/tfx/serving/api_rest#encoding_binary_values).
 
 * Response
 
