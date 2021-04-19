@@ -3,7 +3,7 @@
 ## Analysis of multiple faces in single image frame request
 This document demonstrates how to create complex pipelines using object detection and object recognition models from OpenVINO Model Zoo. As an example, we will use [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/face-detection-retail-0004/description/face-detection-retail-0004.md) to detect multiple faces on the image. Then, for each detected face we will crop it using [model_zoo_intel_object_detection](../src/custom_nodes/model_zoo_intel_object_detection) example custom node. Finally, each image face image will be forwarded to [age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/age-gender-recognition-retail-0013/description/age-gender-recognition-retail-0013.md) and [emotion-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/emotions-recognition-retail-0003/description/emotions-recognition-retail-0003.md) models.
 
-![OCR graph](faces_analysis.png)
+![Faces analysis graph](faces_analysis.png)
 
 Using such pipeline, a single request to OVMS can perform a complex set of operations to determine all faces and its properties.
 
@@ -55,7 +55,7 @@ Copy this `lib` folder to the same location with previously downloaded models.
 
 ## OVMS Configuration File
 
-The configuration file for running the OCR demo is stored in [config.json](../src/custom_nodes/model_zoo_intel_object_detection/config.json).
+The configuration file for running the faces analysis demo is stored in [config.json](../src/custom_nodes/model_zoo_intel_object_detection/config.json).
 Copy this file along with the model files.
 
 ## Final directory structure
@@ -80,7 +80,7 @@ workspace
 
 ## Deploying OVMS
 
-Deploy OVMS with OCR demo pipeline using the following command:
+Deploy OVMS with faces analysis pipeline using the following command:
 
 ```bash
 docker run -p 9000:9000 -d -v ${PWD}/workspace:/workspace openvino/model_server --config_path /workspace/config.json --port 9000
