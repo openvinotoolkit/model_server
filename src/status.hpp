@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -251,14 +253,20 @@ enum class StatusCode {
 
 class Status {
     StatusCode code;
-    std::string message;
+    std::unique_ptr<std::string> message;
 
     static const std::unordered_map<const StatusCode, const std::string> statusMessageMap;
     static const std::unordered_map<const StatusCode, grpc::StatusCode> grpcStatusMap;
     static const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap;
 
     void appendDetails(const std::string& details) {
-        this->message += " - " + details;
+        ensureMessageAllocated();
+        *this->message += " - " + details;
+    }
+    void ensureMessageAllocated() {
+        if (nullptr == message) {
+            message = std::make_unique<std::string>();
+        }
     }
 
 public:
@@ -266,15 +274,29 @@ public:
         code(code) {
         auto it = statusMessageMap.find(code);
         if (it != statusMessageMap.end())
-            this->message = it->second;
+            this->message = std::make_unique<std::string>(it->second);
         else
-            this->message = "Unknown error";
+            this->message = std::make_unique<std::string>("Unknown error");
     }
 
     Status(StatusCode code, const std::string& details) :
         Status(code) {
         appendDetails(details);
     }
+
+    Status(const Status& rhs) :
+        code(rhs.code),
+        message(rhs.message != nullptr ? std::make_unique<std::string>(*(rhs.message)) : nullptr) {}
+
+    Status(Status&& rhs) = default;
+
+    Status operator=(const Status& rhs) {
+        this->code = rhs.code;
+        this->message = (rhs.message != nullptr ? std::make_unique<std::string>(*rhs.message) : nullptr);
+        return *this;
+    }
+
+    Status& operator=(Status&&) = default;
 
     bool ok() const {
         return (code == StatusCode::OK || code == StatusCode::OK_RELOADED || code == StatusCode::OK_NOT_RELOADED);
@@ -303,7 +325,8 @@ public:
     const grpc::Status grpc() const {
         auto it = grpcStatusMap.find(code);
         if (it != grpcStatusMap.end()) {
-            return grpc::Status(it->second, this->message);
+            return grpc::Status(it->second,
+                this->message ? *this->message : "");
         } else {
             return grpc::Status(grpc::StatusCode::UNKNOWN, "Unknown error");
         }
@@ -314,7 +337,7 @@ public:
     }
 
     const std::string& string() const {
-        return this->message;
+        return this->message ? *this->message : statusMessageMap.at(code);
     }
 
     operator const std::string&() const {

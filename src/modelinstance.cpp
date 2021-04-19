@@ -394,7 +394,6 @@ Status ModelInstance::fetchModelFilepaths() {
         }
         modelFiles.push_back(file);
     }
-
     if (!found) {
         found = true;
         modelFiles.clear();
@@ -443,6 +442,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     this->targetDevice = config.getTargetDevice();
     this->config = config;
     auto status = fetchModelFilepaths();
+
     if (!status.ok()) {
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return status;
@@ -450,7 +450,6 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     try {
         if (!this->engine)
             loadOVEngine();
-        status = StatusCode::OK;
         if (!this->network) {
             if (this->config.isCustomLoaderRequiredToLoadModel()) {
                 // loading the model using the custom loader

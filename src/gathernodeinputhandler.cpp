@@ -86,7 +86,7 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
             return status;
         }
         for (auto& [shardId, blob] : shardMap) {
-            auto shardTensorDesc = blob->getTensorDesc();
+            auto& shardTensorDesc = blob->getTensorDesc();
             if (shardTensorDesc != firstShardTensorDesc) {
                 SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to consolidate blob: {} shards in gather node. First shard has different tensor description: {} than current shard: {}",
                     inputName,
