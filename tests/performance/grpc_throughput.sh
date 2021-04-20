@@ -53,8 +53,4 @@ if [ $? = 1 ]; then
 fi
 
 FPS=$((CLIENT_COUNT*ITERATION*BATCHSIZE/SECONDS))
-echo "$ITERATION"
-echo "$CLIENT_COUNT"
-echo "$SECONDS"
-echo "$BATCHSIZE"
 echo "$FPS FPS"
