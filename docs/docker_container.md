@@ -16,14 +16,14 @@ OpenVINO&trade; Model Server is a serving system for machine learning models. Op
 
 ## Overview 
 
-This guide provides step-by-step instructions on how to deploy OpenVINO&trade; Model Server for Linux using Docker Container including a Quick Start guide. Links are provided for different compatible hardwares. Following instructions are covered in this :
+This guide provides step-by-step instructions on how to deploy OpenVINO&trade; Model Server for Linux using Docker Container including a Quick Start guide. Links are provided for different compatible hardwares. Following instructions are covered in this:
 
 - <a href="#quickstart">Quick Start Guide for OpenVINO&trade; Model Server</a>
 - <a href="#sourcecode">Building the OpenVINO&trade; Model Server Image </a>
 - <a href="#singlemodel">Starting Docker Container with a Single Model
 - <a href="#configfile">Starting Docker container with a configuration file for multiple models</a>
 - <a href="#params">Configuration Parameters</a>
-- <a href="#storage">Cloud Storage Requirements </a>
+- <a href="#storage">Cloud Storage Requirements</a>
 - <a href="#ai">Running OpenVINO&trade; Model Server with AI Accelerators NCS, HDDL and GPU</a>
 - <a href="#sec">Security Considerations</a>
 
@@ -40,13 +40,13 @@ Refer [Quick Start guide](./ovms_quickstart.md) to set up OpenVINO&trade; Model 
 
 ### Install Docker
 
-Install Docker using the following link :
+Install Docker using the following link:
 
 - [Install Docker Engine](https://docs.docker.com/engine/install/)
 
 ### Pulling OpenVINO&trade; Model Server Image
 
-After Docker installation you can pull the OpenVINO&trade; Model Server image. Open Terminal and run following command :
+After Docker installation you can pull the OpenVINO&trade; Model Server image. Open Terminal and run following command:
 
 ```bash
 docker pull openvino/model_server:latest
@@ -63,7 +63,7 @@ To build your own image, use the following command in the [git repository root f
    make docker_build
 ```
 
-It will generate the images, tagged as :
+It will generate the images, tagged as:
 
 - openvino/model_server:latest - with CPU, NCS and HDDL support,
 - openvino/model_server-gpu:latest - with CPU, NCS, HDDL and iGPU support,
@@ -87,7 +87,7 @@ docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 9001:9001 open
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 9001 --log_level DEBUG
 ```
 
-#### Configuration Arguments for Running the OpenVINO&trade; Model Server :
+#### Configuration Arguments for Running the OpenVINO&trade; Model Server:
 
 - --rm - Remove the container when exiting the Docker container.
 - -d - Run the container in the background.
@@ -112,7 +112,7 @@ docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 9001:9001 open
 To use a container that has several models, you must use a model server configuration file that defines each model. The configuration file is in JSON format.
 In the configuration file, provide an array, model_config_list, that includes a collection of config objects for each served model. For each config object include, at a minimum, values for the model name and the base_path attributes.
 
-Example configuration file :
+Example configuration file:
 ```json
 {
    "model_config_list":[
@@ -192,7 +192,7 @@ models/
 
 Here the numerical values depict the version number of the model.
 
-### Configuration Parameters <a name="params"></a>:
+### Configuration Parameters<a name="params"></a>:
 
 <details><summary>Model configuration options</summary>
 
@@ -238,9 +238,9 @@ Configuration options for server are defined only via command line options and d
 
 </details>
 
-### Cloud Storage Requirements <a name="storage"></a>:
+### Cloud Storage Requirements<a name="storage"></a>:
 
-<details><summary>Azure Cloud Storage path requirements </summary>
+<details><summary>Azure Cloud Storage path requirements</summary>
 
 Add the Azure Storage path as the model_path and pass the Azure Storage credentials to the Docker container.
 
@@ -251,7 +251,7 @@ Example connection string is:
 AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=azure_account_name;AccountKey=smp/hashkey==;EndpointSuffix=core.windows.net"
 ```
 
-Example command with blob storage az://<container_name>/<model_path> :
+Example command with blob storage az://<container_name>/<model_path>:
 ```
 docker run --rm -d -p 9001:9001 \
 -e AZURE_STORAGE_CONNECTION_STRING=“${AZURE_STORAGE_CONNECTION_STRING}” \
@@ -259,7 +259,7 @@ openvino/model_server:latest \
 --model_path az://container/model_path --model_name az_model --port 9001
 ```
 
-Example command with file storage azfs://<share>/<model_path> :
+Example command with file storage azfs://<share>/<model_path>:
 
 ```
 docker run --rm -d -p 9001:9001 \
@@ -294,7 +294,7 @@ openvino/model_server:latest \
 
 Add the S3 path as the model_path and pass the credentials as environment variables to the Docker container.
 
-Example command with s3://<bucket>/<model_path> :
+Example command with s3://<bucket>/<model_path>:
 
 ```
 docker run --rm -d -p 9001:9001 \
