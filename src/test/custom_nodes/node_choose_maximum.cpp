@@ -33,6 +33,7 @@ enum Method {
 };
 
 static const std::string INPUT_TENSOR_NAME = "input_tensors";
+static const std::string OUTPUT_TENSOR_NAME = "maximum_tensor";
 
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
     std::stringstream ss;
@@ -93,7 +94,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     float* result = (float*)malloc(valuesPerTensor * sizeof(float));
 
     CustomNodeTensor& resultTensor = **outputs;
-    resultTensor.name = "maximum_tensor";
+    resultTensor.name = OUTPUT_TENSOR_NAME.c_str();
     resultTensor.data = reinterpret_cast<uint8_t*>(result);
     resultTensor.dimsCount = 2;
     resultTensor.dims = (uint64_t*)malloc(resultTensor.dimsCount * sizeof(uint64_t));
@@ -167,7 +168,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
     *infoCount = 1;
     *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
-    (*info)->name = "input_tensors";
+    (*info)->name = INPUT_TENSOR_NAME.c_str();
     (*info)->dimsCount = 3;
     (*info)->dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     (*info)->dims[0] = 4;
@@ -180,7 +181,7 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
 int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
     *infoCount = 1;
     *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
-    (*info)->name = "maximum_tensor";
+    (*info)->name = OUTPUT_TENSOR_NAME.c_str();
     (*info)->dimsCount = 2;
     (*info)->dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     (*info)->dims[0] = 1;

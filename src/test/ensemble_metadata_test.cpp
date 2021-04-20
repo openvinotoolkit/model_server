@@ -690,5 +690,5 @@ TEST(EnsembleMetadata, DemultiplyFromEntryNodeIsNotAllowed) {
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
-    ASSERT_EQ(def->validateNodes(manager), StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE);
+    ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
 }
