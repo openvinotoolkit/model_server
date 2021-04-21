@@ -112,7 +112,7 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflo
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
-RUN wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz/download && \
+RUN wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz && \
 	tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
 	./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
 		--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
