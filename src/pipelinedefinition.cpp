@@ -426,7 +426,7 @@ public:
         return StatusCode::OK;
     }
 
-    Status influenceShapeWithDemultiplexer(shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) {
+    Status validateShapeWithDemultiplexer(const shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) const {
         if (!demultiplicatorNodeInfo.demultiplyCount) {
             return StatusCode::OK;
         }
@@ -460,6 +460,14 @@ public:
                 demultiplicatorNodeInfo.demultiplyCount.value(),
                 demultiplicatorNodeInfo.nodeName,
                 shape[0]);
+        }
+        return StatusCode::OK;
+    }
+
+    Status influenceShapeWithDemultiplexer(shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) {
+        auto result = validateShapeWithDemultiplexer(shape, demultiplicatorNodeInfo);
+        if (!result.ok()) {
+            return result;
         }
         shape.erase(shape.begin());
         return StatusCode::OK;
@@ -723,6 +731,15 @@ public:
             }
 
             prepareRemainingUnconnectedDependantInputsSet();
+        }
+
+        if (dependantNodeInfo.kind == NodeKind::DL || dependantNodeInfo.kind == NodeKind::CUSTOM) {
+            for (const auto& [name, tensorOutput] : outputsInfo) {
+                auto result = validateShapeWithDemultiplexer(tensorOutput->getShape(), dependantNodeInfo);
+                if (!result.ok()) {
+                    return result;
+                }
+            }
         }
 
         if (!dependantNodeInfo.gatherFromNode.empty()) {
