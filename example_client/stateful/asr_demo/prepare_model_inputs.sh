@@ -1,4 +1,19 @@
 #!/bin/bash
+#
+# Copyright (c) 2021 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 # Variables setup
 KALDI_PATH=/opt/kaldi
@@ -7,9 +22,6 @@ DATA_PATH=/opt/data
 
 # WAV download and preparation
 cd $DATA_PATH
-#wget https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0039_8k.wav
-#sox OSR_us_000_0039_8k.wav harvard_sample_01.wav trim 11.8 3.9
-#mv harvard_sample_01.wav recording.wav
 ffmpeg -i recording.wav  -acodec pcm_s16le -ac 1 -ar 8000 sample.wav
 
 # Prepare required files
@@ -36,7 +48,7 @@ steps/online/nnet2/extract_ivectors_online.sh --cmd "$train_cmd" --nj "${nspk}" 
 cd $ASPIRE_PATH/exp/nnet3/ivectors_conversion_hires
 $KALDI_PATH/src/featbin/copy-feats --binary=False ark:ivector_online.1.ark ark,t:ivector_online.1.ark.txt
 
-cp /ovms/example_client/stateful/expand_ivectors.py .
+cp /opt/model_server/example_client/stateful/asr_demo/expand_ivectors.py .
 python3 expand_ivectors.py
 
 $KALDI_PATH/src/featbin/copy-feats --binary=True ark,t:ivector_online_ie.ark.txt ark:ivector_online_ie.ark
