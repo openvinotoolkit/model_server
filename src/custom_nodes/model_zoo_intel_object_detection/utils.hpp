@@ -73,16 +73,22 @@ const cv::Mat nchw_to_mat(const CustomNodeTensor* input) {
 }
 
 bool crop_rotate_resize(cv::Mat originalImage, cv::Mat& targetImage, cv::Rect roi, float angle, float originalTextWidth, float originalTextHeight, cv::Size targetShape) {
-    cv::Mat cropped = originalImage(roi);
-    cv::Mat rotated;
-    if (angle != 0.0) {
-        cv::Mat rotationMatrix = cv::getRotationMatrix2D(cv::Point2f(cropped.size().width / 2, cropped.size().height / 2), angle, 1.0);
-        cv::warpAffine(cropped, rotated, rotationMatrix, cropped.size());
-    } else {
-        rotated = cropped;
-    }
-
     try {
+        // Limit roi to be in range of original image.
+        // Face detection detections may go beyond original image.
+        roi.x = roi.x < 0 ? 0 : roi.x;
+        roi.y = roi.y < 0 ? 0 : roi.y;
+        roi.width = roi.width + roi.x > originalImage.size().width ? originalImage.size().width - roi.x : roi.width;
+        roi.height = roi.height + roi.y > originalImage.size().height ? originalImage.size().height - roi.y : roi.height;
+        cv::Mat cropped = originalImage(roi);
+
+        cv::Mat rotated;
+        if (angle != 0.0) {
+            cv::Mat rotationMatrix = cv::getRotationMatrix2D(cv::Point2f(cropped.size().width / 2, cropped.size().height / 2), angle, 1.0);
+            cv::warpAffine(cropped, rotated, rotationMatrix, cropped.size());
+        } else {
+            rotated = cropped;
+        }
         cv::Mat rotatedSlicedImage;
         if (angle != 0.0) {
             int sliceOffset = (rotated.size().height - originalTextHeight) / 2;
