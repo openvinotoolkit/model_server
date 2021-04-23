@@ -1,0 +1,18 @@
+apiVersion: intel.com/v1alpha1
+kind: Ovms
+metadata:
+  name: ovms-resnet
+spec:
+  grpc_port: 8080
+  image_name: registry.connect.redhat.com/intel/openvino-model-server:latest
+  log_level: INFO
+  model_name: "resnet"
+  model_path: "gs://ovms-public-eu/resnet50-binary"
+  plugin_config: '{\"CPU_THROUGHPUT_STREAMS\":\"1\"}'
+  replicas: 1
+  resources:
+    limits:
+      cpu: 4
+      memory: 500Mi
+  rest_port: 8081
+  service_type: ClusterIP

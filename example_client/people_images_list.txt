@@ -1,0 +1,4 @@
+images/people/people1.jpeg 1
+images/people/people2.jpeg 1
+images/people/people3.jpeg 1
+images/people/people4.jpeg 1
