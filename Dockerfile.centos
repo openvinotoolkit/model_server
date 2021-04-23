@@ -188,9 +188,6 @@ RUN cd azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release && CASABLA
 
 ####### End of Azure SDK
 
-# WARNING - do not move this install - needed here for proper ssl linkage in rest and azure
-#RUN yum install -d6 -y openssl-devel
-
 # Build AWS S3 SDK
 RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
 WORKDIR /awssdk/build

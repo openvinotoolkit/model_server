@@ -25,7 +25,6 @@ cc_library(
         "aws-cpp-sdk-core/include/**/*.h",
     ]),
     strip_include_prefix = "aws-cpp-sdk-core/include",
-    copts = ["-L/usr/local/ssl/lib"]
 )
 
 cc_library(
