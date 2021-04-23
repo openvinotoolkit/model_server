@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -417,6 +417,7 @@ def main():
 
         print("Global average rms error: {:.10f}\n".format(
             final_avg_rms_error_sum))
+            
     client_utils.print_statistics(processing_times, sequence_size / 1000)
 
     if output_path:
