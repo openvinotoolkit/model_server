@@ -29,6 +29,8 @@ spec = importlib.util.spec_from_loader('client_utils', importlib.machinery.Sourc
 client_utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(client_utils)
 
+delimiter = ","
+
 def print_debug(msg):
     global debug_mode
     if debug_mode:
@@ -128,7 +130,6 @@ def parse_arguments():
 
 
 def prepare_processing_data(args):
-    delimiter = ","
     input_files = []
     reference_files = []
     input_names = []
@@ -235,7 +236,9 @@ def main():
     args = parse_arguments()
     global debug_mode
     debug_mode = int(args.get('debug'))
-    output_path = args.get('output_path')
+    output_paths = args.get('output_path')
+    if output_paths:
+        output_paths = output_paths.split(delimiter)
 
     channel = grpc.insecure_channel(
         "{}:{}".format(
@@ -417,14 +420,17 @@ def main():
 
         print("Global average rms error: {:.10f}\n".format(
             final_avg_rms_error_sum))
-            
+
     client_utils.print_statistics(processing_times, sequence_size / 1000)
 
-    if output_path:
-        with ArchiveWriter(output_path) as writer:
-            for key, value in output_scores.items():
-                writer.write(key, value[list(value.keys())[0]])
-        print("Output scores saved in: {}".format(output_path))
+    if output_paths:
+        i = 0
+        for output_path in output_paths:
+            with ArchiveWriter(output_path) as writer:
+                for key, value in output_scores.items():
+                    writer.write(key, value[list(value.keys())[i]])
+            print("Output scores saved in: {}".format(output_path))
+            i = i + 1
 
     print('### Finished grpc_stateful_client.py client processing ###')
 
