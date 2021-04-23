@@ -30,4 +30,7 @@ cc_library(
 	"Microsoft.WindowsAzure.Storage/includes/**/*.dat",
 		 ]),
     strip_include_prefix = "Microsoft.WindowsAzure.Storage/includes/",
+    copts = [
+        "-L/usr/local/ssl/lib",
+    ]
 )
