@@ -156,47 +156,47 @@ Start processing:
 	Images numpy path: imgs.npy
 	Images in shape: (10, 3, 224, 224)
 
-Iteration 1; Processing time: 55.45 ms; speed 18.03 fps
+Iteration 1; Processing time: 26.54 ms; speed 37.67 fps
 imagenet top results in a single batch:
-	 0 warplane, military plane 895 ; Incorrect match. Should be 404 airliner
-Iteration 2; Processing time: 71.97 ms; speed 13.89 fps
+	 0 airliner 404 ; Correct match.
+Iteration 2; Processing time: 22.23 ms; speed 44.99 fps
 imagenet top results in a single batch:
 	 0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
-Iteration 3; Processing time: 69.82 ms; speed 14.32 fps
+Iteration 3; Processing time: 21.72 ms; speed 46.03 fps
 imagenet top results in a single batch:
 	 0 bee 309 ; Correct match.
-Iteration 4; Processing time: 68.95 ms; speed 14.50 fps
+Iteration 4; Processing time: 20.71 ms; speed 48.28 fps
 imagenet top results in a single batch:
 	 0 golden retriever 207 ; Correct match.
-Iteration 5; Processing time: 49.82 ms; speed 20.07 fps
+Iteration 5; Processing time: 20.53 ms; speed 48.71 fps
 imagenet top results in a single batch:
 	 0 gorilla, Gorilla gorilla 366 ; Correct match.
-Iteration 6; Processing time: 56.90 ms; speed 17.58 fps
+Iteration 6; Processing time: 20.37 ms; speed 49.08 fps
 imagenet top results in a single batch:
 	 0 magnetic compass 635 ; Correct match.
-Iteration 7; Processing time: 122.50 ms; speed 8.16 fps
+Iteration 7; Processing time: 20.97 ms; speed 47.68 fps
 imagenet top results in a single batch:
 	 0 peacock 84 ; Correct match.
-Iteration 8; Processing time: 50.65 ms; speed 19.74 fps
+Iteration 8; Processing time: 22.82 ms; speed 43.83 fps
 imagenet top results in a single batch:
 	 0 pelican 144 ; Correct match.
-Iteration 9; Processing time: 56.45 ms; speed 17.71 fps
+Iteration 9; Processing time: 22.16 ms; speed 45.13 fps
 imagenet top results in a single batch:
 	 0 snail 113 ; Correct match.
-Iteration 10; Processing time: 58.95 ms; speed 16.96 fps
+Iteration 10; Processing time: 21.17 ms; speed 47.24 fps
 imagenet top results in a single batch:
 	 0 zebra 340 ; Correct match.
 
 processing time for all iterations
-average time: 65.40 ms; average speed: 15.29 fps
-median time: 57.00 ms; median speed: 17.54 fps
-max time: 122.00 ms; max speed: 8.20 fps
-min time: 49.00 ms; min speed: 20.41 fps
-time percentile 90: 76.10 ms; speed percentile 90: 13.14 fps
-time percentile 50: 57.00 ms; speed percentile 50: 17.54 fps
-time standard deviation: 20.25
-time variance: 410.04
-Classification accuracy: 90.00
+average time: 21.40 ms; average speed: 46.73 fps
+median time: 21.00 ms; median speed: 47.62 fps
+max time: 26.00 ms; min speed: 38.46 fps
+min time: 20.00 ms; max speed: 50.00 fps
+time percentile 90: 22.40 ms; speed percentile 90: 44.64 fps
+time percentile 50: 21.00 ms; speed percentile 50: 47.62 fps
+time standard deviation: 1.74
+time variance: 3.04
+Classification accuracy: 100.00
 
 ```
 
@@ -239,37 +239,37 @@ Start processing:
 	Model name: resnet
 	Images list file: input_images.txt
 images/airliner.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 65.10 ms; speed 15.36 fps
+Processing time: 23.40 ms; speed 42.73 fps
 	 1 airliner 404 ; Correct match.
 images/arctic-fox.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 67.53 ms; speed 14.81 fps
+Processing time: 21.09 ms; speed 47.42 fps
 	 2 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
 images/bee.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 58.85 ms; speed 16.99 fps
+Processing time: 21.04 ms; speed 47.52 fps
 	 3 bee 309 ; Correct match.
 images/golden_retriever.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 69.19 ms; speed 14.45 fps
+Processing time: 20.03 ms; speed 49.92 fps
 	 4 golden retriever 207 ; Correct match.
 images/gorilla.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 80.73 ms; speed 12.39 fps
+Processing time: 21.95 ms; speed 45.57 fps
 	 5 gorilla, Gorilla gorilla 366 ; Correct match.
 images/magnetic_compass.jpeg (1, 3, 224, 224) ; data range: 0.0 : 247.0
-Processing time: 64.87 ms; speed 15.42 fps
+Processing time: 21.51 ms; speed 46.48 fps
 	 6 magnetic compass 635 ; Correct match.
 images/peacock.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 67.29 ms; speed 14.86 fps
+Processing time: 20.81 ms; speed 48.05 fps
 	 7 peacock 84 ; Correct match.
 images/pelican.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 75.98 ms; speed 13.16 fps
+Processing time: 21.90 ms; speed 45.66 fps
 	 8 pelican 144 ; Correct match.
 images/snail.jpeg (1, 3, 224, 224) ; data range: 0.0 : 248.0
-Processing time: 76.73 ms; speed 13.03 fps
+Processing time: 22.38 ms; speed 44.68 fps
 	 9 snail 113 ; Correct match.
 images/zebra.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 81.60 ms; speed 12.25 fps
+Processing time: 22.22 ms; speed 45.00 fps
 	 10 zebra 340 ; Correct match.
 Overall accuracy= 100.0 %
-Average latency= 70.2 ms
+Average latency= 21.2 ms
 ```
 ### Multiple input example for HDDL
 
