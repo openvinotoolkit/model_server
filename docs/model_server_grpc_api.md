@@ -50,6 +50,8 @@ Sends requests via TFS gRPC API using images in numpy format. It displays perfor
 
 Read more about *Predict API* usage [here](./../example_client/README.md#predict-api)       
 
+Check [how binary data is handled in OpenVINO Model Server](binary_input_ouput.md)
+
 ## See Also
 
 - [Example client code](./../example_client/README.md) shows how to use GRPC API and REST API.

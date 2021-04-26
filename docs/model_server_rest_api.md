@@ -183,7 +183,23 @@ A request in [column format](https://www.tensorflow.org/tfx/serving/api_rest#spe
   "outputs": <value>|<(nested)list>|<object>
 }
 ```
-Read more about *Predict API* usage [here](./../example_client/README.md#predict-api-1)
+
+Beside numerical values, it is possible to pass binary inputs. They must be Base64 encoded in passed in `b64` key like below:
+```
+{
+  "instances": [
+    {
+      "image": { "b64": "aW1hZ2UgYnl0ZXM=" },
+    },
+    {
+      "image": { "b64": "YXdlc29tZSBpbWFnZSBieXRlcw==" },
+    }
+  ]
+}
+```
+Check [how binary data is handled in OpenVINO Model Server](binary_input_ouput.md)
+
+Read more about *Predict API* usage examples [here](./../example_client/README.md#predict-api-1)
 
 ## Config Reload API <a name="config-reload"></a>
 * Description  
