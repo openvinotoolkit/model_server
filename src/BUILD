@@ -148,6 +148,8 @@ cc_library(
         "version.hpp",
         "logging.hpp",
         "logging.cpp",
+        "binaryutils.hpp",
+        "binaryutils.cpp",
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
@@ -169,6 +171,7 @@ cc_library(
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "@openvino//:openvino",
+        "@opencv//:opencv",
     ],
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG"
