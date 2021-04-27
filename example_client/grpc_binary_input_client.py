@@ -52,17 +52,18 @@ processing_times = np.zeros((0),int)
 
 batch_i = 0
 image_data = []
+labels = []
 for line in lines:
     batch_i += 1
     path, label = line.strip().split(" ")
     with open(path, 'rb') as f:
         image_data.append(f.read())
+    labels.append(label)
     if batch_i < batch_size:
         continue
     request = predict_pb2.PredictRequest()
     request.model_spec.name = args.get('model_name')
     request.inputs[args['input_name']].CopyFrom(tf.make_tensor_proto(img, shape=[len(image_data)]))
-    image_data = []
     start_time = datetime.datetime.now()
     result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
     end_time = datetime.datetime.now()
@@ -78,18 +79,21 @@ for line in lines:
     nu = np.array(output)
     # for object classification models show imagenet class
     print('Processing time: {:.2f} ms; speed {:.2f} fps'.format(round(duration, 2), round(1000 / duration, 2)))
-    ma = np.argmax(nu)
-    mark_message = ""
-    if int(label) == ma:
-        matched += 1
-        mark_message = "; Correct match."
-    else:
-        mark_message = "; Incorrect match. Should be {} {}".format(label, classes.imagenet_classes[int(label)])
+    for i in range(nu.shape[0]):
+        ma = np.argmax(nu[i])
+        mark_message = ""
+        if int(labels[i]) == ma:
+            matched += 1
+            mark_message = "; Correct match."
+        else:
+            mark_message = "; Incorrect match. Should be {} {}".format(label, classes.imagenet_classes[int(label)])
     i += 1
-    print("\t",i, classes.imagenet_classes[ma],ma, mark_message)
+    print("\t", i, classes.imagenet_classes[ma], ma, mark_message)
+    image_data = []
+    labels = []
 
-latency = np.average(processing_times)
-accuracy = matched/i
+latency = np.average(processing_times / batch_size)
+accuracy = matched / i
 
 print("Overall accuracy=",accuracy*100,"%")
 print("Average latency=",latency,"ms")
