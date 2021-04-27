@@ -82,7 +82,7 @@ for line in lines:
     output = make_ndarray(result.outputs[args['output_name']])
     nu = np.array(output)
     # for object classification models show imagenet class
-    print('Batch: {}. Processing time: {:.2f} ms; speed {:.2f} fps'.format(count//batch_size, round(duration, 2), round(1000 / duration, 2)))
+    print('Batch: {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(count // batch_size, round(duration, 2), round(1000 / duration, 2)))
     for i in range(nu.shape[0]):
         ma = np.argmax(nu[i]) - 1
         mark_message = ""
