@@ -29,6 +29,7 @@
 
 #include "status.hpp"
 #include "tensorinfo.hpp"
+#include "binaryutils.hpp"
 
 namespace ovms {
 
@@ -115,9 +116,24 @@ Status deserializePredictRequest(
             }
             auto& requestInput = requestInputItr->second;
 
-            InferenceEngine::Blob::Ptr blob =
-                deserializeTensorProto<TensorProtoDeserializator>(
+
+            InferenceEngine::Blob::Ptr blob;
+            if(requestInput.dtype() == tensorflow::DataType::DT_STRING){
+                auto tensor = new tensorflow::TensorProto();
+                unsigned char buffer[requestInput.string_val(0).length()];
+                memcpy(buffer, requestInput.string_val(0).data(), requestInput.string_val(0).length());
+                convertBinaryToTensor(buffer, tensorInfo, *tensor);
+                blob = deserializeTensorProto<TensorProtoDeserializator>(
+                    *tensor, tensorInfo);
+            }
+            else
+            {
+                blob = deserializeTensorProto<TensorProtoDeserializator>(
                     requestInput, tensorInfo);
+            }
+            
+
+            
 
             if (blob == nullptr) {
                 Status status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
