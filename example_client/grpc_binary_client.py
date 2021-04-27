@@ -27,10 +27,12 @@ parser = argparse.ArgumentParser(description='Do requests to ie_serving and tf_s
 parser.add_argument('--images_list', required=False, default='input_images.txt', help='path to a file with a list of labeled images')
 parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
-parser.add_argument('--input_name',required=False, default='input', help='Specify input tensor name. default: input')
-parser.add_argument('--output_name',required=False, default='resnet_v1_50/predictions/Reshape_1', help='Specify output name. default: resnet_v1_50/predictions/Reshape_1')
+parser.add_argument('--input_name',required=False, default='image_bytes', help='Specify input tensor name. default: image_bytes')
+parser.add_argument('--output_name',required=False, default='probabilities', help='Specify output name. default: probabilities')
 parser.add_argument('--model_name', default='resnet', help='Define model name, must be same as is in service. default: resnet',
                     dest='model_name')
+# If input numpy file has too few frames according to the value of iterations and the batch size, it will be
+# duplicated to match requested number of frames
 parser.add_argument('--batchsize', default=1, help='Number of images in a single request. default: 1',
                     dest='batchsize')
 args = vars(parser.parse_args())
@@ -41,12 +43,14 @@ input_images = args.get('images_list')
 size = args.get('size')
 with open(input_images) as f:
     lines = f.readlines()
-batch_size = min(int(args.get('batchsize')), len(lines))
+batch_size = int(args.get('batchsize'))
+while batch_size > len(lines):
+    lines += lines
 print('Start processing:')
 print('\tModel name: {}'.format(args.get('model_name')))
 print('\tImages list file: {}'.format(args.get('images_list')))
 
-i = 0
+count = 0
 matched = 0
 processing_times = np.zeros((0),int)
 
@@ -63,7 +67,7 @@ for line in lines:
         continue
     request = predict_pb2.PredictRequest()
     request.model_spec.name = args.get('model_name')
-    request.inputs[args['input_name']].CopyFrom(tf.make_tensor_proto(img, shape=[len(image_data)]))
+    request.inputs[args['input_name']].CopyFrom(make_tensor_proto(image_data, shape=[len(image_data)]))
     start_time = datetime.datetime.now()
     result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
     end_time = datetime.datetime.now()
@@ -78,22 +82,23 @@ for line in lines:
     output = make_ndarray(result.outputs[args['output_name']])
     nu = np.array(output)
     # for object classification models show imagenet class
-    print('Processing time: {:.2f} ms; speed {:.2f} fps'.format(round(duration, 2), round(1000 / duration, 2)))
+    print('Batch: {}. Processing time: {:.2f} ms; speed {:.2f} fps'.format(count//batch_size, round(duration, 2), round(1000 / duration, 2)))
     for i in range(nu.shape[0]):
-        ma = np.argmax(nu[i])
+        ma = np.argmax(nu[i]) - 1
         mark_message = ""
         if int(labels[i]) == ma:
             matched += 1
             mark_message = "; Correct match."
         else:
             mark_message = "; Incorrect match. Should be {} {}".format(label, classes.imagenet_classes[int(label)])
-    i += 1
-    print("\t", i, classes.imagenet_classes[ma], ma, mark_message)
+        count += 1
+        print("\t", count, classes.imagenet_classes[ma], ma, mark_message)
     image_data = []
     labels = []
+    batch_i = 0
 
-latency = np.average(processing_times / batch_size)
-accuracy = matched / i
+latency = np.average(processing_times)
+accuracy = matched / count
 
 print("Overall accuracy=",accuracy*100,"%")
 print("Average latency=",latency,"ms")
