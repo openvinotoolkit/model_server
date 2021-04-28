@@ -40,7 +40,6 @@ args = vars(parser.parse_args())
 channel = grpc.insecure_channel("{}:{}".format(args['grpc_address'],args['grpc_port']))
 stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 input_images = args.get('images_list')
-size = args.get('size')
 with open(input_images) as f:
     lines = f.readlines()
 batch_size = int(args.get('batchsize'))
