@@ -20,15 +20,15 @@ KALDI_PATH=/opt/kaldi
 ASPIRE_PATH=$KALDI_PATH/egs/aspire/s5
 DATA_PATH=/opt/data
 
-# WAV download and preparation
+# WAV preparation
 cd $DATA_PATH
-ffmpeg -i recording.wav  -acodec pcm_s16le -ac 1 -ar 8000 sample.wav
+ffmpeg -y -i $1  -acodec pcm_s16le -ac 1 -ar 8000 sample.wav
 
 # Prepare required files
 mkdir $ASPIRE_PATH/data/conversion
 cd $ASPIRE_PATH/data/conversion
-echo "sample /opt/data/sample.wav" > wav.scp
-echo "sample sample" > utt2spk
+echo "$1 /opt/data/sample.wav" > wav.scp
+echo "$1 $1" > utt2spk
 cd $ASPIRE_PATH
 utils/utt2spk_to_spk2utt.pl data/conversion/utt2spk > data/conversion/spk2utt
 utils/copy_data_dir.sh data/conversion data/conversion_hires

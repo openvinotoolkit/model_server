@@ -90,8 +90,8 @@ It will start kaldi container in interactive mode. In the container shell run:
 
 ```
 git clone -b stateful_client_extension https://github.com/openvinotoolkit/model_server.git /opt/model_server
-./opt/model_server/example_client/stateful/asr_demo/prepare_environment.sh
-./opt/model_server/example_client/stateful/asr_demo/run.sh
+/opt/model_server/example_client/stateful/asr_demo/prepare_environment.sh
+/opt/model_server/example_client/stateful/asr_demo/run.sh
 ```
 
 Recognized speech should be now present in `$DATA_DIR/out.txt`:
