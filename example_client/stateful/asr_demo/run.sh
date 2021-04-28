@@ -31,7 +31,7 @@ for i in *.wav; do
     python grpc_stateful_client.py --input_path /opt/data/feats.ark,/opt/data/ivectors.ark --output_path /opt/data/scores.ark --grpc_address localhost --grpc_port 9000 --input_name input,ivector --output_name Final_affine --model_name aspire --cw_l 17 --cw_r 12
     ./asr_demo/read_model_output.sh $i
     cd $DATA_PATH
-    rm scores.ark ivectors.ark feats.* sample.wav out.txt
+    rm scores.ark ivectors.ark feats.* .sample.wav out.txt
 done
 
 
