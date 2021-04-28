@@ -17,37 +17,48 @@
 import requests
 import numpy as np
 import base64
+import classes
 from tensorflow import make_tensor_proto, make_ndarray, make_tensor_proto
 import datetime
 import argparse
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 
-parser = argparse.ArgumentParser(description='Do requests to ie_serving and tf_serving using images in binary format')
-parser.add_argument('--images_list', required=False, default='input_images.txt', help='path to a file with a list of labeled images')
-parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
-parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
-parser.add_argument('--input_name',required=False, default='input', help='Specify input tensor name. default: input')
-parser.add_argument('--output_name',required=False, default='resnet_v1_50/predictions/Reshape_1', help='Specify output name. default: resnet_v1_50/predictions/Reshape_1')
+parser = argparse.ArgumentParser(description='Sends requests via TensorFlow Serving RESTful API using images in binary format. '
+                                             'It displays performance statistics and optionally the model accuracy')
+parser.add_argument('--images_list', required=False, default='input_images.txt',
+                    help='path to a file with a list of labeled images')
+parser.add_argument('--rest_url', required=False, default='http://localhost',
+                    help='Specify url to REST API service. default: http://localhost')
+parser.add_argument('--rest_port', required=False, default=9000,
+                    help='Specify port to rest service. default: 9000')
+parser.add_argument('--input_name', required=False, default='image_bytes',
+                    help='Specify input tensor name. default: image_bytes')
+parser.add_argument('--output_name', required=False, default='probabilities',
+                    help='Specify output name. default: probabilities')
 parser.add_argument('--model_name', default='resnet', help='Define model name, must be same as is in service. default: resnet',
                     dest='model_name')
+# If input numpy file has too few frames according to the value of iterations and the batch size, it will be
+# duplicated to match requested number of frames
 parser.add_argument('--batchsize', default=1, help='Number of images in a single request. default: 1',
                     dest='batchsize')
 args = vars(parser.parse_args())
 
-address = "{}:{}/v1/models/{}:predict".format(args['rest_address'], args['rest_port'], args['model_name'])
+address = "{}:{}/v1/models/{}:predict".format(
+    args['rest_url'], args['rest_port'], args['model_name'])
 input_images = args.get('images_list')
-size = args.get('size')
 with open(input_images) as f:
     lines = f.readlines()
-batch_size = min(int(args.get('batchsize')), len(lines))
+batch_size = int(args.get('batchsize'))
+while batch_size > len(lines):
+    lines += lines
 print('Start processing:')
 print('\tModel name: {}'.format(args.get('model_name')))
 print('\tImages list file: {}'.format(args.get('images_list')))
 
-i = 0
+count = 0
 matched = 0
-processing_times = np.zeros((0),int)
+processing_times = np.zeros((0), int)
 
 batch_i = 0
 image_data = []
@@ -61,38 +72,44 @@ for line in lines:
     if batch_i < batch_size:
         continue
     # Compose a JSON Predict request (send JPEG image in base64).
-    jpeg_bytes = base64.b64encode(image_data).decode('utf-8')
-    predict_request = '{"instances" : [{"b64": "%s"}]}' % jpeg_bytes
+    predict_request = '{"instances" : ['
+    for image in image_data:
+        jpeg_bytes = base64.b64encode(image).decode('utf-8')
+        predict_request += '{"b64": "%s"},' % jpeg_bytes
+    predict_request = predict_request[:-1]
+    predict_request += "]}"
     start_time = datetime.datetime.now()
-    result = requests.post(address, data=predict_request)
+    result = requests.post(address, data=predict_request).json()['predictions']
     end_time = datetime.datetime.now()
-    if args['output_name'] not in result.outputs:
+    if args['output_name'] not in result[0]:
         print("Invalid output name", args['output_name'])
         print("Available outputs:")
         for Y in result.outputs:
             print(Y)
         exit(1)
     duration = (end_time - start_time).total_seconds() * 1000
-    processing_times = np.append(processing_times,np.array([int(duration)]))
-    output = make_ndarray(result.outputs[args['output_name']])
-    nu = np.array(output)
+    processing_times = np.append(processing_times, np.array([int(duration)]))
     # for object classification models show imagenet class
-    print('Processing time: {:.2f} ms; speed {:.2f} fps'.format(round(duration, 2), round(1000 / duration, 2)))
-    for i in range(nu.shape[0]):
-        ma = np.argmax(nu[i])
+    print('Batch: {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(
+        count // batch_size, round(duration, 2), round(1000 / duration, 2)))
+    for i in range(len(result)):
+        nu = result[i][args['output_name']]
+        ma = np.argmax(nu) - 1
         mark_message = ""
         if int(labels[i]) == ma:
             matched += 1
             mark_message = "; Correct match."
         else:
-            mark_message = "; Incorrect match. Should be {} {}".format(label, classes.imagenet_classes[int(label)])
-    i += 1
-    print("\t", i, classes.imagenet_classes[ma], ma, mark_message)
+            mark_message = "; Incorrect match. Should be {} {}".format(
+                label, classes.imagenet_classes[int(label)])
+        count += 1
+        print("\t", count, classes.imagenet_classes[ma], ma, mark_message)
     image_data = []
     labels = []
+    batch_i = 0
 
-latency = np.average(processing_times / batch_size)
-accuracy = matched / i
+latency = np.average(processing_times)
+accuracy = matched / count
 
-print("Overall accuracy=",accuracy*100,"%")
-print("Average latency=",latency,"ms")
+print("Overall accuracy=", accuracy*100, "%")
+print("Average latency=", latency, "ms")
