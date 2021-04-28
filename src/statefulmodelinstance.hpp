@@ -73,7 +73,7 @@ public:
 
     Status reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
 
-    void unloadModel(bool isPermanent = true) override;
+    void unloadModel(bool isPermanent = true, bool isError = false) override;
 
 protected:
     std::shared_ptr<SequenceManager> sequenceManager;

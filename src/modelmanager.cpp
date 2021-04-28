@@ -440,23 +440,19 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     }
     Status firstErrorStatus = StatusCode::OK;
     std::set<std::string> modelsInConfigFile;
+    std::set<std::string> modelsWithInvalidConfig;
     std::unordered_map<std::string, ModelConfig> newModelConfigs;
     for (const auto& configs : itr->value.GetArray()) {
-        const auto modelName = configs["config"]["name"].GetString();
         ModelConfig modelConfig;
         auto status = modelConfig.parseNode(configs["config"]);
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_CONFIG_INVALID);
-            if (std::find_if(this->servedModelConfigs.begin(), this->servedModelConfigs.end(),
-                    [&modelName](const auto& pair) { return pair.first == modelName; }) != this->servedModelConfigs.end()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to reload model: {}. Previous versions will be kept. Parsing config failed due to error: {}.", modelName, status.string());
-                modelsInConfigFile.emplace(modelName);
-                newModelConfigs.emplace(modelName, this->servedModelConfigs.at(modelName));
-            } else {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load model: {}. Parsing config failed due to error: {}", modelName, status.string());
-            }
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed due to error: {}", modelConfig.getName(), status.string());
+            modelsWithInvalidConfig.emplace(modelConfig.getName());
             continue;
         }
+
+        const auto modelName = modelConfig.getName();
         if (pipelineDefinitionExists(modelName)) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by pipeline definition.", modelName);
@@ -488,7 +484,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         }
     }
     this->servedModelConfigs = std::move(newModelConfigs);
-    retireModelsRemovedFromConfigFile(modelsInConfigFile);
+    retireModelsRemovedFromConfigFile(modelsInConfigFile, modelsWithInvalidConfig);
     return firstErrorStatus;
 }
 
@@ -569,7 +565,8 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     return firstErrorStatus;
 }
 
-void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile) {
+void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile, const std::set<std::string>& modelsWithInvalidConfig) {
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "AAAAAAAAA {}", modelsWithInvalidConfig.size());
     std::set<std::string> modelsCurrentlyLoaded;
     for (auto& nameModelPair : getModels()) {
         modelsCurrentlyLoaded.insert(nameModelPair.first);
@@ -583,7 +580,7 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
     for (auto& modelName : modelsToUnloadAllVersions) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Retiring all versions of model: {}", modelName);
         try {
-            models.at(modelName)->retireAllVersions();
+            models.at(modelName)->retireAllVersions(modelsWithInvalidConfig.find(modelName) != modelsWithInvalidConfig.end());
         } catch (const std::out_of_range& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to retire all versions of model: {}", modelName);
         }

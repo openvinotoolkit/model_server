@@ -755,7 +755,7 @@ TEST(ModelManager, ConfigReloadingWithInvalidModelConfigShouldNotRetirePreviousI
             ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, versionModelInstance.second->getStatus().getState());
         }
     }
-    // we make FIRST_MODEL invalid by adding max_sequence_number to non stateful model and expect to keep all loaded versions of it
+    // we make FIRST_MODEL invalid by adding max_sequence_number to non stateful model and expect to unload versions with error code
     const std::string toReplace{"\"name\": \"resnet\","};
     const std::string replacement{"\"name\": \"resnet\",\n        \"max_sequence_number\": 10,"};
     config.replace(config.find(toReplace), toReplace.size(), replacement);
@@ -764,7 +764,8 @@ TEST(ModelManager, ConfigReloadingWithInvalidModelConfigShouldNotRetirePreviousI
     models = manager.getModels();
     ASSERT_EQ(models.size(), 2);
     for (auto& versionModelInstance : manager.getModels().at(FIRST_MODEL_NAME)->getModelVersions()) {
-        EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, versionModelInstance.second->getStatus().getState());
+        EXPECT_EQ(ovms::ModelVersionState::END, versionModelInstance.second->getStatus().getState()) << versionModelInstance.second->getStatus().getStateString();
+        EXPECT_EQ(ovms::ModelVersionStatusErrorCode::ERROR, versionModelInstance.second->getStatus().getErrorCode()) << versionModelInstance.second->getStatus().getErrorMsg();
     }
     for (auto& versionModelInstance : manager.getModels().at(SECOND_MODEL_NAME)->getModelVersions()) {
         EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, versionModelInstance.second->getStatus().getState());

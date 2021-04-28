@@ -124,7 +124,7 @@ private:
      *
      * @param modelsExistingInConfigFile
      */
-    void retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile);
+    void retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile, const std::set<std::string>& modelsWithInvalidConfig);
 
     /**
      * @brief Mutex for protecting concurrent reloading config
