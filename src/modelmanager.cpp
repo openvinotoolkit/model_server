@@ -566,7 +566,6 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
 }
 
 void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile, const std::set<std::string>& modelsWithInvalidConfig) {
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "AAAAAAAAA {}", modelsWithInvalidConfig.size());
     std::set<std::string> modelsCurrentlyLoaded;
     for (auto& nameModelPair : getModels()) {
         modelsCurrentlyLoaded.insert(nameModelPair.first);
