@@ -15,8 +15,7 @@
 #
 
 import subprocess
- 
-subprocess.run(["/opt/kaldi/src/featbin/feat-to-len", "scp:/opt/data/feats.scp", "ark,t:feats_length.txt"])
+subprocess.run(["/opt/kaldi/src/featbin/feat-to-len", "scp:/tmp/feats.scp", "ark,t:feats_length.txt"])
  
 f = open("ivector_online.1.ark.txt", "r")
 g = open("ivector_online_ie.ark.txt", "w")
