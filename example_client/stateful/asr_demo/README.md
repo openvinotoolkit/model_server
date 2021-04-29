@@ -1,19 +1,17 @@
 # Speech recognition with ASpIRE Chain Time Delay Neural Network
 
-In this demo you will use OpenVINO Model Server to serve [ASpIRE Chain TDNN](https://kaldi-asr.org/models/m1) model and do speech recognition starting with audio wave file and eding up with text file containing recognized speech.
+In this demo you will use OpenVINO Model Server to serve [ASpIRE Chain TDNN](https://kaldi-asr.org/models/m1) model and do speech recognition starting with audio wave file and eding up with text file containing recognized speech. Presented steps serve as a demonstration of inference on stateful model and should not be considered as production setup.
 
 ### 1. Prepare working directories
 
 Create a asr_demo directory in your home catalog with the following 3 subdirectories:
 - workspace (used to hold intermediate files)
-- data (used to exchange audio, text and model input and output)
 - models (used to hold Aspire files for the model server)
 
 ```
 export WORKSPACE_DIR=$HOME/asr_demo/workspace
-export DATA_DIR=$HOME/asr_demo/data
 export MODELS_DIR=$HOME/asr_demo/models
-mkdir -p $WORKSPACE_DIR $DATA_DIR $MODELS_DIR
+mkdir -p $WORKSPACE_DIR $MODELS_DIR
 ```
 
 ### 2. Prepare docker images
@@ -32,11 +30,12 @@ docker pull openvino/ubuntu18_dev
 
 # Build Kaldi image
 cd $WORKSPACE_DIR
-wget https://raw.githubusercontent.com/kaldi-asr/kaldi/master/docker/debian10-cpu/Dockerfile
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/stateful_client_extension/example_client/stateful/asr_demo/Dockerfile
 docker build -t kaldi:latest .
 ```
 
-OpenVINO development image is required to convert Kaldi model to IR format and Kaldi image will help with data processing.
+OpenVINO development image is required to convert Kaldi model to IR format.
+Model server container will be used as an inference service and Kaldi container will be used as a OVMS client.
 
 ### 3. Prepare ASpIRE TDNN model
 
@@ -48,7 +47,7 @@ mkdir aspire_kaldi
 tar -xvf 0001_aspire_chain_model.tar.gz -C $WORKSPACE_DIR/aspire_kaldi
 ```
 
-Use OpenVINO development container with model optimizer to convert model to IR format:
+Use temporary OpenVINO development container with model optimizer to convert model to IR format:
 
 ```
 docker run --rm -it -u 0 -v $WORKSPACE_DIR:/opt/workspace openvino/ubuntu18_dev python3 /opt/intel/openvino_2021.3.394/deployment_tools/model_optimizer/mo_kaldi.py --input_model /opt/workspace/aspire_kaldi/exp/chain/tdnn_7b/final.mdl --output output --output_dir /opt/workspace
@@ -80,37 +79,33 @@ docker run --rm -d -p 9000:9000 -v $MODELS_DIR:/opt/models openvino/model_server
 
 ### 6. Do speech recognition
 
-As OVMS is already running, you can now convert the wave file to text.
-First place the audio speech sample in wave format in `DATA_DIR`. You can use `sample.wav` from this repository:
+As OVMS is already running in the background, you need to start another container that will be the client.
+Start kaldi container built in the step 2 in interactive mode:
 
 ```
-wget https://github.com/openvinotoolkit/model_server/raw/stateful_client_extension/example_client/stateful/asr_demo/sample.wav -O $DATA_DIR/sample.wav
+docker run --rm -it --network="host" kaldi:latest bash
 ```
 
-and then run:
+The container constains everything required for data processing and communication with the model server.
+It runs with `host` network parameter to make it easy to access model server container running on the same host.
+As you start the container, the working directory is `/opt/workspace`
+
+Download the sample audio file for speech recognition:
 
 ```
-docker run --rm -it --network="host" -v $DATA_DIR:/opt/data -v $MODELS_DIR:/opt/models kaldi:latest bash
-```
-
-It will start kaldi container in interactive mode. In the container shell clone model server repository:
-
-```
-git clone -b stateful_client_extension https://github.com/openvinotoolkit/model_server.git /opt/model_server
-```
-
-Prepare environment for data processing and communication with OVMS:
-```
-/opt/model_server/example_client/stateful/asr_demo/prepare_environment.sh
+wget https://github.com/openvinotoolkit/model_server/raw/stateful_client_extension/example_client/stateful/asr_demo/sample.wav
 ```
 
 Run speech recognition:
 ```
-/opt/model_server/example_client/stateful/asr_demo/run.sh
+/opt/model_server/example_client/stateful/asr_demo/run.sh /opt/workspace/sample.wav localhost 9000
 ```
 
-Recognized speech should be now present in `DATA_DIR` on your host machine. You can also view it from the container shell as it resides in `/opt/data`:
+The `run.sh` script takes 3 arguments, first is the absolute path to the `wav` file, second is the OVMS address and the third is the port on which model server listens.
+At the beginning the MFCC features and ivectors are extracted, then they are sent to the model server via [grpc_stateful_client](../grpc_stateful_client.py). At the end the results are decoded and parsed into text.
+
+When the command finishes successfully you should see the `txt` file in the same directory as the `wav` one:
 ```
-cat /opt/data/sample.wav.txt
-sample.wav today we have a very nice weather
+cat /opt/workspace/sample.wav.txt
+/opt/workspace/sample.wav today we have a very nice weather
 ```

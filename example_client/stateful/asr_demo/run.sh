@@ -19,7 +19,7 @@
 export OVMS_PATH=/opt/model_server
 export KALDI_PATH=/opt/kaldi
 export ASPIRE_PATH=$KALDI_PATH/egs/aspire/s5
-export DATA_PATH=/opt/data
+export DATA_PATH=/tmp
 
 # Extract features 
 source $OVMS_PATH/.venv/bin/activate
@@ -46,5 +46,3 @@ for i in *.wav; do
     rm -rf $ASPIRE_PATH/data/conversion* || true
 done
 done
-
-
