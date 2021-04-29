@@ -27,50 +27,25 @@
 
 namespace ovms {
 
-int precisionToMatType(InferenceEngine::Precision precision)
-{
-    switch (precision) {
-    case InferenceEngine::Precision::FP32:
-        return CV_32FC3;
-    case InferenceEngine::Precision::FP16:
-        return CV_16FC3;
-    case InferenceEngine::Precision::U8:
-        return CV_8UC3;
-    case InferenceEngine::Precision::I8:
-        return CV_8SC3;
-    case InferenceEngine::Precision::U16:
-        return CV_16UC3;
-    case InferenceEngine::Precision::I16:
-        return CV_16SC3;
-    case InferenceEngine::Precision::I32:
-        return CV_32SC3;
-    case InferenceEngine::Precision::I64:
-    case InferenceEngine::Precision::MIXED:
-    case InferenceEngine::Precision::Q78:
-    case InferenceEngine::Precision::BIN:
-    case InferenceEngine::Precision::BOOL:
-    case InferenceEngine::Precision::CUSTOM:
-    default:
-        return CV_32SC3;
+StatusCode convertStringValToTensorContent(const tensorflow::TensorProto& stringVal, tensorflow::TensorProto& tensorContent){
+    int contentSize = 0;
+    std::vector<cv::Mat> images;
+    for(int i = 0; i < stringVal.string_val_size(); i++){
+        contentSize += stringVal.string_val(i).length();
+        std::vector<char> vectordata(stringVal.string_val(i).begin(),stringVal.string_val(i).end());
+        cv::Mat data_mat(vectordata,true);
+        cv::Mat image(cv::imdecode(data_mat,1));
+        contentSize += image.total() * image.elemSize();
+        images.push_back(image);
     }
-}
+    char* content = new char[contentSize];
 
-StatusCode convertBinaryToTensor(void *byte, const std::shared_ptr<TensorInfo>& tensorInfo, tensorflow::TensorProto& tensor){
-    auto layout = tensorInfo->getLayout();
-    int height, width;
-
-    if(layout == InferenceEngine::Layout::NCHW)
-    {
-        height = tensorInfo->getShape()[2];
-        width = tensorInfo->getShape()[3];
+    int offset = 0;
+    for(cv::Mat image : images){
+        memcpy(&(content[offset]), image.data, image.total() * image.elemSize());
+        offset += image.total() * image.elemSize();
     }
-    else
-    {
-        height = tensorInfo->getShape()[1];
-        width = tensorInfo->getShape()[2];
-    }
-    auto image = cv::Mat(height, width, precisionToMatType(tensorInfo->getPrecision()), byte);
-    tensor.set_tensor_content(image.data, image.datastart - image.dataend);
+    tensorContent.set_tensor_content(content, contentSize);
     return StatusCode::OK;
 }
 }

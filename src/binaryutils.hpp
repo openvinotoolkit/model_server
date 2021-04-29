@@ -18,8 +18,5 @@
 #include "tensorinfo.hpp"
 
 namespace ovms {
-
-int precisionToMatType(InferenceEngine::Precision precision);
-
-StatusCode convertBinaryToTensor(void *byte, const std::shared_ptr<TensorInfo>& tensorInfo, tensorflow::TensorProto& tensor);
+StatusCode convertStringValToTensorContent(const tensorflow::TensorProto& stringVal, tensorflow::TensorProto& tensorContent);
 }

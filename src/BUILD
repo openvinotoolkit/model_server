@@ -362,6 +362,7 @@ cc_test(
         "test/predict_validation_test.cpp",
         "test/prediction_service_test.cpp",
         "test/custom_loader_test.cpp",
+        "test/binaryutils_test.cpp",
         "test/rest_parser_row_test.cpp",
         "test/rest_parser_column_test.cpp",
         "test/rest_parser_nonamed_test.cpp",

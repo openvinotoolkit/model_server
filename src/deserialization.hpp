@@ -115,24 +115,18 @@ Status deserializePredictRequest(
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
             }
             auto& requestInput = requestInputItr->second;
-
-
             InferenceEngine::Blob::Ptr blob;
+
             if(requestInput.dtype() == tensorflow::DataType::DT_STRING){
-                auto tensor = new tensorflow::TensorProto();
-                unsigned char buffer[requestInput.string_val(0).length()];
-                memcpy(buffer, requestInput.string_val(0).data(), requestInput.string_val(0).length());
-                convertBinaryToTensor(buffer, tensorInfo, *tensor);
+                tensorflow::TensorProto tensorContent;
+                convertStringValToTensorContent(requestInput, tensorContent);
                 blob = deserializeTensorProto<TensorProtoDeserializator>(
-                    *tensor, tensorInfo);
-            }
-            else
+                    tensorContent, tensorInfo);
+            }else
             {
                 blob = deserializeTensorProto<TensorProtoDeserializator>(
-                    requestInput, tensorInfo);
-            }
-            
-
+                        requestInput, tensorInfo);
+            } 
             
 
             if (blob == nullptr) {
