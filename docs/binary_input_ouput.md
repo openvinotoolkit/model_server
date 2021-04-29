@@ -4,33 +4,39 @@ While OpenVINO models don't have ability to process binary inputs, the model ser
 automatically using OpenCV library.
 
 OpenVINO Model Server API allows for sending the request data in a variety of formats inside the TensorProto objects.
-Array data are passed inside the tensor_contnet field, which represent the input data buffer.
+Array data are passed inside the tensor_content field, which represent the input data buffer.
 
 When the data is sent in the field `string_val`, it is interpreted as a binary format of the input data.
 
-Note that the model metadata reports the inputs shape with layout NHWC, the binary data must be sent with 
+Note, that while the model metadata reports the inputs shape with layout NHWC, the binary data must be sent with 
 shape: [N] with dtype: DT_STRING. N represents elements with binary data converted to string bytes.
 
 ## Preparing for deployment
-Before processing in the target model, it will be read by OpenCV and passed are a blob. The data converted by OpenCV
-has always layout NHWC. It will be also resize to the target model of pipeline node resolution.
+Before processing in the target AI model, binary image data is encoded by OVMS to a layout NHWC in BGR color format.
+It will be also resize to the model or pipeline node resolution.
 
-The model processing binary data needs to be set in NHWC layout. Original layout of the input data can be changed in the 
-OVMS configuration in runtime. 
-Alternatively layout conversion can be implemented using a custom on `image transormation`.
+Processing the binary image requests requires the model or the custom nodes to accept layout NHWC in BGR color 
+format with data with the data range from 0-255. Original layout of the input data can be changed in the 
+OVMS configuration in runtime. For example when the orignal model has input shape [1,3,224,224] add a parameter
+in the OVMS configuration "layout": "NHWC" or the command line parameter `--layout NHWC`. In result, the model will
+have effective shape [1,224,224,3].
 
-Note that OpenCV generates the blob data with the normalization 0-255 and BGR color format. In case the model was 
-trained with different dataset, execution could include `image transormation` custom node to adjust the data to the target model.
+In case the model was trained with color format RGB and range other then 0-255, the [model optimizer](link) can
+apply required adjustments:
+--reverse_input_channels: Switch the input channels order from RGB to BGR (or vice versa). Applied to original inputs of the model if and only if a number of channels equals 3. Applied after application of --mean_values and --scale_values options, so numbers in --mean_values and  --scale_values go in the order of channels used in the  original model
+--scale : All input values coming from original network inputs  will be divided by this value. When a list of inputs  is overridden by the --input parameter, this scale is  not applied for any input that does not match with the  original input of the model
+--mean_values :  Mean values to be used for the input image per  channel. Values to be provided in the (R,G,B) or (B,G,R) format. Can be defined for desired input of the model, for example: "--mean_values data[255,255,255],info[255,255,255]". The exact meaning and order of channels depend on how the original model was trained.
+
+Alternatively layout conversion can be implemented using a custom node [image transormation](link). Custom node can accept
+the data in layout NHWC and convert it to NCHW before passing to the target AI model. It can also replace color channel
+and rescale the data.
 
 Blob data precision from binary input decoding is set automatically based on the target model or the DAG pipeline node.
 
 ## Returning binary outputs
 
 Some models or DAG pipelines return images in the response. OpenVINO model outputs are always in the form for arrays. It is possible,
-however, to configure OVMS to send the image outputs in the binary format instead.
-
-The binary data will be created out of OpenVINO response blob using OpenCV library. Images in the response can be returned 
-as JPEG encoded. REST API responses will be in addition to that also Base64 encoded.
+however, to configure OVMS to send the image outputs in the binary image format instead.
 
 Binary outputs can be enabled by setting the output name with `_binary` suffix. In case the model is already exported with
 different output name, OVMS has option to configure inputs and outputs names mapping by creating a json file `mapping_config.json`
@@ -41,9 +47,13 @@ and planning it together with the model files in the model version folder.
   "outputs": {"tensor_name":"tensor_name_binary" }
 }
 ```
-Binary outputs can be successfully returned only when they include images with layout NHWC, color format BGR and data range
-0-255. If the model has different format of the results, it can be postprocess by a custom node like `image_transformation`
-with the DAG pipeline.
+The binary data will be encoded out of OpenVINO model response blob. The conversion requires, however,
+the output to be in the layout NHWC. The model layout can be changes in the runtime in OVMS configuration.
+When the model output is [1,3,224,224] and the following configuration
+```json
+"layout": {"input": "NHWC", "output":"NHWC"}
+```
+Images in the response will returned as JPEG encoded. REST API responses will be in addition to that also Base64 encoded.
 
 ## API specification
 
