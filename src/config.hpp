@@ -338,15 +338,6 @@ public:
     }
 
     /**
-     * @brief Get rest API timeout in miliseconds
-     * 
-     * @return uint
-     */
-    uint restTimeout() {
-        return result->operator[]("rest_timeout").as<uint>();
-    }
-
-    /**
      * @brief Get the sequence cleaner poll wait time in minutes
      * 
      * @return uint 

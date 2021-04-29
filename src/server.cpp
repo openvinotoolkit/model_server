@@ -131,7 +131,6 @@ void logConfig(Config& config) {
     SPDLOG_DEBUG("log level: {}", config.logLevel());
     SPDLOG_DEBUG("log path: {}", config.logPath());
     SPDLOG_DEBUG("file system poll wait seconds: {}", config.filesystemPollWaitSeconds());
-    SPDLOG_DEBUG("rest API timeout in miliseconds: {}", config.restTimeout());
     SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
 }
 
@@ -237,7 +236,7 @@ std::unique_ptr<ovms::http_server> startRESTServer() {
         int workers = config.restWorkers() ? config.restWorkers() : 10;
         SPDLOG_INFO("Will start {} REST workers", workers);
 
-        std::unique_ptr<ovms::http_server> restServer = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), workers, config.restTimeout());
+        std::unique_ptr<ovms::http_server> restServer = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), workers, 0);
         if (restServer != nullptr) {
             SPDLOG_INFO("Started REST server at {}", server_address);
         } else {
