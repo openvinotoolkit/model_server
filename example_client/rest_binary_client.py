@@ -17,12 +17,41 @@
 import requests
 import numpy as np
 import base64
+import json
 import classes
-from tensorflow import make_tensor_proto, make_ndarray, make_tensor_proto
 import datetime
 import argparse
-from tensorflow_serving.apis import predict_pb2
-from tensorflow_serving.apis import prediction_service_pb2_grpc
+
+def create_request(image_data, request_format):
+    predict_request = '{"instances" : ['
+    for image in image_data:
+        jpeg_bytes = base64.b64encode(image).decode('utf-8')
+        predict_request += '{"b64": "%s"},' % jpeg_bytes
+    predict_request = predict_request[:-1]
+    predict_request += "]}"
+    signature = "serving_default"
+    instances = []
+    if request_format == "row_name":
+        for image in image_data:
+            jpeg_bytes = base64.b64encode(image).decode('utf-8')
+            instances.append({args['input_name']: {"b64": jpeg_bytes}})
+    else:
+        for image in image_data:
+            jpeg_bytes = base64.b64encode(image).decode('utf-8')
+            instances.append({"b64": jpeg_bytes})
+    if request_format == "row_name":
+        data_obj = {"signature_name": signature, "instances": instances}
+    elif request_format == "row_noname":
+        data_obj = {"signature_name": signature, "instances": instances}
+    elif request_format == "column_name":
+        data_obj = {"signature_name": signature, 'inputs': {args['input_name']: instances}}
+    elif request_format == "column_noname":
+        data_obj = {"signature_name": signature, 'inputs': instances}
+    else:
+        print("invalid request format defined")
+        exit(1)
+    data_json = json.dumps(data_obj)
+    return data_json
 
 parser = argparse.ArgumentParser(description='Sends requests via TensorFlow Serving RESTful API using images in binary format. '
                                              'It displays performance statistics and optionally the model accuracy')
@@ -38,6 +67,8 @@ parser.add_argument('--output_name', required=False, default='probabilities',
                     help='Specify output name. default: probabilities')
 parser.add_argument('--model_name', default='resnet', help='Define model name, must be same as is in service. default: resnet',
                     dest='model_name')
+parser.add_argument('--request_format', default='row_noname', help='Request format according to TF Serving API: row_noname,row_name,column_noname,column_name',
+                    choices=["row_noname", "row_name", "column_noname", "column_name"], dest='request_format')
 # If input numpy file has too few frames according to the value of iterations and the batch size, it will be
 # duplicated to match requested number of frames
 parser.add_argument('--batchsize', default=1, help='Number of images in a single request. default: 1',
@@ -72,28 +103,21 @@ for line in lines:
     if batch_i < batch_size:
         continue
     # Compose a JSON Predict request (send JPEG image in base64).
-    predict_request = '{"instances" : ['
-    for image in image_data:
-        jpeg_bytes = base64.b64encode(image).decode('utf-8')
-        predict_request += '{"b64": "%s"},' % jpeg_bytes
-    predict_request = predict_request[:-1]
-    predict_request += "]}"
+    predict_request = create_request(image_data, args['request_format'])
     start_time = datetime.datetime.now()
-    result = requests.post(address, data=predict_request).json()['predictions']
+    result = requests.post(address, data=predict_request).json()
     end_time = datetime.datetime.now()
-    if args['output_name'] not in result[0]:
-        print("Invalid output name", args['output_name'])
-        print("Available outputs:")
-        for Y in result.outputs:
-            print(Y)
-        exit(1)
+    if args['request_format'] == 'row_name' or args['request_format'] == 'row_noname':
+        result = [r[args['output_name']] for r in result['predictions']]
+    else:
+        result = result['outputs'][args['output_name']]
     duration = (end_time - start_time).total_seconds() * 1000
     processing_times = np.append(processing_times, np.array([int(duration)]))
     # for object classification models show imagenet class
     print('Batch: {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(
         count // batch_size, round(duration, 2), round(1000 / duration, 2)))
     for i in range(len(result)):
-        nu = result[i][args['output_name']]
+        nu = result[i]
         ma = np.argmax(nu) - 1
         mark_message = ""
         if int(labels[i]) == ma:
