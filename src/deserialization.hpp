@@ -118,8 +118,8 @@ Status deserializePredictRequest(
             InferenceEngine::Blob::Ptr blob;
 
             if(requestInput.dtype() == tensorflow::DataType::DT_STRING){
-                tensorflow::TensorProto tensorContent;
-                convertStringValToTensorContent(requestInput, tensorContent);
+                tensorflow::TensorProto tensorContent(requestInput);
+                convertBinaryStringValToTensorContent(tensorContent);
                 blob = deserializeTensorProto<TensorProtoDeserializator>(
                     tensorContent, tensorInfo);
             }else

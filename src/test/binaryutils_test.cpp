@@ -24,9 +24,8 @@ using namespace ovms;
 namespace {
     class BinaryUtilsTest : public ::testing::Test {};
     TEST_F(BinaryUtilsTest, tensorWithNoStringVal) {
-        tensorflow::TensorProto stringVal;
-        tensorflow::TensorProto tensorContent;
-        auto status = convertStringValToTensorContent(stringVal, tensorContent);
+        tensorflow::TensorProto tensor;
+        auto status = convertBinaryStringValToTensorContent(tensor);
         EXPECT_EQ(status, ovms::StatusCode::OK);
     }
 
@@ -39,13 +38,12 @@ namespace {
         char* image_bytes = new char[filesize];
         DataFile.read((char*)image_bytes, filesize);
 
-        tensorflow::TensorProto stringVal;
-        tensorflow::TensorProto tensorContent;
-        stringVal.set_dtype(tensorflow::DataType::DT_STRING);
-        stringVal.add_string_val(image_bytes, filesize);
-        stringVal.mutable_tensor_shape()->add_dim()->set_size(1);
+        tensorflow::TensorProto tensor;
+        tensor.set_dtype(tensorflow::DataType::DT_STRING);
+        tensor.add_string_val(image_bytes, filesize);
+        tensor.mutable_tensor_shape()->add_dim()->set_size(1);
 
-        auto status = convertStringValToTensorContent(stringVal, tensorContent);
+        auto status = convertBinaryStringValToTensorContent(tensor);
         delete [] image_bytes;
         EXPECT_EQ(status, ovms::StatusCode::OK);
     }

@@ -27,25 +27,26 @@
 
 namespace ovms {
 
-StatusCode convertStringValToTensorContent(const tensorflow::TensorProto& stringVal, tensorflow::TensorProto& tensorContent){
-    int contentSize = 0;
+StatusCode convertBinaryStringValToTensorContent(tensorflow::TensorProto& tensor){
+    int sizeOfTensorContent = 0;
     std::vector<cv::Mat> images;
-    for(int i = 0; i < stringVal.string_val_size(); i++){
-        contentSize += stringVal.string_val(i).length();
-        std::vector<char> vectordata(stringVal.string_val(i).begin(),stringVal.string_val(i).end());
+    for(int i = 0; i < tensor.string_val_size(); i++){
+        sizeOfTensorContent += tensor.string_val(i).length();
+        std::vector<char> vectordata(tensor.string_val(i).begin(),tensor.string_val(i).end());
         cv::Mat data_mat(vectordata,true);
         cv::Mat image(cv::imdecode(data_mat,1));
-        contentSize += image.total() * image.elemSize();
+        sizeOfTensorContent += image.total() * image.elemSize();
         images.push_back(image);
     }
-    char* content = new char[contentSize];
+    tensor.clear_string_val();
+    char* tensorContent = new char[sizeOfTensorContent];
 
     int offset = 0;
     for(cv::Mat image : images){
-        memcpy(&(content[offset]), image.data, image.total() * image.elemSize());
+        memcpy(&(tensorContent[offset]), image.data, image.total() * image.elemSize());
         offset += image.total() * image.elemSize();
     }
-    tensorContent.set_tensor_content(content, contentSize);
+    tensor.set_tensor_content(tensorContent, sizeOfTensorContent);
     return StatusCode::OK;
 }
 }
