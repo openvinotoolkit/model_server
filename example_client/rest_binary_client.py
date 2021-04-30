@@ -23,12 +23,6 @@ import datetime
 import argparse
 
 def create_request(image_data, request_format):
-    predict_request = '{"instances" : ['
-    for image in image_data:
-        jpeg_bytes = base64.b64encode(image).decode('utf-8')
-        predict_request += '{"b64": "%s"},' % jpeg_bytes
-    predict_request = predict_request[:-1]
-    predict_request += "]}"
     signature = "serving_default"
     instances = []
     if request_format == "row_name":
