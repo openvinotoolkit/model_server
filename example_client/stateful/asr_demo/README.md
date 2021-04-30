@@ -21,16 +21,40 @@ To successfully run this demo, you will need 3 docker images:
 - OpenVINO development image
 - [Kaldi](https://kaldi-asr.org/) image
 
-Run following commands to obtain them:
+Pull OpenVINO and OpenVINO Model Server images:
 ```
-# Pull OpenVINO images
-
 docker pull openvino/model_server
 docker pull openvino/ubuntu18_dev
+```
 
-# Build Kaldi image
+Download Kaldi dockerfile and modify it to contain necessary dependencies:
+
+```
 cd $WORKSPACE_DIR
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/stateful_client_extension/example_client/stateful/asr_demo/Dockerfile
+
+wget https://raw.githubusercontent.com/kaldi-asr/kaldi/master/docker/debian10-cpu/Dockerfile
+
+sed -i '$d' Dockerfile
+
+echo '
+RUN cd /opt/kaldi/egs/aspire/s5 && \
+    wget https://kaldi-asr.org/models/1/0001_aspire_chain_model_with_hclg.tar.bz2 && \
+    tar -xvf 0001_aspire_chain_model_with_hclg.tar.bz2 && \
+    rm -f 0001_aspire_chain_model_with_hclg.tar.bz2
+
+RUN apt-get install -y virtualenv
+
+RUN git clone -b stateful_client_extension https://github.com/openvinotoolkit/model_server.git /opt/model_server && \
+    cd /opt/model_server && \
+    virtualenv -p python3 .venv && \
+    . .venv/bin/activate && \
+    pip install tensorflow-serving-api==2.* kaldi-python-io==1.2.1 && \
+    echo "source /opt/model_server/.venv/bin/activate" | tee -a /root/.bashrc && \
+    mkdir /opt/workspace
+
+WORKDIR /opt/workspace/
+' >> Dockerfile
+
 docker build -t kaldi:latest .
 ```
 
