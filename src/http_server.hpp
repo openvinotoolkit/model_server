@@ -32,10 +32,10 @@ using http_server = tensorflow::serving::net_http::HTTPServerInterface;
  * 
  * @param port 
  * @param num_threads 
- * @param timeout_in_m
+ * @param timeout_in_m not implemented
  *  
  * @return std::unique_ptr<http_server> 
  */
-std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, int timeout_in_ms = 0);
+std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, int timeout_in_ms = -1);
 
 }  // namespace ovms
