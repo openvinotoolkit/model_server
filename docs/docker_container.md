@@ -52,7 +52,7 @@ After Docker installation you can pull the OpenVINO&trade; Model Server image. O
 docker pull openvino/model_server:latest
 ```
 
-Alternatively pull the image from [RedHat container registry catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de)
+Alternatively pull the image from [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de)
 ```bash
 docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
 ```

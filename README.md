@@ -33,7 +33,7 @@ A few key features:
 **Note:** OVMS has been tested on RedHat*, CentOS* and Ubuntu*. Publicly released docker images are based on CentOS and UBI.
 They are stored in:
 - [Dockerhub](https://hub.docker.com/r/openvino/model_server)
-- [Redhat registry catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de)
+- [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de)
 
 
 ## Run OpenVINO Model Server
