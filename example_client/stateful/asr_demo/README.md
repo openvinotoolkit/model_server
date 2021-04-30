@@ -140,6 +140,7 @@ You can also run the live-demo.py client on windows machine to record wav files 
 On server side run the instructions steps from 1 to 5 but instead of commands in step 6, run the following commands:
 ```
 export DATA_DIR=$HOME/asr_demo/data
+mkdir -p DATA_DIR
 ```
 
 Start kaldi container built in the step 2 in interactive mode:
