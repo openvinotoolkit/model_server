@@ -21,17 +21,18 @@ OVMS configuration in runtime. For example when the orignal model has input shap
 in the OVMS configuration "layout": "NHWC" or the command line parameter `--layout NHWC`. In result, the model will
 have effective shape [1,224,224,3].
 
-In case the model was trained with color format RGB and range other then 0-255, the [model optimizer](link) can
-apply required adjustments:
---reverse_input_channels: Switch the input channels order from RGB to BGR (or vice versa). Applied to original inputs of the model if and only if a number of channels equals 3. Applied after application of --mean_values and --scale_values options, so numbers in --mean_values and  --scale_values go in the order of channels used in the  original model
+In case the model was trained with color format RGB and range other then 0-255, the 
+[model optimizer](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) 
+can apply required adjustments:
+--reverse_input_channels: Switch the input channels order from RGB to BGR (or vice versa). Applied to original inputs of the model if and only if a number of channels equals 3. Applied after application of --mean_values and --scale_values options, so numbers in --mean_values and  --scale_values go in the order of channels used in the original model
 --scale : All input values coming from original network inputs  will be divided by this value. When a list of inputs  is overridden by the --input parameter, this scale is  not applied for any input that does not match with the  original input of the model
 --mean_values :  Mean values to be used for the input image per  channel. Values to be provided in the (R,G,B) or (B,G,R) format. Can be defined for desired input of the model, for example: "--mean_values data[255,255,255],info[255,255,255]". The exact meaning and order of channels depend on how the original model was trained.
 
-Alternatively layout conversion can be implemented using a custom node [image transormation](link). Custom node can accept
+Alternatively layout conversion can be implemented using a custom node [image transormation](../src/custom_nodes/image_transformation). Custom node can accept
 the data in layout NHWC and convert it to NCHW before passing to the target AI model. It can also replace color channel
 and rescale the data.
 
-Blob data precision from binary input decoding is set automatically based on the target model or the DAG pipeline node.
+Blob data precision from binary input decoding is set automatically based on the target model or the [DAG pipeline](dag_scheduler.md) node.
 
 ## Returning binary outputs
 
@@ -90,7 +91,7 @@ report super resolution results in jpeg
 
 ## Error handling:
 In case the binary input can not be converted to the array of correct shape, an error status is returned:
-- 400   BAD_REQUEST for REST API
+- 400 BAD_REQUEST for REST API
 - 3 INVALID_ARGUMENT for gRPC API
 
 When the model outputs with `_binary` suffix can not be JPEG encoded, the following errors will be sent:
