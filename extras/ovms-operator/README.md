@@ -7,6 +7,7 @@ It allows for easy deployment and management of OVMS service in the Kubernetes c
 
 ### OpenShift
 
+The operator is available for OpenShift users in the [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/operators/detail/60649a56209af65d24b7ca9e)
 In the web console navigate to OperatorHub menu. Search for "OpenVINO" and select "OpenVINO Model Server". Click `Install` button.
 
 ### Kubernetes with OLM
