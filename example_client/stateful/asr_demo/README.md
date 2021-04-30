@@ -44,7 +44,7 @@ RUN cd /opt/kaldi/egs/aspire/s5 && \
 
 RUN apt-get install -y virtualenv
 
-RUN git clone -b stateful_client_extension https://github.com/openvinotoolkit/model_server.git /opt/model_server && \
+RUN git clone https://github.com/openvinotoolkit/model_server.git /opt/model_server && \
     cd /opt/model_server && \
     virtualenv -p python3 .venv && \
     . .venv/bin/activate && \
@@ -117,7 +117,7 @@ As you start the container, the working directory is `/opt/workspace`
 Download the sample audio file for speech recognition:
 
 ```
-wget https://github.com/openvinotoolkit/model_server/raw/stateful_client_extension/example_client/stateful/asr_demo/sample.wav
+wget https://github.com/openvinotoolkit/model_server/raw/main/example_client/stateful/asr_demo/sample.wav
 ```
 
 Run speech recognition:
