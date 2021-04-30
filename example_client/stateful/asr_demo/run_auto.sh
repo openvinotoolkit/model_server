@@ -19,12 +19,29 @@
 export OVMS_PATH=/opt/model_server
 export KALDI_PATH=/opt/kaldi
 export ASPIRE_PATH=$KALDI_PATH/egs/aspire/s5
-export DATA_PATH=/tmp
+export DATA_PATH=/opt/data
 
 # Extract features 
 source $OVMS_PATH/.venv/bin/activate
-cd $OVMS_PATH/example_client/stateful
-./asr_demo/prepare_model_inputs.sh $1
-python grpc_stateful_client.py --input_path $DATA_PATH/feats.ark,$DATA_PATH/ivectors.ark --output_path $DATA_PATH/scores.ark --grpc_address $2 --grpc_port $3 --input_name input,ivector --output_name Final_affine --model_name aspire --cw_l 17 --cw_r 12
-./asr_demo/read_model_output.sh $1
-rm $DATA_PATH/*
+cd $DATA_PATH
+while true
+do
+for i in *.wav; do
+    [ -f "$i" ] || break
+    I=`wc -c < echo $i`
+    J=`wc -c < echo $i`
+    if [ $I -ne $J ]; then
+	sleep 0.1
+    fi
+
+    rm -rf $ASPIRE_PATH/data/conversion* || true
+    cd $OVMS_PATH/example_client/stateful
+    ./asr_demo/prepare_model_inputs.sh $i
+    python grpc_stateful_client.py --input_path /opt/data/feats.ark,/opt/data/ivectors.ark --output_path /opt/data/scores.ark --grpc_address $1 --grpc_port $2 --input_name input,ivector --output_name Final_affine --model_name aspire --cw_l 17 --cw_r 12
+    ./asr_demo/read_model_output.sh $i
+    cd $DATA_PATH
+    rm scores.ark ivectors.ark feats.* .sample.wav out.txt || true
+    rm $i || true
+    rm -rf $ASPIRE_PATH/data/conversion* || true
+done
+done

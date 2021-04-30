@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 # Copyright (c) 2013, Ondrej Platek, Ufal MFF UK <oplatek@ufal.mff.cuni.cz>
-#
+# Modifications copyright (c) 2021 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,18 +14,19 @@
 # MERCHANTABLITY OR NON-INFRINGEMENT.
 # See the Apache 2 License for the specific language governing permissions and
 # limitations under the License. #
+
 from __future__ import unicode_literals
 from __future__ import print_function
 
 import pyaudio
 import sys
 import time
-import msvcrt
 import wave
 import threading
 import paramiko
 import os
 import getpass
+import msvcrt
 
 CHANNELS, RATE, FORMAT = 1, 8000, pyaudio.paInt16
 BATCH_SIZE = 4560
@@ -85,18 +86,19 @@ class LiveDemo(object):
             while True:
                 if msvcrt.kbhit():
                     c = msvcrt.getch().decode("utf-8").lower()
-                    if c == 'r':
-                        self.recording = not self.recording
-                        if self.recording:
-                            print('Recording started...')
-                            self.frames = []
-                        else:
-                            print('Recording stopped')
-                            self.utt_end = True
-                    elif c == 'c':
-                        self.dialog_end = True
-                        print('\nMarked end of dialogue\n')
-                        break
+
+                if c == 'r':
+                    self.recording = not self.recording
+                    if self.recording:
+                        print('Recording started...')
+                        self.frames = []
+                    else:
+                        print('Recording stopped')
+                        self.utt_end = True
+                elif c == 'c':
+                    self.dialog_end = True
+                    print('\nMarked end of dialogue\n')
+                    break
         finally:
             print("""Exit""")
 
