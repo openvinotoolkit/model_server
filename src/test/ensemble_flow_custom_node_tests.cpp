@@ -1774,29 +1774,16 @@ static const char* demultiplyThenDummyThenChooseMaximumConfig = R"(
     "pipeline_config_list": [
         {
             "name": "my_pipeline",
-            "inputs": ["pipeline_input", "pipeline_factors"],
+            "inputs": ["pipeline_input"],
+            "demultiply_count": 0,
             "nodes": [
-                {
-                    "name": "custom_node",
-                    "library_name": "lib_dynamic_demultiplex",
-                    "type": "custom",
-                    "demultiply_count": 0,
-                    "inputs": [
-                        {"input_numbers": {"node_name": "request",
-                                           "data_item": "pipeline_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "dynamic_demultiplex_results",
-                         "alias": "custom_node_output"}
-                    ]
-                },
                 {
                     "name": "dummyNode",
                     "model_name": "dummy",
                     "type": "DL model",
                     "inputs": [
-                        {"b": {"node_name": "custom_node",
-                               "data_item": "custom_node_output"}}
+                        {"b": {"node_name": "request",
+                               "data_item": "pipeline_input"}}
                     ],
                     "outputs": [
                         {"data_item": "a",
@@ -1807,7 +1794,7 @@ static const char* demultiplyThenDummyThenChooseMaximumConfig = R"(
                     "name": "choose_max",
                     "library_name": "lib_choose_maximum",
                     "type": "custom",
-                    "gather_from_node": "custom_node",
+                    "gather_from_node": "request",
                     "params": {
                         "selection_criteria": "MAXIMUM_MAXIMUM"
                     },
@@ -4047,7 +4034,7 @@ static const char* pipelineDynamicEntryThenDummyThenGatherFromEntryConfig = R"(
     ]
 })";
 
-TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, pipelineDynamicEntryThenDummyThenGatherFromEntryNotAllowed) {
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, pipelineDynamicEntryThenDummyThenGatherFromEntryAllowed) {
     std::unique_ptr<Pipeline> pipeline;
-    this->loadConfiguration(pipelineDynamicEntryThenDummyThenGatherFromEntryConfig, StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE);
+    this->loadConfiguration(pipelineDynamicEntryThenDummyThenGatherFromEntryConfig, StatusCode::OK);
 }
