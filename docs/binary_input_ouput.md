@@ -1,24 +1,24 @@
 # Support for binary inputs and outputs data in OpenVINO Model Server
 
-While OpenVINO models don't have ability to process binary inputs, the model server can accept them and convert
+While OpenVINO models don't have the ability to process binary inputs, the model server can accept them and convert
 automatically using OpenCV library.
 
 OpenVINO Model Server API allows for sending the request data in a variety of formats inside the TensorProto objects.
-Array data are passed inside the tensor_content field, which represent the input data buffer.
+Array data is passed inside the tensor_content field, which represent the input data buffer.
 
-When the data is sent in the field `string_val`, it is interpreted as a binary format of the input data.
+When the data is sent in the `string_val` field, it is interpreted as a binary format of the input data.
 
 Note, that while the model metadata reports the inputs shape with layout NHWC, the binary data must be sent with 
-shape: [N] with dtype: DT_STRING. N represents elements with binary data converted to string bytes.
+shape: [N] with dtype: DT_STRING. Where N represents elements with binary data converted to string bytes.
 
 ## Preparing for deployment
-Before processing in the target AI model, binary image data is encoded by OVMS to a layout NHWC in BGR color format.
-It will be also resize to the model or pipeline node resolution.
+Before processing in the target AI model, binary image data is encoded by OVMS to a NHWC layout in BGR color format.
+It will also be resized to the model or pipeline node resolution.
 
-Processing the binary image requests requires the model or the custom nodes to accept layout NHWC in BGR color 
-format with data range from 0-255. Original layout of the input data can be changed in the 
-OVMS configuration in the runtime. For example, when the original model has input shape [1,3,224,224] add a parameter
-in the OVMS configuration `"layout": "NHWC"` or the command line parameter `--layout NHWC`. In result, the model will
+Processing the binary image requests requires the model or the custom nodes to accept NHWC layout in BGR color 
+format with data with the data range from 0-255. Original layout of the input data can be changed in the 
+OVMS configuration in runtime. For example when the orignal model has input shape [1,3,224,224] add a parameter
+in the OVMS configuration "layout": "NHWC" or the command line parameter `--layout NHWC`. In result, the model will
 have effective shape [1,224,224,3].
 
 In case the model was trained with color format RGB and range other then 0-255, the 
@@ -36,12 +36,12 @@ Blob data precision from binary input decoding is set automatically based on the
 
 ## Returning binary outputs
 
-Some models or DAG pipelines return images in the response. OpenVINO model outputs are always in the form for arrays. It is possible,
+Some models or DAG pipelines return images in the response. OpenVINO model outputs are always in the form of arrays. It is possible,
 however, to configure OVMS to send the image outputs in the binary image format instead.
 
 Binary outputs can be enabled by setting the output name with `_binary` suffix. In case the model is already exported with
-different output name, OVMS has option to configure inputs and outputs names mapping by creating a json file `mapping_config.json`
-and planning it together with the model files in the model version folder.
+different output name, OVMS has an option to configure inputs and outputs names mapping by creating a json file `mapping_config.json`
+and placing it together with the model files in the model version folder.
 ```json
 {
   "inputs": { "tensor_input":"tensor_input" }, 
@@ -49,12 +49,12 @@ and planning it together with the model files in the model version folder.
 }
 ```
 The binary data will be encoded out of OpenVINO model response blob. The conversion requires, however,
-the output to be in the layout NHWC. The model layout can be changes in the runtime in OVMS configuration.
-When the model output is [1,3,224,224] and the following configuration
+the output to be in the layout NHWC. The model layout can be changed at runtime in the OVMS configuration.
+When the model output is [1,3,224,224] with the following configuration
 ```json
 "layout": {"input": "NHWC", "output":"NHWC"}
 ```
-Images in the response will returned as JPEG encoded. REST API responses will be in addition to that also Base64 encoded.
+Images in the response will be returned as JPEG encoded. REST API responses will be in addition to that Base64 encoded.
 
 ## API specification
 
@@ -101,11 +101,11 @@ When the model outputs with `_binary` suffix can not be JPEG encoded, the follow
 ## Recommendations:
 
 Sending the data in binary format can significantly simplify the client code and it's preprocessing load. With the REST API
-client, there is just needed curl and base64 tool or requests python package. In case the original input data is jpeg or png 
+client, curl and base64 tool or the requests python package is just needed. In case of the original input data is jpeg or png 
 encoded, there is no preprocessing needed to send the request.
 
-Binary data can significantly reduce the network utilization. In many case it allows reducing the latency and achieve
-very higher throughout even with slower network bandwidth.
+Binary data can significantly reduce the network utilization. In many cases it allows reducing the latency and achieve
+very high throughput even with slower network bandwidth.
 
 
 
