@@ -1846,7 +1846,8 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Demultip
     this->prepareRequest(request, input, differentOpsInputName, {4, 1, 10});
     this->loadConfiguration(demultiplyThenDummyThenChooseMaximumConfig);
     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    auto status = pipeline->execute();
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
 
     std::vector<float> expectedOutput{5, 5, 5, 5, 5, 5, 5, 5, 5, 5};
     this->checkResponse("pipeline_output", response, expectedOutput, {1, 10});
