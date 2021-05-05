@@ -1825,7 +1825,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Demultip
     uint iterations = -1;
     uint number = 0;
     std::transform(input.begin(), input.end(), input.begin(),
-        [&iterations, &number](float f) -> float { 
+        [&iterations, &number](float f) -> float {
             iterations++;
             number = iterations/10;
             return f + number; });
