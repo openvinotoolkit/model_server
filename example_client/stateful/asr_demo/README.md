@@ -135,7 +135,7 @@ cat /opt/workspace/sample.wav.txt
 ```
 
 ### 7. Automatic speech recognition
-You can also run the live-demo.py client on windows machine to record wav files in real time with your microphone and send them to a ssh enabled server with mentioned kaldi and ovms containers setup.
+You can also run the live-demo.py client on windows machine to record wav files with your microphone and send them to a ssh enabled server with mentioned kaldi and ovms containers setup.
 
 On server side run the instructions steps from 1 to 5 but instead of commands in step 6, run the following commands:
 
