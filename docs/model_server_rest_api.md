@@ -147,7 +147,7 @@ Read more about *Get Model Metadata API* usage [here](./../example_client/README
 ## Predict API <a name="predict"></a>
 * Description
 
-Sends requests via TensorFlow Serving RESTful API using images in numpy format. It displays performance statistics and optionally the model accuracy.
+Sends requests via TensorFlow Serving RESTful API using images in numpy array or binary format. It displays performance statistics and optionally the model accuracy.
 
 * URL
 ```
