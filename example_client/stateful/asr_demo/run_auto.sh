@@ -37,7 +37,7 @@ for i in *.wav; do
     rm -rf $ASPIRE_PATH/data/conversion* || true
     cd $OVMS_PATH/example_client/stateful
     ./asr_demo/prepare_model_inputs.sh $i
-    python grpc_stateful_client.py --input_path /opt/data/feats.ark,/opt/data/ivectors.ark --output_path /opt/data/scores.ark --grpc_address $1 --grpc_port $2 --input_name input,ivector --output_name Final_affine --model_name aspire --cw_l 17 --cw_r 12
+    python grpc_stateful_client.py --input_path $DATA_PATH/feats.ark,$DATA_PATH/ivectors.ark --output_path $DATA_PATH/scores.ark --grpc_address $1 --grpc_port $2 --input_name input,ivector --output_name Final_affine --model_name aspire --cw_l 17 --cw_r 12
     ./asr_demo/read_model_output.sh $i
     cd $DATA_PATH
     rm scores.ark ivectors.ark feats.* sample.wav out.txt || true

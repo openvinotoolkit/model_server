@@ -138,36 +138,46 @@ cat /opt/workspace/sample.wav.txt
 You can also run the live-demo.py client on windows machine to record wav files in real time with your microphone and send them to a ssh enabled server with mentioned kaldi and ovms containers setup.
 
 On server side run the instructions steps from 1 to 5 but instead of commands in step 6, run the following commands:
+
+Create the data directory as wav files input directory.
 ```
 export DATA_DIR=$HOME/asr_demo/data
-mkdir -p DATA_DIR
+mkdir -p $DATA_DIR
 ```
 
-Start kaldi container built in the step 2 in interactive mode:
+Start kaldi container built in the step 2 in interactive mode with $DATA_DIR mounted as /opt/data:
 ```
 docker run --rm -it --network="host" -v $DATA_DIR:/opt/data kaldi:latest bash
 ```
 
-Run speech recognition loop:
+Run speech recognition loop on the server:
 ```
 /opt/model_server/example_client/stateful/asr_demo/run_auto.sh localhost 9000
 ```
 
-Install the required packages on windows client side:
+Install the required packages on windows client side.
+PyAudio will be used to record audio from microphone and paramiko is used as scp client to copy recorded files to $DATA_DIR on the server.:
 ```
+WINDOWS:
 python -m pip install PyAudio
 python -m pip install paramiko
 ```
 
 Checkout the repository with demo script:
 ```
-git clone -b stateful_client_extension https://github.com/openvinotoolkit/model_server.git
+WINDOWS:
+git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server\example_client\stateful\asr_demo
 ```
 
+The live-demo.py script is a modified version of the script from https://github.com/kaldi-asr/kaldi.git repository from the \kaldi\egs\vystadial_cz\online_demo\live-demo.py path.
 Run the live-demo.py script to record and send audio files to the server:
+<SERVER_IP> - IP of the unix server with the running ovms and kaldi containers from steps 1 to 5.
+<SERVER_HOME_PATH> - is the path of the $HOME directory from steps 1 to 5.
+<SERVER_USER_NAME> - is the owner of the $HOME path and a user of the server used to run steps 1 to 5.
 ```
-python live-demo.py SERVER_IP SERVER_HOME_PATH/asr_demo/data SERVER_USER_NAME
+WINDOWS:
+python live-demo.py <SERVER_IP> <SERVER_HOME_PATH>/asr_demo/data <SERVER_USER_NAME>
 ```
 
 The script will ask you to provide password for the user to connect to the server with scp.
@@ -182,9 +192,9 @@ Recording started...
 Recording stopped
 Sending file 1619781288.2140305-utt.wav
 Sending from \1619781288.2140305-utt.wav
-Sending to SERVER_HOME_PATH/asr_demo/data/1619781288.2140305-utt.wav
+Sending to <SERVER_HOME_PATH>/asr_demo/data/1619781288.2140305-utt.wav
 File sent in 0.33899879455566406 secs
-Waiting for SERVER_HOME_PATH/asr_demo/data/1619781288.2140305-utt.wav.txt
+Waiting for <SERVER_HOME_PATH>/asr_demo/data/1619781288.2140305-utt.wav.txt
 Got model response in 9.464162588119507 secs
 DETECTED TEXT:  it's a beautiful day
 Recording started...
