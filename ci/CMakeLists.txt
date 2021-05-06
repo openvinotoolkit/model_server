@@ -24,8 +24,8 @@ file(GLOB ovms_SRC
 
 file(GLOB OCR_SRC
     "custom_node_interface.hpp"
-    "custom_nodes/east_ocr/*.hpp"
-    "custom_nodes/east_ocr/*.cpp"
+    "custom_nodes/*/*.hpp"
+    "custom_nodes/*/*.cpp"
 )
 
 add_library(ocr ${OCR_SRC})
