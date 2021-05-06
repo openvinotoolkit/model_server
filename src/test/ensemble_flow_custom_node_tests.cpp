@@ -1752,10 +1752,6 @@ static const char* demultiplyThenDummyThenChooseMaximumConfig = R"(
 {
     "custom_node_library_config_list": [
         {
-            "name": "lib_dynamic_demultiplex",
-            "base_path": "/ovms/bazel-bin/src/lib_node_dynamic_demultiplex.so"
-        },
-        {
             "name": "lib_choose_maximum",
             "base_path": "/ovms/bazel-bin/src/lib_node_choose_maximum.so"
         }
