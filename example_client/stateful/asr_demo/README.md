@@ -150,6 +150,8 @@ Start kaldi container built in the step 2 in interactive mode with $DATA_DIR mou
 docker run --rm -it --network="host" -v $DATA_DIR:/opt/data kaldi:latest bash
 ```
 
+The run_auto.sh script works as the run.sh script from step 6. However instead of taking the wav file from the command line argument 
+it detects wav files in $DATA_DIR and then runs the speech recognition on them.
 Run speech recognition loop on the server:
 ```
 /opt/model_server/example_client/stateful/asr_demo/run_auto.sh localhost 9000
