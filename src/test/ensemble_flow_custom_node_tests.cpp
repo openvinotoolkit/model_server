@@ -1748,6 +1748,94 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     this->checkResponse("pipeline_output", response, expectedResult, {1, 10});
 }
 
+static const char* demultiplyThenDummyThenChooseMaximumConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_choose_maximum",
+            "base_path": "/ovms/bazel-bin/src/lib_node_choose_maximum.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input"],
+            "demultiply_count": 0,
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                },
+                {
+                    "name": "choose_max",
+                    "library_name": "lib_choose_maximum",
+                    "type": "custom",
+                    "gather_from_node": "request",
+                    "params": {
+                        "selection_criteria": "MAXIMUM_MAXIMUM"
+                    },
+                    "inputs": [
+                        {"input_tensors": {"node_name": "dummyNode",
+                                           "data_item": "dummy_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "maximum_tensor",
+                         "alias": "maximum_tensor_alias"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "choose_max",
+                                     "data_item": "maximum_tensor_alias"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DemultiplyThenDummyThenChooseMaximum) {
+    std::unique_ptr<Pipeline> pipeline;
+    std::vector<float> input(4 * DUMMY_MODEL_OUTPUT_SIZE);
+    std::fill(input.begin(), input.end(), 1.0);
+
+    uint iterations = -1;
+    uint number = 0;
+    std::transform(input.begin(), input.end(), input.begin(),
+        [&iterations, &number](float f) -> float {
+            iterations++;
+            number = iterations/10;
+            return f + number; });
+
+    this->prepareRequest(request, input, differentOpsInputName, {4, 1, 10});
+    this->loadConfiguration(demultiplyThenDummyThenChooseMaximumConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    auto status = pipeline->execute();
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+
+    std::vector<float> expectedOutput{5, 5, 5, 5, 5, 5, 5, 5, 5, 5};
+    this->checkResponse("pipeline_output", response, expectedOutput, {1, 10});
+}
+
 struct LibraryParamControlledMetadata {
     static bool startsWith(const char* str, const char* prefix) {
         size_t strLen = std::strlen(str);
@@ -3878,71 +3966,4 @@ static const char* pipelineCustomNode2DynamicDemultiplexConfig = R"(
 TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, 2DynamicDemultiplexersNotAllowed) {
     std::unique_ptr<Pipeline> pipeline;
     this->loadConfiguration(pipelineCustomNode2DynamicDemultiplexConfig, StatusCode::NOT_IMPLEMENTED);
-}
-
-static const char* pipelineDynamicEntryThenDummyThenGatherFromEntryConfig = R"(
-{
-    "custom_node_library_config_list": [
-        {
-            "name": "lib_choose_maximum",
-            "base_path": "/ovms/bazel-bin/src/lib_node_choose_maximum.so"
-        }
-    ],
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"all": {}},
-                "nireq": 1
-            }
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "my_pipeline",
-            "demultiply_count": 4,
-            "inputs": ["pipeline_input"],
-            "nodes": [
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "request",
-                               "data_item": "pipeline_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "dummy_output"}
-                    ]
-                },
-                {
-                    "name": "choose",
-                    "library_name": "lib_choose_maximum",
-                    "type": "custom",
-                    "gather_from_node": "request",
-                    "inputs": [
-                        {"b": {"node_name": "dummyNode",
-                               "data_item": "dummy_output"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "maximum_tensor",
-                         "alias": "maximum_tensor"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"pipeline_output": {"node_name": "choose",
-                                     "data_item": "maximum_tensor"}
-                }
-            ]
-        }
-    ]
-})";
-
-TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, pipelineDynamicEntryThenDummyThenGatherFromEntryNotAllowed) {
-    std::unique_ptr<Pipeline> pipeline;
-    this->loadConfiguration(pipelineDynamicEntryThenDummyThenGatherFromEntryConfig, StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE);
 }
