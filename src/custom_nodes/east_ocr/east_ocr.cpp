@@ -35,8 +35,8 @@ struct BoxMetadata {
     float originalHeight;
 };
 
-int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const std::vector<BoxMetadata>& metadata, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, bool convertToGrayScale, int rotationAngleThreshold) {
-    uint64_t outputBatch = boxes.size();
+bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const std::vector<BoxMetadata>& metadata, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, bool convertToGrayScale, int rotationAngleThreshold) {
+    const uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
 
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * outputBatch;
@@ -44,7 +44,7 @@ int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<c
     float* buffer = (float*)malloc(byteSize);
     NODE_ASSERT(buffer != nullptr, "malloc has failed");
     if (buffer == nullptr) {
-        return 1;
+        return false;
     }
 
     for (uint64_t i = 0; i < outputBatch; i++) {
@@ -55,7 +55,7 @@ int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<c
         if (!crop_rotate_resize(originalImage, image, boxes[i], (abs(degree) > rotationAngleThreshold) ? -degree : 0.0, metadata[i].originalWidth, metadata[i].originalHeight, targetShape)) {
             std::cout << "box is outside of original image" << std::endl;
             free(buffer);
-            return 1;
+            return false;
         }
         if (convertToGrayScale) {
             image = apply_grayscale(image);
@@ -75,11 +75,11 @@ int copy_images_into_output(struct CustomNodeTensor* output, const std::vector<c
     output->dims[3] = targetImageHeight;
     output->dims[4] = targetImageWidth;
     output->precision = FP32;
-    return 0;
+    return true;
 }
 
-int copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
-    uint64_t outputBatch = boxes.size();
+bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
+    const uint64_t outputBatch = boxes.size();
     uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
 
     int32_t* buffer = (int32_t*)malloc(byteSize);
@@ -102,11 +102,11 @@ int copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vec
     output->dims[1] = 1;
     output->dims[2] = 4;
     output->precision = I32;
-    return 0;
+    return true;
 }
 
-int copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<float>& scores) {
-    uint64_t outputBatch = scores.size();
+bool copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<float>& scores) {
+    const uint64_t outputBatch = scores.size();
     uint64_t byteSize = sizeof(float) * outputBatch;
 
     float* buffer = (float*)malloc(byteSize);
@@ -122,7 +122,7 @@ int copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<f
     output->dims[1] = 1;
     output->dims[2] = 1;
     output->precision = FP32;
-    return 0;
+    return true;
 }
 
 void cleanup(CustomNodeTensor& tensor) {
@@ -140,8 +140,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT((originalImageWidth % 4) == 0, "original image width must be divisible by 4");
     int targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
     int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
-    NODE_ASSERT(targetImageHeight > 0, "original image height must be larger than 0");
-    NODE_ASSERT(targetImageWidth > 0, "original image width must be larger than 0");
+    NODE_ASSERT(targetImageHeight > 0, "target image height must be larger than 0");
+    NODE_ASSERT(targetImageWidth > 0, "target image width must be larger than 0");
     bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
     float confidenceThreshold = get_float_parameter("confidence_threshold", params, paramsCount, -1.0);
     NODE_ASSERT(confidenceThreshold >= 0 && confidenceThreshold <= 1.0, "confidence threshold must be in 0-1 range");
@@ -175,7 +175,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     }
 
     NODE_ASSERT(imageTensor != nullptr, "Missing input image");
-    NODE_ASSERT(scoresTensor != nullptr, "Missin input scores");
+    NODE_ASSERT(scoresTensor != nullptr, "Missing input scores");
     NODE_ASSERT(geometryTensor != nullptr, "Missing input geometry");
     NODE_ASSERT(imageTensor->precision == FP32, "image input is not FP32");
     NODE_ASSERT(scoresTensor->precision == FP32, "image input is not FP32");
@@ -291,6 +291,9 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
             NODE_ASSERT(x2 > x1, "detected box width must be greater than 0");
             NODE_ASSERT(y2 > y1, "detected box height must be greater than 0");
 
+            NODE_ASSERT(x2 > x1, "detected box width must be greater than 0");
+            NODE_ASSERT(y2 > y1, "detected box height must be greater than 0");
+
             rects.emplace_back(x1, y1, x2 - x1, y2 - y1);
             scores.emplace_back(score);
             metadata.emplace_back(BoxMetadata{angle, w * (1.0f + boxWidthAdjustment), h * (1.0f + boxHeightAdjustment)});
@@ -320,14 +323,14 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT((*outputs) != nullptr, "malloc has failed");
     CustomNodeTensor& textImagesTensor = (*outputs)[0];
     textImagesTensor.name = TEXT_IMAGES_TENSOR_NAME;
-    if (copy_images_into_output(&textImagesTensor, filteredBoxes, filteredMetadata, image, targetImageHeight, targetImageWidth, convertToGrayScale, rotationAngleThreshold)) {
+    if (!copy_images_into_output(&textImagesTensor, filteredBoxes, filteredMetadata, image, targetImageHeight, targetImageWidth, convertToGrayScale, rotationAngleThreshold)) {
         free(*outputs);
         return 1;
     }
 
     CustomNodeTensor& coordinatesTensor = (*outputs)[1];
     coordinatesTensor.name = COORDINATES_TENSOR_NAME;
-    if (copy_coordinates_into_output(&coordinatesTensor, filteredBoxes)) {
+    if (!copy_coordinates_into_output(&coordinatesTensor, filteredBoxes)) {
         free(*outputs);
         cleanup(textImagesTensor);
         return 1;
@@ -335,7 +338,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     CustomNodeTensor& confidenceTensor = (*outputs)[2];
     confidenceTensor.name = CONFIDENCE_TENSOR_NAME;
-    if (copy_scores_into_output(&confidenceTensor, filteredScores)) {
+    if (!copy_scores_into_output(&confidenceTensor, filteredScores)) {
         free(*outputs);
         cleanup(textImagesTensor);
         cleanup(coordinatesTensor);
@@ -392,8 +395,8 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
 int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
     int targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
     int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
-    NODE_ASSERT(targetImageHeight > 0, "original image height must be larger than 0");
-    NODE_ASSERT(targetImageWidth > 0, "original image width must be larger than 0");
+    NODE_ASSERT(targetImageHeight > 0, "target image height must be larger than 0");
+    NODE_ASSERT(targetImageWidth > 0, "target image width must be larger than 0");
     bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
 
     *infoCount = 3;
