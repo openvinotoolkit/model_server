@@ -30,6 +30,12 @@ file(GLOB OCR_SRC
     "${PROJECT_SOURCE_DIR}/custom_node_interface.h"
     "${PROJECT_SOURCE_DIR}/custom_nodes/*/*.hpp"
     "${PROJECT_SOURCE_DIR}/custom_nodes/*/*.cpp"
+    "${PROJECT_SOURCE_DIR}/custom_nodes/east_ocr/utils.hpp"
+    "${PROJECT_SOURCE_DIR}/custom_nodes/east_ocr/east_ocr.cpp"
+    "${PROJECT_SOURCE_DIR}/custom_nodes/image_transformation/utils.hpp"
+    "${PROJECT_SOURCE_DIR}/custom_nodes/image_transformation/image_transformation.cpp"
+    "${PROJECT_SOURCE_DIR}/custom_nodes/model_zoo_intel_object_detection/model_zoo_intel_object_detection.cpp"
+    "${PROJECT_SOURCE_DIR}/custom_nodes/model_zoo_intel_object_detection/utils.hpp"
 )
 
 message("Custom nodes sources:" ${OCR_SRC} )
