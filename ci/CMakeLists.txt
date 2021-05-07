@@ -82,6 +82,8 @@ target_link_libraries(${PROJECT_NAME} azurestorage cpprest)
 target_link_libraries(${PROJECT_NAME} ${OVMS_LIBS})
 target_link_libraries(${PROJECT_NAME} stdc++fs ssl crypto uuid xml2 dl)
 
+link_directories(/usr/local/ssl/lib)
+
 # workaround to have OCR custom node scanned
 target_link_libraries(ovms ocr)
 
