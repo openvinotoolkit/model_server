@@ -16,17 +16,21 @@
 cmake_minimum_required(VERSION 2.8)
 project(ovms)
 set(CMAKE_CXX_STANDARD 17)
-
+message("CMake version:" ${CMAKE_VERSION} )
 file(GLOB ovms_SRC
     "*.hpp"
     "*.cpp"
 )
+
+message("OVMS sources:" ${ovms_SRC} )
 
 file(GLOB OCR_SRC
     "custom_node_interface.hpp"
     "custom_nodes/*/*.hpp"
     "custom_nodes/*/*.cpp"
 )
+
+message("Custom nodes sources:" ${OCR_SRC} )
 
 add_library(ocr ${OCR_SRC})
 add_executable(ovms ${ovms_SRC})
