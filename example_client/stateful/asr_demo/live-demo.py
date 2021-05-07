@@ -26,7 +26,7 @@ import threading
 import paramiko
 import os
 import getpass
-import msvcrt
+
 
 CHANNELS, RATE, FORMAT = 1, 8000, pyaudio.paInt16
 BATCH_SIZE = 4560
@@ -50,7 +50,7 @@ class LiveDemo(object):
             self.sftp = paramiko.SFTPClient.from_transport(self.transport)
             print("Connection success.")
         except Exception as e:
-            print("Connection issue: " + e)
+            print("Connection issue: ", e)
 
 
     def setup(self):
@@ -77,7 +77,8 @@ class LiveDemo(object):
             return in_data, pyaudio.paContinue
         return frame_in
 
-    def _user_control(self):
+    def _user_control_windows(self):
+        import msvcrt
         '''Simply stupid sollution how to control state of recogniser.'''
         self.utt_end, self.dialog_end, self.recording = False, False, False
         print('Press r key to toggle recording')
@@ -86,7 +87,36 @@ class LiveDemo(object):
             while True:
                 if msvcrt.kbhit():
                     c = msvcrt.getch().decode("utf-8").lower()
+                    if c == 'r':
+                        self.recording = not self.recording
+                        if self.recording:
+                            print('Recording started...')
+                            self.frames = []
+                        else:
+                            print('Recording stopped')
+                            self.utt_end = True
+                    elif c == 'c':
+                        self.dialog_end = True
+                        print('\nMarked end of dialogue\n')
+                        break
+        finally:
+            print("""Exit""")
 
+    def _user_control_unix(self):
+        import select
+        import tty
+        import termios
+        '''Simply stupid sollution how to control state of recogniser.'''
+        self.utt_end, self.dialog_end, self.recording = False, False, False
+        print('Press r key to toggle recording')
+        print('Press c key to exit')
+
+        old_settings = termios.tcgetattr(sys.stdin)
+        try:
+            tty.setcbreak(sys.stdin.fileno())
+            # if is data on input
+            while (select.select([sys.stdin], [], [], 1) == ([sys.stdin], [], [])):
+                c = sys.stdin.read(1)
                 if c == 'r':
                     self.recording = not self.recording
                     if self.recording:
@@ -100,11 +130,17 @@ class LiveDemo(object):
                     print('\nMarked end of dialogue\n')
                     break
         finally:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
             print("""Exit""")
 
     def run(self):
-        x = threading.Thread(target=self._user_control, args=())
-        x.start()
+        if 'nt' in os.name:
+            x = threading.Thread(target=self._user_control_windows, args=())
+            x.start()
+        else:
+            x = threading.Thread(target=self._user_control_unix, args=())
+            x.start()
+        
         while True:
             time.sleep(0.1)
             if self.utt_end:
@@ -139,15 +175,20 @@ class LiveDemo(object):
         local_path = os.path.join(this_dir_path, local_file)
         print("Sending from " + local_path)
         print("Sending to " + remote_path)
-        self.sftp.put(local_path, remote_path)
-        print("File sent in %s secs"% str(time.time() - start) )
+        try:
+            self.sftp.put(local_path, remote_path)
+        except Exception as ex:
+            print("Wrong server path:" + self.host_path, ex)
+            return
+
+        print("File sent in {:.2f} seconds".format(time.time() - start) )
         start = time.time() 
         print("Waiting for " + remote_path + ".txt")
         while True and not self.dialog_end:
             time.sleep(0.1)
             try:
                 response_file = self.sftp.open(remote_path + ".txt")
-                print("Got model response in %s secs"% str(time.time() - start) )
+                print("Got model response in {:.2f} seconds".format(time.time() - start) )
                 for line in response_file.readlines():
                     if line == "" or len(line.split(".wav")) < 2:
                         print("Nothing detected")
@@ -161,18 +202,32 @@ class LiveDemo(object):
             except:
                 continue
 
+def print_help():
+    print("The live-demo.py script is a modified version of the script from https://github.com/kaldi-asr/kaldi.git repository from the \kaldi\egs\vystadial_cz\online_demo\live-demo.py path.")
+    print("Run the live-demo.py script to record and send audio files to the server.")
+    print("Prerequisites is running run_auto.sh script on server, kaldi container and ovms container as described in the instructions from:")
+    print("https://github.com/openvinotoolkit/model_server/blob/main/example_client/stateful/asr_demo/README.md")
+    print("\nUsage: python live-demo.py <SERVER_IP> <SERVER_HOME_PATH>/asr_demo/data <SERVER_USER_NAME>\n")
+    print("<SERVER_IP> - IP of the unix server with the running ovms and kaldi containers.")
+    print("<SERVER_HOME_PATH> - is the path of the $HOME directory.")
+    print("<SERVER_USER_NAME> - is the owner of the $HOME path and a user of the server.")
+
+
 if __name__ == '__main__':
     print('Python args: %s' % str(sys.argv), file=sys.stderr)
-    host = str(sys.argv[1])
-    host_path = str(sys.argv[2])
-    user = str(sys.argv[3])
+    if len(sys.argv) < 4:
+        print_help()
+    else:
+        host = str(sys.argv[1])
+        host_path = str(sys.argv[2])
+        user = str(sys.argv[3])
     
-    try:
-        password = getpass.getpass()
-    except Exception as error:
-        print('ERROR', error)
+        try:
+            password = getpass.getpass()
+        except Exception as error:
+            print('ERROR', error)
 
-    argv = sys.argv[4:]
-    demo = LiveDemo(host, host_path, user, password, argv)
-    demo.setup()
-    demo.run()
+        argv = sys.argv[4:]
+        demo = LiveDemo(host, host_path, user, password, argv)
+        demo.setup()
+        demo.run()

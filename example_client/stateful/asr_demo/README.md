@@ -134,7 +134,7 @@ cat /opt/workspace/sample.wav.txt
 /opt/workspace/sample.wav today we have a very nice weather
 ```
 
-### 7. Automatic speech recognition
+### 7. Live speech recognition
 You can also run the live-demo.py client on windows machine to record wav files with your microphone and send them to a ssh enabled server with mentioned kaldi and ovms containers setup.
 
 On server side run the instructions steps from 1 to 5 but instead of commands in step 6, run the following commands:
@@ -157,17 +157,17 @@ Run speech recognition loop on the server:
 /opt/model_server/example_client/stateful/asr_demo/run_auto.sh localhost 9000
 ```
 
-Install the required packages on windows client side.
+Install the required packages on client side.
 PyAudio will be used to record audio from microphone and paramiko is used as scp client to copy recorded files to $DATA_DIR on the server.:
 ```
-WINDOWS:
+CLIENT SIDE:
 python -m pip install PyAudio
 python -m pip install paramiko
 ```
 
 Checkout the repository with demo script:
 ```
-WINDOWS:
+CLIENT SIDE:
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server\example_client\stateful\asr_demo
 ```
@@ -178,7 +178,7 @@ Run the live-demo.py script to record and send audio files to the server:
 <SERVER_HOME_PATH> - is the path of the $HOME directory from steps 1 to 5.
 <SERVER_USER_NAME> - is the owner of the $HOME path and a user of the server used to run steps 1 to 5.
 ```
-WINDOWS:
+CLIENT SIDE:
 python live-demo.py <SERVER_IP> <SERVER_HOME_PATH>/asr_demo/data <SERVER_USER_NAME>
 ```
 
@@ -195,9 +195,9 @@ Recording stopped
 Sending file 1619781288.2140305-utt.wav
 Sending from \1619781288.2140305-utt.wav
 Sending to <SERVER_HOME_PATH>/asr_demo/data/1619781288.2140305-utt.wav
-File sent in 0.33899879455566406 secs
+File sent in 0.33 seconds
 Waiting for <SERVER_HOME_PATH>/asr_demo/data/1619781288.2140305-utt.wav.txt
-Got model response in 9.464162588119507 secs
+Got model response in 9.46 seconds
 DETECTED TEXT:  it's a beautiful day
 Recording started...
 Recording stopped
