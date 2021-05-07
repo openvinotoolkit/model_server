@@ -61,6 +61,7 @@ include_directories(/root/.cache/bazel/_bazel_root/${BAZEL_BUILD}/execroot/ovms/
 include_directories(/root/.cache/bazel/_bazel_root/${BAZEL_BUILD}/execroot/ovms/bazel-out/k8-opt/bin/external/awssdk/_virtual_includes/core/)
 include_directories(/root/.cache/bazel/_bazel_root/${BAZEL_BUILD}/external/opencv/include)
 include_directories(/awssdk/aws-cpp-sdk-s3/include)
+include_directories(/usr/local/ssl/include)
 
 find_package(InferenceEngine REQUIRED)
 find_package(ngraph REQUIRED)
