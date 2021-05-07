@@ -17,17 +17,19 @@ cmake_minimum_required(VERSION 2.8)
 project(ovms)
 set(CMAKE_CXX_STANDARD 17)
 message("CMake version:" ${CMAKE_VERSION} )
+
+message("Project source directory: " ${PROJECT_SOURCE_DIR})
 file(GLOB ovms_SRC
-    "*.hpp"
-    "*.cpp"
+    "${PROJECT_SOURCE_DIR}/*.hpp"
+    "${PROJECT_SOURCE_DIR}/*.cpp"
 )
 
 message("OVMS sources:" ${ovms_SRC} )
 
 file(GLOB OCR_SRC
-    "custom_node_interface.hpp"
-    "custom_nodes/*/*.hpp"
-    "custom_nodes/*/*.cpp"
+    "${PROJECT_SOURCE_DIR}/custom_node_interface.h"
+    "${PROJECT_SOURCE_DIR}/custom_nodes/*/*.hpp"
+    "${PROJECT_SOURCE_DIR}/custom_nodes/*/*.cpp"
 )
 
 message("Custom nodes sources:" ${OCR_SRC} )
