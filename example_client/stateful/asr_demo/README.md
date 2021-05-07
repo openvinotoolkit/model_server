@@ -32,8 +32,9 @@ Download Kaldi dockerfile and modify it to contain necessary dependencies:
 ```
 cd $WORKSPACE_DIR
 
-wget https://raw.githubusercontent.com/kaldi-asr/kaldi/master/docker/debian10-cpu/Dockerfile
+wget https://raw.githubusercontent.com/kaldi-asr/kaldi/e28927fd17b22318e73faf2cf903a7566fa1b724/docker/debian10-cpu/Dockerfile
 
+sed -i 's|RUN git clone --depth 1 https://github.com/kaldi-asr/kaldi.git /opt/kaldi #EOL|RUN git clone https://github.com/kaldi-asr/kaldi.git /opt/kaldi \&\& cd /opt/kaldi \&\& git checkout e28927fd17b22318e73faf2cf903a7566fa1b724|' Dockerfile
 sed -i '$d' Dockerfile
 
 echo '
