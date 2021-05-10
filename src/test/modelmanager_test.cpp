@@ -732,47 +732,6 @@ TEST(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJs
     manager.join();
 }
 
-TEST(ModelManager, ConfigReloadingWithInvalidModelConfigShouldNotRetirePreviousInstanceOfModel) {
-    std::filesystem::create_directories(model_1_path);
-    std::filesystem::create_directories(model_2_path);
-    std::string fileToReload = "/tmp/ovms_config_file2.json";
-    std::string config = config_2_models;
-    createConfigFileWithContent(config, fileToReload);
-    modelMock = std::make_shared<MockModel>();
-    MockModelManagerWithModelInstancesJustChangingStates manager;
-    manager.registerVersionToLoad(1);
-    manager.registerVersionToLoad(2);
-    auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
-    auto models = manager.getModels();
-    ASSERT_EQ(models.size(), 2);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-    waitForOVMSConfigReload(manager);
-    models = manager.getModels();
-    ASSERT_EQ(models.size(), 2);
-    for (auto& nameModel : models) {
-        for (auto& versionModelInstance : nameModel.second->getModelVersions()) {
-            ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, versionModelInstance.second->getStatus().getState());
-        }
-    }
-    // we make FIRST_MODEL invalid by adding max_sequence_number to non stateful model and expect to unload versions with error code
-    const std::string toReplace{"\"name\": \"resnet\","};
-    const std::string replacement{"\"name\": \"resnet\",\n        \"max_sequence_number\": 10,"};
-    config.replace(config.find(toReplace), toReplace.size(), replacement);
-    createConfigFileWithContent(config, fileToReload);
-    waitForOVMSConfigReload(manager);
-    models = manager.getModels();
-    ASSERT_EQ(models.size(), 2);
-    for (auto& versionModelInstance : manager.getModels().at(FIRST_MODEL_NAME)->getModelVersions()) {
-        EXPECT_EQ(ovms::ModelVersionState::END, versionModelInstance.second->getStatus().getState()) << versionModelInstance.second->getStatus().getStateString();
-        EXPECT_EQ(ovms::ModelVersionStatusErrorCode::ERROR, versionModelInstance.second->getStatus().getErrorCode()) << versionModelInstance.second->getStatus().getErrorMsg();
-    }
-    for (auto& versionModelInstance : manager.getModels().at(SECOND_MODEL_NAME)->getModelVersions()) {
-        EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, versionModelInstance.second->getStatus().getState());
-    }
-    manager.join();
-}
-
 class MockModelInstanceInStateWithConfig : public ovms::ModelInstance {
     static const ovms::model_version_t UNUSED_VERSION = 987789;
 

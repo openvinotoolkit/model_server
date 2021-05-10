@@ -650,7 +650,7 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
 
 void ModelInstance::unloadModel(bool isPermanent, bool isError) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
-    ModelVersionStatusErrorCode errorStatus = isError ? ModelVersionStatusErrorCode::ERROR : ModelVersionStatusErrorCode::OK;
+    ModelVersionStatusErrorCode errorStatus = isError ? ModelVersionStatusErrorCode::UNKNOWN : ModelVersionStatusErrorCode::OK;
     if (isPermanent) {
         this->status.setUnloading(errorStatus);
     } else {
@@ -670,7 +670,7 @@ void ModelInstance::unloadModel(bool isPermanent, bool isError) {
     inputsInfo.clear();
     modelFiles.clear();
     if (isPermanent) {
-        status.setEnd(errorStatus);
+        status.setEnd();
     }
 
     if (this->config.isCustomLoaderRequiredToLoadModel()) {
