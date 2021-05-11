@@ -69,19 +69,22 @@ public:
 
 private:
     Status getRealInputName(ModelInstance& model, const std::string& alias, std::string* result) const {
-        if (model.getInputsInfo().count(alias) == 0) {
+        auto it = model.getInputsInfo().find(alias);
+        if (it == model.getInputsInfo().end()) {
             return StatusCode::INVALID_MISSING_INPUT;
         }
-        *result = model.getInputsInfo().at(alias)->getName();
+        *result = it->second->getName();
         return StatusCode::OK;
     }
 
     Status getRealOutputName(ModelInstance& model, const std::string& alias, std::string* result) const {
-        const auto& modelOutputName = nodeOutputNameAlias.count(alias) == 1 ? nodeOutputNameAlias.at(alias) : alias;
-        if (model.getOutputsInfo().count(modelOutputName) == 0) {
+        auto it = nodeOutputNameAlias.find(alias);
+        const auto& modelOutputName = it != nodeOutputNameAlias.end() ? it->second : alias;
+        auto jt = model.getOutputsInfo().find(modelOutputName);
+        if (jt == model.getOutputsInfo().end()) {
             return StatusCode::INVALID_MISSING_OUTPUT;
         }
-        *result = model.getOutputsInfo().at(modelOutputName)->getName();
+        *result = jt->second->getName();
         return StatusCode::OK;
     }
 
