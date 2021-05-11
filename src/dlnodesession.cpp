@@ -251,10 +251,10 @@ Status DLNodeSession::setInputsForInference(InferenceEngine::InferRequest& infer
             kv.second->getTensorDesc().setLayout(this->model->getInputsInfo().at(kv.first)->getLayout());
             inferRequest.SetBlob(realModelInputName, kv.second);
         }
-        // OV implementation the InferenceEngineException is not
+        // OV implementation the InferenceEngine::Exception is not
         // a base class for all other exceptions thrown from OV.
         // OV can throw exceptions derived from std::logic_error.
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::Exception& e) {
         status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] {}; exception message: {}", getName(), status.string(), e.what());
     } catch (std::logic_error& e) {
@@ -281,7 +281,7 @@ Status DLNodeSession::executeInference(PipelineEventQueue& notifyEndQueue, Infer
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Starting infer async for node name: {}", getName());
         this->timer->start("inference");
         inferRequest.StartAsync();
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::Exception& e) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception occured when starting async inference or setting completion callback on model: {}, error: {}",
             getName(), getModelName(), e.what());
         return StatusCode::OV_INTERNAL_INFERENCE_ERROR;

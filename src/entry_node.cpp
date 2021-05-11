@@ -151,7 +151,7 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
             return Status(StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION, details);
         }
         }
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::Exception& e) {
         Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception thrown during deserialization from make_shared_blob; {}; exception message: {}",
             getName(), status.string(), e.what());

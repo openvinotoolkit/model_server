@@ -219,7 +219,7 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, Infe
         case CustomNodeTensorPrecision::UNSPECIFIED:
             return StatusCode::INTERNAL_ERROR;
         }
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::Exception& e) {
         Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "{}: {}", status.string(), e.what());
         return status;
