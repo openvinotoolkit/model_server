@@ -110,7 +110,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         try {
             SPDLOG_INFO("Initial network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
             network->reshape(networkShapes);
-        } catch (const InferenceEngine::details::InferenceEngineException& e) {
+        } catch (const InferenceEngine::Exception& e) {
             SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
             SPDLOG_DEBUG("Description: {}", e.what());
             return StatusCode::RESHAPE_ERROR;
@@ -227,7 +227,7 @@ uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& mo
     std::string key = METRIC_KEY(OPTIMAL_NUMBER_OF_INFER_REQUESTS);
     try {
         numberOfParallelInferRequests = execNetwork->GetMetric(key).as<unsigned int>();
-    } catch (const details::InferenceEngineException& ex) {
+    } catch (const Exception& ex) {
         SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
         numberOfParallelInferRequests = 1u;
     }
@@ -251,7 +251,7 @@ void ModelInstance::loadOVEngine() {
     if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
         SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
         try {
-            auto extension_ptr = InferenceEngine::make_so_pointer<InferenceEngine::IExtension>(ovms::Config::instance().cpuExtensionLibraryPath().c_str());
+            auto extension_ptr = std::make_shared<InferenceEngine::Extension>(ovms::Config::instance().cpuExtensionLibraryPath());
             SPDLOG_INFO("Custom CPU extention loaded. Adding it.");
             engine->AddExtension(extension_ptr, "CPU");
             SPDLOG_INFO("Extention added.");
@@ -482,7 +482,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
         }
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::Exception& e) {
         SPDLOG_ERROR("exception occurred while loading network: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return StatusCode::NETWORK_NOT_LOADED;
@@ -896,7 +896,7 @@ Status ModelInstance::performInference(InferenceEngine::InferRequest& inferReque
             SPDLOG_ERROR("Async infer failed {}: {}", status.string(), sts);
             return status;
         }
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::Exception& e) {
         Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
         SPDLOG_ERROR("Async caught an exception {}: {}", status.string(), e.what());
         return status;

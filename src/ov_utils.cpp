@@ -60,7 +60,7 @@ Status createSharedBlob(InferenceEngine::Blob::Ptr& destinationBlob, InferenceEn
             return StatusCode::INVALID_PRECISION;
         }
         }
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::Exception& e) {
         SPDLOG_DEBUG("Blob clone failed; exception message: {}", e.what());
         return StatusCode::OV_CLONE_BLOB_ERROR;
     } catch (std::logic_error& e) {

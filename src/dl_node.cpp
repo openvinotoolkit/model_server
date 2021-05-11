@@ -65,7 +65,7 @@ Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inf
     InferenceEngine::StatusCode ov_status;
     try {
         ov_status = inferRequest.Wait(InferenceEngine::IInferRequest::RESULT_READY);
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::Exception& e) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} IE exception occured during infer request wait: {}", getName(), sessionKey, e.what());
         return StatusCode::INTERNAL_ERROR;
     } catch (std::exception& e) {
@@ -115,7 +115,7 @@ Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inf
                     return status;
                 }
                 outputs.emplace(std::make_pair(output_name, std::move(copiedBlob)));
-            } catch (const InferenceEngine::details::InferenceEngineException& e) {
+            } catch (const InferenceEngine::Exception& e) {
                 Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session:{} Error during getting blob {}; exception message: {}", getName(), sessionKey, status.string(), e.what());
                 return status;
