@@ -23,23 +23,23 @@ ARG PROJECT_NAME="OpenVINO Model Server 2021.3"
 
 LABEL description=${PROJECT_NAME}
 
-ARG ov_source_branch=releases/2021/2
+ARG ov_source_branch=master
 ARG ovms_metadata_file
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
 ARG OPENVINO_NAME=${DLDT_PACKAGE_URL}
 ARG INSTALL_DIR=/opt/intel/openvino
-ARG TEMP_DIR=/tmp/openvino_installer
-ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
-ARG DL_DIR=/tmp
-ARG JOBS
-ARG YUM_OV_PACKAGE=intel-openvino-runtime-centos7
+    ARG TEMP_DIR=/tmp/openvino_installer
+    ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
+    ARG DL_DIR=/tmp
+    ARG JOBS
+    ARG YUM_OV_PACKAGE=intel-openvino-runtime-centos7
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
-ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
+    ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 
-RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && yum install -d6 -y \
+    RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && yum install -d6 -y \
             boost-atomic \
             boost-chrono \
             boost-filesystem \
@@ -93,14 +93,14 @@ RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && y
             unzip && \
             yum clean all
 
-SHELL [ "/usr/bin/scl", "enable", "devtoolset-8" ]
+    SHELL [ "/usr/bin/scl", "enable", "devtoolset-8" ]
 ENV CC=/opt/rh/devtoolset-8/root/bin/gcc
-ENV CXX=/opt/rh/devtoolset-8/root/bin/g++
+    ENV CXX=/opt/rh/devtoolset-8/root/bin/g++
 
 # Set up Bazel
 ENV BAZEL_VERSION 2.0.0
 WORKDIR /bazel
-RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
     chmod +x bazel-*.sh && \
     ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
@@ -109,14 +109,15 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ;  git clone --recurse-submodules https://github.com/openvinotoolkit/openvino --branch $ov_source_branch --single-branch --depth 1 /openvino
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ;  git clone https://github.com/openvinotoolkit/openvino /openvino ; cd /openvino ; git checkout $ov_source_branch; git submodule update --init --recursive ; git config --global user.email "docker-build@intel.com"
 WORKDIR /openvino/build
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake3 -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
+    RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake3 -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
+    RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ && \
-    mkdir -p /opt/intel/openvino/deployment_tools/inference_engine && \ 
-    ln -s /openvino/bin/intel64/Release/lib/* /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ && \
-    ln -s /openvino/inference-engine/include/ /opt/intel/openvino/deployment_tools/inference_engine/
+    mkdir -p /opt/intel/openvino/deployment_tools/inference_engine && \
+    ln -s /openvino/bin/intel64/Release/lib/ /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64 && \
+    ln -s /openvino/inference-engine/include/ /opt/intel/openvino/deployment_tools/inference_engine/ && \
+    curl -s https://download.01.org/opencv/master/openvinotoolkit/thirdparty/linux/opencv/opencv_4.5.1-044_centos7.txz | tar --use-compress-program=xz -C /opt/intel/openvino -xvf -
 ################## END OF OPENVINO SOURCE BUILD ######################
 
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
@@ -212,9 +213,9 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/infe
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
-RUN cd /ovms/src/test/cpu_extension/ && make
+RUN if [ -f /opt/intel/openvino/bin/setupvars.sh ];  then cd /ovms/src/test/cpu_extension/ && make ; fi
 
-#RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
+RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
 
 COPY ${ovms_metadata_file} metadata.json
 
