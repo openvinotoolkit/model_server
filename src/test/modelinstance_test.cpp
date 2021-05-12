@@ -86,7 +86,7 @@ TEST_F(TestUnloadModel, CanUnloadModelNotHoldingModelInstanceAtPredictPath) {
 
 TEST_F(TestUnloadModel, UnloadWaitsUntilMetadataResponseIsBuilt) {
     static std::thread thread;
-    static std::shared_ptr<ovms::ModelInstance> instance;
+    static std::unique_ptr<ovms::ModelInstance> instance;
 
     class MockModelInstanceTriggeringUnload : public ovms::ModelInstance {
     public:
@@ -102,12 +102,12 @@ TEST_F(TestUnloadModel, UnloadWaitsUntilMetadataResponseIsBuilt) {
             return ovms::ModelInstance::getInputsInfo();
         }
     };
-    instance = std::make_shared<MockModelInstanceTriggeringUnload>();
+    instance = std::make_unique<MockModelInstanceTriggeringUnload>();
     ovms::Status status = instance->loadModel(DUMMY_MODEL_CONFIG);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, instance->getStatus().getState());
     tensorflow::serving::GetModelMetadataResponse response;
-    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
+    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(*instance, &response), ovms::StatusCode::OK);
     thread.join();
     EXPECT_EQ(ovms::ModelVersionState::END, instance->getStatus().getState());
 

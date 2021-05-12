@@ -2756,27 +2756,27 @@ public:
 };
 
 class ModelWithDummyModelWithMockedMetadata : public ovms::Model {
-    std::shared_ptr<DummyModelWithMockedMetadata> modelInstance;
+    std::unique_ptr<DummyModelWithMockedMetadata>& modelInstance;
 
 public:
-    ModelWithDummyModelWithMockedMetadata(const std::string& name, std::shared_ptr<DummyModelWithMockedMetadata> modelInstance) :
+    ModelWithDummyModelWithMockedMetadata(const std::string& name, std::unique_ptr<DummyModelWithMockedMetadata>& modelInstance) :
         Model(name, false, nullptr),
         modelInstance(modelInstance) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
+    std::unique_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
         return modelInstance;
     }
 };
-
-std::shared_ptr<ModelWithDummyModelWithMockedMetadata> dummyModelWithMockedMetadata;
+// TODO unused?
+std::unique_ptr<ModelWithDummyModelWithMockedMetadata> dummyModelWithMockedMetadata;
 
 class ModelManagerWithModelWithDummyModelWithMockedMetadata : public ovms::ModelManager {
-    std::shared_ptr<DummyModelWithMockedMetadata> modelInstance;
+    std::unique_ptr<DummyModelWithMockedMetadata> modelInstance;
 
 public:
     ModelManagerWithModelWithDummyModelWithMockedMetadata(std::shared_ptr<DummyModelWithMockedMetadata> modelInstance) :
         modelInstance(modelInstance) {}
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
-        return std::make_shared<ModelWithDummyModelWithMockedMetadata>("dummy", modelInstance);
+    std::unique_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+        return std::make_unique<ModelWithDummyModelWithMockedMetadata>("dummy", modelInstance);
     }
 };
 
@@ -2803,7 +2803,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenDL
     connections[EXIT_NODE_NAME] = {
         {"custom_node", {{"out", pipelineOutputName}}}};
 
-    auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+    auto dummyModelInstance = std::make_unique<DummyModelWithMockedMetadata>(
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
@@ -3025,7 +3025,7 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{"out", pipelineOutputName}}}};
 
-    auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+    auto dummyModelInstance = std::make_unique<DummyModelWithMockedMetadata>(
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
@@ -3076,7 +3076,7 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
 
-    auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+    auto dummyModelInstance = std::make_unique<DummyModelWithMockedMetadata>(
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
@@ -3170,7 +3170,7 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenDLModelAn
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{"out", pipelineOutputName}}}};
 
-    auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+    auto dummyModelInstance = std::make_unique<DummyModelWithMockedMetadata>(
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
@@ -3221,7 +3221,7 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenCustomNod
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
 
-    auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+    auto dummyModelInstance = std::make_unique<DummyModelWithMockedMetadata>(
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
@@ -3556,7 +3556,7 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     auto& output = outputs.at(pipelineOutputName);
     EXPECT_EQ(output->getShape(), shape_t({0, 1, 10}));
 
-    std::shared_ptr<ModelInstance> modelInstance;
+    ModelInstance* > modelInstance;
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance("dummy", 1, modelInstance, modelInstanceUnloadGuardPtr);
     ASSERT_EQ(status, StatusCode::OK) << status.string();

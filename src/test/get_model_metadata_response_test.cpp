@@ -65,11 +65,11 @@ protected:
     std::string modelName = "resnet";
     ovms::model_version_t modelVersion = 23;
 
-    std::shared_ptr<NiceMock<MockModelInstance>> instance;
+    std::unique_ptr<NiceMock<MockModelInstance>> instance;
     tensorflow::serving::GetModelMetadataResponse response;
 
     virtual void prepare() {
-        instance = std::make_shared<NiceMock<MockModelInstance>>();
+        instance = std::make_unique<NiceMock<MockModelInstance>>();
 
         inputTensors = tensor_desc_map_t({
             {"Input_FP32_1_3_224_224", {
@@ -125,7 +125,7 @@ class GetModelMetadataResponseBuild : public GetModelMetadataResponse {
 protected:
     void prepare() override {
         GetModelMetadataResponse::prepare();
-        ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
+        ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(*instance, &response), ovms::StatusCode::OK);
     }
 };
 
@@ -239,12 +239,12 @@ TEST_F(GetModelMetadataResponseBuild, HasCorrectShape) {
 
 TEST_F(GetModelMetadataResponse, ModelVersionNotLoadedAnymore) {
     instance->unloadModel();
-    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
+    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(*instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
 }
 
 TEST_F(GetModelMetadataResponse, ModelVersionNotLoadedYet) {
     instance->loadModel(DUMMY_MODEL_CONFIG);
-    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
+    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(*instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 }
 
 TEST_F(GetModelMetadataResponseBuild, serialize2Json) {

@@ -55,8 +55,8 @@ public:
     virtual ~MockModelWithInstancesJustChangingStates() {}
 
 protected:
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory() { return modelInstanceFactory("UNUSED_NAME", UNUSED_MODEL_VERSION); }
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t version) override {
-        return std::move(std::make_shared<MockModelInstanceChangingStates>(modelName, version));
+    std::unique_ptr<ovms::ModelInstance> modelInstanceFactory() { return modelInstanceFactory("UNUSED_NAME", UNUSED_MODEL_VERSION); }
+    std::unique_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t version) override {
+        return std::move(std::make_unique<MockModelInstanceChangingStates>(modelName, version));
     }
 };

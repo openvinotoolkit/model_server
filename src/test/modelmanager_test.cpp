@@ -76,14 +76,16 @@ public:
     MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&), (override));
 };
 
-std::shared_ptr<MockModel> modelMock;
+// TODO
+std::unique_ptr<MockModel> modelMock;
 
 }  // namespace
 
 class MockModelManager : public ovms::ModelManager {
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
-        return modelMock;
+    std::unique_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+        // TODO
+        return std::move(modelMock);
     }
 };
 
@@ -198,7 +200,7 @@ TEST(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
 
     std::string configFile = "/tmp/ovms_config_file.json";
     createConfigFileWithContent(configWithPipelineDefinitionMatchSchema, configFile);
-    modelMock = std::make_shared<MockModel>();
+    modelMock = std::make_unique<MockModel>();
     MockModelManager manager;
 
     auto status = manager.startFromFile(configFile);
@@ -216,7 +218,7 @@ void setupModelsDirs() {
 TEST(ModelManager, configRelodNotNeededManyThreads) {
     std::string configFile = "/tmp/config.json";
 
-    modelMock = std::make_shared<MockModel>();
+    modelMock = std::make_unique<MockModel>();
     MockModelManager manager;
     setupModelsDirs();
     createConfigFileWithContent(config_2_models, configFile);
@@ -246,7 +248,7 @@ TEST(ModelManager, configRelodNotNeededManyThreads) {
 TEST(ModelManager, configRelodNeededManyThreads) {
     std::string configFile = "/tmp/config.json";
 
-    modelMock = std::make_shared<MockModel>();
+    modelMock = std::make_unique<MockModel>();
     MockModelManager manager;
     setupModelsDirs();
     createConfigFileWithContent(config_2_models, configFile);
@@ -282,7 +284,7 @@ TEST(ModelManager, configRelodNeededManyThreads) {
 TEST(ModelManager, configReloadNeededChange) {
     std::string configFile = "/tmp/config.json";
 
-    modelMock = std::make_shared<MockModel>();
+    modelMock = std::make_unique<MockModel>();
     MockModelManager manager;
 
     createConfigFileWithContent(config_2_models, configFile);
@@ -305,7 +307,7 @@ TEST(ModelManager, configReloadNeededChange) {
 TEST(ModelManager, loadConfigManyThreads) {
     std::string configFile = "/tmp/config.json";
 
-    modelMock = std::make_shared<MockModel>();
+    modelMock = std::make_unique<MockModel>();
     MockModelManager manager;
     setupModelsDirs();
     createConfigFileWithContent(config_2_models, configFile);
@@ -334,7 +336,7 @@ TEST(ModelManager, loadConfigManyThreads) {
 TEST(ModelManager, configReloadNeededBeforeConfigLoad) {
     std::string configFile = "/tmp/config.json";
 
-    modelMock = std::make_shared<MockModel>();
+    modelMock = std::make_unique<MockModel>();
     MockModelManager manager;
 
     createConfigFileWithContent(config_2_models, configFile);
@@ -382,7 +384,7 @@ TEST(ModelManager, parseConfigWhenOnlyPipelineDefinitionProvided) {
 
     std::string configFile = "/tmp/ovms_config_file.json";
     createConfigFileWithContent(configWithOnlyPipelineDefinitionProvided, configFile);
-    modelMock = std::make_shared<MockModel>();
+    modelMock = std::make_unique<MockModel>();
     MockModelManager manager;
 
     auto status = manager.startFromFile(configFile);
@@ -449,7 +451,7 @@ TEST(ModelManager, StartFromFile) {
     std::filesystem::create_directories(model_2_path);
     std::string fileToReload = "/tmp/ovms_config_file1.json";
     createConfigFileWithContent(config_1_model, fileToReload);
-    modelMock = std::make_shared<MockModel>();
+    modelMock = std::make_unique<MockModel>();
     MockModelManager manager;
 
     EXPECT_CALL(*modelMock, addVersion(_))
@@ -477,7 +479,7 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     std::filesystem::create_directories(model_2_path);
     std::string fileToReload = "/tmp/ovms_config_file2.json";
     createConfigFileWithContent(config_1_model, fileToReload);
-    modelMock = std::make_shared<MockModel>();
+    modelMock = std::make_unique<MockModel>();
     MockModelManager manager;
     EXPECT_CALL(*modelMock, addVersion(_))
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
@@ -603,9 +605,9 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     config.setNireq(1);
     ConstructorEnabledModelManager manager;
     manager.reloadModelWithVersions(config);
-    std::shared_ptr<ovms::ModelInstance> modelInstance1;
-    std::shared_ptr<ovms::ModelInstance> modelInstance2;
-    std::shared_ptr<ovms::ModelInstance> modelInstance3;
+    ovms::ModelInstance* modelInstance1;
+    ovms::ModelInstance* modelInstance2;
+    ovms::ModelInstance* modelInstance3;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     auto status = manager.getModelInstance(modelDirectory.name, 2, modelInstance2, modelInstanceUnloadGuard);
     ASSERT_EQ(status, ovms::StatusCode::OK);
@@ -661,7 +663,7 @@ TEST(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
     std::filesystem::create_directories(model_2_path);
     std::string fileToReload = "/tmp/ovms_config_file2.json";
     createConfigFileWithContent(configWithTwoSameNames, fileToReload);
-    modelMock = std::make_shared<MockModel>();
+    modelMock = std::make_unique<MockModel>();
     MockModelManager manager;
 
     EXPECT_CALL(*modelMock, addVersion(_))
@@ -677,8 +679,8 @@ TEST(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
 
 class MockModelManagerWithModelInstancesJustChangingStates : public ovms::ModelManager {
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
-        return std::make_shared<MockModelWithInstancesJustChangingStates>(name);
+    std::unique_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+        return std::make_unique<MockModelWithInstancesJustChangingStates>(name);
     }
     ovms::Status readAvailableVersions(
         std::shared_ptr<ovms::FileSystem>& fs,
@@ -701,7 +703,7 @@ TEST(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJs
     std::filesystem::create_directories(model_2_path);
     std::string fileToReload = "/tmp/ovms_config_file2.json";
     createConfigFileWithContent(config_2_models, fileToReload);
-    modelMock = std::make_shared<MockModel>();
+    modelMock = std::make_unique<MockModel>();
     MockModelManagerWithModelInstancesJustChangingStates manager;
     manager.registerVersionToLoad(1);
     manager.registerVersionToLoad(2);
@@ -743,10 +745,10 @@ public:
     }
 };
 
-std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> getMockedModelVersionInstances(
+std::map<ovms::model_version_t, std::unique_ptr<ovms::ModelInstance>> getMockedModelVersionInstances(
     std::map<ovms::ModelVersionState, ovms::model_versions_t> initialVersionStates,
     const ovms::ModelConfig& modelConfig = ovms::ModelConfig{}) {
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> modelVersions;
+    std::map<ovms::model_version_t, std::unique_ptr<ovms::ModelInstance>> modelVersions;
     std::array<ovms::ModelVersionState, 5> states{
         ovms::ModelVersionState::START,
         ovms::ModelVersionState::LOADING,
@@ -755,7 +757,7 @@ std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> getMockedM
         ovms::ModelVersionState::END};
     for (auto& state : states) {
         for (auto& version : initialVersionStates[state]) {
-            modelVersions[version] = std::make_shared<MockModelInstanceInStateWithConfig>(state, modelConfig);
+            modelVersions[version] = std::make_unique<MockModelInstanceInStateWithConfig>(state, modelConfig);
         }
     }
     return modelVersions;
@@ -788,7 +790,7 @@ TEST_F(ModelManagerVersionsReload, RetireOldAddNew) {
     initialVersions[ovms::ModelVersionState::UNLOADING] = {};
     initialVersions[ovms::ModelVersionState::END] = {};
     ovms::model_versions_t requestedVersions{2};
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
+    std::map<ovms::model_version_t, ovms::ModelInstance*> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
     ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{2};
@@ -806,7 +808,7 @@ TEST_F(ModelManagerVersionsReload, NoVersionsChange) {
     initialVersions[ovms::ModelVersionState::UNLOADING] = {1};
     initialVersions[ovms::ModelVersionState::END] = {};
     ovms::model_versions_t requestedVersions{2, 3};
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
+    std::map<ovms::model_version_t, ovms::ModelInstance*> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
     ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
@@ -824,7 +826,7 @@ TEST_F(ModelManagerVersionsReload, KeepOldAddNewNoRetired) {
     initialVersions[ovms::ModelVersionState::UNLOADING] = {};
     initialVersions[ovms::ModelVersionState::END] = {};
     ovms::model_versions_t requestedVersions{1, 2, 3};
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
+    std::map<ovms::model_version_t, ovms::ModelInstance*> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
     ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{3};
@@ -842,7 +844,7 @@ TEST_F(ModelManagerVersionsReload, KeepOldAddNewWithRetiredVersions) {
     initialVersions[ovms::ModelVersionState::UNLOADING] = {};
     initialVersions[ovms::ModelVersionState::END] = {1};
     ovms::model_versions_t requestedVersions{2, 3, 4};
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
+    std::map<ovms::model_version_t, ovms::ModelInstance*> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
     ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{4};
@@ -860,7 +862,7 @@ TEST_F(ModelManagerVersionsReload, JustAddNewVersions) {
     initialVersions[ovms::ModelVersionState::UNLOADING] = {};
     initialVersions[ovms::ModelVersionState::END] = {};
     ovms::model_versions_t requestedVersions{1, 2};
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
+    std::map<ovms::model_version_t, ovms::ModelInstance*> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
     ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{1, 2};
@@ -878,7 +880,7 @@ TEST_F(ModelManagerVersionsReload, JustRetireVersion) {
     initialVersions[ovms::ModelVersionState::UNLOADING] = {};
     initialVersions[ovms::ModelVersionState::END] = {};
     ovms::model_versions_t requestedVersions{2, 3};
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
+    std::map<ovms::model_version_t, ovms::ModelInstance*> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
     ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
@@ -896,7 +898,7 @@ TEST_F(ModelManagerVersionsReload, ResurrectRetiredVersion) {
     initialVersions[ovms::ModelVersionState::UNLOADING] = {};
     initialVersions[ovms::ModelVersionState::END] = {1};
     ovms::model_versions_t requestedVersions{1, 2};
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
+    std::map<ovms::model_version_t, ovms::ModelInstance*> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
     ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
@@ -914,7 +916,7 @@ TEST_F(ModelManagerVersionsReload, RessurectRetireAddAtTheSameTime) {
     initialVersions[ovms::ModelVersionState::UNLOADING] = {};
     initialVersions[ovms::ModelVersionState::END] = {1};
     ovms::model_versions_t requestedVersions{1, 3};
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
+    std::map<ovms::model_version_t, ovms::ModelInstance*> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
     ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{3};
@@ -932,7 +934,7 @@ TEST_F(ModelManagerVersionsReload, DontStartAlreadyStartingVersion) {
     initialVersions[ovms::ModelVersionState::UNLOADING] = {};
     initialVersions[ovms::ModelVersionState::END] = {};
     ovms::model_versions_t requestedVersions{1};
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
+    std::map<ovms::model_version_t, ovms::ModelInstance*> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
     ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
@@ -950,7 +952,7 @@ TEST_F(ModelManagerVersionsReload, DontStartAlreadyLoadingVersion) {
     initialVersions[ovms::ModelVersionState::UNLOADING] = {};
     initialVersions[ovms::ModelVersionState::END] = {};
     ovms::model_versions_t requestedVersions{1};
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
+    std::map<ovms::model_version_t, ovms::ModelInstance*> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
     ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
@@ -968,7 +970,7 @@ TEST_F(ModelManagerVersionsReload, DontRetireAlreadyUnloadingVersion) {
     initialVersions[ovms::ModelVersionState::UNLOADING] = {1};
     initialVersions[ovms::ModelVersionState::END] = {};
     ovms::model_versions_t requestedVersions{};
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
+    std::map<ovms::model_version_t, ovms::ModelInstance*> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
     ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
@@ -985,7 +987,7 @@ TEST_F(ModelManagerVersionsReload, RetireLoadingVersion) {
     initialVersions[ovms::ModelVersionState::UNLOADING] = {};
     initialVersions[ovms::ModelVersionState::END] = {};
     ovms::model_versions_t requestedVersions{};
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
+    std::map<ovms::model_version_t, ovms::ModelInstance*> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
     ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
@@ -1003,7 +1005,7 @@ TEST_F(ModelManagerVersionsReload, RetireStartingVersion) {
     initialVersions[ovms::ModelVersionState::UNLOADING] = {};
     initialVersions[ovms::ModelVersionState::END] = {};
     ovms::model_versions_t requestedVersions{};
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
+    std::map<ovms::model_version_t, ovms::ModelInstance*> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
     ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
@@ -1021,7 +1023,7 @@ TEST_F(ModelManagerVersionsReload, ReloadUnloadingVersion) {
     initialVersions[ovms::ModelVersionState::UNLOADING] = {1};
     initialVersions[ovms::ModelVersionState::END] = {};
     ovms::model_versions_t requestedVersions{1};
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances =
+    std::map<ovms::model_version_t, ovms::ModelInstance*> mockModelVersionInstances =
         getMockedModelVersionInstances(initialVersions);
     ovms::ModelManager::getVersionsToChange(oldConfig, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     ovms::model_versions_t expectedVersionsToStart{};
@@ -1055,7 +1057,7 @@ public:
     std::shared_ptr<ovms::model_versions_t> versionsToRetire;
     std::shared_ptr<ovms::model_versions_t> versionsToReload;
     std::shared_ptr<ovms::model_versions_t> versionsToStart;
-    std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> mockModelVersionInstances;
+    std::map<ovms::model_version_t, ovms::ModelInstance*> mockModelVersionInstances;
     ovms::model_versions_t requestedVersions{3};
     ovms::ModelConfig config;
 };
@@ -1187,14 +1189,14 @@ std::shared_ptr<ovms::Model> model;
 
 class MockModelManagerWith1Model : public ovms::ModelManager {
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+    std::unique_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
         return model;
     }
 };
 
 TEST_F(GetModelInstanceTest, WithRequestedNameShouldReturnModelNameMissing) {
     MockModelManagerWith1Model manager;
-    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    ovms::ModelInstance* modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance("SOME", 0, modelInstance, modelInstanceUnloadGuardPtr);
     EXPECT_EQ(status, ovms::StatusCode::MODEL_NAME_MISSING) << "Should fail with no model with such name registered";
@@ -1205,7 +1207,7 @@ TEST_F(GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturnModelVers
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
-    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    ovms::ModelInstance* modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance(config.getName(), 2, modelInstance, modelInstanceUnloadGuardPtr);
     EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_MISSING) << "Should fail with no model with such name registered";
@@ -1228,8 +1230,8 @@ class ModelWithModelInstanceFakeLoad : public ovms::Model {
 public:
     ModelWithModelInstanceFakeLoad(const std::string& name) :
         Model(name, false, nullptr) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
-        return std::make_shared<MockModelInstanceFakeLoad>();
+    std::unique_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
+        return std::make_unique<MockModelInstanceFakeLoad>();
     }
 };
 
@@ -1243,7 +1245,7 @@ TEST_F(GetModelInstanceTest, WithRequestedDefaultVersionUnloadedShouldReturnMode
     std::shared_ptr<ovms::model_versions_t> versionsToRetire = std::make_shared<ovms::model_versions_t>();
     versionsToRetire->emplace_back(1);
     model->retireVersions(versionsToRetire);
-    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    ovms::ModelInstance* modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance(config.getName(), 0, modelInstance, modelInstanceUnloadGuardPtr);
     EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_MISSING);
@@ -1257,7 +1259,7 @@ TEST_F(GetModelInstanceTest, WithRequestedVersion1ShouldReturnModelVersionNotLoa
     std::shared_ptr<ovms::model_versions_t> versionsToRetire = std::make_shared<ovms::model_versions_t>();
     versionsToRetire->emplace_back(1);
     model->retireVersions(versionsToRetire);
-    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    ovms::ModelInstance* modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance(config.getName(), 1, modelInstance, modelInstanceUnloadGuardPtr);
     EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
@@ -1280,8 +1282,8 @@ class ModelWithModelInstanceLoadedStuckInLoadingState : public ovms::Model {
 public:
     ModelWithModelInstanceLoadedStuckInLoadingState(const std::string& name) :
         Model(name, false, nullptr) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
-        return std::make_shared<ModelInstanceLoadedStuckInLoadingState>();
+    std::unique_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
+        return std::make_unique<ModelInstanceLoadedStuckInLoadingState>();
     }
 };
 
@@ -1289,7 +1291,7 @@ std::shared_ptr<ModelWithModelInstanceLoadedStuckInLoadingState> modelWithModelI
 
 class ModelManagerWithModelInstanceLoadedStuckInLoadingState : public ovms::ModelManager {
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+    std::unique_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
         return modelWithModelInstanceLoadedStuckInLoadingState;
     }
 };
@@ -1324,8 +1326,8 @@ public:
     ModelWithModelInstanceLoadedWaitInLoadingState(const std::string& name, const uint modelInstanceLoadDelayInMilliseconds) :
         Model(name, false, nullptr),
         modelInstanceLoadDelayInMilliseconds(modelInstanceLoadDelayInMilliseconds) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
-        return std::make_shared<ModelInstanceLoadedWaitInLoadingState>(modelInstanceLoadDelayInMilliseconds);
+    std::unique_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
+        return std::make_unique<ModelInstanceLoadedWaitInLoadingState>(modelInstanceLoadDelayInMilliseconds);
     }
 
 private:
@@ -1336,7 +1338,7 @@ std::shared_ptr<ModelWithModelInstanceLoadedWaitInLoadingState> modelWithModelIn
 
 class ModelManagerWithModelInstanceLoadedWaitInLoadingState : public ovms::ModelManager {
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+    std::unique_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
         return modelWithModelInstanceLoadedWaitInLoadingState;
     }
 
@@ -1353,10 +1355,10 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInN
     const uint32_t modelLoadingTimeoutMs = 100;
     manager.setWaitForModelLoadedTimeoutMs(modelLoadingTimeoutMs);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    modelWithModelInstanceLoadedWaitInLoadingState = std::make_shared<ModelWithModelInstanceLoadedWaitInLoadingState>(
+    modelWithModelInstanceLoadedWaitInLoadingState = std::make_unique<ModelWithModelInstanceLoadedWaitInLoadingState>(
         config.getName(), modelLoadingTimeoutMs / 1.5);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
-    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    ovms::ModelInstance* modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance(config.getName(), 1, modelInstance, modelInstanceUnloadGuardPtr);
     ASSERT_EQ(status, ovms::StatusCode::OK);
@@ -1371,11 +1373,11 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInR
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
 
     const auto MODEL_LOADING_LONGER_THAN_WAIT_FOR_LOADED_TIMEOUT_MS = 1.5 * modelLoadingTimeoutMs;
-    modelWithModelInstanceLoadedWaitInLoadingState = std::make_shared<ModelWithModelInstanceLoadedWaitInLoadingState>(
+    modelWithModelInstanceLoadedWaitInLoadingState = std::make_unique<ModelWithModelInstanceLoadedWaitInLoadingState>(
         config.getName(), MODEL_LOADING_LONGER_THAN_WAIT_FOR_LOADED_TIMEOUT_MS);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     ASSERT_EQ(ovms::ModelVersionState::LOADING, modelWithModelInstanceLoadedWaitInLoadingState->getModelInstanceByVersion(1)->getStatus().getState());
-    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    ovms::ModelInstance* modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance(config.getName(), 1, modelInstance, modelInstanceUnloadGuardPtr);
     spdlog::error("State: {}", (int)modelInstance->getStatus().getState());

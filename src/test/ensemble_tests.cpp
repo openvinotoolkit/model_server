@@ -138,7 +138,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     managerWithDummyModel.reloadModelWithVersions(config);
 
     // Get dummy model instance
-    std::shared_ptr<ovms::ModelInstance> model;
+    ovms::ModelInstance* model;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     auto status = managerWithDummyModel.getModelInstance(dummyModelName, 0, model, unload_guard);
     ASSERT_EQ(status, ovms::StatusCode::OK);

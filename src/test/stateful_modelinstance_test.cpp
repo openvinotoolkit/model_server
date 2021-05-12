@@ -306,7 +306,7 @@ public:
     }
 };
 
-void RunStatefulPredict(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, uint32_t sequenceControl) {
+void RunStatefulPredict(const ovms::ModelInstance* modelInstance, inputs_info_t modelInput, uint64_t seqId, uint32_t sequenceControl) {
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceId(&request, seqId);
     setRequestSequenceControl(&request, sequenceControl);
@@ -319,7 +319,7 @@ void RunStatefulPredict(const std::shared_ptr<ovms::ModelInstance> modelInstance
     EXPECT_TRUE(CheckSequenceIdResponse(response, seqId));
 }
 
-void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, int numberOfNoControlRequests, uint64_t seqId,
+void RunStatefulPredicts(const ovms::ModelInstance* modelInstance, inputs_info_t modelInput, int numberOfNoControlRequests, uint64_t seqId,
     std::future<void>* waitBeforeSequenceStarted,
     std::future<void>* waitAfterSequenceStarted,
     std::future<void>* waitBeforeSequenceFinished) {

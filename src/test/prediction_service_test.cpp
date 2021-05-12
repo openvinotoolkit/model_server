@@ -55,7 +55,7 @@ public:
         std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance = nullptr,
         std::unique_ptr<std::future<void>> waitBeforePerformInference = nullptr);
 
-    void deserialize(const std::vector<float>& input, InferenceEngine::InferRequest& inferRequest, std::shared_ptr<ovms::ModelInstance> modelInstance) {
+    void deserialize(const std::vector<float>& input, InferenceEngine::InferRequest& inferRequest, ovms::ModelInstance* modelInstance) {
         auto blob = InferenceEngine::make_shared_blob<float>(
             modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getTensorDesc(),
             const_cast<float*>(reinterpret_cast<const float*>(input.data())));
@@ -160,7 +160,7 @@ public:
     }
 
     ovms::Status performInferenceWithRequest(const tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response) {
-        std::shared_ptr<ovms::ModelInstance> model;
+        ovms::ModelInstance* model;
         std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
         auto status = manager.getModelInstance("dummy", 0, model, unload_guard);
         if (!status.ok()) {
@@ -207,7 +207,7 @@ void TestPredict::performPredict(const std::string modelName,
     std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance,
     std::unique_ptr<std::future<void>> waitBeforePerformInference) {
     // only validation is skipped
-    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    ovms::ModelInstance* modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
 
     auto& tensorProto = request.inputs().find("b")->second;
@@ -227,7 +227,8 @@ void TestPredict::performPredict(const std::string modelName,
         std::cout << "Waiting before performInfernce." << std::endl;
         waitBeforePerformInference->get();
     }
-    ovms::Status validationStatus = (std::static_pointer_cast<MockModelInstance>(modelInstance))->mockValidate(&request);
+    // TODO
+    ovms::Status validationStatus = (dynamic_cast<MockModelInstance*>(modelInstance))->mockValidate(&request);
     ASSERT_TRUE(validationStatus == ovms::StatusCode::OK ||
                 validationStatus == ovms::StatusCode::RESHAPE_REQUIRED ||
                 validationStatus == ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
@@ -373,7 +374,7 @@ TEST_F(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     // Get dummy model instance
-    std::shared_ptr<ovms::ModelInstance> model;
+    ovms::ModelInstance* model;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     auto status = manager.getModelInstance("dummy", 0, model, unload_guard);
 

@@ -28,7 +28,7 @@ class ModelDefaultVersions : public ::testing::Test {};
 
 TEST_F(ModelDefaultVersions, DefaultVersionNullWhenNoVersionAdded) {
     MockModelWithInstancesJustChangingStates mockModel;
-    std::shared_ptr<ovms::ModelInstance> defaultInstance;
+    ovms::ModelInstance* defaultInstance;
     defaultInstance = mockModel.getDefaultModelInstance();
     EXPECT_EQ(nullptr, defaultInstance);
 }
@@ -43,7 +43,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionNullWhenVersionRetired) {
     mockModel.addVersions(versionsToChange, config, fs, versionsFailed);
     mockModel.retireVersions(versionsToChange);
 
-    std::shared_ptr<ovms::ModelInstance> defaultInstance;
+    ovms::ModelInstance* defaultInstance;
     defaultInstance = mockModel.getDefaultModelInstance();
     EXPECT_EQ(nullptr, defaultInstance);
 }
@@ -57,7 +57,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnValidWhen1Added) {
     auto fs = ovms::ModelManager::getFilesystem(config.getBasePath());
     ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, versionsFailed), ovms::StatusCode::OK);
 
-    std::shared_ptr<ovms::ModelInstance> defaultInstance;
+    ovms::ModelInstance* defaultInstance;
     defaultInstance = mockModel.getDefaultModelInstance();
     EXPECT_TRUE(nullptr != defaultInstance);
     EXPECT_EQ(1, defaultInstance->getVersion());
@@ -76,7 +76,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighest) {
     config.setVersion(2);
     ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, versionsFailed), ovms::StatusCode::OK);
 
-    std::shared_ptr<ovms::ModelInstance> defaultInstance;
+    ovms::ModelInstance* defaultInstance;
     defaultInstance = mockModel.getDefaultModelInstance();
     EXPECT_TRUE(nullptr != defaultInstance);
     EXPECT_EQ(2, defaultInstance->getVersion());
@@ -101,7 +101,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighestNonRetired) {
     mockModel.retireVersions(versionsToChange);
     versionsToChange->clear();
 
-    std::shared_ptr<ovms::ModelInstance> defaultInstance;
+    ovms::ModelInstance* defaultInstance;
     defaultInstance = mockModel.getDefaultModelInstance();
     EXPECT_TRUE(nullptr != defaultInstance);
     EXPECT_EQ(1, defaultInstance->getVersion());
@@ -131,7 +131,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighestWhenVersionReloade
     ASSERT_EQ(mockModel.reloadVersions(versionsToChange, config, fs, versionsFailed), ovms::StatusCode::OK);
     versionsToChange->clear();
 
-    std::shared_ptr<ovms::ModelInstance> defaultInstance;
+    ovms::ModelInstance* defaultInstance;
     defaultInstance = mockModel.getDefaultModelInstance();
     EXPECT_TRUE(nullptr != defaultInstance);
     EXPECT_EQ(2, defaultInstance->getVersion());

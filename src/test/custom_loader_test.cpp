@@ -308,7 +308,7 @@ public:
         std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance = nullptr,
         std::unique_ptr<std::future<void>> waitBeforePerformInference = nullptr);
 
-    void deserialize(const std::vector<float>& input, InferenceEngine::InferRequest& inferRequest, std::shared_ptr<ovms::ModelInstance> modelInstance) {
+    void deserialize(const std::vector<float>& input, InferenceEngine::InferRequest& inferRequest, ovms::ModelInstance* modelInstance) {
         auto blob = InferenceEngine::make_shared_blob<float>(
             modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getTensorDesc(),
             const_cast<float*>(reinterpret_cast<const float*>(input.data())));
@@ -325,7 +325,7 @@ public:
     }
 
     ovms::Status performInferenceWithRequest(const tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response) {
-        std::shared_ptr<ovms::ModelInstance> model;
+        ovms::ModelInstance* model;
         std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
         auto status = manager.getModelInstance("dummy", 0, model, unload_guard);
         if (!status.ok()) {
@@ -363,7 +363,7 @@ void TestCustomLoader::performPredict(const std::string modelName,
     std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance,
     std::unique_ptr<std::future<void>> waitBeforePerformInference) {
     // only validation is skipped
-    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    ovms::ModelInstance* modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
 
     auto& tensorProto = request.inputs().find("b")->second;
@@ -941,7 +941,7 @@ TEST_F(TestCustomLoader, CustomLoaderGetMetaData) {
     createConfigFileWithContent(configStr, fileToReload);
     ASSERT_EQ(manager.loadConfig(fileToReload), ovms::StatusCode::OK);
 
-    std::shared_ptr<ovms::ModelInstance> model;
+    ovms::ModelInstance* model;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     ASSERT_EQ(manager.getModelInstance("dummy", 1, model, unload_guard), ovms::StatusCode::OK);
 
