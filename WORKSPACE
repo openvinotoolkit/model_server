@@ -102,6 +102,19 @@ load("@upb//bazel:repository_defs.bzl", "bazel_version_repository")
 
 bazel_version_repository(name = "bazel_version")
 
+# LIBCRYPTO
+new_local_repository(
+    name = "crypto_lib",
+    path = "/usr/local/ssl/lib",
+    build_file_content = """
+cc_library(
+    name = "libcrypto",
+    srcs = ["libcrypto.so","libcrypto.so.1.1"],
+    visibility = ["//visibility:public"],
+)
+""",
+)
+
 # AWS S3 SDK
 new_local_repository(
     name = "awssdk",

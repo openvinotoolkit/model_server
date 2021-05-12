@@ -243,16 +243,11 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         const auto step = blob->byteSize() / resultsDemultiplyCount;
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
             InferenceEngine::Blob::Ptr dividedBlob;
-            auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
-            if (!status.ok()) {
-                return status;
-            }
-            if (dividedBlob->byteSize() != step) {
-                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created blob: {} have wrong byte size: {}, expected: {}",
-                    getName(), metadata.getSessionKey(), blobName, dividedBlob->byteSize(), step);
-                return StatusCode::UNKNOWN_ERROR;
-            }
-            memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
+            this->createShardedBlob(dividedBlob, dividedBlobDesc, blob, i, step, metadata, blobName);
+            std::stringstream ss;
+            ss << "Node: " << getName() << " input demultiplied: " << blobName
+               << "; Actual: " << TensorInfo::shapeToString(dividedBlob->getTensorDesc().getDims());
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
             auto it = nodeSessionOutputs.find(newSessionMetadatas[i].getSessionKey());
             if (it == nodeSessionOutputs.end()) {
                 nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{blobName, dividedBlob}}});
@@ -265,4 +260,17 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     return StatusCode::OK;
 }
 
+Status Node::createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, const InferenceEngine::TensorDesc& dividedBlobDesc, InferenceEngine::Blob::Ptr blob, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName) {
+    auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
+    if (!status.ok()) {
+        return status;
+    }
+    if (dividedBlob->byteSize() != step) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created blob: {} have wrong byte size: {}, expected: {}",
+            getName(), metadata.getSessionKey(), blobName, dividedBlob->byteSize(), step);
+        return StatusCode::UNKNOWN_ERROR;
+    }
+    memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
+    return StatusCode::OK;
+}
 }  // namespace ovms

@@ -4,7 +4,7 @@ This document presents a models ensemble as an example of [DAG Scheduler](dag_sc
 It describes how to combine several models to perform multiple inference operations with a single prediction call.
 When you need to execute several predictions on the same data, you can create a pipeline, which combines the results from several models.
 
-![diagram](combined_model_dag.png))
+![diagram](combined_model_dag.png)
 
 ### Step 1: Prepare the models
 

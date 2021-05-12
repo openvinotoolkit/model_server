@@ -233,15 +233,26 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
         return StatusCode::OK;
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Reading pipeline: {} configuration", pipelineName);
-    auto itr2 = pipelineConfig.FindMember("nodes");
-
-    std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, ENTRY_NODE_NAME}};
-    processPipelineInputs(pipelineConfig.FindMember("inputs"), ENTRY_NODE_NAME, info[0].outputNameAliases, pipelineName);
-    pipeline_connections_t connections;
     std::set<std::string> demultiplexerNodes;
     std::set<std::string> gatheredDemultiplexerNodes;
-    for (const auto& nodeConfig : itr2->value.GetArray()) {
+    std::optional<uint32_t> demultiplyCountEntry = std::nullopt;
+    auto demultiplyCountEntryIt = pipelineConfig.FindMember("demultiply_count");
+    if (demultiplyCountEntryIt != pipelineConfig.MemberEnd()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Pipeline: {} does have demultiply at entry node", pipelineName);
+        demultiplyCountEntry = pipelineConfig["demultiply_count"].GetUint64();
+        demultiplexerNodes.insert(ENTRY_NODE_NAME);
+    } else {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Pipeline: {} does not have demultiply at entry node", pipelineName);
+    }
+
+    std::vector<NodeInfo> info;
+    NodeInfo entryInfo{NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {}, demultiplyCountEntry};
+    info.emplace_back(std::move(entryInfo));
+    processPipelineInputs(pipelineConfig.FindMember("inputs"), ENTRY_NODE_NAME, info[0].outputNameAliases, pipelineName);
+    pipeline_connections_t connections;
+
+    auto nodesItr = pipelineConfig.FindMember("nodes");
+    for (const auto& nodeConfig : nodesItr->value.GetArray()) {
         std::string nodeName;
         nodeName = nodeConfig["name"].GetString();
 

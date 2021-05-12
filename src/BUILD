@@ -316,7 +316,8 @@ cc_binary(
         "-Werror",
     ],
     deps = [
-        "//src:ovms_lib"
+        "//src:ovms_lib",
+        "@crypto_lib//:libcrypto",
     ]
 )
 
@@ -403,6 +404,7 @@ cc_test(
         "//src:libcustom_node_model_zoo_intel_object_detection.so",
         "//src:libcustom_node_image_transformation.so",
         "@com_google_googletest//:gtest",
+        "@crypto_lib//:libcrypto",
     ],
     copts = [
         "-Wall",

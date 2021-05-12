@@ -30,8 +30,8 @@ parser.add_argument('--image_input_name', required=False, default='image', help=
 parser.add_argument('--image_input_path', required=True, help='Input image path.')
 parser.add_argument('--face_images_output_name', required=False, default='face_images', help='Pipeline output name for cropped images with faces. default: face_images')
 parser.add_argument('--face_images_save_path', required=False, default='', help='If specified, face images will be saved to disk.')
-parser.add_argument('--image_width', required=False, default=1920, help='Original image width. default: 1920')
-parser.add_argument('--image_height', required=False, default=1024, help='Original image height. default: 1024')
+parser.add_argument('--image_width', required=False, default=600, help='Original image width. default: 600')
+parser.add_argument('--image_height', required=False, default=400, help='Original image height. default: 400')
 parser.add_argument('--image_layout', required=False, default='CHW', choices=['CHW', 'HWC'], help='Original image layout. default: CHW')
 
 args = vars(parser.parse_args())

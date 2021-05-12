@@ -82,10 +82,6 @@ Config& Config::parse(int argc, char** argv) {
                 "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
                 cxxopts::value<uint>()->default_value("1"),
                 "FILE_SYSTEM_POLL_WAIT_SECONDS")
-            ("rest_timeout",
-                "Rest API request timeout in miliseconds. Default is 5000.",
-                cxxopts::value<uint>()->default_value("5000"),
-                "REST_TIMEOUT")
             ("sequence_cleaner_poll_wait_minutes",
                 "Time interval between two consecutive sequence cleaner scans. Default is 5. Zero value disables sequence cleaner.",
                 cxxopts::value<uint32_t>()->default_value("5"),

@@ -155,7 +155,7 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflo
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
-RUN wget https://dl.bintray.com/boostorg/release/1.68.0/source/boost_1_68_0.tar.gz && \
+RUN wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz && \
 	tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
 	./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
 		--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
@@ -188,13 +188,10 @@ RUN cd azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release && CASABLA
 
 ####### End of Azure SDK
 
-# WARNING - do not move this install - needed here for proper ssl linkage in rest and azure
-RUN yum install -d6 -y openssl-devel
-
 # Build AWS S3 SDK
 RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
 WORKDIR /awssdk/build
-RUN cmake3 -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
+RUN OPENSSL_ROOT_DIR=/usr/local/ssl/ cmake3 -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
 RUN make --jobs=$JOBS
 RUN mv .deps/install/lib64 .deps/install/lib
 

@@ -59,12 +59,18 @@ protected:
     }
 
     template <typename T>
-    void prepareRequest(PredictRequest& request, const std::vector<T>& data, const std::string& inputName = pipelineInputName) {
+    void prepareRequest(PredictRequest& request, const std::vector<T>& data, const std::string& inputName = pipelineInputName, const shape_t shape = {}) {
         tensorflow::TensorProto& proto = (*request.mutable_inputs())[inputName];
         proto.set_dtype(tensorflow::DataTypeToEnum<T>::value);
         proto.mutable_tensor_content()->assign((char*)data.data(), data.size() * sizeof(T));
-        proto.mutable_tensor_shape()->add_dim()->set_size(1);
-        proto.mutable_tensor_shape()->add_dim()->set_size(data.size());
+        if (shape.size()) {
+            for (auto& dim : shape) {
+                proto.mutable_tensor_shape()->add_dim()->set_size(dim);
+            }
+        } else {
+            proto.mutable_tensor_shape()->add_dim()->set_size(1);
+            proto.mutable_tensor_shape()->add_dim()->set_size(data.size());
+        }
     }
 
     template <typename T>
@@ -202,7 +208,7 @@ protected:
     const std::string differentOpsInputName = "input_numbers";
     const std::string differentOpsFactorsInputName = "op_factors";
     const std::string differentOpsOutputName = "different_ops_results";
-    const std::string differentOpsFactorsOutputName = "different_ops_factors_results";
+    const std::string differentOpsFactorsOutputName = "different_ops_factors";
     const std::unordered_map<std::string, std::string> differentOpsOutputAlias{{differentOpsOutputName, differentOpsOutputName}};
     const std::unordered_map<std::string, std::string> chooseMaxOutputAlias{{chooseMaxOutputName, chooseMaxOutputName}};
     const std::string dummyNodeName = "dummy";
@@ -1329,6 +1335,20 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, JustDiff
     std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
     prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
     this->checkResponse("pipeline_output", response, expectedOutput, {4, 1, 10});
+    tensor_map_t inputs, outputs;
+
+    auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(pipelineName);
+    ASSERT_EQ(pipelineDefinition->getInputsInfo(inputs, manager), StatusCode::OK);
+    ASSERT_EQ(pipelineDefinition->getOutputsInfo(outputs, manager), StatusCode::OK);
+    ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
+    ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
+
+    const auto& input_A = inputs.at(differentOpsInputName);
+    EXPECT_EQ(input_A->getShape(), shape_t({1, 10}));
+    const auto& input_B = inputs.at(differentOpsFactorsName);
+    EXPECT_EQ(input_B->getShape(), shape_t({1, 4}));
+    const auto& output = outputs.at(pipelineOutputName);
+    EXPECT_EQ(output->getShape(), shape_t({4, 1, 10}));
 }
 
 static const char* pipelineCustomNodeDifferentOperationsThenDummyConfig = R"(
@@ -1393,6 +1413,7 @@ static const char* pipelineCustomNodeDifferentOperationsThenDummyConfig = R"(
         }
     ]
 })";
+
 TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNodeThenDummy) {
     std::unique_ptr<Pipeline> pipeline;
     std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -1420,6 +1441,92 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     EXPECT_EQ(input_A->getShape(), shape_t({1, 10}));
     const auto& output = outputs.at(pipelineOutputName);
     EXPECT_EQ(output->getShape(), shape_t({4, 1, 10}));
+}
+
+static const char* pipelineCustomNodeDifferentOperations2OutputsConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_perform_different_operations",
+            "base_path": "/ovms/bazel-bin/src/lib_node_perform_different_operations.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_perform_different_operations",
+                    "type": "custom",
+                    "demultiply_count": 4,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}},
+                        {"op_factors": {"node_name": "request",
+                                           "data_item": "pipeline_factors"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "different_ops_results",
+                         "alias": "custom_node_output"},
+                        {"data_item": "different_ops_factors",
+                         "alias": "custom_node_factors"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "custom_node",
+                                     "data_item": "custom_node_output"}
+                },
+                {"pipeline_factors": {"node_name": "custom_node",
+                                      "data_item": "custom_node_factors"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNode2OutputsMetadataCheck) {
+    std::unique_ptr<Pipeline> pipeline;
+    std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
+    this->prepareRequest(request, input, differentOpsInputName);
+    this->prepareRequest(request, factors, differentOpsFactorsName);
+    this->loadConfiguration(pipelineCustomNodeDifferentOperations2OutputsConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    std::vector<float> expectedOutput(4 * DUMMY_MODEL_OUTPUT_SIZE);
+    prepareDifferentOpsExpectedOutput(expectedOutput, input, factors);
+    this->checkResponse("pipeline_output", response, expectedOutput, {4, 1, 10});
+    tensor_map_t inputs, outputs;
+
+    auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(pipelineName);
+    ASSERT_EQ(pipelineDefinition->getInputsInfo(inputs, manager), StatusCode::OK);
+    ASSERT_EQ(pipelineDefinition->getOutputsInfo(outputs, manager), StatusCode::OK);
+    ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
+    ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
+
+    const auto& input_A = inputs.at(differentOpsInputName);
+    EXPECT_EQ(input_A->getShape(), shape_t({1, 10}));
+    const auto& input_B = inputs.at(differentOpsFactorsName);
+    EXPECT_EQ(input_B->getShape(), shape_t({1, 4}));
+    const auto& output = outputs.at(pipelineOutputName);
+    EXPECT_EQ(output->getShape(), shape_t({4, 1, 10}));
+    const auto& outputFactors = outputs.at("pipeline_factors");
+    EXPECT_EQ(outputFactors->getShape(), shape_t({4, 1, 4}));
 }
 
 static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig = R"(
@@ -1639,6 +1746,94 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     std::transform(expectedResult.begin(), expectedResult.end(), expectedResult.begin(),
         [](float f) -> float { return f + 1; });
     this->checkResponse("pipeline_output", response, expectedResult, {1, 10});
+}
+
+static const char* demultiplyThenDummyThenChooseMaximumConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_choose_maximum",
+            "base_path": "/ovms/bazel-bin/src/lib_node_choose_maximum.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input"],
+            "demultiply_count": 0,
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                },
+                {
+                    "name": "choose_max",
+                    "library_name": "lib_choose_maximum",
+                    "type": "custom",
+                    "gather_from_node": "request",
+                    "params": {
+                        "selection_criteria": "MAXIMUM_MAXIMUM"
+                    },
+                    "inputs": [
+                        {"input_tensors": {"node_name": "dummyNode",
+                                           "data_item": "dummy_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "maximum_tensor",
+                         "alias": "maximum_tensor_alias"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "choose_max",
+                                     "data_item": "maximum_tensor_alias"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DemultiplyThenDummyThenChooseMaximum) {
+    std::unique_ptr<Pipeline> pipeline;
+    std::vector<float> input(4 * DUMMY_MODEL_OUTPUT_SIZE);
+    std::fill(input.begin(), input.end(), 1.0);
+
+    uint iterations = -1;
+    uint number = 0;
+    std::transform(input.begin(), input.end(), input.begin(),
+        [&iterations, &number](float f) -> float {
+            iterations++;
+            number = iterations/10;
+            return f + number; });
+
+    this->prepareRequest(request, input, differentOpsInputName, {4, 1, 10});
+    this->loadConfiguration(demultiplyThenDummyThenChooseMaximumConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    auto status = pipeline->execute();
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+
+    std::vector<float> expectedOutput{5, 5, 5, 5, 5, 5, 5, 5, 5, 5};
+    this->checkResponse("pipeline_output", response, expectedOutput, {1, 10});
 }
 
 struct LibraryParamControlledMetadata {
@@ -1995,6 +2190,29 @@ TEST_F(EnsembleConfigurationValidationWithCustomNode, NotAllCustomNodeInputsAreC
     ConstructorEnabledModelManager manager;
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_NOT_ALL_INPUTS_CONNECTED);
+}
+
+TEST_F(EnsembleConfigurationValidationWithCustomNode, CustomNodeMissingOutput) {
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"out", "not_existing_output"}}, std::nullopt, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,30,7;I32"},
+                {"out_OutputNumbers", "1,2000;FP32"}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_1", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL_OUTPUT);
 }
 
 TEST_F(EnsembleConfigurationValidationWithCustomNode, InvalidSharedLibrary) {
@@ -2704,6 +2922,32 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplyCountNotMatch
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT);
 }
 
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplyCountNotMatchingOutputShapeBeforeExitNode) {
+    const size_t demultiplyCount = 213;
+    const std::set<std::string> gatherFrom{"custom_node_1"};
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"out", "out_OutputNumbers"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_InputNumbers", "1,3,10;FP32"},
+                {"out_OutputNumbers", "220,1,30,7;I32"}  // 213,1,30,7 is correct
+            }},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, gatherFrom},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node_1"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_1", {{"out", pipelineOutputName}}}};
+
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT);
+}
+
 class EnsembleConfigurationValidationWithGather : public EnsembleConfigurationValidationWithCustomNode {};
 
 TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfiguration) {
@@ -3307,8 +3551,209 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     ASSERT_EQ(pipelineDefinition->getOutputsInfo(outputs, manager), StatusCode::OK);
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
+    auto& input_A = inputs.at(pipelineInputName);
+    EXPECT_EQ(input_A->getShape(), shape_t({1, 10}));
+    auto& output = outputs.at(pipelineOutputName);
+    EXPECT_EQ(output->getShape(), shape_t({0, 1, 10}));
+
+    std::shared_ptr<ModelInstance> modelInstance;
+    std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
+    auto status = manager.getModelInstance("dummy", 1, modelInstance, modelInstanceUnloadGuardPtr);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    tensor_map_t modelInputs = modelInstance->getInputsInfo();
+    tensor_map_t modelOutputs = modelInstance->getOutputsInfo();
+    ASSERT_NE(modelInputs.find("b"), modelInputs.end());
+    ASSERT_NE(modelOutputs.find("a"), modelOutputs.end());
+    auto inputDummy = modelInputs.at("b");
+    EXPECT_EQ(inputDummy->getShape(), shape_t({1, 10}));
+    auto outputDummy = modelOutputs.at("a");
+    EXPECT_EQ(outputDummy->getShape(), shape_t({1, 10}));
+
+    inputs.clear();
+    outputs.clear();
+    modelInputs.clear();
+    modelOutputs.clear();
+
+    ASSERT_EQ(pipelineDefinition->getInputsInfo(inputs, manager), StatusCode::OK);
+    ASSERT_EQ(pipelineDefinition->getOutputsInfo(outputs, manager), StatusCode::OK);
+    ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
+    ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
+    auto input_A2 = inputs.at(pipelineInputName);
+    EXPECT_EQ(input_A2->getShape(), shape_t({1, 10}));
+    auto output2 = outputs.at(pipelineOutputName);
+    EXPECT_EQ(output2->getShape(), shape_t({0, 1, 10}));
+
+    status = manager.getModelInstance("dummy", 1, modelInstance, modelInstanceUnloadGuardPtr);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    modelInputs = modelInstance->getInputsInfo();
+    modelOutputs = modelInstance->getOutputsInfo();
+    ASSERT_NE(modelInputs.find("b"), modelInputs.end());
+    ASSERT_NE(modelOutputs.find("a"), modelOutputs.end());
+    auto inputDummy2 = modelInputs.at("b");
+    EXPECT_EQ(inputDummy2->getShape(), shape_t({1, 10}));
+    auto outputDummy2 = modelOutputs.at("a");
+    EXPECT_EQ(outputDummy2->getShape(), shape_t({1, 10}));
+}
+
+static const char* pipelineCustomNodeDynamicDemultiplexThenDummyDemultiplexerConnectedToExitConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_dynamic_demultiplex",
+            "base_path": "/ovms/bazel-bin/src/lib_node_dynamic_demultiplex.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input", "pipeline_factors"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_dynamic_demultiplex",
+                    "type": "custom",
+                    "demultiply_count": 0,
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "dynamic_demultiplex_results",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "dummyNode",
+                                     "data_item": "dummy_output"}
+                },
+                {"pipeline_output2": {"node_name": "custom_node",
+                                     "data_item": "custom_node_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, JustDynamicDemultiplexerThenDummyBothConnectedToExitConfigMetadataCheck) {
+    this->loadConfiguration(pipelineCustomNodeDynamicDemultiplexThenDummyDemultiplexerConnectedToExitConfig);
+
+    tensor_map_t inputs, outputs;
+
+    auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(pipelineName);
+    ASSERT_EQ(pipelineDefinition->getInputsInfo(inputs, manager), StatusCode::OK);
+    ASSERT_EQ(pipelineDefinition->getOutputsInfo(outputs, manager), StatusCode::OK);
+    ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
+    ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
     const auto& input_A = inputs.at(pipelineInputName);
     EXPECT_EQ(input_A->getShape(), shape_t({1, 10}));
+    const auto& output = outputs.at(pipelineOutputName);
+    EXPECT_EQ(output->getShape(), shape_t({0, 1, 10}));
+    const auto& output2 = outputs.at(pipelineOutputName + "2");
+    EXPECT_EQ(output2->getShape(), shape_t({0, 1, 10}));
+}
+
+static const char* pipelineEntryNodeDynamicDemultiplexThenDummyConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_dynamic_demultiplex",
+            "base_path": "/ovms/bazel-bin/src/lib_node_dynamic_demultiplex.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "demultiply_count": 0,
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "dummyNode",
+                                     "data_item": "dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DynamicDemultiplexerEntryThenDummyConfig) {
+    std::unique_ptr<Pipeline> pipeline;
+    uint8_t dynamicDemultiplyCount = 3;
+    std::vector<float> input(3 * DUMMY_MODEL_OUTPUT_SIZE);
+    std::iota(input.begin(), input.end(), 42);
+    this->prepareRequest(request, input, differentOpsInputName, {dynamicDemultiplyCount, 1, 10});
+    this->loadConfiguration(pipelineEntryNodeDynamicDemultiplexThenDummyConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    std::vector<float> expectedOutput = input;
+    std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
+        [](float f) -> float { return f + 1; });
+    this->checkResponse("pipeline_output", response, expectedOutput, {dynamicDemultiplyCount, 1, 10});
+}
+
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DynamicDemultiplexerEntryMetadataCorrectness) {
+    this->loadConfiguration(pipelineEntryNodeDynamicDemultiplexThenDummyConfig);
+    auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(pipelineName);
+    ASSERT_NE(pipelineDefinition, nullptr);
+
+    tensor_map_t inputs, outputs;
+    ASSERT_EQ(pipelineDefinition->getInputsInfo(inputs, manager), StatusCode::OK);
+    ASSERT_EQ(pipelineDefinition->getOutputsInfo(outputs, manager), StatusCode::OK);
+    ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
+    ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
+
+    const auto& input_A = inputs.at(pipelineInputName);
+    EXPECT_EQ(input_A->getShape(), shape_t({0, 1, 10}));
     const auto& output = outputs.at(pipelineOutputName);
     EXPECT_EQ(output->getShape(), shape_t({0, 1, 10}));
 }
@@ -3520,7 +3965,5 @@ static const char* pipelineCustomNode2DynamicDemultiplexConfig = R"(
 
 TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, 2DynamicDemultiplexersNotAllowed) {
     std::unique_ptr<Pipeline> pipeline;
-    createConfigFileWithContent(pipelineCustomNode2DynamicDemultiplexConfig, configJsonFilePath);
-    auto status = manager.createPipeline(pipeline, pipelineName, &request, &response);
-    ASSERT_EQ(status, StatusCode::PIPELINE_DEFINITION_NAME_MISSING) << status.string();
+    this->loadConfiguration(pipelineCustomNode2DynamicDemultiplexConfig, StatusCode::NOT_IMPLEMENTED);
 }
