@@ -76,7 +76,7 @@ const std::map<model_version_t, const ModelInstance&> Model::getModelVersionsMap
     return std::move(modelInstancesMapCopy);
 }
 
-const std::map<model_version_t, std::shared_ptr<ModelInstance>>& Model::getModelVersions() const {
+const std::map<model_version_t, std::unique_ptr<ModelInstance>>& Model::getModelVersions() const {
     return modelVersions;
 }
 
@@ -98,7 +98,7 @@ void Model::updateDefaultVersion(int ignoredVersion) {
     }
 }
 
-const std::shared_ptr<ModelInstance> Model::getDefaultModelInstance() const {
+ModelInstance* Model::getDefaultModelInstance() const {
     std::shared_lock lock(modelVersionsMtx);
     auto defaultVersion = getDefaultVersion();
     const auto modelInstanceIt = modelVersions.find(defaultVersion);
@@ -107,23 +107,23 @@ const std::shared_ptr<ModelInstance> Model::getDefaultModelInstance() const {
         SPDLOG_WARN("Default version: {} for model: {} not found", defaultVersion, getName());
         return nullptr;
     }
-    return modelInstanceIt->second;
+    return modelInstanceIt->second.get();
 }
 
-std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion) {
+std::unique_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion) {
     if (isStateful()) {
         SPDLOG_DEBUG("Creating new stateful model instance - model name: {}; model version: {};", modelName, modelVersion);
-        return std::move(std::static_pointer_cast<ModelInstance>(
-            std::make_shared<StatefulModelInstance>(modelName, modelVersion, this->globalSequencesViewer)));
+        return std::move(  // TODO check
+            std::make_unique<StatefulModelInstance>(modelName, modelVersion, this->globalSequencesViewer));
     } else {
         SPDLOG_DEBUG("Creating new model instance - model name: {}; model version: {};", modelName, modelVersion);
-        return std::move(std::make_shared<ModelInstance>(modelName, modelVersion));
+        return std::move(std::make_unique<ModelInstance>(modelName, modelVersion));
     }
 }
 
 Status Model::addVersion(const ModelConfig& config) {
     const auto& version = config.getVersion();
-    std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory(config.getName(), version);
+    std::unique_ptr<ModelInstance> modelInstance = modelInstanceFactory(config.getName(), version);
 
     auto status = modelInstance->loadModel(config);
     if (!status.ok()) {
@@ -192,7 +192,7 @@ void Model::retireAllVersions() {
         }
     }
 
-    for (const auto versionModelInstancePair : modelVersions) {
+    for (const auto& versionModelInstancePair : modelVersions) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
         cleanupModelTmpFiles(versionModelInstancePair.second->getModelConfig());
         versionModelInstancePair.second->unloadModel();

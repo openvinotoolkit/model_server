@@ -61,7 +61,7 @@ protected:
     /**
          * @brief Holds different versions of model
          */
-    std::map<model_version_t, std::shared_ptr<ModelInstance>> modelVersions;
+    std::map<model_version_t, std::unique_ptr<ModelInstance>> modelVersions;
 
     /**
          * @brief Model default version
@@ -93,7 +93,7 @@ protected:
          *
          * @return modelInstance
          */
-    virtual std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion);
+    virtual std::unique_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion);
 
     ModelChangeSubscription subscriptionManager;
 
@@ -138,14 +138,14 @@ public:
          *
          * @return ModelInstance
          */
-    const std::shared_ptr<ModelInstance> getDefaultModelInstance() const;
+    ModelInstance* getDefaultModelInstance() const;
 
     /**
      * @brief Gets model versions instances
      *
      * @return model versions instances
      */
-    const std::map<model_version_t, std::shared_ptr<ModelInstance>>& getModelVersions() const;
+    const std::map<model_version_t, std::unique_ptr<ModelInstance>>& getModelVersions() const;
 
     /**
      * @brief Gets model versions instances
@@ -161,10 +161,10 @@ public:
          *
          * @return specific model version
          */
-    const std::shared_ptr<ModelInstance> getModelInstanceByVersion(const model_version_t& version) const {
+    ModelInstance* getModelInstanceByVersion(const model_version_t& version) const {
         std::shared_lock lock(modelVersionsMtx);
         auto it = modelVersions.find(version);
-        return it != modelVersions.end() ? it->second : nullptr;
+        return it != modelVersions.end() ? it->second.get() : nullptr;
     }
 
     /**

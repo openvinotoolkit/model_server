@@ -297,7 +297,8 @@ Status DLNodeSession::executeInference(PipelineEventQueue& notifyEndQueue, Infer
 
 void DLNodeSession::release() {
     this->nodeStreamIdGuard.reset();
-    this->model.reset();
+    // TODO check
+    this->model = nullptr;
     this->modelUnloadGuard.reset();
 }
 

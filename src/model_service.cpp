@@ -112,7 +112,7 @@ Status GetModelStatusImpl::getModelStatus(
     SPDLOG_DEBUG("requested model: {}, has_version: {} (version: {})", requested_model_name, has_requested_version, requested_version);
     if (has_requested_version && requested_version != 0) {
         // return details only for a specific version of requested model; NOT_FOUND otherwise. If requested_version == 0, default is returned.
-        std::shared_ptr<ModelInstance> model_instance = model_ptr->getModelInstanceByVersion(requested_version);
+        ModelInstance* model_instance = model_ptr->getModelInstanceByVersion(requested_version);
         if (!model_instance) {
             SPDLOG_WARN("requested model {} in version {} was not found.", requested_model_name, requested_version);
             return StatusCode::MODEL_VERSION_MISSING;
@@ -138,7 +138,7 @@ Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow
     std::shared_lock lock(manager.modelsMtx);
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesTmp;
 
-    const std::map<std::string, std::shared_ptr<Model>>& models = manager.getModels();
+    const std::map<std::string, std::unique_ptr<Model>>& models = manager.getModels();
     for (auto const& model : models) {
         std::optional<int64_t> noValueModelVersion;
         tensorflow::serving::GetModelStatusRequest request;

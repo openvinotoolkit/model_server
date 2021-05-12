@@ -43,7 +43,7 @@ public:
         proto_signature_map_t* to);
 
     static Status buildResponse(
-        std::shared_ptr<ModelInstance> instance,
+        ModelInstance& instance,
         tensorflow::serving::GetModelMetadataResponse* response);
     static Status buildResponse(
         PipelineDefinition& pipelineDefinition,

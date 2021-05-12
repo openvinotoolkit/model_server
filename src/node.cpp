@@ -185,7 +185,7 @@ std::unique_ptr<NodeSession> Node::createNodeSession(const NodeSessionMetadata& 
 std::vector<session_key_t> Node::getReadySessions() const {
     std::vector<session_key_t> readySessions;
     for (auto& [sessionKey, nodeSession] : nodeSessions) {
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Checking readiness of node: {} session: {}", getName(), nodeSession->getSessionKey());
+        SPDLOG_LOGGER_TRACE(dag_executor_logger, "Checking readiness of node: {} session: {}", getName(), sessionKey);
         if (nodeSession->isReady()) {
             readySessions.emplace_back(sessionKey);
         }

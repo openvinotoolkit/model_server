@@ -50,7 +50,7 @@ Status GetModelMetadataImpl::getModelStatus(
         return buildResponse(*pipelineDefinition, response, manager);
     }
 
-    std::shared_ptr<ModelInstance> instance = nullptr;
+    ModelInstance* instance = nullptr;
     if (version != 0) {
         SPDLOG_DEBUG("GetModelMetadata requested model: name {}; version {}", name, version);
         instance = model->getModelInstanceByVersion(version);
@@ -67,7 +67,7 @@ Status GetModelMetadataImpl::getModelStatus(
         }
     }
 
-    return buildResponse(instance, response);
+    return buildResponse(*instance, response);
 }
 
 Status GetModelMetadataImpl::validate(
@@ -110,24 +110,24 @@ void GetModelMetadataImpl::convert(
 }
 
 Status GetModelMetadataImpl::buildResponse(
-    std::shared_ptr<ModelInstance> instance,
+    ModelInstance& instance,
     tensorflow::serving::GetModelMetadataResponse* response) {
 
     std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
 
     // 0 meaning immediately return unload guard if possible, otherwise do not wait for available state
-    auto status = instance->waitForLoaded(0, unloadGuard);
+    auto status = instance.waitForLoaded(0, unloadGuard);
     if (!status.ok()) {
         return status;
     }
 
     response->Clear();
-    response->mutable_model_spec()->set_name(instance->getName());
-    response->mutable_model_spec()->mutable_version()->set_value(instance->getVersion());
+    response->mutable_model_spec()->set_name(instance.getName());
+    response->mutable_model_spec()->mutable_version()->set_value(instance.getVersion());
 
     tensorflow::serving::SignatureDefMap def;
-    convert(instance->getInputsInfo(), ((*def.mutable_signature_def())["serving_default"]).mutable_inputs());
-    convert(instance->getOutputsInfo(), ((*def.mutable_signature_def())["serving_default"]).mutable_outputs());
+    convert(instance.getInputsInfo(), ((*def.mutable_signature_def())["serving_default"]).mutable_inputs());
+    convert(instance.getOutputsInfo(), ((*def.mutable_signature_def())["serving_default"]).mutable_outputs());
 
     (*response->mutable_metadata())["signature_def"].PackFrom(def);
     return StatusCode::OK;

@@ -49,7 +49,7 @@ Status PipelineDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of pipeline: {}", getName());
     ValidationResultNotifier notifier(status, loadedNotify);
     auto& models = manager.getModels();
-    if (std::find_if(models.begin(), models.end(), [this](auto pair) { return this->pipelineName == pair.first; }) != models.end()) {
+    if (std::find_if(models.begin(), models.end(), [this, &models](auto& pair) { return this->pipelineName == pair.first; }) != models.end()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline name: {} is already occupied by model.", pipelineName);
         return StatusCode::PIPELINE_NAME_OCCUPIED;
     }
@@ -274,7 +274,7 @@ class NodeValidator {
     const bool isMultiBatchAllowed;
 
     std::unique_ptr<ModelInstanceUnloadGuard> dependantModelUnloadGuard;
-    std::shared_ptr<ModelInstance> dependantModelInstance;
+    ModelInstance* dependantModelInstance;
     std::set<std::string> remainingUnconnectedDependantInputs;
 
     tensor_map_t inputsInfo, outputsInfo;
@@ -581,7 +581,7 @@ public:
         // At this point dependency node can only be either DL model node, Custom node or entry node.
         // Take care when adding new node types.
         std::unique_ptr<ModelInstanceUnloadGuard> dependencyModelUnloadGuard;
-        std::shared_ptr<ModelInstance> dependencyModelInstance;
+        ModelInstance* dependencyModelInstance = nullptr;
         if (dependencyNodeInfo.kind == NodeKind::DL) {
             if (!manager.getModelInstance(
                             dependencyNodeInfo.modelName,
@@ -595,7 +595,7 @@ public:
                     dependencyNodeInfo.modelVersion.value_or(0));
                 return StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL;
             }
-            retrieveModelNodeDependencyMetadata(dependencyModelInstance);
+            retrieveModelNodeDependencyMetadata(*dependencyModelInstance);
         }
 
         if (dependencyNodeInfo.kind == NodeKind::CUSTOM) {
@@ -657,9 +657,9 @@ public:
         return StatusCode::OK;
     }
 
-    void retrieveModelNodeDependencyMetadata(const std::shared_ptr<ModelInstance>& dependencyModelInstance) {
-        this->dependencyInputsInfo = dependencyModelInstance->getInputsInfo();
-        this->dependencyOutputsInfo = dependencyModelInstance->getOutputsInfo();
+    void retrieveModelNodeDependencyMetadata(const ModelInstance& dependencyModelInstance) {
+        this->dependencyInputsInfo = dependencyModelInstance.getInputsInfo();
+        this->dependencyOutputsInfo = dependencyModelInstance.getOutputsInfo();
     }
 
     Status retrieveCustomNodeDependencyMetadata(const NodeInfo& dependencyNodeInfo) {

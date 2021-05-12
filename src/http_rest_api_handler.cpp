@@ -236,7 +236,7 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
     Order& requestOrder,
     tensorflow::serving::PredictResponse& responseProto) {
 
-    std::shared_ptr<ModelInstance> modelInstance;
+    ModelInstance* modelInstance = nullptr;
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     auto status = ModelManager::getInstance().getModelInstance(
         modelName,

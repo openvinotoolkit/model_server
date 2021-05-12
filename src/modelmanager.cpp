@@ -679,7 +679,7 @@ void ModelManager::join() {
 
 void ModelManager::getVersionsToChange(
     const ModelConfig& newModelConfig,
-    const std::map<model_version_t, std::shared_ptr<ModelInstance>>& modelVersionsInstances,
+    const std::map<model_version_t, std::unique_ptr<ModelInstance>>& modelVersionsInstances,
     model_versions_t requestedVersions,
     std::shared_ptr<model_versions_t>& versionsToStartIn,
     std::shared_ptr<model_versions_t>& versionsToReloadIn,
@@ -769,19 +769,18 @@ Status ModelManager::checkStatefulFlagChange(const std::string& modelName, bool 
     if (models.end() == modelIt)
         return StatusCode::OK;  // Model has not been loaded yet, so there are no restrictions regarding stateful flag setup
 
-    auto model = models[modelName];
-    if (model->isStateful() != configStatefulFlag)
+    if (modelIt->second->isStateful() != configStatefulFlag)
         return StatusCode::REQUESTED_MODEL_TYPE_CHANGE;
     return StatusCode::OK;
 }
 
-std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::string& modelName, const bool isStateful) {
+ovms::Model* ModelManager::getModelIfExistCreateElse(const std::string& modelName, const bool isStateful) {
     std::unique_lock modelsLock(modelsMtx);
     auto modelIt = models.find(modelName);
     if (models.end() == modelIt) {
-        models.insert({modelName, modelFactory(modelName, isStateful)});
+        modelIt = models.insert({modelName, modelFactory(modelName, isStateful)}).first;
     }
-    return models[modelName];
+    return modelIt->second.get();
 }
 
 std::shared_ptr<FileSystem> ModelManager::getFilesystem(const std::string& basePath) {
@@ -851,10 +850,10 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
     return StatusCode::OK;
 }
 
-Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed) {
+Status ModelManager::addModelVersions(Model& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed) {
     Status status = StatusCode::OK;
     try {
-        status = model->addVersions(versionsToStart, config, fs, versionsFailed);
+        status = model.addVersions(versionsToStart, config, fs, versionsFailed);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
@@ -867,11 +866,11 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
     return status;
 }
 
-Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t> versionsFailed) {
+Status ModelManager::reloadModelVersions(Model& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t> versionsFailed) {
     Status status = StatusCode::OK;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading model versions");
     try {
-        auto status = model->reloadVersions(versionsToReload, config, fs, versionsFailed);
+        auto status = model.reloadVersions(versionsToReload, config, fs, versionsFailed);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading model: {}; versions; error: {}",
                 config.getName(),
@@ -955,7 +954,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     }
 
     while (versionsToStart->size() > 0) {
-        blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
+        blocking_status = addModelVersions(*model, fs, config, versionsToStart, versionsFailed);
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Adding new versions. Status: {};", blocking_status.string());
         if (!blocking_status.ok()) {
             for (const auto version : *versionsFailed) {
@@ -972,7 +971,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     }
 
     if (versionsToReload->size() > 0) {
-        reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
+        reloadModelVersions(*model, fs, config, versionsToReload, versionsFailed);
     }
     for (const auto version : *versionsFailed) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Removing available version {} due to load failure.", version);
@@ -1001,15 +1000,15 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     return blocking_status;
 }
 
-const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& name) const {
+Model* ModelManager::findModelByName(const std::string& name) const {
     std::shared_lock lock(modelsMtx);
     auto it = models.find(name);
-    return it != models.end() ? it->second : nullptr;
+    return it != models.end() ? it->second.get() : nullptr;
 }
 
 Status ModelManager::getModelInstance(const std::string& modelName,
     ovms::model_version_t modelVersionId,
-    std::shared_ptr<ovms::ModelInstance>& modelInstance,
+    ModelInstance* modelInstance,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
     SPDLOG_DEBUG("Requesting model: {}; version: {}.", modelName, modelVersionId);
 

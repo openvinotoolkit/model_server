@@ -49,7 +49,7 @@ using tensorflow::serving::PredictResponse;
 namespace ovms {
 
 Status getModelInstance(const PredictRequest* request,
-    std::shared_ptr<ovms::ModelInstance>& modelInstance,
+    ovms::ModelInstance* modelInstance,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
     ModelManager& manager = ModelManager::getInstance();
     return manager.getModelInstance(request->model_spec().name(), request->model_spec().version().value(), modelInstance, modelInstanceUnloadGuardPtr);
@@ -73,7 +73,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         request->model_spec().name(),
         request->model_spec().version().value());
 
-    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    ovms::ModelInstance* modelInstance = nullptr;
     std::unique_ptr<ovms::Pipeline> pipelinePtr;
 
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;

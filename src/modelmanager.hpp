@@ -56,13 +56,13 @@ protected:
 
     Status checkStatefulFlagChange(const std::string& modelName, bool configStatefulFlag);
 
-    std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name, const bool isStateful);
+    ovms::Model* getModelIfExistCreateElse(const std::string& name, const bool isStateful);
 
     /**
      * @brief A collection of models
      * 
      */
-    std::map<std::string, std::shared_ptr<Model>> models;
+    std::map<std::string, std::unique_ptr<Model>> models;
 
     PipelineFactory pipelineFactory;
 
@@ -80,8 +80,8 @@ private:
     Status lastLoadConfigStatus = StatusCode::OK;
 
     Status cleanupModelTmpFiles(ModelConfig& config);
-    Status reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t> versionsFailed);
-    Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed);
+    Status reloadModelVersions(ovms::Model& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t> versionsFailed);
+    Status addModelVersions(ovms::Model& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed);
     Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs);
     Status tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs);
     Status loadCustomNodeLibrariesConfig(rapidjson::Document& configJson);
@@ -187,7 +187,7 @@ public:
      * 
      * @return models collection
      */
-    const std::map<std::string, std::shared_ptr<Model>>& getModels() {
+    const std::map<std::string, std::unique_ptr<Model>>& getModels() {
         return models;
     }
 
@@ -206,11 +206,11 @@ public:
      *
      * @return pointer to Model or nullptr if not found 
      */
-    const std::shared_ptr<Model> findModelByName(const std::string& name) const;
+    Model* findModelByName(const std::string& name) const;
 
     Status getModelInstance(const std::string& modelName,
         ovms::model_version_t modelVersionId,
-        std::shared_ptr<ovms::ModelInstance>& modelInstance,
+        ovms::ModelInstance* modelInstance,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
 
     Status getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
@@ -232,7 +232,7 @@ public:
      *
      * @return pointer to ModelInstance or nullptr if not found 
      */
-    const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const {
+    ovms::ModelInstance* findModelInstance(const std::string& name, model_version_t version = 0) const {
         auto model = findModelByName(name);
         if (!model) {
             return nullptr;
@@ -303,8 +303,8 @@ public:
      * 
      * @return std::shared_ptr<Model> 
      */
-    virtual std::shared_ptr<Model> modelFactory(const std::string& name, const bool isStateful) {
-        return std::make_shared<Model>(name, isStateful, &this->globalSequencesViewer);
+    virtual std::unique_ptr<Model> modelFactory(const std::string& name, const bool isStateful) {
+        return std::make_unique<Model>(name, isStateful, &this->globalSequencesViewer);
     }
 
     /**
@@ -331,7 +331,7 @@ public:
      */
     static void getVersionsToChange(
         const ModelConfig& newModelConfig,
-        const std::map<model_version_t, std::shared_ptr<ModelInstance>>& modelVersionsInstances,
+        const std::map<model_version_t, std::unique_ptr<ModelInstance>>& modelVersionsInstances,
         std::vector<model_version_t> requestedVersions,
         std::shared_ptr<model_versions_t>& versionsToRetireIn,
         std::shared_ptr<model_versions_t>& versionsToReloadIn,
