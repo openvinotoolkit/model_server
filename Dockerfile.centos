@@ -115,7 +115,7 @@ WORKDIR /openvino/build
     RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ && \
     mkdir -p /opt/intel/openvino/deployment_tools/inference_engine && \
-    ln -s /openvino/bin/intel64/Release/lib/ /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64 && \
+    ln -s /openvino/bin/intel64/Release/lib/* /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ && \
     ln -s /openvino/inference-engine/include/ /opt/intel/openvino/deployment_tools/inference_engine/ && \
     curl -s https://download.01.org/opencv/master/openvinotoolkit/thirdparty/linux/opencv/opencv_4.5.1-044_centos7.txz | tar --use-compress-program=xz -C /opt/intel/openvino -xvf -
 ################## END OF OPENVINO SOURCE BUILD ######################
