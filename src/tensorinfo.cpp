@@ -93,19 +93,19 @@ const tensorflow::DataType TensorInfo::getPrecisionAsDataType(InferenceEngine::P
     switch (precision) {
     case InferenceEngine::Precision::FP32:
         return tensorflow::DataType::DT_FLOAT;
+    case InferenceEngine::Precision::I32:
+        return tensorflow::DataType::DT_INT32;
+    case InferenceEngine::Precision::I8:
+        return tensorflow::DataType::DT_INT8;
+    case InferenceEngine::Precision::U8:
+        return tensorflow::DataType::DT_UINT8;
     case InferenceEngine::Precision::FP16:
         return tensorflow::DataType::DT_HALF;
     // case InferenceEngine::Precision::Q78:   return tensorflow::DataType::
     case InferenceEngine::Precision::I16:
         return tensorflow::DataType::DT_INT16;
-    case InferenceEngine::Precision::U8:
-        return tensorflow::DataType::DT_UINT8;
-    case InferenceEngine::Precision::I8:
-        return tensorflow::DataType::DT_INT8;
     case InferenceEngine::Precision::U16:
         return tensorflow::DataType::DT_UINT16;
-    case InferenceEngine::Precision::I32:
-        return tensorflow::DataType::DT_INT32;
     case InferenceEngine::Precision::U64:
         return tensorflow::DataType::DT_UINT64;
     case InferenceEngine::Precision::I64:
@@ -126,19 +126,19 @@ const std::string TensorInfo::getPrecisionAsString(InferenceEngine::Precision pr
     switch (precision) {
     case InferenceEngine::Precision::FP32:
         return "FP32";
+    case InferenceEngine::Precision::I32:
+        return "I32";
+    case InferenceEngine::Precision::I8:
+        return "I8";
+    case InferenceEngine::Precision::U8:
+        return "U8";
     case InferenceEngine::Precision::FP16:
         return "FP16";
         // case InferenceEngine::Precision::Q78:   return tensorflow::DataType::
     case InferenceEngine::Precision::I16:
         return "I16";
-    case InferenceEngine::Precision::U8:
-        return "U8";
-    case InferenceEngine::Precision::I8:
-        return "I8";
     case InferenceEngine::Precision::U16:
         return "U16";
-    case InferenceEngine::Precision::I32:
-        return "I32";
     case InferenceEngine::Precision::I64:
         return "I64";
     case InferenceEngine::Precision::BOOL:
@@ -152,18 +152,18 @@ const std::string TensorInfo::getDataTypeAsString(tensorflow::DataType dataType)
     switch (dataType) {
     case tensorflow::DataType::DT_FLOAT:
         return "FP32";
+    case tensorflow::DataType::DT_INT32:
+        return "I32";
+    case tensorflow::DataType::DT_INT8:
+        return "I8";
+    case tensorflow::DataType::DT_UINT8:
+        return "U8";
     case tensorflow::DataType::DT_HALF:
         return "FP16";
     case tensorflow::DataType::DT_INT16:
         return "I16";
-    case tensorflow::DataType::DT_UINT8:
-        return "U8";
-    case tensorflow::DataType::DT_INT8:
-        return "I8";
     case tensorflow::DataType::DT_UINT16:
         return "U16";
-    case tensorflow::DataType::DT_INT32:
-        return "I32";
     case tensorflow::DataType::DT_UINT64:
         return "U64";
     case tensorflow::DataType::DT_INT64:
