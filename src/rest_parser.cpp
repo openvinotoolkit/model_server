@@ -18,6 +18,8 @@
 #include <functional>
 #include <string>
 
+#include "absl/strings/escaping.h"
+
 namespace ovms {
 
 RestParser::RestParser(const tensor_map_t& tensors) {
@@ -395,6 +397,16 @@ bool RestParser::setPrecisionIfNotSet(const rapidjson::Value& value, tensorflow:
 
     proto.set_dtype(TensorInfo::getPrecisionAsDataType(tensorPrecisionMap[tensorName]));
     return true;
+}
+
+Status RestParser::decodeBase64(tensorflow::TensorProto& proto) {
+    for (int i = 0; i < proto.string_val_size(); i++) {
+        auto status = Base64Unescape(tensor.string_val(i), dest) ? StatusCode::OK : StatusCode::REST_COULD_NOT_PARSE_INPUT;
+        if (!status.ok()) {
+            return status;
+        }
+    }
+    return StatusCode::OK;
 }
 
 }  // namespace ovms

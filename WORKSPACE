@@ -216,6 +216,14 @@ http_archive(
     build_file = "@//third_party/libevent:BUILD",
 )
 
+# abseil
+http_archive(
+  name = "com_google_absl",
+  urls = ["https://github.com/abseil/abseil-cpp/archive/98eb410c93ad059f9bba1bf43f5bb916fc92a5ea.zip"],
+  strip_prefix = "abseil-cpp-98eb410c93ad059f9bba1bf43f5bb916fc92a5ea",
+  build_file = "@//third_party/abseil:BUILD"
+)
+
 ##################### OPEN VINO ######################
 # OPENVINO DEFINITION FOR BUILDING FROM BINARY RELEASE: ##########################
 new_local_repository(
