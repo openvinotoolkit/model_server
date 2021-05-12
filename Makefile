@@ -37,7 +37,7 @@ BASE_IMAGE ?= centos:7
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
 
-BASE_OS_TAG_UBUNTU ?= 18.04
+BASE_OS_TAG_UBUNTU ?= 20.04
 BASE_OS_TAG_CENTOS ?= 7
 BASE_OS_TAG_CLEARLINUX ?= latest
 BASE_OS_TAG_REDHAT ?= 8.2
@@ -53,7 +53,7 @@ OV_SOURCE_BRANCH ?= master
 DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.4.575.tgz
 OV_USE_BINARY ?= 1
 YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7
-
+APT_OV_PACKAGE ?= intel-openvino-runtime-ubuntu20-2021.3.394
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
 
@@ -70,6 +70,7 @@ DIST_OS_TAG ?= $(BASE_OS_TAG)
 
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
+  BASE_IMAGE=ubuntu:$(BASE_OS_TAG_UBUNTU)
 endif
 ifeq ($(BASE_OS),centos)
   BASE_OS_TAG=$(BASE_OS_TAG_CENTOS)
@@ -176,6 +177,7 @@ endif
 		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
 		--build-arg YUM_OV_PACKAGE=$(YUM_OV_PACKAGE) \
+		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) \
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
