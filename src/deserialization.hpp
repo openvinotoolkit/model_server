@@ -48,6 +48,12 @@ public:
         switch (tensorInfo->getPrecision()) {
         case InferenceEngine::Precision::FP32:
             return makeBlob<float>(requestInput, tensorInfo);
+        case InferenceEngine::Precision::I32:
+            return makeBlob<int32_t>(requestInput, tensorInfo);
+        case InferenceEngine::Precision::I8:
+            return makeBlob<int8_t>(requestInput, tensorInfo);
+        case InferenceEngine::Precision::U8:
+            return makeBlob<uint8_t>(requestInput, tensorInfo);
         case InferenceEngine::Precision::FP16: {
             auto blob = InferenceEngine::make_shared_blob<uint16_t>(tensorInfo->getTensorDesc());
             blob->allocate();
@@ -60,10 +66,6 @@ public:
             }
             return blob;
         }
-        case InferenceEngine::Precision::U8:
-            return makeBlob<uint8_t>(requestInput, tensorInfo);
-        case InferenceEngine::Precision::I8:
-            return makeBlob<int8_t>(requestInput, tensorInfo);
         case InferenceEngine::Precision::U16: {
             auto blob = InferenceEngine::make_shared_blob<uint16_t>(tensorInfo->getTensorDesc());
             blob->allocate();
@@ -78,8 +80,6 @@ public:
         }
         case InferenceEngine::Precision::I16:
             return makeBlob<int16_t>(requestInput, tensorInfo);
-        case InferenceEngine::Precision::I32:
-            return makeBlob<int32_t>(requestInput, tensorInfo);
         case InferenceEngine::Precision::I64:
         case InferenceEngine::Precision::MIXED:
         case InferenceEngine::Precision::Q78:

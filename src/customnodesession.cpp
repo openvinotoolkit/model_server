@@ -198,15 +198,6 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, Infe
         case CustomNodeTensorPrecision::FP32:
             resultBlob = InferenceEngine::make_shared_blob<float>(desc, std::move(allocator));
             break;
-        case CustomNodeTensorPrecision::FP16:
-            resultBlob = InferenceEngine::make_shared_blob<uint16_t>(desc, std::move(allocator));
-            break;
-        case CustomNodeTensorPrecision::I16:
-            resultBlob = InferenceEngine::make_shared_blob<int16_t>(desc, std::move(allocator));
-            break;
-        case CustomNodeTensorPrecision::U16:
-            resultBlob = InferenceEngine::make_shared_blob<uint16_t>(desc, std::move(allocator));
-            break;
         case CustomNodeTensorPrecision::I32:
             resultBlob = InferenceEngine::make_shared_blob<int32_t>(desc, std::move(allocator));
             break;
@@ -215,6 +206,15 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, Infe
             break;
         case CustomNodeTensorPrecision::U8:
             resultBlob = InferenceEngine::make_shared_blob<uint8_t>(desc, std::move(allocator));
+            break;
+        case CustomNodeTensorPrecision::FP16:
+            resultBlob = InferenceEngine::make_shared_blob<uint16_t>(desc, std::move(allocator));
+            break;
+        case CustomNodeTensorPrecision::I16:
+            resultBlob = InferenceEngine::make_shared_blob<int16_t>(desc, std::move(allocator));
+            break;
+        case CustomNodeTensorPrecision::U16:
+            resultBlob = InferenceEngine::make_shared_blob<uint16_t>(desc, std::move(allocator));
             break;
         case CustomNodeTensorPrecision::UNSPECIFIED:
             return StatusCode::INTERNAL_ERROR;
