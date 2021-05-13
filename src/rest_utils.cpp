@@ -17,10 +17,11 @@
 
 #include <spdlog/spdlog.h>
 
+#include "absl/strings/escaping.h"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/util/json_tensor.h"
-#include "absl/strings/escaping.h"
 #pragma GCC diagnostic pop
 
 #include "timer.hpp"
