@@ -1,17 +1,17 @@
-from core.tfs_compat.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
+from ovmsclient.tfs_compat.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
 
-class HttpPredictRequest(PredictRequest):
+class GrpcPredictRequest(PredictRequest):
     pass
 
-class HttpModelMetadataRequest(ModelMetadataRequest):
+class GrpcModelMetadataRequest(ModelMetadataRequest):
     pass
 
-class HttpModelStatusRequest(ModelStatusRequest):
+class GrpcModelStatusRequest(ModelStatusRequest):
     pass
 
 def make_predict_request(inputs, model_name, model_version=0):
     '''
-    Create HttpPredictRequest object.
+    Create GrpcPredictRequest object.
 
     Args:
 
@@ -32,9 +32,12 @@ def make_predict_request(inputs, model_name, model_version=0):
             input_data    | python scalar,
                           | python list,
                           | numpy scalar,
-                          | numpy array
+                          | numpy array,
+                          | TensorProto
             ============  ==================
 
+            If provided **input_data** is not TensorProto, 
+            the make_tensor_proto function with default parameters will be called internally.
 
         model_name: Name of the model that will receive the request.
 
@@ -42,7 +45,7 @@ def make_predict_request(inputs, model_name, model_version=0):
             By default this value is set to 0, meaning the request will be sent to the default version of the model.
 
     Returns:
-        HttpPredictRequest object filled with **inputs** and target model spec.
+        GrpcPredictRequest object filled with **inputs** and target model spec.
 
     Raises:
         TypeError:  if unsupported types are provided.
@@ -58,13 +61,25 @@ def make_predict_request(inputs, model_name, model_version=0):
         ...     }, 
         ...     model_name="model")
         >>> print(predict_request)
+
+        Request to the second version of the model called "model" that has 1 input.
+        Providing data as TensorProto to make sure desired data type is set for the input:
+
+        >>> data = make_tensor_proto([1, 2, 3], dtype=DataTypes.float32)
+        >>> predict_request = make_predict_request(
+        ...     inputs={
+        ...         "input": data
+        ...     }, 
+        ...     model_name="model", 
+        ...     model_version=2)
+        >>> print(predict_request)
     '''
 
     raise NotImplementedError
 
 def make_metadata_request(model_name, model_version=0):
     '''
-    Create HttpModelMetadataRequest object.
+    Create GrpcModelMetadataRequest object.
 
     Args:
 
@@ -74,7 +89,7 @@ def make_metadata_request(model_name, model_version=0):
             By default this value is set to 0, meaning the request will be sent to the default version of the model.
 
     Returns:
-        HttpModelMetadataRequest object with target model spec.
+        GrpcModelMetadataRequest object with target model spec.
 
     Raises:
         TypeError:  if unsupported types are provided.
@@ -91,7 +106,7 @@ def make_metadata_request(model_name, model_version=0):
 
 def make_status_request(model_name, model_version=0):
     '''
-    Create HttpModelStatusRequest object.
+    Create GrpcModelStatusRequest object.
 
     Args:
 
@@ -101,7 +116,7 @@ def make_status_request(model_name, model_version=0):
             By default this value is set to 0, meaning the request will be sent to the default version of the model.
 
     Returns:
-        HttpModelStatusRequest object with target model spec.
+        GrpcModelStatusRequest object with target model spec.
 
     Raises:
         TypeError:  if unsupported types are provided.

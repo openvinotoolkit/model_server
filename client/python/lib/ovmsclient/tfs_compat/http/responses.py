@@ -1,4 +1,4 @@
-from core.tfs_compat.responses import PredictResponse, ModelMetadataResponse, ModelStatusResponse
+from ovmsclient.tfs_compat.responses import PredictResponse, ModelMetadataResponse, ModelStatusResponse
 
 class HttpPredictResponse(PredictResponse):
     pass
