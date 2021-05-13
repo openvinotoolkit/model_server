@@ -109,6 +109,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::REST_NO_INPUTS_FOUND, "Invalid JSON structure. Missing inputs in column format"},
     {StatusCode::REST_COULD_NOT_PARSE_INPUT, "Could not parse input content. Not valid ndarray detected"},
     {StatusCode::REST_PROTO_TO_STRING_ERROR, "Response parsing to JSON error"},
+    {StatusCode::REST_BASE64_DECODE_ERROR, "Decode Base64 to string error"},
     {StatusCode::REST_UNSUPPORTED_PRECISION, "Could not parse input content. Unsupported data precision detected"},
     {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, "Size of data in tensor_content does not match declared tensor shape"},
     {StatusCode::REST_SERIALIZE_VAL_FIELD_INVALID_SIZE, "Number of elements in xxx_val field does not match declared tensor shape"},

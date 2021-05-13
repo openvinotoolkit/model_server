@@ -169,7 +169,6 @@ class RestParser {
 
     bool setPrecisionIfNotSet(const rapidjson::Value& value, tensorflow::TensorProto& proto, const std::string& tensorName);
 
-    Status decodeBase64(const std::string& bytes);
 public:
     RestParser() = default;
     /**

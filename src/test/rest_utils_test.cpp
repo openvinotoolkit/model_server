@@ -267,6 +267,17 @@ TEST_F(RestUtilsTest, MakeJsonFromPredictResponse_ErrorWhenNoOutputs) {
     EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, Order::COLUMN), StatusCode::REST_PROTO_TO_STRING_ERROR);
 }
 
+TEST_F(RestUtilsTest, Base64DecodeCorrect) {
+    std::string bytes = "abcd";
+    EXPECT_EQ(decodeBase64(bytes), StatusCode::OK);
+    EXPECT_EQ(bytes, "i\xB7\x1D");
+}
+
+TEST_F(RestUtilsTest, Base64DecodeWrongLength) {
+    std::string bytes = "abcde";
+    EXPECT_EQ(decodeBase64(bytes), StatusCode::REST_BASE64_DECODE_ERROR);
+}
+
 TEST_F(RestUtilsPrecisionTest, MakeJsonFromPredictResponse_Float) {
     float data = 92.5f;
     output->set_dtype(tensorflow::DataType::DT_FLOAT);
@@ -556,8 +567,4 @@ TEST_F(RestUtilsValTest, MakeJsonFromPredictResponse_ColumnOrder_ContainTwoUint3
 })";
 
     EXPECT_TRUE(is_in_first_order || is_in_second_order);
-}
-
-TEST_F(RestUtilsValTest, AAAAAAAAAAAAAAAAA) {
-    
 }

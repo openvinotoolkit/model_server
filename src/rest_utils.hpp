@@ -30,4 +30,7 @@ Status makeJsonFromPredictResponse(
     tensorflow::serving::PredictResponse& response_proto,
     std::string* response_json,
     Order order);
+
+Status decodeBase64(std::string& bytes);
+
 }  // namespace ovms
