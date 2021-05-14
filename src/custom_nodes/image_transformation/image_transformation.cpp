@@ -24,28 +24,8 @@
 
 static constexpr const char* TENSOR_NAME = "image";
 
-template <class TimeT = std::chrono::milliseconds,
-    class ClockT = std::chrono::steady_clock>
-class Timer {
-    TimeT _total{-1};
-    decltype(ClockT::now()) _start = ClockT::now();
-
-public:
-    void tick() {
-        _total = TimeT{-1};
-        _start = ClockT::now();
-    }
-    void tock() { _total = std::chrono::duration_cast<TimeT>(ClockT::now() - _start); }
-
-    TimeT duration() const {
-        return _total;
-    }
-};
-
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
-    Timer clock;
     // Parameters reading
-    clock.tick();
 
     // Image size.
     //
@@ -82,13 +62,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     // Debug flag for additional logging.
     bool debugMode = get_string_parameter("debug", params, paramsCount) == "true";
-    clock.tock();
-    if (debugMode) {
-        std::cout << "Parameter reading = " << clock.duration().count() << " ms" << std::endl;
-    }
 
     // ------------ validation start -------------
-    clock.tick();
     NODE_ASSERT(inputsCount == 1, "there must be exactly one input");
     const CustomNodeTensor* imageTensor = inputs;
     NODE_ASSERT(std::strcmp(imageTensor->name, TENSOR_NAME) == 0, "node input name is wrong");
@@ -136,28 +111,18 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         std::cout << "Target image color order: " << targetImageColorOrder << std::endl;
         std::cout << "Target image layout: " << targetImageLayout << std::endl;
     }
-    clock.tock();
-    if (debugMode) {
-        std::cout << "Validation = " << clock.duration().count() << " ms" << std::endl;
-    }
     // ------------- validation end ---------------
 
     // Prepare cv::Mat out of imageTensor input.
     // In case input is in NCHW format, perform reordering to NHWC.
-    clock.tick();
     cv::Mat image = cv::Mat(originalImageHeight, originalImageWidth, originalImageColorChannels == 1 ? CV_32FC1 : CV_32FC3);
     if (originalImageLayout == "CHW") {
         reorder_to_nhwc_2<float>((float*)imageTensor->data, (float*)image.data, originalImageHeight, originalImageWidth, originalImageColorChannels);
     } else {
         std::memcpy(image.data, imageTensor->data, imageTensor->dataBytes);
     }
-    clock.tock();
-    if (debugMode) {
-        std::cout << "cv::Mat preparation = " << clock.duration().count() << " ms" << std::endl;
-    }
 
     // Change color order and number of channels.
-    clock.tick();
     static const std::map<std::pair<std::string, std::string>, int> colors = {
         {{"GRAY", "BGR"}, cv::COLOR_GRAY2BGR},
         {{"GRAY", "RGB"}, cv::COLOR_GRAY2RGB},
@@ -172,23 +137,13 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         NODE_ASSERT(colorIt != colors.end(), "unsupported color conversion");
         cv::cvtColor(image, image, colorIt->second);
     }
-    clock.tock();
-    if (debugMode) {
-        std::cout << "Color order change = " << clock.duration().count() << " ms" << std::endl;
-    }
 
     // Perform resize operation.
-    clock.tick();
     if (static_cast<int64_t>(originalImageHeight) != targetImageHeight || static_cast<int64_t>(originalImageWidth) != targetImageWidth) {
         cv::resize(image, image, cv::Size(targetImageWidth, targetImageHeight));
     }
-    clock.tock();
-    if (debugMode) {
-        std::cout << "Resize = " << clock.duration().count() << " ms" << std::endl;
-    }
 
     // Prepare output tensor
-    clock.tick();
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * targetImageColorChannels;
     NODE_ASSERT(image.total() * image.elemSize() == byteSize, "buffer size differs");
     float* buffer = (float*)malloc(byteSize);
@@ -227,10 +182,6 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         output.dims[3] = targetImageColorChannels;
     }
     output.precision = FP32;
-    clock.tock();
-    if (debugMode) {
-        std::cout << "cv::Mat to output = " << clock.duration().count() << " ms" << std::endl;
-    }
     return 0;
 }
 
