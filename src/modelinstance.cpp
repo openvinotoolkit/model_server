@@ -648,12 +648,13 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
     }
 }
 
-void ModelInstance::unloadModel(bool isPermanent) {
+void ModelInstance::unloadModel(bool isPermanent, bool isError) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
+    ModelVersionStatusErrorCode errorStatus = isError ? ModelVersionStatusErrorCode::UNKNOWN : ModelVersionStatusErrorCode::OK;
     if (isPermanent) {
-        this->status.setUnloading();
+        this->status.setUnloading(errorStatus);
     } else {
-        this->status.setLoading();
+        this->status.setLoading(errorStatus);
     }
     subscriptionManager.notifySubscribers();
     while (!canUnloadInstance()) {

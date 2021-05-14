@@ -181,7 +181,7 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
     return result;
 }
 
-void Model::retireAllVersions() {
+void Model::retireAllVersions(bool isError) {
     if (!(customLoaderName.empty())) {
         auto& customloaders = ovms::CustomLoaders::instance();
         auto loaderPtr = customloaders.find(customLoaderName);
@@ -195,7 +195,7 @@ void Model::retireAllVersions() {
     for (const auto versionModelInstancePair : modelVersions) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
         cleanupModelTmpFiles(versionModelInstancePair.second->getModelConfig());
-        versionModelInstancePair.second->unloadModel();
+        versionModelInstancePair.second->unloadModel(true, isError);
         updateDefaultVersion();
     }
     subscriptionManager.notifySubscribers();
