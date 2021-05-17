@@ -1,7 +1,28 @@
+#
+# Copyright (c) 2021 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+from enum import Enum
 from ovmsclient.tfs_compat.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
 
 class HttpPredictRequest(PredictRequest):
-    pass
+    class Format(Enum):
+        COLUMN = 1
+        COLUMN_NONAME = 2
+        ROW = 3
+        ROW_NONAME = 4
 
 class HttpModelMetadataRequest(ModelMetadataRequest):
     pass
@@ -9,7 +30,7 @@ class HttpModelMetadataRequest(ModelMetadataRequest):
 class HttpModelStatusRequest(ModelStatusRequest):
     pass
 
-def make_predict_request(inputs, model_name, model_version=0):
+def make_predict_request(inputs, model_name, model_version=0, request_format=HttpPredictRequest.Format.COLUMN):
     '''
     Create HttpPredictRequest object.
 
@@ -40,6 +61,15 @@ def make_predict_request(inputs, model_name, model_version=0):
 
         model_version (optional): Version of the model that will receive the request.
             By default this value is set to 0, meaning the request will be sent to the default version of the model.
+
+        request_format (optional): JSON body structure for the request inputs. Can be one of:
+
+            * *HttpPredictRequest.Format.COLUMN*
+            * *HttpPredictRequest.Format.COLUMN_NONAME*
+            * *HttpPredictRequest.Format.ROW*
+            * *HttpPredictRequest.Format.ROW_NONAME*
+
+            By default this value is set to *HttpPredictRequest.Format.COLUMN*.
 
     Returns:
         HttpPredictRequest object filled with **inputs** and target model spec.
