@@ -48,7 +48,7 @@ std::mutex& SequenceManager::getMutex() {
 }
 
 bool SequenceManager::sequenceExists(const uint64_t sequenceId) const {
-    return sequences.count(sequenceId);
+    return sequences.find(sequenceId) != sequences.end();
 }
 
 Status SequenceManager::removeIdleSequences() {
@@ -128,9 +128,10 @@ Sequence& SequenceManager::getSequence(const uint64_t sequenceId) {
 }
 
 Status SequenceManager::removeSequence(const uint64_t sequenceId) {
-    if (sequences.count(sequenceId)) {
+    auto it = sequences.find(sequenceId);
+    if (it != sequences.end()) {
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} versions {} Removing sequence with ID: {}", modelName, modelVersion, sequenceId);
-        sequences.erase(sequenceId);
+        sequences.erase(it);
     } else {
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model {} version {} Sequence with provided ID does not exists", modelName, modelVersion);
         return StatusCode::SEQUENCE_MISSING;

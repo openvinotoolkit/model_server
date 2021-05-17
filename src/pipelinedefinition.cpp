@@ -741,9 +741,9 @@ public:
                 return result;
             }
         }
-
-        if (connections.count(dependantNodeInfo.nodeName) > 0) {
-            for (const auto& [dependencyNodeName, mapping] : connections.at(dependantNodeInfo.nodeName)) {
+        auto it = connections.find(dependantNodeInfo.nodeName);
+        if (it != connections.end()) {
+            for (const auto& [dependencyNodeName, mapping] : it->second) {
                 if (mapping.size() == 0) {
                     return StatusCode::UNKNOWN_ERROR;
                 }

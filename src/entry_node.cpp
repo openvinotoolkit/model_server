@@ -64,18 +64,18 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
     for (const auto& node : this->next) {
         for (const auto& pair : node.get().getMappingByDependency(*this)) {
             const auto& output_name = pair.first;
-            if (outputs.count(output_name) == 1) {
+            if (outputs.find(output_name) != outputs.end()) {
                 continue;
             }
-
-            if (request->inputs().count(output_name) == 0) {
+            auto it = request->inputs().find(output_name);
+            if (it == request->inputs().end()) {
                 std::stringstream ss;
                 ss << "Required input: " << output_name;
                 const std::string details = ss.str();
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Missing input with specific name: {}", getName(), details);
                 return Status(StatusCode::INVALID_MISSING_INPUT, details);
             }
-            const auto& tensor_proto = request->inputs().at(output_name);
+            const auto& tensor_proto = it->second;
             InferenceEngine::Blob::Ptr blob;
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Deserializing input: {}", getName(), output_name);
             auto status = deserialize(tensor_proto, blob);

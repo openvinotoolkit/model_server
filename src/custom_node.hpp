@@ -51,7 +51,8 @@ public:
     Status fetchResults(BlobMap& outputs, session_key_t sessionKey);
 
     const std::string& getRealOutputName(const std::string& alias) const {
-        return nodeOutputNameAlias.count(alias) == 1 ? nodeOutputNameAlias.at(alias) : alias;
+        auto it = nodeOutputNameAlias.find(alias);
+        return it != nodeOutputNameAlias.end() ? it->second : alias;
     }
 
     std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) override;

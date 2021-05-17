@@ -92,14 +92,15 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
         const auto& name = kv.first;
         auto& blob = kv.second;
 
-        if (inputsInfo.count(name) == 0) {
+        auto it = inputsInfo.find(name);
+        if (it == inputsInfo.end()) {
             std::stringstream ss;
             ss << "Required input: " << name;
             const std::string details = ss.str();
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Missing input with specific name - {}", getName(), details);
             return Status(StatusCode::INVALID_MISSING_INPUT, details);
         }
-        auto& inputInfo = *inputsInfo.at(name);
+        auto& inputInfo = *it->second;
         std::stringstream ss;
         ss << "Node: " << getName() << " input validate: " << name
            << "; Actual: " << TensorInfo::shapeToString(inputInfo.getShape());
@@ -228,10 +229,11 @@ Status DLNodeSession::execute(PipelineEventQueue& notifyEndQueue, uint waitForSt
 }
 
 Status DLNodeSession::getRealInputName(const std::string& alias, std::string* result) const {
-    if (this->model->getInputsInfo().count(alias) == 0) {
+    auto it = this->model->getInputsInfo().find(alias);
+    if (it == this->model->getInputsInfo().end()) {
         return StatusCode::INVALID_MISSING_INPUT;
     }
-    *result = this->model->getInputsInfo().at(alias)->getName();
+    *result = it->second->getName();
     return StatusCode::OK;
 }
 
