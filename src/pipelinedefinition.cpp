@@ -69,7 +69,6 @@ Status PipelineDefinition::validate(ModelManager& manager) {
         return validationResult;
     }
 
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of pipeline: {}", getName());
     validationResult = getInputsInfo(inputsInfo, manager);
     if (!validationResult.ok()) {
         return validationResult;
@@ -79,6 +78,7 @@ Status PipelineDefinition::validate(ModelManager& manager) {
         return validationResult;
     }
     notifier.passed = true;
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of pipeline: {}", getName());
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Pipeline: {} inputs: {}", getName(), getTensorMapString(inputsInfo));
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Pipeline: {} outputs: {}", getName(), getTensorMapString(outputsInfo));
     return std::move(validationResult);

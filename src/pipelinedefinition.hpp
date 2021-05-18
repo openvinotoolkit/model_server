@@ -73,9 +73,12 @@ class PipelineDefinition {
     const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
     pipeline_connections_t connections;
+
+protected:
     tensor_map_t inputsInfo;
     tensor_map_t outputsInfo;
 
+private:
     std::atomic<uint64_t> requestsHandlesCounter = 0;
     std::shared_mutex loadMtx;
 
@@ -140,8 +143,8 @@ protected:
     virtual Status getOutputsInfo(tensor_map_t& outputsInfo, const ModelManager& manager) const;
 
 public:
-    virtual const tensor_map_t& getInputsInfo() const;
-    virtual const tensor_map_t& getOutputsInfo() const;
+    const tensor_map_t& getInputsInfo() const;
+    const tensor_map_t& getOutputsInfo() const;
 
 private:
     static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName);

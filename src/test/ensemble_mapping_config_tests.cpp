@@ -222,8 +222,8 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
 
     ASSERT_EQ(def->validate(managerWithDummyModel), StatusCode::OK);
 
-    const tensor_map_t& inputs = def->getInputsInfo();
-    const tensor_map_t& outputs = def->getOutputsInfo();
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
     ASSERT_EQ(inputs.size(), 1);
     ASSERT_EQ(outputs.size(), 1);
     ASSERT_NE(inputs.find("vector"), inputs.end());

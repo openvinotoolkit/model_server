@@ -2299,7 +2299,7 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingSuccessfullyChangedInputName)
         PipelineDefinitionStateCode::AVAILABLE);
 
     auto pdPtr = manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME);
-    const tensor_map_t& inputsInfoBefore = pdPtr->getInputsInfo();
+    auto inputsInfoBefore = pdPtr->getInputsInfo();
     ASSERT_EQ(inputsInfoBefore.count(NEW_INPUT_NAME), 0);
 
     // now reload
@@ -2307,7 +2307,7 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingSuccessfullyChangedInputName)
     manager.loadConfig(fileToReload);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
-    const tensor_map_t& inputsInfoAfter = pdPtr->getInputsInfo();
+    auto inputsInfoAfter = pdPtr->getInputsInfo();
     ASSERT_TRUE(status.ok()) << status.string();
     EXPECT_EQ(inputsInfoAfter.count(NEW_INPUT_NAME), 1);
 }
@@ -2559,7 +2559,7 @@ TEST_F(EnsembleFlowTest, RetireReloadAddPipelineAtTheSameTime) {
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_ADD), nullptr);
 
     auto pipelineToReloadPtr = manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RELOAD);
-    const tensor_map_t& inputsInfoBefore = pipelineToReloadPtr->getInputsInfo();
+    auto inputsInfoBefore = pipelineToReloadPtr->getInputsInfo();
     ASSERT_EQ(inputsInfoBefore.count(NEW_INPUT_NAME), 0);
 
     // now reload
@@ -2572,7 +2572,7 @@ TEST_F(EnsembleFlowTest, RetireReloadAddPipelineAtTheSameTime) {
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_ADD)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
 
-    const tensor_map_t& inputsInfoAfter = pipelineToReloadPtr->getInputsInfo();
+    auto inputsInfoAfter = pipelineToReloadPtr->getInputsInfo();
     EXPECT_EQ(inputsInfoAfter.count(NEW_INPUT_NAME), 1);
 }
 

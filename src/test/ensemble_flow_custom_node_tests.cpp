@@ -1337,8 +1337,8 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, JustDiff
     this->checkResponse("pipeline_output", response, expectedOutput, {4, 1, 10});
 
     auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(pipelineName);
-    const tensor_map_t& inputs = pipelineDefinition->getInputsInfo();
-    const tensor_map_t& outputs = pipelineDefinition->getOutputsInfo();
+    auto inputs = pipelineDefinition->getInputsInfo();
+    auto outputs = pipelineDefinition->getOutputsInfo();
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
@@ -1429,8 +1429,8 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     this->checkResponse("pipeline_output", response, expectedOutput, {4, 1, 10});
 
     auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(pipelineName);
-    const tensor_map_t& inputs = pipelineDefinition->getInputsInfo();
-    const tensor_map_t& outputs = pipelineDefinition->getOutputsInfo();
+    auto inputs = pipelineDefinition->getInputsInfo();
+    auto outputs = pipelineDefinition->getOutputsInfo();
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
@@ -1510,8 +1510,8 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     this->checkResponse("pipeline_output", response, expectedOutput, {4, 1, 10});
 
     auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(pipelineName);
-    const tensor_map_t& inputs = pipelineDefinition->getInputsInfo();
-    const tensor_map_t& outputs = pipelineDefinition->getOutputsInfo();
+    auto inputs = pipelineDefinition->getInputsInfo();
+    auto outputs = pipelineDefinition->getOutputsInfo();
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
@@ -2385,8 +2385,8 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
 
-    const tensor_map_t& inputs = pipelineDefinition->getInputsInfo();
-    const tensor_map_t& outputs = pipelineDefinition->getOutputsInfo();
+    auto inputs = pipelineDefinition->getInputsInfo();
+    auto outputs = pipelineDefinition->getOutputsInfo();
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
@@ -2421,8 +2421,8 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
 
-    const tensor_map_t& inputs = pipelineDefinition->getInputsInfo();
-    const tensor_map_t& outputs = pipelineDefinition->getOutputsInfo();
+    auto inputs = pipelineDefinition->getInputsInfo();
+    auto outputs = pipelineDefinition->getOutputsInfo();
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
@@ -2452,8 +2452,8 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
 
-    const tensor_map_t& inputs = pipelineDefinition->getInputsInfo();
-    const tensor_map_t& outputs = pipelineDefinition->getOutputsInfo();
+    auto inputs = pipelineDefinition->getInputsInfo();
+    auto outputs = pipelineDefinition->getOutputsInfo();
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
@@ -2598,8 +2598,8 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
 
-    const tensor_map_t& inputs = pipelineDefinition->getInputsInfo();
-    const tensor_map_t& outputs = pipelineDefinition->getOutputsInfo();
+    auto inputs = pipelineDefinition->getInputsInfo();
+    auto outputs = pipelineDefinition->getOutputsInfo();
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
@@ -3534,8 +3534,8 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     this->checkResponse("pipeline_output", response, expectedOutput, {dynamicDemultiplyCount, 1, 10});
 
     auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(pipelineName);
-    const tensor_map_t& inputs = pipelineDefinition->getInputsInfo();
-    const tensor_map_t& outputs = pipelineDefinition->getOutputsInfo();
+    auto inputs = pipelineDefinition->getInputsInfo();
+    auto outputs = pipelineDefinition->getOutputsInfo();
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
     auto& input_A = inputs.at(pipelineInputName);
@@ -3559,8 +3559,8 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     modelInputs.clear();
     modelOutputs.clear();
 
-    const tensor_map_t& inputs2 = pipelineDefinition->getInputsInfo();
-    const tensor_map_t& outputs2 = pipelineDefinition->getOutputsInfo();
+    auto inputs2 = pipelineDefinition->getInputsInfo();
+    auto outputs2 = pipelineDefinition->getOutputsInfo();
     ASSERT_NE(inputs2.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs2.find(pipelineOutputName), outputs.end());
     auto input_A2 = inputs2.at(pipelineInputName);
@@ -3648,8 +3648,8 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     this->loadConfiguration(pipelineCustomNodeDynamicDemultiplexThenDummyDemultiplexerConnectedToExitConfig);
 
     auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(pipelineName);
-    const tensor_map_t& inputs = pipelineDefinition->getInputsInfo();
-    const tensor_map_t& outputs = pipelineDefinition->getOutputsInfo();
+    auto inputs = pipelineDefinition->getInputsInfo();
+    auto outputs = pipelineDefinition->getOutputsInfo();
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
     const auto& input_A = inputs.at(pipelineInputName);
@@ -3729,8 +3729,8 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, D
     auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(pipelineName);
     ASSERT_NE(pipelineDefinition, nullptr);
 
-    const tensor_map_t& inputs = pipelineDefinition->getInputsInfo();
-    const tensor_map_t& outputs = pipelineDefinition->getOutputsInfo();
+    auto inputs = pipelineDefinition->getInputsInfo();
+    auto outputs = pipelineDefinition->getOutputsInfo();
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 

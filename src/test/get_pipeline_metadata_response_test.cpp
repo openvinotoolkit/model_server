@@ -32,21 +32,12 @@ using namespace rapidjson;
 class GetPipelineMetadataResponse : public ::testing::Test {
 protected:
     class MockPipelineDefinitionGetInputsOutputsInfo : public PipelineDefinition {
-        tensor_map_t inputsInfo, outputsInfo;
         Status status = StatusCode::OK;
 
     public:
         MockPipelineDefinitionGetInputsOutputsInfo() :
             PipelineDefinition("pipeline_name", {}, {}) {
             PipelineDefinition::status.handle(ValidationPassedEvent());
-        }
-
-        const tensor_map_t& getInputsInfo() const override {
-            return this->inputsInfo;
-        }
-
-        const tensor_map_t& getOutputsInfo() const override {
-            return this->outputsInfo;
         }
 
         void mockMetadata(const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo) {

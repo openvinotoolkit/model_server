@@ -54,8 +54,8 @@ TEST(EnsembleMetadata, OneNode) {
 
     ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
-    const tensor_map_t& inputs = def->getInputsInfo();
-    const tensor_map_t& outputs = def->getOutputsInfo();
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
 
     ASSERT_EQ(inputs.size(), 1);
     ASSERT_EQ(outputs.size(), 1);
@@ -120,8 +120,8 @@ TEST(EnsembleMetadata, MultipleNodesOnDifferentLevelsUsingTheSamePipelineInputs)
 
     ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
-    const tensor_map_t& inputs = def->getInputsInfo();
-    const tensor_map_t& outputs = def->getOutputsInfo();
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
 
     ASSERT_EQ(inputs.size(), 2);
     ASSERT_EQ(outputs.size(), 3);
@@ -175,8 +175,8 @@ TEST(EnsembleMetadata, EmptyPipelineReturnsCorrectInputAndOutputInfo) {
 
     ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
-    const tensor_map_t& inputs = def->getInputsInfo();
-    const tensor_map_t& outputs = def->getOutputsInfo();
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
 
     ASSERT_EQ(inputs.size(), 1);
     ASSERT_EQ(outputs.size(), 1);
@@ -265,8 +265,8 @@ TEST(EnsembleMetadata, ParallelDLModelNodesReferingToManyPipelineInputs) {
 
     ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
-    const tensor_map_t& inputs = def->getInputsInfo();
-    const tensor_map_t& outputs = def->getOutputsInfo();
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
 
     ASSERT_EQ(inputs.size(), 8);
     for (size_t i = 1; i <= 4; i++) {
@@ -326,8 +326,8 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
-    const tensor_map_t& inputs = def->getInputsInfo();
-    const tensor_map_t& outputs = def->getOutputsInfo();
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
 
     config = DUMMY_MODEL_CONFIG;
     ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
@@ -336,15 +336,15 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
     instance->unloadModel();
 
     // we should still be able to get metadata since pipeline definition was not reloaded
-    const tensor_map_t& inputs2 = def->getInputsInfo();
-    const tensor_map_t& outputs2 = def->getOutputsInfo();
+    auto inputs2 = def->getInputsInfo();
+    auto outputs2 = def->getOutputsInfo();
 
     config.setLocalPath("/tmp/non_existing_path_j3nmc783n");
     ASSERT_EQ(instance->loadModel(config), StatusCode::PATH_INVALID);
 
     // we should still be able to get metadata since pipeline definition was not reloaded
-    const tensor_map_t& inputs3 = def->getInputsInfo();
-    const tensor_map_t& outputs3 = def->getOutputsInfo();
+    auto inputs3 = def->getInputsInfo();
+    auto outputs3 = def->getOutputsInfo();
 #pragma GCC diagnostic pop
 }
 
@@ -378,8 +378,8 @@ TEST(EnsembleMetadata, OneCustomNode) {
     ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
     ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
-    const tensor_map_t& inputs = def->getInputsInfo();
-    const tensor_map_t& outputs = def->getOutputsInfo();
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
 
     ASSERT_EQ(inputs.size(), 1);
     ASSERT_EQ(outputs.size(), 1);
@@ -433,8 +433,8 @@ TEST(EnsembleMetadata, ParallelCustomNodes) {
     ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
     ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
-    const tensor_map_t& inputs = def->getInputsInfo();
-    const tensor_map_t& outputs = def->getOutputsInfo();
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
 
     ASSERT_EQ(inputs.size(), 1);
     ASSERT_EQ(outputs.size(), 3);
@@ -594,8 +594,8 @@ TEST(EnsembleMetadata, CustomNodeMultipleDemultiplexers) {
     ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
     ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
-    const tensor_map_t& inputs = def->getInputsInfo();
-    const tensor_map_t& outputs = def->getOutputsInfo();
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
 
     ASSERT_EQ(inputs.size(), 2);
     ASSERT_EQ(outputs.size(), 1);
