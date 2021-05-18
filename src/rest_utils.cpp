@@ -186,13 +186,11 @@ Status makeJsonFromPredictResponse(
     return StatusCode::OK;
 }
 
-Status decodeBase64(std::string& bytes) {
-    std::string decodedBytes;
+Status decodeBase64(std::string& bytes, std::string& decodedBytes) {
     auto status = Status(absl::Base64Unescape(bytes, &decodedBytes) ? StatusCode::OK : StatusCode::REST_BASE64_DECODE_ERROR);
     if (!status.ok()) {
         return status;
     }
-    bytes = decodedBytes;
     return StatusCode::OK;
 }
 }  // namespace ovms

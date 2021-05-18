@@ -31,6 +31,6 @@ Status makeJsonFromPredictResponse(
     std::string* response_json,
     Order order);
 
-Status decodeBase64(std::string& bytes);
+Status decodeBase64(std::string& bytes, std::string& decodedBytes);
 
 }  // namespace ovms

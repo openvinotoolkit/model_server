@@ -269,13 +269,15 @@ TEST_F(RestUtilsTest, MakeJsonFromPredictResponse_ErrorWhenNoOutputs) {
 
 TEST_F(RestUtilsTest, Base64DecodeCorrect) {
     std::string bytes = "abcd";
-    EXPECT_EQ(decodeBase64(bytes), StatusCode::OK);
-    EXPECT_EQ(bytes, "i\xB7\x1D");
+    std::string decodedBytes;
+    EXPECT_EQ(decodeBase64(bytes, decodedBytes), StatusCode::OK);
+    EXPECT_EQ(decodedBytes, "i\xB7\x1D");
 }
 
 TEST_F(RestUtilsTest, Base64DecodeWrongLength) {
     std::string bytes = "abcde";
-    EXPECT_EQ(decodeBase64(bytes), StatusCode::REST_BASE64_DECODE_ERROR);
+    std::string decodedBytes;
+    EXPECT_EQ(decodeBase64(bytes, decodedBytes), StatusCode::REST_BASE64_DECODE_ERROR);
 }
 
 TEST_F(RestUtilsPrecisionTest, MakeJsonFromPredictResponse_Float) {
