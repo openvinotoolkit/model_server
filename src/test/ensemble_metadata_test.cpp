@@ -288,13 +288,14 @@ TEST(EnsembleMetadata, ParallelDLModelNodesReferingToManyPipelineInputs) {
     EXPECT_EQ(outputs.find("final_sum")->second->getPrecision(), InferenceEngine::Precision::FP32);
 }
 
-TEST(EnsembleMetadata, OneUnavailableNode) {
+TEST(EnsembleMetadata, OneUnavailableNodeBeforeRevalidationShouldWork) {
     /*
-        This test creates pipeline definition with one DL model node which has model that is unavailable due to:
+        This test creates pipeline definition with one DL model node which has model that becomes unavailable due to:
             a) no model version available
             b) model version is retired
             c) model is not loaded yet
-        Test ensures we receive error status by calling getInputsInfo and getOutputsInfo.
+        Test ensures we still receive metadata when underlying model is unloaded but PipelineDefinition is not revalidated
+        yet.
     */
 
     const model_version_t UNAVAILABLE_DUMMY_VERSION = 99;
@@ -324,10 +325,10 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
 
     config.setModelVersionPolicy(std::make_shared<SpecificModelVersionPolicy>(model_versions_t{UNAVAILABLE_DUMMY_VERSION}));
     ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-variable"
     auto inputs = def->getInputsInfo();
     auto outputs = def->getOutputsInfo();
+    ASSERT_GT(inputs.size(), 0);
+    ASSERT_GT(outputs.size(), 0);
 
     config = DUMMY_MODEL_CONFIG;
     ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
@@ -338,6 +339,8 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
     // we should still be able to get metadata since pipeline definition was not reloaded
     auto inputs2 = def->getInputsInfo();
     auto outputs2 = def->getOutputsInfo();
+    ASSERT_GT(inputs2.size(), 0);
+    ASSERT_GT(outputs2.size(), 0);
 
     config.setLocalPath("/tmp/non_existing_path_j3nmc783n");
     ASSERT_EQ(instance->loadModel(config), StatusCode::PATH_INVALID);
@@ -345,7 +348,8 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
     // we should still be able to get metadata since pipeline definition was not reloaded
     auto inputs3 = def->getInputsInfo();
     auto outputs3 = def->getOutputsInfo();
-#pragma GCC diagnostic pop
+    ASSERT_GT(inputs3.size(), 0);
+    ASSERT_GT(outputs3.size(), 0);
 }
 
 TEST(EnsembleMetadata, OneCustomNode) {

@@ -586,7 +586,10 @@ public:
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
         const std::string modelPathToReplace{"/ovms/src/test/dummy"};
-        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+        auto it = ovmsConfig.find(modelPathToReplace);
+        if (it != std::string::npos) {
+            ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+        }
         configFilePath = directoryPath + "/ovms_config.json";
     }
     void SetUp() override {
@@ -597,7 +600,7 @@ public:
     }
     void defaultVersionRemove() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        ovmsConfig = stressTestPipelineOneDummyRemovedConfig;
+        SetUpConfig(stressTestPipelineOneDummyRemovedConfig);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
@@ -608,25 +611,25 @@ public:
     }
     void changeToAutoShape() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        ovmsConfig = stressTestPipelineOneDummyConfigChangedToAuto;
+        SetUpConfig(stressTestPipelineOneDummyConfigChangedToAuto);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
     void removePipelineDefinition() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        ovmsConfig = stressTestPipelineOneDummyConfigPipelineRemoved;
+        SetUpConfig(stressTestPipelineOneDummyConfigPipelineRemoved);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
     void changeConnectionName() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        ovmsConfig = stressTestPipelineOneDummyConfigChangeConnectionName;
+        SetUpConfig(stressTestPipelineOneDummyConfigChangeConnectionName);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
     void addNewPipeline() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        ovmsConfig = stressTestPipelineOneDummyConfigAddNewPipeline;
+        SetUpConfig(stressTestPipelineOneDummyConfigAddNewPipeline);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
