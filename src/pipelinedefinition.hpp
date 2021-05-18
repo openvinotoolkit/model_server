@@ -46,7 +46,11 @@ class Pipeline;
 
 using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 
+class NodeValidator;
+
 class PipelineDefinition {
+    friend NodeValidator;
+    friend PipelineDefinitionUnloadGuard;
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
             status(status),
@@ -69,6 +73,8 @@ class PipelineDefinition {
     const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
     pipeline_connections_t connections;
+    tensor_map_t inputsInfo;
+    tensor_map_t outputsInfo;
 
     std::atomic<uint64_t> requestsHandlesCounter = 0;
     std::shared_mutex loadMtx;
@@ -129,9 +135,15 @@ public:
     void makeSubscriptions(ModelManager& manager);
     void resetSubscriptions(ModelManager& manager);
 
+protected:
     virtual Status getInputsInfo(tensor_map_t& inputsInfo, const ModelManager& manager) const;
     virtual Status getOutputsInfo(tensor_map_t& outputsInfo, const ModelManager& manager) const;
 
+public:
+    virtual const tensor_map_t& getInputsInfo() const;
+    virtual const tensor_map_t& getOutputsInfo() const;
+
+private:
     static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName);
 
     Status populateOutputsInfoWithDLModelOutputs(
@@ -156,6 +168,7 @@ public:
         --requestsHandlesCounter;
     }
 
+public:
     Status waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
 };
 }  // namespace ovms

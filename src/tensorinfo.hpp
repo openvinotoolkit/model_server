@@ -66,11 +66,6 @@ protected:
          */
     InferenceEngine::Layout layout;
 
-    /**
-         * @brief TensorDesc
-         */
-    InferenceEngine::TensorDesc tensorDesc;
-
 public:
     /**
          * @brief Construct a new Tensor Info object

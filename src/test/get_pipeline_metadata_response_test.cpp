@@ -41,14 +41,12 @@ protected:
             PipelineDefinition::status.handle(ValidationPassedEvent());
         }
 
-        Status getInputsInfo(tensor_map_t& inputsInfo, const ModelManager& manager) const override {
-            inputsInfo = this->inputsInfo;
-            return status;
+        const tensor_map_t& getInputsInfo() const override {
+            return this->inputsInfo;
         }
 
-        Status getOutputsInfo(tensor_map_t& outputsInfo, const ModelManager& manager) const override {
-            outputsInfo = this->outputsInfo;
-            return status;
+        const tensor_map_t& getOutputsInfo() const override {
+            return this->outputsInfo;
         }
 
         void mockMetadata(const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo) {
@@ -222,14 +220,14 @@ TEST_F(GetPipelineMetadataResponseBuild, HasCorrectShape) {
         {}));
 }
 
-TEST_F(GetPipelineMetadataResponse, ModelVersionNotLoadedAnymore) {
+TEST_F(GetPipelineMetadataResponse, ModelVersionNotLoadedAnymoreButPipelineNotReloadedYet) {
     pipelineDefinition.mockStatus(StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
-    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
+    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
 }
 
 TEST_F(GetPipelineMetadataResponse, ModelVersionNotLoadedYet) {
     pipelineDefinition.mockStatus(StatusCode::MODEL_VERSION_NOT_LOADED_YET);
-    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
+    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
 }
 
 TEST_F(GetPipelineMetadataResponse, PipelineNotLoadedAnymore) {

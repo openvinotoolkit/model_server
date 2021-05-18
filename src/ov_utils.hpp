@@ -26,9 +26,12 @@
 
 namespace ovms {
 
+class TensorInfo;
+
 Status createSharedBlob(InferenceEngine::Blob::Ptr& destinationBlob, InferenceEngine::TensorDesc tensorDesc);
 
 std::string getNetworkInputsInfoString(const InferenceEngine::InputsDataMap& inputsInfo, const ModelConfig& config);
+std::string getTensorMapString(const std::map<std::string, std::shared_ptr<TensorInfo>>& tensorMap);
 
 template <typename T>
 Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const T sourceBlob) {

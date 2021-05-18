@@ -2298,10 +2298,8 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingSuccessfullyChangedInputName)
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
 
-    tensor_map_t inputsInfoBefore;
     auto pdPtr = manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME);
-    status = pdPtr->getInputsInfo(inputsInfoBefore, manager);
-    ASSERT_TRUE(status.ok()) << status.string();
+    const tensor_map_t& inputsInfoBefore = pdPtr->getInputsInfo();
     ASSERT_EQ(inputsInfoBefore.count(NEW_INPUT_NAME), 0);
 
     // now reload
@@ -2309,8 +2307,7 @@ TEST_F(EnsembleFlowTest, ReloadPipelineAfterLoadingSuccessfullyChangedInputName)
     manager.loadConfig(fileToReload);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
-    tensor_map_t inputsInfoAfter;
-    status = pdPtr->getInputsInfo(inputsInfoAfter, manager);
+    const tensor_map_t& inputsInfoAfter = pdPtr->getInputsInfo();
     ASSERT_TRUE(status.ok()) << status.string();
     EXPECT_EQ(inputsInfoAfter.count(NEW_INPUT_NAME), 1);
 }
@@ -2561,10 +2558,8 @@ TEST_F(EnsembleFlowTest, RetireReloadAddPipelineAtTheSameTime) {
         PipelineDefinitionStateCode::AVAILABLE);
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_ADD), nullptr);
 
-    tensor_map_t inputsInfoBefore;
     auto pipelineToReloadPtr = manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_RELOAD);
-    status = pipelineToReloadPtr->getInputsInfo(inputsInfoBefore, manager);
-    ASSERT_TRUE(status.ok()) << status.string();
+    const tensor_map_t& inputsInfoBefore = pipelineToReloadPtr->getInputsInfo();
     ASSERT_EQ(inputsInfoBefore.count(NEW_INPUT_NAME), 0);
 
     // now reload
@@ -2577,9 +2572,7 @@ TEST_F(EnsembleFlowTest, RetireReloadAddPipelineAtTheSameTime) {
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_TO_ADD)->getStateCode(),
         PipelineDefinitionStateCode::AVAILABLE);
 
-    tensor_map_t inputsInfoAfter;
-    status = pipelineToReloadPtr->getInputsInfo(inputsInfoAfter, manager);
-    ASSERT_TRUE(status.ok()) << status.string();
+    const tensor_map_t& inputsInfoAfter = pipelineToReloadPtr->getInputsInfo();
     EXPECT_EQ(inputsInfoAfter.count(NEW_INPUT_NAME), 1);
 }
 

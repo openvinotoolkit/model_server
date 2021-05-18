@@ -758,7 +758,6 @@ public:
         if (!inputsSizeCorrect || !outputsSizeCorrect) {
             return false;
         }
-        SPDLOG_ERROR("ExpectedInputsCount:{}", expectedInputs.size());
         for (auto& [expectedInputName, shapeTypeTuple] : expectedInputs) {
             bool inputNameExist = inputs.find(expectedInputName.c_str()) != inputs.end();
             EXPECT_TRUE(inputNameExist);
@@ -921,7 +920,7 @@ TEST_F(StressPipelineConfigChanges, AddNewVersionDuringPredictLoad) {
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop,
-        &StressPipelineConfigChanges::defaultVersionRemove,
+        &StressPipelineConfigChanges::defaultVersionAdd,
         performWholeConfigReload,
         requiredLoadResults,
         allowedLoadResults);
@@ -1009,16 +1008,14 @@ TEST_F(StressPipelineConfigChanges, AddNewVersionDuringGetMetadataLoad) {
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
-        &StressPipelineConfigChanges::defaultVersionRemove,
+        &StressPipelineConfigChanges::defaultVersionAdd,
         performWholeConfigReload,
         requiredLoadResults,
         allowedLoadResults);
 }
 TEST_F(StressPipelineConfigChanges, RemoveDefaultVersionDuringGetMetadataLoad) {
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET,  // we hit when all config changes finish to propagate
-        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE,    // we hit default version which is unloaded already but default is not changed yet
-        StatusCode::MODEL_MISSING};                      // model instance not found during metadata request
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // we hit when all config changes finish to propagate
     std::set<StatusCode> allowedLoadResults = {};
     // we need whole config reload since there is no other way to dispose
     // all model versions different than removing model from config
@@ -1044,8 +1041,7 @@ TEST_F(StressPipelineConfigChanges, ChangeToShapeAutoDuringGetMetadataLoad) {
 TEST_F(StressPipelineConfigChanges, RemovePipelineDefinitionDuringGetMetadataLoad) {
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE,  // when pipeline is retired
-        StatusCode::MODEL_VERSION_NOT_LOADED_YET};           // we do not wait for models durign get metadata
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE};  // when pipeline is retired
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
@@ -1056,8 +1052,7 @@ TEST_F(StressPipelineConfigChanges, RemovePipelineDefinitionDuringGetMetadataLoa
 }
 TEST_F(StressPipelineConfigChanges, ChangedPipelineConnectionNameDuringGetMetadataLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
-        StatusCode::MODEL_VERSION_NOT_LOADED_YET};               // we do not wait for models durign get metadata
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
@@ -1083,8 +1078,7 @@ TEST_F(StressPipelineConfigChanges, RetireSpecificVersionUsedDuringGetMetadataLo
     SetUpConfig(stressTestPipelineOneDummyConfigSpecificVersionUsed);
     bool performWholeConfigReload = false;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET,          // we hit when all config changes finish to propagate
-        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};           // version is retired but pipeline not invalidated yet
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,

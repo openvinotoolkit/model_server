@@ -89,4 +89,21 @@ std::string getNetworkInputsInfoString(const InferenceEngine::InputsDataMap& inp
     }
     return stringStream.str();
 }
+
+std::string getTensorMapString(const std::map<std::string, std::shared_ptr<TensorInfo>>& inputsInfo) {
+    std::stringstream stringStream;
+    for (const auto& pair : inputsInfo) {
+        const auto& name = pair.first;
+        auto inputInfo = pair.second;
+        auto precision = inputInfo->getPrecision();
+        auto layout = inputInfo->getLayout();
+        auto shape = inputInfo->getShape();
+
+        stringStream << "\nname: " << name
+                     << "; shape: " << TensorInfo::shapeToString(shape)
+                     << "; precision: " << TensorInfo::getPrecisionAsString(precision)
+                     << "; layout: " << TensorInfo::getStringFromLayout(layout);
+    }
+    return stringStream.str();
+}
 }  // namespace ovms
