@@ -216,7 +216,6 @@ http_archive(
     build_file = "@//third_party/libevent:BUILD",
 )
 
-
 ##################### OPEN VINO ######################
 # OPENVINO DEFINITION FOR BUILDING FROM BINARY RELEASE: ##########################
 new_local_repository(
