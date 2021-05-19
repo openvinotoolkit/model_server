@@ -16,19 +16,39 @@
 cmake_minimum_required(VERSION 2.8)
 project(ovms)
 set(CMAKE_CXX_STANDARD 17)
+message("CMake version:" ${CMAKE_VERSION} )
 
+message("Project source directory: " ${PROJECT_SOURCE_DIR})
 file(GLOB ovms_SRC
-    "*.hpp"
-    "*.cpp"
+    "${PROJECT_SOURCE_DIR}/*.hpp"
+    "${PROJECT_SOURCE_DIR}/*.cpp"
 )
+
+message("OVMS sources:" ${ovms_SRC} )
 
 file(GLOB OCR_SRC
-    "custom_node_interface.hpp"
-    "custom_nodes/east_ocr/*.hpp"
-    "custom_nodes/east_ocr/*.cpp"
+    "${PROJECT_SOURCE_DIR}/custom_node_interface.h"
+    "${PROJECT_SOURCE_DIR}/custom_nodes/east_ocr/utils.hpp"
+    "${PROJECT_SOURCE_DIR}/custom_nodes/east_ocr/east_ocr.cpp"
 )
 
+file(GLOB IMG_SRC
+    "${PROJECT_SOURCE_DIR}/custom_node_interface.h"
+    "${PROJECT_SOURCE_DIR}/custom_nodes/image_transformation/utils.hpp"
+    "${PROJECT_SOURCE_DIR}/custom_nodes/image_transformation/image_transformation.cpp"
+)
+
+file(GLOB ZOO_SRC
+    "${PROJECT_SOURCE_DIR}/custom_node_interface.h"
+    "${PROJECT_SOURCE_DIR}/custom_nodes/model_zoo_intel_object_detection/model_zoo_intel_object_detection.cpp"
+    "${PROJECT_SOURCE_DIR}/custom_nodes/model_zoo_intel_object_detection/utils.hpp"
+)
+
+message("Custom nodes sources:" ${OCR_SRC} ${IMG_SRC} ${ZOO_SRC})
+
 add_library(ocr ${OCR_SRC})
+add_library(img ${IMG_SRC})
+add_library(zoo ${ZOO_SRC})
 add_executable(ovms ${ovms_SRC})
 
 set(BAZEL_BUILD "$ENV{BAZEL_BUILD}")
@@ -70,6 +90,6 @@ target_link_libraries(${PROJECT_NAME} ${OVMS_LIBS})
 target_link_libraries(${PROJECT_NAME} stdc++fs ssl crypto uuid xml2 dl)
 
 # workaround to have OCR custom node scanned
-target_link_libraries(ovms ocr)
+target_link_libraries(ovms ocr img zoo)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread")

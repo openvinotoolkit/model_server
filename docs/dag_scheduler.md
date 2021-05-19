@@ -197,7 +197,9 @@ version parameter is ignored. Pipelines are not versioned. Though, they can refe
 
 [Models ensemble](ensemble_scheduler.md)
 
-[Face analysis with combined models](combined_model_dag.md)
+[Single face analysis with combined models](combined_model_dag.md)
+
+[Multiple vehicles analysis using demultiplexer and custom node](vehicles_analysis_dag.md)
 
 [Optical Character Recognition with custom node pipeline](east_ocr.md)
 
