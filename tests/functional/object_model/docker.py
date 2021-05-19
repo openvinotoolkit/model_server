@@ -51,11 +51,16 @@ class Docker:
 
         def finalizer():
             if self.container is not None:
+                logger.info(f"Stopping container: {self.container_name}")
                 self.save_container_logs()
                 self.container.stop()
                 self.container.remove()
+                logger.info(f"Container successfully closed and removed: {self.container_name}")
+
 
         self.request.addfinalizer(finalizer)
+
+        logger.info(f"Starting container: {self.container_name}")
 
         volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
                                                             'mode': 'ro'}}
@@ -71,12 +76,16 @@ class Docker:
                                                     environment=self.env_vars_container)
         self.ensure_container_status(status=CONTAINER_STATUS_RUNNING, terminal_statuses=TERMINAL_STATUSES)
         self.ensure_logs_contains()
+
+        logger.info(f"Container started grpc_port:{self.grpc_port}\trest_port{self.rest_port}")
         return self.container, {"grpc_port": self.grpc_port, "rest_port": self.rest_port}
 
     def save_container_logs(self):
-        if config.log_level == "DEBUG" and config.artifacts_dir != "":
+        if config.log_level == "DEBUG":
             logs = self.container.logs().decode()
-            save_container_logs_to_file(container=self.container, logs=logs)
+            logger.info(logs)
+            if config.artifacts_dir != "":
+                save_container_logs_to_file(container=self.container, logs=logs)
 
     def ensure_logs(self):
         logs = str(self.container.logs())
