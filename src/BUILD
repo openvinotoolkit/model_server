@@ -321,25 +321,11 @@ cc_binary(
     ]
 )
 
-cc_binary(
-    name = "my_test",
-    srcs = [
-        "test/my_test.cpp",
-    ],
-    linkopts = [
-    ],
-    copts = [
-    ],
-    deps = [
-        "@openvino//:openvino",
-    ]
-)
-
 cc_test(
     name = "ovms_test",
     linkstatic = 1,
     srcs = [
-        "test/deserialization_tests.cpp",
+        # "test/deserialization_tests.cpp",
         "test/ensemble_tests.cpp",
         "test/ensemble_flow_custom_node_tests.cpp",
         "test/ensemble_mapping_config_tests.cpp",
@@ -378,12 +364,12 @@ cc_test(
         "test/rest_parser_column_test.cpp",
         "test/rest_parser_nonamed_test.cpp",
         "test/rest_utils_test.cpp",
-        "test/sequence_test.cpp",
-        "test/stateful_test_utils.hpp",
-        "test/sequence_manager_test.cpp",
-        "test/serialization_tests.cpp",
+        # "test/sequence_test.cpp",
+        # "test/stateful_test_utils.hpp",
+        # "test/sequence_manager_test.cpp",
+        # "test/serialization_tests.cpp",
         "test/stateful_config_test.cpp",
-        "test/stateful_modelinstance_test.cpp",
+        # "test/stateful_modelinstance_test.cpp",
         "test/stringutils_test.cpp",
         "test/test_utils.cpp",
         "test/test_utils.hpp",
