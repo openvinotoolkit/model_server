@@ -24,28 +24,131 @@
 
 #include "opencv2/opencv.hpp"
 #include "binaryutils.hpp"
+#include "logging.hpp"
 
 namespace ovms {
 
-StatusCode convertStringValToTensorContent(const tensorflow::TensorProto& stringVal, tensorflow::TensorProto& tensorContent){
+int getMatTypeFromTensorPrecision(InferenceEngine::Precision tensorPrecision)
+{
+    switch (tensorPrecision) {
+    case InferenceEngine::Precision::FP32:
+        return CV_32F;
+    case InferenceEngine::Precision::FP16:
+        return CV_16F;
+    case InferenceEngine::Precision::I16:
+        return CV_16S;
+    case InferenceEngine::Precision::U8:
+        return CV_8U;
+    case InferenceEngine::Precision::I8:
+        return CV_8S;
+    case InferenceEngine::Precision::U16:
+        return CV_16U;
+    case InferenceEngine::Precision::I32:
+        return CV_32S;
+    default:
+        return -1;
+    }
+}
+
+bool isPrecisionEqual(int matPrecision, InferenceEngine::Precision tensorPrecision)
+{
+    int convertedTensorPrecision = getMatTypeFromTensorPrecision(tensorPrecision);
+    if(convertedTensorPrecision == matPrecision){
+        return true;
+    }
+    return false;
+}
+
+template <typename T>
+std::vector<T> reorder_to_nchw(const T* nhwcVector, int rows, int cols, int channels) {
+    std::vector<T> nchwVector(rows * cols * channels);
+    for (int y = 0; y < rows; ++y) {
+        for (int x = 0; x < cols; ++x) {
+            for (int c = 0; c < channels; ++c) {
+                nchwVector[c * (rows * cols) + y * cols + x] = reinterpret_cast<const T*>(nhwcVector)[y * channels * cols + x * channels + c];
+            }
+        }
+    }
+    return std::move(nchwVector);
+}
+
+StatusCode convertStringValToTensorContent(const tensorflow::TensorProto& stringVal, tensorflow::TensorProto& tensorContent, const std::shared_ptr<TensorInfo>& tensorInfo){
     int contentSize = 0;
     std::vector<cv::Mat> images;
+
     for(int i = 0; i < stringVal.string_val_size(); i++){
-        contentSize += stringVal.string_val(i).length();
-        std::vector<char> vectordata(stringVal.string_val(i).begin(),stringVal.string_val(i).end());
+        std::vector<unsigned char> vectordata(stringVal.string_val(i).begin(),stringVal.string_val(i).end());
         cv::Mat data_mat(vectordata,true);
-        cv::Mat image(cv::imdecode(data_mat,1));
-        contentSize += image.total() * image.elemSize();
-        images.push_back(image);
+        cv::Mat image(cv::imdecode(data_mat,cv::IMREAD_UNCHANGED)); 
+
+        if(!isPrecisionEqual(image.depth(), tensorInfo->getPrecision())){
+            int type = getMatTypeFromTensorPrecision(tensorInfo->getPrecision());
+            if(type == -1)
+            {
+                return StatusCode::INVALID_PRECISION;
+            }
+            
+            cv::Mat imagePrecisionConverted(image.rows,image.cols,type);
+            image.convertTo(imagePrecisionConverted, type);
+
+            contentSize += imagePrecisionConverted.total() * imagePrecisionConverted.elemSize();
+            images.push_back(imagePrecisionConverted);
+        }
+        else{
+            contentSize += image.total() * image.elemSize();
+            images.push_back(image);
+        }
     }
     char* content = new char[contentSize];
 
     int offset = 0;
     for(cv::Mat image : images){
-        memcpy(&(content[offset]), image.data, image.total() * image.elemSize());
-        offset += image.total() * image.elemSize();
+        if(tensorInfo->getLayout() == InferenceEngine::Layout::NCHW)
+        {
+            int cols = tensorInfo->getShape()[3];
+            int rows = tensorInfo->getShape()[2];
+            cv::Mat resized;
+            cv::resize(image, resized, cv::Size(cols,rows));
+            switch (image.elemSize1()) {
+            case 1:
+                {
+                    auto imgBuffer = reorder_to_nchw((uint8_t*)resized.data, resized.rows, resized.cols, resized.channels());
+                    memcpy(content, imgBuffer.data(), resized.total() * resized.elemSize());
+                    offset += resized.total() * resized.elemSize();
+                    break;
+                }
+            case 2:
+                {
+                    auto imgBuffer = reorder_to_nchw((uint16_t*)resized.data, resized.rows, resized.cols, resized.channels());
+                    memcpy(content, imgBuffer.data(), resized.total() * resized.elemSize());
+                    offset += resized.total() * resized.elemSize();
+                    break;
+                }
+            case 4:
+                {
+                    auto imgBuffer = reorder_to_nchw((uint32_t*)resized.data, resized.rows, resized.cols, resized.channels());
+                    memcpy(content, imgBuffer.data(), resized.total() * resized.elemSize());
+                    offset += resized.total() * resized.elemSize();
+                    break;
+                }
+            default:
+                return StatusCode::INVALID_PRECISION;
+            }
+
+        }
+        else
+        {
+            int cols = tensorInfo->getShape()[2];
+            int rows = tensorInfo->getShape()[1];
+            cv::Mat resized;
+            cv::resize(image, resized, cv::Size(cols,rows));
+
+            memcpy(content, resized.data, resized.total() * resized.elemSize());
+            offset += resized.total() * resized.elemSize();
+        }
     }
-    tensorContent.set_tensor_content(content, contentSize);
+    std::string sContent(content, contentSize);
+    tensorContent.set_allocated_tensor_content(&sContent);
     return StatusCode::OK;
 }
 }

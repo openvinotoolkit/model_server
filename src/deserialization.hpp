@@ -119,15 +119,14 @@ Status deserializePredictRequest(
 
             if(requestInput.dtype() == tensorflow::DataType::DT_STRING){
                 tensorflow::TensorProto tensorContent;
-                convertStringValToTensorContent(requestInput, tensorContent);
+                convertStringValToTensorContent(requestInput, tensorContent, tensorInfo);
                 blob = deserializeTensorProto<TensorProtoDeserializator>(
                     tensorContent, tensorInfo);
-            }else
-            {
-                blob = deserializeTensorProto<TensorProtoDeserializator>(
-                        requestInput, tensorInfo);
-            } 
-            
+                SPDLOG_DEBUG("Request contains binary inputs.");
+            }
+
+            blob = deserializeTensorProto<TensorProtoDeserializator>(
+                    requestInput, tensorInfo);
 
             if (blob == nullptr) {
                 Status status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;

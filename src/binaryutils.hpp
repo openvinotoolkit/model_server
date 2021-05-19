@@ -18,5 +18,5 @@
 #include "tensorinfo.hpp"
 
 namespace ovms {
-StatusCode convertStringValToTensorContent(const tensorflow::TensorProto& stringVal, tensorflow::TensorProto& tensorContent);
+StatusCode convertStringValToTensorContent(const tensorflow::TensorProto& stringVal, tensorflow::TensorProto& tensorContent, const std::shared_ptr<TensorInfo>& tensorInfo);
 }
