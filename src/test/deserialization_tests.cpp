@@ -187,7 +187,7 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobExc
     EXPECT_CALL(mockTPobject, deserializeTensorProto(_, _))
         .Times(1)
         .WillRepeatedly(
-            Throw(InferenceEngine::details::InferenceEngineException(__FILE__, __LINE__)));
+            Throw(InferenceEngine::GeneralError("")));
     auto status =
         deserializePredictRequest<MockTensorProtoDeserializator>(
             request, tensorMap, inferRequest);

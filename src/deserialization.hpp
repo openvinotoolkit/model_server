@@ -126,10 +126,10 @@ Status deserializePredictRequest(
             }
             inferRequest.SetBlob(tensorInfo->getName(), blob);
         }
-        // OV implementation the InferenceEngineException is not
+        // OV implementation the InferenceEngine::Exception is not
         // a base class for all other exceptions thrown from OV.
         // OV can throw exceptions derived from std::logic_error.
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::Exception& e) {
         Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
         SPDLOG_DEBUG("{}: {}", status.string(), e.what());
         return status;

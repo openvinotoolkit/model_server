@@ -79,7 +79,7 @@ Status serializePredictResponse(
         InferenceEngine::Blob::Ptr blob;
         try {
             blob = inferRequest.GetBlob(networkOutput->getName());
-        } catch (const InferenceEngine::details::InferenceEngineException& e) {
+        } catch (const InferenceEngine::Exception& e) {
             Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
             SPDLOG_ERROR("{}: {}", status.string(), e.what());
             return status;
