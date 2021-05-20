@@ -68,15 +68,16 @@ Status PipelineDefinition::validate(ModelManager& manager) {
     if (!validationResult.ok()) {
         return validationResult;
     }
-
-    validationResult = getInputsInfo(inputsInfo, manager);
+    std::unique_lock lock(metadataMtx);
+    validationResult = updateInputsInfo(manager);
     if (!validationResult.ok()) {
         return validationResult;
     }
-    validationResult = getOutputsInfo(outputsInfo, manager);
+    validationResult = updateOutputsInfo(manager);
     if (!validationResult.ok()) {
         return validationResult;
     }
+    lock.unlock();
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of pipeline: {}", getName());
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Pipeline: {} inputs: {}", getName(), getTensorMapString(inputsInfo));
@@ -982,18 +983,22 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
     return StatusCode::OK;
 }
 
-const tensor_map_t& PipelineDefinition::getInputsInfo() const {
-    return inputsInfo;
+const tensor_map_t PipelineDefinition::getInputsInfo() const {
+    std::shared_lock lock(metadataMtx);
+    tensor_map_t copy = inputsInfo;
+    return std::move(copy);
 }
 
-const tensor_map_t& PipelineDefinition::getOutputsInfo() const {
-    return outputsInfo;
+const tensor_map_t PipelineDefinition::getOutputsInfo() const {
+    std::shared_lock lock(metadataMtx);
+    tensor_map_t copy = outputsInfo;
+    return std::move(copy);
 }
 
-Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelManager& manager) const {
+Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
     // Assumptions: this can only be called on available pipeline definition.
     // Add check if available when pipeline status will be implemented.
-
+    inputsInfo.clear();
     static const auto byName = [](const std::string& name) {
         return [name](const NodeInfo& nodeInfo) {
             return nodeInfo.nodeName == name;
@@ -1115,9 +1120,10 @@ Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeIn
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::getOutputsInfo(tensor_map_t& outputsInfo, const ModelManager& manager) const {
+Status PipelineDefinition::updateOutputsInfo(const ModelManager& manager) {
     // Assumptions: this can only be called on available pipeline definition.
     // Add check if available when pipeline status will be implemented.
+    outputsInfo.clear();
     static const auto byName = [](const std::string& name) {
         return [name](const NodeInfo& nodeInfo) {
             return nodeInfo.nodeName == name;

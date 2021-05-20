@@ -79,6 +79,7 @@ protected:
     tensor_map_t outputsInfo;
 
 private:
+    mutable std::shared_mutex metadataMtx;
     std::atomic<uint64_t> requestsHandlesCounter = 0;
     std::shared_mutex loadMtx;
 
@@ -139,12 +140,12 @@ public:
     void resetSubscriptions(ModelManager& manager);
 
 protected:
-    virtual Status getInputsInfo(tensor_map_t& inputsInfo, const ModelManager& manager) const;
-    virtual Status getOutputsInfo(tensor_map_t& outputsInfo, const ModelManager& manager) const;
+    virtual Status updateInputsInfo(const ModelManager& manager);
+    virtual Status updateOutputsInfo(const ModelManager& manager);
 
 public:
-    const tensor_map_t& getInputsInfo() const;
-    const tensor_map_t& getOutputsInfo() const;
+    const tensor_map_t getInputsInfo() const;
+    const tensor_map_t getOutputsInfo() const;
 
 private:
     static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName);
