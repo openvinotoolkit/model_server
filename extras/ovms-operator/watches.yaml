@@ -3,4 +3,4 @@
   version: v1alpha1
   kind: Ovms
   chart: helm-charts/ovms
-# +kubebuilder:scaffold:watch
+#+kubebuilder:scaffold:watch

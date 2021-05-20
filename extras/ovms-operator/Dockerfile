@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-FROM quay.io/operator-framework/helm-operator:v1.7
+FROM quay.io/operator-framework/helm-operator:v1.7.2
 LABEL "Description"="OpenVINO(TM) Model Server Operator"
 LABEL "Vendor"="Intel Corporation"
 ENV HOME=/opt/helm
