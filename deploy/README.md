@@ -246,10 +246,15 @@ release "ovms-app" uninstalled
 | config_path | Starts OVMS using the config file mounted from the node local path or the k8s persistent volume | Use it together with models_host_path or models_claim_name and place the config file in configured storage path | - |
 | grpc_port      | service port for gRPC interface |  | 8080 |
 | grpc_port      | service port for REST API interface |  | 8081 |
+| file_system_poll_wait_seconds      | Time interval in seconds between new version detection. 0 disables the version updates |  | 1 |
 | model_name      | model name, start OVMS with a single model, excluding with config_configmap_name and config_path parameter |  | - |
 | model_path      | model path, start OVMS with a single model, excluding with config_configmap_name and config_path parameter |  | - |
 | target_device      | Target device to run inference operations | Non CPU device require the device plugin to be deployed | CPU |
+| stateful      | If set to any non empty value, enables stateful model execution | Model must be stateful | Stateless model execution |
 | nireq      | Size of inference queue  |  | set automatically by OpenVINO|
+| batch_size      | Change the model batch size  |  | defined by the model attributes |
+| shape      | Change the model input shape  |  | defined by the model attributes |
+| model_version_policy      | Set the model version policy  |  | {\"latest\": { \"num_versions\":1 }} The latest version is served |
 | plugin_config      | Device plugin configuration used for performance tuning  |  | {\"CPU_THROUGHPUT_STREAMS\":\"CPU_THROUGHPUT_AUTO\"}|
 | gcp_creds_secret_name      | k8s secret resource including GCP credentials, use it with google storage for models | Secret should be created with GCP credentials json file | - |
 | aws_access_key_id      | S3 storage access key id, use it with S3 storage for models |  | - |
@@ -261,6 +266,8 @@ release "ovms-app" uninstalled
 | log_level      | OVMS log level, one of ERROR,INFO,DEBUG|  |  INFO |
 | service_type      | k8s service type |  | LoadBalancer |
 | resources      | compute resource limits |  | All CPU and memory on the node |
+| node_selector      | target node label condition |  | All available nodes |
+| annotations      | defined annotations to be set in the pods |  | none |
 | security_context     | OVMS security context |  | 5000:5000 |
 | models_host_path      | mounts node local path in container as /models folder | Path should be created on all nodes and populated with the data | - |
 | models_volume_claim      | mounts k8s persistent volume claim in the container as /models | Persistent Volume Claim should be create in the same namespace and populated with the data | - |
