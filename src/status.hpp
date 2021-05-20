@@ -242,6 +242,9 @@ enum class StatusCode {
     NODE_LIBRARY_METADATA_FAILED,
     NODE_LIBRARY_OUTPUT_MISSING_NAME,
 
+    // Binary inputs
+    IMAGE_PARSING_FAILED,
+
     // Model control API
     OK_NOT_RELOADED, /*!< Operation succeeded but no config reload was needed */
     OK_RELOADED,     /*!< Operation succeeded but no config reload was needed */

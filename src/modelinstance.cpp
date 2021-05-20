@@ -848,7 +848,7 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         if (!status.ok())
             return status;
 
-        if (requestInput.dtype() == tensorflow::DataType::DT_STRING){
+        if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
             continue;
         }
 

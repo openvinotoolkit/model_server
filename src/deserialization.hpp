@@ -27,9 +27,9 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "binaryutils.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
-#include "binaryutils.hpp"
 
 namespace ovms {
 
@@ -117,16 +117,18 @@ Status deserializePredictRequest(
             auto& requestInput = requestInputItr->second;
             InferenceEngine::Blob::Ptr blob;
 
-            if(requestInput.dtype() == tensorflow::DataType::DT_STRING){
-                tensorflow::TensorProto tensorContent;
-                convertStringValToTensorContent(requestInput, tensorContent, tensorInfo);
-                blob = deserializeTensorProto<TensorProtoDeserializator>(
-                    tensorContent, tensorInfo);
+            if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
                 SPDLOG_DEBUG("Request contains binary inputs.");
-            }
-
-            blob = deserializeTensorProto<TensorProtoDeserializator>(
+                Status status = convertStringValToBlob(requestInput, &blob, tensorInfo);
+                if(status != StatusCode::OK)
+                {
+                    SPDLOG_DEBUG("Binary inputs conversion failed.");
+                    return status;
+                }
+            } else {
+                blob = deserializeTensorProto<TensorProtoDeserializator>(
                     requestInput, tensorInfo);
+            }
 
             if (blob == nullptr) {
                 Status status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;

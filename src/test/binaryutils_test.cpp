@@ -16,39 +16,39 @@
 
 #include <fstream>
 
-#include "gtest/gtest.h"
 #include "../binaryutils.hpp"
+#include "gtest/gtest.h"
 
 using namespace ovms;
 
 namespace {
-    class BinaryUtilsTest : public ::testing::Test {};
-    // TEST_F(BinaryUtilsTest, tensorWithNoStringVal) {
-    //     tensorflow::TensorProto stringVal;
-    //     tensorflow::TensorProto tensorContent;
-    //     auto tensorInfo = std::make_shared<TensorInfo>();
-    //     auto status = convertStringValToTensorContent(stringVal, tensorContent, tensorInfo);
-    //     EXPECT_EQ(status, ovms::StatusCode::OK);
-    // }
+class BinaryUtilsTest : public ::testing::Test {};
+// TEST_F(BinaryUtilsTest, tensorWithNoStringVal) {
+//     tensorflow::TensorProto stringVal;
+//     tensorflow::TensorProto tensorContent;
+//     auto tensorInfo = std::make_shared<TensorInfo>();
+//     auto status = convertStringValToTensorContent(stringVal, tensorContent, tensorInfo);
+//     EXPECT_EQ(status, ovms::StatusCode::OK);
+// }
 
-    // TEST_F(BinaryUtilsTest, positive) {
-    //     std::ifstream DataFile("/ovms/example_client/images/bee.jpeg", std::ios::binary);
-    //     DataFile.seekg(0, std::ios::end);
-    //     size_t filesize = (int)DataFile.tellg();
-    //     DataFile.seekg(0);
+// TEST_F(BinaryUtilsTest, positive) {
+//     std::ifstream DataFile("/ovms/example_client/images/bee.jpeg", std::ios::binary);
+//     DataFile.seekg(0, std::ios::end);
+//     size_t filesize = (int)DataFile.tellg();
+//     DataFile.seekg(0);
 
-    //     char* image_bytes = new char[filesize];
-    //     DataFile.read((char*)image_bytes, filesize);
+//     char* image_bytes = new char[filesize];
+//     DataFile.read((char*)image_bytes, filesize);
 
-    //     tensorflow::TensorProto stringVal;
-    //     tensorflow::TensorProto tensorContent;
-    //     stringVal.set_dtype(tensorflow::DataType::DT_STRING);
-    //     stringVal.add_string_val(image_bytes, filesize);
-    //     stringVal.mutable_tensor_shape()->add_dim()->set_size(1);
+//     tensorflow::TensorProto stringVal;
+//     tensorflow::TensorProto tensorContent;
+//     stringVal.set_dtype(tensorflow::DataType::DT_STRING);
+//     stringVal.add_string_val(image_bytes, filesize);
+//     stringVal.mutable_tensor_shape()->add_dim()->set_size(1);
 
-    //     auto tensorInfo = std::make_shared<TensorInfo>();
-    //     auto status = convertStringValToTensorContent(stringVal, tensorContent, tensorInfo);
-    //     delete [] image_bytes;
-    //     EXPECT_EQ(status, ovms::StatusCode::OK);
-    // }
-}
+//     auto tensorInfo = std::make_shared<TensorInfo>();
+//     auto status = convertStringValToTensorContent(stringVal, tensorContent, tensorInfo);
+//     delete [] image_bytes;
+//     EXPECT_EQ(status, ovms::StatusCode::OK);
+// }
+}  // namespace
