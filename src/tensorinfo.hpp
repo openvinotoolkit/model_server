@@ -72,6 +72,7 @@ public:
          * 
          */
     TensorInfo() = default;
+    TensorInfo(const TensorInfo&) = default;
 
     /**
          * @brief Construct a new Tensor Info object

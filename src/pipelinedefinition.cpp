@@ -1033,7 +1033,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                 }
 
                 for (const auto& [alias, realName] : specificDependencyMapping) {
-                    inputsInfo[alias] = instance->getInputsInfo().at(realName);
+                    inputsInfo[alias] = std::make_shared<TensorInfo>(*instance->getInputsInfo().at(realName));
                 }
                 break;
             }
@@ -1049,7 +1049,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                 }
 
                 for (const auto& [alias, realName] : specificDependencyMapping) {
-                    inputsInfo[alias] = info.at(realName);
+                    inputsInfo[alias] = std::make_shared<TensorInfo>(*info.at(realName));
                 }
                 break;
             }
@@ -1073,9 +1073,9 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
     return StatusCode::OK;
 }
 
-std::shared_ptr<TensorInfo> applyGatherShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape, bool isConnectionFromDemultiplexer) {
+std::shared_ptr<TensorInfo> applyGatherShapeForTensorIfNeeded(const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape, bool isConnectionFromDemultiplexer) {
     if (gatherShape.size() == 0) {
-        return tensorInfo;
+        return std::make_shared<TensorInfo>(*tensorInfo);
     }
     shape_t newShape = tensorInfo->getShape();
     if (isConnectionFromDemultiplexer) {
@@ -1099,7 +1099,7 @@ Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo&
     }
     for (const auto& [alias, realName] : specificDependencyMapping) {
         const auto& finalName = dependencyNodeInfo.outputNameAliases.count(alias) > 0 ? dependencyNodeInfo.outputNameAliases.at(alias) : alias;
-        outputsInfo[realName] = applyGatherShapeForTensor(instance->getOutputsInfo().at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
+        outputsInfo[realName] = applyGatherShapeForTensorIfNeeded(instance->getOutputsInfo().at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
     }
     return StatusCode::OK;
 }
@@ -1115,7 +1115,7 @@ Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeIn
     }
     for (const auto& [alias, realName] : specificDependencyMapping) {
         const auto& finalName = dependencyNodeInfo.outputNameAliases.count(alias) > 0 ? dependencyNodeInfo.outputNameAliases.at(alias) : alias;
-        outputsInfo[realName] = applyGatherShapeForTensor(info.at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
+        outputsInfo[realName] = applyGatherShapeForTensorIfNeeded(info.at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
     }
     return StatusCode::OK;
 }
