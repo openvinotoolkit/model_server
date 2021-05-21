@@ -79,7 +79,7 @@ cv::Mat convertStringValToMat(const std::string& stringVal) {
     return cv::imdecode(data_mat, cv::IMREAD_UNCHANGED);
 }
 
-StatusCode convertPrecision(const cv::Mat& src, cv::Mat& dst, const InferenceEngine::Precision requestedPrecision) {
+Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const InferenceEngine::Precision requestedPrecision) {
     int type = getMatTypeFromTensorPrecision(requestedPrecision);
     if (type == -1) {
         return StatusCode::INVALID_PRECISION;
@@ -89,61 +89,75 @@ StatusCode convertPrecision(const cv::Mat& src, cv::Mat& dst, const InferenceEng
     return StatusCode::OK;
 }
 
-StatusCode resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
+Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
     if(tensorInfo->getLayout() == InferenceEngine::Layout::NCHW)
     {
         int cols = tensorInfo->getShape()[3];
         int rows = tensorInfo->getShape()[2];
         cv::resize(src, dst, cv::Size(cols,rows));
+        return StatusCode::OK;
     }
-    else
+    else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC)
     {
         int cols = tensorInfo->getShape()[2];
         int rows = tensorInfo->getShape()[1];
         cv::resize(src, dst, cv::Size(cols,rows));
+        return StatusCode::OK;
     }
 
-    return StatusCode::OK;
+    return StatusCode::UNSUPPORTED_LAYOUT;
 }
 
-Status validateNumberOfShapeDimensions(const std::shared_ptr<TensorInfo>& networkInput,
+Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     const cv::Mat input) {
     // Network and input must have the same number of shape dimensions. 
-    if ((unsigned int)(input.channels()) != networkInput->getShape()[1]) {
-        SPDLOG_DEBUG("Binary sent to input: {} has invalid number of shape dimensions. Expected: {} Actual: {}", networkInput->getMappedName(),networkInput->getShape()[1], input.dims);
+    if ((unsigned int)(input.channels()) != tensorInfo->getShape()[1]) {
+        SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(),tensorInfo->getShape()[1], input.dims);
         return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
     }
     return StatusCode::OK;
 }
 
-const bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& networkInput,
+const bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     const int batchSize) {
-    if (static_cast<size_t>(batchSize) != networkInput->getShape()[0])
+    if (static_cast<size_t>(batchSize) != tensorInfo->getShape()[0])
         return true;
     return false;
 }
 
-const Status validate(const std::shared_ptr<TensorInfo>& networkInput,
+const Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo,
     const cv::Mat input) {
-    auto status = validateNumberOfShapeDimensions(networkInput, input);
+    auto status = validateNumberOfChannels(tensorInfo, input);
     if (!status.ok())
         return status;
 
     return StatusCode::OK;
 }
 
-Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+const Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
+    const tensorflow::TensorProto& src) {
+    if(tensorInfo->getLayout() == InferenceEngine::Layout::NCHW ||
+       tensorInfo->getLayout() == InferenceEngine::Layout::NHWC)
+    {
+        return StatusCode::OK;
+    }
+
     if (checkBatchSizeMismatch(tensorInfo, src.string_val_size())){
         SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[0],src.string_val_size());
-        return Status(StatusCode::INVALID_BATCH_SIZE);
+        return Status(StatusCode::UNSUPPORTED_LAYOUT);
     }
+
+    return StatusCode::OK;
+}
+
+Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
 
     for (int i = 0; i < src.string_val_size(); i++) {
         cv::Mat image = convertStringValToMat(src.string_val(i));
         if (image.data == NULL)
             return StatusCode::IMAGE_PARSING_FAILED;
                     
-        auto status = validate(tensorInfo, image);
+        auto status = validateInput(tensorInfo, image);
         if (status != StatusCode::OK) {
             return status;
         }
@@ -158,11 +172,17 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
 
             cv::Mat imageResized;
             resizeMat(imagePrecisionConverted, imageResized, tensorInfo);
+            if (status != StatusCode::OK) {
+                return status;
+            }
 
             images.push_back(imageResized);
         } else {
             cv::Mat imageResized;
             resizeMat(image, imageResized, tensorInfo);
+            if (status != StatusCode::OK) {
+                return status;
+            }
             images.push_back(imageResized);
         }
     }
@@ -221,10 +241,14 @@ InferenceEngine::Blob::Ptr convertMatsToBlob(std::vector<cv::Mat>& images, const
 }
 
 Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr* blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    auto status = validateTensor(tensorInfo, src);
+    if (status != StatusCode::OK) {
+        return status;
+    }
+    
     std::vector<cv::Mat> images;
 
-    auto status = convertTensorToMatsMatchingTensorInfo(src, images, tensorInfo);
-
+    status = convertTensorToMatsMatchingTensorInfo(src, images, tensorInfo);
     if (status != StatusCode::OK) {
         return status;
     }
