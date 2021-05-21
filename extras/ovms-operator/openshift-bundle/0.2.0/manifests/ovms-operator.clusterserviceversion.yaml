@@ -26,7 +26,7 @@ metadata:
             "model_name": "resnet",
             "model_path": "gs://ovms-public-eu/resnet50-binary",
             "models_host_path": "",
-            "model_version_policy": "{\\\"latest\\\": { \\\"num_versions\\\":1 }}"
+            "model_version_policy": "{\\\"latest\\\": { \\\"num_versions\\\":1 }}",
             "models_volume_claim": "",
             "nireq": "",
             "plugin_config": "{\\\"CPU_THROUGHPUT_STREAMS\\\":\\\"1\\\"}",
