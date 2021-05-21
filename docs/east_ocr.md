@@ -184,15 +184,15 @@ Output: name[text_coordinates]
     numpy => shape[(9, 1, 4)] data[int32]
 Output: name[texts]
     numpy => shape[(9, 25, 1, 37)] data[float32]
-pp___er_ior_m__a_n_c____d
-g______d___a_nn__ss_____k
-s______ee__r_v___e_____rr
-mm_______o___dd___e_____l
-o_____p_ee_n_vv_inn_____o
-pp____iipp__elliin______e
-2_______o_____2_________1
-ii____nn____tt___e_____ll
-rr____o_ttaa_tiio__n____n
+periormancd
+gdansk
+server
+model
+openvino
+pipeline
+2o21
+intel
+rotationn
 Output: name[confidence_levels]
     numpy => shape[(9, 1, 1)] data[float32]
 Output: name[text_images]
@@ -208,14 +208,17 @@ if the image was analyzed correctly.
 
 
 The custom node generates the following text images retrieved from the original input to CRNN model:
-| #| Image | CRNN Recognition |                     
-| --- | --- | --- |                                                      
-| text 0 |![text0](../src/custom_nodes/east_ocr/demo_images/text_images_0.jpg)| pp___er_ior_m__a_n_c____d |
-| text 1 |![text1](../src/custom_nodes/east_ocr/demo_images/text_images_1.jpg)| g______d___a_nn__ss_____k |
-| text 2 |![text2](../src/custom_nodes/east_ocr/demo_images/text_images_2.jpg)| s______ee__r_v___e_____rr |
-| text 3 |![text3](../src/custom_nodes/east_ocr/demo_images/text_images_3.jpg)| mm_______o___dd___e_____l |
-| text 4 |![text4](../src/custom_nodes/east_ocr/demo_images/text_images_4.jpg)| o_____p_ee_n_vv_inn_____o |
-| text 5 |![text5](../src/custom_nodes/east_ocr/demo_images/text_images_5.jpg)| pp____iipp__elliin______e |
-| text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_6.jpg)| 2_______o_____2_________1 |
-| text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_7.jpg)| ii____nn____tt___e_____ll |
-| text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_8.jpg)| rr____o_ttaa_tiio__n____n |
+| #| Image | CRNN Recognition | Decoded Word |                     
+| --- | --- | --- | --- |
+| text 0 |![text0](../src/custom_nodes/east_ocr/demo_images/text_images_0.jpg)| pp___er_ior_m__a_n_c____d | periormancd |
+| text 1 |![text1](../src/custom_nodes/east_ocr/demo_images/text_images_1.jpg)| g______d___a_nn__ss_____k | gdansk |
+| text 2 |![text2](../src/custom_nodes/east_ocr/demo_images/text_images_2.jpg)| s______ee__r_v___e_____rr | server |
+| text 3 |![text3](../src/custom_nodes/east_ocr/demo_images/text_images_3.jpg)| mm_______o___dd___e_____l | model |
+| text 4 |![text4](../src/custom_nodes/east_ocr/demo_images/text_images_4.jpg)| o_____p_ee_n_vv_inn_____o | openvino |
+| text 5 |![text5](../src/custom_nodes/east_ocr/demo_images/text_images_5.jpg)| pp____iipp__elliin______e | pipeline |
+| text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_6.jpg)| 2_______o_____2_________1 | 2o21 |
+| text 7 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_7.jpg)| ii____nn____tt___e_____ll | intel |
+| text 8 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_8.jpg)| rr____o_ttaa_tiio__n____n | rotationn |
+
+## Accurracy
+Please note that it is possible to swap the models included in DAG with your own to adjust pipeline accuracy for various scenarios and datasets.
