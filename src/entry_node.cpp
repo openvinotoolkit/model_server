@@ -64,18 +64,18 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
     for (const auto& node : this->next) {
         for (const auto& pair : node.get().getMappingByDependency(*this)) {
             const auto& output_name = pair.first;
-            if (outputs.count(output_name) == 1) {
+            if (outputs.find(output_name) != outputs.end()) {
                 continue;
             }
-
-            if (request->inputs().count(output_name) == 0) {
+            auto it = request->inputs().find(output_name);
+            if (it == request->inputs().end()) {
                 std::stringstream ss;
                 ss << "Required input: " << output_name;
                 const std::string details = ss.str();
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Missing input with specific name: {}", getName(), details);
                 return Status(StatusCode::INVALID_MISSING_INPUT, details);
             }
-            const auto& tensor_proto = request->inputs().at(output_name);
+            const auto& tensor_proto = it->second;
             InferenceEngine::Blob::Ptr blob;
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Deserializing input: {}", getName(), output_name);
             auto status = deserialize(tensor_proto, blob);
@@ -124,21 +124,21 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
             description.setPrecision(InferenceEngine::Precision::FP32);
             blob = InferenceEngine::make_shared_blob<float>(description, (float*)proto.tensor_content().data());
             break;
-        case tensorflow::DataType::DT_UINT8:
-            description.setPrecision(InferenceEngine::Precision::U8);
-            blob = InferenceEngine::make_shared_blob<uint8_t>(description, (uint8_t*)proto.tensor_content().data());
+        case tensorflow::DataType::DT_INT32:
+            description.setPrecision(InferenceEngine::Precision::I32);
+            blob = InferenceEngine::make_shared_blob<int32_t>(description, (int32_t*)proto.tensor_content().data());
             break;
         case tensorflow::DataType::DT_INT8:
             description.setPrecision(InferenceEngine::Precision::I8);
             blob = InferenceEngine::make_shared_blob<int8_t>(description, (int8_t*)proto.tensor_content().data());
             break;
+        case tensorflow::DataType::DT_UINT8:
+            description.setPrecision(InferenceEngine::Precision::U8);
+            blob = InferenceEngine::make_shared_blob<uint8_t>(description, (uint8_t*)proto.tensor_content().data());
+            break;
         case tensorflow::DataType::DT_INT16:
             description.setPrecision(InferenceEngine::Precision::I16);
             blob = InferenceEngine::make_shared_blob<int16_t>(description, (int16_t*)proto.tensor_content().data());
-            break;
-        case tensorflow::DataType::DT_INT32:
-            description.setPrecision(InferenceEngine::Precision::I32);
-            blob = InferenceEngine::make_shared_blob<int32_t>(description, (int32_t*)proto.tensor_content().data());
             break;
         case tensorflow::DataType::DT_HALF:
         case tensorflow::DataType::DT_UINT16:
@@ -171,14 +171,14 @@ Status EntryNode::createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, con
     // and reuse memory from original blob since its memory is kept for whole duration of predict request
     if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::FP32) {
         dividedBlob = InferenceEngine::make_shared_blob<float>(dividedBlobDesc, (float*)blob->buffer() + i * step / sizeof(float));
-    } else if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::U8) {
-        dividedBlob = InferenceEngine::make_shared_blob<uint8_t>(dividedBlobDesc, (uint8_t*)blob->buffer() + i * step / sizeof(uint8_t));
-    } else if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::I8) {
-        dividedBlob = InferenceEngine::make_shared_blob<int8_t>(dividedBlobDesc, (int8_t*)blob->buffer() + i * step / sizeof(int8_t));
-    } else if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::I16) {
-        dividedBlob = InferenceEngine::make_shared_blob<int16_t>(dividedBlobDesc, (int16_t*)blob->buffer() + i * step / sizeof(int16_t));
     } else if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::I32) {
         dividedBlob = InferenceEngine::make_shared_blob<int32_t>(dividedBlobDesc, (int32_t*)blob->buffer() + i * step / sizeof(int32_t));
+    } else if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::I8) {
+        dividedBlob = InferenceEngine::make_shared_blob<int8_t>(dividedBlobDesc, (int8_t*)blob->buffer() + i * step / sizeof(int8_t));
+    } else if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::U8) {
+        dividedBlob = InferenceEngine::make_shared_blob<uint8_t>(dividedBlobDesc, (uint8_t*)blob->buffer() + i * step / sizeof(uint8_t));
+    } else if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::I16) {
+        dividedBlob = InferenceEngine::make_shared_blob<int16_t>(dividedBlobDesc, (int16_t*)blob->buffer() + i * step / sizeof(int16_t));
     } else {
         return Node::createShardedBlob(dividedBlob, dividedBlobDesc, blob, i, step, metadata, blobName);
     }

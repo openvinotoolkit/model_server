@@ -24,7 +24,7 @@ namespace ovms {
 
 bool PipelineFactory::definitionExists(const std::string& name) const {
     std::shared_lock lock(definitionsMtx);
-    return definitions.count(name) == 1;
+    return definitions.find(name) != definitions.end();
 }
 
 PipelineDefinition* PipelineFactory::findDefinitionByName(const std::string& name) const {

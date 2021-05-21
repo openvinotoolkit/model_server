@@ -18,7 +18,7 @@
 
 namespace ovms {
 
-const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
+const std::unordered_map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::OK, ""},
 
     {StatusCode::PATH_INVALID, "The provided base path is invalid or doesn't exists"},
@@ -191,7 +191,7 @@ const std::map<const StatusCode, const std::string> Status::statusMessageMap = {
     {StatusCode::CUSTOM_LOADER_ERROR, "Custom Loader Generic / Unknown Error"},
 };
 
-const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
+const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
     {StatusCode::OK, grpc::StatusCode::OK},
 
     {StatusCode::PATH_INVALID, grpc::StatusCode::INTERNAL},
@@ -258,7 +258,7 @@ const std::map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
     {StatusCode::INTERNAL_ERROR, grpc::StatusCode::INTERNAL},
 };
 
-const std::map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap = {
+const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap = {
     {StatusCode::OK, net_http::HTTPStatusCode::OK},
     {StatusCode::OK_RELOADED, net_http::HTTPStatusCode::CREATED},
     {StatusCode::OK_NOT_RELOADED, net_http::HTTPStatusCode::OK},

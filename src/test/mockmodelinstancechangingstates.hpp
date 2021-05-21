@@ -42,8 +42,9 @@ public:
         status.setAvailable();
         return ovms::StatusCode::OK;
     }
-    void unloadModel(bool isPermanent = true) override {
-        status.setUnloading();
+    void unloadModel(bool isPermanent = true, bool isError = false) override {
+        ovms::ModelVersionStatusErrorCode errorStatus = isError ? ovms::ModelVersionStatusErrorCode::UNKNOWN : ovms::ModelVersionStatusErrorCode::OK;
+        status.setUnloading(errorStatus);
         status.setEnd();
     }
 };

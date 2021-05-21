@@ -104,12 +104,12 @@ Status StatefulModelInstance::reloadModel(const ModelConfig& config, const Dynam
     return StatusCode::OK;
 }
 
-void StatefulModelInstance::unloadModel(bool isPermanent) {
+void StatefulModelInstance::unloadModel(bool isPermanent, bool isError) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     if (isPermanent && autoCleanupEnabled) {
         globalSequencesViewer->unregisterFromCleanup(getName(), getVersion());
     }
-    ModelInstance::unloadModel(isPermanent);
+    ModelInstance::unloadModel(isPermanent, isError);
     sequenceManager.reset();
 }
 

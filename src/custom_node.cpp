@@ -70,7 +70,7 @@ Status CustomNode::fetchResults(BlobMap& outputs, session_key_t sessionKey) {
     for (const auto& node : this->next) {
         for (const auto& pair : node.get().getMappingByDependency(*this)) {
             const auto& output_name = pair.first;
-            if (outputs.count(output_name) == 1) {
+            if (outputs.find(output_name) != outputs.end()) {
                 continue;
             }
             const auto& realOutputName = this->getRealOutputName(output_name);

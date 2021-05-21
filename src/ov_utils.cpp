@@ -31,23 +31,23 @@ Status createSharedBlob(InferenceEngine::Blob::Ptr& destinationBlob, InferenceEn
         case InferenceEngine::Precision::FP32:
             destinationBlob = InferenceEngine::make_shared_blob<float>(tensorDesc);
             break;
-        case InferenceEngine::Precision::FP16:
-            destinationBlob = InferenceEngine::make_shared_blob<uint16_t>(tensorDesc);
+        case InferenceEngine::Precision::I32:
+            destinationBlob = InferenceEngine::make_shared_blob<int32_t>(tensorDesc);
+            break;
+        case InferenceEngine::Precision::I8:
+            destinationBlob = InferenceEngine::make_shared_blob<int8_t>(tensorDesc);
             break;
         case InferenceEngine::Precision::U8:
             destinationBlob = InferenceEngine::make_shared_blob<uint8_t>(tensorDesc);
             break;
-        case InferenceEngine::Precision::I8:
-            destinationBlob = InferenceEngine::make_shared_blob<int8_t>(tensorDesc);
+        case InferenceEngine::Precision::FP16:
+            destinationBlob = InferenceEngine::make_shared_blob<uint16_t>(tensorDesc);
             break;
         case InferenceEngine::Precision::I16:
             destinationBlob = InferenceEngine::make_shared_blob<int16_t>(tensorDesc);
             break;
         case InferenceEngine::Precision::U16:
             destinationBlob = InferenceEngine::make_shared_blob<uint16_t>(tensorDesc);
-            break;
-        case InferenceEngine::Precision::I32:
-            destinationBlob = InferenceEngine::make_shared_blob<int32_t>(tensorDesc);
             break;
         case InferenceEngine::Precision::I64:
         case InferenceEngine::Precision::MIXED:

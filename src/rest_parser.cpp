@@ -357,20 +357,20 @@ bool RestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Value
     switch (proto.dtype()) {
     case tensorflow::DataType::DT_FLOAT:
         return addToTensorContent<float>(proto, value);
-    case tensorflow::DataType::DT_HALF:
-        return addToHalfVal(proto, value);
-    case tensorflow::DataType::DT_DOUBLE:
-        return addToTensorContent<double>(proto, value);
     case tensorflow::DataType::DT_INT32:
         return addToTensorContent<int32_t>(proto, value);
-    case tensorflow::DataType::DT_INT16:
-        return addToTensorContent<int16_t>(proto, value);
-    case tensorflow::DataType::DT_UINT16:
-        return addToIntVal(proto, value);
     case tensorflow::DataType::DT_INT8:
         return addToTensorContent<int8_t>(proto, value);
     case tensorflow::DataType::DT_UINT8:
         return addToTensorContent<uint8_t>(proto, value);
+    case tensorflow::DataType::DT_DOUBLE:
+        return addToTensorContent<double>(proto, value);
+    case tensorflow::DataType::DT_HALF:
+        return addToHalfVal(proto, value);
+    case tensorflow::DataType::DT_INT16:
+        return addToTensorContent<int16_t>(proto, value);
+    case tensorflow::DataType::DT_UINT16:
+        return addToIntVal(proto, value);
     case tensorflow::DataType::DT_INT64:
         return addToTensorContent<int64_t>(proto, value);
     case tensorflow::DataType::DT_UINT32:

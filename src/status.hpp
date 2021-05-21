@@ -15,8 +15,8 @@
 //*****************************************************************************
 #pragma once
 
-#include <map>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 #include <grpcpp/server_context.h>
@@ -253,9 +253,9 @@ class Status {
     StatusCode code;
     std::string message;
 
-    static const std::map<const StatusCode, const std::string> statusMessageMap;
-    static const std::map<const StatusCode, grpc::StatusCode> grpcStatusMap;
-    static const std::map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap;
+    static const std::unordered_map<const StatusCode, const std::string> statusMessageMap;
+    static const std::unordered_map<const StatusCode, grpc::StatusCode> grpcStatusMap;
+    static const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap;
 
     void appendDetails(const std::string& details) {
         this->message += " - " + details;
