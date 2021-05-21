@@ -1,0 +1,12 @@
+apiVersion: "v1"
+kind: "ImageStream"
+metadata:
+  name: "openvino-toolkit"
+  annotations:
+   opendatahub.io/notebook-image-desc: >-
+      Jupyter notebook image with OpenVINO Toolkit
+      and dependencies to start experimenting with advanced AI/ML notebooks.
+    opendatahub.io/notebook-image-name: OpenVINO Toolkit
+    opendatahub.io/notebook-image-url: 'https://github.com/openvinotoolkit/openvino'
+spec:
+  dockerImageRepository: "{{ .Values.image }}"
