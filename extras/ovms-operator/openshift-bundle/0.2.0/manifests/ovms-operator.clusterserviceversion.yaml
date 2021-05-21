@@ -44,6 +44,16 @@ metadata:
             "shape": "",
             "target_device": "CPU"
           }
+        },
+        {
+          "apiVersion": "intel.com/v1alpha1",
+          "kind": "OVImageStream",
+          "metadata": {
+            "name": "ovimagestream-sample"
+          },
+          "spec": {
+            "image_name": "docker.io/openvino/ubuntu20-dev:latest"
+          }
         }
       ]
     capabilities: Basic Install
@@ -99,6 +109,12 @@ spec:
           verbs:
           - '*'
         - apiGroups:
+            - ""
+          resources:
+            - imagestreams
+          verbs:
+            - '*'
+        - apiGroups:
           - ""
           resources:
           - events
@@ -110,6 +126,9 @@ spec:
           - ovms
           - ovms/status
           - ovms/finalizers
+          - ovimagestreams
+          - ovimagestreams/status
+          - ovimagestreams/finalizers
           verbs:
           - create
           - delete
