@@ -849,6 +849,7 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
             return status;
 
         if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
+            // binary inputs will be validated during conversion to blob
             continue;
         }
 
