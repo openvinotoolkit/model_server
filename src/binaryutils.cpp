@@ -110,16 +110,30 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
 
 Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     const cv::Mat input) {
-    // Network and input must have the same number of shape dimensions. 
-    if ((unsigned int)(input.channels()) != tensorInfo->getShape()[1]) {
-        SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(),tensorInfo->getShape()[1], input.dims);
-        return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+    // Network and input must have the same number of shape dimensions.
+    if(tensorInfo->getLayout() == InferenceEngine::Layout::NCHW)
+    {
+        if ((unsigned int)(input.channels()) != tensorInfo->getShape()[1]) {
+            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(),tensorInfo->getShape()[1], input.dims);
+            return StatusCode::INVALID_NO_OF_CHANNELS;
+        }
+    }
+    else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC)
+    {
+        if ((unsigned int)(input.channels()) != tensorInfo->getShape()[3]) {
+            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(),tensorInfo->getShape()[3], input.dims);
+            return StatusCode::INVALID_NO_OF_CHANNELS;
+        }
+    }
+    else{
+        return StatusCode::UNSUPPORTED_LAYOUT;
     }
     return StatusCode::OK;
 }
 
 const bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     const int batchSize) {
+    SPDLOG_DEBUG("BATCH SIZE: {}", tensorInfo->getShape()[0]);
     if (static_cast<size_t>(batchSize) != tensorInfo->getShape()[0])
         return true;
     return false;
@@ -136,15 +150,15 @@ const Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo,
 
 const Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     const tensorflow::TensorProto& src) {
-    if(tensorInfo->getLayout() == InferenceEngine::Layout::NCHW ||
-       tensorInfo->getLayout() == InferenceEngine::Layout::NHWC)
+    if(tensorInfo->getLayout() != InferenceEngine::Layout::NCHW &&
+       tensorInfo->getLayout() != InferenceEngine::Layout::NHWC)
     {
-        return StatusCode::OK;
+        return StatusCode::UNSUPPORTED_LAYOUT;
     }
 
     if (checkBatchSizeMismatch(tensorInfo, src.string_val_size())){
         SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[0],src.string_val_size());
-        return Status(StatusCode::UNSUPPORTED_LAYOUT);
+        return StatusCode::UNSUPPORTED_LAYOUT;
     }
 
     return StatusCode::OK;

@@ -23,13 +23,16 @@ using namespace ovms;
 
 namespace {
 class BinaryUtilsTest : public ::testing::Test {};
-// TEST_F(BinaryUtilsTest, tensorWithNoStringVal) {
-//     tensorflow::TensorProto stringVal;
-//     tensorflow::TensorProto tensorContent;
-//     auto tensorInfo = std::make_shared<TensorInfo>();
-//     auto status = convertStringValToTensorContent(stringVal, tensorContent, tensorInfo);
-//     EXPECT_EQ(status, ovms::StatusCode::OK);
-// }
+//convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr* blob, const std::shared_ptr<TensorInfo>& tensorInfo)
+
+TEST_F(BinaryUtilsTest, tensorWithNoStringVal) {
+    tensorflow::TensorProto stringVal;
+    InferenceEngine::Blob::Ptr blob;
+    auto tensorInfo = std::make_shared<TensorInfo>();
+    tensorInfo->setShape({1,1,1,1});
+    auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+}
 
 // TEST_F(BinaryUtilsTest, positive) {
 //     std::ifstream DataFile("/ovms/example_client/images/bee.jpeg", std::ios::binary);
