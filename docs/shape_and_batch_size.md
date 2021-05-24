@@ -6,6 +6,9 @@ It accepts also a value `auto` - this special phrase make the served model to se
 - Each time the input data change the batch size, the model is reloaded. It might have extra response delay for the first request.
 This feature is useful for sequential inference requests of the same batch size.
 
+*Note:* In case of frequent batch size changes in predict requests consider using [demultiplexing feature](./demultiplexing.md#dynamic-batch-handling-with-demultiplexing) from [Directed Acyclic Graph Scheduler](./dag_scheduler.md) which is more
+performant in such situations.
+
 - OpenVINO&trade; Model Server determines the batch size based on the size of the first dimension in the first input.
 For example with the input shape (1, 3, 225, 225), the batch size is set to 1. With input shape (8, 3, 225, 225) the batch size is set to 8.
 

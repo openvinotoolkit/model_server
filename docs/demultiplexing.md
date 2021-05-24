@@ -1,9 +1,9 @@
 # Demultiplexing in Directed Acyclic Graph Scheduler
 
 ## Pipeline branching
-Directed Acyclic Graph Scheduler allows creating pipelines with optional parameter `demultiply_count: N` which adds ability to any node (`DL model` and `custom`) to slice outputs into `N` separate sub outputs and branch pipeline execution into `N` sub pipelines. Following nodes will be executed by event loop `N` times independently from each other and results will be gathered and packed into one output just before sending a response. Additionally `gather_from_node: <node_name>` parameter can be used to specify gathering at any point in Directed Acyclic Graph.
+Directed Acyclic Graph Scheduler allows creating pipelines with optional parameter `demultiply_count: N` which adds ability to any node to slice outputs into `N` separate sub outputs and branch pipeline execution into `N` sub pipelines. Following nodes will be executed by event loop `N` times independently from each other and results will be gathered and packed into one output just before sending a response. Additionally `gather_from_node: <node_name>` parameter can be used to specify gathering at any point in Directed Acyclic Graph.
 
-## Basic demultiplexer example and metadata explaination
+## Basic demultiplexer example and metadata explanation
 This example contains 2 consecutive models:
 - Model A accepts one input named `input` with shape `(1,224,224)`, layout `NHW` and floating point precision (later referred as `(1,224,224) FP32`) and produces 2 outputs: `output_A (3,1,100,100) FP32` and `output_B (3,1,40,130) FP32`. Since this model is configured as demultiplexer, the first dimension is very important - it must be equal to `demultiply_count` parameter specified in config.json configuration file. This allows scheduler to split all outputs into smaller chunks (so called `demultiplexing` in diagram below) and spawn new pipeline branches.
 - Model B accepts 2 inputs: `input_A (1,100,100) FP32` and `input_B (1,40,130) FP32`. Please note how metadata must be matched with previous model output after demultiplication (with first dimension removed after slicing). Since in most cases it is not possible to match metadata, OpenVINO&trade; Model Server allows creating custom nodes to perform output postprocessing ([custom node development](./custom_node_development.md)). This model produces one output: `output (1,50) FP32`.
@@ -159,6 +159,52 @@ Example configuration file for pipeline with `gather_from_node` specified before
     ]
 }
 ```
+
+## Dynamic batch handling with demultiplexing
+
+Demutliplexing feature enables handling requests with dynamic batch size. For workloads that involve frequent batch size change this is recommended way to handle such requests.
+In order to use it pipeline config has to have additional field demultiply_count. To leverage this feature requests, and responses have to have additional dimension of inputs/outputs.
+
+In the case of Resnet 50 with standard input (1,3,224,224) and N images, the inputs and outputs should have following shapes
+Input: (N,1,3,224,224)
+Output: (N,1,1001)
+
+Example configuration file for handling dynamic batch size:
+```
+{
+    "model_config_list": [
+        {"config": {
+            "name": "Model_A",
+            "base_path": "/models/model_a"
+        }}
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline_with_demultiplexer",
+            "inputs": ["pipeline_input_name"],
+            "demultiply_count": 0,  <----------- this parameter specifies that dynamic input batch size will be handled
+            "nodes": [
+                {
+                    "name": "Model_A_node",
+                    "model_name": "Model_A",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input_name"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output_A",
+                         "alias": "output_A"}
+                    ]
+                },
+            ],
+            "outputs": [
+                {"pipeline_output_name": {"node_name": "Model_A_node",
+                                          "data_item": "output_A"}}
+            ]
+        }
+    ]
+}
 
 ## Pipeline configuration rules
 There are several rules for possible configurations in regards to demultiplexing and gathering:
