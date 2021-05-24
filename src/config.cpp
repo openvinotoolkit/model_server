@@ -108,6 +108,10 @@ Config& Config::parse(int argc, char** argv) {
                 "Resets models shape (model must support reshaping). If set, batch_size parameter is ignored",
                 cxxopts::value<std::string>(),
                 "SHAPE")
+            ("layout",
+                "Resets model layout.",
+                cxxopts::value<std::string>(),
+                "LAYOUT")
             ("model_version_policy",
                 "Model version policy",
                 cxxopts::value<std::string>(),

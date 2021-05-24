@@ -61,6 +61,12 @@ const cv::Mat nhwc_to_mat(const CustomNodeTensor* input) {
     return cv::Mat(height, width, CV_32FC3, input->data);
 }
 
+const cv::Mat nhwc_to_mat_2(const CustomNodeTensor* input) {
+    uint64_t height = input->dims[2];
+    uint64_t width = input->dims[3];
+    return cv::Mat(height, width, CV_32FC3, input->data);
+}
+
 const cv::Mat nchw_to_mat(const CustomNodeTensor* input) {
     uint64_t channels = input->dims[1];
     uint64_t rows = input->dims[2];

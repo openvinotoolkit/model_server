@@ -60,6 +60,7 @@ void ModelInstance::subscribe(PipelineDefinition& pd) {
 void ModelInstance::unsubscribe(PipelineDefinition& pd) {
     subscriptionManager.unsubscribe(pd);
 }
+
 Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
     if (config.isShapeAnonymousFixed() && network->getInputsInfo().size() > 1) {
         Status status = StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED;
@@ -82,6 +83,9 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     }
     this->inputsInfo.clear();
 
+    auto& CLIConfig = ovms::Config::instance();
+    const auto& layoutCLISetting = CLIConfig.layout();
+
     for (const auto& pair : networkInputs) {
         const auto& name = pair.first;
         auto input = pair.second;
@@ -96,7 +100,22 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
         }
 
-        SPDLOG_DEBUG("Network shape for input: {} - {}; final shape {}", name, TensorInfo::shapeToString(networkShapes[name]), TensorInfo::shapeToString(shape));
+        SPDLOG_DEBUG("Network shape for input: {} - {}; final shape {}", name,
+            TensorInfo::shapeToString(networkShapes[name]),
+            TensorInfo::shapeToString(shape));
+
+        auto layout = input->getLayout();
+        if (!layoutCLISetting.empty()) {
+            layout = TensorInfo::getLayoutFromString(layoutCLISetting);
+        } else if (!config.getLayout().empty()) {
+            layout = TensorInfo::getLayoutFromString(config.getLayout());
+        }
+
+        SPDLOG_DEBUG("Network layout for input: {} - {}; final layout {}", name,
+            TensorInfo::getStringFromLayout(input->getLayout()),
+            TensorInfo::getStringFromLayout(layout));
+
+        input->setLayout(layout);
 
         if (networkShapes[name] != shape) {
             reshapeRequired = true;
@@ -128,15 +147,19 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         auto layout = input->getLayout();
         auto shape = input->getTensorDesc().getDims();
 
-        // Data from config
-        if (config.getLayout().size()) {
-            // Single layout for all inputs
-            layout = TensorInfo::getLayoutFromString(config.getLayout());
-        } else if (config.getLayouts().count(name)) {
-            // Layout defined for specific input
-            layout = TensorInfo::getLayoutFromString(config.getLayouts().at(name));
-        }
-        input->setLayout(layout);
+        // // Data from config
+        // if (config.getLayout().size()) {
+        //     // Single layout for all inputs
+        //     layout = TensorInfo::getLayoutFromString(config.getLayout());
+        // } else if (config.getLayouts().count(name)) {
+        //     // Layout defined for specific input
+        //     layout = TensorInfo::getLayoutFromString(config.getLayouts().at(name));
+        // }
+        // if (!layoutCLISetting.empty()) {
+        //     layout = TensorInfo::getLayoutFromString(layoutCLISetting);
+        // }
+
+        // input->setLayout(layout);
 
         auto mappingName = config.getMappingInputByKey(name);
         auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
@@ -873,18 +896,18 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
             }
         }
 
-        if (checkShapeMismatch(*networkInput, requestInput, batchingMode)) {
-            if (shapeMode == AUTO) {
-                finalStatus = StatusCode::RESHAPE_REQUIRED;
-            } else {
-                std::stringstream ss;
-                ss << "Expected: " << TensorInfo::shapeToString(networkInput->getShape())
-                   << "; Actual: " << TensorInfo::tensorShapeToString(requestInput.tensor_shape());
-                const std::string details = ss.str();
-                SPDLOG_DEBUG("[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
-                return Status(StatusCode::INVALID_SHAPE, details);
-            }
-        }
+        // if (checkShapeMismatch(*networkInput, requestInput, batchingMode)) {
+        //     if (shapeMode == AUTO) {
+        //         finalStatus = StatusCode::RESHAPE_REQUIRED;
+        //     } else {
+        //         std::stringstream ss;
+        //         ss << "Expected: " << TensorInfo::shapeToString(networkInput->getShape())
+        //            << "; Actual: " << TensorInfo::tensorShapeToString(requestInput.tensor_shape());
+        //         const std::string details = ss.str();
+        //         SPDLOG_DEBUG("[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
+        //         return Status(StatusCode::INVALID_SHAPE, details);
+        //     }
+        // }
 
         status = validateTensorContentSize(*networkInput, requestInput);
         if (!status.ok())

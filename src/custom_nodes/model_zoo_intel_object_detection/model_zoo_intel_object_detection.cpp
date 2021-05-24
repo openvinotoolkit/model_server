@@ -183,8 +183,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(imageHeight == originalImageHeight, "original image size parameter differs from original image tensor size");
     NODE_ASSERT(imageWidth == originalImageWidth, "original image size parameter differs from original image tensor size");
 
-    cv::Mat image = nchw_to_mat(imageTensor);
-    // cv::Mat image = nhwc_to_mat(imageTensor);  // here you can support other layouts
+    //cv::Mat image = nchw_to_mat(imageTensor);
+    cv::Mat image = nhwc_to_mat(imageTensor);  // here you can support other layouts
 
     NODE_ASSERT(image.cols == imageWidth, "Mat generation failed");
     NODE_ASSERT(image.rows == imageHeight, "Mat generation failed");
