@@ -133,7 +133,6 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
 
 const bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     const int batchSize) {
-    SPDLOG_DEBUG("BATCH SIZE: {}", tensorInfo->getShape()[0]);
     if (static_cast<size_t>(batchSize) != tensorInfo->getShape()[0])
         return true;
     return false;
@@ -209,19 +208,18 @@ InferenceEngine::Blob::Ptr createBlobFromMats(std::vector<cv::Mat>& images, cons
     int offset = 0;
     auto blob = InferenceEngine::make_shared_blob<T>(tensorInfo->getTensorDesc());
     blob->allocate();
-    T* ptr = blob->buffer();
+    char* ptr = blob->buffer();
     for(cv::Mat image : images){
         if(tensorInfo->getLayout() == InferenceEngine::Layout::NCHW)
         {
             auto imgBuffer = reorder_to_nchw((T*)image.data, image.rows, image.cols, image.channels());
             memcpy(ptr + offset, (char*)imgBuffer.data(), image.total() * image.elemSize());
-            offset += image.total() * image.elemSize();
-            break;
+            offset += (image.total() * image.elemSize());
         }
         else
         {            
-            memcpy(ptr + offset, image.data, image.total() * image.elemSize());
-            offset += image.total() * image.elemSize();
+            memcpy(ptr + offset, (char*)image.data, image.total() * image.elemSize());
+            offset += (image.total() * image.elemSize());
         }
     }
     return blob;

@@ -25,13 +25,14 @@ namespace {
 class BinaryUtilsTest : public ::testing::Test {};
 //convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr* blob, const std::shared_ptr<TensorInfo>& tensorInfo)
 
-TEST_F(BinaryUtilsTest, tensorWithNoStringVal) {
+TEST_F(BinaryUtilsTest, tensorWithNonMatchingBatchsize) {
     tensorflow::TensorProto stringVal;
+    stringVal.add_string_val("dummy");
     InferenceEngine::Blob::Ptr blob;
     auto tensorInfo = std::make_shared<TensorInfo>();
-    tensorInfo->setShape({1,1,1,1});
+    tensorInfo->setShape({5,1,1,1});
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(status, ovms::StatusCode::UNSUPPORTED_LAYOUT);
 }
 
 // TEST_F(BinaryUtilsTest, positive) {
