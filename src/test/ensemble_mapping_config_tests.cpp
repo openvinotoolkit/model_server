@@ -220,12 +220,10 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
-    ASSERT_EQ(def->validateNodes(managerWithDummyModel), StatusCode::OK);
+    ASSERT_EQ(def->validate(managerWithDummyModel), StatusCode::OK);
 
-    tensor_map_t inputs, outputs;
-    ASSERT_EQ(def->getInputsInfo(inputs, managerWithDummyModel), StatusCode::OK);
-    ASSERT_EQ(def->getOutputsInfo(outputs, managerWithDummyModel), StatusCode::OK);
-
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
     ASSERT_EQ(inputs.size(), 1);
     ASSERT_EQ(outputs.size(), 1);
     ASSERT_NE(inputs.find("vector"), inputs.end());

@@ -586,7 +586,10 @@ public:
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
         const std::string modelPathToReplace{"/ovms/src/test/dummy"};
-        ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+        auto it = ovmsConfig.find(modelPathToReplace);
+        if (it != std::string::npos) {
+            ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+        }
         configFilePath = directoryPath + "/ovms_config.json";
     }
     void SetUp() override {
@@ -597,7 +600,7 @@ public:
     }
     void defaultVersionRemove() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        ovmsConfig = stressTestPipelineOneDummyRemovedConfig;
+        SetUpConfig(stressTestPipelineOneDummyRemovedConfig);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
@@ -608,25 +611,25 @@ public:
     }
     void changeToAutoShape() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        ovmsConfig = stressTestPipelineOneDummyConfigChangedToAuto;
+        SetUpConfig(stressTestPipelineOneDummyConfigChangedToAuto);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
     void removePipelineDefinition() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        ovmsConfig = stressTestPipelineOneDummyConfigPipelineRemoved;
+        SetUpConfig(stressTestPipelineOneDummyConfigPipelineRemoved);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
     void changeConnectionName() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        ovmsConfig = stressTestPipelineOneDummyConfigChangeConnectionName;
+        SetUpConfig(stressTestPipelineOneDummyConfigChangeConnectionName);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
     void addNewPipeline() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        ovmsConfig = stressTestPipelineOneDummyConfigAddNewPipeline;
+        SetUpConfig(stressTestPipelineOneDummyConfigAddNewPipeline);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
@@ -758,7 +761,6 @@ public:
         if (!inputsSizeCorrect || !outputsSizeCorrect) {
             return false;
         }
-        SPDLOG_ERROR("ExpectedInputsCount:{}", expectedInputs.size());
         for (auto& [expectedInputName, shapeTypeTuple] : expectedInputs) {
             bool inputNameExist = inputs.find(expectedInputName.c_str()) != inputs.end();
             EXPECT_TRUE(inputNameExist);
@@ -921,7 +923,7 @@ TEST_F(StressPipelineConfigChanges, AddNewVersionDuringPredictLoad) {
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerPredictInALoop,
-        &StressPipelineConfigChanges::defaultVersionRemove,
+        &StressPipelineConfigChanges::defaultVersionAdd,
         performWholeConfigReload,
         requiredLoadResults,
         allowedLoadResults);
@@ -1009,16 +1011,14 @@ TEST_F(StressPipelineConfigChanges, AddNewVersionDuringGetMetadataLoad) {
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
-        &StressPipelineConfigChanges::defaultVersionRemove,
+        &StressPipelineConfigChanges::defaultVersionAdd,
         performWholeConfigReload,
         requiredLoadResults,
         allowedLoadResults);
 }
 TEST_F(StressPipelineConfigChanges, RemoveDefaultVersionDuringGetMetadataLoad) {
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET,  // we hit when all config changes finish to propagate
-        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE,    // we hit default version which is unloaded already but default is not changed yet
-        StatusCode::MODEL_MISSING};                      // model instance not found during metadata request
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // we hit when all config changes finish to propagate
     std::set<StatusCode> allowedLoadResults = {};
     // we need whole config reload since there is no other way to dispose
     // all model versions different than removing model from config
@@ -1044,8 +1044,7 @@ TEST_F(StressPipelineConfigChanges, ChangeToShapeAutoDuringGetMetadataLoad) {
 TEST_F(StressPipelineConfigChanges, RemovePipelineDefinitionDuringGetMetadataLoad) {
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE,  // when pipeline is retired
-        StatusCode::MODEL_VERSION_NOT_LOADED_YET};           // we do not wait for models durign get metadata
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE};  // when pipeline is retired
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
@@ -1056,8 +1055,7 @@ TEST_F(StressPipelineConfigChanges, RemovePipelineDefinitionDuringGetMetadataLoa
 }
 TEST_F(StressPipelineConfigChanges, ChangedPipelineConnectionNameDuringGetMetadataLoad) {
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
-        StatusCode::MODEL_VERSION_NOT_LOADED_YET};               // we do not wait for models durign get metadata
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
@@ -1083,8 +1081,7 @@ TEST_F(StressPipelineConfigChanges, RetireSpecificVersionUsedDuringGetMetadataLo
     SetUpConfig(stressTestPipelineOneDummyConfigSpecificVersionUsed);
     bool performWholeConfigReload = false;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET,          // we hit when all config changes finish to propagate
-        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};           // version is retired but pipeline not invalidated yet
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,

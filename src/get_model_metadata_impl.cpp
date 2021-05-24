@@ -145,15 +145,8 @@ Status GetModelMetadataImpl::buildResponse(
         return status;
     }
 
-    tensor_map_t inputs, outputs;
-    status = pipelineDefinition.getInputsInfo(inputs, manager);
-    if (!status.ok()) {
-        return status;
-    }
-    status = pipelineDefinition.getOutputsInfo(outputs, manager);
-    if (!status.ok()) {
-        return status;
-    }
+    const tensor_map_t& inputs = pipelineDefinition.getInputsInfo();
+    const tensor_map_t& outputs = pipelineDefinition.getOutputsInfo();
 
     response->Clear();
     response->mutable_model_spec()->set_name(pipelineDefinition.getName());
