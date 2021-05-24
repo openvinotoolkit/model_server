@@ -100,7 +100,7 @@ Status Node::setInputs(const Node& dependency, BlobMap& inputs, NodeSessionMetad
     }
     session_id_t shardId;
     try {
-        static std::set<std::string> emptySet;
+        static const std::set<std::string> emptySet;
         shardId = metadata.getShardId(gatherFrom.value_or(emptySet));
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to get shardId for node: {}", getName());
