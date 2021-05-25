@@ -57,19 +57,19 @@ protected:
     InferenceEngine::Precision precision;
 
     /**
-         * @brief Model input
+         * @brief Model input shape
          */
     shape_t shape;
+
+    /**
+        * @brief Model input effective shape
+        */
+    shape_t effectiveShape;
 
     /**
          * @brief Tensor layout
          */
     InferenceEngine::Layout layout;
-
-    /**
-         * @brief Tensor original layout
-         */
-    InferenceEngine::Layout originalLayout;
 
     /**
          * @brief TensorDesc
@@ -123,8 +123,7 @@ public:
         const std::string& mapping,
         const InferenceEngine::Precision& precision,
         const shape_t& shape,
-        const InferenceEngine::Layout& layout,
-        const InferenceEngine::Layout& originalLayout);
+        const InferenceEngine::Layout& layout);
 
     /**
          * @brief Get the Name object
@@ -153,6 +152,13 @@ public:
          * @return const InferenceEngine::Precision
          */
     void setPrecision(const InferenceEngine::Precision& requestedPrecision);
+
+     /**
+         * @brief Set the Layout object
+         * 
+         * @return const InferenceEngine::Layout
+         */
+    void setLayout(InferenceEngine::Layout layout);
 
     /**
          * @brief Get the Precision As DataType object
@@ -204,9 +210,16 @@ public:
          */
     const shape_t& getShape() const;
 
+    /**
+         * @brief Gets input effective shape
+         *
+         * @return shape
+         */
+    const shape_t& getEffectiveShape() const;
+
     void setShape(const shape_t& shape);
 
-    std::shared_ptr<TensorInfo> createCopyWithNewShape(const shape_t& shapee) const;
+    std::shared_ptr<TensorInfo> createCopyWithNewShape(const shape_t& shape) const;
 
     /**
          * @brief Get the Tensor Desc object
@@ -215,10 +228,6 @@ public:
          */
     const InferenceEngine::TensorDesc getTensorDesc() const;
 
-    bool isLayoutModified() const {
-        return this->layout != this->originalLayout;
-    }
-
     static std::string shapeToString(const shape_t& shape);
 
     static std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape);
@@ -226,5 +235,8 @@ public:
     static std::shared_ptr<TensorInfo> getUnspecifiedTensorInfo();
 
     static std::string tensorDescToString(const InferenceEngine::TensorDesc& desc);
+
+    private:
+    void updateEffectiveShape();
 };
 }  // namespace ovms

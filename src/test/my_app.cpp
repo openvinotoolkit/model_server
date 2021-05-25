@@ -19,7 +19,7 @@ int main()
     InferenceEngine::CNNNetwork network = ie.ReadNetwork("/workspace/resnet50-binary/1/resnet50-binary-0001.xml");
     // "0" FP32 1,3,224,224 NCHW
 
-    network.getInputsInfo().find("0")->second->setLayout(Layout::NHWC);
+    //network.getInputsInfo().find("0")->second->setLayout(Layout::NHWC);
     // "0" FP32 1,3,224,224 NHWC
 
     std::cout << "3" << std::endl;

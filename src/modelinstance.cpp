@@ -155,17 +155,13 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         } else if (!config.getLayout().empty()) {
             layout = TensorInfo::getLayoutFromString(config.getLayout());
         }
-
-        if (layout != originalLayout) {
-            SPDLOG_INFO("Layout for input: {} is modified: from {} to {}", name,
-                TensorInfo::getStringFromLayout(originalLayout),
-                TensorInfo::getStringFromLayout(layout));
-        }
         
         input->setLayout(layout);
 
         auto mappingName = config.getMappingInputByKey(name);
-        auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout, originalLayout);
+        auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
+        SPDLOG_INFO("Effective shape input: {}; {}", name,
+            TensorInfo::shapeToString(tensor->getEffectiveShape()));
         this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
     }
     SPDLOG_INFO("Final network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
@@ -183,7 +179,7 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
         auto layout = output->getLayout();
         auto shape = output->getDims();
         auto mappingName = config.getMappingOutputByKey(name);
-        auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout, layout);
+        auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
         std::string precision_str = tensor->getPrecisionAsString();
         this->outputsInfo[tensor->getMappedName()] = std::move(tensor);
         std::stringstream shape_stream;
@@ -771,11 +767,22 @@ const bool ModelInstance::checkBatchSizeMismatch(const ovms::TensorInfo& network
     return false;
 }
 
+void print_shape(const std::string& str, const SizeVector& vec) {
+    std::cout << str << ": ";
+    for (auto n : vec)
+        std::cout << n << ",";
+    std::cout << std::endl;
+}
+
 const bool ModelInstance::checkShapeMismatch(const ovms::TensorInfo& networkInput,
     const tensorflow::TensorProto& requestInput,
     const Mode& batchingMode) {
+    print_shape("TensorInfo", networkInput.getShape());
+    //print_shape("TensorDesc", networkInput.getTensorDesc().getDims());
+    //print_shape("BlockingDesc", networkInput.getTensorDesc().getBlockingDesc().getBlockDims());
     // Network and request must have the same shape
     auto& shape = networkInput.getShape();
+    //auto& shape = networkInput.getTensorDesc().getBlockingDesc().getBlockDims();
     int i = (batchingMode == AUTO) ? 1 : 0;  // If batch size is automatic, omit first dimension
     for (; i < requestInput.tensor_shape().dim_size(); i++) {
         if (requestInput.tensor_shape().dim(i).size() < 0 ||
@@ -899,18 +906,19 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
             }
         }
 
-        // if (checkShapeMismatch(*networkInput, requestInput, batchingMode)) {
-        //     if (shapeMode == AUTO) {
-        //         finalStatus = StatusCode::RESHAPE_REQUIRED;
-        //     } else {
-        //         std::stringstream ss;
-        //         ss << "Expected: " << TensorInfo::shapeToString(networkInput->getShape())
-        //            << "; Actual: " << TensorInfo::tensorShapeToString(requestInput.tensor_shape());
-        //         const std::string details = ss.str();
-        //         SPDLOG_DEBUG("[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
-        //         return Status(StatusCode::INVALID_SHAPE, details);
-        //     }
-        // }
+        if (checkShapeMismatch(*networkInput, requestInput, batchingMode)) {
+            if (shapeMode == AUTO) {
+                finalStatus = StatusCode::RESHAPE_REQUIRED;
+            } else {
+                std::stringstream ss;
+                //ss << "Expected: " << TensorInfo::shapeToString(networkInput->getShape())
+                ss << "Expected: " << TensorInfo::shapeToString(networkInput->getTensorDesc().getBlockingDesc().getBlockDims())
+                   << "; Actual: " << TensorInfo::tensorShapeToString(requestInput.tensor_shape());
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
+                return Status(StatusCode::INVALID_SHAPE, details);
+            }
+        }
 
         status = validateTensorContentSize(*networkInput, requestInput);
         if (!status.ok())

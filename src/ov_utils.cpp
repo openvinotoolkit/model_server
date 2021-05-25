@@ -98,9 +98,11 @@ std::string getTensorMapString(const std::map<std::string, std::shared_ptr<Tenso
         auto precision = inputInfo->getPrecision();
         auto layout = inputInfo->getLayout();
         auto shape = inputInfo->getShape();
+        auto effectiveShape = inputInfo->getEffectiveShape();
 
         stringStream << "\nname: " << name
                      << "; shape: " << TensorInfo::shapeToString(shape)
+                     << "; effective shape: " << TensorInfo::shapeToString(effectiveShape)
                      << "; precision: " << TensorInfo::getPrecisionAsString(precision)
                      << "; layout: " << TensorInfo::getStringFromLayout(layout);
     }
