@@ -73,10 +73,10 @@ std::vector<T> reorder_to_nchw(const T* nhwcVector, int rows, int cols, int chan
 }
 
 cv::Mat convertStringValToMat(const std::string& stringVal) {
-    std::vector<unsigned char> vectordata(stringVal.begin(), stringVal.end());
-    cv::Mat data_mat(vectordata, true);
+    std::vector<unsigned char> data(stringVal.begin(), stringVal.end());
+    cv::Mat dataMat(data, true);
 
-    return cv::imdecode(data_mat, cv::IMREAD_UNCHANGED);
+    return cv::imdecode(dataMat, cv::IMREAD_UNCHANGED);
 }
 
 Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const InferenceEngine::Precision requestedPrecision) {
@@ -89,12 +89,35 @@ Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const InferenceEngine:
     return StatusCode::OK;
 }
 
+bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    if(tensorInfo->getLayout() == InferenceEngine::Layout::NCHW)
+    {
+        int cols = tensorInfo->getShape()[3];
+        int rows = tensorInfo->getShape()[2];
+        if(cols != image.cols || rows != image.rows)
+        {
+            return true;
+        }
+    }
+    else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC)
+    {
+        int cols = tensorInfo->getShape()[2];
+        int rows = tensorInfo->getShape()[1];
+        if(cols != image.cols || rows != image.rows)
+        {
+            return true;
+        }
+    }
+    return false;    
+}
+
 Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
     if(tensorInfo->getLayout() == InferenceEngine::Layout::NCHW)
     {
         int cols = tensorInfo->getShape()[3];
         int rows = tensorInfo->getShape()[2];
         cv::resize(src, dst, cv::Size(cols,rows));
+
         return StatusCode::OK;
     }
     else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC)
@@ -102,9 +125,9 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
         int cols = tensorInfo->getShape()[2];
         int rows = tensorInfo->getShape()[1];
         cv::resize(src, dst, cv::Size(cols,rows));
+
         return StatusCode::OK;
     }
-
     return StatusCode::UNSUPPORTED_LAYOUT;
 }
 
@@ -114,14 +137,14 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     if(tensorInfo->getLayout() == InferenceEngine::Layout::NCHW)
     {
         if ((unsigned int)(input.channels()) != tensorInfo->getShape()[1]) {
-            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(),tensorInfo->getShape()[1], input.dims);
+            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(),tensorInfo->getShape()[1], input.channels());
             return StatusCode::INVALID_NO_OF_CHANNELS;
         }
     }
     else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC)
     {
         if ((unsigned int)(input.channels()) != tensorInfo->getShape()[3]) {
-            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(),tensorInfo->getShape()[3], input.dims);
+            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(),tensorInfo->getShape()[3], input.channels());
             return StatusCode::INVALID_NO_OF_CHANNELS;
         }
     }
@@ -131,14 +154,16 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     return StatusCode::OK;
 }
 
-const bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
+bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     const int batchSize) {
+    if(batchSize < 0)
+        return true;
     if (static_cast<size_t>(batchSize) != tensorInfo->getShape()[0])
         return true;
     return false;
 }
 
-const Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo,
+Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo,
     const cv::Mat input) {
     auto status = validateNumberOfChannels(tensorInfo, input);
     if (!status.ok())
@@ -147,8 +172,12 @@ const Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo,
     return StatusCode::OK;
 }
 
-const Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
+Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     const tensorflow::TensorProto& src) {
+    if(tensorInfo->getShape().size() != 4){
+        return StatusCode::UNSUPPORTED_LAYOUT;
+    }
+
     if(tensorInfo->getLayout() != InferenceEngine::Layout::NCHW &&
        tensorInfo->getLayout() != InferenceEngine::Layout::NHWC)
     {
@@ -156,7 +185,7 @@ const Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     }
 
     if (checkBatchSizeMismatch(tensorInfo, src.string_val_size())){
-        SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[0],src.string_val_size());
+        SPDLOG_LOGGER_DEBUG(binary_inputs_logger,"Input: {} request batch size is incorrect. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[0],src.string_val_size());
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
 
@@ -167,36 +196,45 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
 
     for (int i = 0; i < src.string_val_size(); i++) {
         cv::Mat image = convertStringValToMat(src.string_val(i));
-        if (image.data == NULL)
+        if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
-                    
+
         auto status = validateInput(tensorInfo, image);
         if (status != StatusCode::OK) {
             return status;
         }
 
         if (!isPrecisionEqual(image.depth(), tensorInfo->getPrecision())) {
-            cv::Mat imagePrecisionConverted;
-            status = convertPrecision(image, imagePrecisionConverted, tensorInfo->getPrecision());
+            cv::Mat imageCorrectPrecision;
+            status = convertPrecision(image, imageCorrectPrecision, tensorInfo->getPrecision());
 
             if (status != StatusCode::OK) {
                 return status;
             }
-
-            cv::Mat imageResized;
-            resizeMat(imagePrecisionConverted, imageResized, tensorInfo);
-            if (status != StatusCode::OK) {
-                return status;
+            if(resizeNeeded(imageCorrectPrecision, tensorInfo)){
+                cv::Mat imageResized;
+                status = resizeMat(imageCorrectPrecision, imageResized, tensorInfo);
+                if (status != StatusCode::OK) {
+                    return status;
+                }
+                images.push_back(imageResized);
             }
-
-            images.push_back(imageResized);
-        } else {
-            cv::Mat imageResized;
-            resizeMat(image, imageResized, tensorInfo);
-            if (status != StatusCode::OK) {
-                return status;
+            else{
+                images.push_back(imageCorrectPrecision);
             }
-            images.push_back(imageResized);
+        }
+        else{
+            if(resizeNeeded(image, tensorInfo)){
+                cv::Mat imageResized;
+                status = resizeMat(image, imageResized, tensorInfo);
+                if (status != StatusCode::OK) {
+                    return status;
+                }
+                images.push_back(imageResized);
+            }
+            else{
+                images.push_back(image);
+            }
         }
     }
 
@@ -204,7 +242,7 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
 }
 
 template <typename T>
-InferenceEngine::Blob::Ptr createBlobFromMats(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo){
+InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo){
     int offset = 0;
     auto blob = InferenceEngine::make_shared_blob<T>(tensorInfo->getTensorDesc());
     blob->allocate();
