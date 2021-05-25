@@ -83,7 +83,10 @@ for line in lines:
     # for object classification models show imagenet class
     print('Batch: {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(count // batch_size, round(duration, 2), round(1000 / duration, 2)))
     for i in range(nu.shape[0]):
-        ma = np.argmax(nu[i]) - 1
+        offset = 0
+        if nu.shape[1] == 1001:
+            offset = 1 
+        ma = np.argmax(nu[i]) - offset
         mark_message = ""
         if int(labels[i]) == ma:
             matched += 1

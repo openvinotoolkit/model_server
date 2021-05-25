@@ -170,6 +170,8 @@ const std::string TensorInfo::getDataTypeAsString(tensorflow::DataType dataType)
         return "I64";
     case tensorflow::DataType::DT_BOOL:
         return "BOOL";
+    case tensorflow::DataType::DT_STRING:
+        return "STRING";
     default:
         return "DT_INVALID";
     }
