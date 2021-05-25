@@ -22,6 +22,11 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include <inference_engine.hpp>
 
 #include "binaryutils.hpp"
@@ -180,7 +185,6 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
 }
 
 Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
-
     for (int i = 0; i < src.string_val_size(); i++) {
         cv::Mat image = convertStringValToMat(src.string_val(i));
         if (image.data == nullptr)

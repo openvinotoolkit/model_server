@@ -13,10 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
+
+#include <memory>
 
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
 Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr* blob, const std::shared_ptr<TensorInfo>& tensorInfo);
-}
+}  // namespace ovms
