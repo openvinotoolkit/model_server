@@ -30,6 +30,7 @@
 #include "get_model_metadata_impl.hpp"
 #include "model_service.hpp"
 #include "modelinstanceunloadguard.hpp"
+#include "pipelinedefinition.hpp"
 #include "prediction_service_utils.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
@@ -268,6 +269,18 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
     return status;
 }
 
+Status getPipelineInputs(const std::string& modelName, ovms::tensor_map_t& inputs) {
+    auto pipelineDefinition = ModelManager::getInstance().getPipelineFactory().findDefinitionByName(modelName);
+    std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+    Status status = pipelineDefinition->waitForLoaded(unloadGuard);
+    if (!status.ok()) {
+        return status;
+    }
+
+    inputs = pipelineDefinition->getInputsInfo();
+    return StatusCode::OK;
+}
+
 Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
     const std::string& request,
     Order& requestOrder,
@@ -277,8 +290,14 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
 
     Timer timer;
     timer.start("parse");
-    RestParser requestParser;
-    auto status = requestParser.parse(request.c_str());
+    ovms::tensor_map_t inputs;
+    auto status = getPipelineInputs(modelName, inputs);
+    if (!status.ok()) {
+        return status;
+    }
+
+    RestParser requestParser(inputs);
+    status = requestParser.parse(request.c_str());
     if (!status.ok()) {
         return status;
     }

@@ -366,7 +366,7 @@ cc_test(
         "test/binaryutils_test.cpp",
         "test/rest_parser_row_test.cpp",
         "test/rest_parser_column_test.cpp",
-        "test/rest_parser_binary_inputs.cpp",
+        "test/rest_parser_binary_inputs_test.cpp",
         "test/rest_parser_nonamed_test.cpp",
         "test/rest_utils_test.cpp",
         "test/sequence_test.cpp",
