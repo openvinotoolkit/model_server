@@ -211,31 +211,18 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
             if (status != StatusCode::OK) {
                 return status;
             }
-            if(resizeNeeded(imageCorrectPrecision, tensorInfo)){
-                cv::Mat imageResized;
-                status = resizeMat(imageCorrectPrecision, imageResized, tensorInfo);
-                if (status != StatusCode::OK) {
-                    return status;
-                }
-                images.push_back(imageResized);
-            }
-            else{
-                images.push_back(imageCorrectPrecision);
-            }
+            image = std::move(imageCorrectPrecision);
         }
-        else{
-            if(resizeNeeded(image, tensorInfo)){
-                cv::Mat imageResized;
-                status = resizeMat(image, imageResized, tensorInfo);
-                if (status != StatusCode::OK) {
-                    return status;
-                }
-                images.push_back(imageResized);
+
+        if(resizeNeeded(image, tensorInfo)){
+            cv::Mat imageResized;
+            status = resizeMat(image, imageResized, tensorInfo);
+            if (status != StatusCode::OK) {
+                return status;
             }
-            else{
-                images.push_back(image);
-            }
+            image = std::move(imageResized);
         }
+        images.push_back(image);
     }
 
     return StatusCode::OK;
