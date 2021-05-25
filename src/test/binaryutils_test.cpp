@@ -18,7 +18,6 @@
 
 #include "../binaryutils.hpp"
 #include "gtest/gtest.h"
-
 #include "opencv2/opencv.hpp"
 
 using namespace ovms;
@@ -32,14 +31,13 @@ TEST_F(BinaryUtilsTest, tensorWithNonMatchingBatchsize) {
     stringVal.add_string_val("dummy");
     InferenceEngine::Blob::Ptr blob;
     auto tensorInfo = std::make_shared<TensorInfo>();
-    tensorInfo->setShape({5,1,1,1});
+    tensorInfo->setShape({5, 1, 1, 1});
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
     EXPECT_EQ(status, ovms::StatusCode::UNSUPPORTED_LAYOUT);
 }
 
-
 TEST_F(BinaryUtilsTest, positive_rgb) {
-    uint8_t rgb_expected_blob[] = {0x24,0x1b,0xed};
+    uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed};
 
     std::ifstream DataFile;
     DataFile.open("/ovms/src/test/binaryutils/rgb.jpg", std::ios::binary);
@@ -54,8 +52,8 @@ TEST_F(BinaryUtilsTest, positive_rgb) {
     stringVal.set_dtype(tensorflow::DataType::DT_STRING);
     stringVal.add_string_val(image_bytes.get(), filesize);
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1,3,1,1}, InferenceEngine::Layout::NCHW);
-    
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 3, 1, 1}, InferenceEngine::Layout::NCHW);
+
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
 
     ASSERT_EQ(blob->size(), 3);
@@ -80,8 +78,8 @@ TEST_F(BinaryUtilsTest, positive_grayscale) {
     stringVal.set_dtype(tensorflow::DataType::DT_STRING);
     stringVal.add_string_val(image_bytes.get(), filesize);
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1,1,1,1}, InferenceEngine::Layout::NCHW);
-    
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 1}, InferenceEngine::Layout::NCHW);
+
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
     ASSERT_EQ(blob->size(), 1);
     ASSERT_EQ(status, ovms::StatusCode::OK);
@@ -90,7 +88,7 @@ TEST_F(BinaryUtilsTest, positive_grayscale) {
 }
 
 TEST_F(BinaryUtilsTest, positive_batch_size_2) {
-    uint8_t rgb_batchsize_2_blob[] = {0x24,0x1b,0xed,0x24,0x1b,0xed};
+    uint8_t rgb_batchsize_2_blob[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
 
     std::ifstream DataFile;
     DataFile.open("/ovms/src/test/binaryutils/rgb.jpg", std::ios::binary);
@@ -106,8 +104,8 @@ TEST_F(BinaryUtilsTest, positive_batch_size_2) {
     stringVal.add_string_val(image_bytes.get(), filesize);
     stringVal.add_string_val(image_bytes.get(), filesize);
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{2,3,1,1}, InferenceEngine::Layout::NCHW);
-    
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{2, 3, 1, 1}, InferenceEngine::Layout::NCHW);
+
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
 
     ASSERT_EQ(blob->size(), 6);
@@ -117,7 +115,7 @@ TEST_F(BinaryUtilsTest, positive_batch_size_2) {
 }
 
 TEST_F(BinaryUtilsTest, positive_precision_changed) {
-    uint8_t rgb_precision_changed_expected_blob[] = {0x24,0x00,0x00,0x00,0x1b,0x00,0x00,0x00,0xed,0x00,0x00,0x00};
+    uint8_t rgb_precision_changed_expected_blob[] = {0x24, 0x00, 0x00, 0x00, 0x1b, 0x00, 0x00, 0x00, 0xed, 0x00, 0x00, 0x00};
 
     std::ifstream DataFile;
     DataFile.open("/ovms/src/test/binaryutils/rgb.jpg", std::ios::binary);
@@ -132,19 +130,19 @@ TEST_F(BinaryUtilsTest, positive_precision_changed) {
     stringVal.set_dtype(tensorflow::DataType::DT_STRING);
     stringVal.add_string_val(image_bytes.get(), filesize);
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::I32, shape_t{1,3,1,1}, InferenceEngine::Layout::NCHW);
-    
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::I32, shape_t{1, 3, 1, 1}, InferenceEngine::Layout::NCHW);
+
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
 
     ASSERT_EQ(blob->size(), 3);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     uint8_t* ptr = blob->buffer();
     int I32_size = 4;
-    EXPECT_EQ(std::equal(ptr, ptr + blob->size()*I32_size, rgb_precision_changed_expected_blob), true);
+    EXPECT_EQ(std::equal(ptr, ptr + blob->size() * I32_size, rgb_precision_changed_expected_blob), true);
 }
 
 TEST_F(BinaryUtilsTest, positive_nhwc_layout) {
-    uint8_t rgb_expected_blob[] = {0x24,0x1b,0xed};
+    uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed};
 
     std::ifstream DataFile;
     DataFile.open("/ovms/src/test/binaryutils/rgb.jpg", std::ios::binary);
@@ -159,8 +157,8 @@ TEST_F(BinaryUtilsTest, positive_nhwc_layout) {
     stringVal.set_dtype(tensorflow::DataType::DT_STRING);
     stringVal.add_string_val(image_bytes.get(), filesize);
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1,1,1,3}, InferenceEngine::Layout::NHWC);
-    
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 3}, InferenceEngine::Layout::NHWC);
+
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
 
     ASSERT_EQ(blob->size(), 3);
@@ -171,7 +169,7 @@ TEST_F(BinaryUtilsTest, positive_nhwc_layout) {
 }
 
 TEST_F(BinaryUtilsTest, positive_resizing) {
-    uint8_t rgb_expected_blob[] = {0x24,0x24,0x24,0x24,0x1b,0x1b,0x1b,0x1b,0xed,0xed,0xed,0xed};
+    uint8_t rgb_expected_blob[] = {0x24, 0x24, 0x24, 0x24, 0x1b, 0x1b, 0x1b, 0x1b, 0xed, 0xed, 0xed, 0xed};
 
     std::ifstream DataFile;
     DataFile.open("/ovms/src/test/binaryutils/rgb.jpg", std::ios::binary);
@@ -186,8 +184,8 @@ TEST_F(BinaryUtilsTest, positive_resizing) {
     stringVal.set_dtype(tensorflow::DataType::DT_STRING);
     stringVal.add_string_val(image_bytes.get(), filesize);
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1,3,2,2}, InferenceEngine::Layout::NCHW);
-    
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 3, 2, 2}, InferenceEngine::Layout::NCHW);
+
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
 
     ASSERT_EQ(blob->size(), 12);
