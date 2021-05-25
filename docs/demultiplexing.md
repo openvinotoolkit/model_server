@@ -162,49 +162,68 @@ Example configuration file for pipeline with `gather_from_node` specified before
 
 ## Dynamic batch handling with demultiplexing
 
-Demutliplexing feature enables handling requests with dynamic batch size. For workloads that involve frequent batch size change this is recommended way to handle such requests.
-In order to use it pipeline config has to have additional field demultiply_count. To leverage this feature requests, and responses have to have additional dimension of inputs/outputs.
+Demutliplexing feature enables handling requests with dynamic batch size without a model reloading.
+It is recommended for workloads with arbitrary batch size in the sequential requests.
+You can use dynamic batching feature via requests demuliplexing by configuring a pipeline including a single model and an extra field 'demultiply_count: 0'.
+To leverage this feature, input data requires additional, first dimension, representing the batch size. It should be added to the original model shape with batch size 1.
+The response will include combined predictions from the split batch. That also adds extra first dimension to the model output.
 
-In the case of Resnet 50 with standard input (1,3,224,224) and N images, the inputs and outputs should have following shapes
+In the case of ResNet-50 model with shape (1,3,224,224) and N images, the inputs and outputs will be like presented below:
+
 Input: (N,1,3,224,224)
 Output: (N,1,1001)
+
+Thanks to that additional dimension, demultiplexing implementation is generic and can support any input and output data layout.
+
+*Note:* You can use additional parameters in model config ('nireq' and 'CPU_THROUGHPUT_STREAMS') to fine tune your performance for dynamic batch. 'CPU_THROUGHPUT_STREAMS' allows for multiple parallel
+inferences processing in OpenVINO which may increase throughput at the cost of latency of predict requests. 'nireq' specifies how many inference requests can be prepared.
+
+*Note:* In case you are using different device for inference than CPU you have check that device plugin configuration parameters.
 
 Example configuration file for handling dynamic batch size:
 ```
 {
     "model_config_list": [
-        {"config": {
-            "name": "Model_A",
-            "base_path": "/models/model_a"
-        }}
+        {
+            "config": {
+                "name": "resnet50",
+                "base_path": "/models/resnet50-binary",
+                "plugin_config": {
+                    "CPU_THROUGHPUT_STREAMS": "8" <---- this parameter specifies that 8 parallel inferences may be performed by OpenVINO
+                },
+                "nireq": 32 <--- this parameter specifies that 32 parallel inference requests may be prepared
+            }
+        }
     ],
     "pipeline_config_list": [
         {
-            "name": "my_pipeline_with_demultiplexer",
-            "inputs": ["pipeline_input_name"],
-            "demultiply_count": 0,  <----------- this parameter specifies that dynamic input batch size will be handled
+            "name": "resnet50DAG",
+            "inputs": ["0"],
+            "demultiply_count": 0, <---- this parameter specifies that dynamic input batch size will be handled
             "nodes": [
                 {
-                    "name": "Model_A_node",
-                    "model_name": "Model_A",
+                    "name": "resnetNode",
+                    "model_name": "resnet50",
                     "type": "DL model",
                     "inputs": [
-                        {"input": {"node_name": "request",
-                                   "data_item": "pipeline_input_name"}}
+                        {"0": {"node_name": "request",
+                               "data_item": "0"}}
                     ],
                     "outputs": [
-                        {"data_item": "output_A",
-                         "alias": "output_A"}
+                        {"data_item": "1463",
+                         "alias": "1463"}
                     ]
-                },
+                }
             ],
             "outputs": [
-                {"pipeline_output_name": {"node_name": "Model_A_node",
-                                          "data_item": "output_A"}}
+                {"1463": {"node_name": "resnetNode",
+                                         "data_item": "1463"}
+                }
             ]
         }
     ]
 }
+```
 
 ## Pipeline configuration rules
 There are several rules for possible configurations in regards to demultiplexing and gathering:
