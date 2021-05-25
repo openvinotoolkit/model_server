@@ -133,12 +133,12 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     // Network and input must have the same number of shape dimensions.
     if (tensorInfo->getLayout() == InferenceEngine::Layout::NCHW) {
         if ((unsigned int)(input.channels()) != tensorInfo->getShape()[1]) {
-            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[1], input.channels());
+            SPDLOG_LOGGER_DEBUG(binary_inputs_logger, "Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[1], input.channels());
             return StatusCode::INVALID_NO_OF_CHANNELS;
         }
     } else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC) {
         if ((unsigned int)(input.channels()) != tensorInfo->getShape()[3]) {
-            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[3], input.channels());
+            SPDLOG_LOGGER_DEBUG(binary_inputs_logger, "Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[3], input.channels());
             return StatusCode::INVALID_NO_OF_CHANNELS;
         }
     } else {

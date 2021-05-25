@@ -36,6 +36,90 @@ TEST_F(BinaryUtilsTest, tensorWithNonMatchingBatchsize) {
     EXPECT_EQ(status, ovms::StatusCode::UNSUPPORTED_LAYOUT);
 }
 
+TEST_F(BinaryUtilsTest, tensorWithNonSupportedPrecision) {
+    std::ifstream DataFile;
+    DataFile.open("/ovms/src/test/binaryutils/rgb.jpg", std::ios::binary);
+    DataFile.seekg(0, std::ios::end);
+    size_t filesize = DataFile.tellg();
+    DataFile.seekg(0);
+    std::unique_ptr<char[]> image_bytes(new char[filesize]);
+    DataFile.read(image_bytes.get(), filesize);
+
+    tensorflow::TensorProto stringVal;
+    InferenceEngine::Blob::Ptr blob;
+    stringVal.set_dtype(tensorflow::DataType::DT_STRING);
+    stringVal.add_string_val(image_bytes.get(), filesize);
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::MIXED, shape_t{1, 3, 1, 1}, InferenceEngine::Layout::NCHW);
+
+    auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
+
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_PRECISION);
+}
+
+TEST_F(BinaryUtilsTest, tensorWithNonMatchingShapeSize) {
+    std::ifstream DataFile;
+    DataFile.open("/ovms/src/test/binaryutils/rgb.jpg", std::ios::binary);
+    DataFile.seekg(0, std::ios::end);
+    size_t filesize = DataFile.tellg();
+    DataFile.seekg(0);
+    std::unique_ptr<char[]> image_bytes(new char[filesize]);
+    DataFile.read(image_bytes.get(), filesize);
+
+    tensorflow::TensorProto stringVal;
+    InferenceEngine::Blob::Ptr blob;
+    stringVal.set_dtype(tensorflow::DataType::DT_STRING);
+    stringVal.add_string_val(image_bytes.get(), filesize);
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1}, InferenceEngine::Layout::NCHW);
+
+    auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
+
+    EXPECT_EQ(status, ovms::StatusCode::UNSUPPORTED_LAYOUT);
+}
+
+TEST_F(BinaryUtilsTest, tensorWithNonMatchingNumberOfChannelsNCHW) {
+    std::ifstream DataFile;
+    DataFile.open("/ovms/src/test/binaryutils/rgb.jpg", std::ios::binary);
+    DataFile.seekg(0, std::ios::end);
+    size_t filesize = DataFile.tellg();
+    DataFile.seekg(0);
+    std::unique_ptr<char[]> image_bytes(new char[filesize]);
+    DataFile.read(image_bytes.get(), filesize);
+
+    tensorflow::TensorProto stringVal;
+    InferenceEngine::Blob::Ptr blob;
+    stringVal.set_dtype(tensorflow::DataType::DT_STRING);
+    stringVal.add_string_val(image_bytes.get(), filesize);
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 1}, InferenceEngine::Layout::NCHW);
+
+    auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
+
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_CHANNELS);
+}
+
+TEST_F(BinaryUtilsTest, tensorWithNonMatchingNumberOfChannelsNHWC) {
+    std::ifstream DataFile;
+    DataFile.open("/ovms/src/test/binaryutils/rgb.jpg", std::ios::binary);
+    DataFile.seekg(0, std::ios::end);
+    size_t filesize = DataFile.tellg();
+    DataFile.seekg(0);
+    std::unique_ptr<char[]> image_bytes(new char[filesize]);
+    DataFile.read(image_bytes.get(), filesize);
+
+    tensorflow::TensorProto stringVal;
+    InferenceEngine::Blob::Ptr blob;
+    stringVal.set_dtype(tensorflow::DataType::DT_STRING);
+    stringVal.add_string_val(image_bytes.get(), filesize);
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 1}, InferenceEngine::Layout::NHWC);
+
+    auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
+
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_CHANNELS);
+}
+
 TEST_F(BinaryUtilsTest, positive_rgb) {
     uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed};
 
