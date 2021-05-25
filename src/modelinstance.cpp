@@ -850,7 +850,7 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
 
         if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
             // binary inputs will be validated during conversion to blob
-            SPDLOG_LOGGER_DEBUG(binary_inputs_logger, "Received request contains binary inputs");
+            SPDLOG_DEBUG("Received request contains binary inputs");
             continue;
         }
 

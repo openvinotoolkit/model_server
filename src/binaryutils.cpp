@@ -133,12 +133,12 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     // Network and input must have the same number of shape dimensions.
     if (tensorInfo->getLayout() == InferenceEngine::Layout::NCHW) {
         if ((unsigned int)(input.channels()) != tensorInfo->getShape()[1]) {
-            SPDLOG_LOGGER_DEBUG(binary_inputs_logger, "Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[1], input.channels());
+            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[1], input.channels());
             return StatusCode::INVALID_NO_OF_CHANNELS;
         }
     } else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC) {
         if ((unsigned int)(input.channels()) != tensorInfo->getShape()[3]) {
-            SPDLOG_LOGGER_DEBUG(binary_inputs_logger, "Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[3], input.channels());
+            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[3], input.channels());
             return StatusCode::INVALID_NO_OF_CHANNELS;
         }
     } else {
@@ -177,7 +177,7 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     }
 
     if (checkBatchSizeMismatch(tensorInfo, src.string_val_size())) {
-        SPDLOG_LOGGER_DEBUG(binary_inputs_logger, "Input: {} request batch size is incorrect. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[0], src.string_val_size());
+        SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[0], src.string_val_size());
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
 
