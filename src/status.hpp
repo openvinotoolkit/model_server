@@ -272,6 +272,9 @@ class Status {
 public:
     Status(StatusCode code = StatusCode::OK) :
         code(code) {
+        if (code == StatusCode::OK) {
+            return;
+        }
         auto it = statusMessageMap.find(code);
         if (it != statusMessageMap.end())
             this->message = std::make_unique<std::string>(it->second);
