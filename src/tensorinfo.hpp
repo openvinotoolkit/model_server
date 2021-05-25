@@ -66,6 +66,16 @@ protected:
          */
     InferenceEngine::Layout layout;
 
+    /**
+         * @brief Tensor original layout
+         */
+    InferenceEngine::Layout originalLayout;
+
+    /**
+         * @brief TensorDesc
+         */
+    InferenceEngine::TensorDesc tensorDesc;
+
 public:
     /**
          * @brief Construct a new Tensor Info object
@@ -113,7 +123,8 @@ public:
         const std::string& mapping,
         const InferenceEngine::Precision& precision,
         const shape_t& shape,
-        const InferenceEngine::Layout& layout);
+        const InferenceEngine::Layout& layout,
+        const InferenceEngine::Layout& originalLayout);
 
     /**
          * @brief Get the Name object
@@ -203,6 +214,10 @@ public:
          * @return const InferenceEngine::TensorDesc&
          */
     const InferenceEngine::TensorDesc getTensorDesc() const;
+
+    bool isLayoutModified() const {
+        return this->layout != this->originalLayout;
+    }
 
     static std::string shapeToString(const shape_t& shape);
 

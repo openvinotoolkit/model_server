@@ -162,9 +162,9 @@ cc_library(
         "@awssdk//:s3",
         "@awssdk//:core",
         "@awssdk//:deps",
-	"@azure//:storage",
-	"@cpprest//:sdk",
-	"@boost//:lib",
+	    "@azure//:storage",
+	    "@cpprest//:sdk",
+	    "@boost//:lib",
         "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
@@ -186,8 +186,8 @@ cc_library(
 cc_binary(
     name = "libsampleloader.so",
     srcs = [
-	"example/SampleCustomLoader/sampleCustLoader.cpp",
-	"customloaderinterface.hpp",
+	    "example/SampleCustomLoader/sampleCustLoader.cpp",
+	    "customloaderinterface.hpp",
     ],
     linkshared = 1,
     deps = [
@@ -198,8 +198,8 @@ cc_binary(
 cc_binary(
     name = "lib_node_mock.so",
     srcs = [
-	"test/custom_nodes/node_mock.c",
-	"custom_node_interface.h",
+	    "test/custom_nodes/node_mock.c",
+	    "custom_node_interface.h",
     ],
     linkshared = 1,
 )
@@ -207,8 +207,8 @@ cc_binary(
 cc_binary(
     name = "lib_node_missing_implementation.so",
     srcs = [
-	"test/custom_nodes/node_missing_implementation.c",
-	"custom_node_interface.h",
+	    "test/custom_nodes/node_missing_implementation.c",
+	    "custom_node_interface.h",
     ],
     linkshared = 1,
 )
@@ -216,8 +216,8 @@ cc_binary(
 cc_binary(
     name = "lib_node_add_sub.so",
     srcs = [
-	"test/custom_nodes/node_add_sub.c",
-	"custom_node_interface.h",
+	    "test/custom_nodes/node_add_sub.c",
+	    "custom_node_interface.h",
     ],
     linkshared = 1,
 )
@@ -257,7 +257,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-            "@opencv//:opencv"
+        "@opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -275,7 +275,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-            "@opencv//:opencv"
+        "@opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -293,7 +293,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-            "@opencv//:opencv"
+        "@opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -321,6 +321,20 @@ cc_binary(
     deps = [
         "//src:ovms_lib",
         "@crypto_lib//:libcrypto",
+    ]
+)
+
+cc_binary(
+    name = "my_app",
+    srcs = [
+        "test/my_app.cpp",
+    ],
+    linkopts = [
+    ],
+    copts = [
+    ],
+    deps = [
+        "@openvino//:openvino",
     ]
 )
 

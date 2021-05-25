@@ -81,6 +81,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             return StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK;
         }
     }
+    // TODO: Restrict setting layout only to existing input tensors
     this->inputsInfo.clear();
 
     auto& CLIConfig = ovms::Config::instance();
@@ -103,19 +104,6 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         SPDLOG_DEBUG("Network shape for input: {} - {}; final shape {}", name,
             TensorInfo::shapeToString(networkShapes[name]),
             TensorInfo::shapeToString(shape));
-
-        auto layout = input->getLayout();
-        if (!layoutCLISetting.empty()) {
-            layout = TensorInfo::getLayoutFromString(layoutCLISetting);
-        } else if (!config.getLayout().empty()) {
-            layout = TensorInfo::getLayoutFromString(config.getLayout());
-        }
-
-        SPDLOG_DEBUG("Network layout for input: {} - {}; final layout {}", name,
-            TensorInfo::getStringFromLayout(input->getLayout()),
-            TensorInfo::getStringFromLayout(layout));
-
-        input->setLayout(layout);
 
         if (networkShapes[name] != shape) {
             reshapeRequired = true;
@@ -144,7 +132,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
 
         // Data from network
         auto precision = input->getPrecision();
-        auto layout = input->getLayout();
+        auto originalLayout = input->getLayout();
         auto shape = input->getTensorDesc().getDims();
 
         // // Data from config
@@ -161,8 +149,23 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
 
         // input->setLayout(layout);
 
+        auto layout = originalLayout;
+        if (!layoutCLISetting.empty()) {
+            layout = TensorInfo::getLayoutFromString(layoutCLISetting);
+        } else if (!config.getLayout().empty()) {
+            layout = TensorInfo::getLayoutFromString(config.getLayout());
+        }
+
+        if (layout != originalLayout) {
+            SPDLOG_INFO("Layout for input: {} is modified: from {} to {}", name,
+                TensorInfo::getStringFromLayout(originalLayout),
+                TensorInfo::getStringFromLayout(layout));
+        }
+        
+        input->setLayout(layout);
+
         auto mappingName = config.getMappingInputByKey(name);
-        auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
+        auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout, originalLayout);
         this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
     }
     SPDLOG_INFO("Final network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
@@ -180,7 +183,7 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
         auto layout = output->getLayout();
         auto shape = output->getDims();
         auto mappingName = config.getMappingOutputByKey(name);
-        auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
+        auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout, layout);
         std::string precision_str = tensor->getPrecisionAsString();
         this->outputsInfo[tensor->getMappedName()] = std::move(tensor);
         std::stringstream shape_stream;

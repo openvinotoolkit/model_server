@@ -241,21 +241,18 @@ Status DLNodeSession::setInputsForInference(InferenceEngine::InferRequest& infer
     Status status = StatusCode::OK;
     try {
         // Prepare inference request, fill with input blobs
-        for (const auto& kv : this->inputHandler->getInputs()) {
+        for (const auto& [name, blob] : this->inputHandler->getInputs()) {
             std::string realModelInputName;
-            if (!getRealInputName(kv.first, &realModelInputName).ok()) {
-                SPDLOG_LOGGER_WARN(dag_executor_logger, "DLNode::{} [Node name: {}]; cannot find real model input name for alias: {}", __FUNCTION__, getName(), kv.first);
+            if (!getRealInputName(name, &realModelInputName).ok()) {
+                SPDLOG_LOGGER_WARN(dag_executor_logger, "DLNode::{} [Node name: {}]; cannot find real model input name for alias: {}",
+                    __FUNCTION__, getName(), name);
                 return StatusCode::INTERNAL_ERROR;
             }
             // Update blob layout with model input layout
-            kv.second->getTensorDesc().setLayout(this->model->getInputsInfo().at(kv.first)->getLayout());
-            if (this->model->getInputsInfo().at(kv.first)->getLayout() == InferenceEngine::Layout::NHWC) {
-                // swap nchw to nhwc in description
-                SPDLOG_INFO("XDDDDDD");
-                auto blob = kv.second;
-                blob->getTensorDesc().reshape({1,3,400,600});
-            }
-            inferRequest.SetBlob(realModelInputName, kv.second);
+            auto& inputInfo = this->model->getInputsInfo().at(name);
+            blob->getTensorDesc().setLayout(inputInfo->getLayout());
+            blob->getTensorDesc().reshape(inputInfo->getTensorDesc().getDims());
+            inferRequest.SetBlob(realModelInputName, blob);
         }
         // OV implementation the InferenceEngine::Exception is not
         // a base class for all other exceptions thrown from OV.

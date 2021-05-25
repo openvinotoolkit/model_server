@@ -38,7 +38,8 @@ TensorInfo::TensorInfo(const std::string& name,
     mapping(""),
     precision(precision),
     shape(shape),
-    layout(InferenceEngine::Layout::ANY) {}
+    layout(InferenceEngine::Layout::ANY),
+    originalLayout(InferenceEngine::Layout::ANY) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const InferenceEngine::Precision& precision,
@@ -48,7 +49,8 @@ TensorInfo::TensorInfo(const std::string& name,
     mapping(""),
     precision(precision),
     shape(shape),
-    layout(layout) {}
+    layout(layout),
+    originalLayout(layout) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const InferenceEngine::TensorDesc& tensorDesc) :
@@ -56,18 +58,21 @@ TensorInfo::TensorInfo(const std::string& name,
     mapping(""),
     precision(tensorDesc.getPrecision()),
     shape(tensorDesc.getDims()),
-    layout(tensorDesc.getLayout()) {}
+    layout(tensorDesc.getLayout()),
+    originalLayout(tensorDesc.getLayout()) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
     const InferenceEngine::Precision& precision,
     const shape_t& shape,
-    const InferenceEngine::Layout& layout) :
+    const InferenceEngine::Layout& layout,
+    const InferenceEngine::Layout& originalLayout) :
     name(name),
     mapping(mapping),
     precision(precision),
     shape(shape),
-    layout(layout) {}
+    layout(layout),
+    originalLayout(originalLayout) {}
 
 const std::string& TensorInfo::getName() const {
     return name;

@@ -77,6 +77,14 @@ std::unique_ptr<struct CustomNodeParam[]> createCustomNodeParamArray(const std::
     return std::move(libraryParameters);
 }
 
+void print_shape(const InferenceEngine::SizeVector& v) {
+    std::cout << "=========; ";
+    for (auto c : v) {
+        std::cout << c << ",";
+    }
+    std::cout << std::endl;
+}
+
 std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const std::unordered_map<std::string, InferenceEngine::Blob::Ptr>& blobMap) {
     if (blobMap.size() == 0) {
         return nullptr;
@@ -84,11 +92,23 @@ std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const std
     auto inputTensors = std::make_unique<struct CustomNodeTensor[]>(blobMap.size());
     int i = 0;
     for (const auto& [name, blob] : blobMap) {
+        std::cout << name << ":";
+
+        const InferenceEngine::SizeVector& dims =
+            blob->getTensorDesc().getBlockingDesc().getBlockDims().size() > 0 ?
+            blob->getTensorDesc().getBlockingDesc().getBlockDims() :
+            blob->getTensorDesc().getDims();
+
+        print_shape(blob->getTensorDesc().getDims());
+        print_shape(blob->getTensorDesc().getBlockingDesc().getBlockDims());
+
         inputTensors[i].name = static_cast<const char*>(name.c_str());
         inputTensors[i].data = static_cast<uint8_t*>(blob->buffer());
         inputTensors[i].dataBytes = static_cast<uint64_t>(blob->byteSize());
-        inputTensors[i].dims = static_cast<uint64_t*>(blob->getTensorDesc().getDims().data());
-        inputTensors[i].dimsCount = static_cast<uint64_t>(blob->getTensorDesc().getDims().size());
+        inputTensors[i].dims = const_cast<uint64_t*>(dims.data());
+        //inputTensors[i].dims = static_cast<uint64_t*>(blob->getTensorDesc().getDims().data());
+        inputTensors[i].dimsCount = static_cast<uint64_t>(dims.size());
+        //inputTensors[i].dimsCount = static_cast<uint64_t>(blob->getTensorDesc().getDims().size());
         inputTensors[i].precision = toCustomNodeTensorPrecision(blob->getTensorDesc().getPrecision());
         i++;
     }

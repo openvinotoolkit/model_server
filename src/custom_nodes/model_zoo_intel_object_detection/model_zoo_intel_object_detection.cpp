@@ -161,7 +161,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     NODE_ASSERT(imageTensor->dimsCount == 4, "input image shape must have 4 dimensions");
     NODE_ASSERT(imageTensor->dims[0] == 1, "input image batch must be 1");
-    NODE_ASSERT(imageTensor->dims[1] == 3, "input image needs to have 3 color channels");
+    NODE_ASSERT(imageTensor->dims[3] == 3, "input image needs to have 3 color channels");
 
     NODE_ASSERT(detectionTensor->dimsCount == 4, "input detection shape must have 4 dimensions");
     NODE_ASSERT(detectionTensor->dims[0] == 1, "input detection dim[0] must be 1");
@@ -169,8 +169,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(detectionTensor->dims[2] == 200, "input detection dim[2] must be 200");
     NODE_ASSERT(detectionTensor->dims[3] == 7, "input detection dim[3] must be 7");
 
-    uint64_t _imageHeight = imageTensor->dims[2];
-    uint64_t _imageWidth = imageTensor->dims[3];
+    uint64_t _imageHeight = imageTensor->dims[1];
+    uint64_t _imageWidth = imageTensor->dims[2];
     NODE_ASSERT(_imageHeight <= std::numeric_limits<int>::max(), "image height is too large");
     NODE_ASSERT(_imageWidth <= std::numeric_limits<int>::max(), "image width is too large");
     int imageHeight = static_cast<int>(_imageHeight);
@@ -274,9 +274,9 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     (*info)[0].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     NODE_ASSERT(((*info)[0].dims) != nullptr, "malloc has failed");
     (*info)[0].dims[0] = 1;
-    (*info)[0].dims[1] = 3;
-    (*info)[0].dims[2] = originalImageHeight;
-    (*info)[0].dims[3] = originalImageWidth;
+    (*info)[0].dims[3] = 3;
+    (*info)[0].dims[1] = originalImageHeight;
+    (*info)[0].dims[2] = originalImageWidth;
     (*info)[0].precision = FP32;
 
     (*info)[1].name = INPUT_DETECTION_TENSOR_NAME;
