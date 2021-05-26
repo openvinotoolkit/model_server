@@ -49,6 +49,19 @@ def nchw_to_image(output_nd, name, location):
         out = out.transpose(1,2,0)
         cv2.imwrite(os.path.join(location, name + '_' + str(i) + '.jpg'), out)
 
+def decode(text):
+    word = ''
+    last_character = None
+    for character in text:
+        if character == last_character:
+            continue
+        elif character == '_':
+            last_character = None
+        else:
+            last_character = character
+            word += character
+    return word
+
 def crnn_output_to_text(output_nd):
     for i in range(output_nd.shape[0]):
         data = output_nd[i]
@@ -57,7 +70,7 @@ def crnn_output_to_text(output_nd):
         word = ''
         for i in range(preds.shape[0]):
             word += alphabet[preds[i,0]]
-        print(word)
+        print(decode(word))
 
 
 address = "{}:{}".format(args['grpc_address'],args['grpc_port'])

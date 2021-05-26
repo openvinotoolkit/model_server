@@ -170,6 +170,8 @@ const std::string TensorInfo::getDataTypeAsString(tensorflow::DataType dataType)
         return "I64";
     case tensorflow::DataType::DT_BOOL:
         return "BOOL";
+    case tensorflow::DataType::DT_STRING:
+        return "STRING";
     default:
         return "DT_INVALID";
     }
@@ -269,6 +271,7 @@ void TensorInfo::setShape(const shape_t& shape) {
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const shape_t& shape) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->setShape(shape);
+    copy->layout = InferenceEngine::Layout::ANY;
     return copy;
 }
 

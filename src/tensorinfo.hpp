@@ -66,17 +66,13 @@ protected:
          */
     InferenceEngine::Layout layout;
 
-    /**
-         * @brief TensorDesc
-         */
-    InferenceEngine::TensorDesc tensorDesc;
-
 public:
     /**
          * @brief Construct a new Tensor Info object
          * 
          */
     TensorInfo() = default;
+    TensorInfo(const TensorInfo&) = default;
 
     /**
          * @brief Construct a new Tensor Info object

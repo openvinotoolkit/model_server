@@ -27,6 +27,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "binaryutils.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -114,10 +115,19 @@ Status deserializePredictRequest(
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
             }
             auto& requestInput = requestInputItr->second;
+            InferenceEngine::Blob::Ptr blob;
 
-            InferenceEngine::Blob::Ptr blob =
-                deserializeTensorProto<TensorProtoDeserializator>(
+            if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
+                SPDLOG_DEBUG("Request contains binary inputs.");
+                Status status = convertStringValToBlob(requestInput, &blob, tensorInfo);
+                if (status != StatusCode::OK) {
+                    SPDLOG_DEBUG("Binary inputs conversion failed.");
+                    return status;
+                }
+            } else {
+                blob = deserializeTensorProto<TensorProtoDeserializator>(
                     requestInput, tensorInfo);
+            }
 
             if (blob == nullptr) {
                 Status status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;

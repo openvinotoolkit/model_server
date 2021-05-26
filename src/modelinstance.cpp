@@ -394,7 +394,6 @@ Status ModelInstance::fetchModelFilepaths() {
         }
         modelFiles.push_back(file);
     }
-
     if (!found) {
         found = true;
         modelFiles.clear();
@@ -443,6 +442,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     this->targetDevice = config.getTargetDevice();
     this->config = config;
     auto status = fetchModelFilepaths();
+
     if (!status.ok()) {
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return status;
@@ -450,7 +450,6 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     try {
         if (!this->engine)
             loadOVEngine();
-        status = StatusCode::OK;
         if (!this->network) {
             if (this->config.isCustomLoaderRequiredToLoadModel()) {
                 // loading the model using the custom loader
@@ -847,6 +846,12 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         auto status = checkIfShapeValuesNegative(requestInput);
         if (!status.ok())
             return status;
+
+        if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
+            // binary inputs will be validated during conversion to blob
+            SPDLOG_DEBUG("Received request contains binary inputs");
+            continue;
+        }
 
         status = validatePrecision(*networkInput, requestInput);
         if (!status.ok())

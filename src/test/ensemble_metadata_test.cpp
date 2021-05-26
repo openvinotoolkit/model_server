@@ -52,11 +52,10 @@ TEST(EnsembleMetadata, OneNode) {
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
-    ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
+    ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
-    tensor_map_t inputs, outputs;
-    ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::OK);
-    ASSERT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::OK);
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
 
     ASSERT_EQ(inputs.size(), 1);
     ASSERT_EQ(outputs.size(), 1);
@@ -119,11 +118,10 @@ TEST(EnsembleMetadata, MultipleNodesOnDifferentLevelsUsingTheSamePipelineInputs)
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
-    ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
+    ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
-    tensor_map_t inputs, outputs;
-    ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::OK);
-    ASSERT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::OK);
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
 
     ASSERT_EQ(inputs.size(), 2);
     ASSERT_EQ(outputs.size(), 3);
@@ -175,11 +173,10 @@ TEST(EnsembleMetadata, EmptyPipelineReturnsCorrectInputAndOutputInfo) {
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
-    ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
+    ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
-    tensor_map_t inputs, outputs;
-    ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::OK);
-    ASSERT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::OK);
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
 
     ASSERT_EQ(inputs.size(), 1);
     ASSERT_EQ(outputs.size(), 1);
@@ -266,11 +263,10 @@ TEST(EnsembleMetadata, ParallelDLModelNodesReferingToManyPipelineInputs) {
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
-    ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
+    ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
-    tensor_map_t inputs, outputs;
-    ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::OK);
-    ASSERT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::OK);
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
 
     ASSERT_EQ(inputs.size(), 8);
     for (size_t i = 1; i <= 4; i++) {
@@ -292,13 +288,14 @@ TEST(EnsembleMetadata, ParallelDLModelNodesReferingToManyPipelineInputs) {
     EXPECT_EQ(outputs.find("final_sum")->second->getPrecision(), InferenceEngine::Precision::FP32);
 }
 
-TEST(EnsembleMetadata, OneUnavailableNode) {
+TEST(EnsembleMetadata, OneUnavailableNodeBeforeRevalidationShouldWork) {
     /*
-        This test creates pipeline definition with one DL model node which has model that is unavailable due to:
+        This test creates pipeline definition with one DL model node which has model that becomes unavailable due to:
             a) no model version available
             b) model version is retired
             c) model is not loaded yet
-        Test ensures we receive error status by calling getInputsInfo and getOutputsInfo.
+        Test ensures we still receive metadata when underlying model is unloaded but PipelineDefinition is not revalidated
+        yet.
     */
 
     const model_version_t UNAVAILABLE_DUMMY_VERSION = 99;
@@ -324,14 +321,14 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
-    ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
+    ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
     config.setModelVersionPolicy(std::make_shared<SpecificModelVersionPolicy>(model_versions_t{UNAVAILABLE_DUMMY_VERSION}));
     ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
-
-    tensor_map_t inputs, outputs;
-    EXPECT_EQ(def->getInputsInfo(inputs, manager), StatusCode::MODEL_MISSING);
-    EXPECT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::MODEL_MISSING);
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
+    ASSERT_GT(inputs.size(), 0);
+    ASSERT_GT(outputs.size(), 0);
 
     config = DUMMY_MODEL_CONFIG;
     ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
@@ -339,14 +336,20 @@ TEST(EnsembleMetadata, OneUnavailableNode) {
     ASSERT_NE(instance, nullptr);
     instance->unloadModel();
 
-    EXPECT_EQ(def->getInputsInfo(inputs, manager), StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
-    EXPECT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
+    // we should still be able to get metadata since pipeline definition was not reloaded
+    auto inputs2 = def->getInputsInfo();
+    auto outputs2 = def->getOutputsInfo();
+    ASSERT_GT(inputs2.size(), 0);
+    ASSERT_GT(outputs2.size(), 0);
 
     config.setLocalPath("/tmp/non_existing_path_j3nmc783n");
     ASSERT_EQ(instance->loadModel(config), StatusCode::PATH_INVALID);
 
-    EXPECT_EQ(def->getInputsInfo(inputs, manager), StatusCode::MODEL_VERSION_NOT_LOADED_YET);
-    EXPECT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::MODEL_VERSION_NOT_LOADED_YET);
+    // we should still be able to get metadata since pipeline definition was not reloaded
+    auto inputs3 = def->getInputsInfo();
+    auto outputs3 = def->getOutputsInfo();
+    ASSERT_GT(inputs3.size(), 0);
+    ASSERT_GT(outputs3.size(), 0);
 }
 
 TEST(EnsembleMetadata, OneCustomNode) {
@@ -379,9 +382,8 @@ TEST(EnsembleMetadata, OneCustomNode) {
     ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
     ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
-    tensor_map_t inputs, outputs;
-    ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::OK);
-    ASSERT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::OK);
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
 
     ASSERT_EQ(inputs.size(), 1);
     ASSERT_EQ(outputs.size(), 1);
@@ -433,10 +435,10 @@ TEST(EnsembleMetadata, ParallelCustomNodes) {
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
     ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
     ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
+    ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
-    tensor_map_t inputs, outputs;
-    ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::OK);
-    ASSERT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::OK);
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
 
     ASSERT_EQ(inputs.size(), 1);
     ASSERT_EQ(outputs.size(), 3);
@@ -594,10 +596,10 @@ TEST(EnsembleMetadata, CustomNodeMultipleDemultiplexers) {
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
     ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
     ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
+    ASSERT_EQ(def->validate(manager), StatusCode::OK);
 
-    tensor_map_t inputs, outputs;
-    ASSERT_EQ(def->getInputsInfo(inputs, manager), StatusCode::OK);
-    ASSERT_EQ(def->getOutputsInfo(outputs, manager), StatusCode::OK);
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
 
     ASSERT_EQ(inputs.size(), 2);
     ASSERT_EQ(outputs.size(), 1);

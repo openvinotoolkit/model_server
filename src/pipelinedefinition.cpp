@@ -68,10 +68,21 @@ Status PipelineDefinition::validate(ModelManager& manager) {
     if (!validationResult.ok()) {
         return validationResult;
     }
-
+    std::unique_lock lock(metadataMtx);
+    validationResult = updateInputsInfo(manager);
+    if (!validationResult.ok()) {
+        return validationResult;
+    }
+    validationResult = updateOutputsInfo(manager);
+    if (!validationResult.ok()) {
+        return validationResult;
+    }
+    lock.unlock();
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of pipeline: {}", getName());
-    return validationResult;
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Pipeline: {} inputs: {}", getName(), getTensorMapString(inputsInfo));
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Pipeline: {} outputs: {}", getName(), getTensorMapString(outputsInfo));
+    return std::move(validationResult);
 }
 
 Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections) {
@@ -972,10 +983,22 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelManager& manager) const {
+const tensor_map_t PipelineDefinition::getInputsInfo() const {
+    std::shared_lock lock(metadataMtx);
+    tensor_map_t copy = inputsInfo;
+    return std::move(copy);
+}
+
+const tensor_map_t PipelineDefinition::getOutputsInfo() const {
+    std::shared_lock lock(metadataMtx);
+    tensor_map_t copy = outputsInfo;
+    return std::move(copy);
+}
+
+Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
     // Assumptions: this can only be called on available pipeline definition.
     // Add check if available when pipeline status will be implemented.
-
+    inputsInfo.clear();
     static const auto byName = [](const std::string& name) {
         return [name](const NodeInfo& nodeInfo) {
             return nodeInfo.nodeName == name;
@@ -1010,7 +1033,7 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelMa
                 }
 
                 for (const auto& [alias, realName] : specificDependencyMapping) {
-                    inputsInfo[alias] = instance->getInputsInfo().at(realName);
+                    inputsInfo[alias] = std::make_shared<TensorInfo>(*instance->getInputsInfo().at(realName));
                 }
                 break;
             }
@@ -1026,7 +1049,7 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelMa
                 }
 
                 for (const auto& [alias, realName] : specificDependencyMapping) {
-                    inputsInfo[alias] = info.at(realName);
+                    inputsInfo[alias] = std::make_shared<TensorInfo>(*info.at(realName));
                 }
                 break;
             }
@@ -1050,9 +1073,9 @@ Status PipelineDefinition::getInputsInfo(tensor_map_t& inputsInfo, const ModelMa
     return StatusCode::OK;
 }
 
-std::shared_ptr<TensorInfo> applyGatherShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape, bool isConnectionFromDemultiplexer) {
+std::shared_ptr<TensorInfo> applyGatherShapeForTensorIfNeeded(const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape, bool isConnectionFromDemultiplexer) {
     if (gatherShape.size() == 0) {
-        return tensorInfo;
+        return std::make_shared<TensorInfo>(*tensorInfo);
     }
     shape_t newShape = tensorInfo->getShape();
     if (isConnectionFromDemultiplexer) {
@@ -1076,7 +1099,7 @@ Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo&
     }
     for (const auto& [alias, realName] : specificDependencyMapping) {
         const auto& finalName = dependencyNodeInfo.outputNameAliases.count(alias) > 0 ? dependencyNodeInfo.outputNameAliases.at(alias) : alias;
-        outputsInfo[realName] = applyGatherShapeForTensor(instance->getOutputsInfo().at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
+        outputsInfo[realName] = applyGatherShapeForTensorIfNeeded(instance->getOutputsInfo().at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
     }
     return StatusCode::OK;
 }
@@ -1092,14 +1115,15 @@ Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeIn
     }
     for (const auto& [alias, realName] : specificDependencyMapping) {
         const auto& finalName = dependencyNodeInfo.outputNameAliases.count(alias) > 0 ? dependencyNodeInfo.outputNameAliases.at(alias) : alias;
-        outputsInfo[realName] = applyGatherShapeForTensor(info.at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
+        outputsInfo[realName] = applyGatherShapeForTensorIfNeeded(info.at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
     }
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::getOutputsInfo(tensor_map_t& outputsInfo, const ModelManager& manager) const {
+Status PipelineDefinition::updateOutputsInfo(const ModelManager& manager) {
     // Assumptions: this can only be called on available pipeline definition.
     // Add check if available when pipeline status will be implemented.
+    outputsInfo.clear();
     static const auto byName = [](const std::string& name) {
         return [name](const NodeInfo& nodeInfo) {
             return nodeInfo.nodeName == name;
