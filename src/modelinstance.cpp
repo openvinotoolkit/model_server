@@ -747,7 +747,7 @@ const Status ModelInstance::validatePrecision(const ovms::TensorInfo& networkInp
 const Status ModelInstance::validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
     const tensorflow::TensorProto& requestInput) {
     // Network and request must have the same number of shape dimensions, higher than 0
-    auto& shape = networkInput.getShape();
+    auto& shape = networkInput.getEffectiveShape();
     if (requestInput.tensor_shape().dim_size() <= 0 ||
         shape.size() != static_cast<size_t>(requestInput.tensor_shape().dim_size())) {
         std::stringstream ss;
@@ -777,12 +777,8 @@ void print_shape(const std::string& str, const SizeVector& vec) {
 const bool ModelInstance::checkShapeMismatch(const ovms::TensorInfo& networkInput,
     const tensorflow::TensorProto& requestInput,
     const Mode& batchingMode) {
-    print_shape("TensorInfo", networkInput.getShape());
-    //print_shape("TensorDesc", networkInput.getTensorDesc().getDims());
-    //print_shape("BlockingDesc", networkInput.getTensorDesc().getBlockingDesc().getBlockDims());
     // Network and request must have the same shape
-    auto& shape = networkInput.getShape();
-    //auto& shape = networkInput.getTensorDesc().getBlockingDesc().getBlockDims();
+    auto& shape = networkInput.getEffectiveShape();
     int i = (batchingMode == AUTO) ? 1 : 0;  // If batch size is automatic, omit first dimension
     for (; i < requestInput.tensor_shape().dim_size(); i++) {
         if (requestInput.tensor_shape().dim(i).size() < 0 ||
@@ -911,8 +907,7 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
                 finalStatus = StatusCode::RESHAPE_REQUIRED;
             } else {
                 std::stringstream ss;
-                //ss << "Expected: " << TensorInfo::shapeToString(networkInput->getShape())
-                ss << "Expected: " << TensorInfo::shapeToString(networkInput->getTensorDesc().getBlockingDesc().getBlockDims())
+                ss << "Expected: " << TensorInfo::shapeToString(networkInput->getEffectiveShape())
                    << "; Actual: " << TensorInfo::tensorShapeToString(requestInput.tensor_shape());
                 const std::string details = ss.str();
                 SPDLOG_DEBUG("[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);

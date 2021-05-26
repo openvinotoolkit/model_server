@@ -273,7 +273,7 @@ const shape_t& TensorInfo::getShape() const {
 }
 
 const shape_t& TensorInfo::getEffectiveShape() const {
-    return effectiveShape;
+    return effectiveShape.size() > 0 ? effectiveShape : shape;
 }
 
 void TensorInfo::setShape(const shape_t& shape) {
@@ -340,6 +340,7 @@ std::shared_ptr<TensorInfo> TensorInfo::getUnspecifiedTensorInfo() {
 std::string TensorInfo::tensorDescToString(const InferenceEngine::TensorDesc& desc) {
     std::stringstream ss;
     ss << "shape: " << shapeToString(desc.getDims())
+       << " effectiveShape: " << shapeToString(desc.getBlockingDesc().getBlockDims())
        << " precision: " << getPrecisionAsString(desc.getPrecision())
        << " layout: " << getStringFromLayout(desc.getLayout());
     return ss.str();

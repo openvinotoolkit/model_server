@@ -367,11 +367,11 @@ public:
     Status checkForRestrictedBatchSize() {
         if (!isMultiBatchAllowed) {
             for (auto& [inputName, tensorInfo] : this->inputsInfo) {
-                if (!tensorInfo->getShape().empty() &&
+                if (!tensorInfo->getEffectiveShape().empty() &&
                     dependantNodeInfo.gatherFromNode.empty() &&
-                    (tensorInfo->getShape()[0] >= 2)) {
+                    (tensorInfo->getEffectiveShape()[0] >= 2)) {
                     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {}, node: {}, inputName: {}, inputShape: {}. Batch size >= 2 is not allowed for non gathering nodes",
-                        pipelineName, dependantNodeInfo.nodeName, inputName, TensorInfo::shapeToString(tensorInfo->getShape()));
+                        pipelineName, dependantNodeInfo.nodeName, inputName, TensorInfo::shapeToString(tensorInfo->getEffectiveShape()));
                     return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE;
                 }
             }
@@ -485,8 +485,8 @@ public:
         // Affect shape by demultiplexer/gather if applies.
         const auto& tensorInput = this->inputsInfo.at(modelInputName);
         const auto& tensorOutput = this->dependencyOutputsInfo.at(modelOutputName);
-        shape_t tensorInputShape = tensorInput->getShape();
-        shape_t tensorOutputShape = tensorOutput->getShape();
+        shape_t tensorInputShape = tensorInput->getEffectiveShape();
+        shape_t tensorOutputShape = tensorOutput->getEffectiveShape();
         if (dependencyNodeInfo.demultiplyCount) {
             auto result = influenceShapeWithDemultiplexer(tensorOutputShape, dependencyNodeInfo);
             if (!result.ok()) {
@@ -520,10 +520,10 @@ public:
                 pipelineName,
                 dependantNodeInfo.nodeName,
                 modelInputName,
-                TensorInfo::shapeToString(tensorInput->getShape()),
+                TensorInfo::shapeToString(tensorInput->getEffectiveShape()),
                 dependencyNodeInfo.nodeName,
                 modelOutputName,
-                TensorInfo::shapeToString(tensorOutput->getShape()));
+                TensorInfo::shapeToString(tensorOutput->getEffectiveShape()));
             return StatusCode::INVALID_SHAPE;
         }
         if (tensorInput->getPrecision() != tensorOutput->getPrecision()) {
@@ -741,7 +741,7 @@ public:
 
         if (dependantNodeInfo.kind == NodeKind::DL || dependantNodeInfo.kind == NodeKind::CUSTOM) {
             for (const auto& [name, tensorOutput] : outputsInfo) {
-                auto result = validateShapeWithDemultiplexer(tensorOutput->getShape(), dependantNodeInfo);
+                auto result = validateShapeWithDemultiplexer(tensorOutput->getEffectiveShape(), dependantNodeInfo);
                 if (!result.ok()) {
                     return result;
                 }
@@ -1067,7 +1067,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
     if (it != nodeInfos.end()) {
         uint32_t demultiplyCount = it->demultiplyCount.value();
         for (auto& [inputName, inputTensorInfo] : inputsInfo) {
-            shape_t newShape = inputTensorInfo->getShape();
+            shape_t newShape = inputTensorInfo->getEffectiveShape();
             newShape.insert(newShape.begin(), demultiplyCount);
             inputTensorInfo = inputTensorInfo->createCopyWithNewShape(newShape);
         }
@@ -1079,7 +1079,7 @@ std::shared_ptr<TensorInfo> applyGatherShapeForTensorIfNeeded(const std::shared_
     if (gatherShape.size() == 0) {
         return std::make_shared<TensorInfo>(*tensorInfo);
     }
-    shape_t newShape = tensorInfo->getShape();
+    shape_t newShape = tensorInfo->getEffectiveShape();
     if (isConnectionFromDemultiplexer) {
         newShape.erase(newShape.begin());
     }
@@ -1226,11 +1226,11 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
                     if (nodeOutputsInfo.size() == 0) {
                         SPDLOG_ERROR("Node: {} library metadata reports no outputs", nodeName);
                         return;
-                    } else if (nodeOutputsInfo.begin()->second->getShape().size() < 3) {
+                    } else if (nodeOutputsInfo.begin()->second->getEffectiveShape().size() < 3) {
                         SPDLOG_ERROR("Node: {} library metadata reports output with too small number of dimensions", nodeName);
                         return;
                     }
-                    demultiplyCount = nodeOutputsInfo.begin()->second->getShape()[0];
+                    demultiplyCount = nodeOutputsInfo.begin()->second->getEffectiveShape()[0];
                 } else if (someNodeInfo.kind == NodeKind::ENTRY) {
                     demultiplyCount = 0;
                 }

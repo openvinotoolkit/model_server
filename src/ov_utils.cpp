@@ -81,11 +81,13 @@ std::string getNetworkInputsInfoString(const InferenceEngine::InputsDataMap& inp
         auto precision = inputInfo->getPrecision();
         auto layout = inputInfo->getLayout();
         auto shape = inputInfo->getTensorDesc().getDims();
+        auto effectiveShape = inputInfo->getTensorDesc().getBlockingDesc().getBlockDims();
 
         auto mappingName = config.getMappingInputByKey(name);
 
         stringStream << "\nInput name: " << name << "; mapping_name: " << mappingName << "; shape: " << TensorInfo::shapeToString(shape)
-                     << "; precision: " << TensorInfo::getPrecisionAsString(precision) << "; layout: " << TensorInfo::getStringFromLayout(layout);
+                     << "; effectiveShape: " << TensorInfo::shapeToString(effectiveShape) << "; precision: " << TensorInfo::getPrecisionAsString(precision)
+                     << "; layout: " << TensorInfo::getStringFromLayout(layout);
     }
     return stringStream.str();
 }
