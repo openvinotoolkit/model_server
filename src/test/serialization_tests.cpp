@@ -209,7 +209,7 @@ TEST_P(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
 
 class SerializeTFGRPCPredictResponseNegative : public SerializeTFGRPCPredictResponse {};
 
-TEST_P(SerializeTFGRPCPredictResponseNegative, ShouldFailForUnsupportedPrecision) {
+TEST_P(SerializeTFGRPCPredictResponseNegative, DISABLED_ShouldFailForUnsupportedPrecision) {
     Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     PredictResponse response;
@@ -217,7 +217,7 @@ TEST_P(SerializeTFGRPCPredictResponseNegative, ShouldFailForUnsupportedPrecision
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION);
 }
 
-TEST_F(SerializeTFGRPCPredictResponseNegative, OutputNameNotCreatedInInferenceShouldFail) {
+TEST_F(SerializeTFGRPCPredictResponseNegative, DISABLED_OutputNameNotCreatedInInferenceShouldFail) {
     auto inputs = getInputs(Precision::FP32);
     std::shared_ptr<MockIInferRequest> mInferRequestPtr =
         std::make_shared<MockIInferRequest>();
