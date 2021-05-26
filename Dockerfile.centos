@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,9 +37,9 @@ ARG YUM_OV_PACKAGE=intel-openvino-runtime-centos7
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
-    ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
+ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 
-    RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && yum install -d6 -y \
+RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && yum install -d6 -y \
             boost-atomic \
             boost-chrono \
             boost-filesystem \
@@ -93,7 +93,7 @@ ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
             unzip && \
             yum clean all
 
-    SHELL [ "/usr/bin/scl", "enable", "devtoolset-8" ]
+SHELL [ "/usr/bin/scl", "enable", "devtoolset-8" ]
 ENV CC=/opt/rh/devtoolset-8/root/bin/gcc
     ENV CXX=/opt/rh/devtoolset-8/root/bin/g++
 
