@@ -160,7 +160,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
 
         auto mappingName = config.getMappingInputByKey(name);
         auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
-        SPDLOG_INFO("Effective shape input: {}; {}", name,
+        SPDLOG_INFO("Effective shape input: {}; {}", tensor->getMappedName(),
             TensorInfo::shapeToString(tensor->getEffectiveShape()));
         this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
     }
@@ -174,12 +174,27 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
         const auto& name = pair.first;
         auto output = pair.second;
 
+        auto& CLIConfig = ovms::Config::instance();
+        const auto& layoutCLISetting = CLIConfig.layout();
+
         // Data from network
         auto precision = output->getPrecision();
-        auto layout = output->getLayout();
+        auto originalLayout = output->getLayout();
+
+        auto layout = originalLayout;
+        if (!layoutCLISetting.empty()) {
+            layout = TensorInfo::getLayoutFromString(layoutCLISetting);
+        } else if (!config.getLayout().empty()) {
+            layout = TensorInfo::getLayoutFromString(config.getLayout());
+        }
+        
+        output->setLayout(layout);
+
         auto shape = output->getDims();
         auto mappingName = config.getMappingOutputByKey(name);
         auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
+        SPDLOG_INFO("Effective shape output: {}; {}", tensor->getMappedName(),
+            TensorInfo::shapeToString(tensor->getEffectiveShape()));
         std::string precision_str = tensor->getPrecisionAsString();
         this->outputsInfo[tensor->getMappedName()] = std::move(tensor);
         std::stringstream shape_stream;
