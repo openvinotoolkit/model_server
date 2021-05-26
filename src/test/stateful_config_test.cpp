@@ -19,6 +19,8 @@
 
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -122,3 +124,4 @@ TEST_F(StatefulConfigTest, ChangedValues) {
     auto idleSequenceCleanup = modelConfig.getIdleSequenceCleanup();
     ASSERT_EQ(idleSequenceCleanup, true);
 }
+#pragma GCC diagnostic pop

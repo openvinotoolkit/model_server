@@ -28,6 +28,8 @@
 #pragma GCC diagnostic pop
 
 #include "../serialization.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "ovtestutils.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>
@@ -200,11 +202,6 @@ public:
 TEST_P(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
-    InferenceEngine::InferRequest inferRequest = std::get<0>(inputs);
-    // Using overloaded cast operator from InferRequest
-    InferenceEngine::IInferRequest::Ptr& mInferRequestPtr(inferRequest);
-    MockIInferRequestProperGetBlob* mInferRequest = static_cast<MockIInferRequestProperGetBlob*>(mInferRequestPtr.get());
-    EXPECT_CALL(*mInferRequest, GetBlob_mocked(_, _, _));
     PredictResponse response;
     auto status = serializePredictResponse(std::get<0>(inputs), std::get<1>(inputs), &response);
     EXPECT_TRUE(status.ok());
@@ -215,11 +212,6 @@ class SerializeTFGRPCPredictResponseNegative : public SerializeTFGRPCPredictResp
 TEST_P(SerializeTFGRPCPredictResponseNegative, ShouldFailForUnsupportedPrecision) {
     Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
-    InferenceEngine::InferRequest inferRequest = std::get<0>(inputs);
-    // Using overloaded cast operator from InferRequest
-    InferenceEngine::IInferRequest::Ptr& mInferRequestPtr(inferRequest);
-    MockIInferRequestProperGetBlob* mInferRequest = static_cast<MockIInferRequestProperGetBlob*>(mInferRequestPtr.get());
-    EXPECT_CALL(*mInferRequest, GetBlob_mocked(_, _, _));
     PredictResponse response;
     auto status = serializePredictResponse(std::get<0>(inputs), std::get<1>(inputs), &response);
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION);
@@ -259,3 +251,4 @@ INSTANTIATE_TEST_SUITE_P(
     SerializeTFGRPCPredictResponseNegative,
     ::testing::ValuesIn(UNSUPPORTED_OUTPUT_PRECISIONS),
     ::testing::PrintToStringParamName());
+#pragma GCC diagnostic pop
