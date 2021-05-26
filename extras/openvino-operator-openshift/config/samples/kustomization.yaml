@@ -1,0 +1,4 @@
+## Append samples you want in your CSV to this file as resources ##
+resources:
+- intel_v1alpha1_ovms.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
