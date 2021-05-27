@@ -119,7 +119,7 @@ spec:
           verbs:
           - '*'
         - apiGroups:
-            - ""
+            - image.openshift.io
           resources:
             - imagestreams
           verbs:

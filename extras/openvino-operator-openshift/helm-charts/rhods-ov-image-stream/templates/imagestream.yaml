@@ -3,7 +3,7 @@ kind: "ImageStream"
 metadata:
   name: "openvino-toolkit"
   labels:
-    application: s2i-openvino-notebook
+    application: openvino-notebook
     opendatahub.io/notebook-image: "true"
   annotations:
     opendatahub.io/notebook-image-desc: >-

@@ -25,6 +25,7 @@ rest_port: 8081
 file_system_poll_wait_seconds: 0
 model_name: ""
 model_path: ""
+layout: ""
 target_device: "CPU"
 nireq: ""
 batch_size: ""

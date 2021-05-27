@@ -1,4 +1,4 @@
 apiVersion: v1
-description: OpenVINO Toolkit stream
+description: OpenVINO Toolkit Notebook image
 name: rhods-ov-image-stream
 version: 0.0.1

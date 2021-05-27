@@ -253,6 +253,7 @@ release "ovms-app" uninstalled
 | stateful      | If set to any non empty value, enables stateful model execution | Model must be stateful | Stateless model execution |
 | nireq      | Size of inference queue  |  | set automatically by OpenVINO|
 | batch_size      | Change the model batch size  |  | defined by the model attributes |
+| layout      | Change layout of the model input or output with image data. NCHW or NHWC  |  | Defined in the model |
 | shape      | Change the model input shape  |  | defined by the model attributes |
 | model_version_policy      | Set the model version policy  |  | {\"latest\": { \"num_versions\":1 }} The latest version is served |
 | plugin_config      | Device plugin configuration used for performance tuning  |  | {\"CPU_THROUGHPUT_STREAMS\":\"CPU_THROUGHPUT_AUTO\"}|
