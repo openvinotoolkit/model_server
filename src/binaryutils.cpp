@@ -84,6 +84,12 @@ cv::Mat convertStringValToMat(const std::string& stringVal) {
     return cv::imdecode(dataMat, cv::IMREAD_UNCHANGED);
 }
 
+std::string convertMatToStringVal(const cv::Mat& dataMat) {
+    std::vector<unsigned char> buf;
+    cv::imencode(".jpg", dataMat, buf);
+    return std::string(buf.begin(), buf.end());
+}
+
 Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const InferenceEngine::Precision requestedPrecision) {
     int type = getMatTypeFromTensorPrecision(requestedPrecision);
     if (type == -1) {
@@ -219,6 +225,20 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
     return StatusCode::OK;
 }
 
+Status convertMatsToTensor(std::vector<cv::Mat>& images, const tensorflow::TensorProto& dst) {
+    std::string stringVal;
+    for (auto& image : images) {
+        stringVal += convertMatToStringVal(image);
+    }
+    dst.set_dtype(tensorflow::DataTypeToEnum<tstring>::value);
+    dst.mutable_tensor_shape()->Clear();
+    for (auto dim : networkOutput->getShape()) {
+        dst.mutable_tensor_shape()->add_dim()->set_size(dim);
+    }
+    dst.mutable_tensor_content()->assign(stringVal.c_str(), stringVal.size() * sizeof(char));
+    return StatusCode::OK;
+}
+
 template <typename T>
 InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
     int offset = 0;
@@ -265,6 +285,17 @@ InferenceEngine::Blob::Ptr convertMatsToBlob(std::vector<cv::Mat>& images, const
     }
 }
 
+Status convertBlobToMats(std::vector<cv::Mat>& images, const InferenceEngine::Blob::Ptr* blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    int offset = 0;
+    auto blob = InferenceEngine::make_shared_blob<T>(tensorInfo->getTensorDesc());
+    char* ptr = blob->buffer();
+    for (int i = 0; i < tensorInfo.getShape()[0]; i++) {
+        images.emplace_back(cv::Mat(tensorInfo.getShape()[1], tensorInfo.getShape()[2], CV_32FC3, ptr + offset);
+        offset += (images.back().total() * images.back().elemSize());
+    }
+    return blob;
+}
+
 Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr* blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
     auto status = validateTensor(tensorInfo, src);
     if (status != StatusCode::OK) {
@@ -280,5 +311,15 @@ Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngin
 
     *blob = convertMatsToBlob(images, tensorInfo);
     return StatusCode::OK;
+}
+
+Status convertBlobToStringVal(const InferenceEngine::Blob::Ptr* blob, tensorflow::TensorProto& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    std::vector<cv::Mat> images;
+    auto status = convertBlobToMats(images, blob, tensorInfo);
+    if (!status.ok()) {
+        return status;
+    }
+
+    return convertMatsToTensor(images, dst, tensorInfo);
 }
 }  // namespace ovms

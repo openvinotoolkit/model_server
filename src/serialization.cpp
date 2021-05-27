@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "serialization.hpp"
 
+#include "binaryutils.hpp"
+
 namespace ovms {
 
 Status serializeBlobToTensorProto(
@@ -85,7 +87,11 @@ Status serializePredictResponse(
             return status;
         }
         auto& tensorProto = (*response->mutable_outputs())[networkOutput->getMappedName()];
-        auto status = serializeBlobToTensorProto(tensorProto, networkOutput, blob);
+        if (networkName.find("b64") != std::string::npos) {
+            auto status = convertBlobToStringVal(&blob, tensorProto, networkOutput);
+        } else {
+            auto status = serializeBlobToTensorProto(tensorProto, networkOutput, blob);
+        }
         if (!status.ok()) {
             return status;
         }
