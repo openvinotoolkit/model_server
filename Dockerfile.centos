@@ -93,10 +93,6 @@ RUN yum install -d6 -y epel-release centos-release-scl && yum update -d6 -y && y
             unzip && \
             yum clean all
 
-SHELL [ "/usr/bin/scl", "enable", "devtoolset-8" ]
-ENV CC=/opt/rh/devtoolset-8/root/bin/gcc
-ENV CXX=/opt/rh/devtoolset-8/root/bin/g++
-
 # Set up Bazel
 ENV BAZEL_VERSION 2.0.0
 WORKDIR /bazel
@@ -143,6 +139,10 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; \
 # install sample apps including benchmark_app
 RUN if [ -f /opt/intel/openvino/deployment_tools/inference_engine/samples/cpp/build_samples.sh ];  then ln -s /usr/bin/cmake3 /usr/bin/cmake && /opt/intel/openvino/deployment_tools/inference_engine/samples/cpp/build_samples.sh ; fi
 #################### END OF OPENVINO BINARY INSTALL
+
+SHELL [ "/usr/bin/scl", "enable", "devtoolset-8" ]
+ENV CC=/opt/rh/devtoolset-8/root/bin/gcc
+ENV CXX=/opt/rh/devtoolset-8/root/bin/g++
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
