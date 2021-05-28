@@ -17,6 +17,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include "absl/strings/escaping.h"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/util/json_tensor.h"
@@ -181,6 +183,14 @@ Status makeJsonFromPredictResponse(
         return StatusCode::REST_PROTO_TO_STRING_ERROR;
     }
 
+    return StatusCode::OK;
+}
+
+Status decodeBase64(std::string& bytes, std::string& decodedBytes) {
+    auto status = Status(absl::Base64Unescape(bytes, &decodedBytes) ? StatusCode::OK : StatusCode::REST_BASE64_DECODE_ERROR);
+    if (!status.ok()) {
+        return status;
+    }
     return StatusCode::OK;
 }
 }  // namespace ovms
