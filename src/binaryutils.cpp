@@ -226,16 +226,10 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
 }
 
 Status convertMatsToTensor(const std::vector<cv::Mat>& images, tensorflow::TensorProto& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    std::string stringVal;
-    for (auto& image : images) {
-        stringVal += convertMatToStringVal(image);
-    }
     dst.set_dtype(tensorflow::DataTypeToEnum<tensorflow::tstring>::value);
-    dst.mutable_tensor_shape()->Clear();
-    for (auto dim : tensorInfo->getShape()) {
-        dst.mutable_tensor_shape()->add_dim()->set_size(dim);
+    for (auto& image : images) {
+        dst.add_string_val(convertMatToStringVal(image));
     }
-    dst.mutable_tensor_content()->assign(stringVal.c_str(), stringVal.size() * sizeof(char));
     return StatusCode::OK;
 }
 
@@ -286,19 +280,22 @@ InferenceEngine::Blob::Ptr convertMatsToBlob(std::vector<cv::Mat>& images, const
 }
 
 Status convertBlobToMats(std::vector<cv::Mat>& images, const InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    int rows, cols;
+    int matPrecision = getMatTypeFromTensorPrecision(tensorInfo->getPrecision());
+    int rows, cols, channels;
     if (tensorInfo->getLayout() == InferenceEngine::Layout::NCHW) {
+        channels = tensorInfo->getShape()[1];
         rows = tensorInfo->getShape()[2];
         cols = tensorInfo->getShape()[3];
     } else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC) {
         rows = tensorInfo->getShape()[1];
         cols = tensorInfo->getShape()[2];
+        channels = tensorInfo->getShape()[3];
     } else {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
     int offset = 0;
     for (size_t i = 0; i < tensorInfo->getShape()[0]; i++) {
-        images.emplace_back(cv::Mat(rows, cols, CV_32FC3, (char*)blob->buffer() + offset));
+        images.emplace_back(cv::Mat(rows, cols, CV_MAKETYPE(matPrecision, channels), (char*)blob->buffer() + offset));
         offset += (images.back().total() * images.back().elemSize());
     }
     return StatusCode::OK;
