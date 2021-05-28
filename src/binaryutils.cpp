@@ -225,14 +225,14 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
     return StatusCode::OK;
 }
 
-Status convertMatsToTensor(std::vector<cv::Mat>& images, const tensorflow::TensorProto& dst) {
+Status convertMatsToTensor(const std::vector<cv::Mat>& images, tensorflow::TensorProto& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
     std::string stringVal;
     for (auto& image : images) {
         stringVal += convertMatToStringVal(image);
     }
-    dst.set_dtype(tensorflow::DataTypeToEnum<tstring>::value);
+    dst.set_dtype(tensorflow::DataTypeToEnum<tensorflow::tstring>::value);
     dst.mutable_tensor_shape()->Clear();
-    for (auto dim : networkOutput->getShape()) {
+    for (auto dim : tensorInfo->getShape()) {
         dst.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
     dst.mutable_tensor_content()->assign(stringVal.c_str(), stringVal.size() * sizeof(char));
@@ -285,15 +285,23 @@ InferenceEngine::Blob::Ptr convertMatsToBlob(std::vector<cv::Mat>& images, const
     }
 }
 
-Status convertBlobToMats(std::vector<cv::Mat>& images, const InferenceEngine::Blob::Ptr* blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
+Status convertBlobToMats(std::vector<cv::Mat>& images, const InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    int rows, cols;
+    if (tensorInfo->getLayout() == InferenceEngine::Layout::NCHW) {
+        rows = tensorInfo->getShape()[2];
+        cols = tensorInfo->getShape()[3];
+    } else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC) {
+        rows = tensorInfo->getShape()[1];
+        cols = tensorInfo->getShape()[2];
+    } else {
+        return StatusCode::UNSUPPORTED_LAYOUT;
+    }
     int offset = 0;
-    auto blob = InferenceEngine::make_shared_blob<T>(tensorInfo->getTensorDesc());
-    char* ptr = blob->buffer();
-    for (int i = 0; i < tensorInfo.getShape()[0]; i++) {
-        images.emplace_back(cv::Mat(tensorInfo.getShape()[1], tensorInfo.getShape()[2], CV_32FC3, ptr + offset);
+    for (size_t i = 0; i < tensorInfo->getShape()[0]; i++) {
+        images.emplace_back(cv::Mat(rows, cols, CV_32FC3, (char*)blob->buffer() + offset));
         offset += (images.back().total() * images.back().elemSize());
     }
-    return blob;
+    return StatusCode::OK;
 }
 
 Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr* blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
@@ -313,7 +321,7 @@ Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngin
     return StatusCode::OK;
 }
 
-Status convertBlobToStringVal(const InferenceEngine::Blob::Ptr* blob, tensorflow::TensorProto& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
+Status convertBlobToStringVal(const InferenceEngine::Blob::Ptr& blob, tensorflow::TensorProto& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
     std::vector<cv::Mat> images;
     auto status = convertBlobToMats(images, blob, tensorInfo);
     if (!status.ok()) {

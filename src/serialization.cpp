@@ -76,8 +76,7 @@ Status serializePredictResponse(
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response) {
 
-    for (const auto& pair : outputMap) {
-        auto networkOutput = pair.second;
+    for (const auto& [networkName, networkOutput] : outputMap) {
         InferenceEngine::Blob::Ptr blob;
         try {
             blob = inferRequest.GetBlob(networkOutput->getName());
@@ -87,10 +86,11 @@ Status serializePredictResponse(
             return status;
         }
         auto& tensorProto = (*response->mutable_outputs())[networkOutput->getMappedName()];
+        Status status = StatusCode::OK;
         if (networkName.find("b64") != std::string::npos) {
-            auto status = convertBlobToStringVal(&blob, tensorProto, networkOutput);
+            status = convertBlobToStringVal(blob, tensorProto, networkOutput);
         } else {
-            auto status = serializeBlobToTensorProto(tensorProto, networkOutput, blob);
+            status = serializeBlobToTensorProto(tensorProto, networkOutput, blob);
         }
         if (!status.ok()) {
             return status;
