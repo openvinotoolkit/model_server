@@ -15,14 +15,10 @@
 #
 
 from enum import Enum
-from ovmsclient.tfs_compat.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
+from ovmsclient.tfs_compat.base.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
 
 class HttpPredictRequest(PredictRequest):
-    class Format(Enum):
-        COLUMN = 1
-        COLUMN_NONAME = 2
-        ROW = 3
-        ROW_NONAME = 4
+    pass
 
 class HttpModelMetadataRequest(ModelMetadataRequest):
     pass
@@ -30,7 +26,7 @@ class HttpModelMetadataRequest(ModelMetadataRequest):
 class HttpModelStatusRequest(ModelStatusRequest):
     pass
 
-def make_predict_request(inputs, model_name, model_version=0, request_format=HttpPredictRequest.Format.COLUMN):
+def make_predict_request(inputs, model_name, model_version=0):
     '''
     Create HttpPredictRequest object.
 
@@ -62,15 +58,6 @@ def make_predict_request(inputs, model_name, model_version=0, request_format=Htt
         model_version (optional): Version of the model that will receive the request.
             By default this value is set to 0, meaning the request will be sent to the default version of the model.
 
-        request_format (optional): JSON body structure for the request inputs. Can be one of:
-
-            * *HttpPredictRequest.Format.COLUMN*
-            * *HttpPredictRequest.Format.COLUMN_NONAME*
-            * *HttpPredictRequest.Format.ROW*
-            * *HttpPredictRequest.Format.ROW_NONAME*
-
-            By default this value is set to *HttpPredictRequest.Format.COLUMN*.
-
     Returns:
         HttpPredictRequest object filled with **inputs** and target model spec.
 
@@ -83,7 +70,7 @@ def make_predict_request(inputs, model_name, model_version=0, request_format=Htt
 
         >>> predict_request = make_predict_request(
         ...     inputs={
-        ...         "string_input": "hello there",
+        ...         "binary_input": bytes([1, 2, 3, 4, 5, 6]),
         ...         "numeric_input: np.array([[1, 2, 3], [4, 5, 6]], np.int32)
         ...     }, 
         ...     model_name="model")

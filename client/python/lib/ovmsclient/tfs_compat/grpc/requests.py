@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from ovmsclient.tfs_compat.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
+from ovmsclient.tfs_compat.base.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
 
 class GrpcPredictRequest(PredictRequest):
     pass
@@ -72,7 +72,7 @@ def make_predict_request(inputs, model_name, model_version=0):
 
         >>> predict_request = make_predict_request(
         ...     inputs={
-        ...         "string_input": "hello there",
+        ...         "binary_input": bytes([1, 2, 3, 4, 5, 6]),
         ...         "numeric_input: np.array([[1, 2, 3], [4, 5, 6]], np.int32)
         ...     }, 
         ...     model_name="model")

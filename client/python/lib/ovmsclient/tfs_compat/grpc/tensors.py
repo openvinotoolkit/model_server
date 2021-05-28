@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-def make_tensor_proto(values, dtype=None, shape=None, use_tensor_content=True):
+def make_tensor_proto(values, dtype=None, shape=None):
     '''
     Create TensorProto object from values.
 
@@ -31,10 +31,6 @@ def make_tensor_proto(values, dtype=None, shape=None, use_tensor_content=True):
         shape (optional): The list of integers defining the shape of the tensor. 
             If not provided, the function will try to infer the shape from **values** argument.
 
-        use_tensor_content (optional): Determines if the **values** should be placed in tensor_content field of TensorProto.  
-            This is applicable for numeric types. Strings are always placed in TensorProto string_val field.
-            The default value of this argument is True.
-
     Returns:
         TensorProto object filled with **values**.
 
@@ -43,11 +39,6 @@ def make_tensor_proto(values, dtype=None, shape=None, use_tensor_content=True):
         ValueError: if arguments have inappropriate values.
 
     Examples:
-        With python string scalar:
-
-        >>> data = "hello"
-        >>> tensor_proto = make_tensor_proto(data)
-        >>> print(tensor_proto)
 
         With python list:
 
@@ -58,6 +49,12 @@ def make_tensor_proto(values, dtype=None, shape=None, use_tensor_content=True):
         With numpy array:
 
         >>> data = np.array([[1, 2, 3], [4, 5, 6]], np.int32)
+        >>> tensor_proto = make_tensor_proto(data)
+        >>> print(tensor_proto)
+
+        With binary data:
+
+        >>> data = bytes([1, 2, 3, 4, 5, 6])
         >>> tensor_proto = make_tensor_proto(data)
         >>> print(tensor_proto)
     '''
