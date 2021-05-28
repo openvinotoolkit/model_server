@@ -106,6 +106,11 @@ private:
     uint32_t maxSequenceNumber;
 
     /**
+         * @brief Layout for single input
+         */
+    std::string layout;
+
+    /**
          * @brief Model version
          */
     model_version_t version = -1;
@@ -114,11 +119,6 @@ private:
          * @brief Plugin config
          */
     plugin_config_t pluginConfig;
-
-    /**
-         * @brief Layout for single input
-         */
-    std::string layout;
 
     /**
          * @brief Map of shapes
@@ -184,6 +184,7 @@ public:
         bool idleSequenceCleanup = true,
         bool lowLatencyTransformation = false,
         uint32_t maxSequenceNumber = DEFAULT_MAX_SEQUENCE_NUMBER,
+        const std::string& layout = "",
         model_version_t version = 0,
         const std::string& localPath = "") :
         name(name),
@@ -196,9 +197,9 @@ public:
         idleSequenceCleanup(idleSequenceCleanup),
         lowLatencyTransformation(lowLatencyTransformation),
         maxSequenceNumber(maxSequenceNumber),
+        layout(layout),
         version(version),
         pluginConfig({}),
-        layout(""),
         shapes({}),
         layouts({}),
         mappingInputs({}),

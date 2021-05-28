@@ -53,6 +53,7 @@ const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     true,                  // idle sequence cleanup enabled
     false,                 // low latency transformation enabled
     500,                   // steteful sequence max number
+    "",                    // layout
     1,                     // model_version unused since version are read from path
     dummy_model_location,  // local path
 };
@@ -67,6 +68,7 @@ const ovms::ModelConfig SUM_MODEL_CONFIG{
     true,                // idle sequence cleanup enabled
     false,               // low latency transformation enabled
     500,                 // steteful sequence max number
+    "",                  // layout
     1,                   // model_version unused since version are read from path
     sum_model_location,  // local path
 };

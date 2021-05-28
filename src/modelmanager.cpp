@@ -106,7 +106,8 @@ Status ModelManager::startFromConfig() {
             config.stateful(),
             config.idleSequenceCleanup(),
             config.lowLatencyTransformation(),
-            config.maxSequenceNumber()});
+            config.maxSequenceNumber(),
+            config.layout()});
 
     if (!success) {
         return StatusCode::UNKNOWN_ERROR;

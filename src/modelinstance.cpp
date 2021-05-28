@@ -83,9 +83,11 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     }
     // TODO: Restrict setting layout only to existing input tensors
     this->inputsInfo.clear();
+    std::cout << "55555" << std::endl;
 
-    auto& CLIConfig = ovms::Config::instance();
-    const auto& layoutCLISetting = CLIConfig.layout();
+    //auto& CLIConfig = ovms::Config::instance();
+    //const auto& layoutCLISetting = CLIConfig.layout();
+    const auto& layoutCLISetting = config.getLayout();
 
     for (const auto& pair : networkInputs) {
         const auto& name = pair.first;
@@ -110,6 +112,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             networkShapes[name] = shape;
         }
     }
+    std::cout << "66666" << std::endl;
 
     // Update OV model shapes
     if (reshapeRequired) {
@@ -125,6 +128,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     } else {
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
     }
+    std::cout << "77777" << std::endl;
 
     for (const auto& pair : networkInputs) {
         const auto& name = pair.first;
@@ -155,7 +159,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         } else if (!config.getLayout().empty()) {
             layout = TensorInfo::getLayoutFromString(config.getLayout());
         }
-        
+
         input->setLayout(layout);
 
         auto mappingName = config.getMappingInputByKey(name);
@@ -164,6 +168,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             TensorInfo::shapeToString(tensor->getEffectiveShape()));
         this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
     }
+    std::cout << "88888" << std::endl;
     SPDLOG_INFO("Final network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
     return StatusCode::OK;
 }
@@ -174,8 +179,9 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
         const auto& name = pair.first;
         auto output = pair.second;
 
-        auto& CLIConfig = ovms::Config::instance();
-        const auto& layoutCLISetting = CLIConfig.layout();
+        //auto& CLIConfig = ovms::Config::instance();
+        //const auto& layoutCLISetting = CLIConfig.layout();
+        const auto& layoutCLISetting = config.getLayout();
 
         // Data from network
         auto precision = output->getPrecision();
@@ -495,14 +501,17 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
                 status = loadOVCNNNetwork();
             }
         }
+        std::cout << "11111" << std::endl;
 
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
         }
-
+        std::cout << "22222" << std::endl;
         configureBatchSize(this->config, parameter);
+        std::cout << "33333" << std::endl;
         status = loadInputTensors(this->config, parameter);
+        std::cout << "444444" << std::endl;
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
