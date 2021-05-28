@@ -176,6 +176,7 @@ enum class StatusCode {
     REST_NO_INPUTS_FOUND,                       /*!< Missing inputs in column order */
     REST_COULD_NOT_PARSE_INPUT,                 /*!< Error while parsing input content, not valid ndarray */
     REST_PROTO_TO_STRING_ERROR,                 /*!< Error while parsing ResponseProto to JSON string */
+    REST_BASE64_DECODE_ERROR,                   /*!< Error while decoding base64 REST binary input */
     REST_UNSUPPORTED_PRECISION,                 /*!< Unsupported conversion from tensor_content to _val container */
     REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, /*!< Size of data in tensor_content does not match declared tensor shape */
     REST_SERIALIZE_VAL_FIELD_INVALID_SIZE,      /*!< Number of elements in xxx_val field does not match declared tensor shape */

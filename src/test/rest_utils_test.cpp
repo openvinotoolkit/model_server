@@ -267,6 +267,19 @@ TEST_F(RestUtilsTest, MakeJsonFromPredictResponse_ErrorWhenNoOutputs) {
     EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, Order::COLUMN), StatusCode::REST_PROTO_TO_STRING_ERROR);
 }
 
+TEST_F(RestUtilsTest, Base64DecodeCorrect) {
+    std::string bytes = "abcd";
+    std::string decodedBytes;
+    EXPECT_EQ(decodeBase64(bytes, decodedBytes), StatusCode::OK);
+    EXPECT_EQ(decodedBytes, "i\xB7\x1D");
+}
+
+TEST_F(RestUtilsTest, Base64DecodeWrongLength) {
+    std::string bytes = "abcde";
+    std::string decodedBytes;
+    EXPECT_EQ(decodeBase64(bytes, decodedBytes), StatusCode::REST_BASE64_DECODE_ERROR);
+}
+
 TEST_F(RestUtilsPrecisionTest, MakeJsonFromPredictResponse_Float) {
     float data = 92.5f;
     output->set_dtype(tensorflow::DataType::DT_FLOAT);
