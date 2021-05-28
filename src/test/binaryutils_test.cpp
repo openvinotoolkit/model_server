@@ -86,7 +86,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonSupportedPrecision) {
 TEST_F(BinaryUtilsTest, tensorWithNonMatchingShapeSize) {
     InferenceEngine::Blob::Ptr blob;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1}, InferenceEngine::Layout::NCHW);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1}, InferenceEngine::Layout::NC);
 
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
 
