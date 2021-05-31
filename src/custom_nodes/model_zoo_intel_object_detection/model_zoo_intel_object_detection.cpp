@@ -198,12 +198,12 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(imageWidth == originalImageWidth, "original image size parameter differs from original image tensor size");
 
     // cv::Mat image = nchw_to_mat(imageTensor);
-    
+
     cv::Mat image;
     if (originalImageLayout == "NHWC") {
-        nhwc_to_mat(imageTensor);
+        image = nhwc_to_mat(imageTensor);
     } else {
-        nchw_to_mat(imageTensor);
+        image = nchw_to_mat(imageTensor);
     }
 
     NODE_ASSERT(image.cols == imageWidth, "Mat generation failed");

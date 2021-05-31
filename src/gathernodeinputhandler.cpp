@@ -68,10 +68,13 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
     }
     for (auto& [inputName, shardMap] : shardsStorage) {
         const auto shardsCount = shardMap.size();
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Consolidating: {} shards for input: {}", shardsCount, inputName);
+        SPDLOG_LOGGER_INFO(dag_executor_logger, "Consolidating: {} shards for input: {}", shardsCount, inputName);
         session_id_t firstShardId = 0;
         auto firstShardTensorDesc = shardMap.at(firstShardId)->getTensorDesc();
-        auto shardDims = firstShardTensorDesc.getDims();
+        // auto shardDims = firstShardTensorDesc.getDims();
+        std::cout << TensorInfo::shapeToString(firstShardTensorDesc.getDims()) << " " << TensorInfo::shapeToString(firstShardTensorDesc.getBlockingDesc().getBlockDims()) << std::endl;
+        auto shardDims =
+            firstShardTensorDesc.getBlockingDesc().getBlockDims().size() > 0 ? firstShardTensorDesc.getBlockingDesc().getBlockDims() : firstShardTensorDesc.getDims();
         auto newDims = shardDims;
         newDims.insert(newDims.begin(),
             collapsingDetails->collapsedSessionSizes.begin(),

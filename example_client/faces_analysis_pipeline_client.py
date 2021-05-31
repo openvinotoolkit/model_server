@@ -51,10 +51,11 @@ def prepare_img_input_in_nhwc_format(request, name, path, resize_to_shape):
     request.inputs[name].CopyFrom(make_tensor_proto(img, shape=img.shape))
 
 
-def save_face_images_as_jpgs(output_nd, name, location):
+def save_face_images_as_jpgs(output_nd, name, location, layout):
     for i in range(output_nd.shape[0]):
         out = output_nd[i][0]
-        out = out.transpose(1,2,0)
+        if layout == 'CHW':
+            out = out.transpose(1,2,0)
         cv2.imwrite(os.path.join(location, name + '_' + str(i) + '.jpg'), out)
 
 def update_people_ages(output_nd, people):
@@ -136,7 +137,7 @@ for name in response.outputs:
     print(f"    numpy => shape[{output_nd.shape}] data[{output_nd.dtype}]")
 
     if name == args['face_images_output_name'] and len(args['face_images_save_path']) > 0:
-        save_face_images_as_jpgs(output_nd, name, args['face_images_save_path'])
+        save_face_images_as_jpgs(output_nd, name, args['face_images_save_path'], args['image_layout'])
 
     if name == 'ages':
         people = update_people_ages(output_nd, people)
