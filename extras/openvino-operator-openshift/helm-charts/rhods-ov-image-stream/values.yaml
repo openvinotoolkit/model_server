@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-image_name: "docker.io/openvino/ubuntu20-dev:latest"
+image_name: "registry.access.redhat.com/intel/openvino_notebooks:latest"

@@ -52,7 +52,7 @@ metadata:
             "name": "notebook-sample"
           },
           "spec": {
-            "image_name": "docker.io/openvino/ubuntu20-dev:latest"
+            "image_name": "registry.access.redhat.com/intel/openvino_notebooks:latest"
           }
         }
       ]
@@ -75,7 +75,7 @@ spec:
   description: |
     OpenVINO Toolkit Operator manages OpenVINO components in OpenShift.
 
-    Currently there are 2 components includes:
+    Currently there are 2 components included:
     # Model Server
     [OpenVINO™ Model Server](https://github.com/openvinotoolkit/model_server) (OVMS) is a scalable, high-performance solution for serving machine learning models optimized for Intel® architectures. The server provides an inference service via gRPC or REST API - making it easy to deploy new algorithms and AI experiments using the same architecture as [TensorFlow Serving](https://github.com/tensorflow/serving) for any models trained in a framework that is supported by [OpenVINO](https://software.intel.com/en-us/openvino-toolkit).
     Model Server configuration is identical with a [Helm chart](https://github.com/openvinotoolkit/model_server/tree/main/deploy) for OVMS. It supports all the parameters from the helm chart.
