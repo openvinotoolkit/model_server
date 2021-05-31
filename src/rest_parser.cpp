@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include "rest_parser.hpp"
+#include "rest_utils.hpp"
 
 #include <functional>
 #include <string>
@@ -84,7 +85,27 @@ bool RestParser::parseSpecialInput(rapidjson::Value& doc, tensorflow::TensorProt
     return false;
 }
 
+bool isBinary(const rapidjson::Value& value){
+    if(value.IsObject())
+    {
+        if(value.HasMember("b64")){
+            if(value["b64"].IsString()){
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 bool RestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorProto& proto, const std::string& tensorName) {
+    if(isBinary(doc)) {
+        if (!addValue(proto, doc)) {
+            return false;
+        }
+        return true;
+    }
+
     if (!doc.IsArray()) {
         return false;
     }
@@ -96,8 +117,9 @@ bool RestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorPr
     }
 
     if (tensorName == "sequence_id" || tensorName == "sequence_control_input") {
-        if (!parseSpecialInput(doc, proto, tensorName))
+        if (!parseSpecialInput(doc, proto, tensorName)){
             return false;
+        }
         return true;
     }
 
@@ -109,8 +131,9 @@ bool RestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorPr
         }
         return true;
     } else {
-        if (!setPrecisionIfNotSet(doc.GetArray()[0], proto, tensorName))
+        if (!setPrecisionIfNotSet(doc.GetArray()[0], proto, tensorName)){
             return false;
+        }
         for (auto& value : doc.GetArray()) {
             if (!addValue(proto, value)) {
                 return false;
@@ -156,17 +179,18 @@ Status RestParser::parseRowFormat(rapidjson::Value& node) {
     if (node.GetArray().Size() == 0) {
         return StatusCode::REST_NO_INSTANCES_FOUND;
     }
-    if (node.GetArray()[0].IsObject()) {
+    if (node.GetArray()[0].IsObject() && !isBinary(node.GetArray()[0])) {
         // named format
         for (auto& instance : node.GetArray()) {
             if (!instance.IsObject()) {
                 return StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT;
             }
+
             if (!this->parseInstance(instance)) {
                 return StatusCode::REST_COULD_NOT_PARSE_INSTANCE;
             }
         }
-    } else if (node.GetArray()[0].IsArray() || node.GetArray()[0].IsNumber()) {
+    } else if (node.GetArray()[0].IsArray() || node.GetArray()[0].IsNumber() || isBinary(node.GetArray()[0])) {
         // no named format
         if (requestProto.inputs_size() != 1) {
             return StatusCode::REST_INPUT_NOT_PREALLOCATED;
@@ -273,6 +297,20 @@ bool RestParser::setDimOrValidate(tensorflow::TensorProto& proto, int dim, int s
     }
 }
 
+bool getB64FromValue(const rapidjson::Value& value, std::string& b64Val){
+    if(value.IsObject())
+    {
+        if(value.HasMember("b64")){
+            if(value["b64"].IsString()){
+                b64Val = value["b64"].GetString();
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 template <typename T>
 bool addToTensorContent(tensorflow::TensorProto& proto, T value) {
     if (sizeof(T) != DataTypeSize(proto.dtype())) {
@@ -299,6 +337,7 @@ bool addToTensorContent(tensorflow::TensorProto& proto, const rapidjson::Value& 
     if (value.IsUint()) {
         return addToTensorContent<T>(proto, static_cast<T>(value.GetUint()));
     }
+
     return false;
 }
 
@@ -323,6 +362,7 @@ bool addToHalfVal(tensorflow::TensorProto& proto, const rapidjson::Value& value)
         proto.add_half_val(value.GetUint());
         return true;
     }
+
     return false;
 }
 
@@ -347,12 +387,27 @@ bool addToIntVal(tensorflow::TensorProto& proto, const rapidjson::Value& value) 
         proto.add_int_val(value.GetUint());
         return true;
     }
+
     return false;
 }
 
 bool RestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
-    if (!value.IsNumber())
+    if(isBinary(value)) {
+        std::string b64Val;
+        if(!getB64FromValue(value, b64Val))
+            return false;
+        std::string decodedBytes;
+        if(decodeBase64(b64Val, decodedBytes) == StatusCode::OK)
+        {
+            proto.add_string_val(decodedBytes.c_str(), decodedBytes.length());
+            proto.set_dtype(tensorflow::DataType::DT_STRING);
+            return true;
+        }
+    }
+
+    if (!value.IsNumber()){
         return false;
+    }
 
     switch (proto.dtype()) {
     case tensorflow::DataType::DT_FLOAT:
@@ -380,6 +435,7 @@ bool RestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Value
     default:
         return false;
     }
+    return false;
 }
 
 bool RestParser::setPrecisionIfNotSet(const rapidjson::Value& value, tensorflow::TensorProto& proto, const std::string& tensorName) {
