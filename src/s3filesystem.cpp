@@ -109,8 +109,6 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
     } else if (profile_name) {
         config = Aws::Client::ClientConfiguration(profile_name);
     } else {
-        Aws::Auth::AnonymousAWSCredentialsProvider provider;
-        credentials = provider.GetAWSCredentials();
         config = Aws::Client::ClientConfiguration();
         if (region != NULL) {
             config.region = region;
@@ -158,13 +156,21 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
             config,
             Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
             false);
-    } else {
+    } else if ((secret_key != NULL) && (key_id != NULL)) {
         client_ = s3::S3Client(
             credentials,
             config,
             Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
             false);
+    } else {
+        std::shared_ptr<Aws::Auth::AWSCredentialsProvider> provider = std::make_shared<Aws::Auth::AnonymousAWSCredentialsProvider>();
+        client_ = s3::S3Client(
+            provider,
+            config,
+            Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
+            false);
     }
+    
 }
 
 S3FileSystem::~S3FileSystem() {
