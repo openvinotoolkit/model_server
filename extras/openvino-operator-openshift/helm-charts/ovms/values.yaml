@@ -29,6 +29,7 @@ target_device: "CPU"
 nireq: ""
 batch_size: ""
 shape: ""
+layout: ""
 model_version_policy: >-
   {\"latest\": { \"num_versions\":1 }}
 plugin_config: >-

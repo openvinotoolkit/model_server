@@ -120,7 +120,7 @@ containers:
       {{- if .Values.batch_size }}
       "--batch_size", "{{ .Values.batch_size }}",
       {{- end }}
-      {{- if .Values.batch_size }}
+      {{- if .Values.layout }}
       "--layout", "{{ .Values.layout }}",
       {{- end }}
       {{- if .Values.shape }}
