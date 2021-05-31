@@ -302,6 +302,11 @@ const InferenceEngine::TensorDesc TensorInfo::getTensorDesc() const {
     return InferenceEngine::TensorDesc{precision, shape, layout};
 }
 
+bool TensorInfo::isTensorSpecEqual(const TensorInfo& other) const {
+    return this->getEffectiveShape() == other.getEffectiveShape() &&
+           this->getPrecision() == other.getPrecision();
+}
+
 std::string TensorInfo::shapeToString(const shape_t& shape) {
     std::ostringstream oss;
     oss << "(";

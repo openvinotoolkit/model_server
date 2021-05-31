@@ -30,6 +30,8 @@
 
 namespace ovms {
 
+const std::set<std::string> ModelConfig::configAllowedLayouts{"NCHW", "NHWC"};
+
 ShapeInfo::operator std::string() const {
     if (shapeMode == Mode::AUTO)
         return std::string("auto");
@@ -286,7 +288,14 @@ Status ModelConfig::parseLayoutParameter(const rapidjson::Value& node) {
         if (!it->value.IsString()) {
             return StatusCode::LAYOUT_WRONG_FORMAT;
         }
-        layouts[it->name.GetString()] = it->value.GetString();
+        std::string layout = it->value.GetString();
+        std::transform(layout.begin(), layout.end(), layout.begin(), ::toupper);
+        if (configAllowedLayouts.count(layout) > 0) {
+            layouts[it->name.GetString()] = layout;
+        } else {
+            SPDLOG_ERROR("Setting {} layout is not supported", layout);
+            return StatusCode::LAYOUT_WRONG_FORMAT;
+        }
     }
     setLayouts(layouts);
 
@@ -304,18 +313,16 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
     std::string upperCaseCommand;
     std::transform(command.begin(), command.end(), std::back_inserter(upperCaseCommand), ::toupper);
 
-    if (upperCaseCommand == "NCHW" || upperCaseCommand == "NHWC") {
+    if (configAllowedLayouts.count(upperCaseCommand) > 0) {
         setLayout(upperCaseCommand);
         return StatusCode::OK;
     }
 
     // parse as json
-    std::cout << command << std::endl;
     rapidjson::Document node;
     if (node.Parse(command.c_str()).HasParseError()) {
         return StatusCode::LAYOUT_WRONG_FORMAT;
     }
-
     return parseLayoutParameter(node);
 }
 
@@ -470,22 +477,14 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     if (v.HasMember("layout")) {
         if (v["layout"].IsString()) {
-            this->setLayout(v["layout"].GetString());
+            Status status = this->parseLayoutParameter(v["layout"].GetString());
+            if (!status.ok()) {
+                return status;
+            }
         } else {
-            for (auto& s : v["layout"].GetObject()) {
-                if (s.value.IsString()) {
-                    std::string layout = s.value.GetString();
-                    std::transform(layout.begin(), layout.end(), layout.begin(), ::toupper);
-                    if (layout == "NHWC" || layout == "NCHW") {
-                        this->addLayout(s.name.GetString(), layout);
-                        continue;
-                    }
-                    SPDLOG_ERROR("Layout setting must be NHWC or NCHW");
-                    return StatusCode::LAYOUT_WRONG_FORMAT;
-                } else {
-                    SPDLOG_ERROR("Layout setting must be string");
-                    return StatusCode::LAYOUT_WRONG_FORMAT;
-                }
+            Status status = this->parseLayoutParameter(v["layout"]);
+            if (!status.ok()) {
+                return status;
             }
         }
     }

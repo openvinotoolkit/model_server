@@ -18,6 +18,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -154,6 +155,11 @@ private:
          * @brief Shape delimeter in string format
          */
     static const char shapeDelimeter = ',';
+
+    /**
+         * @brief Allowed configurable layouts
+         */
+    static const std::set<std::string> configAllowedLayouts;
 
     /**
          * @brief custom_loader_options config as map

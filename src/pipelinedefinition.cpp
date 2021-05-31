@@ -1033,7 +1033,16 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                 }
 
                 for (const auto& [alias, realName] : specificDependencyMapping) {
-                    inputsInfo[alias] = std::make_shared<TensorInfo>(*instance->getInputsInfo().at(realName));
+                    auto tensorInfo = std::make_shared<TensorInfo>(*instance->getInputsInfo().at(realName));
+                    auto it = inputsInfo.find(alias);
+                    if (it != inputsInfo.end()) {
+                        if (!it->second->isTensorSpecEqual(*tensorInfo)) {
+                            Status result = StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA;
+                            SPDLOG_ERROR(result.string());
+                            return result;
+                        }
+                    }
+                    inputsInfo[alias] = tensorInfo;
                 }
                 break;
             }
@@ -1049,7 +1058,16 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                 }
 
                 for (const auto& [alias, realName] : specificDependencyMapping) {
-                    inputsInfo[alias] = std::make_shared<TensorInfo>(*info.at(realName));
+                    auto tensorInfo = std::make_shared<TensorInfo>(*info.at(realName));
+                    auto it = inputsInfo.find(alias);
+                    if (it != inputsInfo.end()) {
+                        if (!it->second->isTensorSpecEqual(*tensorInfo)) {
+                            Status result = StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA;
+                            SPDLOG_ERROR(result.string());
+                            return result;
+                        }
+                    }
+                    inputsInfo[alias] = tensorInfo;
                 }
                 break;
             }

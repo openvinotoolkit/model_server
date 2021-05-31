@@ -30,6 +30,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::JSON_INVALID, "The file is not valid json"},
     {StatusCode::MODELINSTANCE_NOT_FOUND, "ModelInstance not found"},
     {StatusCode::SHAPE_WRONG_FORMAT, "The provided shape is in wrong format"},
+    {StatusCode::LAYOUT_WRONG_FORMAT, "The provided layout is in wrong format"},
     {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, "Plugin config is in wrong format"},
     {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT, "Model version policy is in wrong format"},
     {StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY, "Model version policy contains unsupported key"},
@@ -49,6 +50,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::MODEL_SPEC_MISSING, "model_spec missing in request"},
     {StatusCode::INVALID_SIGNATURE_DEF, "Invalid signature name"},
     {StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK, "Shape from config not found in network"},
+    {StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK, "Layout from config not found in network"},
     {StatusCode::INVALID_NIREQ, "Nireq parameter too high"},
     {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL, "Requested dynamic parameters but model is used in pipeline"},
     {StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET, "Node is not ready for execution"},
@@ -148,6 +150,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY, "Too large dynamic demultiplication requested."},
     {StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER, "Demultiplexer and gather nodes are not in LIFO order"},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, "Pipeline execution aborted due to no content from custom node"},
+    {StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA, "Multiple nodes connected to the same pipeline input require different tensor metadata"},
 
     // Storage errors
     // S3
