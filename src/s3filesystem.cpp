@@ -90,6 +90,7 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
     Aws::Client::ClientConfiguration config;
     Aws::Auth::AWSCredentials credentials;
 
+    const char* profile_name = std::getenv("AWS_PROFILE");
     const char* secret_key = std::getenv("AWS_SECRET_ACCESS_KEY");
     const char* key_id = std::getenv("AWS_ACCESS_KEY_ID");
     const char* region = std::getenv("AWS_REGION");
@@ -105,9 +106,10 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
         if (region != NULL) {
             config.region = region;
         }
-    } else if (const char* profile_name = std::getenv("AWS_PROFILE")) {
+    } else if (profile_name) {
         config = Aws::Client::ClientConfiguration(profile_name);
     } else {
+        credentials = Aws::Auth::AnonymousAWSCredentialsProvider::GetAWSCredentials();
         config = Aws::Client::ClientConfiguration("default");
     }
 
@@ -147,18 +149,19 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
         }
     }
 
-    if ((secret_key != NULL) && (key_id != NULL)) {
+    } if (profile_name) {
         client_ = s3::S3Client(
-            credentials,
             config,
             Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
             false);
     } else {
         client_ = s3::S3Client(
+            credentials,
             config,
             Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
             false);
     }
+
 }
 
 S3FileSystem::~S3FileSystem() {
