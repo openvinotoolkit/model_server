@@ -109,8 +109,12 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
     } else if (profile_name) {
         config = Aws::Client::ClientConfiguration(profile_name);
     } else {
-        credentials = Aws::Auth::AnonymousAWSCredentialsProvider::GetAWSCredentials();
-        config = Aws::Client::ClientConfiguration("default");
+        Aws::Auth::AnonymousAWSCredentialsProvider provider;
+        credentials = provider.GetAWSCredentials();
+        config = Aws::Client::ClientConfiguration();
+        if (region != NULL) {
+            config.region = region;
+        }
     }
 
     std::string host_name, host_port, bucket, object;
@@ -149,7 +153,7 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
         }
     }
 
-    } if (profile_name) {
+    if (profile_name) {
         client_ = s3::S3Client(
             config,
             Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
@@ -161,7 +165,6 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
             Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
             false);
     }
-
 }
 
 S3FileSystem::~S3FileSystem() {
