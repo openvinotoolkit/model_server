@@ -67,27 +67,32 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         SPDLOG_WARN(status.string());
         return status;
     }
+    if (!config.getLayout().empty() && network->getInputsInfo().size() > 1) {
+        Status status = StatusCode::ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED;
+        SPDLOG_WARN(status.string());
+        return status;
+    }
 
     auto networkShapes = network->getInputShapes();
     const auto& networkInputs = network->getInputsInfo();
     bool reshapeRequired = false;
-    auto& configShapes = config.getShapes();
-    for (const auto& shape : configShapes) {
-        if (shape.first == ANONYMOUS_INPUT_NAME) {
+    for (const auto& [name, _] : config.getShapes()) {
+        if (name == ANONYMOUS_INPUT_NAME) {
             continue;
         }
-        if (networkInputs.count(shape.first) == 0) {
-            SPDLOG_WARN("Config shape - {} not found in network", shape.first);
+        if (networkInputs.count(name) == 0) {
+            SPDLOG_WARN("Config shape - {} not found in network", name);
             return StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK;
         }
     }
-    // TODO: Restrict setting layout only to existing input tensors
-    this->inputsInfo.clear();
-    std::cout << "55555" << std::endl;
+    for (const auto& [name, _] : config.getLayouts()) {
+        if (networkInputs.count(name) == 0) {
+            SPDLOG_WARN("Config layout - {} not found in network", name);
+            return StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK;
+        }
+    }
 
-    //auto& CLIConfig = ovms::Config::instance();
-    //const auto& layoutCLISetting = CLIConfig.layout();
-    const auto& layoutCLISetting = config.getLayout();
+    this->inputsInfo.clear();
 
     for (const auto& pair : networkInputs) {
         const auto& name = pair.first;
@@ -112,7 +117,6 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             networkShapes[name] = shape;
         }
     }
-    std::cout << "66666" << std::endl;
 
     // Update OV model shapes
     if (reshapeRequired) {
@@ -128,7 +132,6 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     } else {
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
     }
-    std::cout << "77777" << std::endl;
 
     for (const auto& pair : networkInputs) {
         const auto& name = pair.first;
@@ -136,39 +139,24 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
 
         // Data from network
         auto precision = input->getPrecision();
-        auto originalLayout = input->getLayout();
+        auto layout = input->getLayout();
         auto shape = input->getTensorDesc().getDims();
 
-        // // Data from config
-        // if (config.getLayout().size()) {
-        //     // Single layout for all inputs
-        //     layout = TensorInfo::getLayoutFromString(config.getLayout());
-        // } else if (config.getLayouts().count(name)) {
-        //     // Layout defined for specific input
-        //     layout = TensorInfo::getLayoutFromString(config.getLayouts().at(name));
-        // }
-        // if (!layoutCLISetting.empty()) {
-        //     layout = TensorInfo::getLayoutFromString(layoutCLISetting);
-        // }
-
-        // input->setLayout(layout);
-
-        auto layout = originalLayout;
-        if (!layoutCLISetting.empty()) {
-            layout = TensorInfo::getLayoutFromString(layoutCLISetting);
-        } else if (!config.getLayout().empty()) {
+        if (!config.getLayout().empty()) {
             layout = TensorInfo::getLayoutFromString(config.getLayout());
+        } else if (config.getLayouts().size() > 0) {
+            auto it = config.getLayouts().find(name);
+            if (it != config.getLayouts().end()) {
+                layout = TensorInfo::getLayoutFromString(it->second);
+            }
         }
 
         input->setLayout(layout);
 
         auto mappingName = config.getMappingInputByKey(name);
         auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
-        SPDLOG_INFO("Effective shape input: {}; {}", tensor->getMappedName(),
-            TensorInfo::shapeToString(tensor->getEffectiveShape()));
         this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
     }
-    std::cout << "88888" << std::endl;
     SPDLOG_INFO("Final network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
     return StatusCode::OK;
 }
@@ -179,34 +167,32 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
         const auto& name = pair.first;
         auto output = pair.second;
 
-        //auto& CLIConfig = ovms::Config::instance();
-        //const auto& layoutCLISetting = CLIConfig.layout();
-        const auto& layoutCLISetting = config.getLayout();
-
         // Data from network
         auto precision = output->getPrecision();
-        auto originalLayout = output->getLayout();
+        auto layout = output->getLayout();
 
-        auto layout = originalLayout;
-        if (!layoutCLISetting.empty()) {
-            layout = TensorInfo::getLayoutFromString(layoutCLISetting);
-        } else if (!config.getLayout().empty()) {
-            layout = TensorInfo::getLayoutFromString(config.getLayout());
+        if (config.getLayouts().size() > 0) {
+            auto it = config.getLayouts().find(name);
+            if (it != config.getLayouts().end()) {
+                layout = TensorInfo::getLayoutFromString(it->second);
+            }
         }
-        
+
         output->setLayout(layout);
 
         auto shape = output->getDims();
+        auto effectiveShape = output->getTensorDesc().getBlockingDesc().getBlockDims();
         auto mappingName = config.getMappingOutputByKey(name);
         auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
-        SPDLOG_INFO("Effective shape output: {}; {}", tensor->getMappedName(),
-            TensorInfo::shapeToString(tensor->getEffectiveShape()));
         std::string precision_str = tensor->getPrecisionAsString();
         this->outputsInfo[tensor->getMappedName()] = std::move(tensor);
         std::stringstream shape_stream;
         std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
-        SPDLOG_INFO("Output name: {} ; mapping name: {}; shape: {} ; precision: {}, layout:{}",
-            name, mappingName, shape_stream.str(), precision_str, TensorInfo::getStringFromLayout(output->getLayout()));
+        std::stringstream effective_shape_stream;
+        std::copy(effectiveShape.begin(), effectiveShape.end(), std::ostream_iterator<size_t>(effective_shape_stream, " "));
+        SPDLOG_INFO("Output name: {} ; mapping name: {}; shape: {}; effective shape {}; precision: {}, layout:{}",
+            name, mappingName, shape_stream.str(), effective_shape_stream.str(), precision_str,
+            TensorInfo::getStringFromLayout(output->getLayout()));
     }
 }
 
@@ -501,17 +487,14 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
                 status = loadOVCNNNetwork();
             }
         }
-        std::cout << "11111" << std::endl;
 
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
         }
-        std::cout << "22222" << std::endl;
+
         configureBatchSize(this->config, parameter);
-        std::cout << "33333" << std::endl;
         status = loadInputTensors(this->config, parameter);
-        std::cout << "444444" << std::endl;
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
@@ -789,13 +772,6 @@ const bool ModelInstance::checkBatchSizeMismatch(const ovms::TensorInfo& network
     if (static_cast<size_t>(requestInput.tensor_shape().dim(0).size()) != getBatchSize())
         return true;
     return false;
-}
-
-void print_shape(const std::string& str, const SizeVector& vec) {
-    std::cout << str << ": ";
-    for (auto n : vec)
-        std::cout << n << ",";
-    std::cout << std::endl;
 }
 
 const bool ModelInstance::checkShapeMismatch(const ovms::TensorInfo& networkInput,

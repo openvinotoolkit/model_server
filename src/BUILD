@@ -324,20 +324,6 @@ cc_binary(
     ]
 )
 
-cc_binary(
-    name = "my_app",
-    srcs = [
-        "test/my_app.cpp",
-    ],
-    linkopts = [
-    ],
-    copts = [
-    ],
-    deps = [
-        "@openvino//:openvino",
-    ]
-)
-
 cc_test(
     name = "ovms_test",
     linkstatic = 1,

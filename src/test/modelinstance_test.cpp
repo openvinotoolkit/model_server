@@ -219,7 +219,6 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
         false,      // low latency transformation enabled
         60,         // stateful sequence timeout
         500,        // steteful sequence max number
-        "",         // layout
         version,    // version
         modelPath,  // local path
     };
@@ -255,7 +254,6 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
         false,      // low latency transformation enabled
         60,         // stateful sequence timeout
         500,        // steteful sequence max number
-        "",         // layout
         version,    // version
         modelPath,  // local path
     };

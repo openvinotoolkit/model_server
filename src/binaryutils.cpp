@@ -227,7 +227,7 @@ InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images
     char* ptr = blob->buffer();
     for (cv::Mat image : images) {
         if (tensorInfo->getLayout() == InferenceEngine::Layout::NCHW) {
-            auto imgBuffer = reorder_to_nchw((T*)image.data, image.rows, image.cols, image.channels());
+            auto imgBuffer = reorder_to_nchw((T*)image.data, image.rows, image.cols, image.channels());  // here we dont need to reorder. we will support nhwc
             memcpy(ptr + offset, (char*)imgBuffer.data(), image.total() * image.elemSize());
             offset += (image.total() * image.elemSize());
         } else {

@@ -106,8 +106,7 @@ Status ModelManager::startFromConfig() {
             config.stateful(),
             config.idleSequenceCleanup(),
             config.lowLatencyTransformation(),
-            config.maxSequenceNumber(),
-            config.layout()});
+            config.maxSequenceNumber()});
 
     if (!success) {
         return StatusCode::UNKNOWN_ERROR;
@@ -130,6 +129,12 @@ Status ModelManager::startFromConfig() {
     status = modelConfig.parseShapeParameter(config.shape());
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse shape parameter");
+        return status;
+    }
+
+    status = modelConfig.parseLayoutParameter(config.layout());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse layout parameter");
         return status;
     }
 

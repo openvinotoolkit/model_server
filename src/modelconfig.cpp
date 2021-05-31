@@ -95,7 +95,6 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to shape configuration mismatch", this->name);
         return true;
     }
-    // TODO: Layout mismatch
     if (this->customLoaderOptionsConfigMap.size() != rhs.customLoaderOptionsConfigMap.size()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to custom loader config mismatch", this->name);
         return true;
@@ -277,6 +276,49 @@ Status ModelConfig::parseShapeParameter(const std::string& command) {
     return parseShapeParameter(node);
 }
 
+Status ModelConfig::parseLayoutParameter(const rapidjson::Value& node) {
+    if (!node.IsObject()) {
+        return StatusCode::LAYOUT_WRONG_FORMAT;
+    }
+
+    layouts_map_t layouts;
+    for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
+        if (!it->value.IsString()) {
+            return StatusCode::LAYOUT_WRONG_FORMAT;
+        }
+        layouts[it->name.GetString()] = it->value.GetString();
+    }
+    setLayouts(layouts);
+
+    return StatusCode::OK;
+}
+
+Status ModelConfig::parseLayoutParameter(const std::string& command) {
+    this->layouts.clear();
+    this->layout = std::string();
+
+    if (command.empty()) {
+        return StatusCode::OK;
+    }
+
+    std::string upperCaseCommand;
+    std::transform(command.begin(), command.end(), std::back_inserter(upperCaseCommand), ::toupper);
+
+    if (upperCaseCommand == "NCHW" || upperCaseCommand == "NHWC") {
+        setLayout(upperCaseCommand);
+        return StatusCode::OK;
+    }
+
+    // parse as json
+    std::cout << command << std::endl;
+    rapidjson::Document node;
+    if (node.Parse(command.c_str()).HasParseError()) {
+        return StatusCode::LAYOUT_WRONG_FORMAT;
+    }
+
+    return parseLayoutParameter(node);
+}
+
 Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
     if (str == "auto") {
         shapeInfo.shapeMode = AUTO;
@@ -431,7 +473,19 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             this->setLayout(v["layout"].GetString());
         } else {
             for (auto& s : v["layout"].GetObject()) {
-                this->addLayout(s.name.GetString(), s.value.GetString());
+                if (s.value.IsString()) {
+                    std::string layout = s.value.GetString();
+                    std::transform(layout.begin(), layout.end(), layout.begin(), ::toupper);
+                    if (layout == "NHWC" || layout == "NCHW") {
+                        this->addLayout(s.name.GetString(), layout);
+                        continue;
+                    }
+                    SPDLOG_ERROR("Layout setting must be NHWC or NCHW");
+                    return StatusCode::LAYOUT_WRONG_FORMAT;
+                } else {
+                    SPDLOG_ERROR("Layout setting must be string");
+                    return StatusCode::LAYOUT_WRONG_FORMAT;
+                }
             }
         }
     }

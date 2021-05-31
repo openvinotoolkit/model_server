@@ -39,8 +39,8 @@ TensorInfo::TensorInfo(const std::string& name,
     precision(precision),
     shape(shape),
     layout(InferenceEngine::Layout::ANY) {
-        this->updateEffectiveShape();
-    }
+    this->updateEffectiveShape();
+}
 
 TensorInfo::TensorInfo(const std::string& name,
     const InferenceEngine::Precision& precision,
@@ -51,8 +51,8 @@ TensorInfo::TensorInfo(const std::string& name,
     precision(precision),
     shape(shape),
     layout(layout) {
-        this->updateEffectiveShape();
-    }
+    this->updateEffectiveShape();
+}
 
 TensorInfo::TensorInfo(const std::string& name,
     const InferenceEngine::TensorDesc& tensorDesc) :
@@ -61,8 +61,8 @@ TensorInfo::TensorInfo(const std::string& name,
     precision(tensorDesc.getPrecision()),
     shape(tensorDesc.getDims()),
     layout(tensorDesc.getLayout()) {
-        this->updateEffectiveShape();
-    }
+    this->updateEffectiveShape();
+}
 
 TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
@@ -74,8 +74,8 @@ TensorInfo::TensorInfo(const std::string& name,
     precision(precision),
     shape(shape),
     layout(layout) {
-        this->updateEffectiveShape();
-    }
+    this->updateEffectiveShape();
+}
 
 const std::string& TensorInfo::getName() const {
     return name;
@@ -340,7 +340,7 @@ std::shared_ptr<TensorInfo> TensorInfo::getUnspecifiedTensorInfo() {
 std::string TensorInfo::tensorDescToString(const InferenceEngine::TensorDesc& desc) {
     std::stringstream ss;
     ss << "shape: " << shapeToString(desc.getDims())
-       << " effectiveShape: " << shapeToString(desc.getBlockingDesc().getBlockDims())
+       << " effective shape: " << shapeToString(desc.getBlockingDesc().getBlockDims())
        << " precision: " << getPrecisionAsString(desc.getPrecision())
        << " layout: " << getStringFromLayout(desc.getLayout());
     return ss.str();

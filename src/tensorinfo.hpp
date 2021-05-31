@@ -153,7 +153,7 @@ public:
          */
     void setPrecision(const InferenceEngine::Precision& requestedPrecision);
 
-     /**
+    /**
          * @brief Set the Layout object
          * 
          * @return const InferenceEngine::Layout
@@ -236,7 +236,7 @@ public:
 
     static std::string tensorDescToString(const InferenceEngine::TensorDesc& desc);
 
-    private:
+private:
     void updateEffectiveShape();
 };
 }  // namespace ovms

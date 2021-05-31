@@ -73,12 +73,10 @@ Status PipelineDefinition::validate(ModelManager& manager) {
     if (!validationResult.ok()) {
         return validationResult;
     }
-
     validationResult = updateOutputsInfo(manager);
     if (!validationResult.ok()) {
         return validationResult;
     }
-
     lock.unlock();
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of pipeline: {}", getName());

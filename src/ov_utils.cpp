@@ -86,7 +86,7 @@ std::string getNetworkInputsInfoString(const InferenceEngine::InputsDataMap& inp
         auto mappingName = config.getMappingInputByKey(name);
 
         stringStream << "\nInput name: " << name << "; mapping_name: " << mappingName << "; shape: " << TensorInfo::shapeToString(shape)
-                     << "; effectiveShape: " << TensorInfo::shapeToString(effectiveShape) << "; precision: " << TensorInfo::getPrecisionAsString(precision)
+                     << "; effective shape: " << TensorInfo::shapeToString(effectiveShape) << "; precision: " << TensorInfo::getPrecisionAsString(precision)
                      << "; layout: " << TensorInfo::getStringFromLayout(layout);
     }
     return stringStream.str();

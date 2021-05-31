@@ -114,22 +114,22 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
-    // // Configure pipeline
-    // auto input_node = std::make_unique<EntryNode>(&request);
-    // auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
-    // auto output_node = std::make_unique<ExitNode>(&response);
+    // Configure pipeline
+    auto input_node = std::make_unique<EntryNode>(&request);
+    auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
+    auto output_node = std::make_unique<ExitNode>(&response);
 
-    // Pipeline pipeline(*input_node, *output_node);
-    // pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
-    // pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+    Pipeline pipeline(*input_node, *output_node);
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
 
-    // pipeline.push(std::move(input_node));
-    // pipeline.push(std::move(model_node));
-    // pipeline.push(std::move(output_node));
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
 
-    // pipeline.execute();
-    // const int dummySeriallyConnectedCount = 1;
-    // checkDummyResponse(dummySeriallyConnectedCount);
+    pipeline.execute();
+    const int dummySeriallyConnectedCount = 1;
+    checkDummyResponse(dummySeriallyConnectedCount);
 }
 
 TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
