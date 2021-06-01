@@ -16,9 +16,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "absl/strings/escaping.h"
-
 #include "../rest_parser.hpp"
+#include "absl/strings/escaping.h"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -129,7 +128,7 @@ TEST(RestParserNoNamed, BinaryInputsColumn) {
     std::unique_ptr<char[]> image_bytes(new char[filesize]);
     DataFile.read(image_bytes.get(), filesize);
     std::string_view bytes(image_bytes.get(), filesize);
-    
+
     std::string b64encoded;
     absl::Base64Escape(bytes, &b64encoded);
     std::string request = R"({"signature_name":"","inputs":[{"b64":")" + b64encoded + R"("}]})";
@@ -149,7 +148,7 @@ TEST(RestParserNoNamed, BinaryInputsRow) {
     std::unique_ptr<char[]> image_bytes(new char[filesize]);
     DataFile.read(image_bytes.get(), filesize);
     std::string_view bytes(image_bytes.get(), filesize);
-    
+
     std::string b64encoded;
     absl::Base64Escape(bytes, &b64encoded);
     std::string request = R"({"signature_name":"","instances":[[{"b64":")" + b64encoded + R"("}]]})";
