@@ -19,6 +19,8 @@
 #include "../rest_parser.hpp"
 #include "test_utils.hpp"
 
+#include "absl/strings/escaping.h"
+
 using namespace ovms;
 
 using namespace testing;
@@ -640,4 +642,24 @@ TEST(RestParserColumn, RemoveUnnecessaryInputs) {
         ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
         ASSERT_EQ(parser.getProto().inputs().count("l"), 1);
     }
+}
+
+TEST(RestParserColumn, BinaryInputs) {
+    std::ifstream DataFile;
+    DataFile.open("/ovms/src/test/binaryutils/rgb.jpg", std::ios::binary);
+    DataFile.seekg(0, std::ios::end);
+    size_t filesize = DataFile.tellg();
+    DataFile.seekg(0);
+    std::unique_ptr<char[]> image_bytes(new char[filesize]);
+    DataFile.read(image_bytes.get(), filesize);
+    std::string_view bytes(image_bytes.get(), filesize);
+    
+    std::string b64encoded;
+    absl::Base64Escape(bytes, &b64encoded);
+    std::string request = R"({"signature_name":"","inputs":{"k":[{"b64":")" + b64encoded + R"("}]}})";
+    
+    RestParser parser(prepareTensors({{"k", {1, 1}}}));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
+    EXPECT_EQ(memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }

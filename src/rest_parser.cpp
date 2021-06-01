@@ -105,7 +105,6 @@ bool RestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorPr
         }
         return true;
     }
-
     if (!doc.IsArray()) {
         return false;
     }
@@ -115,14 +114,12 @@ bool RestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorPr
     if (!setDimOrValidate(proto, dim, doc.GetArray().Size())) {
         return false;
     }
-
     if (tensorName == "sequence_id" || tensorName == "sequence_control_input") {
         if (!parseSpecialInput(doc, proto, tensorName)){
             return false;
         }
         return true;
     }
-
     if (doc.GetArray()[0].IsArray()) {
         for (auto& itr : doc.GetArray()) {
             if (!parseArray(itr, dim + 1, proto, tensorName)) {
