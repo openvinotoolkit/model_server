@@ -131,17 +131,19 @@ python face_detection.py --batch_size 1 --width 600 --height 400 --input_images_
 In the `results` folder, look for an image that contains the inference results. 
 The result is the modified input image with bounding boxes indicating detected faces.
 
+That concludes the prediction using the model in IR format. It can be repeated for ONNX model like presented below in step 9.
 
-### Step 9: Repeat similar steps with ONNX model
+### Step 9: Prediction Use Case with an ONNX model
 
-Similar steps can be executed also for the model in ONNX format like presented below.
+Similar steps can be executed also for the model in ONNX format. Just the model files should be swapped.
+Below is a complete functional use case.
 
 Download the model:
 ```
 curl -L --create-dir https://github.com/onnx/models/raw/master/vision/classification/resnet/model/resnet50-caffe2-v1-9.onnx -o resnet/1/resnet50-caffe2-v1-9.onnx
 ```
 
-Start OVMS container:
+Start the OVMS container:
 ```bash
 docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet:/model -p 9001:9001 openvino/model_server:latest \
 --model_path /model --model_name resnet --port 9001
@@ -173,8 +175,6 @@ def getJpeg(path, size):
     # add image preprocessing if needed by the model
     img = cv2.resize(img, (224, 224))
     img = img.astype('float32')
-    #convert to RGB instead of BGR if required by model
-    #img = img[:, :, [2, 1, 0]]
     #convert to NHWC
     img = img.transpose(2,0,1)
     # normalize to adjust to model training dataset
