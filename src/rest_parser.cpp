@@ -398,6 +398,9 @@ bool RestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Value
             proto.set_dtype(tensorflow::DataType::DT_STRING);
             return true;
         }
+        else{
+            return false;
+        }
     }
 
     if (!value.IsNumber()) {
