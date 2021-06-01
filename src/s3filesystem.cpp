@@ -170,7 +170,6 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
             Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
             true);
     }
-    
 }
 
 S3FileSystem::~S3FileSystem() {
