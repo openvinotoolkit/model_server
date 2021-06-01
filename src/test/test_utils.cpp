@@ -75,16 +75,6 @@ void checkDummyResponse(const std::string outputName,
         << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
 }
 
-std::string readableError(const float* expected_output, const float* actual_output, const size_t size) {
-    std::stringstream ss;
-    for (size_t i = 0; i < size; ++i) {
-        if (actual_output[i] != expected_output[i]) {
-            ss << "Expected:" << expected_output[i] << ", actual:" << actual_output[i] << " at place:" << i << std::endl;
-        }
-    }
-    return ss.str();
-}
-
 bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vector<int64_t>&& expected) {
     if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
         SPDLOG_ERROR("Unexpected dim_size. Got: {}, Expect: {}", actual.dim_size(), expected.size());

@@ -69,16 +69,16 @@ protected:
         ::checkDummyResponse(customPipelineOutputName, requestData, request, response, seriesLength, batchSize);
     }
 
-    std::string readableError(const float* expected_output, const float* actual_output, const size_t size) {
-        std::stringstream ss;
-        for (size_t i = 0; i < size; ++i) {
-            if (actual_output[i] != expected_output[i]) {
-                ss << "Expected:" << expected_output[i] << ", actual:" << actual_output[i] << " at place:" << i << std::endl;
-                break;
-            }
-        }
-        return ss.str();
-    }
+    // std::string readableError(const float* expected_output, const float* actual_output, const size_t size) {
+    //     std::stringstream ss;
+    //     for (size_t i = 0; i < size; ++i) {
+    //         if (actual_output[i] != expected_output[i]) {
+    //             ss << "Expected:" << expected_output[i] << ", actual:" << actual_output[i] << " at place:" << i << std::endl;
+    //             break;
+    //         }
+    //     }
+    //     return ss.str();
+    // }
 
     void performWrongPipelineConfigTest(const char* configFileContent) {
         std::string fileToReload = directoryPath + "/ovms_config_file1.json";
