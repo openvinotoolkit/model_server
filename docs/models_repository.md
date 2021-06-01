@@ -5,7 +5,7 @@ This guide will help you to create a models repository for serving with the Open
 
 
 ## Creating Repository for Models in **Intermediate Representation (IR)** format
-The AI models to be served with OpenVINO&trade; Model Server should be in Intermediate Representation (IR) format (where the graph is represented in .bin and .xml format) on in [ONNX](https://onnx.ai/) format. 
+The AI models to be served with OpenVINO&trade; Model Server should be in Intermediate Representation (IR) format (where the graph is represented in .bin and .xml format) or in [ONNX](https://onnx.ai/) format. 
 
 Tensorflow, Caffe and MXNet trained models can be converted to IR format using Model_Optimizer from  OpenVINO&trade; toolkit. Follow the steps from  [model optimizer documentation](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) to convert your model.
 
