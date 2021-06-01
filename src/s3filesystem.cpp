@@ -155,20 +155,20 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
         client_ = s3::S3Client(
             config,
             Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
-            false);
+            true);
     } else if ((secret_key != NULL) && (key_id != NULL)) {
         client_ = s3::S3Client(
             credentials,
             config,
             Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
-            false);
+            true);
     } else {
-        std::shared_ptr<Aws::Auth::AWSCredentialsProvider> provider = std::make_shared<Aws::Auth::AnonymousAWSCredentialsProvider>();
+        std::shared_ptr<Aws::Auth::AnonymousAWSCredentialsProvider> provider = std::make_shared<Aws::Auth::AnonymousAWSCredentialsProvider>();
         client_ = s3::S3Client(
             provider,
             config,
             Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
-            false);
+            true);
     }
     
 }
