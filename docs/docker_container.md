@@ -250,7 +250,7 @@ Example connection string is:
 AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=azure_account_name;AccountKey=smp/hashkey==;EndpointSuffix=core.windows.net"
 ```
 
-Example command with blob storage az://<container_name>/<model_path>:
+Example command with blob storage `az://<container_name>/<model_path>:`
 ```
 docker run --rm -d -p 9001:9001 \
 -e AZURE_STORAGE_CONNECTION_STRING=“${AZURE_STORAGE_CONNECTION_STRING}” \
@@ -279,7 +279,7 @@ Exception: This is not required if you use GKE kubernetes cluster. GKE kubernete
 
 To start a Docker container with support for Google Cloud Storage paths to your model use the GOOGLE_APPLICATION_CREDENTIALS variable. This variable contains the path to the GCP authentication key.
 
-Example command with gs://<bucket>/<model_path>:
+Example command with `gs://<bucket>/<model_path>:`
 ```
 docker run --rm -d -p 9001:9001 \
 -e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}” \
@@ -293,7 +293,7 @@ openvino/model_server:latest \
 
 Add the S3 path as the model_path and pass the credentials as environment variables to the Docker container.
 
-Example command with s3://<bucket>/<model_path>:
+Example command with `s3://<bucket>/<model_path>:`
 
 ```
 docker run --rm -d -p 9001:9001 \
@@ -307,7 +307,7 @@ openvino/model_server:latest \
 
 You can also use anonymous access to s3 public paths.
 
-Example command with s3://<public_bucket>/<model_path>:
+Example command with `s3://<public_bucket>/<model_path>:`
 
 ```
 docker run --rm -d -p 9001:9001 \
@@ -318,7 +318,7 @@ openvino/model_server:latest \
 or setup a profile credentials file in the docker image described here
 [AWS Named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html)
 
-Example command with s3://<bucket>/<model_path>:
+Example command with `s3://<bucket>/<model_path>:`
 
 ```
 docker run --rm -d -p 9001:9001 \
