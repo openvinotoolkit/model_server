@@ -258,7 +258,7 @@ openvino/model_server:latest \
 --model_path az://container/model_path --model_name az_model --port 9001
 ```
 
-Example command with file storage azfs://<share>/<model_path>:
+Example command with file storage `azfs://<share>/<model_path>:`
 
 ```
 docker run --rm -d -p 9001:9001 \
