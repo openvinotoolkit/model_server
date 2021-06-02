@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "../rest_parser.hpp"
+#include "absl/strings/escaping.h"
 #include "test_utils.hpp"
 
 using namespace ovms;
