@@ -1,9 +1,9 @@
 # Demultiplexing in Directed Acyclic Graph Scheduler
 
 ## Pipeline branching
-Directed Acyclic Graph Scheduler allows creating pipelines with optional parameter `demultiply_count: N` which adds ability to any node (`DL model` and `custom`) to slice outputs into `N` separate sub outputs and branch pipeline execution into `N` sub pipelines. Following nodes will be executed by event loop `N` times independently from each other and results will be gathered and packed into one output just before sending a response. Additionally `gather_from_node: <node_name>` parameter can be used to specify gathering at any point in Directed Acyclic Graph.
+Directed Acyclic Graph Scheduler allows creating pipelines with optional parameter `demultiply_count: N` which adds ability to any node to slice outputs into `N` separate sub outputs and branch pipeline execution into `N` sub pipelines. Following nodes will be executed by event loop `N` times independently from each other and results will be gathered and packed into one output just before sending a response. Additionally `gather_from_node: <node_name>` parameter can be used to specify gathering at any point in Directed Acyclic Graph.
 
-## Basic demultiplexer example and metadata explaination
+## Basic demultiplexer example and metadata explanation
 This example contains 2 consecutive models:
 - Model A accepts one input named `input` with shape `(1,224,224)`, layout `NHW` and floating point precision (later referred as `(1,224,224) FP32`) and produces 2 outputs: `output_A (3,1,100,100) FP32` and `output_B (3,1,40,130) FP32`. Since this model is configured as demultiplexer, the first dimension is very important - it must be equal to `demultiply_count` parameter specified in config.json configuration file. This allows scheduler to split all outputs into smaller chunks (so called `demultiplexing` in diagram below) and spawn new pipeline branches.
 - Model B accepts 2 inputs: `input_A (1,100,100) FP32` and `input_B (1,40,130) FP32`. Please note how metadata must be matched with previous model output after demultiplication (with first dimension removed after slicing). Since in most cases it is not possible to match metadata, OpenVINO&trade; Model Server allows creating custom nodes to perform output postprocessing ([custom node development](./custom_node_development.md)). This model produces one output: `output (1,50) FP32`.
@@ -154,6 +154,71 @@ Example configuration file for pipeline with `gather_from_node` specified before
             "outputs": [
                 {"pipeline_output_name": {"node_name": "Model_C_node",
                                           "data_item": "output"}}
+            ]
+        }
+    ]
+}
+```
+
+## Dynamic batch handling with demultiplexing
+
+Demutliplexing feature enables handling requests with dynamic batch size without a model reloading.
+It is recommended for workloads with arbitrary batch size in the sequential requests.
+You can use dynamic batching feature via requests demuliplexing by configuring a pipeline including a single model and an extra field 'demultiply_count: 0'.
+To leverage this feature, input data requires additional, first dimension, representing the batch size. It should be added to the original model shape with batch size 1.
+The response will include combined predictions from the split batch. That also adds extra first dimension to the model output.
+
+In the case of ResNet-50 model with shape (1,3,224,224) and N images, the inputs and outputs will be like presented below:
+
+Input: (N,1,3,224,224)
+Output: (N,1,1001)
+
+Thanks to that additional dimension, demultiplexing implementation is generic and can support any input and output data layout.
+
+*Note:* You can use additional parameters in model config ('nireq' and 'CPU_THROUGHPUT_STREAMS') to fine tune your performance for dynamic batch. 'CPU_THROUGHPUT_STREAMS' allows for multiple parallel
+inferences processing in OpenVINO which may increase throughput at the cost of latency of predict requests. 'nireq' specifies how many inference requests can be prepared.
+
+*Note:* In case you are using different device for inference than CPU you have check that device plugin configuration parameters.
+
+Example configuration file for handling dynamic batch size:
+```
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "resnet50",
+                "base_path": "/models/resnet50-binary",
+                "plugin_config": {
+                    "CPU_THROUGHPUT_STREAMS": "8" <---- this parameter specifies that 8 parallel inferences may be performed by OpenVINO
+                },
+                "nireq": 32 <--- this parameter specifies that 32 parallel inference requests may be prepared
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "resnet50DAG",
+            "inputs": ["0"],
+            "demultiply_count": 0, <---- this parameter specifies that dynamic input batch size will be handled
+            "nodes": [
+                {
+                    "name": "resnetNode",
+                    "model_name": "resnet50",
+                    "type": "DL model",
+                    "inputs": [
+                        {"0": {"node_name": "request",
+                               "data_item": "0"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "1463",
+                         "alias": "1463"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"1463": {"node_name": "resnetNode",
+                                         "data_item": "1463"}
+                }
             ]
         }
     ]
