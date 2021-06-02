@@ -86,7 +86,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         }
     }
     for (const auto& [name, _] : config.getLayouts()) {
-        if (networkInputs.count(name) == 0) {
+        if (networkInputs.count(name) == 0 && network->getOutputsInfo().count(name) == 0) {
             SPDLOG_WARN("Config layout - {} not found in network", name);
             return StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK;
         }
@@ -190,7 +190,7 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
         std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
         std::stringstream effective_shape_stream;
         std::copy(effectiveShape.begin(), effectiveShape.end(), std::ostream_iterator<size_t>(effective_shape_stream, " "));
-        SPDLOG_INFO("Output name: {} ; mapping name: {}; shape: {}; effective shape {}; precision: {}, layout:{}",
+        SPDLOG_INFO("Output name: {}; mapping name: {}; shape: {}; effective shape {}; precision: {}; layout: {}",
             name, mappingName, shape_stream.str(), effective_shape_stream.str(), precision_str,
             TensorInfo::getStringFromLayout(output->getLayout()));
     }

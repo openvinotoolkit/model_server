@@ -96,14 +96,14 @@ Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const InferenceEngine:
 
 bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tensorInfo) {
     if (tensorInfo->getLayout() == InferenceEngine::Layout::NCHW) {
-        int cols = tensorInfo->getShape()[3];
-        int rows = tensorInfo->getShape()[2];
+        int cols = tensorInfo->getEffectiveShape()[3];
+        int rows = tensorInfo->getEffectiveShape()[2];
         if (cols != image.cols || rows != image.rows) {
             return true;
         }
     } else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC) {
-        int cols = tensorInfo->getShape()[2];
-        int rows = tensorInfo->getShape()[1];
+        int cols = tensorInfo->getEffectiveShape()[2];
+        int rows = tensorInfo->getEffectiveShape()[1];
         if (cols != image.cols || rows != image.rows) {
             return true;
         }
@@ -113,14 +113,14 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
 
 Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
     if (tensorInfo->getLayout() == InferenceEngine::Layout::NCHW) {
-        int cols = tensorInfo->getShape()[3];
-        int rows = tensorInfo->getShape()[2];
+        int cols = tensorInfo->getEffectiveShape()[3];
+        int rows = tensorInfo->getEffectiveShape()[2];
         cv::resize(src, dst, cv::Size(cols, rows));
 
         return StatusCode::OK;
     } else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC) {
-        int cols = tensorInfo->getShape()[2];
-        int rows = tensorInfo->getShape()[1];
+        int cols = tensorInfo->getEffectiveShape()[2];
+        int rows = tensorInfo->getEffectiveShape()[1];
         cv::resize(src, dst, cv::Size(cols, rows));
 
         return StatusCode::OK;
@@ -132,13 +132,13 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     const cv::Mat input) {
     // Network and input must have the same number of shape dimensions.
     if (tensorInfo->getLayout() == InferenceEngine::Layout::NCHW) {
-        if ((unsigned int)(input.channels()) != tensorInfo->getShape()[1]) {
-            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[1], input.channels());
+        if ((unsigned int)(input.channels()) != tensorInfo->getEffectiveShape()[1]) {
+            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getEffectiveShape()[1], input.channels());
             return StatusCode::INVALID_NO_OF_CHANNELS;
         }
     } else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC) {
-        if ((unsigned int)(input.channels()) != tensorInfo->getShape()[3]) {
-            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[3], input.channels());
+        if ((unsigned int)(input.channels()) != tensorInfo->getEffectiveShape()[3]) {
+            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getEffectiveShape()[3], input.channels());
             return StatusCode::INVALID_NO_OF_CHANNELS;
         }
     } else {
@@ -151,7 +151,7 @@ bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     const int batchSize) {
     if (batchSize < 0)
         return true;
-    if (static_cast<size_t>(batchSize) != tensorInfo->getShape()[0])
+    if (static_cast<size_t>(batchSize) != tensorInfo->getEffectiveShape()[0])
         return true;
     return false;
 }
@@ -167,7 +167,7 @@ Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo,
 
 Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     const tensorflow::TensorProto& src) {
-    if (tensorInfo->getShape().size() != 4) {
+    if (tensorInfo->getEffectiveShape().size() != 4) {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
 
@@ -177,7 +177,7 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     }
 
     if (checkBatchSizeMismatch(tensorInfo, src.string_val_size())) {
-        SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getShape()[0], src.string_val_size());
+        SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getEffectiveShape()[0], src.string_val_size());
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
 

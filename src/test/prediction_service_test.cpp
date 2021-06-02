@@ -533,23 +533,90 @@ TEST_F(TestPredict, PerformInferenceChangeModelInputLayout) {
     checkOutputShape(response, {1, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
     checkOutputValues(response, {2.0, 5.0, 3.0, 6.0, 4.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 
-    // // Change batch size with model reload to Fixed=4
-    // config.setBatchingParams("4");
-    // ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    // Perform inference with NCHW layout, ensure error
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::INVALID_SHAPE);
 
-    // // Cannot do the inference with (3,10)
-    // ASSERT_EQ(performInferenceWithBatchSize(response, 3), ovms::StatusCode::INVALID_BATCH_SIZE);
+    // Reload model with layout setting removed
+    ASSERT_EQ(config.parseLayoutParameter(""), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
-    // // Successfull inference with (4,10)
-    // ASSERT_EQ(performInferenceWithBatchSize(response, 4), ovms::StatusCode::OK);
-    // checkOutputShape(response, {4, 10});
+    // Perform inference with NHWC layout, ensure status OK and correct results
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 1, 2, 3}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+    checkOutputValues(response, {2.0, 5.0, 3.0, 6.0, 4.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 
-    // // Reshape back to AUTO, internal shape is (1,10)
-    // config.setBatchingParams("auto");
-    // ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    // Perform inference with NCHW layout, ensure error
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::INVALID_SHAPE);
 
-    // // Perform batch change to 3 using request
-    // ASSERT_EQ(performInferenceWithBatchSize(response, 3), ovms::StatusCode::OK);
-    // checkOutputShape(response, {3, 10});
+    // Prepare model with layout changed back to nchw
+    ASSERT_EQ(config.parseLayoutParameter("nchw"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Perform inference with NCHW layout, ensure status OK and correct results
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+    checkOutputValues(response, {2.0, 3.0, 4.0, 5.0, 6.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+
+    // Perform inference with NHWC layout, ensure error
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 1, 2, 3}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::INVALID_SHAPE);
 }
+
+/**
+ * Scenario - change output layout of model and perform inference. Check results if in correct order.
+ * 
+ * 1. Load model with output layout=nhwc, initial internal layout: nchw
+ * 2. Do the inference with (1,3,4,5) shape - expect status OK and result in NHWC layout
+ * 3. Remove layout setting
+ * 4. Do the inference with (1,3,4,5) shape - expect status OK and result in NHWC layout
+ * 5. Roll back layout setting to internal nchw
+ * 6. Do the inference with (1,3,4,5) shape - expect status OK and result in NCHW layout
+ */
+TEST_F(TestPredict, PerformInferenceChangeModelOutputLayout) {
+    using namespace ovms;
+
+    // Prepare model with changed output layout to nhwc (internal layout=nchw)
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter(std::string("{\"") + INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME + std::string("\":\"nhwc\"}")), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    tensorflow::serving::PredictResponse response;
+
+    // Perform inference with NCHW layout, ensure status OK and results in NHWC order
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 1, 2, 3}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+    checkOutputValues(response, {2.0, 4.0, 6.0, 3.0, 5.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+
+    // Reload model with layout setting removed
+    ASSERT_EQ(config.parseLayoutParameter(""), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Perform inference with NCHW layout, ensure status OK and results still in NHWC order
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 1, 2, 3}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+    checkOutputValues(response, {2.0, 4.0, 6.0, 3.0, 5.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+
+    // Change output layout back to original nchw.
+    ASSERT_EQ(config.parseLayoutParameter(std::string("{\"") + INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME + std::string("\":\"nchw\"}")), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+    checkOutputValues(response, {2.0, 3.0, 4.0, 5.0, 6.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+}
+
+TEST_F(TestPredict, ErrorWhenLayoutSetForMissingTensor) {
+    ovms::ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    ASSERT_EQ(config.parseLayoutParameter("{\"invalid_tensor_name\":\"nhwc\"}"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK);
+}
+
+TEST_F(TestPredict, NetworkNotLoadedWhenLayoutAndDimsInconsistent) {
+    // Dummy has 2 dimensions: (1,10), changing layout to NHWC should fail
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::NETWORK_NOT_LOADED);
+}
+
 #pragma GCC diagnostic pop
