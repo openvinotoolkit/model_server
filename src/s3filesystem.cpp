@@ -110,10 +110,7 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
     } else if (profile_name) {
         config = Aws::Client::ClientConfiguration(profile_name);
     } else {
-        config = Aws::Client::ClientConfiguration();
-        if (region != NULL) {
-            config.region = region;
-        }
+        config = Aws::Client::ClientConfiguration("default");
     }
 
     std::string host_name, host_port, bucket, object;
