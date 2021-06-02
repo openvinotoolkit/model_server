@@ -88,7 +88,7 @@ bool RestParser::parseSpecialInput(rapidjson::Value& doc, tensorflow::TensorProt
 
 bool isBinary(const rapidjson::Value& value) {
     if (value.IsObject()) {
-        if (value.HasMember("b64")) {
+        if (value.HasMember("b64") && ((value.MemberEnd() - value.MemberBegin()) == 1)) {
             if (value["b64"].IsString()) {
                 return true;
             }
