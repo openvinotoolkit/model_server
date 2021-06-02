@@ -122,8 +122,8 @@ TEST_F(BinaryUtilsTest, positive_rgb) {
 
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
 
-    ASSERT_EQ(blob->size(), 3);
     ASSERT_EQ(status, ovms::StatusCode::OK);
+    ASSERT_EQ(blob->size(), 3);
     uint8_t* ptr = blob->buffer();
     EXPECT_EQ(std::equal(ptr, ptr + blob->size(), rgb_expected_blob), true);
 }
@@ -147,8 +147,8 @@ TEST_F(BinaryUtilsTest, positive_grayscale) {
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 1}, InferenceEngine::Layout::NCHW);
 
     auto status = convertStringValToBlob(grayscaleStringVal, &blob, tensorInfo);
-    ASSERT_EQ(blob->size(), 1);
     ASSERT_EQ(status, ovms::StatusCode::OK);
+    ASSERT_EQ(blob->size(), 1);
     uint8_t* ptr = blob->buffer();
     EXPECT_EQ(std::equal(ptr, ptr + blob->size(), grayscale_expected_blob), true);
 }
@@ -163,8 +163,8 @@ TEST_F(BinaryUtilsTest, positive_batch_size_2) {
 
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
 
-    ASSERT_EQ(blob->size(), 6);
     ASSERT_EQ(status, ovms::StatusCode::OK);
+    ASSERT_EQ(blob->size(), 6);
     uint8_t* ptr = blob->buffer();
     EXPECT_EQ(std::equal(ptr, ptr + blob->size(), rgb_batchsize_2_blob), true);
 }
@@ -178,8 +178,8 @@ TEST_F(BinaryUtilsTest, positive_precision_changed) {
 
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
 
-    ASSERT_EQ(blob->size(), 3);
     ASSERT_EQ(status, ovms::StatusCode::OK);
+    ASSERT_EQ(blob->size(), 3);
     uint8_t* ptr = blob->buffer();
     int I32_size = 4;
     EXPECT_EQ(std::equal(ptr, ptr + blob->size() * I32_size, rgb_precision_changed_expected_blob), true);
@@ -190,12 +190,12 @@ TEST_F(BinaryUtilsTest, positive_nhwc_layout) {
 
     InferenceEngine::Blob::Ptr blob;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 3, 1, 1}, InferenceEngine::Layout::NHWC);
 
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
 
-    ASSERT_EQ(blob->size(), 3);
     ASSERT_EQ(status, ovms::StatusCode::OK);
+    ASSERT_EQ(blob->size(), 3);
     uint8_t* ptr = blob->buffer();
 
     EXPECT_EQ(std::equal(ptr, ptr + blob->size(), rgb_expected_blob), true);
@@ -210,8 +210,8 @@ TEST_F(BinaryUtilsTest, positive_resizing) {
 
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
 
-    ASSERT_EQ(blob->size(), 12);
     ASSERT_EQ(status, ovms::StatusCode::OK);
+    ASSERT_EQ(blob->size(), 12);
     uint8_t* ptr = blob->buffer();
     EXPECT_EQ(std::equal(ptr, ptr + blob->size(), rgb_expected_blob), true);
 }
