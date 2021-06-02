@@ -39,7 +39,7 @@ representing its versions (1,2, etc). The versions and the sub-folder names shou
 
 - Each model defines input and output tensors in the AI graph. The client passes data to model input tensors by filling appropriate entries in the request inputs map.
   Prediction results can be read from response outputs map. By default OpenVINO™ model server is using model
-  tensors names as inputs and outputs names in prediction requests and responses. The client passes the input values to the gRPC request and 
+  tensors names as inputs and outputs names in prediction requests and responses. The client passes the input values to the request and 
   reads the results by referring to the correspondent output names. 
 
 Below is the snippet of the example client code :
