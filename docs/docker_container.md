@@ -305,6 +305,29 @@ openvino/model_server:latest \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001
 
 ```
+
+You can also use anonymous access to s3 public paths.
+Example command with s3://<public_bucket>/<model_path>:
+
+```
+docker run --rm -d -p 9001:9001 \
+openvino/model_server:latest \
+--model_path s3://public_bucket/model_path --model_name s3_model --port 9001
+
+```
+
+or setup a profile credentials file in the docker image described here
+[AWS Named profiles]https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html
+
+Example command with s3://<bucket>/<model_path>:
+
+```
+docker run --rm -d -p 9001:9001 \
+-e AWS_PROFILE=“${AWS_PROFILE}” \
+openvino/model_server:latest \
+--model_path s3://bucket/model_path --model_name s3_model --port 9001
+
+```
 </details>
 
 ### Model Version Policy
