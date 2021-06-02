@@ -57,6 +57,17 @@ TEST_F(RestParserBinaryInputs, ColumnName) {
     EXPECT_EQ(memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
 
+TEST_F(RestParserBinaryInputs, BatchSize2) {
+    std::string request = R"({"signature_name":"","instances":[{"k":[{"b64":")" + b64encoded + R"("}]},{"i":[{"b64":")" + b64encoded + R"("}]}]})";
+
+    RestParser parser(RestParser(prepareTensors({{"i", {1, 1}}, {"k", {1, 1}}})));
+    ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
+    EXPECT_EQ(memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
+    EXPECT_EQ(memcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
+}
+
 TEST_F(RestParserBinaryInputs, RowName) {
     std::string request = R"({"signature_name":"","instances":[{"k":[{"b64":")" + b64encoded + R"("}]}]})";
 
@@ -91,4 +102,3 @@ TEST_F(RestParserBinaryInputs, RowNoNamed) {
     ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
     EXPECT_EQ(memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
-
