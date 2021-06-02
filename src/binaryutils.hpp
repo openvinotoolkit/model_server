@@ -22,5 +22,5 @@
 
 namespace ovms {
 Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr* blob, const std::shared_ptr<TensorInfo>& tensorInfo);
-Status convertBlobToStringVal(const InferenceEngine::Blob::Ptr& blob, tensorflow::TensorProto& dst, const std::shared_ptr<TensorInfo>& tensorInfo);
+Status convertBlobToStringVal(tensorflow::TensorProto& dst, const std::shared_ptr<TensorInfo>& tensorInfo, const InferenceEngine::Blob::Ptr& blob);
 }  // namespace ovms

@@ -318,7 +318,7 @@ Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngin
     return StatusCode::OK;
 }
 
-Status convertBlobToStringVal(const InferenceEngine::Blob::Ptr& blob, tensorflow::TensorProto& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
+Status convertBlobToStringVal(tensorflow::TensorProto& dst, const std::shared_ptr<TensorInfo>& tensorInfo, const InferenceEngine::Blob::Ptr& blob) {
     std::vector<cv::Mat> images;
     auto status = convertBlobToMats(images, blob, tensorInfo);
     if (!status.ok()) {

@@ -154,7 +154,7 @@ TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
     TensorProto responseOutput;
     std::shared_ptr<MockBlob> mockBlob = std::get<1>(inputs);
     EXPECT_CALL(*mockBlob, element_size());
-    auto status = serializeBlobToTensorProto(responseOutput,
+    auto status = convertBlobToTensorContent(responseOutput,
         std::get<0>(inputs),
         std::get<1>(inputs));
     EXPECT_TRUE(status.ok())
@@ -169,7 +169,7 @@ TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldSucceedForPreci
     Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
-    auto status = serializeBlobToTensorProto(responseOutput,
+    auto status = convertBlobToTensorContent(responseOutput,
         std::get<0>(inputs),
         std::get<1>(inputs));
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION)

@@ -19,7 +19,7 @@
 
 namespace ovms {
 
-Status serializeBlobToTensorProto(
+Status convertBlobToTensorContent(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& networkOutput,
     InferenceEngine::Blob::Ptr blob) {
@@ -86,11 +86,12 @@ Status serializePredictResponse(
             return status;
         }
         auto& tensorProto = (*response->mutable_outputs())[networkOutput->getMappedName()];
-        Status status = StatusCode::OK;
-        if (networkName.find("b64") != std::string::npos) {
-            status = convertBlobToStringVal(blob, tensorProto, networkOutput);
+        Status status;
+        std::string binary_suffix = "_binary";
+        if (networkName.size() >= binary_suffix.size() && 0 == networkName.compare(networkName.size() - binary_suffix.size(), binary_suffix.size(), binary_suffix)) {
+            status = convertBlobToStringVal(tensorProto, networkOutput, blob);
         } else {
-            status = serializeBlobToTensorProto(tensorProto, networkOutput, blob);
+            status = convertBlobToTensorContent(tensorProto, networkOutput, blob);
         }
         if (!status.ok()) {
             return status;

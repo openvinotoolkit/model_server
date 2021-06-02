@@ -337,7 +337,7 @@ TEST_F(BinaryUtilsTest, positive_grayscale_serialization_deserialization) {
     uint8_t* ptr = blob->buffer();
     ASSERT_EQ(std::equal(ptr, ptr + blob->size(), grayscale_expected_blob), true);
     tensorflow::TensorProto stringValDeserialized;
-    convertBlobToStringVal(blob, stringValDeserialized, tensorInfo);
+    convertBlobToStringVal(stringValDeserialized, tensorInfo, blob);
     EXPECT_EQ(stringVal.string_val(0).substr(stringVal.string_val(0).find("\xFF\xC0")), stringValDeserialized.string_val(0).substr(stringValDeserialized.string_val(0).find("\xFF\xC0")));
 }
 
@@ -366,7 +366,7 @@ TEST_F(BinaryUtilsTest, positive_rgb_serialization_deserialization) {
     uint8_t* ptr = blob->buffer();
     ASSERT_EQ(std::equal(ptr, ptr + blob->size(), rgb_expected_blob), true);
     tensorflow::TensorProto stringValDeserialized;
-    convertBlobToStringVal(blob, stringValDeserialized, tensorInfo);
+    convertBlobToStringVal(stringValDeserialized, tensorInfo, blob);
 
     EXPECT_EQ(stringVal.string_val(0).substr(stringVal.string_val(0).find("\xFF\xC0")), stringValDeserialized.string_val(0).substr(stringValDeserialized.string_val(0).find("\xFF\xC0")));
 }
@@ -397,7 +397,7 @@ TEST_F(BinaryUtilsTest, positive_batch_size_2_serialization_deserialization) {
     uint8_t* ptr = blob->buffer();
     ASSERT_EQ(std::equal(ptr, ptr + blob->size(), rgb_batchsize_2_blob), true);
     tensorflow::TensorProto stringValDeserialized;
-    convertBlobToStringVal(blob, stringValDeserialized, tensorInfo);
+    convertBlobToStringVal(stringValDeserialized, tensorInfo, blob);
 
     EXPECT_EQ(stringVal.string_val(0).substr(stringVal.string_val(0).find("\xFF\xC0")), stringValDeserialized.string_val(0).substr(stringValDeserialized.string_val(0).find("\xFF\xC0")));
     EXPECT_EQ(stringVal.string_val(1).substr(stringVal.string_val(1).find("\xFF\xC0")), stringValDeserialized.string_val(1).substr(stringValDeserialized.string_val(1).find("\xFF\xC0")));

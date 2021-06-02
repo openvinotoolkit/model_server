@@ -32,7 +32,7 @@
 
 namespace ovms {
 
-Status serializeBlobToTensorProto(
+Status convertBlobToTensorContent(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& networkOutput,
     InferenceEngine::Blob::Ptr blob);
