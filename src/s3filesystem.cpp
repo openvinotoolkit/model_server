@@ -27,6 +27,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
