@@ -30,13 +30,7 @@ using ::testing::ElementsAre;
 class RestParserBinaryInputs : public ::testing::Test {
 protected:
     void SetUp() override {
-        std::ifstream DataFile;
-        DataFile.open("/ovms/src/test/binaryutils/rgb.jpg", std::ios::binary);
-        DataFile.seekg(0, std::ios::end);
-        filesize = DataFile.tellg();
-        DataFile.seekg(0);
-        image_bytes = std::make_unique<char[]>(filesize);
-        DataFile.read(image_bytes.get(), filesize);
+        readRgbJpg(filesize, image_bytes);
         std::string_view bytes(image_bytes.get(), filesize);
 
         absl::Base64Escape(bytes, &b64encoded);
@@ -52,7 +46,9 @@ TEST_F(RestParserBinaryInputs, ColumnName) {
 
     RestParser parser(prepareTensors({{"k", {1, 1}}}));
     ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("k")->second.string_val_size(), 1);
     EXPECT_EQ(memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
 
@@ -61,8 +57,11 @@ TEST_F(RestParserBinaryInputs, BatchSize2) {
 
     RestParser parser(RestParser(prepareTensors({{"i", {1, 1}}, {"k", {1, 1}}})));
     ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs_size(), 2);
     ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
     ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("k")->second.string_val_size(), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
     EXPECT_EQ(memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
     EXPECT_EQ(memcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
@@ -72,7 +71,9 @@ TEST_F(RestParserBinaryInputs, RowName) {
 
     RestParser parser(prepareTensors({{"k", {1, 1}}}));
     ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("k")->second.string_val_size(), 1);
     EXPECT_EQ(memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
 
@@ -88,7 +89,9 @@ TEST_F(RestParserBinaryInputs, ColumnNoNamed) {
 
     RestParser parser(prepareTensors({{"k", {1, 1}}}));
     ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("k")->second.string_val_size(), 1);
     EXPECT_EQ(memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
 
@@ -97,6 +100,8 @@ TEST_F(RestParserBinaryInputs, RowNoNamed) {
 
     RestParser parser(prepareTensors({{"k", {1, 1}}}));
     ASSERT_EQ(parser.parse(request.c_str()), StatusCode::OK);
+    ASSERT_EQ(parser.getProto().inputs_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
+    ASSERT_EQ(parser.getProto().inputs().find("k")->second.string_val_size(), 1);
     EXPECT_EQ(memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }

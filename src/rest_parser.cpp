@@ -87,15 +87,19 @@ bool RestParser::parseSpecialInput(rapidjson::Value& doc, tensorflow::TensorProt
 }
 
 bool isBinary(const rapidjson::Value& value) {
-    if (value.IsObject()) {
-        if (value.HasMember("b64") && ((value.MemberEnd() - value.MemberBegin()) == 1)) {
-            if (value["b64"].IsString()) {
-                return true;
-            }
-        }
+    if (!value.IsObject()) {
+        return false;
     }
 
-    return false;
+    if (!(value.HasMember("b64") && ((value.MemberEnd() - value.MemberBegin()) == 1))) {
+        return false;
+    }
+
+    if (!value["b64"].IsString()) {
+        return false;
+    }
+
+    return true;
 }
 
 bool RestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorProto& proto, const std::string& tensorName) {
@@ -295,16 +299,12 @@ bool RestParser::setDimOrValidate(tensorflow::TensorProto& proto, int dim, int s
 }
 
 bool getB64FromValue(const rapidjson::Value& value, std::string& b64Val) {
-    if (value.IsObject()) {
-        if (value.HasMember("b64")) {
-            if (value["b64"].IsString()) {
-                b64Val = value["b64"].GetString();
-                return true;
-            }
-        }
+    if (!isBinary(value)) {
+        return false;
     }
-
-    return false;
+    
+    b64Val = value["b64"].GetString();
+    return true;
 }
 
 template <typename T>
