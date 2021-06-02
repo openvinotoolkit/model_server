@@ -397,8 +397,7 @@ bool RestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Value
             proto.add_string_val(decodedBytes.c_str(), decodedBytes.length());
             proto.set_dtype(tensorflow::DataType::DT_STRING);
             return true;
-        }
-        else{
+        } else {
             return false;
         }
     }
