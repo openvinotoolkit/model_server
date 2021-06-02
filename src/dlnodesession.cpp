@@ -163,15 +163,6 @@ Status DLNodeSession::validate(const InferenceEngine::Blob::Ptr& blob, const Ten
         return Status(StatusCode::INVALID_PRECISION, details);
     }
 
-    // Otherwise whole shape is incorrect
-    std::stringstream ss;
-    ss << "Node: " << getName() << " input: " << tensorInfo.getName()
-       << " Invalid shape -"
-       << " Expected: " << TensorInfo::shapeToString(tensorInfo.getEffectiveShape())
-       << "; Actual: " << TensorInfo::shapeToString(blob->getTensorDesc().getDims());
-    const std::string details = ss.str();
-    SPDLOG_LOGGER_ERROR(dag_executor_logger, details);
-
     // If batch size differs, check if remaining dimensions are equal
     auto& dims =
         blob->getTensorDesc().getBlockingDesc().getBlockDims().size() > 0 ? blob->getTensorDesc().getBlockingDesc().getBlockDims() : blob->getTensorDesc().getDims();

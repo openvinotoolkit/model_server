@@ -65,20 +65,18 @@ protected:
         proto.mutable_tensor_shape()->add_dim()->set_size(DUMMY_MODEL_INPUT_SIZE);
     }
 
+    void prepareRequest(const std::vector<float>& requestData, PredictRequest& request, const std::string& customPipelineInputName, const std::vector<size_t>& shape) {
+        tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
+        proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+        proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+        for (size_t i = 0; i < shape.size(); i++) {
+            proto.mutable_tensor_shape()->add_dim()->set_size(shape[i]);
+        }
+    }
+
     void checkDummyResponse(int seriesLength, int batchSize = 1) {
         ::checkDummyResponse(customPipelineOutputName, requestData, request, response, seriesLength, batchSize);
     }
-
-    // std::string readableError(const float* expected_output, const float* actual_output, const size_t size) {
-    //     std::stringstream ss;
-    //     for (size_t i = 0; i < size; ++i) {
-    //         if (actual_output[i] != expected_output[i]) {
-    //             ss << "Expected:" << expected_output[i] << ", actual:" << actual_output[i] << " at place:" << i << std::endl;
-    //             break;
-    //         }
-    //     }
-    //     return ss.str();
-    // }
 
     void performWrongPipelineConfigTest(const char* configFileContent) {
         std::string fileToReload = directoryPath + "/ovms_config_file1.json";
@@ -3089,4 +3087,413 @@ TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeWithShapeNotAllowed) {
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+}
+
+static const char* pipelineSingleIncrement4DimInputNHWC = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,3,1,2) ",
+                "layout": "nhwc",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimInputNHWC) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimInputNHWC, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    prepareRequest({1.0, 2.0, 3.0, 4.0, 5.0, 6.0}, request, "pipeline_input", {1, 1, 2, 3});
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse("pipeline_output", {2.0, 5.0, 3.0, 6.0, 4.0, 7.0}, request, response, {1, 3, 1, 2});
+}
+
+static const char* pipelineSingleIncrement4DimInputNHWCDynamicBatch = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,3,1,2) ",
+                "layout": "nhwc",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "demultiply_count": 0,
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimInputNHWCDynamicBatch) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimInputNHWCDynamicBatch, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    prepareRequest({
+                       1.0,
+                       2.0,
+                       3.0,
+                       4.0,
+                       5.0,
+                       6.0,
+                       10.0,
+                       20.0,
+                       30.0,
+                       40.0,
+                       50.0,
+                       60.0,
+                   },
+        request, "pipeline_input", {2, 1, 1, 2, 3});
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse("pipeline_output", {2.0, 5.0, 3.0, 6.0, 4.0, 7.0, 11.0, 41.0, 21.0, 51.0, 31.0, 61.0}, request, response, {2, 1, 3, 1, 2});
+}
+
+static const char* pipelineSingleIncrement4DimOutputNHWC = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,3,1,2) ",
+                "layout": {"output": "nhwc"},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimOutputNHWC) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWC, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    prepareRequest({1.0, 2.0, 3.0, 4.0, 5.0, 6.0}, request, "pipeline_input", {1, 3, 1, 2});
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0}, request, response, {1, 1, 2, 3});
+}
+
+static const char* pipelineSingleIncrement4DimOutputNHWCDynamicBatch = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,3,1,2) ",
+                "layout": {"output": "nhwc"},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "demultiply_count": 0,
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimOutputNHWCDynamicBatch) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWCDynamicBatch, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    prepareRequest({1.0, 2.0, 3.0, 4.0, 5.0, 6.0,
+                       10.0, 20.0, 30.0, 40.0, 50.0, 60.0},
+        request, "pipeline_input", {2, 1, 3, 1, 2});
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0, 11.0, 31.0, 51, 21.0, 41.0, 61.0}, request, response, {2, 1, 1, 2, 3});
+}
+
+static const char* pipelineAmbiguousInputMeta = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment_nhwc",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,3,1,2) ",
+                "layout": {"input": "nhwc"},
+                "nireq": 1
+            }
+        },
+        {
+            "config": {
+                "name": "increment_nchw",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,3,1,2) ",
+                "layout": {"input": "nchw"},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "increment_node_nhwc",
+                    "model_name": "increment_nhwc",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                },
+                {
+                    "name": "increment_node_nchw",
+                    "model_name": "increment_nchw",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output_nhwc": {"node_name": "increment_node_nhwc",
+                                          "data_item": "out"}
+                },
+                {"pipeline_output_nchw": {"node_name": "increment_node_nchw",
+                                          "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, PipelineAmbiguousInputMetaFailsToLoad) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineAmbiguousInputMeta, fileToReload);
+    ConstructorEnabledModelManager manager;
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA);
+}
+
+static const char* pipelineInnerConnectedNhwc = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment_nchw_in_nhwc_out",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,3,1,2) ",
+                "layout": {"output": "nhwc"},
+                "nireq": 1
+            }
+        },
+        {
+            "config": {
+                "name": "increment_nhwc_in_nchw_out",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,3,1,2) ",
+                "layout": {"input": "nhwc"},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "increment_node_nchw_in_nhwc_out",
+                    "model_name": "increment_nchw_in_nhwc_out",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                },
+                {
+                    "name": "increment_node_nhwc_in_nchw_out",
+                    "model_name": "increment_nhwc_in_nchw_out",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "increment_node_nchw_in_nhwc_out",
+                                   "data_item": "out"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node_nhwc_in_nchw_out",
+                                          "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, ExecutePipelineWithInnerNhwcConnection) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineInnerConnectedNhwc, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    prepareRequest({1.0, 2.0, 3.0, 4.0, 5.0, 6.0}, request, "pipeline_input", {1, 3, 1, 2});
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse("pipeline_output", {3.0, 4.0, 5.0, 6.0, 7.0, 8.0}, request, response, {1, 3, 1, 2});
 }

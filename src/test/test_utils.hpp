@@ -139,6 +139,12 @@ void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
     tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1);
 
+void checkIncrement4DimResponse(const std::string outputName,
+    const std::vector<float>& expectedData,
+    tensorflow::serving::PredictRequest& request,
+    tensorflow::serving::PredictResponse& response,
+    const std::vector<size_t>& expectedShape);
+
 static std::vector<int> asVector(const tensorflow::TensorShapeProto& proto) {
     std::vector<int> shape;
     for (int i = 0; i < proto.dim_size(); i++) {

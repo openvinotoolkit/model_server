@@ -60,8 +60,6 @@ Status ExitNode::serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::T
     auto& dims =
         blob->getTensorDesc().getBlockingDesc().getBlockDims().size() > 0 ? blob->getTensorDesc().getBlockingDesc().getBlockDims() : blob->getTensorDesc().getDims();
 
-    std::cout << TensorInfo::shapeToString(blob->getTensorDesc().getDims()) << " " << TensorInfo::shapeToString(blob->getTensorDesc().getBlockingDesc().getBlockDims()) << std::endl;
-
     for (size_t dim : dims) {
         proto.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
