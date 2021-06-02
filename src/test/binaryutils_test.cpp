@@ -19,7 +19,6 @@
 #include "../binaryutils.hpp"
 #include "gtest/gtest.h"
 #include "opencv2/opencv.hpp"
-
 #include "test_utils.hpp"
 
 using namespace ovms;

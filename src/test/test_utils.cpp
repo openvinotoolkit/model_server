@@ -99,7 +99,7 @@ bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vecto
     return true;
 }
 
-void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes){
+void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
     std::ifstream DataFile;
     DataFile.open("/ovms/src/test/binaryutils/rgb.jpg", std::ios::binary);
     DataFile.seekg(0, std::ios::end);

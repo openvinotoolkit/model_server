@@ -302,7 +302,7 @@ bool getB64FromValue(const rapidjson::Value& value, std::string& b64Val) {
     if (!isBinary(value)) {
         return false;
     }
-    
+
     b64Val = value["b64"].GetString();
     return true;
 }
