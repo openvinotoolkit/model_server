@@ -20,7 +20,6 @@
 #include <gtest/gtest.h>
 
 #include "../rest_parser.hpp"
-
 #include "absl/strings/escaping.h"
 #include "test_utils.hpp"
 
@@ -77,8 +76,7 @@ TEST_F(RestParserBinaryInputs, RowName) {
     EXPECT_EQ(memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
 
-
-TEST_F(RestParserBinaryInputs, InvalidObject){
+TEST_F(RestParserBinaryInputs, InvalidObject) {
     std::string request = R"({"signature_name":"","inputs":{"k":[{"b64":")" + b64encoded + R"(", "AdditionalField":"someValue"}]}})";
 
     RestParser parser;
