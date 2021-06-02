@@ -49,7 +49,7 @@ TEST_F(RestParserBinaryInputs, ColumnName) {
     ASSERT_EQ(parser.getProto().inputs_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
     ASSERT_EQ(parser.getProto().inputs().find("k")->second.string_val_size(), 1);
-    EXPECT_EQ(memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
+    EXPECT_EQ(std::memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
 
 TEST_F(RestParserBinaryInputs, BatchSize2) {
@@ -62,8 +62,8 @@ TEST_F(RestParserBinaryInputs, BatchSize2) {
     ASSERT_EQ(parser.getProto().inputs().count("i"), 1);
     ASSERT_EQ(parser.getProto().inputs().find("k")->second.string_val_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().find("i")->second.string_val_size(), 1);
-    EXPECT_EQ(memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
-    EXPECT_EQ(memcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
+    EXPECT_EQ(std::memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
+    EXPECT_EQ(std::memcmp(parser.getProto().inputs().find("i")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
 
 TEST_F(RestParserBinaryInputs, RowName) {
@@ -74,7 +74,7 @@ TEST_F(RestParserBinaryInputs, RowName) {
     ASSERT_EQ(parser.getProto().inputs_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
     ASSERT_EQ(parser.getProto().inputs().find("k")->second.string_val_size(), 1);
-    EXPECT_EQ(memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
+    EXPECT_EQ(std::memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
 
 TEST_F(RestParserBinaryInputs, InvalidObject) {
@@ -92,7 +92,7 @@ TEST_F(RestParserBinaryInputs, ColumnNoNamed) {
     ASSERT_EQ(parser.getProto().inputs_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
     ASSERT_EQ(parser.getProto().inputs().find("k")->second.string_val_size(), 1);
-    EXPECT_EQ(memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
+    EXPECT_EQ(std::memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
 
 TEST_F(RestParserBinaryInputs, RowNoNamed) {
@@ -103,5 +103,5 @@ TEST_F(RestParserBinaryInputs, RowNoNamed) {
     ASSERT_EQ(parser.getProto().inputs_size(), 1);
     ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
     ASSERT_EQ(parser.getProto().inputs().find("k")->second.string_val_size(), 1);
-    EXPECT_EQ(memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
+    EXPECT_EQ(std::memcmp(parser.getProto().inputs().find("k")->second.string_val(0).c_str(), image_bytes.get(), filesize), 0);
 }
