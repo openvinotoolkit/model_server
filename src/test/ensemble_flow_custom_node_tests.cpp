@@ -1835,8 +1835,8 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Demultip
 struct LibraryParamControlledMetadata {
     static bool startsWith(const char* str, const char* prefix) {
         // Ensure null terminated
-        str[sizeof(str)-1] = 0;
-        prefix[sizeof(prefix)-1] = 0;
+        str[sizeof(str) - 1] = 0;
+        prefix[sizeof(prefix) - 1] = 0;
         size_t strLen = std::strlen(str);
         size_t prefixLen = std::strlen(prefix);
         return strLen < prefixLen ? false : std::memcmp(str, prefix, prefixLen) == 0;
