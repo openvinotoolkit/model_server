@@ -378,7 +378,7 @@ Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Check if loader is already loaded");
     if (customloaders.find(loaderName) == nullptr) {
         // this is where library or custom loader is loaded
-        if (FileSystem::isPathEscaped(loaderConfig.getLibraryPath()) {
+        if (FileSystem::isPathEscaped(loaderConfig.getLibraryPath())) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", loaderConfig.getLibraryPath());
             return StatusCode::PATH_INVALID;
         }
