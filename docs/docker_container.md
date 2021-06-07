@@ -239,7 +239,8 @@ Configuration options for server are defined only via command line options and d
 
 ### Cloud Storage Requirements<a name="storage"></a>:
 
-In general OVMS requires "read" and "list" permissions on the model storage side.
+OVMS supports a range of cloud storage types. In general OVMS requires "read" and "list" permissions on the model repository side.
+Below are specific steps for every storage provider:
 
 <details><summary>Azure Cloud Storage path requirements</summary>
 
