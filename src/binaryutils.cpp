@@ -64,19 +64,6 @@ bool isPrecisionEqual(int matPrecision, InferenceEngine::Precision tensorPrecisi
     return false;
 }
 
-template <typename T>
-std::vector<T> reorder_to_nchw(const T* nhwcVector, int rows, int cols, int channels) {
-    std::vector<T> nchwVector(rows * cols * channels);
-    for (int y = 0; y < rows; ++y) {
-        for (int x = 0; x < cols; ++x) {
-            for (int c = 0; c < channels; ++c) {
-                nchwVector[c * (rows * cols) + y * cols + x] = reinterpret_cast<const T*>(nhwcVector)[y * channels * cols + x * channels + c];
-            }
-        }
-    }
-    return std::move(nchwVector);
-}
-
 cv::Mat convertStringValToMat(const std::string& stringVal) {
     std::vector<unsigned char> data(stringVal.begin(), stringVal.end());
     cv::Mat dataMat(data, true);
@@ -95,13 +82,7 @@ Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const InferenceEngine:
 }
 
 bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    if (tensorInfo->getLayout() == InferenceEngine::Layout::NCHW) {
-        int cols = tensorInfo->getEffectiveShape()[3];
-        int rows = tensorInfo->getEffectiveShape()[2];
-        if (cols != image.cols || rows != image.rows) {
-            return true;
-        }
-    } else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC) {
+    if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC) {
         int cols = tensorInfo->getEffectiveShape()[2];
         int rows = tensorInfo->getEffectiveShape()[1];
         if (cols != image.cols || rows != image.rows) {
@@ -112,13 +93,7 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
 }
 
 Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    if (tensorInfo->getLayout() == InferenceEngine::Layout::NCHW) {
-        int cols = tensorInfo->getEffectiveShape()[3];
-        int rows = tensorInfo->getEffectiveShape()[2];
-        cv::resize(src, dst, cv::Size(cols, rows));
-
-        return StatusCode::OK;
-    } else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC) {
+    if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC) {
         int cols = tensorInfo->getEffectiveShape()[2];
         int rows = tensorInfo->getEffectiveShape()[1];
         cv::resize(src, dst, cv::Size(cols, rows));
@@ -131,12 +106,7 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
 Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     const cv::Mat input) {
     // Network and input must have the same number of shape dimensions.
-    if (tensorInfo->getLayout() == InferenceEngine::Layout::NCHW) {
-        if ((unsigned int)(input.channels()) != tensorInfo->getEffectiveShape()[1]) {
-            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getEffectiveShape()[1], input.channels());
-            return StatusCode::INVALID_NO_OF_CHANNELS;
-        }
-    } else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC) {
+    if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC) {
         if ((unsigned int)(input.channels()) != tensorInfo->getEffectiveShape()[3]) {
             SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getEffectiveShape()[3], input.channels());
             return StatusCode::INVALID_NO_OF_CHANNELS;
@@ -171,8 +141,7 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
 
-    if (tensorInfo->getLayout() != InferenceEngine::Layout::NCHW &&
-        tensorInfo->getLayout() != InferenceEngine::Layout::NHWC) {
+    if (tensorInfo->getLayout() != InferenceEngine::Layout::NHWC) {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
 
@@ -226,14 +195,8 @@ InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images
     blob->allocate();
     char* ptr = blob->buffer();
     for (cv::Mat image : images) {
-        if (tensorInfo->getLayout() == InferenceEngine::Layout::NCHW) {
-            auto imgBuffer = reorder_to_nchw((T*)image.data, image.rows, image.cols, image.channels());  // here we dont need to reorder. we will support nhwc
-            memcpy(ptr + offset, (char*)imgBuffer.data(), image.total() * image.elemSize());
-            offset += (image.total() * image.elemSize());
-        } else {
-            memcpy(ptr + offset, (char*)image.data, image.total() * image.elemSize());
-            offset += (image.total() * image.elemSize());
-        }
+        memcpy(ptr + offset, (char*)image.data, image.total() * image.elemSize());
+        offset += (image.total() * image.elemSize());
     }
     return blob;
 }

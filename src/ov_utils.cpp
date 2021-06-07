@@ -112,10 +112,7 @@ std::string getTensorMapString(const std::map<std::string, std::shared_ptr<Tenso
 }
 
 const InferenceEngine::SizeVector& getEffectiveShape(InferenceEngine::TensorDesc& desc) {
-    return
-        desc.getBlockingDesc().getBlockDims().size() > 0 ?
-        desc.getBlockingDesc().getBlockDims() :
-        desc.getDims();
+    return desc.getBlockingDesc().getBlockDims().size() > 0 ? desc.getBlockingDesc().getBlockDims() : desc.getDims();
 }
 
 const InferenceEngine::SizeVector& getEffectiveBlobShape(const InferenceEngine::Blob::Ptr& blob) {
