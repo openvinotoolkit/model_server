@@ -1835,11 +1835,16 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Demultip
 struct LibraryParamControlledMetadata {
     static bool startsWith(const char* str, const char* prefix) {
         // Ensure null terminated
-        if (str[sizeof(str) - 1] == 0) {
-            EXPECT_EQ(1, 2);
+        const int MAX = 300;
+        const char* end = str;
+        for( ; *end != '\0'; ++end) {
+            if (end - str > 1000)
+                EXPECT_EQ(1, 2);
         }
-        if (str[sizeof(prefix) - 1] == 0) {
-            EXPECT_EQ(1, 2);
+        const char* end2 = prefix;
+        for( ; *end2 != '\0'; ++end2) {
+            if (end2 - str > 1000)
+                EXPECT_EQ(1, 2);
         }
         size_t strLen = std::strlen(str);
         size_t prefixLen = std::strlen(prefix);
