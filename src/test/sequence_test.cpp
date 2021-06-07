@@ -25,6 +25,8 @@
 
 #include "../ov_utils.hpp"
 #include "../sequence.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "stateful_test_utils.hpp"
 
 TEST(Sequence, SequenceDisabled) {
@@ -66,3 +68,4 @@ TEST(Sequence, UpdateSequenceState) {
     state2BlobSequenceData.assign((float*)sequenceMemoryState.at("state2")->buffer(), ((float*)sequenceMemoryState.at("state2")->buffer()) + elementsCount2);
     EXPECT_EQ(state2BlobSequenceData, state2);
 }
+#pragma GCC diagnostic pop

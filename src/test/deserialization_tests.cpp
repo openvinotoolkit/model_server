@@ -27,6 +27,10 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 #include "../deserialization.hpp"
 #include "ovtestutils.hpp"
 
@@ -248,3 +252,4 @@ INSTANTIATE_TEST_SUITE_P(
     DeserializeTFTensorProto,
     ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
     ::testing::PrintToStringParamName());
+#pragma GCC diagnostic pop
