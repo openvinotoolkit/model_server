@@ -326,7 +326,7 @@ Example command with `s3://<bucket>/<model_path>:`
 ```
 docker run --rm -d -p 9001:9001 \
 -e AWS_PROFILE=“${AWS_PROFILE}” \
--v /home/user/.aws/credentials:/home/user/.aws/credentials \
+-v ${HOME}/.aws/credentials:/home/ovms/.aws/credentials \
 openvino/model_server:latest \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
