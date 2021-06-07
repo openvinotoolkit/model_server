@@ -30,7 +30,10 @@ A few key features:
 - [Custom nodes in DAG pipelines](docs/custom_node_development.md) Model inference or data transformations can be implemented by a custom node C/C++ implementation loaded as an external library.
 - [Serving stateful models](docs/stateful_models.md). Serve models that operate on sequences of data and maintain state between inference requests.
 
-**Note:** OVMS has been tested on CentOS* and Ubuntu*. Publicly released docker images are based on CentOS.
+**Note:** OVMS has been tested on RedHat*, CentOS* and Ubuntu*. Publicly released docker images are based on CentOS and UBI.
+They are stored in:
+- [Dockerhub](https://hub.docker.com/r/openvino/model_server)
+- [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de)
 
 
 ## Run OpenVINO Model Server
