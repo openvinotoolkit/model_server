@@ -99,20 +99,54 @@ for line in lines:
     # Compose a JSON Predict request (send JPEG image in base64).
     predict_request = create_request(image_data, args['request_format'])
     start_time = datetime.datetime.now()
-    result = requests.post(address, data=predict_request).json()
+    result = requests.post(address, data=predict_request)
     end_time = datetime.datetime.now()
-    if args['request_format'] == 'row_name' or args['request_format'] == 'row_noname':
-        result = [r[args['output_name']] for r in result['predictions']]
+    try:
+        result_dict = json.loads(result.text)
+    except ValueError:
+        print("The server response is not json format: {}",format(result.text))
+        exit(1)
+    if "error" in result_dict:
+        print('Server returned error: {}'.format(result_dict))
+        exit(1)
+
+    if "outputs" in result_dict:  # is column format
+        keyname = "outputs"
+        if type(result_dict[keyname]) is dict:
+            if args['output_name'] not in result_dict[keyname]:
+                print("Invalid output name", args['output_name'])
+                print("Available outputs:")
+                for Y in result_dict[keyname]:
+                    print(Y)
+                exit(1)
+            output = result_dict[keyname][args['output_name']]
+        else:
+            output = result_dict[keyname]
+    elif "predictions" in result_dict:  # is row format
+        keyname = "predictions"
+        if type(result_dict[keyname][0]) is dict:  # are multiple outputs
+            output = []
+            for row in result_dict[keyname]:  # iterate over all results in the batch
+                output.append(row[args['output_name']])
+        else:
+            output = result_dict[keyname]
     else:
-        result = result['outputs'][args['output_name']]
+        print("Missing required response in {}".format(result_dict))
+        exit(1)
     duration = (end_time - start_time).total_seconds() * 1000
     processing_times = np.append(processing_times, np.array([int(duration)]))
     # for object classification models show imagenet class
     print('Batch: {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(
         count // batch_size, round(duration, 2), round(1000 / duration, 2)))
-    for i in range(len(result)):
-        nu = result[i]
-        ma = np.argmax(nu) - 1
+
+    nu = np.array(output)  # numpy array with inference results
+    print("output shape: {}".format(nu.shape))
+    for i in range(nu.shape[0]):
+        single_result = nu[[i], ...]
+        offset = 0
+        if nu.shape[1] == 1001:
+            offset = 1 
+        ma = np.argmax(single_result) - offset
         mark_message = ""
         if int(labels[i]) == ma:
             matched += 1
