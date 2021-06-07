@@ -239,6 +239,8 @@ Configuration options for server are defined only via command line options and d
 
 ### Cloud Storage Requirements<a name="storage"></a>:
 
+In general OVMS requires "read" and "list" permissions on the model storage side.
+
 <details><summary>Azure Cloud Storage path requirements</summary>
 
 Add the Azure Storage path as the model_path and pass the Azure Storage credentials to the Docker container.
@@ -292,6 +294,7 @@ openvino/model_server:latest \
 <details><summary>AWS S3 and Minio storage path requirements</summary>
 
 Add the S3 path as the model_path and pass the credentials as environment variables to the Docker container.
+S3_ENDPOINT is optional for AWS s3 storage and mandatory for Minio and other s3 compatible storage types.
 
 Example command with `s3://<bucket>/<model_path>:`
 
@@ -323,6 +326,7 @@ Example command with `s3://<bucket>/<model_path>:`
 ```
 docker run --rm -d -p 9001:9001 \
 -e AWS_PROFILE=“${AWS_PROFILE}” \
+-v ~/.aws/credentials:~/.aws/credentials \
 openvino/model_server:latest \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
