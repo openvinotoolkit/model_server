@@ -3969,9 +3969,6 @@ struct LibraryProduceImages5Dimensions {
     static int execute(const struct CustomNodeTensor* inputs, int, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam*, int) {
         const CustomNodeTensor& input = *inputs;
         std::vector<float> inputData((float*)input.data, ((float*)input.data) + (input.dataBytes / sizeof(float)));
-        for (float x : inputData)
-            std::cout << x << " ";
-        std::cout << std::endl;
 
         *outputsCount = 1;
         int elements = 3 * 1 * 1 * 2 * 3;

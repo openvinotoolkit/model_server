@@ -19,6 +19,7 @@
 #include <utility>
 
 #include "logging.hpp"
+#include "ov_utils.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -57,8 +58,7 @@ Status ExitNode::fetchResults(const BlobMap& inputBlobs) {
 
 Status ExitNode::serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::TensorProto& proto) {
     // Set size
-    auto& dims =
-        blob->getTensorDesc().getBlockingDesc().getBlockDims().size() > 0 ? blob->getTensorDesc().getBlockingDesc().getBlockDims() : blob->getTensorDesc().getDims();
+    const auto& dims = getEffectiveBlobShape(blob);
 
     for (size_t dim : dims) {
         proto.mutable_tensor_shape()->add_dim()->set_size(dim);

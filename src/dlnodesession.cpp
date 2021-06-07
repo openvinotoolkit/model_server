@@ -26,6 +26,7 @@
 #include "nodeinputhandler.hpp"
 #include "nodeoutputhandler.hpp"
 #include "nodestreamidguard.hpp"
+#include "ov_utils.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
 
@@ -164,8 +165,7 @@ Status DLNodeSession::validate(const InferenceEngine::Blob::Ptr& blob, const Ten
     }
 
     // If batch size differs, check if remaining dimensions are equal
-    auto& dims =
-        blob->getTensorDesc().getBlockingDesc().getBlockDims().size() > 0 ? blob->getTensorDesc().getBlockingDesc().getBlockDims() : blob->getTensorDesc().getDims();
+    const auto& dims = getEffectiveBlobShape(blob);
     if (tensorInfo.getEffectiveShape()[0] != dims[0]) {
         // If remaining dimensions are equal, it is invalid batch size
         std::stringstream ss;

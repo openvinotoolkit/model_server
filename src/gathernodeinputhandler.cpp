@@ -73,8 +73,7 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
         auto firstShardTensorDesc = shardMap.at(firstShardId)->getTensorDesc();
         // auto shardDims = firstShardTensorDesc.getDims();
         std::cout << TensorInfo::shapeToString(firstShardTensorDesc.getDims()) << " " << TensorInfo::shapeToString(firstShardTensorDesc.getBlockingDesc().getBlockDims()) << std::endl;
-        auto shardDims =
-            firstShardTensorDesc.getBlockingDesc().getBlockDims().size() > 0 ? firstShardTensorDesc.getBlockingDesc().getBlockDims() : firstShardTensorDesc.getDims();
+        auto shardDims = getEffectiveShape(firstShardTensorDesc);
         auto newDims = shardDims;
         newDims.insert(newDims.begin(),
             collapsingDetails->collapsedSessionSizes.begin(),

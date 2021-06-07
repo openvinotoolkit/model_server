@@ -110,4 +110,16 @@ std::string getTensorMapString(const std::map<std::string, std::shared_ptr<Tenso
     }
     return stringStream.str();
 }
+
+const InferenceEngine::SizeVector& getEffectiveShape(InferenceEngine::TensorDesc& desc) {
+    return
+        desc.getBlockingDesc().getBlockDims().size() > 0 ?
+        desc.getBlockingDesc().getBlockDims() :
+        desc.getDims();
+}
+
+const InferenceEngine::SizeVector& getEffectiveBlobShape(const InferenceEngine::Blob::Ptr& blob) {
+    return getEffectiveShape(blob->getTensorDesc());
+}
+
 }  // namespace ovms

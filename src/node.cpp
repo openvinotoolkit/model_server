@@ -217,7 +217,6 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     }
 
     for (auto& [blobName, blob] : blobMap) {
-        std::cout << TensorInfo::shapeToString(blob->getTensorDesc().getDims()) << " " << TensorInfo::shapeToString(blob->getTensorDesc().getBlockingDesc().getBlockDims()) << std::endl;
         auto tensorDesc = blob->getTensorDesc();
         auto newDims = tensorDesc.getDims();
         if (newDims.size() < 3) {
