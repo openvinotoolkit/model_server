@@ -1838,12 +1838,12 @@ struct LibraryParamControlledMetadata {
         const int MAX = 300;
         const char* end = str;
         for (; *end != '\0'; ++end) {
-            if (end - str > 1000)
+            if (end - str > MAX)
                 EXPECT_EQ(1, 2);
         }
         const char* end2 = prefix;
         for (; *end2 != '\0'; ++end2) {
-            if (end2 - str > 1000)
+            if (end2 - str > MAX)
                 EXPECT_EQ(1, 2);
         }
         size_t strLen = std::strlen(str);
