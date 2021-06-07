@@ -1837,12 +1837,12 @@ struct LibraryParamControlledMetadata {
         // Ensure null terminated
         const int MAX = 300;
         const char* end = str;
-        for( ; *end != '\0'; ++end) {
+        for (; *end != '\0'; ++end) {
             if (end - str > 1000)
                 EXPECT_EQ(1, 2);
         }
         const char* end2 = prefix;
-        for( ; *end2 != '\0'; ++end2) {
+        for (; *end2 != '\0'; ++end2) {
             if (end2 - str > 1000)
                 EXPECT_EQ(1, 2);
         }
