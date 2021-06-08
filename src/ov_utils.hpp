@@ -33,6 +33,8 @@ Status createSharedBlob(InferenceEngine::Blob::Ptr& destinationBlob, InferenceEn
 
 std::string getNetworkInputsInfoString(const InferenceEngine::InputsDataMap& inputsInfo, const ModelConfig& config);
 std::string getTensorMapString(const std::map<std::string, std::shared_ptr<TensorInfo>>& tensorMap);
+const InferenceEngine::SizeVector& getEffectiveShape(InferenceEngine::TensorDesc& desc);
+const InferenceEngine::SizeVector& getEffectiveBlobShape(const InferenceEngine::Blob::Ptr& blob);
 
 template <typename T>
 Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const T sourceBlob) {

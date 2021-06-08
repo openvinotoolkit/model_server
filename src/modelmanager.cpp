@@ -132,6 +132,12 @@ Status ModelManager::startFromConfig() {
         return status;
     }
 
+    status = modelConfig.parseLayoutParameter(config.layout());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse layout parameter");
+        return status;
+    }
+
     bool batchSizeSet = (modelConfig.getBatchingMode() != FIXED || modelConfig.getBatchSize() != 0);
     bool shapeSet = (modelConfig.getShapes().size() > 0);
 

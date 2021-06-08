@@ -32,7 +32,8 @@ parser.add_argument('--face_images_output_name', required=False, default='face_i
 parser.add_argument('--face_images_save_path', required=False, default='', help='If specified, face images will be saved to disk.')
 parser.add_argument('--image_width', required=False, default=600, help='Original image width. default: 600')
 parser.add_argument('--image_height', required=False, default=400, help='Original image height. default: 400')
-parser.add_argument('--image_layout', required=False, default='CHW', choices=['CHW', 'HWC'], help='Original image layout. default: CHW')
+parser.add_argument('--input_image_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC'], help='Pipeline input image layout. default: NCHW')
+parser.add_argument('--output_image_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC'], help='Transformed detected image layout. default: NCHW')
 
 args = vars(parser.parse_args())
 
@@ -51,10 +52,11 @@ def prepare_img_input_in_nhwc_format(request, name, path, resize_to_shape):
     request.inputs[name].CopyFrom(make_tensor_proto(img, shape=img.shape))
 
 
-def save_face_images_as_jpgs(output_nd, name, location):
+def save_face_images_as_jpgs(output_nd, name, location, layout):
     for i in range(output_nd.shape[0]):
         out = output_nd[i][0]
-        out = out.transpose(1,2,0)
+        if layout == 'NCHW':
+            out = out.transpose(1,2,0)
         cv2.imwrite(os.path.join(location, name + '_' + str(i) + '.jpg'), out)
 
 def update_people_ages(output_nd, people):
@@ -113,7 +115,7 @@ stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 request = predict_pb2.PredictRequest()
 request.model_spec.name = args['pipeline_name']
 
-if args['image_layout'] == 'CHW':
+if args['input_image_layout'] == 'NCHW':
     prepare_img_input_in_nchw_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
 else:
     prepare_img_input_in_nhwc_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
@@ -136,7 +138,7 @@ for name in response.outputs:
     print(f"    numpy => shape[{output_nd.shape}] data[{output_nd.dtype}]")
 
     if name == args['face_images_output_name'] and len(args['face_images_save_path']) > 0:
-        save_face_images_as_jpgs(output_nd, name, args['face_images_save_path'])
+        save_face_images_as_jpgs(output_nd, name, args['face_images_save_path'], args['output_image_layout'])
 
     if name == 'ages':
         people = update_people_ages(output_nd, people)

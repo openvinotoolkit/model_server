@@ -30,8 +30,8 @@ RestParser::RestParser(const tensor_map_t& tensors) {
         auto& input = (*requestProto.mutable_inputs())[name];
         input.set_dtype(tensor->getPrecisionAsDataType());
         input.mutable_tensor_content()->reserve(std::accumulate(
-                                                    tensor->getShape().begin(),
-                                                    tensor->getShape().end(),
+                                                    tensor->getEffectiveShape().begin(),
+                                                    tensor->getEffectiveShape().end(),
                                                     1,
                                                     std::multiplies<size_t>()) *
                                                 DataTypeSize(tensor->getPrecisionAsDataType()));

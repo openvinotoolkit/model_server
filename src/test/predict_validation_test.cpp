@@ -74,7 +74,7 @@ protected:
         request = preparePredictRequest(
             {
                 {"Input_FP32_1_3_224_224_NHWC",
-                    std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 3, 224, 224}, tensorflow::DataType::DT_FLOAT}},
+                    std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 224, 224, 3}, tensorflow::DataType::DT_FLOAT}},
                 {"Input_U8_1_3_62_62_NCHW",
                     std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 3, 62, 62}, tensorflow::DataType::DT_UINT8}},
                 {"Input_I64_1_6_128_128_16_NCDHW",

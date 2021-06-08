@@ -81,11 +81,13 @@ std::string getNetworkInputsInfoString(const InferenceEngine::InputsDataMap& inp
         auto precision = inputInfo->getPrecision();
         auto layout = inputInfo->getLayout();
         auto shape = inputInfo->getTensorDesc().getDims();
+        auto effectiveShape = inputInfo->getTensorDesc().getBlockingDesc().getBlockDims();
 
         auto mappingName = config.getMappingInputByKey(name);
 
         stringStream << "\nInput name: " << name << "; mapping_name: " << mappingName << "; shape: " << TensorInfo::shapeToString(shape)
-                     << "; precision: " << TensorInfo::getPrecisionAsString(precision) << "; layout: " << TensorInfo::getStringFromLayout(layout);
+                     << "; effective shape: " << TensorInfo::shapeToString(effectiveShape) << "; precision: " << TensorInfo::getPrecisionAsString(precision)
+                     << "; layout: " << TensorInfo::getStringFromLayout(layout);
     }
     return stringStream.str();
 }
@@ -98,12 +100,23 @@ std::string getTensorMapString(const std::map<std::string, std::shared_ptr<Tenso
         auto precision = inputInfo->getPrecision();
         auto layout = inputInfo->getLayout();
         auto shape = inputInfo->getShape();
+        auto effectiveShape = inputInfo->getEffectiveShape();
 
         stringStream << "\nname: " << name
                      << "; shape: " << TensorInfo::shapeToString(shape)
+                     << "; effective shape: " << TensorInfo::shapeToString(effectiveShape)
                      << "; precision: " << TensorInfo::getPrecisionAsString(precision)
                      << "; layout: " << TensorInfo::getStringFromLayout(layout);
     }
     return stringStream.str();
 }
+
+const InferenceEngine::SizeVector& getEffectiveShape(InferenceEngine::TensorDesc& desc) {
+    return desc.getBlockingDesc().getBlockDims().size() > 0 ? desc.getBlockingDesc().getBlockDims() : desc.getDims();
+}
+
+const InferenceEngine::SizeVector& getEffectiveBlobShape(const InferenceEngine::Blob::Ptr& blob) {
+    return getEffectiveShape(blob->getTensorDesc());
+}
+
 }  // namespace ovms
