@@ -108,7 +108,7 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     // Network and input must have the same number of shape dimensions.
     if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC) {
         if ((unsigned int)(input.channels()) != tensorInfo->getEffectiveShape()[3]) {
-            SPDLOG_DEBUG("Binary sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getEffectiveShape()[3], input.channels());
+            SPDLOG_DEBUG("Binary data sent to input: {} has invalid number of channels. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getEffectiveShape()[3], input.channels());
             return StatusCode::INVALID_NO_OF_CHANNELS;
         }
     } else {
@@ -190,13 +190,12 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
 
 template <typename T>
 InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    int offset = 0;
     auto blob = InferenceEngine::make_shared_blob<T>(tensorInfo->getTensorDesc());
     blob->allocate();
     char* ptr = blob->buffer();
     for (cv::Mat image : images) {
-        memcpy(ptr + offset, (char*)image.data, image.total() * image.elemSize());
-        offset += (image.total() * image.elemSize());
+        memcpy(ptr, (char*)image.data, image.total() * image.elemSize());
+        ptr += image.total() * image.elemSize();
     }
     return blob;
 }

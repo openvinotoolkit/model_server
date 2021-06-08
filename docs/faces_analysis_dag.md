@@ -100,7 +100,7 @@ Now you can create directory for text images and run the client:
 mkdir results
 ```
 ```bash
-python3 faces_analysis_pipeline_client.py --pipeline_name find_face_images --image_input_path ./images/people/people1.jpeg --face_images_output_name face_images --face_images_save_path ./results --image_width 1920 --image_height 1024 --image_layout CHW
+python3 faces_analysis_pipeline_client.py --pipeline_name find_face_images --image_input_path ./images/people/people1.jpeg --face_images_output_name face_images --face_images_save_path ./results --image_width 1920 --image_height 1024 --image_layout NCHW
 Output: name[genders]
     numpy => shape[(10, 1, 2, 1, 1)] data[float32]
 Output: name[ages]
