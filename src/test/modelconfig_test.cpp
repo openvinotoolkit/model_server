@@ -491,7 +491,7 @@ TEST(ModelConfig, ConfigParseNodeWithForbiddenShapeName) {
     EXPECT_EQ(modelConfig.getShapes().size(), 0);
 }
 
-TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormat) {
+TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatArray) {
     std::string config = R"#(
         {
         "model_config_list": [
@@ -526,6 +526,75 @@ TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormat) {
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(modelConfig.getShapes().size(), 0);
+}
+
+TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatString) {
+    std::string config = R"#(
+        {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "alpha",
+                    "base_path": "/tmp/models/dummy1",
+                    "shape": {
+                        "input": "(auto, 2, 244, 244)"
+                        }
+                }
+            }
+        ]
+    }
+    )#";
+
+    rapidjson::Document configJson;
+    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+    ASSERT_EQ(parsingSucceeded, true);
+
+    const auto modelConfigList = configJson.FindMember("model_config_list");
+    ASSERT_NE(modelConfigList, configJson.MemberEnd());
+    const auto& configs = modelConfigList->value.GetArray();
+    ASSERT_EQ(configs.Size(), 1);
+    ovms::ModelConfig modelConfig;
+    auto status = modelConfig.parseNode(configs[0]["config"]);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(modelConfig.getShapes().size(), 0);
+}
+
+TEST(ModelConfig, ConfigParseNodeWithValidShapeFormatArray) {
+    std::string config = R"#(
+        {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "alpha",
+                    "base_path": "/tmp/models/dummy1",
+                    "shape": {
+                        "input": [
+                            1,
+                            3, 
+                            600, 
+                            600
+                            ]
+                        }
+                }
+            }
+        ]
+    }
+    )#";
+
+    rapidjson::Document configJson;
+    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+    ASSERT_EQ(parsingSucceeded, true);
+
+    const auto modelConfigList = configJson.FindMember("model_config_list");
+    ASSERT_NE(modelConfigList, configJson.MemberEnd());
+    const auto& configs = modelConfigList->value.GetArray();
+    ASSERT_EQ(configs.Size(), 1);
+    ovms::ModelConfig modelConfig;
+    auto status = modelConfig.parseNode(configs[0]["config"]);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(modelConfig.getShapes().size(), 1);
 }
 
 static std::string config_low_latency_no_stateful = R"#(
