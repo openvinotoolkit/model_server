@@ -330,6 +330,7 @@ cc_test(
     srcs = [
         "test/deserialization_tests.cpp",
         "test/ensemble_tests.cpp",
+        "test/ensemble_binary_inputs_tests.cpp",
         "test/ensemble_flow_custom_node_tests.cpp",
         "test/ensemble_mapping_config_tests.cpp",
         "test/ensemble_metadata_test.cpp",
@@ -387,6 +388,8 @@ cc_test(
     data = [
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
+        "test/identity/1/identity.xml",
+        "test/identity/1/identity.bin",
         "test/add_two_inputs_model/1/add.xml",
         "test/add_two_inputs_model/1/add.bin",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.xml",

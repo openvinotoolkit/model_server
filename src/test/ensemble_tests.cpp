@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
+#include "../binaryutils.hpp"
 #include "../dl_node.hpp"
 #include "../entry_node.hpp"
 #include "../exit_node.hpp"
@@ -113,7 +114,8 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     managerWithDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -169,7 +171,8 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
         << readableError(expected_output, actual_output, dataLengthToCheck);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -214,7 +217,8 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     managerWithDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response);
 
     std::unique_ptr<DLNode> dummy_nodes[N];
@@ -275,7 +279,8 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchSize) {
     managerWithDynamicBatchDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicBatchDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -317,7 +322,8 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape) {
     managerWithDynamicShapeDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicShapeDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -385,7 +391,8 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchAndShape) {
     manager.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, manager);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -456,7 +463,8 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape_RequestHasDifferentDim0
     manager.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, manager);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -486,7 +494,12 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    tensor_map_t inputsInfoTmp;
+    for (int i = 0; i < N; i++) {
+        inputsInfoTmp[customPipelineInputName + std::to_string(i)] = nullptr;
+    }
+    const tensor_map_t inputsInfo = inputsInfoTmp;
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response);
     Pipeline pipeline(*input_node, *output_node);
     std::unique_ptr<DLNode> dummy_nodes[N];
@@ -542,7 +555,8 @@ TEST_F(EnsembleFlowTest, FailInDLNodeSetInputsMissingInput) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -566,7 +580,8 @@ TEST_F(EnsembleFlowTest, FailInDLNodeExecuteInputsMissingInput) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -601,7 +616,8 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResults) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto failInFetchNode = std::make_unique<DLNodeFailInFetch>("failInFetch_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -627,7 +643,8 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResultsStreamIdReleasedForDeferredNode
     config.setNireq(1);
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto failInFetchNode = std::make_unique<DLNodeFailInFetch>("failInFetch_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto modelNode = std::make_unique<DLNodeFailInFetch>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
@@ -1947,7 +1964,8 @@ TEST_F(EnsembleFlowTest, ErrorHandlingSkipsDeferredNodesExecutionIfExecutionFail
     managerWithDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{"proto_input_1x10", nullptr}, {"proto_input_1x5", nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response);
 
     auto dummy_node_1 = std::make_unique<DLNode>("dummy_node_1", dummyModelName, requestedModelVersion, managerWithDummyModel);

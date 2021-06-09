@@ -16,11 +16,13 @@
 #include "entry_node.hpp"
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <utility>
 
 #include <inference_engine.hpp>
 
+#include "binaryutils.hpp"
 #include "logging.hpp"
 
 #pragma GCC diagnostic push
@@ -63,34 +65,46 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
     // Fill outputs map with tensorflow predict request inputs. Fetch only those that are required in following nodes
     for (const auto& node : this->next) {
         for (const auto& pair : node.get().getMappingByDependency(*this)) {
-            const auto& output_name = pair.first;
-            if (outputs.find(output_name) != outputs.end()) {
+            const auto& outputName = pair.first;
+            if (outputs.find(outputName) != outputs.end()) {
                 continue;
             }
-            auto it = request->inputs().find(output_name);
+            auto it = request->inputs().find(outputName);
             if (it == request->inputs().end()) {
                 std::stringstream ss;
-                ss << "Required input: " << output_name;
+                ss << "Required input: " << outputName;
                 const std::string details = ss.str();
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Missing input with specific name: {}", getName(), details);
                 return Status(StatusCode::INVALID_MISSING_INPUT, details);
             }
-            const auto& tensor_proto = it->second;
+            const auto& tensorProto = it->second;
             InferenceEngine::Blob::Ptr blob;
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Deserializing input: {}", getName(), output_name);
-            auto status = deserialize(tensor_proto, blob);
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Deserializing input: {}", getName(), outputName);
+            auto status = deserialize(tensorProto, blob, inputsInfo.at(outputName));
             if (!status.ok()) {
                 return status;
             }
-            outputs[output_name] = blob;
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}]: blob with name: {} description: {} has been prepared", getName(), output_name, TensorInfo::tensorDescToString(blob->getTensorDesc()));
+            outputs[outputName] = blob;
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}]: blob with name: {} description: {} has been prepared", getName(), outputName, TensorInfo::tensorDescToString(blob->getTensorDesc()));
         }
     }
 
     return StatusCode::OK;
 }
 
-Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob) {
+Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    if (proto.dtype() == tensorflow::DataType::DT_STRING) {
+        return deserializeBinaryInput(proto, blob, tensorInfo);
+    } else {
+        return deserializeNumericalInput(proto, blob);
+    }
+}
+
+Status EntryNode::deserializeBinaryInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    return convertStringValToBlob(proto, blob, tensorInfo);
+}
+
+Status EntryNode::deserializeNumericalInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob) {
     InferenceEngine::TensorDesc description;
     if (proto.tensor_content().size() == 0) {
         const std::string details = "Tensor content size can't be 0";

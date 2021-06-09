@@ -227,7 +227,7 @@ InferenceEngine::Blob::Ptr convertMatsToBlob(std::vector<cv::Mat>& images, const
     }
 }
 
-Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr* blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
+Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
     auto status = validateTensor(tensorInfo, src);
     if (status != StatusCode::OK) {
         return status;
@@ -240,7 +240,7 @@ Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngin
         return status;
     }
 
-    *blob = convertMatsToBlob(images, tensorInfo);
+    blob = convertMatsToBlob(images, tensorInfo);
     return StatusCode::OK;
 }
 }  // namespace ovms
