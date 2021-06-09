@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <set>
 #include <sstream>
 
 #include <rapidjson/istreamwrapper.h>
