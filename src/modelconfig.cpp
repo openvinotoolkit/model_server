@@ -412,7 +412,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                         }
                     } else {
                         for (auto& sh : s.value.GetArray()) {
-                            if(sh.IsUint64()) {
+                            if (sh.IsUint64()) {
                                 shapeInfo.shape.push_back(sh.GetUint64());
                             } else {
                                 SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
@@ -422,7 +422,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                         }
                     }
                     if (s.name.GetString() != ANONYMOUS_INPUT_NAME) {
-                        if(!shapeInfo.shape.empty()) {
+                        if (!shapeInfo.shape.empty()) {
                             this->addShape(s.name.GetString(), shapeInfo);
                         }
                     } else {
