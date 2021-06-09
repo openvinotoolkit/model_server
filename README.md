@@ -30,7 +30,10 @@ A few key features:
 - [Custom nodes in DAG pipelines](docs/custom_node_development.md) Model inference or data transformations can be implemented by a custom node C/C++ implementation loaded as an external library.
 - [Serving stateful models](docs/stateful_models.md). Serve models that operate on sequences of data and maintain state between inference requests.
 
-**Note:** OVMS has been tested on CentOS* and Ubuntu*. Publicly released docker images are based on CentOS.
+**Note:** OVMS has been tested on RedHat*, CentOS* and Ubuntu*. Publicly released docker images are based on CentOS and UBI.
+They are stored in:
+- [Dockerhub](https://hub.docker.com/r/openvino/model_server)
+- [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de)
 
 
 ## Run OpenVINO Model Server
@@ -105,9 +108,13 @@ Follow a [contributor guide](docs/contributing.md) and a [developer guide](docs/
 
 * [RESTful API](https://restfulapi.net/)
 
+* [Benchmarking results](https://docs.openvinotoolkit.org/latest/openvino_docs_performance_benchmarks_ovms.html)
+
 * [Speed and Scale AI Inference Operations Across Multiple Architectures](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) - webinar recording
 
 * [What is new in OpenVINO Model Server C++](https://www.intel.com/content/www/us/en/artificial-intelligence/posts/whats-new-openvino-model-server.html)
+
+* [Capital Health Improves Stroke Care with AI](https://www.intel.co.uk/content/www/uk/en/customer-spotlight/stories/capital-health-ai-customer-story.html) - use case example
 
 ## Contact
 

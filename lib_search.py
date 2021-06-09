@@ -71,9 +71,9 @@ def check_dir(start_dir):
                      'Doxyfile', 'clang-format','net_http.patch', 'tftext.patch', 'tf.patch', 'client_requirements.txt',
                      'openvino.LICENSE.txt', 'c-ares.LICENSE.txt', 'zlib.LICENSE.txt', 'boost.LICENSE.txt',
                      'libuuid.LICENSE.txt', 'input_images.txt', 'REST_age_gender.ipynb', 'dummy.xml', 'listen.patch', 'add.xml',
-                     'requirements.txt', 'missing_headers.txt', 'libevent/BUILD', 'azure_sdk.patch', 'rest_sdk_v2.10.16.patch',
+                     'requirements.txt', 'missing_headers.txt', 'libevent/BUILD', 'azure_sdk.patch', 'rest_sdk_v2.10.16.patch', '.wav',
                      'forbidden_functions.txt', 'missing_headers.txt', 'increment_1x3x4x5.xml']
-                   
+
     exclude_directories = ['/dist/', 'extras/ovms-operator']
 
     for (d_path, dir_set, file_set) in os.walk(start_dir):

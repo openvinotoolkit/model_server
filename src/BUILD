@@ -304,6 +304,42 @@ cc_binary(
 )
 
 cc_binary(
+    name = "libcustom_node_model_zoo_intel_object_detection.so",
+    srcs = [
+        "custom_nodes/model_zoo_intel_object_detection/model_zoo_intel_object_detection.cpp",
+        "custom_nodes/model_zoo_intel_object_detection/utils.hpp",
+        "custom_node_interface.h",
+    ],
+    deps = [
+            "@opencv//:opencv"
+    ],
+    linkshared = 1,
+    copts = [
+        "-Wall",
+        "-Wno-unknown-pragmas",
+        "-Werror"
+    ]
+)
+
+cc_binary(
+    name = "libcustom_node_image_transformation.so",
+    srcs = [
+        "custom_nodes/image_transformation/image_transformation.cpp",
+        "custom_nodes/image_transformation/utils.hpp",
+        "custom_node_interface.h",
+    ],
+    deps = [
+            "@opencv//:opencv"
+    ],
+    linkshared = 1,
+    copts = [
+        "-Wall",
+        "-Wno-unknown-pragmas",
+        "-Werror"
+    ]
+)
+
+cc_binary(
     name = "ovms",
     srcs = [
         "main.cpp",
