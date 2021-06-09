@@ -63,3 +63,29 @@ Generate OpenVINO IR model format using model optimiser in a docker container:
 docker run -it -v /tmp/argmax:/model openvino/ubuntu18_dev python3 /opt/intel/openvino_2020.1.023/deployment_tools/model_optimizer/mo.py --saved_model_dir /model/ --batch 1 --output_dir /model/
 
 ```
+
+# Model copying input image to output
+
+```bash
+python identical_image.py
+```
+
+Display the parameters:
+```bash
+saved_model_cli show --dir /tmp/identity/1/  --tag_set serve --signature_def serving_default
+The given SavedModel SignatureDef contains the following input(s):
+  inputs['image'] tensor_info:
+      dtype: DT_FLOAT
+      shape: (-1, 224, 224, 3)
+      name: image:0
+The given SavedModel SignatureDef contains the following output(s):
+  outputs['output_bytes'] tensor_info:
+      dtype: DT_FLOAT
+      shape: (-1, 224, 224, 3)
+      name: output_bytes:0
+Method name is: tensorflow/serving/predict
+```
+Convert to IR format:
+```bash
+docker run -it -u root -v /tmp/identity/1:/model openvino/ubuntu18_dev python3 /opt/intel/openvino_2021/deployment_tools/model_optimizer/mo.py --saved_model_dir /model/ --batch 1 --output_dir /model
+```
