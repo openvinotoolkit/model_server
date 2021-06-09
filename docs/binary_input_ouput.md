@@ -39,17 +39,17 @@ Blob data precision from binary input decoding is set automatically based on the
 Some models or DAG pipelines return images in the response. OpenVINO model outputs are always in the form of arrays. It is possible,
 however, to configure OVMS to send the image outputs in the binary image format instead.
 
-Binary outputs can be enabled by setting the output name with `_binary` suffix. In case the model is already exported with
+Binary outputs can be enabled by setting the output name with `_bytes` suffix. In case the model is already exported with
 different output name, OVMS has an option to configure inputs and outputs names mapping by creating a json file `mapping_config.json`
 and placing it together with the model files in the model version folder.
 ```json
 {
   "inputs": { "tensor_input":"tensor_input" }, 
-  "outputs": {"tensor_name":"tensor_name_binary" }
+  "outputs": {"tensor_name":"tensor_name_bytes" }
 }
 ```
-The binary data will be encoded out of OpenVINO model response blob. The conversion requires, however,
-the output to be in the layout NHWC. The model layout can be changed at runtime in the OVMS configuration.
+The binary data will be encoded out of OpenVINO model response blob. The conversion, however, requires the output values to be in range [0,255]
+and the output to be in the layout NHWC. The model layout can be changed at runtime in the OVMS configuration.
 When the model output is [1,3,224,224] with the following configuration
 ```json
 "layout": {"input": "NHWC", "output":"NHWC"}
