@@ -295,8 +295,14 @@ Status convertBlobToMats(std::vector<cv::Mat>& images, const InferenceEngine::Bl
     }
     int offset = 0;
     for (size_t i = 0; i < tensorInfo->getShape()[0]; i++) {
-        images.emplace_back(cv::Mat(rows, cols, CV_MAKETYPE(matPrecision, channels), (char*)blob->buffer() + offset));
-        offset += (images.back().total() * images.back().elemSize());
+        std::vector<cv::Mat> mat_channels;
+        for (int j = 0; j < channels; j++) {
+            mat_channels.emplace_back(rows, cols, CV_MAKETYPE(matPrecision, 1), (char*)blob->buffer() + offset);
+            offset += (mat_channels.back().total() * mat_channels.back().elemSize());
+        }
+        cv::Mat merged_mat;
+        cv::merge(mat_channels, merged_mat);
+        images.emplace_back(merged_mat);
     }
     return StatusCode::OK;
 }
