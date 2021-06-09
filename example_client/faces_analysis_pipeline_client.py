@@ -32,12 +32,8 @@ parser.add_argument('--face_images_output_name', required=False, default='face_i
 parser.add_argument('--face_images_save_path', required=False, default='', help='If specified, face images will be saved to disk.')
 parser.add_argument('--image_width', required=False, default=600, help='Original image width. default: 600')
 parser.add_argument('--image_height', required=False, default=400, help='Original image height. default: 400')
-<<<<<<< HEAD
-parser.add_argument('--input_image_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC'], help='Pipeline input image layout. default: NCHW')
+parser.add_argument('--input_image_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC', 'BINARY'], help='Pipeline input image layout. default: NCHW')
 parser.add_argument('--output_image_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC'], help='Transformed detected image layout. default: NCHW')
-=======
-parser.add_argument('--image_layout', required=False, default='CHW', choices=['CHW', 'HWC', 'BINARY'], help='Original image layout. default: CHW')
->>>>>>> binary in dag
 
 args = vars(parser.parse_args())
 
@@ -125,7 +121,7 @@ request.model_spec.name = args['pipeline_name']
 
 if args['input_image_layout'] == 'NCHW':
     prepare_img_input_in_nchw_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
-elif args['image_layout'] == 'HWC':
+elif args['input_image_layout'] == 'NHWC':
     prepare_img_input_in_nhwc_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
 else:
     prepare_img_input_in_binary_format(request, args['image_input_name'], args['image_input_path'])

@@ -290,10 +290,6 @@ void TensorInfo::updateEffectiveShape() {
     this->effectiveShape = this->getTensorDesc().getBlockingDesc().getBlockDims();
 }
 
-void TensorInfo::setLayout(InferenceEngine::Layout layout) {
-    this->layout = layout;
-}
-
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const shape_t& shape) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->shape = shape;

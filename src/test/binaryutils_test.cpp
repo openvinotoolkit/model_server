@@ -47,7 +47,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonMatchingBatchsize) {
     tensorInfo->setShape({5, 1, 1, 1});
     tensorInfo->setLayout(InferenceEngine::Layout::NHWC);
     auto status = convertStringValToBlob(stringVal, blob, tensorInfo);
-    EXPECT_EQ(status, ovms::StatusCode::UNSUPPORTED_LAYOUT);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
 }
 
 TEST_F(BinaryUtilsTest, tensorWithInvalidImage) {
@@ -91,7 +91,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonMatchingShapeSize) {
 
     auto status = convertStringValToBlob(stringVal, blob, tensorInfo);
 
-    EXPECT_EQ(status, ovms::StatusCode::UNSUPPORTED_LAYOUT);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
 }
 
 TEST_F(BinaryUtilsTest, tensorWithNonMatchingNumberOfChannelsNHWC) {

@@ -4041,7 +4041,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     std::set<std::string> gather = {"image_demultiplexer_node"};
     std::unordered_map<std::string, std::string> aliases{{"custom_node_output", "custom_node_output"}};
 
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response, gather);
     auto custom_node = std::make_unique<CustomNode>(
         "image_demultiplexer_node",
