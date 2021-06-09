@@ -123,7 +123,7 @@ Status StatefulModelInstance::loadOVExecutableNetwork(const ModelConfig& config)
     if (performLowLatencyTransformation) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "[Model: {} version: {}] Performing Low Latency Transformation on the network", getName(), getVersion());
         try {
-            InferenceEngine::LowLatency(*network);
+            InferenceEngine::lowLatency2(*network);
         } catch (std::exception& ex) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error: {}; occurred during low latency transformation on model: {} version: {}", ex.what(), getName(), getVersion());
             return StatusCode::INTERNAL_ERROR;
