@@ -162,6 +162,7 @@ TEST(ModelConfig, parseShapeFromString) {
     std::string invalid_str1 = "(1, 2, 3, 4]";
     std::string invalid_str2 = "(1, 2, 3.14, 4)";
     std::string invalid_str3 = "(1,2221413523534234632463462346234562)";
+    std::string invalid_str4 = "(auto, 2, 3, 4)";
     ovms::Status status;
 
     status = config.parseShape(shapeInfo, invalid_str1);
@@ -171,6 +172,8 @@ TEST(ModelConfig, parseShapeFromString) {
 
     status = config.parseShape(shapeInfo, invalid_str3);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+    status = config.parseShape(shapeInfo, invalid_str4);
+    EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
 }
 
 TEST(ModelConfig, parseShapeParam) {
@@ -467,6 +470,43 @@ TEST(ModelConfig, ConfigParseNodeWithForbiddenShapeName) {
                     "base_path": "/tmp/models/dummy1",
                     "shape": {")#" +
                          ovms::ANONYMOUS_INPUT_NAME + R"#(": "(1, 3, 600, 600)"}
+                }
+            }
+        ]
+    }
+    )#";
+
+    rapidjson::Document configJson;
+    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+    ASSERT_EQ(parsingSucceeded, true);
+
+    const auto modelConfigList = configJson.FindMember("model_config_list");
+    ASSERT_NE(modelConfigList, configJson.MemberEnd());
+    const auto& configs = modelConfigList->value.GetArray();
+    ASSERT_EQ(configs.Size(), 1);
+    ovms::ModelConfig modelConfig;
+    auto status = modelConfig.parseNode(configs[0]["config"]);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(modelConfig.getShapes().size(), 0);
+}
+
+TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormat) {
+    std::string config = R"#(
+        {
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "alpha",
+                    "base_path": "/tmp/models/dummy1",
+                    "shape": {
+                        "input": [
+                            "auto",
+                            3, 
+                            600, 
+                            600
+                            ]
+                        }
                 }
             }
         ]

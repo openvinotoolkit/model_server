@@ -412,11 +412,20 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                         }
                     } else {
                         for (auto& sh : s.value.GetArray()) {
-                            shapeInfo.shape.push_back(sh.GetUint64());
+                            if(sh.IsUint64()){
+                                shapeInfo.shape.push_back(sh.GetUint64());
+                            }
+                            else{
+                                SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
+                                shapeInfo.shape.clear();
+                                break;
+                            }
                         }
                     }
                     if (s.name.GetString() != ANONYMOUS_INPUT_NAME) {
-                        this->addShape(s.name.GetString(), shapeInfo);
+                        if(!shapeInfo.shape.empty()){
+                            this->addShape(s.name.GetString(), shapeInfo);
+                        }
                     } else {
                         SPDLOG_WARN("Provided shape name: {} is forbidden and will be omitted", ANONYMOUS_INPUT_NAME);
                     }
