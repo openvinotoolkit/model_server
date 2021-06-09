@@ -18,6 +18,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -154,6 +155,11 @@ private:
          * @brief Shape delimeter in string format
          */
     static const char shapeDelimeter = ',';
+
+    /**
+         * @brief Allowed configurable layouts
+         */
+    static const std::set<std::string> configAllowedLayouts;
 
     /**
          * @brief custom_loader_options config as map
@@ -571,6 +577,24 @@ public:
          * @return status
          */
     Status parseShapeParameter(const std::string& command);
+
+    /**
+         * @brief Parses value from json and extracts layouts info
+         * 
+         * @param rapidjson::Value& node
+         * 
+         * @return status
+         */
+    Status parseLayoutParameter(const rapidjson::Value& node);
+
+    /**
+         * @brief Parses value from string and extracts layouts info
+         * 
+         * @param string
+         * 
+         * @return status
+         */
+    Status parseLayoutParameter(const std::string& command);
 
     /**
          * @brief Returns true if any input shape specified in shapes map is in AUTO mode
