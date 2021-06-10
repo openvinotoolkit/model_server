@@ -91,7 +91,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonMatchingShapeSize) {
 
     auto status = convertStringValToBlob(stringVal, blob, tensorInfo);
 
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+    EXPECT_EQ(status, ovms::StatusCode::UNSUPPORTED_LAYOUT);
 }
 
 TEST_F(BinaryUtilsTest, tensorWithNonMatchingNumberOfChannelsNHWC) {

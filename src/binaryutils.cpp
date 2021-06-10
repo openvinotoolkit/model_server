@@ -169,8 +169,8 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     }
 
     // 4 for normal pipelines, 5 for pipelines with demultiplication at entry
-    bool isShapeDimensionValid = tensorInfo->getShape().size() == 4 ||
-        (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5);
+    bool isShapeDimensionValid = tensorInfo->getEffectiveShape().size() == 4 ||
+        (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getEffectiveShape().size() == 5);
     if (!isShapeDimensionValid) {
         return StatusCode::INVALID_SHAPE;
     }
