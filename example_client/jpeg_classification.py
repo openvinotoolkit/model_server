@@ -16,6 +16,7 @@
 
 import grpc
 import numpy as np
+import classes
 from tensorflow import make_tensor_proto, make_ndarray, make_tensor_proto
 import datetime
 import argparse
@@ -87,9 +88,6 @@ for line in lines:
     path, label = line.strip().split(" ")
     img = getJpeg(path, size, rgb_image)
 
-    # lbs = np.append(lbs,[int(label)],0)
-    # imgs = np.append(imgs, img,0)
-
     request = predict_pb2.PredictRequest()
     request.model_spec.name = args.get('model_name')
     request.inputs[args['input_name']].CopyFrom(make_tensor_proto(img, shape=(img.shape)))
@@ -109,10 +107,14 @@ for line in lines:
     # for object classification models show imagenet class
     print('Processing time: {:.2f} ms; speed {:.2f} fps'.format(round(duration, 2), round(1000 / duration, 2)))
     ma = np.argmax(nu)
+    mark_message = ""
     if int(label) == ma:
         matched += 1
+        mark_message = "; Correct match."
+    else:
+        mark_message = "; Incorrect match. Should be {} {}".format(label, classes.imagenet_classes[int(label)])
     i += 1
-    print("Detected:", ma, " Should be:", label)
+    print("\t",i, classes.imagenet_classes[ma],ma, mark_message)
 
 latency = np.average(processing_times)
 accuracy = matched/i
@@ -120,5 +122,3 @@ accuracy = matched/i
 print("Overall accuracy=",accuracy*100,"%")
 print("Average latency=",latency,"ms")
 
-# np.save('imgs.npy', imgs)
-# np.save('lbs.npy', lbs)

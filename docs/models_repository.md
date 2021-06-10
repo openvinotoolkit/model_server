@@ -5,10 +5,13 @@ This guide will help you to create a models repository for serving with the Open
 
 
 ## Creating Repository for Models in **Intermediate Representation (IR)** format
-The AI models to be served with OpenVINO&trade; Model Server should be in Intermediate Representation (IR) format (where the graph is represented in .bin and .xml format). Tensorflow, Caffe and MXNet trained models can be converted using Model_Optimizer from  OpenVINO&trade; toolkit. Follow the steps from  [model optimizer documentation](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) to convert your model.
+The AI models to be served with OpenVINO&trade; Model Server should be in Intermediate Representation (IR) format (where the graph is represented in .bin and .xml format) or in [ONNX](https://onnx.ai/) format. 
 
+Tensorflow, Caffe and MXNet trained models can be converted to IR format using Model_Optimizer from  OpenVINO&trade; toolkit. Follow the steps from  [model optimizer documentation](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) to convert your model.
 
-The IR models should be placed and mounted in a folder structure as depicted below:
+ONNX model format can be also converted from other frameworks using [converters](https://onnx.ai/supported-tools.html). 
+
+The models should be placed and mounted in a folder structure as depicted below:
 ```bash
 tree models/
 models/
@@ -20,20 +23,24 @@ models/
 │       ├── ir_model.bin
 │       └── ir_model.xml
 └── model2
+│   └── 1
+│   │   ├── ir_model.bin
+│   │   ├── ir_model.xml
+│   │   └── mapping_config.json
+└── model3
     └── 1
-        ├── ir_model.bin
-        ├── ir_model.xml
-        └── mapping_config.json
+        └── model.onnx
 ``` 
 
 - Each model should be stored in a dedicated directory (model1 and model2 in the examples above) and should include sub-folders
 representing its versions (1,2, etc). The versions and the sub-folder names should be positive integer values. 
 
-- Every version folder _must_ include a pair of model files with .bin and .xml extensions; however, the file name can be arbitrary.
+- Every version folder _must_ include model files. IR model files must be with .bin and .xml extensions. ONNX model must have .onnx extension. The file name can be arbitrary.
 
-- Each model in IR format defines input and output tensors in the AI graph. By default OpenVINO&trade; model server is using 
-tensors names as the input and output dictionary keys.  The client passes the input values to the gRPC request and 
-reads the results by referring to the correspondent tensor names. 
+- Each model defines input and output tensors in the AI graph. The client passes data to model input tensors by filling appropriate entries in the request inputs map.
+  Prediction results can be read from response outputs map. By default OpenVINO™ model server is using model
+  tensors names as inputs and outputs names in prediction requests and responses. The client passes the input values to the request and 
+  reads the results by referring to the correspondent output names. 
 
 Below is the snippet of the example client code :
 ```python
