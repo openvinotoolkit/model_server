@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
+#include "../binaryutils.hpp"
 #include "../dl_node.hpp"
 #include "../entry_node.hpp"
 #include "../exit_node.hpp"
@@ -74,6 +75,23 @@ protected:
         }
     }
 
+    void prepareBinaryRequest(const std::string& jpegPath, PredictRequest& request, const std::string& customPipelineInputName, int batchSize = 1) {
+        std::ifstream DataFile;
+        DataFile.open(jpegPath, std::ios::binary);
+        DataFile.seekg(0, std::ios::end);
+        size_t filesize = DataFile.tellg();
+        DataFile.seekg(0);
+        std::unique_ptr<char[]> image_bytes(new char[filesize]);
+        DataFile.read(image_bytes.get(), filesize);
+
+        tensorflow::TensorProto& inputProto = (*request.mutable_inputs())[customPipelineInputName];
+        inputProto.set_dtype(tensorflow::DataType::DT_STRING);
+        for (int i = 0; i < batchSize; i++) {
+            inputProto.add_string_val(image_bytes.get(), filesize);
+        }
+        inputProto.mutable_tensor_shape()->add_dim()->set_size(batchSize);
+    }
+
     void checkDummyResponse(int seriesLength, int batchSize = 1) {
         ::checkDummyResponse(customPipelineOutputName, requestData, request, response, seriesLength, batchSize);
     }
@@ -113,7 +131,8 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     managerWithDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -169,7 +188,8 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
         << readableError(expected_output, actual_output, dataLengthToCheck);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -214,7 +234,8 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     managerWithDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response);
 
     std::unique_ptr<DLNode> dummy_nodes[N];
@@ -275,7 +296,8 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchSize) {
     managerWithDynamicBatchDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicBatchDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -317,7 +339,8 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape) {
     managerWithDynamicShapeDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicShapeDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -385,7 +408,8 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchAndShape) {
     manager.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, manager);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -456,7 +480,8 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape_RequestHasDifferentDim0
     manager.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, manager);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -486,7 +511,12 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    tensor_map_t inputsInfoTmp;
+    for (int i = 0; i < N; i++) {
+        inputsInfoTmp[customPipelineInputName + std::to_string(i)] = nullptr;
+    }
+    const tensor_map_t inputsInfo = inputsInfoTmp;
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response);
     Pipeline pipeline(*input_node, *output_node);
     std::unique_ptr<DLNode> dummy_nodes[N];
@@ -542,7 +572,8 @@ TEST_F(EnsembleFlowTest, FailInDLNodeSetInputsMissingInput) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -566,7 +597,8 @@ TEST_F(EnsembleFlowTest, FailInDLNodeExecuteInputsMissingInput) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -601,7 +633,8 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResults) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto failInFetchNode = std::make_unique<DLNodeFailInFetch>("failInFetch_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
 
@@ -627,7 +660,8 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResultsStreamIdReleasedForDeferredNode
     config.setNireq(1);
     managerWithDummyModel.reloadModelWithVersions(config);
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto failInFetchNode = std::make_unique<DLNodeFailInFetch>("failInFetch_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto modelNode = std::make_unique<DLNodeFailInFetch>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
     auto output_node = std::make_unique<ExitNode>(&response);
@@ -1947,7 +1981,8 @@ TEST_F(EnsembleFlowTest, ErrorHandlingSkipsDeferredNodesExecutionIfExecutionFail
     managerWithDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{"proto_input_1x10", nullptr}, {"proto_input_1x5", nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response);
 
     auto dummy_node_1 = std::make_unique<DLNode>("dummy_node_1", dummyModelName, requestedModelVersion, managerWithDummyModel);
@@ -3496,4 +3531,433 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithInnerNhwcConnection) {
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
     checkIncrement4DimResponse("pipeline_output", {3.0, 4.0, 5.0, 6.0, 7.0, 8.0}, request, response, {1, 3, 1, 2});
+}
+
+class EnsembleFlowTestBinaryInput : public EnsembleFlowTest {
+public:
+    const std::string imagePath = "/ovms/src/test/binaryutils/rgb.jpg";
+    const std::string graycaleImagePath = "/ovms/src/test/binaryutils/grayscale.jpg";
+};
+
+static const char* pipelineSingleIncrement4DimOutputNHWC1x1 = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,3,1,1) ",
+                "layout": "nhwc",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTestBinaryInput, ExecutePipelineWithInnerNhwcConnection) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWC1x1, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    prepareBinaryRequest(imagePath, request, "pipeline_input");
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse("pipeline_output", {37.0, 28.0, 238.0}, request, response, {1, 3, 1, 1});
+}
+
+static const char* pipelineSingleIncrement4DimOutputNCHW1x1 = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,3,1,1) ",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTestBinaryInput, ExecutePipelineWithInnerNchwConnection) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNCHW1x1, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    prepareBinaryRequest(imagePath, request, "pipeline_input");
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::UNSUPPORTED_LAYOUT);
+}
+
+static const char* pipelineSingleIncrement4DimOutputNHWC1x1Grayscale = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,1,1,1) ",
+                "layout": "nhwc",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTestBinaryInput, GrayscaleImage) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWC1x1Grayscale, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    prepareBinaryRequest(graycaleImagePath, request, "pipeline_input");
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse("pipeline_output", {1.0}, request, response, {1, 1, 1, 1});
+}
+
+static const char* pipelineSingleIncrement4DimOutputNHWC1x1BS5 = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(5,3,1,1) ",
+                "layout": "nhwc",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTestBinaryInput, ExecutePipelineWithInnerNhwcConnectionBatchSize5) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWC1x1BS5, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    int batchSize = 5;
+    prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 3, 1, 1});
+}
+
+static const char* pipelineSingleIncrement4DimOutputNHWC2x2 = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,3,2,2) ",
+                "layout": "nhwc",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTestBinaryInput, ResizeBatch1) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWC2x2, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    prepareBinaryRequest(imagePath, request, "pipeline_input");
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0}, request, response, {1, 3, 2, 2});
+}
+
+static const char* pipelineSingleIncrement4DimOutputNHWC2x2BS5 = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(5,3,2,2) ",
+                "layout": "nhwc",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTestBinaryInput, ResizeBatch5) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWC2x2BS5, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    int batchSize = 5;
+    prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0},
+        request, response, {5, 3, 2, 2});
+}
+
+static const char* pipelineSingleIncrement4DimOutputNHWC1Channel = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,1,1,1) ",
+                "layout": "nhwc",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTestBinaryInput, ColorChannelsDiffer) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWC1Channel, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    prepareBinaryRequest(imagePath, request, "pipeline_input");
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_NO_OF_CHANNELS);
+}
+
+TEST_F(EnsembleFlowTestBinaryInput, InvalidData) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWC1x1, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    tensorflow::TensorProto& inputProto = (*request.mutable_inputs())["pipeline_input"];
+    inputProto.set_dtype(tensorflow::DataType::DT_STRING);
+    inputProto.add_string_val("INVALID_IMAGE");
+    inputProto.mutable_tensor_shape()->add_dim()->set_size(1);
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::IMAGE_PARSING_FAILED);
 }

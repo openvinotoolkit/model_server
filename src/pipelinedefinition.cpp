@@ -175,7 +175,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
             getName(), info.nodeName, info.modelName);
         switch (info.kind) {
         case NodeKind::ENTRY: {
-            auto node = std::make_unique<EntryNode>(request, info.demultiplyCount);
+            auto node = std::make_unique<EntryNode>(request, getInputsInfo(), info.demultiplyCount);
             entry = node.get();
             nodes.emplace(info.nodeName, std::move(node));
             break;
@@ -1066,8 +1066,9 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                             SPDLOG_ERROR(result.string());
                             return result;
                         }
+                    } else {
+                        inputsInfo[alias] = tensorInfo;
                     }
-                    inputsInfo[alias] = tensorInfo;
                 }
                 break;
             }
