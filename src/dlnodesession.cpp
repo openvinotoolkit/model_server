@@ -93,6 +93,11 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
         const auto& name = kv.first;
         auto& blob = kv.second;
 
+        std::cout << "UUUUUUUUUUUU" << std::endl;
+        for (size_t i = 0; i < 3; i++) {
+            std::cout << ((float*)blob->buffer())[i] << std::endl;
+        }
+
         auto it = inputsInfo.find(name);
         if (it == inputsInfo.end()) {
             std::stringstream ss;
@@ -105,6 +110,11 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
         auto status = validate(blob, inputInfo);
         if (status.ok()) {
             continue;
+        }
+
+         std::cout << "MMMMMMMMMMM" << std::endl;
+        for (size_t i = 0; i < 3; i++) {
+            std::cout << ((float*)blob->buffer())[i] << std::endl;
         }
 
         // If precision is incorrect, perform conversion
@@ -248,8 +258,17 @@ Status DLNodeSession::setInputsForInference(InferenceEngine::InferRequest& infer
             }
             // Update blob layout with model input layout
             auto& inputInfo = this->model->getInputsInfo().at(name);
+            std::cout << "GGGGGGGGGGGGGG" << std::endl;
+            for (size_t i = 0; i < 3; i++) {
+                std::cout << ((float*)blob->buffer())[i] << std::endl;
+            }
+
             blob->getTensorDesc().setLayout(inputInfo->getLayout());
             blob->getTensorDesc().reshape(inputInfo->getTensorDesc().getDims());
+            std::cout << "FFFFFFFFFFFFF" << std::endl;
+            for (size_t i = 0; i < 3; i++) {
+                std::cout << ((float*)blob->buffer())[i] << std::endl;
+            }
             inferRequest.SetBlob(realModelInputName, blob);
         }
         // OV implementation the InferenceEngine::Exception is not

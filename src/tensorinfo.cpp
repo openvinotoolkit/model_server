@@ -272,6 +272,10 @@ const shape_t& TensorInfo::getShape() const {
     return shape;
 }
 
+bool TensorInfo::isInfluencedByDemultiplexer() const {
+    return influencedByDemultiplexer;
+}
+
 const shape_t& TensorInfo::getEffectiveShape() const {
     return effectiveShape.size() > 0 ? effectiveShape : shape;
 }
@@ -295,6 +299,13 @@ std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const shape_t& sh
     copy->shape = shape;
     copy->layout = InferenceEngine::Layout::ANY;
     copy->updateEffectiveShape();
+    return copy;
+}
+
+std::shared_ptr<TensorInfo> TensorInfo::createCopyWithEffectiveDimensionPrefix(size_t dim) const {
+    auto copy = std::make_shared<TensorInfo>(*this);
+    copy->influencedByDemultiplexer = true;
+    copy->effectiveShape.insert(copy->effectiveShape.begin(), dim);
     return copy;
 }
 

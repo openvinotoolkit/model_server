@@ -68,6 +68,7 @@ Status createSharedBlob(InferenceEngine::Blob::Ptr& destinationBlob, InferenceEn
         return StatusCode::OV_CLONE_BLOB_ERROR;
     }
     destinationBlob->allocate();
+    std::cout << "Address: " << (size_t)(const float*)destinationBlob->buffer() << std::endl;
     return StatusCode::OK;
 }
 

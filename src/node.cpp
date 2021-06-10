@@ -65,6 +65,14 @@ Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOu
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs with demultiplyCount: {}", getName(), demultiplyCountSettingToString(demultiplexCount));
         status = demultiplyOutputs(nodeSessionOutputs);
     }
+    for (auto& [_, result] : nodeSessionOutputs) {
+        for (auto& [_, b] : result.second) {
+                std::cout << "IIIIIIIIIIIIIIII" << std::endl;
+                for (size_t i = 0; i < 3; i++) {
+                    std::cout << ((float*)b->buffer())[i] << std::endl;
+                }
+        }
+    }
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will remove node: {} session: {}", getName(), sessionId);
     nodeSessions.erase(sessionId);
     return status;
@@ -125,6 +133,12 @@ Status Node::setInputs(const Node& dependency, BlobMap& inputs, NodeSessionMetad
             dependency.getName(),
             current_node_input_name,
             dependency_output_name);
+
+        std::cout << "AAAAAAAA" << std::endl;
+        for (size_t i = 0; i < 3; i++) {
+            std::cout << ((float*)it->second->buffer())[i] << std::endl;
+        }
+
         auto status = nodeSession->setInput(current_node_input_name, it->second, shardId);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "node: {} failed to set input: {}, shard: {}", getName(), current_node_input_name, shardId);
@@ -217,6 +231,12 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     }
 
     for (auto& [blobName, blob] : blobMap) {
+
+        std::cout << "ABOUT_TO_DEMULTIPLY" << (size_t)(float*)blob->buffer() << std::endl;
+        for (size_t i = 0; i < 15; i++) {
+            std::cout << ((float*)blob->buffer())[i] << std::endl;
+        }
+
         auto tensorDesc = blob->getTensorDesc();
         auto newDims = tensorDesc.getDims();
         if (newDims.size() < 3) {
@@ -245,10 +265,17 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
             InferenceEngine::Blob::Ptr dividedBlob;
             this->createShardedBlob(dividedBlob, dividedBlobDesc, blob, i, step, metadata, blobName);
+
+            std::cout << "AFTER_DEMULTIPLY" << (size_t)(char*)dividedBlob->buffer() << std::endl;
+            for (size_t i = 0; i < 3; i++) {
+                std::cout << ((float*)dividedBlob->buffer())[i] << std::endl;
+            }
+
             std::stringstream ss;
             ss << "Node: " << getName() << " input demultiplied: " << blobName
                << "; Actual: " << TensorInfo::shapeToString(dividedBlob->getTensorDesc().getDims());
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
+            std::cout << "____: " << newSessionMetadatas[i].getSessionKey() << std::endl;
             auto it = nodeSessionOutputs.find(newSessionMetadatas[i].getSessionKey());
             if (it == nodeSessionOutputs.end()) {
                 nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{blobName, dividedBlob}}});
@@ -257,7 +284,32 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             }
         }
     }
-    nodeSessionOutputs.erase(metadata.getSessionKey());
+
+    for (auto& [_, result] : nodeSessionOutputs) {
+        for (auto& [_, b] : result.second) {
+                std::cout << "VVVVVVVVVVVVVV" << b.use_count() << std::endl;
+                for (size_t i = 0; i < 3; i++) {
+                    std::cout << ((float*)b->buffer())[i] << std::endl;
+                }
+        }
+    }
+
+
+    std::cout << "SESSION_KEY[" << metadata.getSessionKey() << "]" << std::endl;
+    auto ssss = metadata.getSessionKey();
+    std::cout << ssss << std::endl;
+    nodeSessionOutputs.erase(ssss);
+    //nodeSessionOutputs.erase(metadata.getSessionKey());
+
+    for (auto& [_, result] : nodeSessionOutputs) {
+        for (auto& [_, b] : result.second) {
+                std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&" << b.use_count() << (size_t)(char*)b->buffer() << std::endl;
+                for (size_t i = 0; i < 3; i++) {
+                    std::cout << ((float*)b->buffer())[i] << std::endl;
+                }
+        }
+    }
+
     return StatusCode::OK;
 }
 

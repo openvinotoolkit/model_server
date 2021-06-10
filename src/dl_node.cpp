@@ -114,6 +114,12 @@ Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inf
                         realModelOutputName);
                     return status;
                 }
+
+                std::cout << "==========" << std::endl;
+                for (size_t i = 0; i < 3; i++) {
+                    std::cout << ((float*)copiedBlob->buffer())[i] << std::endl;
+                }
+
                 outputs.emplace(std::make_pair(output_name, std::move(copiedBlob)));
             } catch (const InferenceEngine::Exception& e) {
                 Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;

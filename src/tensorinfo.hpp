@@ -72,6 +72,11 @@ protected:
     InferenceEngine::Layout layout;
 
     /**
+         * @brief Information if influenced by demultiplexer
+         */
+    bool influencedByDemultiplexer = false;
+
+    /**
          * @brief TensorDesc
          */
     InferenceEngine::TensorDesc tensorDesc;
@@ -219,7 +224,11 @@ public:
 
     void setShape(const shape_t& shape);
 
+    bool isInfluencedByDemultiplexer() const;
+
     std::shared_ptr<TensorInfo> createCopyWithNewShape(const shape_t& shape) const;
+
+    std::shared_ptr<TensorInfo> createCopyWithEffectiveDimensionPrefix(size_t dim) const;
 
     /**
          * @brief Get the Tensor Desc object
