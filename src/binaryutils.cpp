@@ -138,7 +138,7 @@ Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo,
 Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     const tensorflow::TensorProto& src) {
     if (tensorInfo->getEffectiveShape().size() != 4) {
-        return StatusCode::UNSUPPORTED_LAYOUT;
+        return StatusCode::INVALID_SHAPE;
     }
 
     if (tensorInfo->getLayout() != InferenceEngine::Layout::NHWC) {
@@ -147,7 +147,7 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
 
     if (checkBatchSizeMismatch(tensorInfo, src.string_val_size())) {
         SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getEffectiveShape()[0], src.string_val_size());
-        return StatusCode::UNSUPPORTED_LAYOUT;
+        return StatusCode::INVALID_BATCH_SIZE;
     }
 
     return StatusCode::OK;
@@ -227,7 +227,7 @@ InferenceEngine::Blob::Ptr convertMatsToBlob(std::vector<cv::Mat>& images, const
     }
 }
 
-Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr* blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
+Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
     auto status = validateTensor(tensorInfo, src);
     if (status != StatusCode::OK) {
         return status;
@@ -240,7 +240,7 @@ Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngin
         return status;
     }
 
-    *blob = convertMatsToBlob(images, tensorInfo);
+    blob = convertMatsToBlob(images, tensorInfo);
     return StatusCode::OK;
 }
 }  // namespace ovms

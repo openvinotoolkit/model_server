@@ -77,8 +77,9 @@ protected:
     template <typename T>
     std::unique_ptr<Pipeline> prepareSingleNodePipelineWithLibraryMock() {
         const std::vector<float> inputValues{3.5, 2.1, -0.2};
+        const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
         this->prepareRequest(inputValues);
-        auto input_node = std::make_unique<EntryNode>(&request);
+        auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
         auto output_node = std::make_unique<ExitNode>(&response);
         auto custom_node = std::make_unique<CustomNode>(
             customNodeName,
@@ -167,7 +168,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AddSubCustomNode) {
     const float addValue = 2.5;
     const float subValue = 4.8;
 
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response);
     auto custom_node = std::make_unique<CustomNode>(customNodeName, library,
         parameters_t{
@@ -273,7 +275,8 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
 
     // create pipeline
     std::vector<std::unique_ptr<Node>> nodes(2 + 3 * demultiplicationLayersCount);  // entry + exit + (choose + differentOps + dummy) * layerCount
-    nodes[0] = std::make_unique<EntryNode>(&predictRequest);
+    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}, {pipelineFactorsName, nullptr}};
+    nodes[0] = std::make_unique<EntryNode>(&predictRequest, inputsInfo);
     nodes[1] = std::make_unique<ExitNode>(&response);
     size_t i = 2;
     for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
@@ -340,7 +343,8 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
     // create pipeline
     size_t nodesCount = 2 + 3 * demultiplicationLayersCount;  // entry + exit + (choose + differentOps + dummy) * layerCount
     std::vector<std::unique_ptr<Node>> nodes(nodesCount);
-    nodes[0] = std::make_unique<EntryNode>(&predictRequest);
+    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}, {pipelineFactorsName, nullptr}};
+    nodes[0] = std::make_unique<EntryNode>(&predictRequest, inputsInfo);
     nodes[nodesCount - 1] = std::make_unique<ExitNode>(&response);
     size_t i = 1;
     for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
@@ -399,7 +403,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SeriesOfCustomNodes) {
     const std::array<float, PARAMETERS_PAIRS_COUNT> addValues{1.5, -2.4};
     const std::array<float, PARAMETERS_PAIRS_COUNT> subValues{-5.1, 1.9};
 
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response);
 
     std::unique_ptr<CustomNode> custom_nodes[N];
@@ -453,7 +458,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ParallelCustomNodes) {
     const std::array<float, PARAMETERS_PAIRS_COUNT> addValues{4.5, 0.2, -0.6, 0.4, -2.5};
     const std::array<float, PARAMETERS_PAIRS_COUNT> subValues{8.5, -3.2, 10.0, -0.5, 2.4};
 
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response);
 
     Pipeline pipeline(*input_node, *output_node);
@@ -501,7 +507,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomAndDLNodes) {
     const float addValues[] = {-0.85, 30.2};
     const float subValues[] = {1.35, -28.5};
 
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response);
     auto model_node = std::make_unique<DLNode>(
         "dummy_node",
@@ -4034,7 +4041,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     std::set<std::string> gather = {"image_demultiplexer_node"};
     std::unordered_map<std::string, std::string> aliases{{"custom_node_output", "custom_node_output"}};
 
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response, gather);
     auto custom_node = std::make_unique<CustomNode>(
         "image_demultiplexer_node",

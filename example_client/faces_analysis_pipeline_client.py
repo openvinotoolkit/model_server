@@ -32,7 +32,7 @@ parser.add_argument('--face_images_output_name', required=False, default='face_i
 parser.add_argument('--face_images_save_path', required=False, default='', help='If specified, face images will be saved to disk.')
 parser.add_argument('--image_width', required=False, default=600, help='Original image width. default: 600')
 parser.add_argument('--image_height', required=False, default=400, help='Original image height. default: 400')
-parser.add_argument('--input_image_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC'], help='Pipeline input image layout. default: NCHW')
+parser.add_argument('--input_image_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC', 'BINARY'], help='Pipeline input image layout. default: NCHW')
 parser.add_argument('--output_image_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC'], help='Transformed detected image layout. default: NCHW')
 
 args = vars(parser.parse_args())
@@ -51,6 +51,10 @@ def prepare_img_input_in_nhwc_format(request, name, path, resize_to_shape):
     img = img.reshape(1,target_shape[0],target_shape[1],3)
     request.inputs[name].CopyFrom(make_tensor_proto(img, shape=img.shape))
 
+def prepare_img_input_in_binary_format(request, name, path):
+    with open(path, 'rb') as f:
+        data = f.read()
+        request.inputs[name].CopyFrom(make_tensor_proto(data, shape=[1]))
 
 def save_face_images_as_jpgs(output_nd, name, location, layout):
     for i in range(output_nd.shape[0]):
@@ -117,8 +121,10 @@ request.model_spec.name = args['pipeline_name']
 
 if args['input_image_layout'] == 'NCHW':
     prepare_img_input_in_nchw_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
-else:
+elif args['input_image_layout'] == 'NHWC':
     prepare_img_input_in_nhwc_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
+else:
+    prepare_img_input_in_binary_format(request, args['image_input_name'], args['image_input_path'])
 
 try:
     response = stub.Predict(request, 30.0)
