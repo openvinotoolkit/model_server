@@ -890,7 +890,7 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
             // binary inputs will be validated during conversion to blob
             SPDLOG_DEBUG("Received request contains binary inputs");
-            if(checkBinaryInputBatchSizeMismatch(*networkInput, requestInput)){
+            if (checkBinaryInputBatchSizeMismatch(*networkInput, requestInput)) {
                 if (batchingMode == AUTO) {
                     return StatusCode::BATCHSIZE_CHANGE_REQUIRED;
                 } else {
