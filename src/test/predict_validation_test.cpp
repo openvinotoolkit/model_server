@@ -173,7 +173,7 @@ TEST_F(PredictValidation, RequestWrongBatchSizeAutoBinaryInputs) {
     auto& input = (*binaryInputRequest.mutable_inputs())[inputName];
     input.set_dtype(tensorflow::DataType::DT_STRING);
     const int requestBatchSize = 2;
-    for(int i = 0; i < requestBatchSize; i++){
+    for (int i = 0; i < requestBatchSize; i++) {
         input.add_string_val("val");
     }
 
