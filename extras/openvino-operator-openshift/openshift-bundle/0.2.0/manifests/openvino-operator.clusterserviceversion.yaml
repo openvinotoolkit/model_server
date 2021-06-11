@@ -52,7 +52,7 @@ metadata:
             "name": "openvino-notebook"
           },
           "spec": {
-            "image_name": "registry.access.redhat.com/intel/openvino_notebooks:latest"
+            "image_name": "registry.access.redhat.com/intel/openvino_notebooks:latest",
             "build_locally": "true"
           }
         }
@@ -300,7 +300,7 @@ spec:
   - AI Inference OpenVINO
   links:
   - name: OpenVINO Toolkit Operator
-    url: https://github.com/openvinotoolkit/model_server/tree/main/extras/openvino-operator
+    url: https://github.com/openvinotoolkit/model_server/tree/main/extras/openvino-operator-openshift
   maturity: alpha
   provider:
     name: Intel

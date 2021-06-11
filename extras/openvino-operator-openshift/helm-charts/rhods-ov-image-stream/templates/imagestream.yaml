@@ -38,4 +38,4 @@ spec:
       importPolicy: { }
       referencePolicy:
         type: Source
-{{- end}}
+{{- end }}
