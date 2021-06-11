@@ -226,13 +226,14 @@ TEST_F(BinaryUtilsTest, positive_grayscale_serialization_deserialization) {
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 1}, InferenceEngine::Layout::NCHW);
 
-    auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
     ASSERT_EQ(blob->size(), 1);
+    auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     uint8_t* ptr = blob->buffer();
     ASSERT_EQ(std::equal(ptr, ptr + blob->size(), grayscale_expected_blob), true);
     tensorflow::TensorProto stringValDeserialized;
-    convertBlobToStringVal(stringValDeserialized, tensorInfo, blob);
+    status = convertBlobToStringVal(stringValDeserialized, tensorInfo, blob);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(stringVal.string_val(0).substr(stringVal.string_val(0).find("\xFF\xC0")), stringValDeserialized.string_val(0).substr(stringValDeserialized.string_val(0).find("\xFF\xC0")));
 }
 
@@ -256,12 +257,13 @@ TEST_F(BinaryUtilsTest, positive_rgb_serialization_deserialization) {
 
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
 
-    ASSERT_EQ(blob->size(), 3);
     ASSERT_EQ(status, ovms::StatusCode::OK);
+    ASSERT_EQ(blob->size(), 3);
     uint8_t* ptr = blob->buffer();
     ASSERT_EQ(std::equal(ptr, ptr + blob->size(), rgb_expected_blob), true);
     tensorflow::TensorProto stringValDeserialized;
-    convertBlobToStringVal(stringValDeserialized, tensorInfo, blob);
+    status = convertBlobToStringVal(stringValDeserialized, tensorInfo, blob);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
 
     EXPECT_EQ(stringVal.string_val(0).substr(stringVal.string_val(0).find("\xFF\xC0")), stringValDeserialized.string_val(0).substr(stringValDeserialized.string_val(0).find("\xFF\xC0")));
 }
@@ -287,12 +289,35 @@ TEST_F(BinaryUtilsTest, positive_batch_size_2_serialization_deserialization) {
 
     auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
 
-    ASSERT_EQ(blob->size(), 6);
     ASSERT_EQ(status, ovms::StatusCode::OK);
+    ASSERT_EQ(blob->size(), 6);
     uint8_t* ptr = blob->buffer();
     ASSERT_EQ(std::equal(ptr, ptr + blob->size(), rgb_batchsize_2_blob), true);
     tensorflow::TensorProto stringValDeserialized;
-    convertBlobToStringVal(stringValDeserialized, tensorInfo, blob);
+    status = convertBlobToStringVal(stringValDeserialized, tensorInfo, blob);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    EXPECT_EQ(stringVal.string_val(0).substr(stringVal.string_val(0).find("\xFF\xC0")), stringValDeserialized.string_val(0).substr(stringValDeserialized.string_val(0).find("\xFF\xC0")));
+    EXPECT_EQ(stringVal.string_val(1).substr(stringVal.string_val(1).find("\xFF\xC0")), stringValDeserialized.string_val(1).substr(stringValDeserialized.string_val(1).find("\xFF\xC0")));
+}
+
+TEST_F(BinaryUtilsTest, positive_nhwc_layout_serialization_deserialization) {
+    uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed};
+
+    InferenceEngine::Blob::Ptr blob;
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 3}, InferenceEngine::Layout::NHWC);
+
+    auto status = convertStringValToBlob(stringVal, &blob, tensorInfo);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    ASSERT_EQ(blob->size(), 3);
+    uint8_t* ptr = blob->buffer();
+
+    EXPECT_EQ(std::equal(ptr, ptr + blob->size(), rgb_expected_blob), true);
+    tensorflow::TensorProto stringValDeserialized;
+    status = convertBlobToStringVal(stringValDeserialized, tensorInfo, blob);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
 
     EXPECT_EQ(stringVal.string_val(0).substr(stringVal.string_val(0).find("\xFF\xC0")), stringValDeserialized.string_val(0).substr(stringValDeserialized.string_val(0).find("\xFF\xC0")));
     EXPECT_EQ(stringVal.string_val(1).substr(stringVal.string_val(1).find("\xFF\xC0")), stringValDeserialized.string_val(1).substr(stringValDeserialized.string_val(1).find("\xFF\xC0")));

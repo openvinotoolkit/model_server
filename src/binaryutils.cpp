@@ -248,10 +248,6 @@ Status convertBlobToMats(std::vector<cv::Mat>& images, const InferenceEngine::Bl
         channels = tensorInfo->getShape()[1];
         rows = tensorInfo->getShape()[2];
         cols = tensorInfo->getShape()[3];
-    } else if (tensorInfo->getLayout() == InferenceEngine::Layout::NHWC) {
-        rows = tensorInfo->getShape()[1];
-        cols = tensorInfo->getShape()[2];
-        channels = tensorInfo->getShape()[3];
     } else {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }

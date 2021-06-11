@@ -43,6 +43,7 @@ using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow
 const std::string dummy_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy";
 const std::string sum_model_location = std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model";
 const std::string increment_1x3x4x5_model_location = std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5";
+const std::string binary_output_model_location = std::filesystem::current_path().u8string() + "/src/test/binary_output_dummy";
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
@@ -86,6 +87,20 @@ const ovms::ModelConfig INCREMENT_1x3x4x5_MODEL_CONFIG{
     increment_1x3x4x5_model_location,  // local path
 };
 
+const ovms::ModelConfig BINARY_OUTPUT_CONFIG{
+    "binary_output_dummy",
+    binary_output_model_location,  // base path
+    "CPU",               // target device
+    "1",                 // batchsize
+    1,                   // NIREQ
+    false,               // is stateful
+    true,                // idle sequence cleanup enabled
+    false,               // low latency transformation enabled
+    500,                 // steteful sequence max number
+    1,                   // model_version unused since version are read from path
+    binary_output_model_location,  // local path
+};
+
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
 constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
@@ -101,6 +116,9 @@ constexpr const int SUM_MODEL_OUTPUT_SIZE = 10;
 constexpr const char* INCREMENT_1x3x4x5_MODEL_INPUT_NAME = "input";
 constexpr const char* INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME = "output";
 constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
+
+constexpr const char* BINARY_OUTPUT_INPUT_NAME = "image";
+constexpr const char* BINARY_OUTPUT_OUTPUT_NAME = "output_bytes";
 
 constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life
 

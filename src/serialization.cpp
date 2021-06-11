@@ -87,7 +87,7 @@ Status serializePredictResponse(
         }
         auto& tensorProto = (*response->mutable_outputs())[networkOutput->getMappedName()];
         Status status;
-        std::string binary_suffix = "_bytes";
+        const std::string binary_suffix = "_bytes";
         if (networkName.size() >= binary_suffix.size() && 0 == networkName.compare(networkName.size() - binary_suffix.size(), binary_suffix.size(), binary_suffix)) {
             status = convertBlobToStringVal(tensorProto, networkOutput, blob);
         } else {

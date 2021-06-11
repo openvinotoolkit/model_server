@@ -391,6 +391,8 @@ cc_test(
         "test/add_two_inputs_model/1/add.bin",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.xml",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.bin",
+        "test/binary_output_dummy/1/saved_model.xml",
+        "test/binary_output_dummy/1/saved_model.bin",
     ],
     linkopts = [
         "-lxml2",
