@@ -876,18 +876,6 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         if (!status.ok())
             return status;
 
-        if (checkBatchSizeMismatch(*networkInput, requestInput)) {
-            if (batchingMode == AUTO) {
-                finalStatus = StatusCode::BATCHSIZE_CHANGE_REQUIRED;
-            } else if (shapeMode != AUTO) {
-                std::stringstream ss;
-                ss << "Expected: " << getBatchSize() << "; Actual: " << requestInput.tensor_shape().dim(0).size();
-                const std::string details = ss.str();
-                SPDLOG_DEBUG("[Model: {} version: {}] Invalid batch size - {}", getName(), getVersion(), details);
-                return Status(StatusCode::INVALID_BATCH_SIZE, details);
-            }
-        }
-
         if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
             // binary inputs will be validated during conversion to blob
             SPDLOG_DEBUG("Received request contains binary inputs");
@@ -901,6 +889,18 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         status = validateNumberOfShapeDimensions(*networkInput, requestInput);
         if (!status.ok())
             return status;
+
+        if (checkBatchSizeMismatch(*networkInput, requestInput)) {
+            if (batchingMode == AUTO) {
+                finalStatus = StatusCode::BATCHSIZE_CHANGE_REQUIRED;
+            } else if (shapeMode != AUTO) {
+                std::stringstream ss;
+                ss << "Expected: " << getBatchSize() << "; Actual: " << requestInput.tensor_shape().dim(0).size();
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[Model: {} version: {}] Invalid batch size - {}", getName(), getVersion(), details);
+                return Status(StatusCode::INVALID_BATCH_SIZE, details);
+            }
+        }
 
         if (checkShapeMismatch(*networkInput, requestInput, batchingMode)) {
             if (shapeMode == AUTO) {
