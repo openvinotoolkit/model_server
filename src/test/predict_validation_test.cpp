@@ -167,19 +167,17 @@ TEST_F(PredictValidation, RequestWrongBatchSizeAuto) {
 
 TEST_F(PredictValidation, RequestWrongBatchSizeAutoBinaryInputs) {
     modelConfig.setBatchingParams("auto");
-    tensorflow::serving::PredictRequest binaryInputRequest = preparePredictRequest(
-        {
-            {"Binary_Input",
-                std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 224, 224, 3}, tensorflow::DataType::DT_STRING}},
-        });
-    auto& input = (*binaryInputRequest.mutable_inputs())["Binary_Input"];
-    std::string val1 = "val1";
-    std::string val2 = "val2";
-    input.add_string_val(val1);
-    input.add_string_val(val2);
+    std::string inputName = "Binary_Input";
+    tensorflow::serving::PredictRequest binaryInputRequest;
+
+    auto& input = (*binaryInputRequest.mutable_inputs())[inputName];
+    input.set_dtype(tensorflow::DataType::DT_STRING);
+    const int requestBatchSize = 2;
+    for(int i = 0; i < requestBatchSize; i++){
+        input.add_string_val("val");
+    }
 
     networkInputs.clear();
-    std::string inputName = "Binary_Input";
     ovms::shape_t shape = {1, 3, 224, 224};
     networkInputs[inputName] = std::make_shared<ovms::TensorInfo>(
         inputName,
