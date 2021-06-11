@@ -182,10 +182,10 @@ TEST_F(PredictValidation, RequestWrongBatchSizeAutoBinaryInputs) {
     std::string inputName = "Binary_Input";
     ovms::shape_t shape = {1, 3, 224, 224};
     networkInputs[inputName] = std::make_shared<ovms::TensorInfo>(
-            inputName,
-            InferenceEngine::Precision::FP32,
-            shape,
-            InferenceEngine::Layout::NHWC);
+        inputName,
+        InferenceEngine::Precision::FP32,
+        shape,
+        InferenceEngine::Layout::NHWC);
 
     auto status = instance.mockValidate(&binaryInputRequest);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
