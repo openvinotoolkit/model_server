@@ -138,6 +138,7 @@ TEST_F(BinaryUtilsTest, positive_grayscale) {
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 1}, InferenceEngine::Layout::NHWC);
 
     auto status = convertStringValToBlob(grayscaleStringVal, blob, tensorInfo);
+
     ASSERT_EQ(status, ovms::StatusCode::OK);
     ASSERT_EQ(blob->size(), 1);
     uint8_t* ptr = blob->buffer();

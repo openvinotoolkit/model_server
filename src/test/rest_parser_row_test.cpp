@@ -63,221 +63,211 @@ const char* predictRequestRowNamedJson = R"({
 })";
 
 TEST(RestParserRow, ParseValid2Inputs) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"inputA", {2, 2, 3, 2}},
-                                                      {"inputB", {2, 2, 3}}}))};
-    for (RestParser& parser : parsers) {
-        auto status = parser.parse(predictRequestRowNamedJson);
+    RestParser parser(prepareTensors({{"inputA", {2, 2, 3, 2}},
+        {"inputB", {2, 2, 3}}}));
 
-        ASSERT_EQ(status, StatusCode::OK);
-        EXPECT_EQ(parser.getOrder(), Order::ROW);
-        EXPECT_EQ(parser.getFormat(), Format::NAMED);
-        ASSERT_EQ(parser.getProto().inputs_size(), 2);
-        ASSERT_EQ(parser.getProto().inputs().count("inputA"), 1);
-        ASSERT_EQ(parser.getProto().inputs().count("inputB"), 1);
-        const auto& inputA = parser.getProto().inputs().at("inputA");
-        const auto& inputB = parser.getProto().inputs().at("inputB");
-        EXPECT_EQ(inputA.dtype(), DataType::DT_FLOAT);
-        EXPECT_EQ(inputB.dtype(), DataType::DT_FLOAT);
-        EXPECT_THAT(asVector(inputA.tensor_shape()), ElementsAre(2, 2, 3, 2));
-        EXPECT_THAT(asVector(inputB.tensor_shape()), ElementsAre(2, 2, 3));
-        ASSERT_EQ(inputA.tensor_content().size(), 2 * 2 * 3 * 2 * DataTypeSize(DataType::DT_FLOAT));
-        ASSERT_EQ(inputB.tensor_content().size(), 2 * 2 * 3 * DataTypeSize(DataType::DT_FLOAT));
-        EXPECT_THAT(asVector<float>(inputA.tensor_content()), ElementsAre(
-                                                                  1.0, 2.0,
-                                                                  3.0, 4.0,
-                                                                  5.0, 6.0,
-                                                                  //-------
-                                                                  7.0, 8.0,
-                                                                  9.0, 10.0,
-                                                                  11.0, 12.0,
-                                                                  //=========
-                                                                  101.0, 102.0,
-                                                                  103.0, 104.0,
-                                                                  105.0, 106.0,
-                                                                  //---------
-                                                                  107.0, 108.0,
-                                                                  109.0, 110.0,
-                                                                  111.0, 112.0));
-        EXPECT_THAT(asVector<float>(inputB.tensor_content()), ElementsAre(
-                                                                  1.0, 2.0, 3.0,
-                                                                  4.0, 5.0, 6.0,
-                                                                  //============
-                                                                  11.0, 12, 13.0,
-                                                                  14.0, 15.0, 16.0));
-    }
+    auto status = parser.parse(predictRequestRowNamedJson);
+
+    ASSERT_EQ(status, StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    ASSERT_EQ(parser.getProto().inputs_size(), 2);
+    ASSERT_EQ(parser.getProto().inputs().count("inputA"), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("inputB"), 1);
+    const auto& inputA = parser.getProto().inputs().at("inputA");
+    const auto& inputB = parser.getProto().inputs().at("inputB");
+    EXPECT_EQ(inputA.dtype(), DataType::DT_FLOAT);
+    EXPECT_EQ(inputB.dtype(), DataType::DT_FLOAT);
+    EXPECT_THAT(asVector(inputA.tensor_shape()), ElementsAre(2, 2, 3, 2));
+    EXPECT_THAT(asVector(inputB.tensor_shape()), ElementsAre(2, 2, 3));
+    ASSERT_EQ(inputA.tensor_content().size(), 2 * 2 * 3 * 2 * DataTypeSize(DataType::DT_FLOAT));
+    ASSERT_EQ(inputB.tensor_content().size(), 2 * 2 * 3 * DataTypeSize(DataType::DT_FLOAT));
+    EXPECT_THAT(asVector<float>(inputA.tensor_content()), ElementsAre(
+                                                              1.0, 2.0,
+                                                              3.0, 4.0,
+                                                              5.0, 6.0,
+                                                              //-------
+                                                              7.0, 8.0,
+                                                              9.0, 10.0,
+                                                              11.0, 12.0,
+                                                              //=========
+                                                              101.0, 102.0,
+                                                              103.0, 104.0,
+                                                              105.0, 106.0,
+                                                              //---------
+                                                              107.0, 108.0,
+                                                              109.0, 110.0,
+                                                              111.0, 112.0));
+    EXPECT_THAT(asVector<float>(inputB.tensor_content()), ElementsAre(
+                                                              1.0, 2.0, 3.0,
+                                                              4.0, 5.0, 6.0,
+                                                              //============
+                                                              11.0, 12, 13.0,
+                                                              14.0, 15.0, 16.0));
 }
 
 TEST(RestParserRow, ValidShape_1x1) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {1, 1}}}))};
-    for (RestParser& parser : parsers) {
-        ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
-            {"i":[155.0]}
-        ]})"),
-            StatusCode::OK);
-        EXPECT_EQ(parser.getOrder(), Order::ROW);
-        EXPECT_EQ(parser.getFormat(), Format::NAMED);
-        EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1, 1));
-        EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0));
-    }
+    RestParser parser(prepareTensors({{"i", {1, 1}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[155.0]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1, 1));
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0));
 }
 
 TEST(RestParserRow, ValidShape_1x2) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {1, 2}}}))};
-    for (RestParser& parser : parsers) {
-        ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
-            {"i":[155.0, 56.0]}
-        ]})"),
-            StatusCode::OK);
-        EXPECT_EQ(parser.getOrder(), Order::ROW);
-        EXPECT_EQ(parser.getFormat(), Format::NAMED);
-        EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1, 2));
-        EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0, 56.0));
-    }
+    RestParser parser(prepareTensors({{"i", {1, 2}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[155.0, 56.0]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(1, 2));
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0, 56.0));
 }
 
 TEST(RestParserRow, ValidShape_2x1) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {2, 1}}}))};
-    for (RestParser& parser : parsers) {
-        ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
-            {"i":[155.0]}, {"i":[513.0]}
-        ]})"),
-            StatusCode::OK);
-        EXPECT_EQ(parser.getOrder(), Order::ROW);
-        EXPECT_EQ(parser.getFormat(), Format::NAMED);
-        EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 1));
-        EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0, 513.0));
-    }
+    RestParser parser(prepareTensors({{"i", {2, 1}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[155.0]}, {"i":[513.0]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 1));
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0, 513.0));
 }
 
 TEST(RestParserRow, ValidShape_2x2) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {2, 2}}}))};
-    for (RestParser& parser : parsers) {
-        ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
-            {"i":[155.0, 9.0]}, {"i":[513.0, -5.0]}
-        ]})"),
-            StatusCode::OK);
-        EXPECT_EQ(parser.getOrder(), Order::ROW);
-        EXPECT_EQ(parser.getFormat(), Format::NAMED);
-        EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 2));
-        EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0, 9.0, 513.0, -5.0));
-    }
+    RestParser parser(prepareTensors({{"i", {2, 2}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[155.0, 9.0]}, {"i":[513.0, -5.0]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 2));
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0, 9.0, 513.0, -5.0));
 }
 
 TEST(RestParserRow, ValidShape_2x1x3) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {2, 1, 3}}}))};
-    for (RestParser& parser : parsers) {
-        ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
-            {"i":[
-                [5.0, 9.0, 2.0]
-            ]},
-            {"i":[
-                [-5.0, -2.0, -10.0]
-            ]}
-        ]})"),
-            StatusCode::OK);
-        EXPECT_EQ(parser.getOrder(), Order::ROW);
-        EXPECT_EQ(parser.getFormat(), Format::NAMED);
-        EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 1, 3));
-        EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(5.0, 9.0, 2.0, -5.0, -2.0, -10.0));
-    }
+    RestParser parser(prepareTensors({{"i", {2, 1, 3}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[
+            [5.0, 9.0, 2.0]
+        ]},
+        {"i":[
+            [-5.0, -2.0, -10.0]
+        ]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 1, 3));
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(5.0, 9.0, 2.0, -5.0, -2.0, -10.0));
 }
 
 TEST(RestParserRow, ValidShape_2x3x1) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {2, 3, 1}}}))};
-    for (RestParser& parser : parsers) {
-        ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
-            {"i":[
-                [5.9],
-                [9.9],
-                [1.9]
-            ]},
-            {"i":[
-                [-1.9],
-                [-9.9],
-                [25.9]
-            ]}
-        ]})"),
-            StatusCode::OK);
-        EXPECT_EQ(parser.getOrder(), Order::ROW);
-        EXPECT_EQ(parser.getFormat(), Format::NAMED);
-        EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 3, 1));
-        EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(5.9, 9.9, 1.9, -1.9, -9.9, 25.9));
-    }
+    RestParser parser(prepareTensors({{"i", {2, 3, 1}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[
+            [5.9],
+            [9.9],
+            [1.9]
+        ]},
+        {"i":[
+            [-1.9],
+            [-9.9],
+            [25.9]
+        ]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 3, 1));
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(5.9, 9.9, 1.9, -1.9, -9.9, 25.9));
 }
 
 TEST(RestParserRow, ValidShape_2x1x2x1) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {2, 1, 2, 1}}}))};
-    for (RestParser& parser : parsers) {
-        ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
-            {"i":[
-                [
-                    [5.0],
-                    [2.0]
-                ]
-            ]},
-            {"i":[
-                [
-                    [6.0],
-                    [18.0]
-                ]
-            ]}
-        ]})"),
-            StatusCode::OK);
-        EXPECT_EQ(parser.getOrder(), Order::ROW);
-        EXPECT_EQ(parser.getFormat(), Format::NAMED);
-        EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 1, 2, 1));
-        EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(5.0, 2.0, 6.0, 18.0));
-    }
+    RestParser parser(prepareTensors({{"i", {2, 1, 2, 1}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[
+            [
+                [5.0],
+                [2.0]
+            ]
+        ]},
+        {"i":[
+            [
+                [6.0],
+                [18.0]
+            ]
+        ]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 1, 2, 1));
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(5.0, 2.0, 6.0, 18.0));
 }
 
 TEST(RestParserRow, ValidShape_2x1x3x1x5) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {2, 1, 3, 1, 5}}}))};
-    for (RestParser& parser : parsers) {
-        ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
-            {"i":[
-                [
-                    [[1.0, 2.0, 3.0, 4.0, 5.0]],
-                    [[1.0, 2.0, 3.0, 4.0, 5.0]],
-                    [[1.0, 2.0, 3.0, 4.0, 5.0]]
-                ]
-            ]},
-            {"i":[
-                [
-                    [[1.9, 2.9, 3.9, 4.9, 5.9]],
-                    [[1.9, 2.9, 3.9, 4.9, 5.9]],
-                    [[1.9, 2.9, 3.9, 4.9, 5.9]]
-                ]
-            ]}
-        ]})"),
-            StatusCode::OK);
-        EXPECT_EQ(parser.getOrder(), Order::ROW);
-        EXPECT_EQ(parser.getFormat(), Format::NAMED);
-        EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 1, 3, 1, 5));
-        EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(
-                                                                                              1.0, 2.0, 3.0, 4.0, 5.0,
-                                                                                              1.0, 2.0, 3.0, 4.0, 5.0,
-                                                                                              1.0, 2.0, 3.0, 4.0, 5.0,
-                                                                                              1.9, 2.9, 3.9, 4.9, 5.9,
-                                                                                              1.9, 2.9, 3.9, 4.9, 5.9,
-                                                                                              1.9, 2.9, 3.9, 4.9, 5.9));
-    }
+    RestParser parser(prepareTensors({{"i", {2, 1, 3, 1, 5}}}));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[
+            [
+                [[1.0, 2.0, 3.0, 4.0, 5.0]],
+                [[1.0, 2.0, 3.0, 4.0, 5.0]],
+                [[1.0, 2.0, 3.0, 4.0, 5.0]]
+            ]
+        ]},
+        {"i":[
+            [
+                [[1.9, 2.9, 3.9, 4.9, 5.9]],
+                [[1.9, 2.9, 3.9, 4.9, 5.9]],
+                [[1.9, 2.9, 3.9, 4.9, 5.9]]
+            ]
+        ]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 1, 3, 1, 5));
+    EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(
+                                                                                          1.0, 2.0, 3.0, 4.0, 5.0,
+                                                                                          1.0, 2.0, 3.0, 4.0, 5.0,
+                                                                                          1.0, 2.0, 3.0, 4.0, 5.0,
+                                                                                          1.9, 2.9, 3.9, 4.9, 5.9,
+                                                                                          1.9, 2.9, 3.9, 4.9, 5.9,
+                                                                                          1.9, 2.9, 3.9, 4.9, 5.9));
 }
 
 TEST(RestParserRow, MissingInputInBatch) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {2, 1, 2, 2}},
-                                                      {"j", {1, 1, 2, 2}}}))};
-    for (RestParser& parser : parsers) {
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
-        {
-            "i":[[[5, 2], [10, 7]]],
-            "j":[[[5, 2], [10, 7]]]
-        },
-        {
-            "i":[[[5, 2], [10, 7]]]
-        }
-    ]})"),
-            StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER);
+    RestParser parser(prepareTensors({{"i", {2, 1, 2, 2}},
+        {"j", {1, 1, 2, 2}}}));
+
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
+    {
+        "i":[[[5, 2], [10, 7]]],
+        "j":[[[5, 2], [10, 7]]]
+    },
+    {
+        "i":[[[5, 2], [10, 7]]]
     }
+]})"),
+        StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER);
 }
 
 TEST(RestParserRow, ParseUint8) {
@@ -360,31 +350,30 @@ TEST(RestParserRow, ParseHalf) {
 }
 
 TEST(RestParserRow, InvalidJson) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {1, 3, 2}}}))};
-    for (RestParser& parser : parsers) {
-        EXPECT_EQ(parser.parse(""),
-            StatusCode::JSON_INVALID);
-        EXPECT_EQ(parser.parse("{{}"),
-            StatusCode::JSON_INVALID);
-        EXPECT_EQ(parser.parse(R"({"signature_name:"","instances":[{"i":[1]}]})"),  // missing "
-            StatusCode::JSON_INVALID);
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{i":[1]}]})"),  // missing "
-            StatusCode::JSON_INVALID);
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[1}]})"),  // missing ]
-            StatusCode::JSON_INVALID);
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[1]}])"),  // missing }
-            StatusCode::JSON_INVALID);
-        EXPECT_EQ(parser.parse(R"(["signature_name":"","instances":[{"i":[1]}]})"),  // missing {
-            StatusCode::JSON_INVALID);
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":{[{"i":[1]}]})"),  // too many {
-            StatusCode::JSON_INVALID);
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[1.0,5.0],[3.0,0.0] [9.0,5.0]]}]})"),  // missing ,
-            StatusCode::JSON_INVALID);
-    }
+    RestParser parser(prepareTensors({{"i", {1, 3, 2}}}));
+
+    EXPECT_EQ(parser.parse(""),
+        StatusCode::JSON_INVALID);
+    EXPECT_EQ(parser.parse("{{}"),
+        StatusCode::JSON_INVALID);
+    EXPECT_EQ(parser.parse(R"({"signature_name:"","instances":[{"i":[1]}]})"),  // missing "
+        StatusCode::JSON_INVALID);
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{i":[1]}]})"),  // missing "
+        StatusCode::JSON_INVALID);
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[1}]})"),  // missing ]
+        StatusCode::JSON_INVALID);
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[1]}])"),  // missing }
+        StatusCode::JSON_INVALID);
+    EXPECT_EQ(parser.parse(R"(["signature_name":"","instances":[{"i":[1]}]})"),  // missing {
+        StatusCode::JSON_INVALID);
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":{[{"i":[1]}]})"),  // too many {
+        StatusCode::JSON_INVALID);
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[1.0,5.0],[3.0,0.0] [9.0,5.0]]}]})"),  // missing ,
+        StatusCode::JSON_INVALID);
 }
 
 TEST(RestParserRow, BodyNotAnObject) {
-    RestParser parser;
+    RestParser parser(prepareTensors({}, InferenceEngine::Precision::FP16));
 
     EXPECT_EQ(parser.parse("[]"), StatusCode::REST_BODY_IS_NOT_AN_OBJECT);
     EXPECT_EQ(parser.parse("\"string\""), StatusCode::REST_BODY_IS_NOT_AN_OBJECT);
@@ -393,7 +382,7 @@ TEST(RestParserRow, BodyNotAnObject) {
 }
 
 TEST(RestParserRow, CouldNotDetectOrder) {
-    RestParser parser;
+    RestParser parser(prepareTensors({}, InferenceEngine::Precision::FP16));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":""})"), StatusCode::REST_PREDICT_UNKNOWN_ORDER);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","bad":[{"i":[1]}]})"), StatusCode::REST_PREDICT_UNKNOWN_ORDER);
@@ -401,7 +390,7 @@ TEST(RestParserRow, CouldNotDetectOrder) {
 }
 
 TEST(RestParserRow, InstancesNotAnArray) {
-    RestParser parser;
+    RestParser parser(prepareTensors({}, InferenceEngine::Precision::FP16));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":{}})"), StatusCode::REST_INSTANCES_NOT_AN_ARRAY);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":"string"})"), StatusCode::REST_INSTANCES_NOT_AN_ARRAY);
@@ -409,258 +398,244 @@ TEST(RestParserRow, InstancesNotAnArray) {
 }
 
 TEST(RestParserRow, NamedInstanceNotAnObject) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {2, 1}}}))};
-    for (RestParser& parser : parsers) {
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[5]},2,3]})"), StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT);
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[5]},null]})"), StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT);
-    }
+    RestParser parser(prepareTensors({{"i", {2, 1}}}));
+
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[5]},2,3]})"), StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT);
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[5]},null]})"), StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT);
 }
 
 TEST(RestParserRow, CouldNotDetectNamedOrNoNamed) {
-    RestParser parser;
+    RestParser parser(prepareTensors({}, InferenceEngine::Precision::FP16));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":["1", "2"]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[null, null]})"), StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED);
 }
 
 TEST(RestParserRow, NoInstancesFound) {
-    RestParser parser;
+    RestParser parser(prepareTensors({}, InferenceEngine::Precision::FP16));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[]})"), StatusCode::REST_NO_INSTANCES_FOUND);
 }
 
 TEST(RestParserRow, CannotParseInstance) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {1, 2}}}))};
-    for (RestParser& parser : parsers) {
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":2}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":null}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[1,null]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[1,2],[3,"str"]]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    }
+    RestParser parser(prepareTensors({{"i", {1, 2}}}));
+
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":2}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":null}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[1,null]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[1,2],[3,"str"]]}]})"), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
 TEST(RestParserRow, InputNotNdArray_1) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {1, 2, 3, 2}}}))};
-    for (RestParser& parser : parsers) {
-        // [1, 4, 5] size is 3 instead of 2 to be valid
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
-            [[1, 2],
-            [1, 3],
-            [1, 4, 5]],
-            [[5, 8],
-            [9, 3],
-            [1, 4]]
-        ]}]})"),
-            StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    }
+    RestParser parser(prepareTensors({{"i", {1, 2, 3, 2}}}));
+
+    // [1, 4, 5] size is 3 instead of 2 to be valid
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
+        [[1, 2],
+        [1, 3],
+        [1, 4, 5]],
+        [[5, 8],
+        [9, 3],
+        [1, 4]]
+    ]}]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
 TEST(RestParserRow, InputNotNdArray_2) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {1, 2, 3, 3}}}))};
-    for (RestParser& parser : parsers) {
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
-            [[1, 2, [8]],
-            [1, 3, [3]],
-            [1, 4, [5]]],
-            [[5, 8, [-1]],
-            [9, 3, [-5]],
-            [1, 4, [-4]]]
-        ]}]})"),
-            StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    }
+    RestParser parser(prepareTensors({{"i", {1, 2, 3, 3}}}));
+
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
+        [[1, 2, [8]],
+        [1, 3, [3]],
+        [1, 4, [5]]],
+        [[5, 8, [-1]],
+        [9, 3, [-5]],
+        [1, 4, [-4]]]
+    ]}]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
 TEST(RestParserRow, InputNotNdArray_3) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {1, 4, 3, 2}}}))};
-    for (RestParser& parser : parsers) {
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
-            [[1, 2],
-            [1, 3],
-            [1, 4]],
+    RestParser parser(prepareTensors({{"i", {1, 4, 3, 2}}}));
 
-            [[1, 2]],
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
+        [[1, 2],
+        [1, 3],
+        [1, 4]],
 
-            [[5, 8],
-            [9, 3],
-            [1, 4]],
+        [[1, 2]],
 
-            [[5, 8]]
-        ]}]})"),
-            StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    }
+        [[5, 8],
+        [9, 3],
+        [1, 4]],
+
+        [[5, 8]]
+    ]}]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
 TEST(RestParserRow, InputNotNdArray_4) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {1, 2, 3, 2}}}))};
-    for (RestParser& parser : parsers) {
-        // [5, 6] is not a number but array
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
-            [[1, 2],
-            [1, 3],
-            [1, 4, [5, 6]]],
-            [[5, 8],
-            [9, 3],
-            [1, 4]]
-        ]}]})"),
-            StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    }
+    RestParser parser(prepareTensors({{"i", {1, 2, 3, 2}}}));
+
+    // [5, 6] is not a number but array
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
+        [[1, 2],
+        [1, 3],
+        [1, 4, [5, 6]]],
+        [[5, 8],
+        [9, 3],
+        [1, 4]]
+    ]}]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
 TEST(RestParserRow, InputNotNdArray_5) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {1, 2, 3, 2}}}))};
-    for (RestParser& parser : parsers) {
-        // [1] is of wrong shape
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
-            [[1],
-            [1, 2],
-            [1, 3],
-            [1, 4]],
-            [[5, 8],
-            [9, 3],
-            [1, 4]]
-        ]}]})"),
-            StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    }
+    RestParser parser(prepareTensors({{"i", {1, 2, 3, 2}}}));
+
+    // [1] is of wrong shape
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
+        [[1],
+        [1, 2],
+        [1, 3],
+        [1, 4]],
+        [[5, 8],
+        [9, 3],
+        [1, 4]]
+    ]}]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
 TEST(RestParserRow, InputNotNdArray_6) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {1, 2, 2, 2}}}))};
-    for (RestParser& parser : parsers) {
-        // [1, 1] missing - 2x2, 2x3
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
-            [[1, 2],
-            [1, 3]],
-            [[5, 8],
-            [9, 3],
-            [1, 4]]
-        ]}]})"),
-            StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    }
+    RestParser parser(prepareTensors({{"i", {1, 2, 2, 2}}}));
+
+    // [1, 1] missing - 2x2, 2x3
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
+        [[1, 2],
+        [1, 3]],
+        [[5, 8],
+        [9, 3],
+        [1, 4]]
+    ]}]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
 TEST(RestParserRow, InputNotNdArray_7) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {1, 2, 3, 2}}}))};
-    for (RestParser& parser : parsers) {
-        // [1, 5] numbers are on wrong level
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
-            [1, 5],
+    RestParser parser(prepareTensors({{"i", {1, 2, 3, 2}}}));
+
+    // [1, 5] numbers are on wrong level
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
+        [1, 5],
+        [[1, 1],
+        [1, 2],
+        [1, 3]],
+        [[5, 8],
+        [9, 3],
+        [1, 4]]
+    ]}]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+}
+
+TEST(RestParserRow, InputNotNdArray_8) {
+    RestParser parser(prepareTensors({{"i", {1, 2, 3, 2}}}));
+
+    // [1, 2], [9, 3] numbers are on wrong level
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
+        [[1, 1],
+        [[1, 2]],
+        [1, 3]],
+        [[5, 8],
+        [[9, 3]],
+        [1, 4]]
+    ]}]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+}
+
+TEST(RestParserRow, InstancesShapeDiffer_1) {
+    RestParser parser(prepareTensors({{"i", {2, 2, 3, 2}}}));
+
+    // 2x3x2 vs 2x2x2
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[
             [[1, 1],
             [1, 2],
             [1, 3]],
             [[5, 8],
             [9, 3],
             [1, 4]]
-        ]}]})"),
-            StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    }
-}
-
-TEST(RestParserRow, InputNotNdArray_8) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {1, 2, 3, 2}}}))};
-    for (RestParser& parser : parsers) {
-        // [1, 2], [9, 3] numbers are on wrong level
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[
+        ]},
+        {"i":[
             [[1, 1],
-            [[1, 2]],
-            [1, 3]],
+            [1, 2]],
             [[5, 8],
-            [[9, 3]],
-            [1, 4]]
-        ]}]})"),
-            StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    }
-}
-
-TEST(RestParserRow, InstancesShapeDiffer_1) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {2, 2, 3, 2}}}))};
-    for (RestParser& parser : parsers) {
-        // 2x3x2 vs 2x2x2
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
-            {"i":[
-                [[1, 1],
-                [1, 2],
-                [1, 3]],
-                [[5, 8],
-                [9, 3],
-                [1, 4]]
-            ]},
-            {"i":[
-                [[1, 1],
-                [1, 2]],
-                [[5, 8],
-                [9, 3]]
-            ]}
-        ]})"),
-            StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    }
+            [9, 3]]
+        ]}
+    ]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
 TEST(RestParserRow, InstancesShapeDiffer_2) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {2, 2, 3, 2}}}))};
-    for (RestParser& parser : parsers) {
-        // 2x3x2 vs 2x3x3
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
-            {"i":[
-                [[1, 1],
-                [1, 2],
-                [1, 3]],
-                [[5, 8],
-                [9, 3],
-                [1, 4]]
-            ]},
-            {"i":[
-                [[1, 1, 3],
-                [1, 2, 2],
-                [1, 3, 9]],
-                [[5, 8, 8],
-                [9, 3, 3],
-                [1, 4, 10]]
-            ]}
-        ]})"),
-            StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    }
+    RestParser parser(prepareTensors({{"i", {2, 2, 3, 2}}}));
+
+    // 2x3x2 vs 2x3x3
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[
+            [[1, 1],
+            [1, 2],
+            [1, 3]],
+            [[5, 8],
+            [9, 3],
+            [1, 4]]
+        ]},
+        {"i":[
+            [[1, 1, 3],
+            [1, 2, 2],
+            [1, 3, 9]],
+            [[5, 8, 8],
+            [9, 3, 3],
+            [1, 4, 10]]
+        ]}
+    ]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
 TEST(RestParserRow, InstancesShapeDiffer_3) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {2, 2, 3, 2}}}))};
-    for (RestParser& parser : parsers) {
-        // 2x3x2 vs 1x2x3x2
-        EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
-            {"i":[
-                [[1, 1],
-                [1, 2],
-                [1, 3]],
-                [[5, 8],
-                [9, 3],
-                [1, 4]]
-            ]},
-            {"i":[[
-                [[1, 1],
-                [1, 2],
-                [1, 3]],
-                [[5, 8],
-                [9, 3],
-                [1, 4]]
-            ]]}
-        ]})"),
-            StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    }
+    RestParser parser(prepareTensors({{"i", {2, 2, 3, 2}}}));
+
+    // 2x3x2 vs 1x2x3x2
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[
+            [[1, 1],
+            [1, 2],
+            [1, 3]],
+            [[5, 8],
+            [9, 3],
+            [1, 4]]
+        ]},
+        {"i":[[
+            [[1, 1],
+            [1, 2],
+            [1, 3]],
+            [[5, 8],
+            [9, 3],
+            [1, 4]]
+        ]]}
+    ]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
 TEST(RestParserRow, RemoveUnnecessaryInputs) {
-    std::vector<RestParser> parsers{RestParser(), RestParser(prepareTensors({{"i", {1, 1}}, {"j", {1, 1}}}))};
-    for (RestParser& parser : parsers) {
-        ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
-            {"k":[155.0]}, {"l":[1.0]}
-        ]})"),
-            StatusCode::OK);
-        EXPECT_EQ(parser.getOrder(), Order::ROW);
-        EXPECT_EQ(parser.getFormat(), Format::NAMED);
-        ASSERT_EQ(parser.getProto().inputs().size(), 2);
-        ASSERT_EQ(parser.getProto().inputs().count("i"), 0);
-        ASSERT_EQ(parser.getProto().inputs().count("j"), 0);
-        ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
-        ASSERT_EQ(parser.getProto().inputs().count("l"), 1);
-    }
+    RestParser parser(prepareTensors({{"i", {1, 1}}, {"j", {1, 1}}, {"k", {1, 1}}, {"l", {1, 1}}}, InferenceEngine::Precision::FP16));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"k":[155.0]}, {"l":[1.0]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getOrder(), Order::ROW);
+    EXPECT_EQ(parser.getFormat(), Format::NAMED);
+    ASSERT_EQ(parser.getProto().inputs().size(), 2);
+    ASSERT_EQ(parser.getProto().inputs().count("i"), 0);
+    ASSERT_EQ(parser.getProto().inputs().count("j"), 0);
+    ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("l"), 1);
 }
