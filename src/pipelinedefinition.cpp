@@ -1011,7 +1011,6 @@ std::shared_ptr<TensorInfo> applyGatherShapeForTensorIfNeeded(const std::shared_
     return tensorInfo->createCopyWithNewShape(newShape);
 }
 
-
 Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
     // Assumptions: this can only be called on available pipeline definition.
     // Add check if available when pipeline status will be implemented.

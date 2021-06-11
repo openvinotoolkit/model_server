@@ -19,7 +19,6 @@
 #include <memory>
 #include <string>
 #include <utility>
-#include <iostream>
 
 #include <inference_engine.hpp>
 
@@ -181,7 +180,7 @@ Status EntryNode::deserializeNumericalInput(const tensorflow::TensorProto& proto
 }
 
 Status EntryNode::createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, const InferenceEngine::TensorDesc& dividedBlobDesc, InferenceEngine::Blob::Ptr blob, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName) {
-    std::cout << blobName << " STRING_VAL_SIZE " << request->inputs().at(blobName).string_val_size() << std::endl;
+    // TODO: Return error when missing input
     if (request->inputs().at(blobName).string_val_size() > 0) {
         return Node::createShardedBlob(dividedBlob, dividedBlobDesc, blob, i, step, metadata, blobName);
     }

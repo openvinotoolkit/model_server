@@ -168,9 +168,9 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
 
-    // 4 for normal pipelines, 5 for pipelines with demultiplication at entry
+    // 4 for default pipelines, 5 for pipelines with demultiplication at entry
     bool isShapeDimensionValid = tensorInfo->getEffectiveShape().size() == 4 ||
-        (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getEffectiveShape().size() == 5);
+                                 (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getEffectiveShape().size() == 5);
     if (!isShapeDimensionValid) {
         return StatusCode::INVALID_SHAPE;
     }
@@ -223,23 +223,12 @@ InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images
     auto dims = tensorInfo->getEffectiveShape();
     dims[0] = images.size();
     InferenceEngine::TensorDesc desc{tensorInfo->getPrecision(), dims, InferenceEngine::Layout::ANY};
-    //char* b = new char[(images[0].total() * images[0].elemSize()) * images.size()];
-    //InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<T>(desc, (T*)b);
-    //blob->allocate();
     InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<T>(desc);
     blob->allocate();
     char* ptr = (char*)blob->buffer();
     for (cv::Mat image : images) {
         memcpy(ptr, (char*)image.data, image.total() * image.elemSize());
-        std::cout << "Image" << (size_t)(char*)ptr << std::endl;
-        for (size_t i = 0; i < (image.total() * image.elemSize()) / sizeof(float); i++) {
-            std::cout << ((float*)ptr)[i] << std::endl;
-        }
         ptr += (image.total() * image.elemSize());
-    }
-    std::cout << "TOTAL" << (size_t)(char*)blob->buffer() << std::endl;
-    for (size_t i = 0; i < 15; i++) {
-        std::cout << ((float*)(char*)blob->buffer())[i] << std::endl;
     }
     return blob;
 }
