@@ -25,7 +25,7 @@ A few key features:
 [GPU](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CL_DNN.html) and [HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html). 
 - The server can be enabled both on [Bare Metal Hosts](docs/host.md) or in
 [Docker containers](docs/docker_container.md).
-- [Model reshaping](docs/shape_and_batch_size.md). The server supports reshaping models in runtime. 
+- [Model reshaping](docs/shape_batch_size_and_layout.md). The server supports reshaping models in runtime.
 - [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md) Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
 - [Custom nodes in DAG pipelines](docs/custom_node_development.md) Model inference or data transformations can be implemented by a custom node C/C++ implementation loaded as an external library.
 - [Serving stateful models](docs/stateful_models.md). Serve models that operate on sequences of data and maintain state between inference requests.
