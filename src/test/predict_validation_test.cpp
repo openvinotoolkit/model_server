@@ -165,6 +165,30 @@ TEST_F(PredictValidation, RequestWrongBatchSizeAuto) {
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
 }
 
+TEST_F(PredictValidation, ValidRequestBinaryInputs) {
+    modelConfig.setBatchingParams("auto");
+    std::string inputName = "Binary_Input";
+    tensorflow::serving::PredictRequest binaryInputRequest;
+
+    auto& input = (*binaryInputRequest.mutable_inputs())[inputName];
+    input.set_dtype(tensorflow::DataType::DT_STRING);
+    const int requestBatchSize = 1;
+    for (int i = 0; i < requestBatchSize; i++) {
+        input.add_string_val("val");
+    }
+
+    networkInputs.clear();
+    ovms::shape_t shape = {1, 3, 224, 224};
+    networkInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+        inputName,
+        InferenceEngine::Precision::FP32,
+        shape,
+        InferenceEngine::Layout::NHWC);
+
+    auto status = instance.mockValidate(&binaryInputRequest);
+    EXPECT_TRUE(status.ok());
+}
+
 TEST_F(PredictValidation, RequestWrongBatchSizeAutoBinaryInputs) {
     modelConfig.setBatchingParams("auto");
     std::string inputName = "Binary_Input";
