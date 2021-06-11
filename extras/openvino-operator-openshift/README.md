@@ -5,14 +5,7 @@ It allows for easy deployment and management of OVMS service in the Kubernetes c
 
 ## Operator deployment
 
-### OpenShift
-
-In the web console navigate to OperatorHub menu. Search for "OpenVINO" and select "OpenVINO Model Server". Click `Install` button.
-
-### Kubernetes with OLM
-
-Deploy the operator using the steps covered in [OperatorHub](https://operatorhub.io/operator/ovms-operator). Click 'Install' button.
-
+In the web console navigate to OperatorHub menu. Search for "OpenVINO" and select "OpenVINO Operator". Click `Install` button.
 
 ## Deploying OpenVINO Model Server via the Operator
 
@@ -21,7 +14,7 @@ Deploy the operator using the steps covered in [OperatorHub](https://operatorhub
 While you deploy OVMS Operator in [OpenShift](https://www.openshift.com/), you can manage the instances of OVMS using
 the [web console](https://docs.openshift.com/container-platform/4.6/web_console/web-console.html).
 
-Navigate to the menu `Installed Operators` and click the link `Create Ovms`.
+Navigate to the menu `Installed Operators` and click the link `Create ModelServer`.
 You will be presented with the template of the OVMS deployment configuration:
 
 ![template](images/openshift1.png)
@@ -47,7 +40,7 @@ persistent volume claim or configmap with OVMS configuration file.
 ## Using the OVMS in the cluster
 
 The operator deploys an OVMS instance as a Kubernetes service with a predefined number of replicas.
-The `Service` name is matching the `Ovms` resource.
+The `Service` name is matching the `ModelServer` resource.
 ```bash
 kubectl get pods
 NAME                           READY   STATUS    RESTARTS   AGE

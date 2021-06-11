@@ -14,7 +14,29 @@
 # limitations under the License.
 #
 
-apiVersion: v1
-description: OpenVINO Toolkit Notebook image
-name: rhods-ov-image-stream
-version: 0.0.1
+kind: BuildConfig
+apiVersion: build.openshift.io/v1
+metadata:
+  labels:
+    build: openvino-notebook
+  name: openvino-notebook
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: openvino-notebook:latest
+  source:
+    git:
+      uri: https://github.com/openvinotoolkit/openvino_notebooks
+      ref: s2i
+    Type: Git
+  strategy:
+    dockerStrategy:
+      from:
+        kind: DockerImage
+        name: 'quay.io/thoth-station/s2i-thoth-ubi8-py38:v0.26.0'
+      noCache: true
+      dockerfilePath: Dockerfile
+    type: Docker
+  triggers:
+    - type: ConfigChange
