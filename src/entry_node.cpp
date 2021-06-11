@@ -179,9 +179,23 @@ Status EntryNode::deserializeNumericalInput(const tensorflow::TensorProto& proto
     return StatusCode::OK;
 }
 
+Status EntryNode::isInputBinary(const std::string& name, bool& isBinary) const {
+    auto it = request->inputs().find(name);
+    if (it == request->inputs().end()) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Error during checking binary input; input: {} does not exist", name);
+        return StatusCode::INTERNAL_ERROR;
+    }
+    isBinary = it->second.string_val_size() > 0;
+    return StatusCode::OK;
+}
+
 Status EntryNode::createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, const InferenceEngine::TensorDesc& dividedBlobDesc, InferenceEngine::Blob::Ptr blob, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName) {
-    // TODO: Return error when missing input
-    if (request->inputs().at(blobName).string_val_size() > 0) {
+    bool isBinary = false;
+    auto status = this->isInputBinary(blobName, isBinary);
+    if (!status.ok()) {
+        return status;
+    }
+    if (isBinary) {
         return Node::createShardedBlob(dividedBlob, dividedBlobDesc, blob, i, step, metadata, blobName);
     }
 
