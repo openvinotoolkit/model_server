@@ -61,6 +61,8 @@ public:
     Status deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo);
     Status deserializeBinaryInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo);
     Status deserializeNumericalInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob);
+
+    Status isInputBinary(const std::string& name, bool& isBinary) const;
 };
 
 }  // namespace ovms

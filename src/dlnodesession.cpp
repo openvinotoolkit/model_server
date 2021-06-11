@@ -248,6 +248,7 @@ Status DLNodeSession::setInputsForInference(InferenceEngine::InferRequest& infer
             }
             // Update blob layout with model input layout
             auto& inputInfo = this->model->getInputsInfo().at(name);
+
             blob->getTensorDesc().setLayout(inputInfo->getLayout());
             blob->getTensorDesc().reshape(inputInfo->getTensorDesc().getDims());
             inferRequest.SetBlob(realModelInputName, blob);

@@ -3232,20 +3232,7 @@ TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimInputNHWCDynamicBatch) {
     ConstructorEnabledModelManager manager;
     std::unique_ptr<Pipeline> pipeline;
 
-    prepareRequest({
-                       1.0,
-                       2.0,
-                       3.0,
-                       4.0,
-                       5.0,
-                       6.0,
-                       10.0,
-                       20.0,
-                       30.0,
-                       40.0,
-                       50.0,
-                       60.0,
-                   },
+    prepareRequest({1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0},
         request, "pipeline_input", {2, 1, 1, 2, 3});
 
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
@@ -3582,7 +3569,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1x1 = R"(
     ]
 })";
 
-TEST_F(EnsembleFlowTestBinaryInput, ExecutePipelineWithInnerNhwcConnection) {
+TEST_F(EnsembleFlowTestBinaryInput, BatchSize1) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWC1x1, fileToReload);
     ConstructorEnabledModelManager manager;
@@ -3639,7 +3626,7 @@ static const char* pipelineSingleIncrement4DimOutputNCHW1x1 = R"(
     ]
 })";
 
-TEST_F(EnsembleFlowTestBinaryInput, ExecutePipelineWithInnerNchwConnection) {
+TEST_F(EnsembleFlowTestBinaryInput, NchwEntryNotSupported) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineSingleIncrement4DimOutputNCHW1x1, fileToReload);
     ConstructorEnabledModelManager manager;
@@ -3754,7 +3741,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1x1BS5 = R"(
     ]
 })";
 
-TEST_F(EnsembleFlowTestBinaryInput, ExecutePipelineWithInnerNhwcConnectionBatchSize5) {
+TEST_F(EnsembleFlowTestBinaryInput, BatchSize5) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWC1x1BS5, fileToReload);
     ConstructorEnabledModelManager manager;
@@ -3960,4 +3947,64 @@ TEST_F(EnsembleFlowTestBinaryInput, InvalidData) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::IMAGE_PARSING_FAILED);
+}
+
+static const char* pipelineSingleIncrement4DimOutputNHWC1x1EntryDemultiplexer = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,3,1,1) ",
+                "layout": "nhwc",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "demultiply_count": 0,
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTestBinaryInput, EntryDemultiplexer) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWC1x1EntryDemultiplexer, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    int batchSize = 5;
+    prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
 }

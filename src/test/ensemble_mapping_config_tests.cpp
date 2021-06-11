@@ -230,11 +230,11 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
     ASSERT_NE(outputs.find("response_tensor_name"), outputs.end());
 
     const auto& vector = inputs.at("vector");
-    EXPECT_EQ(vector->getShape(), shape_t({1, DUMMY_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(vector->getEffectiveShape(), shape_t({1, DUMMY_MODEL_INPUT_SIZE}));
     EXPECT_EQ(vector->getPrecision(), InferenceEngine::Precision::FP32);
 
     const auto& response_tensor_name = outputs.at("response_tensor_name");
-    EXPECT_EQ(response_tensor_name->getShape(), shape_t({1, DUMMY_MODEL_OUTPUT_SIZE}));
+    EXPECT_EQ(response_tensor_name->getEffectiveShape(), shape_t({1, DUMMY_MODEL_OUTPUT_SIZE}));
     EXPECT_EQ(response_tensor_name->getPrecision(), InferenceEngine::Precision::FP32);
 }
 

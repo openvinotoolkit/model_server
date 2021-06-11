@@ -995,6 +995,22 @@ const tensor_map_t PipelineDefinition::getOutputsInfo() const {
     return std::move(copy);
 }
 
+std::shared_ptr<TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, uint32_t demultiplyCount) {
+    return tensorInfo->createCopyWithEffectiveDimensionPrefix(demultiplyCount);
+}
+
+std::shared_ptr<TensorInfo> applyGatherShapeForTensorIfNeeded(const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape, bool isConnectionFromDemultiplexer) {
+    if (gatherShape.size() == 0) {
+        return std::make_shared<TensorInfo>(*tensorInfo);
+    }
+    shape_t newShape = tensorInfo->getEffectiveShape();
+    if (isConnectionFromDemultiplexer) {
+        newShape.erase(newShape.begin());
+    }
+    newShape.insert(newShape.begin(), gatherShape.begin(), gatherShape.end());
+    return tensorInfo->createCopyWithNewShape(newShape);
+}
+
 Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
     // Assumptions: this can only be called on available pipeline definition.
     // Add check if available when pipeline status will be implemented.
@@ -1084,24 +1100,10 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
     if (it != nodeInfos.end()) {
         uint32_t demultiplyCount = it->demultiplyCount.value();
         for (auto& [inputName, inputTensorInfo] : inputsInfo) {
-            shape_t newShape = inputTensorInfo->getEffectiveShape();
-            newShape.insert(newShape.begin(), demultiplyCount);
-            inputTensorInfo = inputTensorInfo->createCopyWithNewShape(newShape);
+            inputTensorInfo = applyDemultiplexerShapeForTensor(inputTensorInfo, demultiplyCount);
         }
     }
     return StatusCode::OK;
-}
-
-std::shared_ptr<TensorInfo> applyGatherShapeForTensorIfNeeded(const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape, bool isConnectionFromDemultiplexer) {
-    if (gatherShape.size() == 0) {
-        return std::make_shared<TensorInfo>(*tensorInfo);
-    }
-    shape_t newShape = tensorInfo->getEffectiveShape();
-    if (isConnectionFromDemultiplexer) {
-        newShape.erase(newShape.begin());
-    }
-    newShape.insert(newShape.begin(), gatherShape.begin(), gatherShape.end());
-    return tensorInfo->createCopyWithNewShape(newShape);
 }
 
 Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const shape_t& gatherShape) const {
