@@ -63,8 +63,6 @@ private:
     Status fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey);
 
 public:
-    Status validate(const InferenceEngine::Blob::Ptr& blob, const TensorInfo& info);
-
     void release(session_key_t sessionId) override;
 
 private:

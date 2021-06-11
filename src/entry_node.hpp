@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -32,12 +33,15 @@ const std::string ENTRY_NODE_NAME = "request";
 
 class EntryNode : public Node {
     const tensorflow::serving::PredictRequest* request;
+    const tensor_map_t inputsInfo;
 
 public:
     EntryNode(const tensorflow::serving::PredictRequest* request,
+        const tensor_map_t& inputsInfo,
         std::optional<uint32_t> demultiplyCount = std::nullopt) :
         Node(ENTRY_NODE_NAME, demultiplyCount),
-        request(request) {}
+        request(request),
+        inputsInfo(inputsInfo) {}
 
     Status execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) override;
 
@@ -54,7 +58,9 @@ public:
     }
 
     // Deserialize proto to blob
-    Status deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob);
+    Status deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo);
+    Status deserializeBinaryInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo);
+    Status deserializeNumericalInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob);
 };
 
 }  // namespace ovms

@@ -1,17 +1,11 @@
 {
     "model_config_list": [
         {"config": {
-                "name": "face_detection",
-                "base_path": "/workspace/face-detection-retail-0004/",
-                "shape": "(1,3,400,600)"}},
+                "name": "vehicle_detection",
+                "base_path": "/workspace/vehicle-detection-0202/"}},
         {"config": {
-                "name": "age_gender_recognition",
-                "base_path": "/workspace/age-gender-recognition-retail-0013/",
-                "shape": "(1,3,64,64)"}},
-        {"config": {
-                "name": "emotion_recognition",
-                "base_path": "/workspace/emotion-recognition-retail-0003/",
-                "shape": "(1,3,64,64)"}}
+                "name": "vehicle_attributes_recognition",
+                "base_path": "/workspace/vehicle-attributes-recognition-barrier-0042/"}}
     ],
     "custom_node_library_config_list": [
         {"name": "object_detection_image_extractor",
@@ -19,17 +13,17 @@
     ],
     "pipeline_config_list": [
         {
-            "name": "find_face_images",
+            "name": "multiple_vehicle_recognition",
             "inputs": [
                 "image"
             ],
             "nodes": [
                 {
-                    "name": "face_detection_node",
-                    "model_name": "face_detection",
+                    "name": "vehicle_detection_node",
+                    "model_name": "vehicle_detection",
                     "type": "DL model",
                     "inputs": [
-                        {"data": {
+                        {"image": {
                                 "node_name": "request",
                                 "data_item": "image"}}],
                     "outputs": [
@@ -42,10 +36,10 @@
                     "type": "custom",
                     "demultiply_count": 0,
                     "params": {
-                        "original_image_width": "600",
-                        "original_image_height": "400",
-                        "target_image_width": "64",
-                        "target_image_height": "64",
+                        "original_image_width": "512",
+                        "original_image_height": "512",
+                        "target_image_width": "72",
+                        "target_image_height": "72",
                         "convert_to_gray_scale": "false",
                         "max_output_batch": "100",
                         "confidence_threshold": "0.7",
@@ -56,62 +50,47 @@
                                 "node_name": "request",
                                 "data_item": "image"}},
                         {"detection": {
-                                "node_name": "face_detection_node",
+                                "node_name": "vehicle_detection_node",
                                 "data_item": "detection"}}],
                     "outputs": [
                         {"data_item": "images",
-                            "alias": "face_images"},
+                            "alias": "vehicle_images"},
                         {"data_item": "coordinates",
-                            "alias": "face_coordinates"},
+                            "alias": "vehicle_coordinates"},
                         {"data_item": "confidences",
                             "alias": "confidence_levels"}]
                 },
                 {
-                    "name": "age_gender_recognition_node",
-                    "model_name": "age_gender_recognition",
+                    "name": "vehicle_attributes_recognition_node",
+                    "model_name": "vehicle_attributes_recognition",
                     "type": "DL model",
                     "inputs": [
-                        {"data": {
+                        {"input": {
                                 "node_name": "extract_node",
-                                "data_item": "face_images"}}],
+                                "data_item": "vehicle_images"}}],
                     "outputs": [
-                        {"data_item": "age_conv3",
-                            "alias": "age"},
-                        {"data_item": "prob",
-                            "alias": "gender"}]
-                },
-                {
-                    "name": "emotion_recognition_node",
-                    "model_name": "emotion_recognition",
-                    "type": "DL model",
-                    "inputs": [
-                        {"data": {
-                                "node_name": "extract_node",
-                                "data_item": "face_images"}}],
-                    "outputs": [
-                        {"data_item": "prob_emotion",
-                            "alias": "emotion"}]
+                        {"data_item": "color",
+                            "alias": "color"},
+                        {"data_item": "type",
+                            "alias": "type"}]
                 }
             ],
             "outputs": [
-                {"face_images": {
+                {"vehicle_images": {
                         "node_name": "extract_node",
-                        "data_item": "face_images"}},
-                {"face_coordinates": {
+                        "data_item": "vehicle_images"}},
+                {"vehicle_coordinates": {
                         "node_name": "extract_node",
-                        "data_item": "face_coordinates"}},
+                        "data_item": "vehicle_coordinates"}},
                 {"confidence_levels": {
                         "node_name": "extract_node",
                         "data_item": "confidence_levels"}},
-                {"ages": {
-                        "node_name": "age_gender_recognition_node",
-                        "data_item": "age"}},
-                {"genders": {
-                        "node_name": "age_gender_recognition_node",
-                        "data_item": "gender"}},
-                {"emotions": {
-                        "node_name": "emotion_recognition_node",
-                        "data_item": "emotion"}}
+                {"colors": {
+                        "node_name": "vehicle_attributes_recognition_node",
+                        "data_item": "color"}},
+                {"types": {
+                        "node_name": "vehicle_attributes_recognition_node",
+                        "data_item": "type"}}
             ]
         }
     ]

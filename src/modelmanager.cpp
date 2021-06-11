@@ -132,6 +132,12 @@ Status ModelManager::startFromConfig() {
         return status;
     }
 
+    status = modelConfig.parseLayoutParameter(config.layout());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse layout parameter");
+        return status;
+    }
+
     bool batchSizeSet = (modelConfig.getBatchingMode() != FIXED || modelConfig.getBatchSize() != 0);
     bool shapeSet = (modelConfig.getShapes().size() > 0);
 
@@ -378,6 +384,10 @@ Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Check if loader is already loaded");
     if (customloaders.find(loaderName) == nullptr) {
         // this is where library or custom loader is loaded
+        if (FileSystem::isPathEscaped(loaderConfig.getLibraryPath())) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", loaderConfig.getLibraryPath());
+            return StatusCode::PATH_INVALID;
+        }
         void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_LOCAL);
         if (!handleCL) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());

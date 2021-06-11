@@ -47,7 +47,7 @@ or build the docker image openvino/model_server:latest with a command:
 make docker_build
 ```
 
-### Step 3: Download a Model
+### Step 3: Download a Model in IR Format
 
 Download the model components to the `model/1` directory. Example command using curl:
 
@@ -130,3 +130,6 @@ python face_detection.py --batch_size 1 --width 600 --height 400 --input_images_
 
 In the `results` folder, look for an image that contains the inference results. 
 The result is the modified input image with bounding boxes indicating detected faces.
+
+
+Note: Similar steps can be repeated also for the model with ONNX model. Check the inference [use case example with a public ResNet model in ONNX format](ovms_onnx_example.md). 

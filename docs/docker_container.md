@@ -50,8 +50,13 @@ After Docker installation you can pull the OpenVINO&trade; Model Server image. O
 
 ```bash
 docker pull openvino/model_server:latest
-
 ```
+
+Alternatively pull the image from [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de)
+```bash
+docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
+```
+
 ###  Building the OpenVINO&trade; Model Server Docker Image<a name="sourcecode"></a>
 
 <details><summary>Building a Docker image</summary>
@@ -239,6 +244,9 @@ Configuration options for server are defined only via command line options and d
 
 ### Cloud Storage Requirements<a name="storage"></a>:
 
+OVMS supports a range of cloud storage types. In general OVMS requires "read" and "list" permissions on the model repository side.
+Below are specific steps for every storage provider:
+
 <details><summary>Azure Cloud Storage path requirements</summary>
 
 Add the Azure Storage path as the model_path and pass the Azure Storage credentials to the Docker container.
@@ -250,7 +258,7 @@ Example connection string is:
 AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=azure_account_name;AccountKey=smp/hashkey==;EndpointSuffix=core.windows.net"
 ```
 
-Example command with blob storage az://<container_name>/<model_path>:
+Example command with blob storage `az://<container_name>/<model_path>:`
 ```
 docker run --rm -d -p 9001:9001 \
 -e AZURE_STORAGE_CONNECTION_STRING=“${AZURE_STORAGE_CONNECTION_STRING}” \
@@ -258,7 +266,7 @@ openvino/model_server:latest \
 --model_path az://container/model_path --model_name az_model --port 9001
 ```
 
-Example command with file storage azfs://<share>/<model_path>:
+Example command with file storage `azfs://<share>/<model_path>:`
 
 ```
 docker run --rm -d -p 9001:9001 \
@@ -279,7 +287,7 @@ Exception: This is not required if you use GKE kubernetes cluster. GKE kubernete
 
 To start a Docker container with support for Google Cloud Storage paths to your model use the GOOGLE_APPLICATION_CREDENTIALS variable. This variable contains the path to the GCP authentication key.
 
-Example command with gs://<bucket>/<model_path>:
+Example command with `gs://<bucket>/<model_path>:`
 ```
 docker run --rm -d -p 9001:9001 \
 -e GOOGLE_APPLICATION_CREDENTIALS=“${GOOGLE_APPLICATION_CREDENTIALS}” \
@@ -292,8 +300,9 @@ openvino/model_server:latest \
 <details><summary>AWS S3 and Minio storage path requirements</summary>
 
 Add the S3 path as the model_path and pass the credentials as environment variables to the Docker container.
+S3_ENDPOINT is optional for AWS s3 storage and mandatory for Minio and other s3 compatible storage types.
 
-Example command with s3://<bucket>/<model_path>:
+Example command with `s3://<bucket>/<model_path>:`
 
 ```
 docker run --rm -d -p 9001:9001 \
@@ -303,7 +312,29 @@ docker run --rm -d -p 9001:9001 \
 -e S3_ENDPOINT=“${S3_ENDPOINT}” \
 openvino/model_server:latest \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001
+```
 
+You can also use anonymous access to s3 public paths.
+
+Example command with `s3://<public_bucket>/<model_path>:`
+
+```
+docker run --rm -d -p 9001:9001 \
+openvino/model_server:latest \
+--model_path s3://public_bucket/model_path --model_name s3_model --port 9001
+```
+
+or setup a profile credentials file in the docker image described here
+[AWS Named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html)
+
+Example command with `s3://<bucket>/<model_path>:`
+
+```
+docker run --rm -d -p 9001:9001 \
+-e AWS_PROFILE=“${AWS_PROFILE}” \
+-v ${HOME}/.aws/credentials:/home/ovms/.aws/credentials \
+openvino/model_server:latest \
+--model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
 </details>
 

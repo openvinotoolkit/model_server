@@ -15,9 +15,9 @@ In this example the following models are used:
 [emotions-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/emotions-recognition-retail-0003/description/emotions-recognition-retail-0003.md)
 
 ```bash
-curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml -o models/age-gender-recognition-retail-0013/1/age-gender-recognition-retail-0013.bin -o models/age-gender-recognition/1/age-gender-recognition-retail-0013.xml
-curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/emotions-recognition-retail-0003/FP32/emotions-recognition-retail-0003.bin https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/emotions-recognition-retail-0003/FP32/emotions-recognition-retail-0003.xml -o models/emotions-recognition-retail-0003/1/emotions-recognition-retail-0003.bin -o models/emotions-recognition/1/emotions-recognition-retail-0003.xml
-
+curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml -o models/age-gender-recognition-retail-0013/1/age-gender-recognition-retail-0013.bin -o models/age-gender-recognition-retail-0013/1/age-gender-recognition-retail-0013.xml
+curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/emotions-recognition-retail-0003/FP32/emotions-recognition-retail-0003.bin https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/emotions-recognition-retail-0003/FP32/emotions-recognition-retail-0003.xml -o models/emotions-recognition-retail-0003/1/emotions-recognition-retail-0003.bin -o models/emotions-recognition-retail-0003/1/emotions-recognition-retail-0003.xml
+chmod -R 755 models/
 ```
 
 ### OVMS configuration
@@ -34,7 +34,8 @@ curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/op
         {
             "config": {
                 "name": "age-gender-recognition",
-                "base_path": "/models/age-gender-recognition-retail-0013"
+                "base_path": "/models/age-gender-recognition-retail-0013",
+                "shape": "(1, 3, 64, 64)"
             }
         }
     ],
@@ -96,6 +97,7 @@ Get the sample image:
 ```
 wget https://github.com/openvinotoolkit/open_model_zoo/raw/master/models/intel/age-gender-recognition-retail-0013/description/age-gender-recognition-retail-0001.jpg
 ```
+![image](https://github.com/openvinotoolkit/open_model_zoo/raw/master/models/intel/age-gender-recognition-retail-0013/description/age-gender-recognition-retail-0001.jpg)
 
 Use the following code snippet to submit a request via gRPC to the serving and display the response:
 
@@ -128,8 +130,8 @@ gender_results = make_ndarray(result.outputs["gender"])
 emotion_results = make_ndarray(result.outputs["emotion"])
 
 print("Age results:", age_results[0]*100)
-print("Gender results: Famale-", gender_results[0,0,0,0], "; Male-", gender_results[0,1,0,0] )
-print("Emotion results: Natural-", emotion_results[0,0,0,0], "; Happy-", emotion_results[0,1,0,0], "; Sad-", emotion_results[0,2,0,0], "; Surprise-", emotion_results[0,3,0,0], "; Angry-", emotion_results[0,4,0,0] )
+print("Gender results: Famale:", gender_results[0,0,0,0], "; Male:", gender_results[0,1,0,0] )
+print("Emotion results: Natural:", emotion_results[0,0,0,0], "; Happy:", emotion_results[0,1,0,0], "; Sad:", emotion_results[0,2,0,0], "; Surprise:", emotion_results[0,3,0,0], "; Angry:", emotion_results[0,4,0,0] )
 ```
 
 Make sure there are installed python dependencies from [client_requirements.txt](../example_client/client_requirements.txt)
@@ -137,6 +139,6 @@ Make sure there are installed python dependencies from [client_requirements.txt]
 ```bash
 python combined_model_client.py
 Age results: [[[21.099794]]]
-Gender results: Famale- 0.9483401 ; Male- 0.051659893
-Emotion results: Natural- 0.0233579 ; Happy- 0.9449672 ; Sad- 0.0012368461 ; Surprise- 0.028111037 ; Angry- 0.0023269344
+Gender results: Famale: 0.9483401 ; Male: 0.051659893
+Emotion results: Natural: 0.0233579 ; Happy: 0.9449672 ; Sad: 0.0012368461 ; Surprise: 0.028111037 ; Angry: 0.0023269344
 ```

@@ -205,11 +205,22 @@ public:
     /**
          * @brief Get the shape
          * 
-         * @return const std::vector<size_t>&
+         * @return const std::string&
          */
     const std::string& shape() {
         if (result->count("shape"))
             return result->operator[]("shape").as<std::string>();
+        return empty;
+    }
+
+    /**
+         * @brief Get the layout
+         * 
+         * @return const std::string&
+         */
+    const std::string& layout() {
+        if (result->count("layout"))
+            return result->operator[]("layout").as<std::string>();
         return empty;
     }
 

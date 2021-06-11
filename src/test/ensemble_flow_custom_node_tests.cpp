@@ -17,6 +17,7 @@
 #include <functional>
 #include <limits>
 #include <numeric>
+#include <string>
 #include <utility>
 
 #include <gmock/gmock.h>
@@ -76,8 +77,9 @@ protected:
     template <typename T>
     std::unique_ptr<Pipeline> prepareSingleNodePipelineWithLibraryMock() {
         const std::vector<float> inputValues{3.5, 2.1, -0.2};
+        const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
         this->prepareRequest(inputValues);
-        auto input_node = std::make_unique<EntryNode>(&request);
+        auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
         auto output_node = std::make_unique<ExitNode>(&response);
         auto custom_node = std::make_unique<CustomNode>(
             customNodeName,
@@ -166,7 +168,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AddSubCustomNode) {
     const float addValue = 2.5;
     const float subValue = 4.8;
 
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response);
     auto custom_node = std::make_unique<CustomNode>(customNodeName, library,
         parameters_t{
@@ -272,7 +275,8 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
 
     // create pipeline
     std::vector<std::unique_ptr<Node>> nodes(2 + 3 * demultiplicationLayersCount);  // entry + exit + (choose + differentOps + dummy) * layerCount
-    nodes[0] = std::make_unique<EntryNode>(&predictRequest);
+    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}, {pipelineFactorsName, nullptr}};
+    nodes[0] = std::make_unique<EntryNode>(&predictRequest, inputsInfo);
     nodes[1] = std::make_unique<ExitNode>(&response);
     size_t i = 2;
     for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
@@ -339,7 +343,8 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
     // create pipeline
     size_t nodesCount = 2 + 3 * demultiplicationLayersCount;  // entry + exit + (choose + differentOps + dummy) * layerCount
     std::vector<std::unique_ptr<Node>> nodes(nodesCount);
-    nodes[0] = std::make_unique<EntryNode>(&predictRequest);
+    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}, {pipelineFactorsName, nullptr}};
+    nodes[0] = std::make_unique<EntryNode>(&predictRequest, inputsInfo);
     nodes[nodesCount - 1] = std::make_unique<ExitNode>(&response);
     size_t i = 1;
     for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
@@ -398,7 +403,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SeriesOfCustomNodes) {
     const std::array<float, PARAMETERS_PAIRS_COUNT> addValues{1.5, -2.4};
     const std::array<float, PARAMETERS_PAIRS_COUNT> subValues{-5.1, 1.9};
 
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response);
 
     std::unique_ptr<CustomNode> custom_nodes[N];
@@ -452,7 +458,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ParallelCustomNodes) {
     const std::array<float, PARAMETERS_PAIRS_COUNT> addValues{4.5, 0.2, -0.6, 0.4, -2.5};
     const std::array<float, PARAMETERS_PAIRS_COUNT> subValues{8.5, -3.2, 10.0, -0.5, 2.4};
 
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response);
 
     Pipeline pipeline(*input_node, *output_node);
@@ -500,7 +507,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomAndDLNodes) {
     const float addValues[] = {-0.85, 30.2};
     const float subValues[] = {1.35, -28.5};
 
-    auto input_node = std::make_unique<EntryNode>(&request);
+    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto output_node = std::make_unique<ExitNode>(&response);
     auto model_node = std::make_unique<DLNode>(
         "dummy_node",
@@ -1834,6 +1842,20 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Demultip
 
 struct LibraryParamControlledMetadata {
     static bool startsWith(const char* str, const char* prefix) {
+        // Ensure null terminated
+        const int MAX = 300;
+        const char* end = str;
+        for (; *end != '\0'; ++end) {
+            if ((end - str) > MAX) {
+                EXPECT_TRUE(false);
+            }
+        }
+        const char* end2 = prefix;
+        for (; *end2 != '\0'; ++end2) {
+            if ((end2 - str) > MAX) {
+                EXPECT_TRUE(false);
+            }
+        }
         size_t strLen = std::strlen(str);
         size_t prefixLen = std::strlen(prefix);
         return strLen < prefixLen ? false : std::memcmp(str, prefix, prefixLen) == 0;
@@ -3948,4 +3970,97 @@ static const char* pipelineCustomNode2DynamicDemultiplexConfig = R"(
 TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, 2DynamicDemultiplexersNotAllowed) {
     std::unique_ptr<Pipeline> pipeline;
     this->loadConfiguration(pipelineCustomNode2DynamicDemultiplexConfig, StatusCode::NOT_IMPLEMENTED);
+}
+
+struct LibraryProduceImages5Dimensions {
+    static int execute(const struct CustomNodeTensor* inputs, int, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam*, int) {
+        const CustomNodeTensor& input = *inputs;
+        std::vector<float> inputData((float*)input.data, ((float*)input.data) + (input.dataBytes / sizeof(float)));
+
+        *outputsCount = 1;
+        int elements = 3 * 1 * 1 * 2 * 3;
+        *outputs = (struct CustomNodeTensor*)malloc(*outputsCount * sizeof(CustomNodeTensor));
+        float* result = (float*)malloc(elements * sizeof(float));
+        std::vector<float> data;
+        for (size_t i = 0; i < 3; i++) {
+            for (float v : inputData) {
+                data.push_back(v + float(i) + 1.0);
+            }
+        }
+        std::memcpy(result, data.data(), elements * sizeof(float));
+
+        CustomNodeTensor& resultTensor = (*outputs)[0];
+        resultTensor.name = "custom_node_output";
+        resultTensor.data = reinterpret_cast<uint8_t*>(result);
+        resultTensor.dimsCount = 5;
+        resultTensor.dims = (uint64_t*)malloc(resultTensor.dimsCount * sizeof(uint64_t));
+        resultTensor.dims[0] = 3;
+        resultTensor.dims[1] = 1;
+        resultTensor.dims[2] = 1;
+        resultTensor.dims[3] = 2;
+        resultTensor.dims[4] = 3;
+        resultTensor.dataBytes = elements * sizeof(float);
+        resultTensor.precision = FP32;
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+        return 0;
+    }
+    static int release(void* ptr) {
+        free(ptr);
+        return 0;
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwcNode) {
+    // Prepare request
+    const std::vector<float> inputValues{1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+    PredictRequest request;
+    PredictResponse response;
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[pipelineInputName];
+    proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+    proto.mutable_tensor_content()->assign((char*)inputValues.data(), inputValues.size() * sizeof(float));
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.mutable_tensor_shape()->add_dim()->set_size(3);
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.mutable_tensor_shape()->add_dim()->set_size(2);
+
+    // Prepare model
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare pipeline
+    std::optional<uint32_t> demultiplyCount = 0;
+    std::set<std::string> gather = {"image_demultiplexer_node"};
+    std::unordered_map<std::string, std::string> aliases{{"custom_node_output", "custom_node_output"}};
+
+    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    auto output_node = std::make_unique<ExitNode>(&response, gather);
+    auto custom_node = std::make_unique<CustomNode>(
+        "image_demultiplexer_node",
+        createLibraryMock<LibraryProduceImages5Dimensions>(),
+        parameters_t{}, aliases, demultiplyCount);
+    auto model_node = std::make_unique<DLNode>("increment_node", "increment_1x3x4x5", std::nullopt, manager);
+
+    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+    pipeline->connect(*input_node, *custom_node, {{pipelineInputName, "any"}});
+    pipeline->connect(*custom_node, *model_node, {{"custom_node_output", "input"}});
+    pipeline->connect(*model_node, *output_node, {{"output", pipelineOutputName}});
+
+    pipeline->push(std::move(input_node));
+    pipeline->push(std::move(custom_node));
+    pipeline->push(std::move(model_node));
+    pipeline->push(std::move(output_node));
+
+    // Execute
+    ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
+    checkIncrement4DimResponse(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
 }

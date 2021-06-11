@@ -30,8 +30,8 @@ RestParser::RestParser(const tensor_map_t& tensors) {
         auto& input = (*requestProto.mutable_inputs())[name];
         input.set_dtype(tensor->getPrecisionAsDataType());
         input.mutable_tensor_content()->reserve(std::accumulate(
-                                                    tensor->getShape().begin(),
-                                                    tensor->getShape().end(),
+                                                    tensor->getEffectiveShape().begin(),
+                                                    tensor->getEffectiveShape().end(),
                                                     1,
                                                     std::multiplies<size_t>()) *
                                                 DataTypeSize(tensor->getPrecisionAsDataType()));
@@ -132,9 +132,7 @@ bool RestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorPr
         }
         return true;
     } else {
-        if (!setPrecisionIfNotSet(doc.GetArray()[0], proto, tensorName)) {
-            return false;
-        }
+        setDTypeIfNotSet(doc.GetArray()[0], proto, tensorName);
         for (auto& value : doc.GetArray()) {
             if (!addValue(proto, value)) {
                 return false;
@@ -435,19 +433,10 @@ bool RestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Value
     return false;
 }
 
-bool RestParser::setPrecisionIfNotSet(const rapidjson::Value& value, tensorflow::TensorProto& proto, const std::string& tensorName) {
-    if (tensorPrecisionMap.count(tensorName))
-        return true;
-
-    if (value.IsInt())
-        tensorPrecisionMap[tensorName] = InferenceEngine::Precision::I32;
-    else if (value.IsDouble())
-        tensorPrecisionMap[tensorName] = InferenceEngine::Precision::FP32;
-    else
-        return false;
-
-    proto.set_dtype(TensorInfo::getPrecisionAsDataType(tensorPrecisionMap[tensorName]));
-    return true;
+void RestParser::setDTypeIfNotSet(const rapidjson::Value& value, tensorflow::TensorProto& proto, const std::string& tensorName) {
+    if (!tensorPrecisionMap.count(tensorName)) {
+        proto.set_dtype(TensorInfo::getPrecisionAsDataType(tensorPrecisionMap[tensorName]));
+    }
 }
 
 }  // namespace ovms

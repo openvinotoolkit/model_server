@@ -143,6 +143,13 @@ endif
 	fi
 	@rm missing_headers.txt
 
+	@echo "Checking forbidden functions in files..."
+	@. $(ACTIVATE); bash -c "python3 lib_search.py . functions > forbidden_functions.txt"
+	@if ! grep -FRq "All files checked for forbidden functions" forbidden_functions.txt; then\
+		error Run python3 lib_search.py . functions - to see forbidden functions file list.;\
+	fi
+	@rm forbidden_functions.txt
+
 clang-format: venv
 	@echo "Formatting files with clang-format.."
 	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format-6.0 -style=file -i {} \;

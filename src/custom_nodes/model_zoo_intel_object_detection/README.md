@@ -55,6 +55,8 @@ Parameters can be defined in pipeline definition in OVMS configuration file. [Re
 | original_image_height  | Required input image height |  | &check; |
 | target_image_width | Target width of the boxes in output. Boxes in the original image will be resized to that value.  |  | &check; |
 | target_image_height  | Target width of the boxes in output. Boxes in the original image will be resized to that value. |  | &check; |
+| original_image_layout | Defines input image layout | NCHW | |
+| target_image_layout | Defines the data layout of detected object images in the node output | NCHW | |
 | convert_to_gray_scale  | Defines if output images should be in grayscale or in color  | false | |
 | confidence_threshold | Number in a range of 0-1 |  | &check; |
 | debug  | Defines if debug messages should be displayed | false | |

@@ -74,6 +74,9 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 						"shape": {
 							"type": ["object", "string"]
 						},
+						"layout": {
+							"type": ["object", "string"]
+						},
 						"nireq": {
 							"type": "integer",
 							"minimum": 0

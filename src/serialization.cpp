@@ -64,7 +64,7 @@ Status convertBlobToTensorContent(
     }
     }
     responseOutput.mutable_tensor_shape()->Clear();
-    for (auto dim : networkOutput->getShape()) {
+    for (auto dim : networkOutput->getEffectiveShape()) {
         responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
     responseOutput.mutable_tensor_content()->assign((char*)blob->buffer(), blob->byteSize());

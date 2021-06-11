@@ -26,6 +26,7 @@
 #include "nodeinputhandler.hpp"
 #include "nodeoutputhandler.hpp"
 #include "nodestreamidguard.hpp"
+#include "ov_utils.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
 
@@ -101,10 +102,6 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
             return Status(StatusCode::INVALID_MISSING_INPUT, details);
         }
         auto& inputInfo = *it->second;
-        std::stringstream ss;
-        ss << "Node: " << getName() << " input validate: " << name
-           << "; Actual: " << TensorInfo::shapeToString(inputInfo.getShape());
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
         auto status = validate(blob, inputInfo);
         if (status.ok()) {
             continue;
@@ -161,15 +158,16 @@ Status DLNodeSession::validate(const InferenceEngine::Blob::Ptr& blob, const Ten
         return Status(StatusCode::INVALID_PRECISION, details);
     }
 
-    // If batch size differes, check if remaining dimensions are equal
-    if (tensorInfo.getShape()[0] != blob->getTensorDesc().getDims()[0]) {
+    // If batch size differs, check if remaining dimensions are equal
+    const auto& dims = getEffectiveBlobShape(blob);
+    if (tensorInfo.getEffectiveShape()[0] != dims[0]) {
         // If remaining dimensions are equal, it is invalid batch size
         std::stringstream ss;
-        if (std::equal(tensorInfo.getShape().begin() + 1, tensorInfo.getShape().end(), blob->getTensorDesc().getDims().begin() + 1)) {
+        if (std::equal(tensorInfo.getEffectiveShape().begin() + 1, tensorInfo.getEffectiveShape().end(), dims.begin() + 1)) {
             ss << "Node: " << getName() << " input: " << tensorInfo.getName()
                << " Invalid batch size -"
-               << " Expected: " << tensorInfo.getShape()[0]
-               << "; Actual: " << blob->getTensorDesc().getDims()[0];
+               << " Expected: " << tensorInfo.getEffectiveShape()[0]
+               << "; Actual: " << dims[0];
             const std::string details = ss.str();
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
             return Status(StatusCode::INVALID_BATCH_SIZE, details);
@@ -177,20 +175,20 @@ Status DLNodeSession::validate(const InferenceEngine::Blob::Ptr& blob, const Ten
             // Otherwise whole shape is incorrect
             ss << "Node: " << getName() << " input: " << tensorInfo.getName()
                << " Invalid shape -"
-               << " Expected: " << TensorInfo::shapeToString(tensorInfo.getShape())
-               << "; Actual: " << TensorInfo::shapeToString(blob->getTensorDesc().getDims());
+               << " Expected: " << TensorInfo::shapeToString(tensorInfo.getEffectiveShape())
+               << "; Actual: " << TensorInfo::shapeToString(dims);
             const std::string details = ss.str();
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
             return Status(StatusCode::INVALID_SHAPE, details);
         }
     }
 
-    if (tensorInfo.getShape() != blob->getTensorDesc().getDims()) {
+    if (tensorInfo.getEffectiveShape() != dims) {
         std::stringstream ss;
         ss << "Node: " << getName() << " input: " << tensorInfo.getName()
            << " Invalid shape -"
-           << " Expected: " << TensorInfo::shapeToString(tensorInfo.getShape())
-           << "; Actual: " << TensorInfo::shapeToString(blob->getTensorDesc().getDims());
+           << " Expected: " << TensorInfo::shapeToString(tensorInfo.getEffectiveShape())
+           << "; Actual: " << TensorInfo::shapeToString(dims);
         const std::string details = ss.str();
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
         return Status(StatusCode::INVALID_SHAPE, details);
@@ -241,15 +239,18 @@ Status DLNodeSession::setInputsForInference(InferenceEngine::InferRequest& infer
     Status status = StatusCode::OK;
     try {
         // Prepare inference request, fill with input blobs
-        for (const auto& kv : this->inputHandler->getInputs()) {
+        for (const auto& [name, blob] : this->inputHandler->getInputs()) {
             std::string realModelInputName;
-            if (!getRealInputName(kv.first, &realModelInputName).ok()) {
-                SPDLOG_LOGGER_WARN(dag_executor_logger, "DLNode::{} [Node name: {}]; cannot find real model input name for alias: {}", __FUNCTION__, getName(), kv.first);
+            if (!getRealInputName(name, &realModelInputName).ok()) {
+                SPDLOG_LOGGER_WARN(dag_executor_logger, "DLNode::{} [Node name: {}]; cannot find real model input name for alias: {}",
+                    __FUNCTION__, getName(), name);
                 return StatusCode::INTERNAL_ERROR;
             }
             // Update blob layout with model input layout
-            kv.second->getTensorDesc().setLayout(this->model->getInputsInfo().at(kv.first)->getLayout());
-            inferRequest.SetBlob(realModelInputName, kv.second);
+            auto& inputInfo = this->model->getInputsInfo().at(name);
+            blob->getTensorDesc().setLayout(inputInfo->getLayout());
+            blob->getTensorDesc().reshape(inputInfo->getTensorDesc().getDims());
+            inferRequest.SetBlob(realModelInputName, blob);
         }
         // OV implementation the InferenceEngine::Exception is not
         // a base class for all other exceptions thrown from OV.

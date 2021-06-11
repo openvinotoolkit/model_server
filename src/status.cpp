@@ -30,11 +30,13 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::JSON_INVALID, "The file is not valid json"},
     {StatusCode::MODELINSTANCE_NOT_FOUND, "ModelInstance not found"},
     {StatusCode::SHAPE_WRONG_FORMAT, "The provided shape is in wrong format"},
+    {StatusCode::LAYOUT_WRONG_FORMAT, "The provided layout is in wrong format"},
     {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, "Plugin config is in wrong format"},
     {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT, "Model version policy is in wrong format"},
     {StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY, "Model version policy contains unsupported key"},
     {StatusCode::RESHAPE_ERROR, "Model could not be reshaped with requested shape"},
     {StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED, "Anonymous fixed shape is invalid for models with multiple inputs"},
+    {StatusCode::ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED, "Anonymous fixed layout is invalid for models with multiple inputs"},
     {StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE, "Cannot load network into target device"},
     {StatusCode::MODEL_MISSING, "Model with requested name and/or version is not found"},
     {StatusCode::MODEL_CONFIG_INVALID, "Model config is invalid"},
@@ -48,6 +50,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::MODEL_SPEC_MISSING, "model_spec missing in request"},
     {StatusCode::INVALID_SIGNATURE_DEF, "Invalid signature name"},
     {StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK, "Shape from config not found in network"},
+    {StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK, "Layout from config not found in network"},
     {StatusCode::INVALID_NIREQ, "Nireq parameter too high"},
     {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL, "Requested dynamic parameters but model is used in pipeline"},
     {StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET, "Node is not ready for execution"},
@@ -76,6 +79,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_PRECISION, "Invalid input precision"},
     {StatusCode::INVALID_VALUE_COUNT, "Invalid number of values in tensor proto container"},
     {StatusCode::INVALID_CONTENT_SIZE, "Invalid content size of tensor proto"},
+    {StatusCode::UNSUPPORTED_LAYOUT, "Received binary image input but resource not configured to accept NHWC layout"},
 
     // Deserialization
     {StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION, "Unsupported deserialization precision"},
@@ -147,6 +151,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY, "Too large dynamic demultiplication requested."},
     {StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER, "Demultiplexer and gather nodes are not in LIFO order"},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, "Pipeline execution aborted due to no content from custom node"},
+    {StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA, "Multiple nodes connected to the same pipeline input require different tensor metadata"},
 
     // Storage errors
     // S3
@@ -239,6 +244,7 @@ const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusM
     {StatusCode::INVALID_PRECISION, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_VALUE_COUNT, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_CONTENT_SIZE, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::UNSUPPORTED_LAYOUT, grpc::StatusCode::INVALID_ARGUMENT},
 
     // Deserialization
 
@@ -329,6 +335,7 @@ const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::htt
     {StatusCode::INVALID_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::INVALID_VALUE_COUNT, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::INVALID_CONTENT_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::UNSUPPORTED_LAYOUT, net_http::HTTPStatusCode::BAD_REQUEST},
 
     // Deserialization
 
