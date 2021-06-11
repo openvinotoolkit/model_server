@@ -845,6 +845,17 @@ const Status ModelInstance::validateTensorContentSize(const ovms::TensorInfo& ne
     return StatusCode::OK;
 }
 
+const bool ModelInstance::checkBinaryInputBatchSizeMismatch(const ovms::TensorInfo& networkInput,
+    const tensorflow::TensorProto& requestInput) {
+    if (requestInput.string_val_size() < 0) {
+        return true;
+    }
+    if (getBatchSize() != static_cast<size_t>(requestInput.string_val_size())) {
+        return true;
+    }
+    return false;
+}
+
 const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
     Status finalStatus = StatusCode::OK;
 
@@ -879,6 +890,17 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
             // binary inputs will be validated during conversion to blob
             SPDLOG_DEBUG("Received request contains binary inputs");
+            if(checkBinaryInputBatchSizeMismatch(*networkInput, requestInput)){
+                if (batchingMode == AUTO) {
+                    return StatusCode::BATCHSIZE_CHANGE_REQUIRED;
+                } else {
+                    std::stringstream ss;
+                    ss << "Expected: " << getBatchSize() << "; Actual: " << requestInput.string_val_size();
+                    const std::string details = ss.str();
+                    SPDLOG_DEBUG("[Model: {} version: {}] Invalid batch size - {}", getName(), getVersion(), details);
+                    return Status(StatusCode::INVALID_BATCH_SIZE, details);
+                }
+            }
             continue;
         }
 
