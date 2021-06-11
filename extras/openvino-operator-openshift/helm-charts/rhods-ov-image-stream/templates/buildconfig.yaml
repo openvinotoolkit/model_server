@@ -29,7 +29,7 @@ spec:
     git:
       uri: https://github.com/openvinotoolkit/openvino_notebooks
       ref: s2i
-    Type: Git
+    type: Git
   strategy:
     dockerStrategy:
       from:
