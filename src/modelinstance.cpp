@@ -856,9 +856,8 @@ const bool ModelInstance::checkBinaryInputBatchSizeMismatch(const ovms::TensorIn
     return false;
 }
 
-const Status ModelInstance::validateNumberOfBinaryInputsShapeDimensions(const ovms::TensorInfo& networkInput,
+const Status ModelInstance::validateNumberOfBinaryInputShapeDimensions(const ovms::TensorInfo& networkInput,
     const tensorflow::TensorProto& requestInput) {
-    // Network and request must have the same number of shape dimensions, higher than 0
     if (requestInput.tensor_shape().dim_size() != 1) {
         std::stringstream ss;
         ss << "Expected number of binary input shape dimensions: 1; Actual: " << requestInput.tensor_shape().dim_size();
@@ -903,7 +902,7 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
             // binary inputs will be validated during conversion to blob
             SPDLOG_DEBUG("Received request containing binary inputs");
-            status = validateNumberOfBinaryInputsShapeDimensions(*networkInput, requestInput);
+            status = validateNumberOfBinaryInputShapeDimensions(*networkInput, requestInput);
             if(!status.ok()) {
                 return status;
             }
