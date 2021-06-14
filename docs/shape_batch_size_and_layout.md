@@ -29,3 +29,12 @@ it ignores the batch_size value.
 on [Shape Inference Document](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_ShapeInference.html).
 In case the model can't be reshaped, it will remain in the original parameters and all requests with incompatible input format
 will get an error. The model server will also report such problem in the logs.
+
+# Changing model input/output layout
+- Layout parameter is optional. By default layout is inherited from OpenVINO™ model. You can specify layout during conversion via Model Optimizer.
+- Only 2 layouts are supported: `NCHW` and `NHWC`.
+- You can specify 2 forms of values:
+  * string - either `NCHW` or `NHWC`; this only works for models with single input tensor
+  * dictionary of strings - e.g. `{"input1":"NHWC", "input2":"NCHW", "output1":"NHWC"}`; this allows to specify desired layout per input or output.
+- Changing layout is not supported for models with input names the same as output names.
+- When model is included in DAG, inputs/outputs after layout change need to match between nodes.

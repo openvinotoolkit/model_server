@@ -94,6 +94,7 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
 
 Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
     if (proto.dtype() == tensorflow::DataType::DT_STRING) {
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Request contains binary input: {}", tensorInfo->getName());
         return deserializeBinaryInput(proto, blob, tensorInfo);
     } else {
         return deserializeNumericalInput(proto, blob);

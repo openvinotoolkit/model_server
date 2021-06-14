@@ -207,7 +207,7 @@ version parameter is ignored. Pipelines are not versioned. Though, they can refe
 
 - Models with ["auto" batch size or shape](shape_batch_size_and_layout.md) cannot be referenced in pipeline
 - Connected inputs and output for subsequent node models need to exactly match each other in terms of data shape and precision - 
-there is no automatic conversion between input/output model precisions or layouts
+there is no automatic conversion between input/output model precisions or layouts. To overcome this limitation it is possible to implement and include custom node with custom processing steps to match metadatas.
 - REST requests with no named format (JSON body with one unnamed input) are not supported
 
 

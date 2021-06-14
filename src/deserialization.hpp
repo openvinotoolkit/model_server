@@ -118,9 +118,9 @@ Status deserializePredictRequest(
             InferenceEngine::Blob::Ptr blob;
 
             if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
-                SPDLOG_DEBUG("Request contains binary inputs.");
-                Status status = convertStringValToBlob(requestInput, blob, tensorInfo, false);
-                if (!status.ok()) {
+                SPDLOG_DEBUG("Request contains binary input: {}", name);
+                Status status = convertStringValToBlob(requestInput, blob, tensorInfo);
+                if (status != StatusCode::OK) {
                     SPDLOG_DEBUG("Binary inputs conversion failed.");
                     return status;
                 }
