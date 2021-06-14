@@ -119,8 +119,8 @@ Status deserializePredictRequest(
 
             if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
                 SPDLOG_DEBUG("Request contains binary inputs.");
-                Status status = convertStringValToBlob(requestInput, blob, tensorInfo);
-                if (status != StatusCode::OK) {
+                Status status = convertStringValToBlob(requestInput, blob, tensorInfo, false);
+                if (!status.ok()) {
                     SPDLOG_DEBUG("Binary inputs conversion failed.");
                     return status;
                 }
@@ -134,6 +134,7 @@ Status deserializePredictRequest(
                 SPDLOG_DEBUG(status.string());
                 return status;
             }
+
             inferRequest.SetBlob(tensorInfo->getName(), blob);
         }
         // OV implementation the InferenceEngine::Exception is not
