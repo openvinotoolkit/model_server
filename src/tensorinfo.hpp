@@ -237,6 +237,8 @@ public:
          */
     const InferenceEngine::TensorDesc getTensorDesc() const;
 
+    bool isTensorUnspecified() const;
+
     bool isTensorSpecEqual(const TensorInfo& other) const;
 
     static std::string shapeToString(const shape_t& shape);

@@ -318,6 +318,10 @@ bool TensorInfo::isTensorSpecEqual(const TensorInfo& other) const {
            this->getPrecision() == other.getPrecision();
 }
 
+bool TensorInfo::isTensorUnspecified() const {
+    return this->getPrecision() == InferenceEngine::Precision::UNSPECIFIED;
+}
+
 std::string TensorInfo::shapeToString(const shape_t& shape) {
     std::ostringstream oss;
     oss << "(";
