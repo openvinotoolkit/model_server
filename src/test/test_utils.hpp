@@ -135,6 +135,8 @@ static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t r
     return request;
 }
 
+tensorflow::serving::PredictRequest prepareBinaryPredictRequest(const std::string& inputName, const int batchSize = 1);
+
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
     tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1);
