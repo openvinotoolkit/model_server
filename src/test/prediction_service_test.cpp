@@ -719,9 +719,7 @@ TEST_F(TestPredict, PerformInferenceWithBinaryInputNoInputShape) {
     size_t filesize = 0;
     std::unique_ptr<char[]> image_bytes = nullptr;
     readRgbJpg(filesize, image_bytes);
-
     tensor.add_string_val(image_bytes.get(), filesize);
-
     tensor.set_dtype(tensorflow::DataType::DT_STRING);
 
     // Perform inference with binary input, ensure status INVALID_NO_OF_SHAPE_DIMENSIONS
