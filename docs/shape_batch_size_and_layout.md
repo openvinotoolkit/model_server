@@ -31,10 +31,10 @@ In case the model can't be reshaped, it will remain in the original parameters a
 will get an error. The model server will also report such problem in the logs.
 
 # Changing model input/output layout
-- Layout parameter is optional. By default layout is inherited from OpenVINO™ model. You can specify layout during conversion via Model Optimizer.
+- Layout parameter is optional. By default layout is inherited from OpenVINO™ model. You can specify layout during conversion to IR format via Model Optimizer.
 - Only 2 layouts are supported: `NCHW` and `NHWC`.
 - You can specify 2 forms of values:
-  * string - either `NCHW` or `NHWC`; this only works for models with single input tensor
-  * dictionary of strings - e.g. `{"input1":"NHWC", "input2":"NCHW", "output1":"NHWC"}`; this allows to specify desired layout per input or output.
+  * string - either `NCHW` or `NHWC`; applicable only for models with single input tensor
+  * dictionary of strings - e.g. `{"input1":"NHWC", "input2":"NCHW", "output1":"NHWC"}`; allows to specify layout for multiple inputs and outputs by name.
 - Changing layout is not supported for models with input names the same as output names.
-- When model is included in DAG, inputs/outputs after layout change need to match between nodes.
+- For model is included in DAG, layouts of subsequent nodes must match similary to network shape and precision.
