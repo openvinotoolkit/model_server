@@ -123,3 +123,18 @@ void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
     image_bytes = std::make_unique<char[]>(filesize);
     DataFile.read(image_bytes.get(), filesize);
 }
+
+tensorflow::serving::PredictRequest prepareBinaryPredictRequest(const std::string& inputName, const int batchSize) {
+    tensorflow::serving::PredictRequest request;
+    auto& tensor = (*request.mutable_inputs())[inputName];
+    size_t filesize = 0;
+    std::unique_ptr<char[]> image_bytes = nullptr;
+    readRgbJpg(filesize, image_bytes);
+
+    for (int i = 0; i < batchSize; i++) {
+        tensor.add_string_val(image_bytes.get(), filesize);
+    }
+    tensor.set_dtype(tensorflow::DataType::DT_STRING);
+    tensor.mutable_tensor_shape()->add_dim()->set_size(batchSize);
+    return request;
+}

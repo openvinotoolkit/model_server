@@ -219,8 +219,8 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
 }
 
 template <typename T>
-InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    auto dims = tensorInfo->getEffectiveShape();
+InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+    auto dims = isPipeline ? tensorInfo->getEffectiveShape() : tensorInfo->getShape();
     dims[0] = images.size();
     InferenceEngine::TensorDesc desc{tensorInfo->getPrecision(), dims, InferenceEngine::Layout::ANY};
     InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<T>(desc);
@@ -233,22 +233,22 @@ InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images
     return blob;
 }
 
-InferenceEngine::Blob::Ptr convertMatsToBlob(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+InferenceEngine::Blob::Ptr convertMatsToBlob(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     switch (tensorInfo->getPrecision()) {
     case InferenceEngine::Precision::FP32:
-        return createBlobFromMats<float>(images, tensorInfo);
+        return createBlobFromMats<float>(images, tensorInfo, isPipeline);
     case InferenceEngine::Precision::I32:
-        return createBlobFromMats<int32_t>(images, tensorInfo);
+        return createBlobFromMats<int32_t>(images, tensorInfo, isPipeline);
     case InferenceEngine::Precision::I8:
-        return createBlobFromMats<int8_t>(images, tensorInfo);
+        return createBlobFromMats<int8_t>(images, tensorInfo, isPipeline);
     case InferenceEngine::Precision::U8:
-        return createBlobFromMats<uint8_t>(images, tensorInfo);
+        return createBlobFromMats<uint8_t>(images, tensorInfo, isPipeline);
     case InferenceEngine::Precision::FP16:
-        return createBlobFromMats<uint16_t>(images, tensorInfo);
+        return createBlobFromMats<uint16_t>(images, tensorInfo, isPipeline);
     case InferenceEngine::Precision::U16:
-        return createBlobFromMats<uint16_t>(images, tensorInfo);
+        return createBlobFromMats<uint16_t>(images, tensorInfo, isPipeline);
     case InferenceEngine::Precision::I16:
-        return createBlobFromMats<int16_t>(images, tensorInfo);
+        return createBlobFromMats<int16_t>(images, tensorInfo, isPipeline);
     case InferenceEngine::Precision::I64:
     case InferenceEngine::Precision::MIXED:
     case InferenceEngine::Precision::Q78:
@@ -260,7 +260,7 @@ InferenceEngine::Blob::Ptr convertMatsToBlob(std::vector<cv::Mat>& images, const
     }
 }
 
-Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
+Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     auto status = validateTensor(tensorInfo, src);
     if (status != StatusCode::OK) {
         return status;
@@ -273,7 +273,7 @@ Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngin
         return status;
     }
 
-    blob = convertMatsToBlob(images, tensorInfo);
+    blob = convertMatsToBlob(images, tensorInfo, isPipeline);
     return StatusCode::OK;
 }
 }  // namespace ovms

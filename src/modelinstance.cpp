@@ -889,7 +889,7 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
 
         if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
             // binary inputs will be validated during conversion to blob
-            SPDLOG_DEBUG("Received request contains binary inputs");
+            SPDLOG_DEBUG("Received request containing binary inputs");
             if (checkBinaryInputBatchSizeMismatch(*networkInput, requestInput)) {
                 if (batchingMode == AUTO) {
                     return StatusCode::BATCHSIZE_CHANGE_REQUIRED;
@@ -971,7 +971,6 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     status = reloadModelIfRequired(status, requestProto, modelUnloadGuardPtr);
     if (!status.ok())
         return status;
-
     timer.start("get infer request");
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
     int executingInferId = executingStreamIdGuard.getId();

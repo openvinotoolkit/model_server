@@ -101,7 +101,7 @@ Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEng
 }
 
 Status EntryNode::deserializeBinaryInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    return convertStringValToBlob(proto, blob, tensorInfo);
+    return convertStringValToBlob(proto, blob, tensorInfo, true);
 }
 
 Status EntryNode::deserializeNumericalInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob) {

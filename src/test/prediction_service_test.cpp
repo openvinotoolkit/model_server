@@ -199,6 +199,11 @@ public:
         return performInferenceWithRequest(request, response, servableName);
     }
 
+    ovms::Status performInferenceWithBinaryImageInput(tensorflow::serving::PredictResponse& response, const std::string& inputName, const std::string& servableName = "increment_1x3x4x5", int batchSize = 1) {
+        auto request = prepareBinaryPredictRequest(inputName, batchSize);
+        return performInferenceWithRequest(request, response, servableName);
+    }
+
 public:
     ConstructorEnabledModelManager manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -563,7 +568,7 @@ TEST_F(TestPredict, PerformInferenceChangeModelInputLayout) {
 
 /**
  * Scenario - change output layout of model and perform inference. Check results if in correct order.
- * 
+ *
  * 1. Load model with output layout=nhwc, initial internal layout: nchw
  * 2. Do the inference with (1,3,4,5) shape - expect status OK and result in NHWC layout
  * 3. Remove layout setting
@@ -617,6 +622,75 @@ TEST_F(TestPredict, NetworkNotLoadedWhenLayoutAndDimsInconsistent) {
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::NETWORK_NOT_LOADED);
+}
+
+/**
+ * Scenario - change input layout of model and perform inference with binary input. Check results.
+ *
+ * 1. Load model with input layout=nhwc, initial internal layout: nchw
+ * 2. Do the inference with single binary image tensor - expect status OK and result in NCHW layout
+ * 3. Set layout setting to internal nchw
+ * 4. Do the inference with single binary image tensor - expect status UNSUPPORTED_LAYOUT
+ * 5. Set back layout setting to nhwc
+ * 6. Do the inference with single binary image tensor - expect status OK and result in NCHW layout
+ */
+TEST_F(TestPredict, PerformInferenceWithBinaryInputChangeModelInputLayout) {
+    using namespace ovms;
+
+    // Prepare model with changed layout to nhwc (internal layout=nchw)
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    tensorflow::serving::PredictResponse response;
+
+    // Perform inference with binary input, ensure status OK and correct results
+    ASSERT_EQ(performInferenceWithBinaryImageInput(response, INCREMENT_1x3x4x5_MODEL_INPUT_NAME), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+    checkOutputValues(response, {37.0, 37.0, 28.0, 28.0, 238.0, 238.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+
+    // Reload model with layout setting removed
+    ASSERT_EQ(config.parseLayoutParameter("nchw"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Perform inference with binary input, ensure validation rejects the request due to NCHW setting
+    ASSERT_EQ(performInferenceWithBinaryImageInput(response, INCREMENT_1x3x4x5_MODEL_INPUT_NAME), ovms::StatusCode::UNSUPPORTED_LAYOUT);
+
+    // Switch back to nhwc
+    ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Perform inference with binary input, ensure status OK after switching layout and correct results
+    ASSERT_EQ(performInferenceWithBinaryImageInput(response, INCREMENT_1x3x4x5_MODEL_INPUT_NAME), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+    checkOutputValues(response, {37.0, 37.0, 28.0, 28.0, 238.0, 238.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+}
+
+/**
+ * Scenario - send binary input request to model accepting auto batch size.
+ *
+ * 1. Load model with input layout=nhwc, batch_size=auto, initial internal layout: nchw, batch_size=1
+ * 2. Do the inference with batch=5 binary image tensor - expect status OK and result in NCHW layout
+ */
+TEST_F(TestPredict, PerformInferenceWithBinaryInputBatchSizeAuto) {
+    using namespace ovms;
+
+    // Prepare model with changed layout to nhwc (internal layout=nchw)
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("auto");
+    ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    tensorflow::serving::PredictResponse response;
+
+    const int batchSize = 5;
+    // Perform inference with binary input, ensure status OK and correct results
+    ASSERT_EQ(performInferenceWithBinaryImageInput(response, INCREMENT_1x3x4x5_MODEL_INPUT_NAME, "increment_1x3x4x5", batchSize), ovms::StatusCode::OK);
+    checkOutputShape(response, {5, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+    checkOutputValues(response, {37.0, 37.0, 28.0, 28.0, 238.0, 238.0, 37.0, 37.0, 28.0, 28.0, 238.0, 238.0, 37.0, 37.0, 28.0, 28.0, 238.0, 238.0, 37.0, 37.0, 28.0, 28.0, 238.0, 238.0, 37.0, 37.0, 28.0, 28.0, 238.0, 238.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 }
 
 #pragma GCC diagnostic pop
