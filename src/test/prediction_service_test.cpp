@@ -711,9 +711,6 @@ TEST_F(TestPredict, PerformInferenceWithBinaryInputNoInputShape) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     tensorflow::serving::PredictResponse response;
-
-    const int batchSize = 5;
-
     tensorflow::serving::PredictRequest request;
     auto& tensor = (*request.mutable_inputs())[INCREMENT_1x3x4x5_MODEL_INPUT_NAME];
     size_t filesize = 0;
