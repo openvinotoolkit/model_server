@@ -227,7 +227,7 @@ protected:
     const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
         const tensorflow::TensorProto& requestInput);
 
-     const Status validateNumberOfBinaryInputShapeDimensions(const ovms::TensorInfo& networkInput,
+    const Status validateNumberOfBinaryInputShapeDimensions(const ovms::TensorInfo& networkInput,
         const tensorflow::TensorProto& requestInput);
 
     const bool checkBinaryInputBatchSizeMismatch(const ovms::TensorInfo& networkInput,

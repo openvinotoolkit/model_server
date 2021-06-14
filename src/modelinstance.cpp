@@ -903,7 +903,7 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
             // binary inputs will be validated during conversion to blob
             SPDLOG_DEBUG("Received request containing binary inputs");
             status = validateNumberOfBinaryInputShapeDimensions(*networkInput, requestInput);
-            if(!status.ok()) {
+            if (!status.ok()) {
                 return status;
             }
 
