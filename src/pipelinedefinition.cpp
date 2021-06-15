@@ -1084,6 +1084,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                     if (it != inputsInfo.end()) {
                         // Already exists in map
                         if (tensorInfo->isTensorUnspecified()) {
+
                             continue;
                         }
                         if (!it->second->isTensorSpecEqual(*tensorInfo) &&
