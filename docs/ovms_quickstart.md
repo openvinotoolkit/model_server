@@ -61,7 +61,7 @@ Start the Model Server container:
 
 ```bash
 docker run -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/face-detection -p 9000:9000 openvino/model_server:latest \
---model_path /models/face-detection --model_name face-detection --port 9000 --log_level DEBUG --shape auto
+--model_path /models/face-detection --model_name face-detection --port 9000 --plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}' --shape auto
 ```
 
 The Model Server expects models in a defined folder structure. The folder with the models is mounted as `/models/face-detection/1`, such as:

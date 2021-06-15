@@ -34,28 +34,6 @@ and rescale the data.
 
 Blob data precision from binary input decoding is set automatically based on the target model or the [DAG pipeline](dag_scheduler.md) node.
 
-## Returning binary outputs
-
-Some models or DAG pipelines return images in the response. OpenVINO model outputs are always in the form of arrays. It is possible,
-however, to configure OVMS to send the image outputs in the binary image format instead.
-
-Binary outputs can be enabled by setting the output name with `_binary` suffix. In case the model is already exported with
-different output name, OVMS has an option to configure inputs and outputs names mapping by creating a json file `mapping_config.json`
-and placing it together with the model files in the model version folder.
-```json
-{
-  "inputs": { "tensor_input":"tensor_input" }, 
-  "outputs": {"tensor_name":"tensor_name_binary" }
-}
-```
-The binary data will be encoded out of OpenVINO model response blob. The conversion requires, however,
-the output to be in the layout NHWC. The model layout can be changed at runtime in the OVMS configuration.
-When the model output is [1,3,224,224] with the following configuration
-```json
-"layout": {"input": "NHWC", "output":"NHWC"}
-```
-Images in the response will be returned as JPEG encoded. REST API responses will be in addition to that Base64 encoded.
-
 ## API specification
 
 - [gRPC API Reference Guide](./model_server_grpc_api.md)
@@ -81,22 +59,12 @@ python rest_binary_client.py --url http://localhost:8000 --model_name resnet --i
 
 output results, accuracy and performance
 ```
-## Usage example with binary input and output
-
-download superresolution model https://docs.openvinotoolkit.org/latest/omz_models_model_text_image_super_resolution_0001.html
-add tensor_mapping.json with binary_sufix
-Start model
-Start client
-report super resolution results in jpeg
 
 ## Error handling:
 In case the binary input can not be converted to the array of correct shape, an error status is returned:
-- 400 BAD_REQUEST for REST API
-- 3 INVALID_ARGUMENT for gRPC API
+- 400 - BAD_REQUEST for REST API
+- 3 - INVALID_ARGUMENT for gRPC API
 
-When the model outputs with `_binary` suffix can not be JPEG encoded, the following errors will be sent:
-- 412 Precondition Failed for REST API
-- 9 FAILED_PRECONDITION for gRPC API
 
 ## Recommendations:
 
