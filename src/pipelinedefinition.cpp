@@ -1053,7 +1053,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                     auto it = inputsInfo.find(alias);
                     if (it != inputsInfo.end()) {
                         // Already exists in map
-                        if (it->second->isTensorUnspecified()) {
+                        if (tensorInfo->isTensorUnspecified()) {
                             continue;
                         }
                         if (!it->second->isTensorSpecEqual(*tensorInfo) &&
@@ -1083,7 +1083,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                     auto it = inputsInfo.find(alias);
                     if (it != inputsInfo.end()) {
                         // Already exists in map
-                        if (it->second->isTensorUnspecified()) {
+                        if (tensorInfo->isTensorUnspecified()) {
                             continue;
                         }
                         if (!it->second->isTensorSpecEqual(*tensorInfo) &&
