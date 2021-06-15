@@ -81,6 +81,14 @@ as well as a release package (.tar.gz, with ovms binary and necessary libraries)
 *Note:* OVMS docker image could be created with ubi8-minimal base image, beside the default centos7.
 Use command `make docker_build BASE_OS=redhat`. OVMS with ubi base image doesn't support NCS and HDDL accelerators.
 
+Additionally you can set version of GPU driver used by the produced image. Currently following versions are available:
+- 19.41.14441
+- 20.35.17767
+
+Provide version from the list above as INSTALL_DRIVER_VERSION argument in make command to build image with specific version of the driver like 
+`make docker_build INSTALL_DRIVER_VERSION=19.41.14441`. 
+If not provided, version 20.35.17767 is used.
+
 ### Running the OpenVINO&trade; Model Server Image for **Single** Model <a name="singlemodel"></a>
 
 Follow the [Preparation of Model guide](models_repository.md) before running the docker image 
