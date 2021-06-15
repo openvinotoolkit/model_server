@@ -176,6 +176,7 @@ TEST_F(PredictValidation, ValidRequestBinaryInputs) {
     for (int i = 0; i < requestBatchSize; i++) {
         input.add_string_val("val");
     }
+    input.mutable_tensor_shape()->add_dim()->set_size(requestBatchSize);
 
     networkInputs.clear();
     ovms::shape_t shape = {1, 3, 224, 224};
@@ -199,6 +200,7 @@ TEST_F(PredictValidation, RequestWrongBatchSizeBinaryInputs) {
     for (int i = 0; i < requestBatchSize; i++) {
         input.add_string_val("val");
     }
+    input.mutable_tensor_shape()->add_dim()->set_size(requestBatchSize);
 
     networkInputs.clear();
     ovms::shape_t shape = {1, 3, 224, 224};
@@ -223,6 +225,7 @@ TEST_F(PredictValidation, RequestWrongBatchSizeAutoBinaryInputs) {
     for (int i = 0; i < requestBatchSize; i++) {
         input.add_string_val("val");
     }
+    input.mutable_tensor_shape()->add_dim()->set_size(requestBatchSize);
 
     networkInputs.clear();
     ovms::shape_t shape = {1, 3, 224, 224};

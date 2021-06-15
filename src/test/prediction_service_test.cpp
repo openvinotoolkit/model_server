@@ -693,4 +693,34 @@ TEST_F(TestPredict, PerformInferenceWithBinaryInputBatchSizeAuto) {
     checkOutputValues(response, {37.0, 37.0, 28.0, 28.0, 238.0, 238.0, 37.0, 37.0, 28.0, 28.0, 238.0, 238.0, 37.0, 37.0, 28.0, 28.0, 238.0, 238.0, 37.0, 37.0, 28.0, 28.0, 238.0, 238.0, 37.0, 37.0, 28.0, 28.0, 238.0, 238.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 }
 
+/**
+ * Scenario - send binary input request with no shape set.
+ *
+ * 1. Load model with input layout=nhwc, batch_size=auto, initial internal layout: nchw, batch_size=1
+ * 2. Do the inference with binary image tensor with no shape set - expect status INVALID_NO_OF_SHAPE_DIMENSIONS
+ */
+
+TEST_F(TestPredict, PerformInferenceWithBinaryInputNoInputShape) {
+    using namespace ovms;
+
+    // Prepare model with changed layout to nhwc (internal layout=nchw)
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("auto");
+    ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    tensorflow::serving::PredictResponse response;
+    tensorflow::serving::PredictRequest request;
+    auto& tensor = (*request.mutable_inputs())[INCREMENT_1x3x4x5_MODEL_INPUT_NAME];
+    size_t filesize = 0;
+    std::unique_ptr<char[]> image_bytes = nullptr;
+    readRgbJpg(filesize, image_bytes);
+    tensor.add_string_val(image_bytes.get(), filesize);
+    tensor.set_dtype(tensorflow::DataType::DT_STRING);
+
+    // Perform inference with binary input, ensure status INVALID_NO_OF_SHAPE_DIMENSIONS
+    ASSERT_EQ(performInferenceWithRequest(request, response, "increment_1x3x4x5"), ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+}
+
 #pragma GCC diagnostic pop
