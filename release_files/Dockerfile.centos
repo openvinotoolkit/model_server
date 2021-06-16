@@ -48,13 +48,13 @@ RUN	set -e ; \
 	        cd /tmp/gpu_deps && rpm -iv *.rpm && rm -Rf /tmp/gpu_deps ; \
 	fi ; \
 	if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
+	    yum update -y ; \
 		yum install -y epel-release ; \
-		yum update -y ; \
-	        yum install -y \
+		yum install -y \
 	                libusb numactl-libs ocl-icd \
 	                boost-thread boost-system boost-filesystem \
 	                boost-program-options boost-chrono boost-date-time boost-atomic ; \
-	        yum clean all ; \
+	    yum clean all ; \
 	else  \
 		mkdir /tmp_ovms /src ; \
 		cd /tmp_ovms ; \
