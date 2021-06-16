@@ -596,6 +596,7 @@ TEST(ModelConfig, ConfigParseNodeWithValidShapeFormatArray) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(modelConfig.getShapes().size(), 1);
     auto shapes = modelConfig.getShapes();
+    ASSERT_TRUE(shapes.find("input") != shapes.end());
     EXPECT_THAT(shapes["input"].shape, ElementsAre(1, 3, 600, 600));
 }
 
