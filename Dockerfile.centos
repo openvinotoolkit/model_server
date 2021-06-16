@@ -80,13 +80,6 @@ RUN yum update -d6 -y && yum install -d6 -y epel-release centos-release-scl && y
             unzip \
             wget \
             which \
-            boost-thread \
-            boost-system \
-            boost-filesystem \
-            boost-chrono \
-            boost-program-options \
-            boost-date-time \
-            boost-atomic \
             libxml2-devel \
             yum-utils \
             numactl-libs \
