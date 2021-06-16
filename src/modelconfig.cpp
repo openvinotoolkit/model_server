@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <set>
 #include <sstream>
 
 #include <rapidjson/istreamwrapper.h>
@@ -437,39 +438,44 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                     firstErrorStatus = status;
                 }
                 SPDLOG_WARN("There was an error parsing shape {}", v["shape"].GetString());
-            }
-            this->addShape(ANONYMOUS_INPUT_NAME, shapeInfo);
-        } else {
-            if (v["shape"].IsArray()) {
-                // Shape for all inputs
-                ShapeInfo shapeInfo;
-                for (auto& sh : v["shape"].GetArray()) {
-                    shapeInfo.shape.push_back(sh.GetUint64());
-                }
-                this->addShape(ANONYMOUS_INPUT_NAME, shapeInfo);
             } else {
-                // Map of shapes
-                for (auto& s : v["shape"].GetObject()) {
-                    ShapeInfo shapeInfo;
-                    // check if legacy format is used
-                    if (s.value.IsString()) {
-                        auto status = ModelConfig::parseShape(shapeInfo, s.value.GetString());
-                        if (!status.ok()) {
-                            if (!firstErrorStatus.ok()) {
-                                firstErrorStatus = status;
-                            }
-                            SPDLOG_WARN("There was an error parsing shape {}", v["shape"].GetString());
+                this->addShape(ANONYMOUS_INPUT_NAME, shapeInfo);
+            }
+        } else {
+            // Map of shapes
+            for (auto& s : v["shape"].GetObject()) {
+                ShapeInfo shapeInfo;
+                bool valid = true;
+                // check if legacy format is used
+                if (s.value.IsString()) {
+                    auto status = ModelConfig::parseShape(shapeInfo, s.value.GetString());
+                    if (!status.ok()) {
+                        if (!firstErrorStatus.ok()) {
+                            firstErrorStatus = status;
                         }
-                    } else {
-                        for (auto& sh : s.value.GetArray()) {
+                        SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
+                        valid = false;
+                    }
+                } else {
+                    for (auto& sh : s.value.GetArray()) {
+                        if (sh.IsUint64()) {
                             shapeInfo.shape.push_back(sh.GetUint64());
+                        } else {
+                            SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
+                            if (!firstErrorStatus.ok()) {
+                                firstErrorStatus = StatusCode::SHAPE_WRONG_FORMAT;
+                            }
+                            valid = false;
+                            break;
                         }
                     }
-                    if (s.name.GetString() != ANONYMOUS_INPUT_NAME) {
+                }
+                if (s.name.GetString() != ANONYMOUS_INPUT_NAME) {
+                    if (valid) {
                         this->addShape(s.name.GetString(), shapeInfo);
-                    } else {
-                        SPDLOG_WARN("Provided shape name: {} is forbidden and will be omitted", ANONYMOUS_INPUT_NAME);
                     }
+                } else {
+                    SPDLOG_WARN("Provided shape name: {} is forbidden and will be omitted", ANONYMOUS_INPUT_NAME);
                 }
             }
         }
