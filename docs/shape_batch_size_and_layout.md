@@ -37,4 +37,4 @@ will get an error. The model server will also report such problem in the logs.
   * string - either `NCHW` or `NHWC`; applicable only for models with single input tensor
   * dictionary of strings - e.g. `{"input1":"NHWC", "input2":"NCHW", "output1":"NHWC"}`; allows to specify layout for multiple inputs and outputs by name.
 - Changing layout is not supported for models with input names the same as output names.
-- For model is included in DAG, layouts of subsequent nodes must match similary to network shape and precision.
+- For model included in DAG, layouts of subsequent nodes must match similary to network shape and precision.
