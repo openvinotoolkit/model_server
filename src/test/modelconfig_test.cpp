@@ -595,6 +595,8 @@ TEST(ModelConfig, ConfigParseNodeWithValidShapeFormatArray) {
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(modelConfig.getShapes().size(), 1);
+    auto shapes = modelConfig.getShapes();
+    EXPECT_THAT(shapes["input"].shape, ElementsAre(1, 3, 600, 600));
 }
 
 static std::string config_low_latency_no_stateful = R"#(
