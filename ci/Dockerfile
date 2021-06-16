@@ -39,5 +39,5 @@ SHELL ["/opt/intel/openvino/bin/setupvars.sh", "-c"]
 RUN cmake3 .
 RUN /tmp/kwbuildtools/bin/kwinject --output ./out.out make
 RUN echo $ENV_KLOCWORK_TOKEN > /ovms/ltoken
-RUN /tmp/kwbuildtools/bin/kwbuildproject --force --url ${ENV_KLOCWORK_URL}"${ENV_KLOCWORK_PROJECT}" --tables-directory kwtables out.out ; exit 0
+RUN /tmp/kwbuildtools/bin/kwbuildproject --force --url ${ENV_KLOCWORK_URL}"${ENV_KLOCWORK_PROJECT}" --tables-directory kwtables out.out
 RUN /tmp/kwbuildtools/bin/kwadmin --url ${ENV_KLOCWORK_URL} load "${ENV_KLOCWORK_PROJECT}" kwtables
