@@ -31,10 +31,15 @@ In case the model can't be reshaped, it will remain in the original parameters a
 will get an error. The model server will also report such problem in the logs.
 
 # Changing model input/output layout
-- Layout parameter is optional. By default layout is inherited from OpenVINO™ model. You can specify layout during conversion to IR format via Model Optimizer.
-- Only 2 layouts are supported: `NCHW` and `NHWC`.
-- You can specify 2 forms of values:
+OpenVINO models which process image data are usually generated via the model optimizer with NCHW layout. Image transformation libraries like OpenCV or Pillow use NHWC layout. This makes it required to transpose the data in the client application before it can be sent to OVMS. Custom node example implementations also internall use NCHW format to perform image transformations. It could increase the latency with extra data transposition operations. Layout parameter reduces the latency by changing the model in runtime to accept NHWC layout instead of NCHW. That way the whole processing cycle is more effective by avoiding unnecessary data transpositions. That is especially beneficial for models with high resolution images, where data transposition could be more expensive in processing.<br><br>
+
+Layout parameter is optional. By default layout is inherited from OpenVINO™ model. You can specify layout during conversion to IR format via Model Optimizer. You can also use this parameter for ONNX models.<br>
+
+Layout change is only supported to `NCHW` or `NHWC`. You can specify 2 forms of values:
   * string - either `NCHW` or `NHWC`; applicable only for models with single input tensor
   * dictionary of strings - e.g. `{"input1":"NHWC", "input2":"NCHW", "output1":"NHWC"}`; allows to specify layout for multiple inputs and outputs by name.
-- Changing layout is not supported for models with input names the same as output names.
-- For model included in DAG, layouts of subsequent nodes must match similary to network shape and precision.
+
+After input layout of model is changed, please note to adjust shape of the request in client application as wel. For NCHW inputs it should be: `(batch, channels, height, width)` but for NHWC this is: `(batch, height, width, channels)`.
+
+Changing layout is not supported for models with input names the same as output names.<br>
+For model included in DAG, layouts of subsequent nodes must match similary to network shape and precision.

@@ -120,7 +120,7 @@ Status deserializePredictRequest(
             if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
                 SPDLOG_DEBUG("Request contains binary input: {}", name);
                 Status status = convertStringValToBlob(requestInput, blob, tensorInfo);
-                if (status != StatusCode::OK) {
+                if (!status.ok()) {
                     SPDLOG_DEBUG("Binary inputs conversion failed.");
                     return status;
                 }

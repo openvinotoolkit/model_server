@@ -33,7 +33,6 @@ parser.add_argument('--vehicle_images_save_path', required=False, default='', he
 parser.add_argument('--image_width', required=False, default=600, help='Pipeline input image width. default: 600')
 parser.add_argument('--image_height', required=False, default=400, help='Pipeline input image height. default: 400')
 parser.add_argument('--input_image_layout', required=False, default='NHWC', choices=['NCHW', 'NHWC', 'BINARY'], help='Pipeline input image layout. default: NHWC')
-parser.add_argument('--output_image_layout', required=False, default='NHWC', choices=['NCHW', 'NHWC'], help='Transformed detected image layout. default: NHWC')
 
 args = vars(parser.parse_args())
 
@@ -56,10 +55,11 @@ def prepare_img_input_in_binary_format(request, name, path):
         data = f.read()
         request.inputs[name].CopyFrom(make_tensor_proto(data, shape=[1]))
 
-def save_vehicle_images_as_jpgs(output_nd, name, location, layout):
+def save_vehicle_images_as_jpgs(output_nd, name, location):
     for i in range(output_nd.shape[0]):
         out = output_nd[i][0]
-        if layout == 'NCHW':
+        assert len(out.shape) == 3
+        if out.shape[0] == 3:
             out = out.transpose(1,2,0)
         cv2.imwrite(os.path.join(location, name + '_' + str(i) + '.jpg'), out)
 
@@ -133,7 +133,7 @@ for name in response.outputs:
     print(f"    numpy => shape[{output_nd.shape}] data[{output_nd.dtype}]")
 
     if name == args['vehicle_images_output_name'] and len(args['vehicle_images_save_path']) > 0:
-        save_vehicle_images_as_jpgs(output_nd, name, args['vehicle_images_save_path'], args['output_image_layout'] )
+        save_vehicle_images_as_jpgs(output_nd, name, args['vehicle_images_save_path'])
 
     if name == 'types':
         vehicles = update_vehicle_types(output_nd, vehicles)
