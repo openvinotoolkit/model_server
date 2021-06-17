@@ -77,12 +77,10 @@ RUN yum update -d6 -y && yum install -d6 -y epel-release centos-release-scl && y
             python3-devel \
             python3-setuptools \
             python3-virtualenv \
-            unzip \
             wget \
             which \
             libxml2-devel \
             yum-utils \
-            numactl-libs \
             unzip && \
             yum clean all
 
