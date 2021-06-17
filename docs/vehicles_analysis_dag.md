@@ -48,7 +48,7 @@ Copy this `lib` folder to the same location with previously downloaded models.
 
 ## OVMS Configuration File
 
-The configuration file for running the vehicles analysis demo is stored in [config.json](../src/custom_nodes/model_zoo_intel_object_detection/config.json).
+The configuration file for running the vehicles analysis demo is stored in [config.json](../src/custom_nodes/model_zoo_intel_object_detection/config_vehicles_example.json).
 Copy this file along with the model files.
 
 ## Final directory structure
@@ -88,7 +88,7 @@ Now you can create directory for text images and run the client:
 mkdir results
 ```
 ```bash
-python3 vehicles_analysis_pipeline_client.py --pipeline_name multiple_vehicle_recognition --image_input_path ./images/cars/road1.jpg --vehicle_images_output_name vehicle_images --vehicle_images_save_path ./results --image_width 512 --image_height 512 --image_layout CHW
+python3 vehicles_analysis_pipeline_client.py --pipeline_name multiple_vehicle_recognition --grpc_port 9000 --image_input_path ./images/cars/road1.jpg --vehicle_images_output_name vehicle_images --vehicle_images_save_path ./results --image_width 512 --image_height 512 --input_image_layout NHWC --output_image_layout NHWC
 Output: name[types]
     numpy => shape[(37, 1, 4)] data[float32]
 Output: name[vehicle_coordinates]
@@ -98,7 +98,7 @@ Output: name[colors]
 Output: name[confidence_levels]
     numpy => shape[(37, 1, 1)] data[float32]
 Output: name[vehicle_images]
-    numpy => shape[(37, 1, 3, 72, 72)] data[float32]
+    numpy => shape[(37, 1, 72, 72, 3)] data[float32]
 
 Found 37 vehicles:
 0 Type: van Color: gray

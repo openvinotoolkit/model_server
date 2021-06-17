@@ -114,6 +114,8 @@ The best staring point for developing new custom nodes is via exploring or copyi
 
 The fully functional custom nodes are in:
 - [east-resnet50 OCR custom node](../src/custom_nodes/east_ocr)
+- [model zoo intel object detection custom node](../src/custom_nodes/model_zoo_intel_object_detection)
+- [image transformation custom node](../src/custom_nodes/image_transformation)
 
 Other examples are included in the unit tests:
 - [node_add_sub.c](../src/test/custom_nodes/node_add_sub.c)

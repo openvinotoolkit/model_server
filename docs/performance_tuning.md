@@ -9,7 +9,7 @@ This document gives an overview of various parameters that can be configured to 
 While sending the input data for inference execution, try to adjust the numerical data type to reduce the message size.
 
 
-For example: To reduce the network bandwidth usage following can be tried-
+For example: To reduce the network bandwidth usage following can be tried:
 - Send the image representation as uint8 instead of float data. 
 - For REST API calls, it might help to reduce the numbers precisions in the json message with a command similar to `np.round(imgs.astype(np.float),decimals=2)`. 
 
