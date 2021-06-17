@@ -58,8 +58,7 @@ def prepare_img_input_in_binary_format(request, name, path):
 def save_vehicle_images_as_jpgs(output_nd, name, location):
     for i in range(output_nd.shape[0]):
         out = output_nd[i][0]
-        assert len(out.shape) == 3
-        if out.shape[0] == 3:
+        if len(out.shape) == 3 and out.shape[0] == 3:
             out = out.transpose(1,2,0)
         cv2.imwrite(os.path.join(location, name + '_' + str(i) + '.jpg'), out)
 
