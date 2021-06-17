@@ -64,6 +64,14 @@ RUN yum update -d6 -y && yum install -d6 -y epel-release centos-release-scl && y
             ocl-icd \
             patch \
             pkg-config \
+<<<<<<< HEAD
+=======
+            python2 \
+            python2-pip \
+            python2-devel \
+            python2-setuptools \
+            python2-virtualenv \
+>>>>>>> pulseaudio removed
             python3 \
             python3-pip \
             python3-devel \
