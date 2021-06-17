@@ -271,6 +271,9 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
 
 Status getPipelineInputs(const std::string& modelName, ovms::tensor_map_t& inputs) {
     auto pipelineDefinition = ModelManager::getInstance().getPipelineFactory().findDefinitionByName(modelName);
+    if (!pipelineDefinition) {
+        return StatusCode::MODEL_MISSING;
+    }
     std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
     Status status = pipelineDefinition->waitForLoaded(unloadGuard);
     if (!status.ok()) {
