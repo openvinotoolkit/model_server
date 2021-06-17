@@ -477,7 +477,7 @@ public:
         return StatusCode::OK;
     }
 
-    bool isConnectionShapeCorrect(shape_t tensorInputShape, shape_t tensorOutputShape) {
+    bool isConnectionShapeCorrect(const shape_t& tensorInputShape, const shape_t& tensorOutputShape) {
         if (tensorInputShape.size() != tensorOutputShape.size()) {
             return false;
         }
