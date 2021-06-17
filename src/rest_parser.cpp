@@ -132,7 +132,9 @@ bool RestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorPr
         }
         return true;
     } else {
-        setDTypeIfNotSet(doc.GetArray()[0], proto, tensorName);
+        if (!setDTypeIfNotSet(doc.GetArray()[0], proto, tensorName)) {
+            return false;
+        }
         for (auto& value : doc.GetArray()) {
             if (!addValue(proto, value)) {
                 return false;
@@ -433,10 +435,21 @@ bool RestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Value
     return false;
 }
 
-void RestParser::setDTypeIfNotSet(const rapidjson::Value& value, tensorflow::TensorProto& proto, const std::string& tensorName) {
-    if (!tensorPrecisionMap.count(tensorName)) {
-        proto.set_dtype(TensorInfo::getPrecisionAsDataType(tensorPrecisionMap[tensorName]));
-    }
+// This is still required for parsing inputs which are not present in model/DAG.
+// Such inputs are then removed from proto at the end of parsing phase.
+bool RestParser::setDTypeIfNotSet(const rapidjson::Value& value, tensorflow::TensorProto& proto, const std::string& tensorName) {
+    if (tensorPrecisionMap.count(tensorName))
+        return true;
+
+    if (value.IsInt())
+        tensorPrecisionMap[tensorName] = InferenceEngine::Precision::I32;
+    else if (value.IsDouble())
+        tensorPrecisionMap[tensorName] = InferenceEngine::Precision::FP32;
+    else
+        return false;
+
+    proto.set_dtype(TensorInfo::getPrecisionAsDataType(tensorPrecisionMap[tensorName]));
+    return true;
 }
 
 }  // namespace ovms
