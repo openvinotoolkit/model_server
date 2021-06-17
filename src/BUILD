@@ -419,3 +419,13 @@ cc_test(
         "-Werror",
     ],
 )
+
+filegroup(
+  name = "static_analysis",
+  srcs = [
+    "//src:ovms",
+    "//src:libcustom_node_east_ocr.so",
+    "//src:libcustom_node_model_zoo_intel_object_detection.so",
+    "//src:libcustom_node_image_transformation.so",
+  ]
+)
