@@ -478,15 +478,13 @@ public:
     }
 
     bool isConnectionShapeCorrect(shape_t tensorInputShape, shape_t tensorOutputShape) {
-        if(tensorInputShape.size() != tensorOutputShape.size()){
+        if (tensorInputShape.size() != tensorOutputShape.size()) {
             return false;
         }
 
-        for(size_t i = 0; i < tensorInputShape.size(); i++){
-            if(tensorInputShape[i] != tensorOutputShape[i])
-            {
-                if(tensorInputShape[i] != 0 &&  tensorOutputShape[i] != 0)
-                {
+        for (size_t i = 0; i < tensorInputShape.size(); i++) {
+            if (tensorInputShape[i] != tensorOutputShape[i]) {
+                if (tensorInputShape[i] != 0 && tensorOutputShape[i] != 0) {
                     return false;
                 }
             }
