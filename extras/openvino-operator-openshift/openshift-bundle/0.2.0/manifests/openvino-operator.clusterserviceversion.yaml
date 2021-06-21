@@ -102,7 +102,7 @@ spec:
     the Jupyter Spawner drop-down menu. The image is maintained Intel.
 
     Create the `Notebook` resource in the same project with JupyterHub and RedHat OpenShift Data Science operator.
-    It builds the image in the cluster based on Dockerfile from https://github.com/openvinotoolkit/openvino_notebooks.
+    It builds the image in the cluster based on Dockerfile from [openvino_notebooks](https://github.com/openvinotoolkit/openvino_notebooks).
 
   displayName: OpenVINO Toolkit Operator
   icon:
