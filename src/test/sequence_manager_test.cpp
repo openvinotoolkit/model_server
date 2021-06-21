@@ -22,6 +22,8 @@
 
 #include "../sequence_manager.hpp"
 #include "../status.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "stateful_test_utils.hpp"
 
 TEST(SequenceManager, GetUniqueSequenceIdFirstOK) {
@@ -320,3 +322,4 @@ TEST(SequenceManager, ExceedMaxSequenceNumber) {
         ASSERT_EQ(sequenceManager.mockCreateSequence(spec), ovms::StatusCode::MAX_SEQUENCE_NUMBER_REACHED);
     }
 }
+#pragma GCC diagnostic pop

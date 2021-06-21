@@ -35,6 +35,9 @@ parser.add_argument('--image_height', required=False, default=1024, help='Reshap
 parser.add_argument('--input_layout', required=False, default='CHW', choices=['CHW', 'HWC'], help='Input image layout. default: CHW')
 parser.add_argument('--input_color', required=False, default='BGR', choices=['BGR', 'RGB', 'GRAY'], help='Input image color order. default: BGR')
 parser.add_argument('--output_layout', required=False, default='CHW', choices=['CHW', 'HWC'], help='Output image layout. default: CHW')
+parser.add_argument('--input_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC'], help='Input image layout. default: NCHW')
+parser.add_argument('--input_color', required=False, default='BGR', choices=['BGR', 'RGB', 'GRAY'], help='Input image color order. default: BGR')
+parser.add_argument('--output_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC'], help='Output image layout. default: NCHW')
 parser.add_argument('--output_color', required=False, default='BGR', choices=['BGR', 'RGB', 'GRAY'], help='Output image color order. default: BGR')
 
 args = vars(parser.parse_args())
@@ -48,7 +51,7 @@ def prepare_img_input(request, name, path, width, height, layout, color):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         h, w = img.shape
         img = img.reshape(h, w, 1)
-    if layout == 'CHW':
+    if layout == 'NCHW':
         h, w, c = img.shape
         img = img.transpose(2,0,1).reshape(1, c, h, w)
     else:
@@ -57,7 +60,7 @@ def prepare_img_input(request, name, path, width, height, layout, color):
 
 def save_img_output_as_jpg(output_nd, path, layout, color):
     img = output_nd[0]
-    if layout == 'CHW':
+    if layout == 'NCHW':
         img = img.transpose(1,2,0)
     if color == 'RGB':
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)

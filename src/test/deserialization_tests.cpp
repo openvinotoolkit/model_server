@@ -27,6 +27,10 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 #include "../deserialization.hpp"
 #include "ovtestutils.hpp"
 
@@ -187,7 +191,7 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobExc
     EXPECT_CALL(mockTPobject, deserializeTensorProto(_, _))
         .Times(1)
         .WillRepeatedly(
-            Throw(InferenceEngine::details::InferenceEngineException(__FILE__, __LINE__)));
+            Throw(InferenceEngine::GeneralError("")));
     auto status =
         deserializePredictRequest<MockTensorProtoDeserializator>(
             request, tensorMap, inferRequest);
@@ -248,3 +252,4 @@ INSTANTIATE_TEST_SUITE_P(
     DeserializeTFTensorProto,
     ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
     ::testing::PrintToStringParamName());
+#pragma GCC diagnostic pop

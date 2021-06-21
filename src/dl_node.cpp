@@ -65,7 +65,7 @@ Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inf
     InferenceEngine::StatusCode ov_status;
     try {
         ov_status = inferRequest.Wait(InferenceEngine::IInferRequest::RESULT_READY);
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::Exception& e) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} IE exception occured during infer request wait: {}", getName(), sessionKey, e.what());
         return StatusCode::INTERNAL_ERROR;
     } catch (std::exception& e) {
@@ -90,7 +90,7 @@ Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inf
     for (const auto& node : this->next) {
         for (const auto& pair : node.get().getMappingByDependency(*this)) {
             const auto& output_name = pair.first;
-            if (outputs.count(output_name) == 1) {
+            if (outputs.find(output_name) != outputs.end()) {
                 continue;
             }
 
@@ -115,53 +115,13 @@ Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inf
                     return status;
                 }
                 outputs.emplace(std::make_pair(output_name, std::move(copiedBlob)));
-            } catch (const InferenceEngine::details::InferenceEngineException& e) {
+            } catch (const InferenceEngine::Exception& e) {
                 Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session:{} Error during getting blob {}; exception message: {}", getName(), sessionKey, status.string(), e.what());
                 return status;
             }
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Blob with name {} has been prepared", getName(), sessionKey, output_name);
         }
-    }
-    return StatusCode::OK;
-}
-
-Status DLNode::validate(const InferenceEngine::Blob::Ptr& blob, const TensorInfo& info) {
-    if (info.getPrecision() != blob->getTensorDesc().getPrecision()) {
-        std::stringstream ss;
-        ss << "Expected: " << info.getPrecisionAsString()
-           << "; Actual: " << TensorInfo::getPrecisionAsString(blob->getTensorDesc().getPrecision());
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[Node: {}] Invalid precision - {}", getName(), details);
-        return Status(StatusCode::INVALID_PRECISION, details);
-    }
-
-    // If batch size differes, check if remaining dimensions are equal
-    if (info.getShape()[0] != blob->getTensorDesc().getDims()[0]) {
-        // If remaining dimensions are equal, it is invalid batch size
-        std::stringstream ss;
-        if (std::equal(info.getShape().begin() + 1, info.getShape().end(), blob->getTensorDesc().getDims().begin() + 1)) {
-            ss << "Expected: " << info.getShape()[0] << "; Actual: " << blob->getTensorDesc().getDims()[0];
-            const std::string details = ss.str();
-            SPDLOG_DEBUG("[Node: {}] Invalid batch size - {}", getName(), details);
-            return Status(StatusCode::INVALID_BATCH_SIZE, details);
-        } else {
-            // Otherwise whole shape is incorrect
-            ss << "Expected: " << TensorInfo::shapeToString(info.getShape())
-               << "; Actual: " << TensorInfo::shapeToString(blob->getTensorDesc().getDims());
-            const std::string details = ss.str();
-            SPDLOG_DEBUG("Node: {}] Invalid shape - {}", getName(), details);
-            return Status(StatusCode::INVALID_SHAPE, details);
-        }
-    }
-
-    if (info.getShape() != blob->getTensorDesc().getDims()) {
-        std::stringstream ss;
-        ss << "Expected: " << TensorInfo::shapeToString(info.getShape())
-           << "; Actual: " << TensorInfo::shapeToString(blob->getTensorDesc().getDims());
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("Node: {}] Invalid shape - {}", getName(), details);
-        return Status(StatusCode::INVALID_SHAPE, details);
     }
     return StatusCode::OK;
 }

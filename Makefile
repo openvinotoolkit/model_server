@@ -48,9 +48,9 @@ INSTALL_DRIVER_VERSION ?= "19.41.14441"
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= releases/2021/2
+OV_SOURCE_BRANCH ?= master
 
-DLDT_PACKAGE_URL ?=
+DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_latest.tgz
 OV_USE_BINARY ?= 1
 YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7
 
@@ -143,8 +143,15 @@ endif
 	fi
 	@rm missing_headers.txt
 
+	@echo "Checking forbidden functions in files..."
+	@. $(ACTIVATE); bash -c "python3 lib_search.py . functions > forbidden_functions.txt"
+	@if ! grep -FRq "All files checked for forbidden functions" forbidden_functions.txt; then\
+		error Run python3 lib_search.py . functions - to see forbidden functions file list.;\
+	fi
+	@rm forbidden_functions.txt
+
 clang-format: venv
-	@echo "Formating files with clang-format.."
+	@echo "Formatting files with clang-format.."
 	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format-6.0 -style=file -i {} \;
 
 .PHONY: docker_build

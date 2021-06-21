@@ -220,23 +220,21 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
-    ASSERT_EQ(def->validateNodes(managerWithDummyModel), StatusCode::OK);
+    ASSERT_EQ(def->validate(managerWithDummyModel), StatusCode::OK);
 
-    tensor_map_t inputs, outputs;
-    ASSERT_EQ(def->getInputsInfo(inputs, managerWithDummyModel), StatusCode::OK);
-    ASSERT_EQ(def->getOutputsInfo(outputs, managerWithDummyModel), StatusCode::OK);
-
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
     ASSERT_EQ(inputs.size(), 1);
     ASSERT_EQ(outputs.size(), 1);
     ASSERT_NE(inputs.find("vector"), inputs.end());
     ASSERT_NE(outputs.find("response_tensor_name"), outputs.end());
 
     const auto& vector = inputs.at("vector");
-    EXPECT_EQ(vector->getShape(), shape_t({1, DUMMY_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(vector->getEffectiveShape(), shape_t({1, DUMMY_MODEL_INPUT_SIZE}));
     EXPECT_EQ(vector->getPrecision(), InferenceEngine::Precision::FP32);
 
     const auto& response_tensor_name = outputs.at("response_tensor_name");
-    EXPECT_EQ(response_tensor_name->getShape(), shape_t({1, DUMMY_MODEL_OUTPUT_SIZE}));
+    EXPECT_EQ(response_tensor_name->getEffectiveShape(), shape_t({1, DUMMY_MODEL_OUTPUT_SIZE}));
     EXPECT_EQ(response_tensor_name->getPrecision(), InferenceEngine::Precision::FP32);
 }
 

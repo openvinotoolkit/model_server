@@ -33,6 +33,7 @@
 #include "executingstreamidguard.hpp"
 #include "filesystem.hpp"
 #include "logging.hpp"
+#include "ov_utils.hpp"
 #include "prediction_service_utils.hpp"
 #include "serialization.hpp"
 #include "stringutils.hpp"
@@ -59,9 +60,15 @@ void ModelInstance::subscribe(PipelineDefinition& pd) {
 void ModelInstance::unsubscribe(PipelineDefinition& pd) {
     subscriptionManager.unsubscribe(pd);
 }
+
 Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
     if (config.isShapeAnonymousFixed() && network->getInputsInfo().size() > 1) {
         Status status = StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED;
+        SPDLOG_WARN(status.string());
+        return status;
+    }
+    if (!config.getLayout().empty() && network->getInputsInfo().size() > 1) {
+        Status status = StatusCode::ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED;
         SPDLOG_WARN(status.string());
         return status;
     }
@@ -69,36 +76,28 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     auto networkShapes = network->getInputShapes();
     const auto& networkInputs = network->getInputsInfo();
     bool reshapeRequired = false;
-    auto& configShapes = config.getShapes();
-    for (const auto& shape : configShapes) {
-        if (shape.first == ANONYMOUS_INPUT_NAME) {
+    for (const auto& [name, _] : config.getShapes()) {
+        if (name == ANONYMOUS_INPUT_NAME) {
             continue;
         }
-        if (networkInputs.count(shape.first) == 0) {
-            SPDLOG_WARN("Config shape - {} not found in network", shape.first);
+        if (networkInputs.count(name) == 0) {
+            SPDLOG_WARN("Config shape - {} not found in network", name);
             return StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK;
         }
     }
+    for (const auto& [name, _] : config.getLayouts()) {
+        if (networkInputs.count(name) == 0 && network->getOutputsInfo().count(name) == 0) {
+            SPDLOG_WARN("Config layout - {} not found in network", name);
+            return StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK;
+        }
+    }
+
     this->inputsInfo.clear();
+
     for (const auto& pair : networkInputs) {
         const auto& name = pair.first;
         auto input = pair.second;
-
-        // Data from network
-        auto precision = input->getPrecision();
-        auto layout = input->getLayout();
         auto shape = input->getTensorDesc().getDims();
-
-        // Data from config
-        if (config.getLayout().size()) {
-            // Single layout for all inputs
-            layout = TensorInfo::getLayoutFromString(config.getLayout());
-        } else if (config.getLayouts().count(name)) {
-            // Layout defined for specific input
-            layout = TensorInfo::getLayoutFromString(config.getLayouts().at(name));
-        }
-        input->setLayout(layout);
-
         if (config.getBatchSize() > 0 || parameter.isBatchSizeRequested()) {
             // leave shape untouched
         } else if (config.isShapeAuto(name) && parameter.isShapeRequested(name)) {
@@ -109,29 +108,23 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
         }
 
-        SPDLOG_DEBUG("Network shape - {}; Final shape - {}", TensorInfo::shapeToString(networkShapes[name]), TensorInfo::shapeToString(shape));
+        SPDLOG_DEBUG("Network shape for input: {} - {}; final shape {}", name,
+            TensorInfo::shapeToString(networkShapes[name]),
+            TensorInfo::shapeToString(shape));
 
         if (networkShapes[name] != shape) {
             reshapeRequired = true;
             networkShapes[name] = shape;
         }
-
-        auto mappingName = config.getMappingInputByKey(name);
-        auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
-        std::string precision_str = tensor->getPrecisionAsString();
-        this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
-        std::stringstream shape_stream;
-        std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
-        SPDLOG_INFO("Input name: {}; mapping_name: {}; shape: {}; precision: {}, layout:{}",
-            name, mappingName, shape_stream.str(), precision_str, TensorInfo::getStringFromLayout(input->getLayout()));
     }
 
     // Update OV model shapes
     if (reshapeRequired) {
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs", getName(), getVersion());
         try {
+            SPDLOG_INFO("Initial network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
             network->reshape(networkShapes);
-        } catch (const InferenceEngine::details::InferenceEngineException& e) {
+        } catch (const InferenceEngine::Exception& e) {
             SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
             SPDLOG_DEBUG("Description: {}", e.what());
             return StatusCode::RESHAPE_ERROR;
@@ -140,6 +133,31 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
     }
 
+    for (const auto& pair : networkInputs) {
+        const auto& name = pair.first;
+        auto input = pair.second;
+
+        // Data from network
+        auto precision = input->getPrecision();
+        auto layout = input->getLayout();
+        auto shape = input->getTensorDesc().getDims();
+
+        if (!config.getLayout().empty()) {
+            layout = TensorInfo::getLayoutFromString(config.getLayout());
+        } else if (config.getLayouts().size() > 0) {
+            auto it = config.getLayouts().find(name);
+            if (it != config.getLayouts().end()) {
+                layout = TensorInfo::getLayoutFromString(it->second);
+            }
+        }
+
+        input->setLayout(layout);
+
+        auto mappingName = config.getMappingInputByKey(name);
+        auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
+        this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
+    }
+    SPDLOG_INFO("Final network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
     return StatusCode::OK;
 }
 
@@ -152,15 +170,29 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
         // Data from network
         auto precision = output->getPrecision();
         auto layout = output->getLayout();
+
+        if (config.getLayouts().size() > 0) {
+            auto it = config.getLayouts().find(name);
+            if (it != config.getLayouts().end()) {
+                layout = TensorInfo::getLayoutFromString(it->second);
+            }
+        }
+
+        output->setLayout(layout);
+
         auto shape = output->getDims();
+        auto effectiveShape = output->getTensorDesc().getBlockingDesc().getBlockDims();
         auto mappingName = config.getMappingOutputByKey(name);
         auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
         std::string precision_str = tensor->getPrecisionAsString();
         this->outputsInfo[tensor->getMappedName()] = std::move(tensor);
         std::stringstream shape_stream;
         std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
-        SPDLOG_INFO("Output name: {} ; mapping name: {}; shape: {} ; precision: {}, layout:{}",
-            name, mappingName, shape_stream.str(), precision_str, TensorInfo::getStringFromLayout(output->getLayout()));
+        std::stringstream effective_shape_stream;
+        std::copy(effectiveShape.begin(), effectiveShape.end(), std::ostream_iterator<size_t>(effective_shape_stream, " "));
+        SPDLOG_INFO("Output name: {}; mapping name: {}; shape: {}; effective shape {}; precision: {}; layout: {}",
+            name, mappingName, shape_stream.str(), effective_shape_stream.str(), precision_str,
+            TensorInfo::getStringFromLayout(output->getLayout()));
     }
 }
 
@@ -224,7 +256,7 @@ uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& mo
     std::string key = METRIC_KEY(OPTIMAL_NUMBER_OF_INFER_REQUESTS);
     try {
         numberOfParallelInferRequests = execNetwork->GetMetric(key).as<unsigned int>();
-    } catch (const details::InferenceEngineException& ex) {
+    } catch (const Exception& ex) {
         SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
         numberOfParallelInferRequests = 1u;
     }
@@ -248,7 +280,7 @@ void ModelInstance::loadOVEngine() {
     if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
         SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
         try {
-            auto extension_ptr = InferenceEngine::make_so_pointer<InferenceEngine::IExtension>(ovms::Config::instance().cpuExtensionLibraryPath().c_str());
+            auto extension_ptr = std::make_shared<InferenceEngine::Extension>(ovms::Config::instance().cpuExtensionLibraryPath());
             SPDLOG_INFO("Custom CPU extention loaded. Adding it.");
             engine->AddExtension(extension_ptr, "CPU");
             SPDLOG_INFO("Extention added.");
@@ -391,7 +423,6 @@ Status ModelInstance::fetchModelFilepaths() {
         }
         modelFiles.push_back(file);
     }
-
     if (!found) {
         found = true;
         modelFiles.clear();
@@ -440,6 +471,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     this->targetDevice = config.getTargetDevice();
     this->config = config;
     auto status = fetchModelFilepaths();
+
     if (!status.ok()) {
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return status;
@@ -447,7 +479,6 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     try {
         if (!this->engine)
             loadOVEngine();
-        status = StatusCode::OK;
         if (!this->network) {
             if (this->config.isCustomLoaderRequiredToLoadModel()) {
                 // loading the model using the custom loader
@@ -479,7 +510,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
         }
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::Exception& e) {
         SPDLOG_ERROR("exception occurred while loading network: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return StatusCode::NETWORK_NOT_LOADED;
@@ -645,12 +676,13 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
     }
 }
 
-void ModelInstance::unloadModel(bool isPermanent) {
+void ModelInstance::unloadModel(bool isPermanent, bool isError) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
+    ModelVersionStatusErrorCode errorStatus = isError ? ModelVersionStatusErrorCode::UNKNOWN : ModelVersionStatusErrorCode::OK;
     if (isPermanent) {
-        this->status.setUnloading();
+        this->status.setUnloading(errorStatus);
     } else {
-        this->status.setLoading();
+        this->status.setLoading(errorStatus);
     }
     subscriptionManager.notifySubscribers();
     while (!canUnloadInstance()) {
@@ -722,7 +754,7 @@ const Status ModelInstance::validatePrecision(const ovms::TensorInfo& networkInp
 const Status ModelInstance::validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
     const tensorflow::TensorProto& requestInput) {
     // Network and request must have the same number of shape dimensions, higher than 0
-    auto& shape = networkInput.getShape();
+    auto& shape = networkInput.getEffectiveShape();
     if (requestInput.tensor_shape().dim_size() <= 0 ||
         shape.size() != static_cast<size_t>(requestInput.tensor_shape().dim_size())) {
         std::stringstream ss;
@@ -746,7 +778,7 @@ const bool ModelInstance::checkShapeMismatch(const ovms::TensorInfo& networkInpu
     const tensorflow::TensorProto& requestInput,
     const Mode& batchingMode) {
     // Network and request must have the same shape
-    auto& shape = networkInput.getShape();
+    auto& shape = networkInput.getEffectiveShape();
     int i = (batchingMode == AUTO) ? 1 : 0;  // If batch size is automatic, omit first dimension
     for (; i < requestInput.tensor_shape().dim_size(); i++) {
         if (requestInput.tensor_shape().dim(i).size() < 0 ||
@@ -813,6 +845,29 @@ const Status ModelInstance::validateTensorContentSize(const ovms::TensorInfo& ne
     return StatusCode::OK;
 }
 
+const bool ModelInstance::checkBinaryInputBatchSizeMismatch(const ovms::TensorInfo& networkInput,
+    const tensorflow::TensorProto& requestInput) {
+    if (requestInput.string_val_size() < 0) {
+        return true;
+    }
+    if (getBatchSize() != static_cast<size_t>(requestInput.string_val_size())) {
+        return true;
+    }
+    return false;
+}
+
+const Status ModelInstance::validateNumberOfBinaryInputShapeDimensions(const ovms::TensorInfo& networkInput,
+    const tensorflow::TensorProto& requestInput) {
+    if (requestInput.tensor_shape().dim_size() != 1) {
+        std::stringstream ss;
+        ss << "Expected number of binary input shape dimensions: 1; Actual: " << requestInput.tensor_shape().dim_size();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[Model: {} version: {}] Invalid number of shape dimensions - {}", getName(), getVersion(), details);
+        return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, details);
+    }
+    return StatusCode::OK;
+}
+
 const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
     Status finalStatus = StatusCode::OK;
 
@@ -844,6 +899,28 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         if (!status.ok())
             return status;
 
+        if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
+            // binary inputs will be validated during conversion to blob
+            SPDLOG_DEBUG("Received request containing binary inputs");
+            status = validateNumberOfBinaryInputShapeDimensions(*networkInput, requestInput);
+            if (!status.ok()) {
+                return status;
+            }
+
+            if (checkBinaryInputBatchSizeMismatch(*networkInput, requestInput)) {
+                if (batchingMode == AUTO) {
+                    finalStatus = StatusCode::BATCHSIZE_CHANGE_REQUIRED;
+                } else {
+                    std::stringstream ss;
+                    ss << "Expected: " << getBatchSize() << "; Actual: " << requestInput.string_val_size();
+                    const std::string details = ss.str();
+                    SPDLOG_DEBUG("[Model: {} version: {}] Invalid batch size - {}", getName(), getVersion(), details);
+                    return Status(StatusCode::INVALID_BATCH_SIZE, details);
+                }
+            }
+            continue;
+        }
+
         status = validatePrecision(*networkInput, requestInput);
         if (!status.ok())
             return status;
@@ -869,7 +946,7 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
                 finalStatus = StatusCode::RESHAPE_REQUIRED;
             } else {
                 std::stringstream ss;
-                ss << "Expected: " << TensorInfo::shapeToString(networkInput->getShape())
+                ss << "Expected: " << TensorInfo::shapeToString(networkInput->getEffectiveShape())
                    << "; Actual: " << TensorInfo::tensorShapeToString(requestInput.tensor_shape());
                 const std::string details = ss.str();
                 SPDLOG_DEBUG("[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
@@ -893,7 +970,7 @@ Status ModelInstance::performInference(InferenceEngine::InferRequest& inferReque
             SPDLOG_ERROR("Async infer failed {}: {}", status.string(), sts);
             return status;
         }
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::Exception& e) {
         Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
         SPDLOG_ERROR("Async caught an exception {}: {}", status.string(), e.what());
         return status;
@@ -911,7 +988,6 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     status = reloadModelIfRequired(status, requestProto, modelUnloadGuardPtr);
     if (!status.ok())
         return status;
-
     timer.start("get infer request");
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
     int executingInferId = executingStreamIdGuard.getId();

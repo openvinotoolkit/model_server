@@ -227,6 +227,12 @@ protected:
     const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
         const tensorflow::TensorProto& requestInput);
 
+    const Status validateNumberOfBinaryInputShapeDimensions(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const bool checkBinaryInputBatchSizeMismatch(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
     const bool checkBatchSizeMismatch(const ovms::TensorInfo& networkInput,
         const tensorflow::TensorProto& requestInput);
 
@@ -489,7 +495,7 @@ public:
          * @param isPermanent defines if the unload operation should be permanent and should change instance state to End after it is completed
          * otherwise model might be unloaded temporarily so the instance state should be preserved as Loading
          */
-    virtual void unloadModel(bool isPermanent = true);
+    virtual void unloadModel(bool isPermanent = true, bool isError = false);
 
     /**
          * @brief Wait for model to change to AVAILABLE state

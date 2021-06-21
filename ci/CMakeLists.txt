@@ -69,6 +69,7 @@ include_directories(/root/.cache/bazel/_bazel_root/${BAZEL_BUILD}/execroot/ovms/
 include_directories(/root/.cache/bazel/_bazel_root/${BAZEL_BUILD}/execroot/ovms/bazel-out/k8-opt/bin/external/awssdk/_virtual_includes/core/)
 include_directories(/root/.cache/bazel/_bazel_root/${BAZEL_BUILD}/external/opencv/include)
 include_directories(/awssdk/aws-cpp-sdk-s3/include)
+include_directories(/usr/local/ssl/include)
 
 find_package(InferenceEngine REQUIRED)
 find_package(ngraph REQUIRED)
@@ -84,10 +85,12 @@ target_include_directories(
 message(STATUS ${NGRAPH_LIBRARIES})
 
 file(STRINGS ovms_libs.in OVMS_LIBS)
+find_library(SSL_LIBRARY ssl HINTS /usr/local/ssl/lib)
+find_library(CRYPTO_LIBRARY crypto HINTS /usr/local/ssl/lib)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${InferenceEngine_LIBRARIES} ${OpenCV_LIBS} ${NGRAPH_LIBRARIES} )
 target_link_libraries(${PROJECT_NAME} azurestorage cpprest)
 target_link_libraries(${PROJECT_NAME} ${OVMS_LIBS})
-target_link_libraries(${PROJECT_NAME} stdc++fs ssl crypto uuid xml2 dl)
+target_link_libraries(${PROJECT_NAME} stdc++fs ${SSL_LIBRARY} ${CRYPTO_LIBRARY} uuid xml2 dl)
 
 # workaround to have OCR custom node scanned
 target_link_libraries(ovms ocr img zoo)

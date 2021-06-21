@@ -31,8 +31,6 @@ public:
         tensor(tensor),
         nodeLibrary(nodeLibrary) {}
 
-    void Release() noexcept override { delete this; }
-
     void* lock(void* handle, InferenceEngine::LockOp = InferenceEngine::LOCK_FOR_WRITE) noexcept override {
         return handle;
     }

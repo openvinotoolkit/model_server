@@ -16,7 +16,9 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 #include <grpcpp/server_context.h>
@@ -42,6 +44,7 @@ enum class StatusCode {
     JSON_SERIALIZATION_ERROR, /*!< Data serialization to json format failed */
     MODELINSTANCE_NOT_FOUND,
     SHAPE_WRONG_FORMAT,                   /*!< The provided shape param is in wrong format */
+    LAYOUT_WRONG_FORMAT,                  /*!< The provided layout param is in wrong format */
     PLUGIN_CONFIG_WRONG_FORMAT,           /*!< Plugin config is in wrong format */
     MODEL_VERSION_POLICY_WRONG_FORMAT,    /*!< Model version policy is in wrong format */
     MODEL_VERSION_POLICY_UNSUPPORTED_KEY, /*!< Model version policy contains invalid key */
@@ -53,7 +56,9 @@ enum class StatusCode {
     BATCHSIZE_CHANGE_REQUIRED,              /*!< Model instance needs to be reloaded with new batch size */
     FORBIDDEN_MODEL_DYNAMIC_PARAMETER,      /*!< Value of the provided param is forbidden */
     ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED,      /*!< Anonymous fixed shape is invalid for models with multiple inputs */
-    CONFIG_SHAPE_IS_NOT_IN_NETWORK,         /*!< Invalid shape dimension number or dimension value */
+    ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED,     /*!< Anonymous fixed layout is invalid for models with multiple inputs */
+    CONFIG_SHAPE_IS_NOT_IN_NETWORK,         /*!< Configured tensor shape is not present in network */
+    CONFIG_LAYOUT_IS_NOT_IN_NETWORK,        /*!< Configured tensor layout is not present in network */
     CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE, /*!< Cannot load network into target device */
     REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL,
 
@@ -174,6 +179,7 @@ enum class StatusCode {
     REST_NO_INPUTS_FOUND,                       /*!< Missing inputs in column order */
     REST_COULD_NOT_PARSE_INPUT,                 /*!< Error while parsing input content, not valid ndarray */
     REST_PROTO_TO_STRING_ERROR,                 /*!< Error while parsing ResponseProto to JSON string */
+    REST_BASE64_DECODE_ERROR,                   /*!< Error while decoding base64 REST binary input */
     REST_UNSUPPORTED_PRECISION,                 /*!< Unsupported conversion from tensor_content to _val container */
     REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, /*!< Size of data in tensor_content does not match declared tensor shape */
     REST_SERIALIZE_VAL_FIELD_INVALID_SIZE,      /*!< Number of elements in xxx_val field does not match declared tensor shape */
@@ -218,6 +224,7 @@ enum class StatusCode {
     PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY,
     PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER,
     PIPELINE_DEMULTIPLEXER_NO_RESULTS,
+    PIPELINE_INPUTS_AMBIGUOUS_METADATA,
 
     // Custom Loader
     CUSTOM_LOADER_LIBRARY_INVALID,
@@ -242,6 +249,11 @@ enum class StatusCode {
     NODE_LIBRARY_METADATA_FAILED,
     NODE_LIBRARY_OUTPUT_MISSING_NAME,
 
+    // Binary inputs
+    IMAGE_PARSING_FAILED,
+    UNSUPPORTED_LAYOUT,
+    INVALID_NO_OF_CHANNELS,
+
     // Model control API
     OK_NOT_RELOADED, /*!< Operation succeeded but no config reload was needed */
     OK_RELOADED,     /*!< Operation succeeded but no config reload was needed */
@@ -251,30 +263,53 @@ enum class StatusCode {
 
 class Status {
     StatusCode code;
-    std::string message;
+    std::unique_ptr<std::string> message;
 
-    static const std::map<const StatusCode, const std::string> statusMessageMap;
-    static const std::map<const StatusCode, grpc::StatusCode> grpcStatusMap;
-    static const std::map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap;
+    static const std::unordered_map<const StatusCode, const std::string> statusMessageMap;
+    static const std::unordered_map<const StatusCode, grpc::StatusCode> grpcStatusMap;
+    static const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap;
 
     void appendDetails(const std::string& details) {
-        this->message += " - " + details;
+        ensureMessageAllocated();
+        *this->message += " - " + details;
+    }
+    void ensureMessageAllocated() {
+        if (nullptr == message) {
+            message = std::make_unique<std::string>();
+        }
     }
 
 public:
     Status(StatusCode code = StatusCode::OK) :
         code(code) {
+        if (code == StatusCode::OK) {
+            return;
+        }
         auto it = statusMessageMap.find(code);
         if (it != statusMessageMap.end())
-            this->message = it->second;
+            this->message = std::make_unique<std::string>(it->second);
         else
-            this->message = "Unknown error";
+            this->message = std::make_unique<std::string>("Unknown error");
     }
 
     Status(StatusCode code, const std::string& details) :
         Status(code) {
         appendDetails(details);
     }
+
+    Status(const Status& rhs) :
+        code(rhs.code),
+        message(rhs.message != nullptr ? std::make_unique<std::string>(*(rhs.message)) : nullptr) {}
+
+    Status(Status&& rhs) = default;
+
+    Status operator=(const Status& rhs) {
+        this->code = rhs.code;
+        this->message = (rhs.message != nullptr ? std::make_unique<std::string>(*rhs.message) : nullptr);
+        return *this;
+    }
+
+    Status& operator=(Status&&) = default;
 
     bool ok() const {
         return (code == StatusCode::OK || code == StatusCode::OK_RELOADED || code == StatusCode::OK_NOT_RELOADED);
@@ -303,7 +338,8 @@ public:
     const grpc::Status grpc() const {
         auto it = grpcStatusMap.find(code);
         if (it != grpcStatusMap.end()) {
-            return grpc::Status(it->second, this->message);
+            return grpc::Status(it->second,
+                this->message ? *this->message : "");
         } else {
             return grpc::Status(grpc::StatusCode::UNKNOWN, "Unknown error");
         }
@@ -314,7 +350,7 @@ public:
     }
 
     const std::string& string() const {
-        return this->message;
+        return this->message ? *this->message : statusMessageMap.at(code);
     }
 
     operator const std::string&() const {

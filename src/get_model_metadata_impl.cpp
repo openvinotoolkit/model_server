@@ -103,7 +103,7 @@ void GetModelMetadataImpl::convert(
         *input.mutable_name() = name;
         *input.mutable_tensor_shape() = tensorflow::TensorShapeProto();
 
-        for (auto dim : tensor->getShape()) {
+        for (auto dim : tensor->getEffectiveShape()) {
             input.mutable_tensor_shape()->add_dim()->set_size(dim ? dim : -1);
         }
     }
@@ -145,15 +145,8 @@ Status GetModelMetadataImpl::buildResponse(
         return status;
     }
 
-    tensor_map_t inputs, outputs;
-    status = pipelineDefinition.getInputsInfo(inputs, manager);
-    if (!status.ok()) {
-        return status;
-    }
-    status = pipelineDefinition.getOutputsInfo(outputs, manager);
-    if (!status.ok()) {
-        return status;
-    }
+    const tensor_map_t& inputs = pipelineDefinition.getInputsInfo();
+    const tensor_map_t& outputs = pipelineDefinition.getOutputsInfo();
 
     response->Clear();
     response->mutable_model_spec()->set_name(pipelineDefinition.getName());

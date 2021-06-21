@@ -22,8 +22,8 @@
                         "original_image_color_order": "GRAY",
                         "target_image_color_order": "RGB",
 
-                        "original_image_layout": "CHW",
-                        "target_image_layout": "HWC",
+                        "original_image_layout": "NCHW",
+                        "target_image_layout": "NHWC",
 
                         "debug": "true"
 

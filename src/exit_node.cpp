@@ -19,6 +19,7 @@
 #include <utility>
 
 #include "logging.hpp"
+#include "ov_utils.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -57,7 +58,9 @@ Status ExitNode::fetchResults(const BlobMap& inputBlobs) {
 
 Status ExitNode::serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::TensorProto& proto) {
     // Set size
-    for (size_t dim : blob->getTensorDesc().getDims()) {
+    const auto& dims = getEffectiveBlobShape(blob);
+
+    for (size_t dim : dims) {
         proto.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
 
@@ -69,14 +72,14 @@ Status ExitNode::serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::T
     case InferenceEngine::Precision::I32:
         proto.set_dtype(tensorflow::DataTypeToEnum<int32_t>::value);
         break;
-    case InferenceEngine::Precision::I16:
-        proto.set_dtype(tensorflow::DataTypeToEnum<int16_t>::value);
+    case InferenceEngine::Precision::I8:
+        proto.set_dtype(tensorflow::DataTypeToEnum<int8_t>::value);
         break;
     case InferenceEngine::Precision::U8:
         proto.set_dtype(tensorflow::DataTypeToEnum<uint8_t>::value);
         break;
-    case InferenceEngine::Precision::I8:
-        proto.set_dtype(tensorflow::DataTypeToEnum<int8_t>::value);
+    case InferenceEngine::Precision::I16:
+        proto.set_dtype(tensorflow::DataTypeToEnum<int16_t>::value);
         break;
     case InferenceEngine::Precision::U16:
         proto.set_dtype(tensorflow::DataTypeToEnum<uint32_t>::value);  // 2 byte padding [v1, v0, 0, 0, u1, u0, 0, 0, ...]

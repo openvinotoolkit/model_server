@@ -37,7 +37,6 @@ public:
     MOCK_METHOD(InferenceEngine::StatusCode, StartAsync, (InferenceEngine::ResponseDesc*), (noexcept, override));
     MOCK_METHOD(InferenceEngine::StatusCode, SetBlob, (const char*, const Blob::Ptr&, ResponseDesc*), (noexcept, override));
     MOCK_METHOD(InferenceEngine::StatusCode, SetBlob, (const char*, const Blob::Ptr&, const PreProcessInfo&, ResponseDesc*), (noexcept, override));
-    MOCK_METHOD(void, Release, (), (noexcept, override));
     MOCK_METHOD(InferenceEngine::StatusCode, Infer, (ResponseDesc*), (noexcept, override));
     MOCK_METHOD(InferenceEngine::StatusCode, Wait, (int64_t millis_timeout, ResponseDesc*), (noexcept, override));
     MOCK_METHOD(InferenceEngine::StatusCode, GetUserData, (void**, ResponseDesc*), (noexcept, override));

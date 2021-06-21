@@ -40,7 +40,8 @@ Read more about [*Get Model Metadata API* usage](./../example_client/README.md#m
 
 - Description
 
-Sends requests via TFS gRPC API using images in numpy format. It displays performance statistics and optionally the model accuracy.
+Sends requests via TFS gRPC API using images in base64 encoded string or numpy format. It displays performance statistics and optionally the model accuracy.
+To send images in binary format data should be placed in dt_string field of tensor.proto.
 
 [Predict proto](https://github.com/tensorflow/serving/blob/r1.14/tensorflow_serving/apis/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.  
  * *PredictRequest* specifies information about the model spec, a map of input data serialized via 
@@ -48,7 +49,9 @@ Sends requests via TFS gRPC API using images in numpy format. It displays perfor
  * *PredictResponse* includes a map of outputs serialized by 
 [TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) and information about the used model spec.
 
-Read more about *Predict API* usage [here](./../example_client/README.md#predict-api)       
+Read more about *Predict API* usage [here](./../example_client/README.md#predict-api)
+
+Check [how binary data is handled in OpenVINO Model Server](binary_input_ouput.md)
 
 ## See Also
 

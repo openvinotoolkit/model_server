@@ -66,7 +66,7 @@ Script `grpc_throughput.sh 28` spawns 28 gRPC clients.
 
 ### Example usage:
 ```bash
-$ ./grpc_throughput.sh 28 --grpc_address localhost --grpc_port 9178 --images_numpy_path imgs.npy --iteration 5000 --batchsize 1 --input_name "data"
+$ ./grpc_throughput.sh 28 --grpc_address localhost --grpc_port 9178 --images_numpy_path imgs.npy --iteration 4000 --batchsize 2 --input_name "data"
 ```
 
 This will create `28 * 4000` requests, `2` frames each, = `224000` frames total.  
@@ -133,10 +133,11 @@ To get frames per second, script outputs total execution time:
 real    1m19.263s
 user    5m53.360s
 sys     1m29.495s
+2835 FPS
 ```
 
 To calculate throughput (frames per second), divide frames by execution time:  
 ```
-224000 / 79.263 = 2826.03 fps
+224000 / 79 = 2835.44 fps
 ```
 

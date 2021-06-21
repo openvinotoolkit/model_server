@@ -148,6 +148,8 @@ cc_library(
         "version.hpp",
         "logging.hpp",
         "logging.cpp",
+        "binaryutils.hpp",
+        "binaryutils.cpp",
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
@@ -160,15 +162,16 @@ cc_library(
         "@awssdk//:s3",
         "@awssdk//:core",
         "@awssdk//:deps",
-	"@azure//:storage",
-	"@cpprest//:sdk",
-	"@boost//:lib",
+	    "@azure//:storage",
+	    "@cpprest//:sdk",
+	    "@boost//:lib",
         "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "@openvino//:openvino",
+        "@opencv//:opencv",
     ],
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG"
@@ -183,8 +186,8 @@ cc_library(
 cc_binary(
     name = "libsampleloader.so",
     srcs = [
-	"example/SampleCustomLoader/sampleCustLoader.cpp",
-	"customloaderinterface.hpp",
+	    "example/SampleCustomLoader/sampleCustLoader.cpp",
+	    "customloaderinterface.hpp",
     ],
     linkshared = 1,
     deps = [
@@ -195,8 +198,8 @@ cc_binary(
 cc_binary(
     name = "lib_node_mock.so",
     srcs = [
-	"test/custom_nodes/node_mock.c",
-	"custom_node_interface.h",
+	    "test/custom_nodes/node_mock.c",
+	    "custom_node_interface.h",
     ],
     linkshared = 1,
 )
@@ -204,8 +207,8 @@ cc_binary(
 cc_binary(
     name = "lib_node_missing_implementation.so",
     srcs = [
-	"test/custom_nodes/node_missing_implementation.c",
-	"custom_node_interface.h",
+	    "test/custom_nodes/node_missing_implementation.c",
+	    "custom_node_interface.h",
     ],
     linkshared = 1,
 )
@@ -213,8 +216,8 @@ cc_binary(
 cc_binary(
     name = "lib_node_add_sub.so",
     srcs = [
-	"test/custom_nodes/node_add_sub.c",
-	"custom_node_interface.h",
+	    "test/custom_nodes/node_add_sub.c",
+	    "custom_node_interface.h",
     ],
     linkshared = 1,
 )
@@ -254,7 +257,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-            "@opencv//:opencv"
+        "@opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -272,7 +275,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-            "@opencv//:opencv"
+        "@opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -290,7 +293,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-            "@opencv//:opencv"
+        "@opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -316,7 +319,8 @@ cc_binary(
         "-Werror",
     ],
     deps = [
-        "//src:ovms_lib"
+        "//src:ovms_lib",
+        "@crypto_lib//:libcrypto",
     ]
 )
 
@@ -359,8 +363,10 @@ cc_test(
         "test/predict_validation_test.cpp",
         "test/prediction_service_test.cpp",
         "test/custom_loader_test.cpp",
+        "test/binaryutils_test.cpp",
         "test/rest_parser_row_test.cpp",
         "test/rest_parser_column_test.cpp",
+        "test/rest_parser_binary_inputs_test.cpp",
         "test/rest_parser_nonamed_test.cpp",
         "test/rest_utils_test.cpp",
         "test/sequence_test.cpp",
@@ -383,6 +389,8 @@ cc_test(
         "test/dummy/1/dummy.bin",
         "test/add_two_inputs_model/1/add.xml",
         "test/add_two_inputs_model/1/add.bin",
+        "test/increment_1x3x4x5/1/increment_1x3x4x5.xml",
+        "test/increment_1x3x4x5/1/increment_1x3x4x5.bin",
     ],
     linkopts = [
         "-lxml2",
@@ -403,6 +411,7 @@ cc_test(
         "//src:libcustom_node_model_zoo_intel_object_detection.so",
         "//src:libcustom_node_image_transformation.so",
         "@com_google_googletest//:gtest",
+        "@crypto_lib//:libcrypto",
     ],
     copts = [
         "-Wall",

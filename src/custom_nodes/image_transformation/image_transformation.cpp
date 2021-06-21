@@ -24,8 +24,28 @@
 
 static constexpr const char* TENSOR_NAME = "image";
 
+template <class TimeT = std::chrono::milliseconds,
+    class ClockT = std::chrono::steady_clock>
+class Timer {
+    TimeT _total{-1};
+    decltype(ClockT::now()) _start = ClockT::now();
+
+public:
+    void tick() {
+        _total = TimeT{-1};
+        _start = ClockT::now();
+    }
+    void tock() { _total = std::chrono::duration_cast<TimeT>(ClockT::now() - _start); }
+
+    TimeT duration() const {
+        return _total;
+    }
+};
+
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
+    Timer clock;
     // Parameters reading
+    clock.tick();
 
     // Image size.
     //
@@ -50,20 +70,25 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     // Image layout.
     //
-    // Possible layouts: CHW and HWC.
+    // Possible layouts: NCHW and NHWC.
     // Since OpenCV is used for transformations, image will be converted to cv::Mat.
-    // The container requires the data in HWC format, so selecting input layout CHW will convert data to HWC, therefore decrease performance.
-    // Selecting target layout CHW will also perform conversion before copying data into output.
+    // The container requires the data in NHWC format, so selecting input layout NCHW will convert data to NHWC, therefore decrease performance.
+    // Selecting target layout NCHW will also perform conversion before copying data into output.
     std::string originalImageLayout = get_string_parameter("original_image_layout", params, paramsCount);
     std::string targetImageLayout = get_string_parameter("target_image_layout", params, paramsCount);
     targetImageLayout = targetImageLayout.empty() ? originalImageLayout : targetImageLayout;
-    NODE_ASSERT(originalImageLayout == "CHW" || originalImageLayout == "HWC", "original image layout must be CHW or HWC");
-    NODE_ASSERT(targetImageLayout == "CHW" || targetImageLayout == "HWC", "target image layout must be CHW or HWC");
+    NODE_ASSERT(originalImageLayout == "NCHW" || originalImageLayout == "NHWC", "original image layout must be NCHW or NHWC");
+    NODE_ASSERT(targetImageLayout == "NCHW" || targetImageLayout == "NHWC", "target image layout must be NCHW or NHWC");
 
     // Debug flag for additional logging.
     bool debugMode = get_string_parameter("debug", params, paramsCount) == "true";
+    clock.tock();
+    if (debugMode) {
+        std::cout << "Parameter reading = " << clock.duration().count() << " ms" << std::endl;
+    }
 
     // ------------ validation start -------------
+    clock.tick();
     NODE_ASSERT(inputsCount == 1, "there must be exactly one input");
     const CustomNodeTensor* imageTensor = inputs;
     NODE_ASSERT(std::strcmp(imageTensor->name, TENSOR_NAME) == 0, "node input name is wrong");
@@ -74,11 +99,11 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     uint64_t originalImageWidth = 0;
     uint64_t originalImageColorChannels = 0;
 
-    if (originalImageLayout == "CHW") {
+    if (originalImageLayout == "NCHW") {
         originalImageColorChannels = imageTensor->dims[1];
         originalImageHeight = imageTensor->dims[2];
         originalImageWidth = imageTensor->dims[3];
-    } else if (originalImageLayout == "HWC") {
+    } else if (originalImageLayout == "NHWC") {
         originalImageHeight = imageTensor->dims[1];
         originalImageWidth = imageTensor->dims[2];
         originalImageColorChannels = imageTensor->dims[3];
@@ -111,18 +136,28 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         std::cout << "Target image color order: " << targetImageColorOrder << std::endl;
         std::cout << "Target image layout: " << targetImageLayout << std::endl;
     }
+    clock.tock();
+    if (debugMode) {
+        std::cout << "Validation = " << clock.duration().count() << " ms" << std::endl;
+    }
     // ------------- validation end ---------------
 
     // Prepare cv::Mat out of imageTensor input.
     // In case input is in NCHW format, perform reordering to NHWC.
+    clock.tick();
     cv::Mat image = cv::Mat(originalImageHeight, originalImageWidth, originalImageColorChannels == 1 ? CV_32FC1 : CV_32FC3);
-    if (originalImageLayout == "CHW") {
+    if (originalImageLayout == "NCHW") {
         reorder_to_nhwc_2<float>((float*)imageTensor->data, (float*)image.data, originalImageHeight, originalImageWidth, originalImageColorChannels);
     } else {
         std::memcpy(image.data, imageTensor->data, imageTensor->dataBytes);
     }
+    clock.tock();
+    if (debugMode) {
+        std::cout << "cv::Mat preparation = " << clock.duration().count() << " ms" << std::endl;
+    }
 
     // Change color order and number of channels.
+    clock.tick();
     static const std::map<std::pair<std::string, std::string>, int> colors = {
         {{"GRAY", "BGR"}, cv::COLOR_GRAY2BGR},
         {{"GRAY", "RGB"}, cv::COLOR_GRAY2RGB},
@@ -137,19 +172,29 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         NODE_ASSERT(colorIt != colors.end(), "unsupported color conversion");
         cv::cvtColor(image, image, colorIt->second);
     }
+    clock.tock();
+    if (debugMode) {
+        std::cout << "Color order change = " << clock.duration().count() << " ms" << std::endl;
+    }
 
     // Perform resize operation.
+    clock.tick();
     if (static_cast<int64_t>(originalImageHeight) != targetImageHeight || static_cast<int64_t>(originalImageWidth) != targetImageWidth) {
         cv::resize(image, image, cv::Size(targetImageWidth, targetImageHeight));
     }
+    clock.tock();
+    if (debugMode) {
+        std::cout << "Resize = " << clock.duration().count() << " ms" << std::endl;
+    }
 
     // Prepare output tensor
+    clock.tick();
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * targetImageColorChannels;
     NODE_ASSERT(image.total() * image.elemSize() == byteSize, "buffer size differs");
     float* buffer = (float*)malloc(byteSize);
     NODE_ASSERT(buffer != nullptr, "malloc has failed");
 
-    if (targetImageLayout == "CHW") {
+    if (targetImageLayout == "NCHW") {
         reorder_to_nchw_2<float>((float*)image.data, (float*)buffer, image.rows, image.cols, image.channels());
     } else {
         std::memcpy((uint8_t*)buffer, image.data, byteSize);
@@ -172,7 +217,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     output.dims = (uint64_t*)malloc(output.dimsCount * sizeof(uint64_t));
     NODE_ASSERT(output.dims != nullptr, "malloc has failed");
     output.dims[0] = 1;
-    if (targetImageLayout == "CHW") {
+    if (targetImageLayout == "NCHW") {
         output.dims[1] = targetImageColorChannels;
         output.dims[2] = targetImageHeight;
         output.dims[3] = targetImageWidth;
@@ -182,6 +227,10 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         output.dims[3] = targetImageColorChannels;
     }
     output.precision = FP32;
+    clock.tock();
+    if (debugMode) {
+        std::cout << "cv::Mat to output = " << clock.duration().count() << " ms" << std::endl;
+    }
     return 0;
 }
 
@@ -218,8 +267,8 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     std::string originalImageLayout = get_string_parameter("original_image_layout", params, paramsCount);
     std::string targetImageLayout = get_string_parameter("target_image_layout", params, paramsCount);
     targetImageLayout = targetImageLayout.empty() ? originalImageLayout : targetImageLayout;
-    NODE_ASSERT(originalImageLayout == "CHW" || originalImageLayout == "HWC", "original image layout must be CHW or HWC");
-    NODE_ASSERT(targetImageLayout == "CHW" || targetImageLayout == "HWC", "target image layout must be CHW or HWC");
+    NODE_ASSERT(originalImageLayout == "NCHW" || originalImageLayout == "NHWC", "original image layout must be NCHW or NHWC");
+    NODE_ASSERT(targetImageLayout == "NCHW" || targetImageLayout == "NHWC", "target image layout must be NCHW or NHWC");
 
     *infoCount = 1;
     *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
@@ -231,7 +280,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     NODE_ASSERT(((*info)[0].dims) != nullptr, "malloc has failed");
     (*info)[0].dims[0] = 1;
 
-    if (targetImageLayout == "HWC") {
+    if (targetImageLayout == "NHWC") {
         (*info)[0].dims[1] = targetImageHeight == -1 ? 0 : targetImageHeight;
         (*info)[0].dims[2] = targetImageWidth == -1 ? 0 : targetImageWidth;
         (*info)[0].dims[3] = targetImageColorOrder == "GRAY" ? 1 : 3;

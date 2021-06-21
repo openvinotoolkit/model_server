@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ ARG PROJECT_NAME="OpenVINO Model Server 2021.3"
 
 LABEL description=${PROJECT_NAME}
 
-ARG ov_source_branch=releases/2021/2
+ARG ov_source_branch=master
 ARG ovms_metadata_file
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
@@ -109,14 +109,15 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ;  git clone --recurse-submodules https://github.com/openvinotoolkit/openvino --branch $ov_source_branch --single-branch --depth 1 /openvino
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ;  git clone https://github.com/openvinotoolkit/openvino /openvino ; cd /openvino ; git checkout $ov_source_branch; git submodule update --init --recursive ; git config --global user.email "docker-build@intel.com"
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake3 -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ && \
-    mkdir -p /opt/intel/openvino/deployment_tools/inference_engine && \ 
+    mkdir -p /opt/intel/openvino/deployment_tools/inference_engine && \
     ln -s /openvino/bin/intel64/Release/lib/* /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ && \
-    ln -s /openvino/inference-engine/include/ /opt/intel/openvino/deployment_tools/inference_engine/
+    ln -s /openvino/inference-engine/include/ /opt/intel/openvino/deployment_tools/inference_engine/ && \
+    curl -s https://download.01.org/opencv/master/openvinotoolkit/thirdparty/linux/opencv/opencv_4.5.1-044_centos7.txz | tar --use-compress-program=xz -C /opt/intel/openvino -xvf -
 ################## END OF OPENVINO SOURCE BUILD ######################
 
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
@@ -166,7 +167,7 @@ RUN wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.
 # OPENSSL
 WORKDIR /openssl
 
-RUN git clone https://github.com/openssl/openssl && cd openssl && git checkout tags/OpenSSL_1_1_1j
+RUN git clone https://github.com/openssl/openssl && cd openssl && git checkout tags/OpenSSL_1_1_1k
 RUN cd openssl && ./config --prefix=/usr/local/ssl --openssldir=/etc/pki/tls shared && make --jobs=$JOBS && make --jobs=$JOBS install || true && make --jobs=$JOBS install_runtime
 
 ####### Azure SDK
@@ -188,13 +189,10 @@ RUN cd azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release && CASABLA
 
 ####### End of Azure SDK
 
-# WARNING - do not move this install - needed here for proper ssl linkage in rest and azure
-RUN yum install -d6 -y openssl-devel
-
 # Build AWS S3 SDK
 RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
 WORKDIR /awssdk/build
-RUN cmake3 -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
+RUN OPENSSL_ROOT_DIR=/usr/local/ssl/ cmake3 -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
 RUN make --jobs=$JOBS
 RUN mv .deps/install/lib64 .deps/install/lib
 
@@ -215,7 +213,7 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/infe
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
-RUN cd /ovms/src/test/cpu_extension/ && make
+RUN if [ -f /opt/intel/openvino/bin/setupvars.sh ];  then cd /ovms/src/test/cpu_extension/ && make ; fi
 
 RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
 

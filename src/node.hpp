@@ -65,6 +65,7 @@ public:
 protected:
     virtual Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) = 0;
     Status demultiplyOutputs(SessionResults& nodeSessionOutputs);
+    virtual Status createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, const InferenceEngine::TensorDesc& dividedBlobDesc, InferenceEngine::Blob::Ptr blob, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName);
 
 public:
     Status setInputs(const Node& dependency, BlobMap& inputs, NodeSessionMetadata& metadata);

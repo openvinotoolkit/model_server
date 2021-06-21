@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "test_utils.hpp"
 
+#include <functional>
+
 #include "../prediction_service_utils.hpp"
 
 using tensorflow::serving::PredictRequest;
@@ -75,14 +77,27 @@ void checkDummyResponse(const std::string outputName,
         << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
 }
 
-std::string readableError(const float* expected_output, const float* actual_output, const size_t size) {
-    std::stringstream ss;
-    for (size_t i = 0; i < size; ++i) {
-        if (actual_output[i] != expected_output[i]) {
-            ss << "Expected:" << expected_output[i] << ", actual:" << actual_output[i] << " at place:" << i << std::endl;
-        }
+void checkIncrement4DimResponse(const std::string outputName,
+    const std::vector<float>& expectedData,
+    PredictRequest& request,
+    PredictResponse& response,
+    const std::vector<size_t>& expectedShape) {
+    ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
+    const auto& output_proto = response.outputs().at(outputName);
+
+    auto elementsCount = std::accumulate(expectedShape.begin(), expectedShape.end(), 1, std::multiplies<size_t>());
+
+    ASSERT_EQ(output_proto.tensor_content().size(), elementsCount * sizeof(float));
+    ASSERT_EQ(output_proto.tensor_shape().dim_size(), expectedShape.size());
+    for (size_t i = 0; i < expectedShape.size(); i++) {
+        ASSERT_EQ(output_proto.tensor_shape().dim(i).size(), expectedShape[i]);
     }
-    return ss.str();
+
+    float* actual_output = (float*)output_proto.tensor_content().data();
+    float* expected_output = (float*)expectedData.data();
+    const int dataLengthToCheck = elementsCount * sizeof(float);
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
 }
 
 bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vector<int64_t>&& expected) {
@@ -97,4 +112,29 @@ bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vecto
         }
     }
     return true;
+}
+
+void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
+    std::ifstream DataFile;
+    DataFile.open("/ovms/src/test/binaryutils/rgb.jpg", std::ios::binary);
+    DataFile.seekg(0, std::ios::end);
+    filesize = DataFile.tellg();
+    DataFile.seekg(0);
+    image_bytes = std::make_unique<char[]>(filesize);
+    DataFile.read(image_bytes.get(), filesize);
+}
+
+tensorflow::serving::PredictRequest prepareBinaryPredictRequest(const std::string& inputName, const int batchSize) {
+    tensorflow::serving::PredictRequest request;
+    auto& tensor = (*request.mutable_inputs())[inputName];
+    size_t filesize = 0;
+    std::unique_ptr<char[]> image_bytes = nullptr;
+    readRgbJpg(filesize, image_bytes);
+
+    for (int i = 0; i < batchSize; i++) {
+        tensor.add_string_val(image_bytes.get(), filesize);
+    }
+    tensor.set_dtype(tensorflow::DataType::DT_STRING);
+    tensor.mutable_tensor_shape()->add_dim()->set_size(batchSize);
+    return request;
 }

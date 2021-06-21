@@ -34,7 +34,7 @@ static std::string separator = "_";
 Status GlobalSequencesViewer::registerForCleanup(std::string modelName, model_version_t modelVersion, std::shared_ptr<SequenceManager> sequenceManager) {
     std::string registration_id = modelName + separator + std::to_string(modelVersion);
     std::unique_lock<std::mutex> viewerLock(viewerMutex);
-    if (registeredSequenceManagers.count(registration_id)) {
+    if (registeredSequenceManagers.find(registration_id) != registeredSequenceManagers.end()) {
         SPDLOG_LOGGER_ERROR(sequence_manager_logger, "Model: {}, version: {}, cannot register model instance in sequence cleaner. Already registered.", modelName, modelVersion);
         return StatusCode::INTERNAL_ERROR;
     } else {
@@ -48,8 +48,9 @@ Status GlobalSequencesViewer::registerForCleanup(std::string modelName, model_ve
 Status GlobalSequencesViewer::unregisterFromCleanup(std::string modelName, model_version_t modelVersion) {
     std::string registration_id = modelName + separator + std::to_string(modelVersion);
     std::unique_lock<std::mutex> viewerLock(viewerMutex);
-    if (registeredSequenceManagers.count(registration_id)) {
-        registeredSequenceManagers.erase(registration_id);
+    auto it = registeredSequenceManagers.find(registration_id);
+    if (it != registeredSequenceManagers.end()) {
+        registeredSequenceManagers.erase(it);
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model: {}, version: {}, has been successfully unregistered from sequence cleaner", modelName, modelVersion);
     } else {
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Model: {}, version: {}, cannot unregister model instance from sequence cleaner. It has not been registered.", modelName, modelVersion);

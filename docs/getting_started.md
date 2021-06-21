@@ -23,9 +23,11 @@ OpenVINO&trade; Model Server documentation set includes the following documents 
 
 - [Understanding Architecture of OpenVINO&trade; Model Server](./architecture.md)
 - [Quick Start Guide to Setup OpenVINO&trade; Model Server](./ovms_quickstart.md)
+- [Inference use case example with ONNX model](./ovms_onnx_example.md)  
 - [Install the OpenVINO&trade; Model Server on Linux using Docker](./docker_container.md)
 - [Installation of OpenVINO&trade; Model Server with Kubernetes](./installations_kubernetes.md)
 - [Install the  OpenVINO&trade; Model Server on Bare Metal Hosts and Virtual Machines](./host.md)
+- [Inference pipelines with a DAG scheduler](./dag_scheduler.md)  
 - [OpenVINO&trade; Model Server gRPC Reference Guide](./model_server_grpc_api.md)
 - [OpenVINO&trade; Model Server REST API Reference Guide](./model_server_rest_api.md)
 

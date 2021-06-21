@@ -29,16 +29,15 @@ Status serializeBlobToTensorProto(
     case InferenceEngine::Precision::I32:
         responseOutput.set_dtype(tensorflow::DataTypeToEnum<int>::value);
         break;
-    case InferenceEngine::Precision::I16:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<int16_t>::value);
+    case InferenceEngine::Precision::I8:
+        responseOutput.set_dtype(tensorflow::DataTypeToEnum<int8_t>::value);
         break;
     case InferenceEngine::Precision::U8:
         responseOutput.set_dtype(tensorflow::DataTypeToEnum<uint8_t>::value);
         break;
-    case InferenceEngine::Precision::I8:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<int8_t>::value);
+    case InferenceEngine::Precision::I16:
+        responseOutput.set_dtype(tensorflow::DataTypeToEnum<int16_t>::value);
         break;
-
     // 2 byte padding [v1, v0, 0, 0, u1, u0, 0, 0, ...]
     case InferenceEngine::Precision::U16:
         responseOutput.set_dtype(tensorflow::DataTypeToEnum<uint32_t>::value);
@@ -63,7 +62,7 @@ Status serializeBlobToTensorProto(
     }
     }
     responseOutput.mutable_tensor_shape()->Clear();
-    for (auto dim : networkOutput->getShape()) {
+    for (auto dim : networkOutput->getEffectiveShape()) {
         responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
     responseOutput.mutable_tensor_content()->assign((char*)blob->buffer(), blob->byteSize());
@@ -80,7 +79,7 @@ Status serializePredictResponse(
         InferenceEngine::Blob::Ptr blob;
         try {
             blob = inferRequest.GetBlob(networkOutput->getName());
-        } catch (const InferenceEngine::details::InferenceEngineException& e) {
+        } catch (const InferenceEngine::Exception& e) {
             Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
             SPDLOG_ERROR("{}: {}", status.string(), e.what());
             return status;
