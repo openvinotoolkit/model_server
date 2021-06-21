@@ -24,70 +24,66 @@
 #include <thread>
 #include <vector>
 
-#include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
+
+namespace InferenceEngine {
+class InferRequest;
+class ExecutableNetwork;
+}  // namespace InferenceEngine
 
 namespace ovms {
 /**
-* @brief Class representing circular buffer for managing IE streams
+* @brief Class representing circular buffer for managing IE ireqs
 */
 class OVInferRequestsQueue {
 public:
     /**
-    * @brief Allocating idle stream for execution
+    * @brief Allocating idle ireqs for execution
     */
     std::future<int> getIdleStream();
 
     /**
-    * @brief Release stream after execution
+    * @brief Release ireqs after execution
     */
-    void returnStream(int streamID);
+    void returnStream(int ireqId);
 
     /**
     * @brief Constructor with initialization
     */
-    OVInferRequestsQueue(InferenceEngine::ExecutableNetwork& network, int streamsLength) :
-        streams(streamsLength),
-        front_idx{0},
-        back_idx{0} {
-        for (int i = 0; i < streamsLength; ++i) {
-            streams[i] = i;
-            inferRequests.push_back(network.CreateInferRequest());
-        }
-    }
+    OVInferRequestsQueue(InferenceEngine::ExecutableNetwork& network, int nireq);
+
+    ~OVInferRequestsQueue();
 
     /**
      * @brief Give InferRequest
      */
-    InferenceEngine::InferRequest& getInferRequest(int streamID) {
-        return inferRequests[streamID];
+    InferenceEngine::InferRequest& getInferRequest(int ireqId) {
+        return *inferRequests[ireqId];
     }
 
 protected:
     /**
     * @brief Vector representing circular buffer for infer queue
     */
-    std::vector<int> streams;
+    std::vector<int> ireqs;
 
     /**
-    * @brief Index of the front of the idle streams list
+    * @brief Index of the front of the idle ireqs list
     */
     std::uint32_t front_idx;
 
     /**
-    * @brief Index of the back of the idle streams list
+    * @brief Index of the back of the idle ireqs list
     */
     std::atomic<std::uint32_t> back_idx;
 
-    /**
-    * @brief Vector representing OV streams and used for notification about completed inference operations
-    */
     std::mutex front_mut;
     std::mutex queue_mutex;
     /**
-     * 
-     */
-    std::vector<InferenceEngine::InferRequest> inferRequests;
+    * @brief Vector representing OV ireqs and used for notification about completed inference operations
+    */
+    std::vector<std::unique_ptr<InferenceEngine::InferRequest>> inferRequests;
     std::queue<std::promise<int>> promises;
+    InferenceEngine::ExecutableNetwork& network;
 };
 }  // namespace ovms

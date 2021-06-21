@@ -103,18 +103,7 @@ Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inf
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Getting blob from model: {}, inferRequestStreamId: {}, blobName: {}",
                     getName(), sessionKey, modelName, sessionKey, realModelOutputName);
                 const auto blob = inferRequest.GetBlob(realModelOutputName);
-                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Creating copy of blob from model: {}, blobName: {}",
-                    getName(), sessionKey, modelName, realModelOutputName);
-                InferenceEngine::Blob::Ptr copiedBlob;
-                auto status = blobClone(copiedBlob, blob);
-                if (!status.ok()) {
-                    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Could not clone result blob; node: {}; session: {}; model name: {}; output: {}",
-                        getName(),
-                        this->modelName,
-                        realModelOutputName);
-                    return status;
-                }
-                outputs.emplace(std::make_pair(output_name, std::move(copiedBlob)));
+                outputs.emplace(std::make_pair(output_name, std::move(blob)));
             } catch (const InferenceEngine::Exception& e) {
                 Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session:{} Error during getting blob {}; exception message: {}", getName(), sessionKey, status.string(), e.what());
