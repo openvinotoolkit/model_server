@@ -1,10 +1,10 @@
 ## About this Operator
 This Operator for OpenShift manages OpenVINO tools in the cluster.
 
-It allows easy deployment and management of OVMS service in the OpenShift cluster by just creating `ModelServer` resource.
+It allows easy deployment and management of OVMS services in the OpenShift cluster by just creating `ModelServer` resource.
 
 Beside that, the operator can enable integration between [Red Hat Open Data Science operator](https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-data-science)
-and OpenVINO jupyter notebook image. 
+and [OpenVINO jupyter notebook image](https://github.com/openvinotoolkit/openvino_notebooks). 
 
 
 ## Operator deployment
@@ -62,7 +62,7 @@ OpenShift service with OVMS is exposing the gRPC and REST endpoints for running 
 Here are the options for accessing the endpoints:
 - deploy the client inside the Kubernetes `pod` in the cluster. The client in the cluster can access the endpoint via the service name or the service cluster ip
 - configure the service type as the `NodePort` - it will expose the service on the Kubernetes `node` external IP address
-- in the managed Kubernetes cloud deployment use service type as `LoadBalanced` - it will expose the service as external IP address
+- in the managed Kubernetes cloud deployment use service type as `LoadBalancer` - it will expose the service as external IP address
 - configure OpenShift [`route` resource](https://docs.openshift.com/container-platform/4.6/networking/routes/route-configuration.html) 
   or [`ingress` resource](https://kubernetes.io/docs/concepts/services-networking/ingress/) in opensource Kubernetes linked with OVMS service.
   In OpenShift, this operation could be done from the web console.

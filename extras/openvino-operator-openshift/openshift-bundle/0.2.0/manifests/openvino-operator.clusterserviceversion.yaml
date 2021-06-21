@@ -51,6 +51,7 @@ metadata:
           "metadata": {
             "name": "openvino-notebook"
           },
+          "spec": {}
         }
       ]
     capabilities: Basic Install

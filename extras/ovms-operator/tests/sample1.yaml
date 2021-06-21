@@ -29,4 +29,4 @@ spec:
   security_context: {}
   service_type: ClusterIP
   target_device: CPU
-  https_proxy: http://proxy-chain.intel.com:911
+  https_proxy: ""
