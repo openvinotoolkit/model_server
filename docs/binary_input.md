@@ -1,4 +1,4 @@
-# Support for binary inputs and outputs data in OpenVINO Model Server
+# Support for binary inputs data in OpenVINO Model Server
 
 While OpenVINO models don't have the ability to process binary inputs, the model server can accept them and convert
 automatically using OpenCV library.
@@ -44,20 +44,70 @@ Blob data precision from binary input decoding is set automatically based on the
 Examples below assumes OVMS has been started with ResNet50 binary model:
 
 ```bash
-docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50 --layout NHWC --batch_size 2 --port 9000 --rest_port 8000
+docker run -d --rm -p 8000:8000 -p 9000:9000 openvino/model_server:latest \
+--model_name resnet --model_path gs://ovms-public-eu/resnet50-binary --layout NHWC --batch_size 2 --plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}' \
+--port 9000 --rest_port 8000
+```
+
+Prepare the client:
+```bash
+cd model_server/example_client/
+pip install -r client_requirements.txt
 ```
 
 Run the gRPC client sending the binary input:
 ```
-python grpc_binary_client.py --grpc_address localhost --model_name resnet --input_name 0 --output_name 1463 --grpc_port 9000 --images input_images.txt --iterations 1 --batch_size 2
-output results, accuracy and performance
+python grpc_binary_client.py --grpc_address localhost --model_name resnet --input_name 0 --output_name 1463 --grpc_port 9000 --images input_images.txt  --batchsize 2
+Start processing:
+	Model name: resnet
+	Images list file: input_images.txt
+Batch: 0; Processing time: 22.04 ms; speed 45.38 fps
+	 1 airliner 404 ; Incorrect match. Should be 279 Arctic fox, white fox, Alopex lagopus
+	 2 white wolf, Arctic wolf, Canis lupus tundrarum 270 ; Incorrect match. Should be 279 Arctic fox, white fox, Alopex lagopus
+Batch: 1; Processing time: 15.58 ms; speed 64.16 fps
+	 3 bee 309 ; Correct match.
+	 4 golden retriever 207 ; Correct match.
+Batch: 2; Processing time: 17.93 ms; speed 55.79 fps
+	 5 gorilla, Gorilla gorilla 366 ; Correct match.
+	 6 magnetic compass 635 ; Correct match.
+Batch: 3; Processing time: 17.14 ms; speed 58.36 fps
+	 7 peacock 84 ; Correct match.
+	 8 pelican 144 ; Correct match.
+Batch: 4; Processing time: 15.56 ms; speed 64.25 fps
+	 9 snail 113 ; Correct match.
+	 10 zebra 340 ; Correct match.
+Overall accuracy= 80.0 %
+Average latency= 17.2 ms
 ```
 
 Run the REST API client sending the binary input:
 ```
-python rest_binary_client.py --url http://localhost:8000 --model_name resnet --input_name 0 --output_name 1463  --images input_images.txt --iterations 1 --batch_size 2
-
-output results, accuracy and performance
+python rest_binary_client.py --rest_url http://localhost:8000 --model_name resnet --input_name 0 --output_name 1463  --images input_images.txt  --batchsize 2
+Start processing:
+	Model name: resnet
+	Images list file: input_images.txt
+Batch: 0; Processing time: 17.73 ms; speed 56.42 fps
+output shape: (2, 1000)
+	 1 airliner 404 ; Incorrect match. Should be 279 Arctic fox, white fox, Alopex lagopus
+	 2 white wolf, Arctic wolf, Canis lupus tundrarum 270 ; Incorrect match. Should be 279 Arctic fox, white fox, Alopex lagopus
+Batch: 1; Processing time: 14.06 ms; speed 71.11 fps
+output shape: (2, 1000)
+	 3 bee 309 ; Correct match.
+	 4 golden retriever 207 ; Correct match.
+Batch: 2; Processing time: 14.78 ms; speed 67.66 fps
+output shape: (2, 1000)
+	 5 gorilla, Gorilla gorilla 366 ; Correct match.
+	 6 magnetic compass 635 ; Correct match.
+Batch: 3; Processing time: 20.56 ms; speed 48.64 fps
+output shape: (2, 1000)
+	 7 peacock 84 ; Correct match.
+	 8 pelican 144 ; Correct match.
+Batch: 4; Processing time: 23.04 ms; speed 43.41 fps
+output shape: (2, 1000)
+	 9 snail 113 ; Correct match.
+	 10 zebra 340 ; Correct match.
+Overall accuracy= 80.0 %
+Average latency= 17.6 ms
 ```
 
 ## Error handling:

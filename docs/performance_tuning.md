@@ -4,7 +4,7 @@
 
 This document gives an overview of various parameters that can be configured to achieve maximum performance efficiency. 
 
-## Adjusting the number of Inference Engine streams
+## Adjusting the number of Inference Engine streams in CPu and GPU target devices
 
 OpenVINO Model Server can be tuned to a single client use case or to a high concurrency. It is done via setting the number of
 execution streams. They split the available resources to perform parallel execution of multiple requests.
@@ -21,9 +21,9 @@ In a scenario where the number of parallel connections is close to 1, set the fo
 
 When the number of concurrent requests is higher, increase the number of streams. Make sure, however, the number of
 streams is lower then the average volume of concurrent inference operations. Otherwise the server might not be fully utilized.
-Number of streams should not exceed the number of vCPUs.
+Number of streams should not exceed the number of CPU cores.
 
-For example with ~50 clients sending the requests to the server with 96 vCPU, set the number of streams to 24:
+For example with ~50 clients sending the requests to the server with 48 cores, set the number of streams to 24:
 `--plugin_config '{"CPU_THROUGHPUT_STREAMS": "24"}'`
 
 
@@ -79,7 +79,7 @@ OpenVINO Model Server in C++ implementation is using scalable multithreaded gRPC
 It should be at least as big as the number of assigned OpenVINO streams or expected parallel clients (grpc_wokers >= nireq).
   
 - Parameter `file_system_poll_wait_seconds` defines how often the model server will be checking if new model version gets created in the model repository. 
-The default value is 1s which ensures prompt response to creating new model version. In some cases it might be recommended to reduce the polling frequency
+The default value is 1 second which ensures prompt response to creating new model version. In some cases it might be recommended to reduce the polling frequency
   or even disable it. For example with cloud storage, it could cause a cost for API calls to the storage cloud provider. Detecting new versions 
   can be disabled with a value `0`.
 
