@@ -477,7 +477,7 @@ public:
         return StatusCode::OK;
     }
 
-    bool isConnectionShapeCorrect(const shape_t& tensorInputShape, const shape_t& tensorOutputShape) {
+    bool areShapesEqual(const shape_t& tensorInputShape, const shape_t& tensorOutputShape) {
         if (tensorInputShape.size() != tensorOutputShape.size()) {
             return false;
         }
@@ -528,7 +528,7 @@ public:
                 dependantNodeInfo.nodeName);
             return StatusCode::PIPELINE_MANUAL_GATHERING_FROM_MULTIPLE_NODES_NOT_SUPPORTED;
         }
-        if (!isConnectionShapeCorrect(tensorInputShape, tensorOutputShape)) {
+        if (!areShapesEqual(tensorInputShape, tensorOutputShape)) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Shape mismatch between: dependant node: {}; input: {}; shape: {} vs dependency node: {}; output: {}; shape: {}",
                 pipelineName,
                 dependantNodeInfo.nodeName,
