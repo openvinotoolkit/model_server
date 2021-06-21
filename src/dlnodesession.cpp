@@ -278,7 +278,6 @@ Status DLNodeSession::executeInference(PipelineEventQueue& notifyEndQueue, Infer
             // After inference is completed, input blobs are not needed anymore
             this->inputHandler->clearInputs();
             notifyEndQueue.push({node, getSessionKey()});
-            inferRequest.SetCompletionCallback([]() {});  // reset callback on infer request
         });
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Starting infer async for node name: {}", getName());
         this->timer->start("inference");

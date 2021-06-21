@@ -22,6 +22,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <inference_engine.hpp>
 
 #include "../ovinferrequestsqueue.hpp"
 #include "../timer.hpp"
