@@ -337,7 +337,7 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
             return StatusCode::FILE_INVALID;
         }
 
-        if (res == CustomLoaderStatus::INTERNAL_ERROR) {
+        if ((res == CustomLoaderStatus::INTERNAL_ERROR) || (res == CustomLoaderStatus::MODEL_BLACKLISTED)) {
             return StatusCode::INTERNAL_ERROR;
         }
 
@@ -541,6 +541,11 @@ Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelP
         SPDLOG_INFO("Waiting to reload model: {} version: {}. Blocked by: {} inferences in progress.",
             getName(), getVersion(), predictRequestsHandlesCount);
         std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
+    }
+    if ((this->config.isCustomLoaderRequiredToLoadModel()) && (isCustomLoaderConfigChanged)) {
+        // unloading and the loading back the model
+        isCustomLoaderConfigChanged = false;
+        unloadModel(isCustomLoaderConfigChanged);
     }
     return loadModelImpl(config, parameter);
 }

@@ -98,6 +98,13 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to shape configuration mismatch", this->name);
         return true;
     }
+    if (isCustomLoaderConfigChanged(rhs)) {
+        return true;
+    }
+    return false;
+}
+
+bool ModelConfig::isCustomLoaderConfigChanged(const ModelConfig& rhs) const {
     if (this->customLoaderOptionsConfigMap.size() != rhs.customLoaderOptionsConfigMap.size()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to custom loader config mismatch", this->name);
         return true;

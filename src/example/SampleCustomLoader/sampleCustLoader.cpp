@@ -345,6 +345,20 @@ CustomLoaderStatus custSampleLoader::loadModel(const std::string& modelName, con
         return st;
     }
 
+    // Before loading the modelm, first check if it is disabled in the "enable" file to start with
+    if (!(enableFile.empty())) {
+        std::cout << "Reading Enable File:: " << enableFile << std::endl;
+        std::ifstream fileToRead(enableFile);
+        std::string stateStr;
+        if (fileToRead.is_open()) {
+            getline(fileToRead, stateStr);
+            if (stateStr == "DISABLED") {
+                std::cout << "Model DISABLED cannot load blacklisted model:: " << modelName << std::endl;
+                return CustomLoaderStatus::MODEL_BLACKLISTED;
+            }
+        }
+    }
+
     // load models
     ret = load_files(binFile, modelFile, modelType, model, weights);
     if (ret != SAMPLE_LOADER_OK) {
@@ -412,6 +426,8 @@ CustomLoaderStatus custSampleLoader::unloadModel(const std::string& modelName, c
     } else {
         models_loaded.erase(it);
     }
+    // Unloaded model need not be watched. Remove from the watchlist
+    retireModel(modelName);
     return CustomLoaderStatus::OK;
 }
 
