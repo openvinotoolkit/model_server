@@ -21,7 +21,7 @@ boxes according to the configured criteria. All operations on the images employ 
 Such smaller requests can be submitted for inference in parallel to the next Model Nodes. Learn more about the [demultiplexing](./demultiplexer.md).
 - Model `age-gender-recognition` - this model recognizes age and gender on given face image
 - Model `emotion-recognition` - this model outputs emotion probability for emotions: neutral, happy, sad, surprised and angry
-- Response - the output of the whole pipeline combines the recognized face images with their metadata: coordinates, age, gender, emotion and detection confidence level. 
+- Response - the output of the whole pipeline combines the recognized face images with their metadata: coordinates, age, gender, emotions and detection confidence level. 
 
 ## Prepare the models from OpenVINO Model Zoo
 ### Face detection model
@@ -29,7 +29,7 @@ Such smaller requests can be submitted for inference in parallel to the next Mod
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin
 ```
-### Age gender recogonition model
+### Age gender recognition model
 ```
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin
@@ -100,7 +100,7 @@ Now you can create directory for text images and run the client:
 mkdir results
 ```
 ```bash
-python3 faces_analysis_pipeline_client.py --pipeline_name find_face_images --grpc_port 9000 --image_input_path ./images/people/people1.jpeg --face_images_output_name face_images --face_images_save_path ./results --image_width 600 --image_height 400 --input_image_layout NHWC --output_image_layout NHWC
+python3 faces_analysis_pipeline_client.py --pipeline_name find_face_images --grpc_port 9000 --image_input_path ./images/people/people1.jpeg --face_images_output_name face_images --face_images_save_path ./results --image_width 600 --image_height 400 --input_image_layout NCHW --output_image_layout NHWC
 Output: name[genders]
     numpy => shape[(10, 1, 2, 1, 1)] data[float32]
 Output: name[ages]
