@@ -51,10 +51,6 @@ metadata:
           "metadata": {
             "name": "openvino-notebook"
           },
-          "spec": {
-            "image_name": "registry.access.redhat.com/intel/openvino_notebooks:latest",
-            "build_locally": "true"
-          }
         }
       ]
     capabilities: Basic Install
@@ -76,20 +72,23 @@ spec:
   description: |
     OpenVINO Toolkit Operator manages OpenVINO components in OpenShift.
 
-    Currently there are 2 components included:
+    Currently there are components ModelServer and Notebook.
+
     # Model Server
     [OpenVINO™ Model Server](https://github.com/openvinotoolkit/model_server) (OVMS) is a scalable, high-performance solution for serving machine learning models optimized for Intel® architectures. The server provides an inference service via gRPC or REST API - making it easy to deploy new algorithms and AI experiments using the same architecture as [TensorFlow Serving](https://github.com/tensorflow/serving) for any models trained in a framework that is supported by [OpenVINO](https://software.intel.com/en-us/openvino-toolkit).
     Model Server configuration is identical with a [Helm chart](https://github.com/openvinotoolkit/model_server/tree/main/deploy) for OVMS. It supports all the parameters from the helm chart.
     ## Using the cluster
-    OpenVINO Model Server can be consumed as a `Service` with the name matching the `ModelServer` record. It exposes gRPC and REST API interfaces to run inference requests.
+    OpenVINO Model Server can be consumed as a `Service`. It is called like with `ModelServer` resource with `-ovms` suffix.
+    The suffix is ommited when `ovms` phrase is included in the name.
+    The service exposes gRPC and REST API interfaces to run inference requests.
     ```
     oc get pods
-    NAME                                   READY   STATUS    RESTARTS   AGE
-    model-server-sample-586f6f76df-dpps4   1/1     Running   0          8h
+    NAME                                        READY   STATUS    RESTARTS   AGE
+    model-server-sample-ovms-586f6f76df-dpps4   1/1     Running   0          8h
 
     oc get services
-    NAME                  TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
-    model-server-sample   ClusterIP   172.25.199.210   <none>        8080/TCP,8081/TCP   8h
+    NAME                       TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
+    model-server-sample-ovms   ClusterIP   172.25.199.210   <none>        8080/TCP,8081/TCP   8h
     ```
     ## Before you start
     Depending on the deployment configuration there might be pre-requisites for additional records to be created in the cluster. 
@@ -102,7 +101,7 @@ spec:
     the Jupyter Spawner drop-down menu. The image is maintained Intel.
 
     Create the `Notebook` resource in the same project with JupyterHub and RedHat OpenShift Data Science operator.
-    It can pull the docker image or build it locally based on Dockerfile from https://github.com/openvinotoolkit/openvino_notebooks
+    It builds the image in the cluster based on Dockerfile from https://github.com/openvinotoolkit/openvino_notebooks.
 
   displayName: OpenVINO Toolkit Operator
   icon:

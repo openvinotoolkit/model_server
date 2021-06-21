@@ -1,7 +1,11 @@
 ## About this Operator
-This Operator is based on a [Helm chart](../../deploy/ovms) for OVMS. It support all the parameters from the helm chart.
+This Operator for OpenShift manages OpenVINO tools in the cluster.
 
-It allows for easy deployment and management of OVMS service in the Kubernetes cluster by just creating `Ovms` resource.
+It allows easy deployment and management of OVMS service in the OpenShift cluster by just creating `ModelServer` resource.
+
+Beside that, the operator can enable integration between [Red Hat Open Data Science operator](https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-data-science)
+and OpenVINO jupyter notebook image. 
+
 
 ## Operator deployment
 
@@ -14,7 +18,7 @@ In the web console navigate to OperatorHub menu. Search for "OpenVINO" and selec
 While you deploy OVMS Operator in [OpenShift](https://www.openshift.com/), you can manage the instances of OVMS using
 the [web console](https://docs.openshift.com/container-platform/4.6/web_console/web-console.html).
 
-Navigate to the menu `Installed Operators` and click the link `Create ModelServer`.
+Navigate to the menu `Installed Operators` and click the link `Create ModelServer` or `Create Notebook`.
 You will be presented with the template of the OVMS deployment configuration:
 
 ![template](images/openshift1.png)
@@ -22,14 +26,15 @@ You will be presented with the template of the OVMS deployment configuration:
 Adjust the parameters according to your needs. Use helm chart documentation as a [reference about all the parameters](../../deploy/#helm-options-references).
 
 
-### Kubectl CLI
 
-If you are using opensource Kubernetes, after installing the operator, deploy and manage OVSM deployments by creating `Ovms` Kubernetes resources.
+### OC CLI
+
+Alternatively, after installing the operator, deploy and manage OVMS deployments by creating `ModelServer` resources.
 
 It can be done by editing the [sample resource](config/samples/intel_v1alpha1_ovms.yaml) and running a command:
 
 ```bash
-kubectl apply -f config/samples/intel_v1alpha1_ovms.yaml
+oc apply -f config/samples/intel_v1alpha1_ovms.yaml
 ```
 
 The parameters are identical to [Helm chart](../../deploy/#helm-options-references).
@@ -40,18 +45,20 @@ persistent volume claim or configmap with OVMS configuration file.
 ## Using the OVMS in the cluster
 
 The operator deploys an OVMS instance as a Kubernetes service with a predefined number of replicas.
-The `Service` name is matching the `ModelServer` resource.
+The `Service` name is matching the `ModelServer` resource. It will also get `-ovms` suffix unless `ovms` phrase is included 
+in the name.
+
 ```bash
-kubectl get pods
+oc get pods
 NAME                           READY   STATUS    RESTARTS   AGE
 ovms-sample-586f6f76df-dpps4   1/1     Running   0          8h
 
-kubectl get services
+oc get services
 NAME          TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
 ovms-sample   ClusterIP   172.25.199.210   <none>        8080/TCP,8081/TCP   8h
 ```
 
-Kubernetes service with OVMS is exposing the gRPC and REST endpoints for running the inference requests.
+OpenShift service with OVMS is exposing the gRPC and REST endpoints for running the inference requests.
 Here are the options for accessing the endpoints:
 - deploy the client inside the Kubernetes `pod` in the cluster. The client in the cluster can access the endpoint via the service name or the service cluster ip
 - configure the service type as the `NodePort` - it will expose the service on the Kubernetes `node` external IP address
@@ -103,3 +110,14 @@ Detected: 340  Should be: 340
 Overall accuracy= 100.0 %
 Average latency= 21.1 ms
 ```
+
+## OpenVINO Notebook integration with Redhat Open Data Science services.
+
+The `Notebook` resource integrates JupyterHub from OpenShift Data Science or Open Data Hub with a container image that includes developer
+tools from the OpenVINO toolkit and a set of Jupyter notebook tutorials. It enables selecting a defined image `openvino-notebook` from
+the Jupyter Spawner drop-down menu. The image is maintained Intel.
+
+Create the `Notebook` resource in the same project with JupyterHub and RedHat OpenShift Data Science operator.
+It build the image locally based on Dockerfile from https://github.com/openvinotoolkit/openvino_notebooks
+
+![spawner](images/spawner.png)

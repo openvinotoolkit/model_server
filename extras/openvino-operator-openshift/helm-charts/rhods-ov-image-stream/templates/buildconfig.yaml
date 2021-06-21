@@ -28,17 +28,13 @@ spec:
   source:
     git:
       uri: https://github.com/openvinotoolkit/openvino_notebooks
-      ref: s2i
+      ref: main
     type: Git
+  postCommit: {}
   strategy:
-    dockerStrategy:
-      from:
-        kind: DockerImage
-        name: 'quay.io/thoth-station/s2i-thoth-ubi8-py38:v0.26.0'
-      noCache: true
-      dockerfilePath: Dockerfile
+    dockerStrategy: {}
     type: Docker
   triggers:
     - type: ConfigChange
-
+  runPolicy: Serial
 {{- end }}

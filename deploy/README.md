@@ -1,8 +1,9 @@
 # Kubernetes Deployment
 
-A helm chart for installing OpenVINO Model Server in a Kubernetes cluster is provided. By default, the cluster contains 
-a single instance of the server but the _replicas_ configuration parameter can be set to create a cluster 
-of any size, as described below. This guide assumes you already have a functional Kubernetes cluster and helm 
+A helm chart for installing OpenVINO Model Server in a Kubernetes cluster is provided. 
+The helm chart is managing the Model Server instance which represents a kubernetes deployment and a
+kubernetes service with exposed REST and gRPC inference endpoints.
+This guide assumes you already have a functional Kubernetes cluster and helm 
 installed (see below for instructions on installing helm).
 
 The steps below describe how to setup a model repository, use helm to launch the inference server and then send 
@@ -14,20 +15,27 @@ Please refer to [Helm installation guide](https://helm.sh/docs/intro/install).
 
 ## Model Repository
 
-If you already have a model repository you may use that with this helm chart. If you don't, you can use any model
-from [OpenVINO Model Zoo](https://download.01.org/opencv/2021/openvinotoolkit/2021.2/open_model_zoo/models_bin/).
+Model Server requires a repository of models to execute inference requests. That consist the model files stored in a 
+specific structure. Each model is stored in a dedicated folder with numerical subfolders representing the model versions.
+Each model version subfolder must include its model files. 
 
-Model Server requires a repository of models to execute inference requests. For example, you can 
+Model repository can be hosted in the cloud storage, Kubernetes persistent volume or on the local drives.
+
+Learn more about the [model repository](../docs/models_repository.md)
+
+For example, you can 
 use a Google Cloud Storage (GCS) bucket:
 ```shell script
 gsutil mb gs://model-repository
 ```
 
-You can download the model from the link provided above and upload it to GCS:
+You can download the model from [OpenVINO Model Zoo](https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin). and upload it to GCS:
+
 ```shell script
-gsutil cp -r 1 gs://model-repository/1
+wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -P 1
+wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -P 1
+gsutil cp -r 1 resnet50-binary-0001.bin gs://model-repository/resnet
 ```
-The models repository can be also distributed on the cluster nodes in the local path or it could be stored on the Kubernetes persistent volume.
 
 The supported storage options are described below:
 
@@ -44,20 +52,20 @@ Bucket permissions can be set with the _GOOGLE_APPLICATION_CREDENTIALS_ environm
 
 * When deploying Model Server, provide the model path to GCS bucket and name for the secret created above. Make sure to provide `gcp_creds_secret_name` when deploying:
 ```shell script
-helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository,gcp_creds_secret_name=gcpcreds
+helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository/model,gcp_creds_secret_name=gcpcreds
 ```
 
 ### S3
 
 For S3 you must provide an AWS Access Key ID, the content of that key (AWS Secret Access Key) and the AWS region when deploying: `aws_access_key_id`, `aws_secret_access_key` and `aws_region` (see below)
 ```shell script
-helm install ovms-app ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository,aws_access_key_id=<...>,aws_secret_access_key=<...>,aws_region=eu-central-1
+helm install ovms-app ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository/model,aws_access_key_id=<...>,aws_secret_access_key=<...>,aws_region=eu-central-1
 ```
 
 In case you would like to use custom S3 service with compatible API (e.g. MinIO), you need to also provide endpoint 
 to that service. Please provide it by supplying `s3_compat_api_endpoint`:
 ```shell script
-helm install ovms-app ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository,aws_access_key_id=<...>,aws_secret_access_key=<...>,s3_compat_api_endpoint=<...>
+helm install ovms-app ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository/model,aws_access_key_id=<...>,aws_secret_access_key=<...>,s3_compat_api_endpoint=<...>
 ```
 
 ### Azure Storage
@@ -181,6 +189,10 @@ ovms-app   LoadBalancer   10.121.14.253   1.2.3.4         8080:30043/TCP,8081:32
 ```
 
 The server exposes an gRPC endpoint on 8080 port and REST endpoint on 8081 port.
+
+The service name deployed via the helm chart is defined by the application name. In addition to that, the service
+gets a suffix `-ovms`, in case the application name doesn't include `ovms` phrase. It avoids a risk of the service name
+conflicts with other application.
 
 Follow the [instructions](https://github.com/openvinotoolkit/model_server/tree/main/example_client#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files) 
 to create an image classification client that can be used to perform inference with models being exposed by the server. For example:

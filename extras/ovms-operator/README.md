@@ -7,7 +7,8 @@ It allows for easy deployment and management of OVMS service in the Kubernetes c
 
 ### OpenShift
 
-In the web console navigate to OperatorHub menu. Search for "OpenVINO" and select "OpenVINO Model Server". Click `Install` button.
+OVMS operator on OpenShift infrastructure is now replaced with the [OpenVINO Operator](../openvino-operator-openshift).
+It includes the functionality of the Model Server management with other OpenVINO related integrations.
 
 ### Kubernetes with OLM
 
@@ -15,19 +16,6 @@ Deploy the operator using the steps covered in [OperatorHub](https://operatorhub
 
 
 ## Deploying OpenVINO Model Server via the Operator
-
-### OpenShift console
-
-While you deploy OVMS Operator in [OpenShift](https://www.openshift.com/), you can manage the instances of OVMS using
-the [web console](https://docs.openshift.com/container-platform/4.6/web_console/web-console.html).
-
-Navigate to the menu `Installed Operators` and click the link `Create Ovms`.
-You will be presented with the template of the OVMS deployment configuration:
-
-![template](images/openshift1.png)
-
-Adjust the parameters according to your needs. Use helm chart documentation as a [reference about all the parameters](../../deploy/#helm-options-references).
-
 
 ### Kubectl CLI
 
@@ -63,9 +51,6 @@ Here are the options for accessing the endpoints:
 - deploy the client inside the Kubernetes `pod` in the cluster. The client in the cluster can access the endpoint via the service name or the service cluster ip
 - configure the service type as the `NodePort` - it will expose the service on the Kubernetes `node` external IP address
 - in the managed Kubernetes cloud deployment use service type as `LoadBalanced` - it will expose the service as external IP address
-- configure OpenShift [`route` resource](https://docs.openshift.com/container-platform/4.6/networking/routes/route-configuration.html) 
-  or [`ingress` resource](https://kubernetes.io/docs/concepts/services-networking/ingress/) in opensource Kubernetes linked with OVMS service.
-  In OpenShift, this operation could be done from the web console.
   
 You can use any of the [exemplary clients](../../example_client) to connect to OVMS. 
 Below is the output of the [jpeg_classification.py](../../example_client/jpeg_classification.py) client connecting to the OVMS serving ResNet model.
