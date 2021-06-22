@@ -467,7 +467,7 @@ Next, start the docker container with additional parameter --device /dev/dri to 
 The command example is listed below:
 
 ```
-docker run --rm -it --device=/dev/dri -v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest \
+docker run --rm -it --device=/dev/dri -v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
 --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
 ```
 
@@ -480,7 +480,7 @@ The default account in the docker image is already preconfigured. In case you ch
 to start the ovms container:
 ```
 docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) -u $(id -u):$(id -g) \
--v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest \
+-v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
 --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
 ```
 
