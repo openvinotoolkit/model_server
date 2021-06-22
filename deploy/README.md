@@ -15,7 +15,7 @@ Please refer to [Helm installation guide](https://helm.sh/docs/intro/install).
 
 ## Model Repository
 
-Model Server requires a repository of models to execute inference requests. That consist the model files stored in a 
+Model Server requires a repository of models to execute inference requests. That consists of the model files stored in a 
 specific structure. Each model is stored in a dedicated folder with numerical subfolders representing the model versions.
 Each model version subfolder must include its model files. 
 
@@ -139,7 +139,7 @@ Deploy Model Server using _helm_. Please include the required model name and mod
 helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository
 ```
 
-Use _kubectl_ to see status and wait until the Model Server pod is running:
+Use _kubectl_ to see the status and wait until the Model Server pod is running:
 ```shell script
 kubectl get pods
 NAME                    READY   STATUS    RESTARTS   AGE
