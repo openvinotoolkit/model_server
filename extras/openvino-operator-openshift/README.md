@@ -115,9 +115,9 @@ Average latency= 21.1 ms
 
 The `Notebook` resource integrates JupyterHub from OpenShift Data Science or Open Data Hub with a container image that includes developer
 tools from the OpenVINO toolkit and a set of Jupyter notebook tutorials. It enables selecting a defined image `openvino-notebook` from
-the Jupyter Spawner drop-down menu. The image is maintained Intel.
+the Jupyter Spawner drop-down menu. The image is maintained by Intel.
 
 Create the `Notebook` resource in the same project with JupyterHub and RedHat OpenShift Data Science operator.
-It build the image locally based on Dockerfile from https://github.com/openvinotoolkit/openvino_notebooks
+It builds the image locally based on Dockerfile from https://github.com/openvinotoolkit/openvino_notebooks
 
 ![spawner](images/spawner.png)
