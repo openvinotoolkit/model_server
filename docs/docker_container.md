@@ -471,8 +471,22 @@ docker run --rm -it --device=/dev/dri -v /opt/model:/opt/model -p 9001:9001 open
 --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
 ```
 
-*Note:* As for now, the public docker image doesn't support GPU on TigerLake platform. Such image can be built using a command:
-`make docker_build BASE_OS=redhat INSTALL_DRIVER_VERSION=20.35.17767`. It will not support, however, older GPU platforms.
+Running the inference operation on GPU requires the ovms process security context account needs correct permissions.
+It should belong to the render group identified by the command:
+```
+stat -c "group_name=%G group_id=%g" /dev/dri/render*
+```
+The default account in the docker image is already preconfigured. In case you change the security context, use the following command
+to start the ovms container:
+```
+docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) -u $(id -u):$(id -g) \
+-v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest \
+--model_path /opt/model --model_name my_model --port 9001 --target_device GPU
+```
+
+*Note:* The public docker image include the OpenCL drivers for GPU in version 20.35.17767. Older version could be used 
+via building the image with a parameter INSTALL_DRIVER_VERSION:
+`make docker_build INSTALL_DRIVER_VERSION=19.41.14441`. It would not support, however, the latest GPU platforms.
 </details>
 
 <details><summary>Using Multi-Device Plugin</summary>
