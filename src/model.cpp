@@ -125,13 +125,13 @@ Status Model::addVersion(const ModelConfig& config) {
     const auto& version = config.getVersion();
     std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory(config.getName(), version);
 
+    std::unique_lock lock(modelVersionsMtx);
+    modelVersions.emplace(version, modelInstance);
+    lock.unlock();
     auto status = modelInstance->loadModel(config);
     if (!status.ok()) {
         return status;
     }
-    std::unique_lock lock(modelVersionsMtx);
-    modelVersions[version] = std::move(modelInstance);
-    lock.unlock();
     updateDefaultVersion();
     subscriptionManager.notifySubscribers();
     return StatusCode::OK;

@@ -1,0 +1,10 @@
+# Use the 'create api' subcommand to add watches to this file.
+- group: intel.com
+  version: v1alpha1
+  kind: ModelServer
+  chart: helm-charts/ovms
+- group: intel.com
+  version: v1alpha1
+  kind: Notebook
+  chart: helm-charts/rhods-ov-image-stream
+#+kubebuilder:scaffold:watch
