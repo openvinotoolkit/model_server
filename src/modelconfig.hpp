@@ -222,6 +222,15 @@ public:
     bool isReloadRequired(const ModelConfig& rhs) const;
 
     /**
+         * @brief Compares two ModelConfig instances and decides if customloader configuration changed
+         *
+         * @param rhs
+         *
+         * @return true if customloader configuration has changed
+         */
+    bool isCustomLoaderConfigChanged(const ModelConfig& rhs) const;
+
+    /**
          * @brief Compares two ModelConfig instances for shape configuration
          * 
          * @param rhs
