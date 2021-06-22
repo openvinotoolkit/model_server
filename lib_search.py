@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ def check_header(fd):
 def check_function(fd):
     # Add space separated exceptions for given file in the dictionary
     fix_applied = {"./src/test/ensemble_flow_custom_node_tests.cpp":"size_t strLen = std::strlen(str);size_t prefixLen = std::strlen(prefix);",}
-                   
+
     result = False
     detected = False
     try:
@@ -74,7 +74,7 @@ def check_dir(start_dir):
                      'requirements.txt', 'missing_headers.txt', 'libevent/BUILD', 'azure_sdk.patch', 'rest_sdk_v2.10.16.patch', '.wav',
                      'forbidden_functions.txt', 'missing_headers.txt', 'increment_1x3x4x5.xml']
 
-    exclude_directories = ['/dist/', 'extras/ovms-operator']
+    exclude_directories = ['/dist/', 'extras/ovms-operator', 'extras/openvino-operator-openshift']
 
     for (d_path, dir_set, file_set) in os.walk(start_dir):
         for f_name in file_set:
@@ -113,19 +113,19 @@ def check_func(start_dir):
                      'openvino.LICENSE.txt', 'c-ares.LICENSE.txt', 'zlib.LICENSE.txt', 'boost.LICENSE.txt',
                      'libuuid.LICENSE.txt', 'input_images.txt', 'REST_age_gender.ipynb', 'dummy.xml', 'listen.patch', 'add.xml',
                      'requirements.txt', 'missing_headers.txt', 'libevent/BUILD', 'azure_sdk.patch', 'rest_sdk_v2.10.16.patch', 'forbidden_functions.txt', 'missing_headers.txt']
-                   
+
     exclude_directories = ['/dist/', 'extras/ovms-operator']
 
     for (d_path, dir_set, file_set) in os.walk(start_dir):
         for f_name in file_set:
-            
+
             skip = False
             for excluded in exclude_directories:
                 if excluded in d_path:
                     skip = True
                     print('Warning - Skipping directory - ' + d_path + ' for file - ' + f_name)
                     break
-                
+
             if skip:
                 continue
 
@@ -146,7 +146,7 @@ def main():
     else:
         start_dir = sys.argv[1]
         print('Provided start dir:' + start_dir)
-        
+
 
     if len(sys.argv) > 2 and sys.argv[2] == 'functions':
         print("Check for forbidden functions")
@@ -159,8 +159,8 @@ def main():
             print('## Forbidden functions detected:')
             for forbid_func in forbidden_func:
                 print(f'{forbid_func}')
-    
-    
+
+
     else:
         print("Check for missing headers")
         external_component_set, no_header_set = check_dir(start_dir)

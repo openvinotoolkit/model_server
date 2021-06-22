@@ -1,0 +1,39 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: openvino-operator.v0.0.1
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions: {}
+  description: Operator for OpenVINO Toolkit
+  displayName: OpenVINO
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - AI Inference OpenVINO
+  links:
+  - name: OpenVINO Operator
+    url: https://github.com/openvinotoolkit/model_server/extras/openvino-operator-openshift
+  maturity: alpha
+  provider:
+    name: Intel
+    url: https://github.com/openvinotoolkit/model_server
+  version: 0.0.0
