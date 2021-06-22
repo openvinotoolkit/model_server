@@ -21,8 +21,8 @@ WORKDIR /
 COPY ovms.tar.xz /
 RUN env
 RUN tar -xf ovms.tar.xz
-RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
-             --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
+RUN groupadd --gid 5000 ovms && \
+    useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
     chown -R ovms:ovms /ovms
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
@@ -86,8 +86,8 @@ RUN     set -e ; \
         fi ; \
         microdnf install shadow-utils; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
-        groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
-             --gid 5000 --shell /bin/bash --skel /dev/null ovms
+        groupadd --gid 5000 ovms && \
+        useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups video --shell /bin/bash --skel /dev/null ovms
 
 COPY --from=base_build /ovms /ovms
 ENV LD_LIBRARY_PATH=/ovms/lib
