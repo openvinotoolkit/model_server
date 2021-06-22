@@ -19,7 +19,7 @@ FROM $BASE_IMAGE as base_build
 
 LABEL version="1.0.0"
 
-ARG PROJECT_NAME="OpenVINO Model Server 2021.3"
+ARG PROJECT_NAME="OpenVINO Model Server 2021.4"
 
 LABEL description=${PROJECT_NAME}
 
