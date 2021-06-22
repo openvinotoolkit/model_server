@@ -471,10 +471,10 @@ docker run --rm -it --device=/dev/dri -v /opt/model:/opt/model -p 9001:9001 open
 --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
 ```
 
-Running the inference operation on GPU requires the ovms process security context account needs correct permissions.
-It should belong to the render group identified by the command:
+Running the inference operation on GPU requires the ovms process security context account to have correct permissions.
+It has to belong to the render group identified by the commandA
 ```
-stat -c "group_name=%G group_id=%g" /dev/dri/render*
+stat -c "group_name=%G group_id=%g" /dev/dri/renderA
 ```
 The default account in the docker image is already preconfigured. In case you change the security context, use the following command
 to start the ovms container:
@@ -484,9 +484,9 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
 ```
 
-*Note:* The public docker image include the OpenCL drivers for GPU in version 20.35.17767. Older version could be used 
+*Note:* The public docker image includes the OpenCL drivers for GPU in version 20.35.17767. Older version could be used 
 via building the image with a parameter INSTALL_DRIVER_VERSION:
-`make docker_build INSTALL_DRIVER_VERSION=19.41.14441`. It would not support, however, the latest GPU platforms.
+`make docker_build INSTALL_DRIVER_VERSION=19.41.14441`. The older GPU driver will not support the latest Intel GPU platforms like TigerLake or newer.
 </details>
 
 <details><summary>Using Multi-Device Plugin</summary>
