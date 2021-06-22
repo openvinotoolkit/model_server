@@ -321,6 +321,7 @@ def main():
         print_debug('\tOutput {} in shape: {}'.format(output_name, score_data.shape))
 
     # Main inference loop
+    session = requests.Session()
     for sequence_name, sequence_size in sequence_size_map.items():
         print('\n\tSequence name: {}'.format(sequence_name))
         print('\tSequence size: {}'.format(sequence_size))
@@ -375,7 +376,7 @@ def main():
 
             start_time = datetime.datetime.now()
             # result includes a dictionary with all model outputs
-            result = requests.post("{}:{}/v1/models/{}{}:predict".format(args['rest_url'], args['rest_port'], args['model_name'], version), data=data_json, cert=certs, verify=verify_server)
+            result = session.post("{}:{}/v1/models/{}{}:predict".format(args['rest_url'], args['rest_port'], args['model_name'], version), data=data_json, cert=certs, verify=verify_server)
             end_time = datetime.datetime.now()
 
             try:

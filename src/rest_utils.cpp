@@ -62,7 +62,8 @@ Status makeJsonFromPredictResponse(
         for (int i = 0; i < tensor.tensor_shape().dim_size(); i++) {
             expectedContentSize *= tensor.tensor_shape().dim(i).size();
         }
-        size_t expectedElementsNumber = DataTypeSize(tensor.dtype()) > 0 ? expectedContentSize / DataTypeSize(tensor.dtype()) : 0;
+        size_t dataTypeSize = DataTypeSize(tensor.dtype());
+        size_t expectedElementsNumber = dataTypeSize > 0 ? expectedContentSize / dataTypeSize : 0;
         bool seekDataInValField = false;
 
         if (tensor.tensor_content().size() == 0)

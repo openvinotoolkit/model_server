@@ -55,7 +55,7 @@ Copy this `lib` folder to the same location with previously downloaded models.
 
 ## OVMS Configuration File
 
-The configuration file for running the faces analysis demo is stored in [config.json](../src/custom_nodes/model_zoo_intel_object_detection/config.json).
+The configuration file for running the faces analysis demo is stored in [config.json](../src/custom_nodes/model_zoo_intel_object_detection/config_faces_example.json).
 Copy this file along with the model files.
 
 ## Final directory structure
@@ -100,7 +100,7 @@ Now you can create directory for text images and run the client:
 mkdir results
 ```
 ```bash
-python3 faces_analysis_pipeline_client.py --pipeline_name find_face_images --image_input_path ./images/people/people1.jpeg --face_images_output_name face_images --face_images_save_path ./results --image_width 600 --image_height 400 --image_layout NCHW
+python3 faces_analysis_pipeline_client.py --pipeline_name find_face_images --grpc_port 9000 --image_input_path ./images/people/people1.jpeg --face_images_output_name face_images --face_images_save_path ./results --image_width 600 --image_height 400 --input_image_layout NHWC --output_image_layout NHWC
 Output: name[genders]
     numpy => shape[(10, 1, 2, 1, 1)] data[float32]
 Output: name[ages]

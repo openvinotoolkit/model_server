@@ -81,6 +81,14 @@ as well as a release package (.tar.gz, with ovms binary and necessary libraries)
 *Note:* OVMS docker image could be created with ubi8-minimal base image, beside the default centos7.
 Use command `make docker_build BASE_OS=redhat`. OVMS with ubi base image doesn't support NCS and HDDL accelerators.
 
+Additionally you can set version of GPU driver used by the produced image. Currently following versions are available:
+- 19.41.14441
+- 20.35.17767
+
+Provide version from the list above as INSTALL_DRIVER_VERSION argument in make command to build image with specific version of the driver like 
+`make docker_build INSTALL_DRIVER_VERSION=19.41.14441`. 
+If not provided, version 20.35.17767 is used.
+
 ### Running the OpenVINO&trade; Model Server Image for **Single** Model <a name="singlemodel"></a>
 
 Follow the [Preparation of Model guide](models_repository.md) before running the docker image 
@@ -207,6 +215,7 @@ Here the numerical values depict the version number of the model.
 | `"model_path"/"base_path"` | `"/opt/ml/models/model"`<br>"gs://bucket/models/model"<br>"s3://bucket/models/model"<br>"azure://bucket/models/model" | If using a Google Cloud Storage, Azure Storage or S3 path, see the requirements below.(use `model_path` in command line, `base_path` in json config)  | &check;|
 | `"shape"` | `tuple, json or "auto"` | `shape` is optional and takes precedence over `batch_size`. The `shape` argument changes the model that is enabled in the model server to fit the parameters. <br><br>`shape` accepts three forms of the values:<br>* `auto` - The model server reloads the model with the shape that matches the input data matrix.<br>* a tuple, such as `(1,3,224,224)` - The tuple defines the shape to use for all incoming requests for models with a single input.<br>* A dictionary of shapes, such as `{"input1":"(1,3,224,224)","input2":"(1,3,50,50)", "input3":"auto"}` - This option defines the shape of every included input in the model.<br><br>Some models don't support the reshape operation.<br><br>If the model can't be reshaped, it remains in the original parameters and all requests with incompatible input format result in an error. See the logs for more information about specific errors.<br><br>Learn more about supported model graph layers including all limitations at [Shape Inference Document](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_ShapeInference.html). ||
 | `"batch_size"` | `integer / "auto"` | Optional. By default, the batch size is derived from the model, defined through the OpenVINO Model Optimizer. `batch_size` is useful for sequential inference requests of the same batch size.<br><br>Some models, such as object detection, don't work correctly with the `batch_size` parameter. With these models, the output's first dimension doesn't represent the batch size. You can set the batch size for these models by using network reshaping and setting the `shape` parameter appropriately.<br><br>The default option of using the Model Optimizer to determine the batch size uses the size of the first dimension in the first input for the size. For example, if the input shape is `(1, 3, 225, 225)`, the batch size is set to `1`. If you set `batch_size` to a numerical value, the model batch size is changed when the service starts.<br><br>`batch_size` also accepts a value of `auto`. If you use `auto`, then the served model batch size is set according to the incoming data at run time. The model is reloaded each time the input data changes the batch size. You might see a delayed response upon the first request.<br>  ||
+| `"layout" `| `json / string` | `layout` is optional argument which allows to change the layout of model input and output tensors. Only `NCHW` and `NHWC` layouts are supported.<br><br>When specified with single string value - layout change is only applied to single model input. To change multiple model inputs or outputs, you can specify json object with mapping, such as: `{"input1":"NHWC","input2":"NHWC","output1":"NHWC"}`.<br><br>If not specified, layout is inherited from model. ||
 | `"model_version_policy"` | `{ "all": {} }`<br>`{ "latest": { "num_versions":2 } }`<br>`{ "specific": { "versions":[1, 3] } }`</code> | Optional.<br><br>The model version policy lets you decide which versions of a model that the OpenVINO Model Server is to serve. By default, the server serves the latest version. One reason to use this argument is to control the server memory consumption.<br><br>The accepted format is in json.<br><br>Examples:<br><code>{"latest": { "num_versions":2 } # server will serve only two latest versions of model<br><br>{"specific": { "versions":[1, 3] } } # server will serve only versions 1 and 3 of given model<br><br>{"all": {} } # server will serve all available versions of given model ||
 | `"plugin_config"` | json with plugin config mappings like`{"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}` |  List of device plugin parameters. For full list refer to [OpenVINO documentation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html) and [performance tuning guide](./performance_tuning.md)  ||
 | `"nireq"` | `integer` | The size of internal request queue. When set to 0 or no value is set value is calculated automatically based on available resources.||
@@ -216,7 +225,7 @@ Here the numerical values depict the version number of the model.
 | `max_sequence_number` | `uint32` | Determines how many sequences can be handled concurrently by a model instance. ||
 | `low_latency_transformation` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_network_state_intro.html#lowlatency_transformation) on model load. ||
 
-#### To know more about batch size and shape parameters refer [Batch Size and Shape document](shape_and_batch_size.md)
+#### To know more about batch size, shape and layout parameters refer [Batch Size, Shape and Layout document](shape_batch_size_and_layout.md)
 
 </details>
 

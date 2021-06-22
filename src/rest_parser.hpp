@@ -168,7 +168,7 @@ class RestParser {
     Status parseColumnFormat(rapidjson::Value& node);
 
 public:
-    void setDTypeIfNotSet(const rapidjson::Value& value, tensorflow::TensorProto& proto, const std::string& tensorName);
+    bool setDTypeIfNotSet(const rapidjson::Value& value, tensorflow::TensorProto& proto, const std::string& tensorName);
     /**
      * @brief Constructor for preallocating memory for inputs beforehand. Size is calculated from tensor shape required by backend.
      * 

@@ -50,8 +50,6 @@ RUN yum update -d6 -y && yum install -d6 -y epel-release centos-release-scl && y
             cmake3 \
             gcc-c++ \
             devtoolset-8-gcc* \
-            automake \
-            autoconf \
             curl \
             gdb \
             git \
@@ -66,30 +64,15 @@ RUN yum update -d6 -y && yum install -d6 -y epel-release centos-release-scl && y
             ocl-icd \
             patch \
             pkg-config \
-            pulseaudio-libs-devel \
-            python2 \
-            python2-pip \
-            python2-devel \
-            python2-setuptools \
-            python2-virtualenv \
             python3 \
             python3-pip \
             python3-devel \
             python3-setuptools \
             python3-virtualenv \
-            unzip \
             wget \
             which \
-            boost-thread \
-            boost-system \
-            boost-filesystem \
-            boost-chrono \
-            boost-program-options \
-            boost-date-time \
-            boost-atomic \
             libxml2-devel \
             yum-utils \
-            numactl-libs \
             unzip && \
             yum clean all
 

@@ -86,6 +86,7 @@ processing_times = np.zeros((0), int)
 batch_i = 0
 image_data = []
 labels = []
+session = requests.Session()
 for line in lines:
     batch_i += 1
     path, label = line.strip().split(" ")
@@ -97,7 +98,7 @@ for line in lines:
     # Compose a JSON Predict request (send JPEG image in base64).
     predict_request = create_request(image_data, args['request_format'])
     start_time = datetime.datetime.now()
-    result = requests.post(address, data=predict_request)
+    result = session.post(address, data=predict_request)
     end_time = datetime.datetime.now()
     try:
         result_dict = json.loads(result.text)
