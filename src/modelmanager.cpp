@@ -984,7 +984,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     }
 
     if (versionsToReload->size() > 0) {
-        reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
+        blocking_status = reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
     }
     for (const auto version : *versionsFailed) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Removing available version {} due to load failure.", version);
