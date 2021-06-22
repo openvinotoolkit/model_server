@@ -472,9 +472,9 @@ docker run --rm -it --device=/dev/dri -v /opt/model:/opt/model -p 9001:9001 open
 ```
 
 Running the inference operation on GPU requires the ovms process security context account to have correct permissions.
-It has to belong to the render group identified by the commandA
+It has to belong to the render group identified by the command:
 ```
-stat -c "group_name=%G group_id=%g" /dev/dri/renderA
+stat -c "group_name=%G group_id=%g" /dev/dri/render*
 ```
 The default account in the docker image is already preconfigured. In case you change the security context, use the following command
 to start the ovms container:
