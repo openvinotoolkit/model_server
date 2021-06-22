@@ -4,7 +4,7 @@
 
 This document gives an overview of various parameters that can be configured to achieve maximum performance efficiency. 
 
-## Adjusting the number of Inference Engine streams in CPu and GPU target devices
+## Adjusting the number of Inference Engine streams in CPU and GPU target devices
 
 OpenVINO Model Server can be tuned to a single client use case or to a high concurrency. It is done via setting the number of
 execution streams. They split the available resources to perform parallel execution of multiple requests.
@@ -69,7 +69,7 @@ docker run --rm -d --cpuset-cpus 0,1,2,3 -v <model_path>:/opt/model -p 9001:9001
 
 ```
 
-## Tuning Model server configuration parameters
+## Tuning Model Server configuration parameters           
 
 OpenVINO Model Server in C++ implementation is using scalable multithreaded gRPC and REST interface, however in some hardware configuration it might become a bottleneck for high performance backend with OpenVINO.
 
