@@ -720,8 +720,6 @@ void ModelManager::getVersionsToChange(
                 if (bres != CustomLoaderStatus::OK) {
                     SPDLOG_LOGGER_INFO(modelmanager_logger, "The model {} is blacklisted", versionInstance->getName());
                     requestedVersions.erase(std::remove(requestedVersions.begin(), requestedVersions.end(), version), requestedVersions.end());
-                } else {
-                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "The model {} is not blacklisted", versionInstance->getName());
                 }
             }
         }
@@ -739,6 +737,9 @@ void ModelManager::getVersionsToChange(
         try {
             if (modelVersionsInstances.at(version)->getStatus().willEndUnloaded() ||
                 modelVersionsInstances.at(version)->getModelConfig().isReloadRequired(newModelConfig)) {
+                if (modelVersionsInstances.at(version)->getModelConfig().isCustomLoaderConfigChanged(newModelConfig)) {
+                    modelVersionsInstances.at(version)->setCustomLoaderConfigChangeFlag();
+                }
                 versionsToReload->push_back(version);
             }
         } catch (std::out_of_range& e) {
@@ -984,7 +985,10 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     }
 
     if (versionsToReload->size() > 0) {
-        reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
+        auto status = reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
+        if (!status.ok()) {
+            blocking_status = status;
+        }
     }
     for (const auto version : *versionsFailed) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Removing available version {} due to load failure.", version);

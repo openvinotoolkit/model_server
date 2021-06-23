@@ -613,7 +613,7 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     modelInstanceUnloadGuard.reset();
     status = manager.getModelInstance(modelDirectory.name, 3, modelInstance3, modelInstanceUnloadGuard);
     modelInstanceUnloadGuard.reset();
-    ASSERT_EQ(status, ovms::StatusCode::MODEL_VERSION_MISSING);
+    ASSERT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
 
     // dropped versions 2 and 3
     // expected version 1 as available, 2 as ended
