@@ -29,6 +29,7 @@ A few key features:
 - [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md) Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
 - [Custom nodes in DAG pipelines](docs/custom_node_development.md) Model inference or data transformations can be implemented by a custom node C/C++ implementation loaded as an external library.
 - [Serving stateful models](docs/stateful_models.md). Serve models that operate on sequences of data and maintain state between inference requests.
+- [Binary format of the input data](binary_input.md). Input data can be sent in JPEG or PNG format to reduce traffic and offload the client applications.
 
 **Note:** OVMS has been tested on RedHat*, CentOS* and Ubuntu*. Publicly released docker images are based on CentOS and UBI.
 They are stored in:
@@ -59,6 +60,8 @@ More detailed guides to using Model Server in various scenarios can be found her
 * [Deployment in Kubernetes using helm chart](deploy)
 
 * [Deployment using Kubernetes Operator](https://operatorhub.io/operator/ovms-operator)
+
+* [Using binary input data](docs/binary_input.md)
 
 
 ## API documentation

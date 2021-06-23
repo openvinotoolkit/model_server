@@ -76,7 +76,7 @@ It will generate the images, tagged as:
 as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
 </details>
 
-*Note:* Latest images include OpenVINO 2021.3 release.
+*Note:* Latest images include OpenVINO 2021.4 release.
 
 *Note:* OVMS docker image could be created with ubi8-minimal base image, beside the default centos7.
 Use command `make docker_build BASE_OS=redhat`. OVMS with ubi base image doesn't support NCS and HDDL accelerators.

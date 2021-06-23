@@ -51,10 +51,8 @@ parser = argparse.ArgumentParser(description='Sends requests via TensorFlow Serv
                                              'It displays performance statistics and optionally the model accuracy')
 parser.add_argument('--images_list', required=False, default='input_images.txt',
                     help='path to a file with a list of labeled images')
-parser.add_argument('--rest_url', required=False, default='http://localhost',
-                    help='Specify url to REST API service. default: http://localhost')
-parser.add_argument('--rest_port', required=False, default=9000,
-                    help='Specify port to rest service. default: 9000')
+parser.add_argument('--rest_url', required=False, default='http://localhost:8000',
+                    help='Specify url to REST API service. default: http://localhost:8000')
 parser.add_argument('--input_name', required=False, default='image_bytes',
                     help='Specify input tensor name. default: image_bytes')
 parser.add_argument('--output_name', required=False, default='probabilities',
@@ -69,8 +67,8 @@ parser.add_argument('--batchsize', default=1, help='Number of images in a single
                     dest='batchsize')
 args = vars(parser.parse_args())
 
-address = "{}:{}/v1/models/{}:predict".format(
-    args['rest_url'], args['rest_port'], args['model_name'])
+address = "{}/v1/models/{}:predict".format(
+    args['rest_url'], args['model_name'])
 input_images = args.get('images_list')
 with open(input_images) as f:
     lines = f.readlines()
