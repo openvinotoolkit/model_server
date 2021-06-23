@@ -54,9 +54,9 @@ Copy this file along with the model files.
 ## Final directory structure
 ```
 workspace
+├── config.json
 ├── lib
 │   └── libcustom_node_model_zoo_intel_object_detection.so
-├── config.json
 ├── vehicle-attributes-recognition-barrier-0042
 │   └── 1
 │       ├── vehicle-attributes-recognition-barrier-0042.bin
