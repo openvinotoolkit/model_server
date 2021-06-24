@@ -195,20 +195,17 @@ void scale_image(const int originalImageColorChannels, const int scale, const st
         } else if (originalImageColorChannels == 3) {
             for (cv::Vec3f& pixel : cv::Mat3f(image)) {
                 if (meanValues.size() > 0) {
-                    for(int i = 0; i < pixel.channels; i++)
-                    {
+                    for (int i = 0; i < pixel.channels; i++) {
                         pixel[i] = pixel[i] - meanValues[i];
                     }
                 }
 
                 if (scaleValues.size() > 0) {
-                    for(int i = 0; i < pixel.channels; i++)
-                    {
+                    for (int i = 0; i < pixel.channels; i++) {
                         pixel[i] = pixel[i] / scaleValues[i];
                     }
                 } else if (scale != -1) {
-                    for(int i = 0; i < pixel.channels; i++)
-                    {
+                    for (int i = 0; i < pixel.channels; i++) {
                         pixel[i] = pixel[i] / scale;
                     }
                 }
