@@ -42,17 +42,15 @@ public:
     }
 };
 
-void printListValue(std::string name, std::vector<float> values){
-        std::cout << name << ": [";
-        for(auto v : values)
-        {
-            std::cout << v;
-            if(v != values.back())
-            {
-                std::cout << ",";
-            }
+void printListValue(std::string name, std::vector<float> values) {
+    std::cout << name << ": [";
+    for (auto v : values) {
+        std::cout << v;
+        if (v != values.back()) {
+            std::cout << ",";
         }
-        std::cout << "]" << std::endl;
+    }
+    std::cout << "]" << std::endl;
 }
 
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
@@ -107,7 +105,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     // The exact meaning and order of channels depend on input image.
     std::vector<float> scaleValues;
     get_float_parameters_list("scale_values", params, paramsCount, scaleValues);
-    for(auto v : scaleValues){
+    for (auto v : scaleValues) {
         NODE_ASSERT(v != 0, "scale value - when specified, must be different than 0");
     }
 
@@ -118,10 +116,10 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     // The exact meaning and order of channels depend on input image.
     std::vector<float> meanValues;
     get_float_parameters_list("mean_values", params, paramsCount, meanValues);
-    for(auto v : meanValues){
+    for (auto v : meanValues) {
         NODE_ASSERT(v > 0, "scale - when specified, must be larger than 0");
     }
-    
+
     // Debug flag for additional logging.
     bool debugMode = get_string_parameter("debug", params, paramsCount) == "true";
     clock.tock();
@@ -170,7 +168,6 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     NODE_ASSERT((scaleValues.size() == 0) || (originalImageColorChannels == scaleValues.size()), "number of scale values must be equal to number of image channels");
     NODE_ASSERT((meanValues.size() == 0) || (originalImageColorChannels == meanValues.size()), "number of mean values must be equal to number of image channels");
-
 
     if (debugMode) {
         std::cout << "Original image size: " << cv::Size2i(originalImageWidth, originalImageHeight) << std::endl;
@@ -227,7 +224,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     }
 
     // Perform procesesing with scale and mean values. If scale and scaleValues provided only scaleValues are used for scaling.
-    // If scale and meanValues provided mean values are substracted from pixels first then scaling is made. 
+    // If scale and meanValues provided mean values are substracted from pixels first then scaling is made.
     scale_image(originalImageColorChannels, scale, meanValues, scaleValues, image);
 
     // Perform resize operation.

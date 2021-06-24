@@ -161,64 +161,55 @@ void get_float_parameters_list(const std::string& name, const struct CustomNodeP
         }
     }
 
-    if(value.length() > 2 && value.front() == '[' && value.back() == ']')
-    {
+    if (value.length() > 2 && value.front() == '[' && value.back() == ']') {
         value.pop_back();
         value.erase(value.begin());
-        
+
         std::stringstream ss(value);
- 
+
         while (ss.good()) {
             std::string substr;
             getline(ss, substr, ',');
             try {
                 values.push_back(std::stof(substr));
-            } catch (std::invalid_argument& e) {} 
-            catch (std::out_of_range& e) {}
+            } catch (std::invalid_argument& e) {
+            } catch (std::out_of_range& e) {
+            }
         }
     }
 }
 
 void scale_image(const int originalImageColorChannels, const int scale, const std::vector<float> meanValues, const std::vector<float> scaleValues, cv::Mat& image) {
-    if(scale != -1 || meanValues.size() > 0 || scaleValues.size() > 0){
-        if(originalImageColorChannels == 1)
-        {
-            for(float &pixel : cv::Mat_<float>(image)){
-                if(meanValues.size() > 0)
+    if (scale != -1 || meanValues.size() > 0 || scaleValues.size() > 0) {
+        if (originalImageColorChannels == 1) {
+            for (float& pixel : cv::Mat_<float>(image)) {
+                if (meanValues.size() > 0)
                     pixel = pixel - meanValues[0];
 
-                if(scaleValues.size() > 0)
-                {
+                if (scaleValues.size() > 0) {
                     pixel = pixel / scaleValues[0];
-                }
-                else if(scale != -1)
-                {
+                } else if (scale != -1) {
                     pixel = pixel / scale;
                 }
             }
-        }
-        else if(originalImageColorChannels == 3){
-            for(cv::Point3_<float> &pixel : cv::Mat_<cv::Point3_<float>>(image)){
-                if(meanValues.size() > 0){
+        } else if (originalImageColorChannels == 3) {
+            for (cv::Point3_<float>& pixel : cv::Mat_<cv::Point3_<float>>(image)) {
+                if (meanValues.size() > 0) {
                     pixel.x = pixel.x - meanValues[0];
                     pixel.y = pixel.y - meanValues[1];
                     pixel.z = pixel.z - meanValues[2];
                 }
 
-                if(scaleValues.size() > 0)
-                {
-                    pixel.x = pixel.x/scaleValues[0];
-                    pixel.y = pixel.y/scaleValues[1];
-                    pixel.z = pixel.z/scaleValues[2];
-                }
-                else if(scale != -1)
-                {
-                    pixel.x = pixel.x/scale;
-                    pixel.y = pixel.y/scale;
-                    pixel.z = pixel.z/scale;
+                if (scaleValues.size() > 0) {
+                    pixel.x = pixel.x / scaleValues[0];
+                    pixel.y = pixel.y / scaleValues[1];
+                    pixel.z = pixel.z / scaleValues[2];
+                } else if (scale != -1) {
+                    pixel.x = pixel.x / scale;
+                    pixel.y = pixel.y / scale;
+                    pixel.z = pixel.z / scale;
                 }
             }
         }
-        
     }
 }
