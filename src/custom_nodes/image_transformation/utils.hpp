@@ -182,7 +182,7 @@ void get_float_parameters_list(const std::string& name, const struct CustomNodeP
 void scale_image(const int originalImageColorChannels, const int scale, const std::vector<float> meanValues, const std::vector<float> scaleValues, cv::Mat& image) {
     if (scale != -1 || meanValues.size() > 0 || scaleValues.size() > 0) {
         if (originalImageColorChannels == 1) {
-            for (float& pixel : cv::Mat_<float>(image)) {
+            for (float& pixel : cv::Mat1f(image)) {
                 if (meanValues.size() > 0)
                     pixel = pixel - meanValues[0];
 
@@ -193,23 +193,37 @@ void scale_image(const int originalImageColorChannels, const int scale, const st
                 }
             }
         } else if (originalImageColorChannels == 3) {
-            for (cv::Point3_<float>& pixel : cv::Mat_<cv::Point3_<float>>(image)) {
+            for (cv::Vec3f& pixel : cv::Mat3f(image)) {
                 if (meanValues.size() > 0) {
-                    pixel.x = pixel.x - meanValues[0];
-                    pixel.y = pixel.y - meanValues[1];
-                    pixel.z = pixel.z - meanValues[2];
+                    for(int i = 0; i < pixel.channels; i++)
+                    {
+                        pixel[i] = pixel[i] - meanValues[i];
+                    }
                 }
 
                 if (scaleValues.size() > 0) {
-                    pixel.x = pixel.x / scaleValues[0];
-                    pixel.y = pixel.y / scaleValues[1];
-                    pixel.z = pixel.z / scaleValues[2];
+                    for(int i = 0; i < pixel.channels; i++)
+                    {
+                        pixel[i] = pixel[i] / scaleValues[i];
+                    }
                 } else if (scale != -1) {
-                    pixel.x = pixel.x / scale;
-                    pixel.y = pixel.y / scale;
-                    pixel.z = pixel.z / scale;
+                    for(int i = 0; i < pixel.channels; i++)
+                    {
+                        pixel[i] = pixel[i] / scale;
+                    }
                 }
             }
         }
     }
+}
+
+void printListValue(std::string name, std::vector<float> values) {
+    std::cout << name << ": [";
+    for (const auto& v : values) {
+        std::cout << v;
+        if (&v != &values.back()) {
+            std::cout << ",";
+        }
+    }
+    std::cout << "]" << std::endl;
 }

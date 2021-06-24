@@ -42,17 +42,6 @@ public:
     }
 };
 
-void printListValue(std::string name, std::vector<float> values) {
-    std::cout << name << ": [";
-    for (auto v : values) {
-        std::cout << v;
-        if (v != values.back()) {
-            std::cout << ",";
-        }
-    }
-    std::cout << "]" << std::endl;
-}
-
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
     Timer clock;
     // Parameters reading
