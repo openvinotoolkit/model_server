@@ -21,7 +21,7 @@ boxes according to the configured criteria. All operations on the images employ 
 Such smaller requests can be submitted for inference in parallel to the next Model Nodes. Learn more about the [demultiplexing](./demultiplexer.md).
 - Model `age-gender-recognition` - this model recognizes age and gender on given face image
 - Model `emotion-recognition` - this model outputs emotion probability for emotions: neutral, happy, sad, surprised and angry
-- Response - the output of the whole pipeline combines the recognized face images with their metadata: coordinates, age, gender, emotion and detection confidence level. 
+- Response - the output of the whole pipeline combines the recognized face images with their metadata: coordinates, age, gender, emotions and detection confidence level. 
 
 ## Prepare the models from OpenVINO Model Zoo
 ### Face detection model
@@ -29,7 +29,7 @@ Such smaller requests can be submitted for inference in parallel to the next Mod
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin
 ```
-### Age gender recogonition model
+### Age gender recognition model
 ```
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin

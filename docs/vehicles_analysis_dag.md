@@ -3,7 +3,7 @@
 ## Analysis of multiple vehicles in single image frame request
 This document demonstrates how to create complex pipelines using object detection and object recognition models from OpenVINO Model Zoo. As an example, we will use [vehicle-detection-0202](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/vehicle-detection-0202/description/vehicle-detection-0202.md) to detect multiple vehicles on the image. Then, for each detected vehicle we will crop it using [model_zoo_intel_object_detection](../src/custom_nodes/model_zoo_intel_object_detection) example custom node. Finally, each vehicle image will be forwarded to [vehicle-attributes-recognition-barrier-0042](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/vehicle-attributes-recognition-barrier-0042/description/vehicle-attributes-recognition-barrier-0042.md) model.
 
-![Vehicles analysis visualisation](vehicles_analysis.png)
+![Vehicles analysis visualization](vehicles_analysis.png)
 
 Using such pipeline, a single request to OVMS can perform a complex set of operations to determine all vehicles and its properties.
 
@@ -28,7 +28,7 @@ Such smaller requests can be submitted for inference in parallel to the next Mod
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.xml
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.bin
 ```
-### Vehicle attributes recogonition model
+### Vehicle attributes recognition model
 ```
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-attributes-recognition-barrier-0042/FP32/vehicle-attributes-recognition-barrier-0042.xml
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-attributes-recognition-barrier-0042/FP32/vehicle-attributes-recognition-barrier-0042.bin
@@ -54,6 +54,7 @@ Copy this file along with the model files.
 ## Final directory structure
 ```
 workspace
+├── config.json
 ├── lib
 │   └── libcustom_node_model_zoo_intel_object_detection.so
 ├── vehicle-attributes-recognition-barrier-0042
