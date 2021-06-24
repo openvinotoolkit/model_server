@@ -27,11 +27,13 @@ metadata:
       and dependencies to start experimenting with advanced AI/ML notebooks.
     opendatahub.io/notebook-image-name: OpenVINO Toolkit
     opendatahub.io/notebook-image-url: 'https://github.com/openvinotoolkit/openvino_notebooks'
-{{- if ne .Values.build_locally "true" }}
 spec:
   tags:
     - name: latest
-      annotations: null
+      annotations:
+        opendatahub.io/notebook-software: '[{"name":"Python","version":"v3.8.6"}]'
+        openshift.io/imported-from: quay.io/thoth-station/s2i-thoth-ubi8-py38
+{{- if ne .Values.build_locally "true" }}
       from:
         kind: DockerImage
         name: "{{ .Values.image_name }}"
