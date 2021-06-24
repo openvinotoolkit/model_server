@@ -46,7 +46,7 @@ Status ExitNode::fetchResults(const BlobMap& inputBlobs) {
         auto& blob = kv.second;
         SPDLOG_DEBUG("[Node: {}] Serializing response from pipeline. Output name: {}", getName(), output_name);
         auto& proto = (*this->response->mutable_outputs())[output_name];
-        auto status = serialize(blob, proto);
+        auto status = serialize(blob->getUnderlyingBlob(), proto);
         if (!status.ok()) {
             return status;
         }

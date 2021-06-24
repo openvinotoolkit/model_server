@@ -27,7 +27,7 @@
 
 namespace ovms {
 
-using shard_map_t = std::unordered_map<session_id_t, InferenceEngine::Blob::Ptr>;
+using shard_map_t = std::unordered_map<session_id_t, std::shared_ptr<BlobWrapper>>;
 
 class CollapseDetails;
 
@@ -37,7 +37,7 @@ class GatherNodeInputHandler : public NodeInputHandler {
 
 public:
     GatherNodeInputHandler(uint32_t inputsMissingCount, const CollapseDetails& collapsingDetails);
-    Status setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr, session_id_t shardId) override;
+    Status setInput(const std::string& inputName, std::shared_ptr<BlobWrapper>& blobWrapper, session_id_t shardId) override;
     Status notifyFinishedDependency() override;
 };
 }  // namespace ovms

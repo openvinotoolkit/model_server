@@ -77,7 +77,7 @@ Status CustomNode::fetchResults(BlobMap& outputs, session_key_t sessionKey) {
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Getting custom node output tensor with name: {}",
                 getName(), sessionKey, realOutputName);
 
-            InferenceEngine::Blob::Ptr resultBlob;
+            std::shared_ptr<BlobWrapper> resultBlob;
             auto status = session.fetchResult(realOutputName, resultBlob);
             if (!status.ok()) {
                 SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} Custom node output with name {} is missing",

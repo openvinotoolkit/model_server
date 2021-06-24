@@ -20,8 +20,12 @@
 
 #include <inference_engine.hpp>
 
+#include "blobwrapper.hpp"
+
 namespace ovms {
 
-using BlobMap = std::unordered_map<std::string, InferenceEngine::Blob::Ptr>;
+class BlobWrapper;
+
+using BlobMap = std::unordered_map<std::string, std::shared_ptr<BlobWrapper>>;
 
 }  // namespace ovms

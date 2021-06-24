@@ -15,36 +15,23 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <utility>
-
-//#include <inference_engine.hpp>
-
-#include "blobmap.hpp"
-#include "blobwrapper.hpp"
-#include "session_id.hpp"
-#include "status.hpp"
+#include <inference_engine.hpp>
 
 namespace ovms {
 
-class NodeInputHandler {
-protected:
-    BlobMap inputBlobs;
-    uint32_t remainingDependencies;
-    bool isUsed = false;
-
-public:
-    NodeInputHandler(uint32_t inputsMissingCount);
-    virtual Status setInput(const std::string& inputName, std::shared_ptr<BlobWrapper>& blobWrapper, session_id_t shardId);
-    const BlobMap& getInputs() {
-        isUsed = true;
-        return inputBlobs;
-    }
-    void clearInputs();
-    bool isReady();
-    virtual Status notifyFinishedDependency();
-    virtual ~NodeInputHandler() = default;
+class BlobWrapper {
+    public:
+        BlobWrapper(InferenceEngine::Blob::Ptr& blob) : blob(blob) {}
+ //       BlobWrapper(InferenceEngine::Blob::Ptr&& blob) : blob(blob) {}
+        void registerParent(InferenceEngine::Blob::Ptr ptr) {
+            parent = ptr;
+        }
+        virtual ~BlobWrapper() = default;
+        InferenceEngine::Blob::Ptr getUnderlyingBlob() const {
+            return blob;
+        }
+    private:
+        InferenceEngine::Blob::Ptr blob;
+        InferenceEngine::Blob::Ptr parent;
 };
 }  // namespace ovms

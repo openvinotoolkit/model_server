@@ -20,6 +20,7 @@ cc_library(
     srcs = [
         "aliases.hpp",
         "blobmap.hpp",
+        "blobwrapper.hpp",
         "config.cpp",
         "config.hpp",
         "custom_node.cpp",
@@ -31,8 +32,8 @@ cc_library(
         "customnodesession.cpp",
         "customnodesession.hpp",
         "customloaderconfig.hpp",
-	    "customloaders.hpp",
-	    "customloaders.cpp",
+        "customloaders.hpp",
+        "customloaders.cpp",
         "customloaderinterface.hpp",
         "deserialization.hpp",
         "dl_node.cpp",

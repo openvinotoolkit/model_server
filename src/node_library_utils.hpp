@@ -22,6 +22,7 @@
 
 #include <inference_engine.hpp>
 
+#include "blobmap.hpp"
 #include "custom_node_interface.h"  // NOLINT
 #include "node_library.hpp"
 #include "status.hpp"
@@ -33,7 +34,7 @@ class TensorInfo;
 CustomNodeTensorPrecision toCustomNodeTensorPrecision(InferenceEngine::Precision precision);
 InferenceEngine::Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision);
 std::unique_ptr<struct CustomNodeParam[]> createCustomNodeParamArray(const std::unordered_map<std::string, std::string>& paramMap);
-std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const std::unordered_map<std::string, InferenceEngine::Blob::Ptr>& blobMap);
+std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const BlobMap& blobMap);
 Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std::map<std::string, std::shared_ptr<TensorInfo>>& out, release_fn freeCallback);
 
 }  // namespace ovms

@@ -91,7 +91,8 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
     const auto& inputsInfo = this->model->getInputsInfo();
     for (const auto& kv : this->inputHandler->getInputs()) {
         const auto& name = kv.first;
-        auto& blob = kv.second;
+        auto& blobWrapper = kv.second;
+        auto blob = blobWrapper->getUnderlyingBlob();
 
         auto it = inputsInfo.find(name);
         if (it == inputsInfo.end()) {
@@ -239,7 +240,8 @@ Status DLNodeSession::setInputsForInference(InferenceEngine::InferRequest& infer
     Status status = StatusCode::OK;
     try {
         // Prepare inference request, fill with input blobs
-        for (const auto& [name, blob] : this->inputHandler->getInputs()) {
+        for (const auto& [name, blobWrapper] : this->inputHandler->getInputs()) {
+            auto blob = blobWrapper->getUnderlyingBlob();
             std::string realModelInputName;
             if (!getRealInputName(name, &realModelInputName).ok()) {
                 SPDLOG_LOGGER_WARN(dag_executor_logger, "DLNode::{} [Node name: {}]; cannot find real model input name for alias: {}",

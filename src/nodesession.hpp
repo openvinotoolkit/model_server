@@ -25,6 +25,7 @@
 #include "status.hpp"
 
 namespace ovms {
+class BlobWrapper;
 struct NodeInputHandler;
 struct NodeOutputHandler;
 class Timer;
@@ -44,7 +45,7 @@ public:
     NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
     virtual ~NodeSession();
     const std::string& getName() const { return nodeName; }
-    Status setInput(const std::string& inputName, InferenceEngine::Blob::Ptr&, session_id_t shardId);
+    Status setInput(const std::string& inputName, std::shared_ptr<BlobWrapper>& blobWrapper, session_id_t shardId);
     const NodeSessionMetadata& getNodeSessionMetadata() const;
     const session_key_t& getSessionKey() const { return sessionKey; }
     bool isReady() const;

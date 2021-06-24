@@ -34,25 +34,25 @@ GatherNodeInputHandler::GatherNodeInputHandler(uint32_t inputsMissingCount, cons
         std::multiplies<session_id_t>());
 }
 
-Status GatherNodeInputHandler::setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& ptr, session_id_t shardId) {
+Status GatherNodeInputHandler::setInput(const std::string& inputName, std::shared_ptr<BlobWrapper>& blobWrapper, session_id_t shardId) {
     auto inputsShardsIt = shardsStorage.find(inputName);
     if (inputsShardsIt == shardsStorage.end()) {
-        shard_map_t shardMap{{shardId, ptr}};
+        shard_map_t shardMap{{shardId, blobWrapper}};
         auto itDidInsertPair = shardsStorage.emplace(inputName, std::move(shardMap));
         if (!itDidInsertPair.second) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to insert the same input: {} twice with the same shardId: {}", inputName, shardId);
             return StatusCode::INTERNAL_ERROR;
         }
     } else {
-        auto firstShardTensor = inputsShardsIt->second.begin()->second;
-        if (firstShardTensor->getTensorDesc() != ptr->getTensorDesc()) {
+        auto firstShardTensor = inputsShardsIt->second.begin()->second->getUnderlyingBlob();
+        if (firstShardTensor->getTensorDesc() != blobWrapper->getUnderlyingBlob()->getTensorDesc()) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Shard: {} tensor description differ. First shard desc: {}, current shard desc: {}",
                 shardId,
                 TensorInfo::tensorDescToString(firstShardTensor->getTensorDesc()),
-                TensorInfo::tensorDescToString(ptr->getTensorDesc()));
+                TensorInfo::tensorDescToString(blobWrapper->getUnderlyingBlob()->getTensorDesc()));
             return StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS;
         }
-        auto itDidEmplacePair = inputsShardsIt->second.emplace(shardId, ptr);
+        auto itDidEmplacePair = inputsShardsIt->second.emplace(shardId, blobWrapper);
         if (!itDidEmplacePair.second) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to put the same input: {} shard: {} twice", inputName, shardId);
             return StatusCode::INTERNAL_ERROR;
@@ -70,7 +70,7 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
         const auto shardsCount = shardMap.size();
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Consolidating: {} shards for input: {}", shardsCount, inputName);
         session_id_t firstShardId = 0;
-        auto firstShardTensorDesc = shardMap.at(firstShardId)->getTensorDesc();
+        auto firstShardTensorDesc = shardMap.at(firstShardId)->getUnderlyingBlob()->getTensorDesc();
         auto shardDims = getEffectiveShape(firstShardTensorDesc);
         auto newDims = shardDims;
         newDims.insert(newDims.begin(),
@@ -85,7 +85,8 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
         if (!status.ok()) {
             return status;
         }
-        for (auto& [shardId, blob] : shardMap) {
+        for (auto& [shardId, blobWrapper] : shardMap) {
+            auto blob = blobWrapper->getUnderlyingBlob();
             auto& shardTensorDesc = blob->getTensorDesc();
             if (shardTensorDesc != firstShardTensorDesc) {
                 SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to consolidate blob: {} shards in gather node. First shard has different tensor description: {} than current shard: {}",
@@ -97,7 +98,7 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
             size_t offset = shardId * memstep;
             memcpy((char*)consolidatedBlob->buffer() + offset, blob->cbuffer(), memstep);
         }
-        inputBlobs.insert({inputName, consolidatedBlob});
+        inputBlobs.insert({inputName, std::make_shared<BlobWrapper>(consolidatedBlob)});
     }
     return StatusCode::OK;
 }

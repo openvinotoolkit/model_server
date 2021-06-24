@@ -47,8 +47,8 @@ public:
         const auto sessionKey = sessionMetadata.getSessionKey();
         InferenceEngine::Blob::Ptr secondOutput;
         EXPECT_EQ(blobClone(secondOutput, intermediateResultBlob), StatusCode::OK);
-        BlobMap blobs{{mockerDemutliplexerNodeOutputName, intermediateResultBlob},
-            {mockerDemutliplexerNodeOutputName2, secondOutput}};
+        BlobMap blobs{{mockerDemutliplexerNodeOutputName, std::make_shared<BlobWrapper>(intermediateResultBlob)},
+            {mockerDemutliplexerNodeOutputName2, std::make_shared<BlobWrapper>(secondOutput)}};
         std::pair<NodeSessionMetadata, BlobMap> metaBlobsPair{sessionMetadata, std::move(blobs)};
         nodeSessionOutputs.emplace(sessionKey, std::move(metaBlobsPair));
         return StatusCode::OK;
@@ -92,7 +92,8 @@ TEST(DemultiplexerTest, CheckDemultipliedBlobsMultipleOutputs) {
     for (size_t shardId = 0; shardId < demultiplyCount; ++shardId) {
         auto& sessionResult = sessionResults[demultiplexedMetadata[shardId].getSessionKey()];
         ASSERT_EQ(sessionResult.first.getSessionKey(), demultiplexedMetadata[shardId].getSessionKey());
-        for (auto& [blobName, blob] : sessionResult.second) {
+        for (auto& [blobName, blobWrapper] : sessionResult.second) {
+            auto blob = blobWrapper->getUnderlyingBlob();
             EXPECT_THAT(blobName, AnyOf(Eq(mockerDemutliplexerNodeOutputName),
                                       Eq(mockerDemutliplexerNodeOutputName2)));
             ASSERT_EQ(blobsData[shardId].size(), blob->size());

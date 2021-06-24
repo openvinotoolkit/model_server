@@ -84,7 +84,7 @@ Status EntryNode::fetchResults(BlobMap& outputs) {
             if (!status.ok()) {
                 return status;
             }
-            outputs[outputName] = blob;
+            outputs.emplace(outputName, std::make_shared<BlobWrapper>(blob));
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}]: blob with name: {} description: {} has been prepared", getName(), outputName, TensorInfo::tensorDescToString(blob->getTensorDesc()));
         }
     }

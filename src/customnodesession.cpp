@@ -99,7 +99,8 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
             }
             continue;
         }
-        this->resultBlobs.emplace(std::string(outputTensors[i].name), std::move(resultBlob));
+        auto blobWrapper = std::make_shared<BlobWrapper>(resultBlob);
+        this->resultBlobs.emplace(std::string(outputTensors[i].name), std::move(blobWrapper));
     }
 
     library.release(outputTensors);
@@ -107,7 +108,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
     return status;
 }
 
-Status CustomNodeSession::fetchResult(const std::string& name, InferenceEngine::Blob::Ptr& resultBlob) {
+Status CustomNodeSession::fetchResult(const std::string& name, std::shared_ptr<BlobWrapper>& resultBlob) {
     auto it = resultBlobs.find(name);
     if (it == resultBlobs.end()) {
         return StatusCode::NODE_LIBRARY_MISSING_OUTPUT;

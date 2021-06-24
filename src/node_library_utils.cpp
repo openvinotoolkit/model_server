@@ -78,13 +78,14 @@ std::unique_ptr<struct CustomNodeParam[]> createCustomNodeParamArray(const std::
     return std::move(libraryParameters);
 }
 
-std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const std::unordered_map<std::string, InferenceEngine::Blob::Ptr>& blobMap) {
+std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const BlobMap& blobMap) {
     if (blobMap.size() == 0) {
         return nullptr;
     }
     auto inputTensors = std::make_unique<struct CustomNodeTensor[]>(blobMap.size());
     int i = 0;
-    for (const auto& [name, blob] : blobMap) {
+    for (const auto& [name, blobWrapper] : blobMap) {
+        auto blob = blobWrapper->getUnderlyingBlob();
         const auto& dims = getEffectiveBlobShape(blob);
         inputTensors[i].name = static_cast<const char*>(name.c_str());
         inputTensors[i].data = static_cast<uint8_t*>(blob->buffer());

@@ -102,8 +102,11 @@ Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inf
                 }
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Getting blob from model: {}, inferRequestStreamId: {}, blobName: {}",
                     getName(), sessionKey, modelName, sessionKey, realModelOutputName);
-                const auto blob = inferRequest.GetBlob(realModelOutputName);
-                outputs.emplace(std::make_pair(output_name, std::move(blob)));
+                auto blob = inferRequest.GetBlob(realModelOutputName);
+                // TODO check how to move
+                //outputs.emplace(std::make_pair(output_name, std::make_shared<BlobWrapper>(std::move(blob))));
+                auto blobWrapper = std::make_shared<BlobWrapper>(blob);
+                outputs.emplace(std::make_pair(output_name, std::move(blobWrapper)));
             } catch (const InferenceEngine::Exception& e) {
                 Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session:{} Error during getting blob {}; exception message: {}", getName(), sessionKey, status.string(), e.what());

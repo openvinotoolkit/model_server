@@ -28,8 +28,8 @@ const NodeSessionMetadata& NodeSession::getNodeSessionMetadata() const {
     return this->metadata;
 }
 
-Status NodeSession::setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr, session_id_t shardId) {
-    return inputHandler->setInput(inputName, blobPtr, shardId);
+Status NodeSession::setInput(const std::string& inputName, std::shared_ptr<BlobWrapper>& blobWrapper, session_id_t shardId) {
+    return inputHandler->setInput(inputName, blobWrapper, shardId);
 }
 
 std::unique_ptr<NodeInputHandler> createNodeInputHandler(uint32_t inputsCount, const CollapseDetails& collapsingDetails) {

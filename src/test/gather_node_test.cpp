@@ -64,7 +64,8 @@ TEST_F(GatherNodeInputHandlerTest, ThreePredecessorNodesWithSubsessionSize2) {
     for (session_id_t j = 0; j < shardsCount; ++j) {
         for (size_t i = 0; i < inputNames.size(); ++i) {
             EXPECT_FALSE(gInputHandler.isReady());
-            gInputHandler.setInput(inputNames[i], inputBlobs[i], j);
+            auto blobWrapper = std::make_shared<BlobWrapper>(inputBlobs[i]);
+            gInputHandler.setInput(inputNames[i], blobWrapper, j);
             // each input comming from different node so we call notify each time
             ASSERT_EQ(gInputHandler.notifyFinishedDependency(), StatusCode::OK);
         }
@@ -80,7 +81,8 @@ TEST_F(GatherNodeInputHandlerTest, ThreePredecessorNodesWithSubsessionSize2) {
         std::copy(blobsData[i].begin(), blobsData[i].end(), resultBlobsData[i].begin() + blobsData[i].size());
     }
     for (size_t i = 0; i < inputNames.size(); ++i) {
-        const auto& blob = blobMap.at(inputNames[i]);
+        const auto& blobWrapper = blobMap.at(inputNames[i]);
+        auto blob = blobWrapper->getUnderlyingBlob();
         EXPECT_EQ(blob->size(), blobsData[i].size() * shardsCount);
         EXPECT_THAT(blob->getTensorDesc().getDims(), ElementsAre(shardsCount, 1, blobsData[i].size()));
         EXPECT_EQ(std::memcmp((char*)((const void*)blob->cbuffer()), resultBlobsData[i].data(), resultBlobsData[i].size() * sizeof(float)), 0);
@@ -117,8 +119,9 @@ TEST_F(GatherNodeInputHandlerTest, GatheringOnTwoDemultiplexersAtOnce) {
             ASSERT_FALSE(gInputHandler.isReady());
             SPDLOG_DEBUG("i: {}, j: {}, metadatas.size: {}, metadatas[i].size() :{}", i, j, metadatas.size(), metadatas[i].size());
             auto shardId = metadatas[i][j].getShardId({demultiplexerNodeNames[0], demultiplexerNodeNames[1]});
+            auto blobWrapper = std::make_shared<BlobWrapper>(blob);
             status = gInputHandler.setInput(inputName,
-                blob,
+                blobWrapper,
                 shardId);
             ASSERT_EQ(status, StatusCode::OK) << status.string();
             gInputHandler.notifyFinishedDependency();
@@ -127,7 +130,8 @@ TEST_F(GatherNodeInputHandlerTest, GatheringOnTwoDemultiplexersAtOnce) {
     ASSERT_TRUE(gInputHandler.isReady());
     const auto blobMap = gInputHandler.getInputs();
     ASSERT_EQ(blobMap.size(), 1);
-    const auto& blob = blobMap.at(inputName);
+    const auto& blobWrapper = blobMap.at(inputName);
+    auto blob = blobWrapper->getUnderlyingBlob();
     EXPECT_EQ(blob->size(), blobsData.size());
     EXPECT_THAT(blob->getTensorDesc().getDims(), ElementsAre(demultiplyCounts[0], demultiplyCounts[1], 1, elementCountPerShard));
     EXPECT_EQ(std::memcmp((char*)((const void*)blob->cbuffer()), blobsData.data(), blobsData.size() * sizeof(float)), 0);
@@ -149,7 +153,8 @@ TEST_F(GatherNodeInputHandlerTest, SetInputsWithShardsHavingDifferentShapesShoul
     Status status;
     for (session_id_t j = 0; j < shardsCount; ++j) {
         EXPECT_FALSE(gInputHandler.isReady());
-        status = gInputHandler.setInput(inputNames, inputBlobs[j], j);
+        auto blobWrapper = std::make_shared<BlobWrapper>(inputBlobs[j]);
+        status = gInputHandler.setInput(inputNames, blobWrapper, j);
         // each input comming from different node so we call notify each time
         if (!status.ok()) {
             EXPECT_EQ(status, StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS) << status.string();
@@ -243,8 +248,8 @@ TEST_F(GatherNodeTest, FullFlowGatherInNonExitNode) {
     InferenceEngine::Blob::Ptr originalBlob1 = InferenceEngine::make_shared_blob<float>(desc, nodeRawResults1.data());
     InferenceEngine::Blob::Ptr originalBlob2 = InferenceEngine::make_shared_blob<float>(desc, nodeRawResults2.data());
     // prepare session results
-    BlobMap dummy1Result{{DUMMY_MODEL_OUTPUT_NAME, originalBlob1}};
-    BlobMap dummy2Result{{DUMMY_MODEL_OUTPUT_NAME, originalBlob2}};
+    BlobMap dummy1Result{{DUMMY_MODEL_OUTPUT_NAME, std::make_shared<BlobWrapper>(originalBlob1)}};
+    BlobMap dummy2Result{{DUMMY_MODEL_OUTPUT_NAME, std::make_shared<BlobWrapper>(originalBlob2)}};
     NodeSessionMetadata meta;
     const session_id_t shardsCount = 2;
     auto subsessions = meta.generateSubsessions(demultiplexerNodeName, shardsCount);
@@ -261,7 +266,8 @@ TEST_F(GatherNodeTest, FullFlowGatherInNonExitNode) {
     const auto& inputs = gather2DummyNode.getInputsFromInputHandler(subsessions[0].getSessionKey({demultiplexerNodeName}));
     EXPECT_EQ(inputs.size(), 1);
     ASSERT_NE(inputs.find(DUMMY_MODEL_INPUT_NAME), inputs.end());
-    const auto& gatheredBlob = inputs.at(DUMMY_MODEL_INPUT_NAME);
+    const auto& gatheredBlobWrapper = inputs.at(DUMMY_MODEL_INPUT_NAME);
+    auto gatheredBlob = gatheredBlobWrapper->getUnderlyingBlob();
     EXPECT_EQ(gatheredBlob->size(), nodeRawResults1.size() * shardsCount);
     std::vector<float> resultBlobData(nodeRawResults1.size() * shardsCount);
     std::copy(nodeRawResults1.begin(), nodeRawResults1.end(), resultBlobData.begin());

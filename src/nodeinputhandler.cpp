@@ -23,7 +23,7 @@ NodeInputHandler::NodeInputHandler(uint32_t inputsMissingCount) :
     remainingDependencies(inputsMissingCount) {
 }
 
-Status NodeInputHandler::setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& ptr, session_id_t shardId) {
+Status NodeInputHandler::setInput(const std::string& inputName, std::shared_ptr<BlobWrapper>& blobWrapper, session_id_t shardId) {
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Setting input: {}, shardId: {}", inputName, shardId);
     if (shardId > 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to set input: {}, with shardId: {} >0 in NodeInputHandler.", inputName, shardId);
@@ -33,7 +33,7 @@ Status NodeInputHandler::setInput(const std::string& inputName, InferenceEngine:
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to set the same input: {}, shardId: {} twice for the NodeInputHandler.", inputName, shardId);
         return StatusCode::PIPELINE_TRIED_TO_SET_THE_SAME_INPUT_TWICE;
     }
-    inputBlobs.emplace(inputName, ptr);
+    inputBlobs.emplace(inputName, blobWrapper);
     return StatusCode::OK;
 }
 

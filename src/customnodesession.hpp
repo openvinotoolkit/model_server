@@ -45,7 +45,7 @@ public:
         std::unique_ptr<struct CustomNodeParam[]>& parameters,
         int parametersCount);
 
-    Status fetchResult(const std::string& name, InferenceEngine::Blob::Ptr& resultBlob);
+    Status fetchResult(const std::string& name, std::shared_ptr<BlobWrapper>& resultBlob);
 
     void clearInputs();
     void release() override;

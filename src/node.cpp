@@ -200,7 +200,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         return StatusCode::INTERNAL_ERROR;
     }
     auto& [metadata, blobMap] = nodeSessionOutputs.begin()->second;
-    auto& tensorDesc = blobMap.begin()->second->getTensorDesc();
+    auto& tensorDesc = blobMap.begin()->second->getUnderlyingBlob()->getTensorDesc();
     if (tensorDesc.getDims()[0] > DEMULTIPLY_LIMIT) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} - too large dim[0] size: {} of blob: {}. Maximum allowed is: {}",
             getName(), tensorDesc.getDims()[0], blobMap.begin()->first, DEMULTIPLY_LIMIT);
@@ -216,7 +216,8 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         return StatusCode::INTERNAL_ERROR;
     }
 
-    for (auto& [blobName, blob] : blobMap) {
+    for (auto& [blobName, blobWrapper] : blobMap) {
+        auto blob = blobWrapper->getUnderlyingBlob();
         auto tensorDesc = blob->getTensorDesc();
         auto newDims = tensorDesc.getDims();
         if (newDims.size() < 3) {
@@ -251,9 +252,9 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
             auto it = nodeSessionOutputs.find(newSessionMetadatas[i].getSessionKey());
             if (it == nodeSessionOutputs.end()) {
-                nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{blobName, dividedBlob}}});
+                nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{blobName, std::make_shared<BlobWrapper>(dividedBlob)}}});
             } else {
-                it->second.second.emplace(blobName, dividedBlob);
+                it->second.second.emplace(blobName, std::make_shared<BlobWrapper>(dividedBlob));
             }
         }
     }
