@@ -42,6 +42,19 @@ public:
     }
 };
 
+void printListValue(std::string name, std::vector<float> values){
+        std::cout << name << ": [";
+        for(auto v : values)
+        {
+            std::cout << v;
+            if(v != values.back())
+            {
+                std::cout << ",";
+            }
+        }
+        std::cout << "]" << std::endl;
+}
+
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
     Timer clock;
     // Parameters reading
@@ -80,6 +93,35 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(originalImageLayout == "NCHW" || originalImageLayout == "NHWC", "original image layout must be NCHW or NHWC");
     NODE_ASSERT(targetImageLayout == "NCHW" || targetImageLayout == "NHWC", "target image layout must be NCHW or NHWC");
 
+    // Scale.
+    //
+    // If not specified (-1), the image will not be scaled.
+    // When specified, all pixel values will be divided by this value.
+    float scale = get_float_parameter("scale", params, paramsCount, -1);
+    NODE_ASSERT(scale != 0 || scale == -1, "scale - when specified, must be different than 0");
+
+    // Scale values.
+    //
+    // If not specified, the image will not be scaled.
+    // Smilar to --scale but scale value should be provided per channel.
+    // The exact meaning and order of channels depend on input image.
+    std::vector<float> scaleValues;
+    get_float_parameters_list("scale_values", params, paramsCount, scaleValues);
+    for(auto v : scaleValues){
+        NODE_ASSERT(v != 0, "scale value - when specified, must be different than 0");
+    }
+
+    // Mean values.
+    //
+    // If not specified, the image will not be scaled.
+    // When specified, all pixel values will be substracted by this value per channel.
+    // The exact meaning and order of channels depend on input image.
+    std::vector<float> meanValues;
+    get_float_parameters_list("mean_values", params, paramsCount, meanValues);
+    for(auto v : meanValues){
+        NODE_ASSERT(v > 0, "scale - when specified, must be larger than 0");
+    }
+    
     // Debug flag for additional logging.
     bool debugMode = get_string_parameter("debug", params, paramsCount) == "true";
     clock.tock();
@@ -126,6 +168,10 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     targetImageHeight = targetImageHeight == -1 ? originalImageHeight : targetImageHeight;
     targetImageWidth = targetImageWidth == -1 ? originalImageWidth : targetImageWidth;
 
+    NODE_ASSERT((scaleValues.size() == 0) || (originalImageColorChannels == scaleValues.size()), "number of scale values must be equal to number of image channels");
+    NODE_ASSERT((meanValues.size() == 0) || (originalImageColorChannels == meanValues.size()), "number of mean values must be equal to number of image channels");
+
+
     if (debugMode) {
         std::cout << "Original image size: " << cv::Size2i(originalImageWidth, originalImageHeight) << std::endl;
         std::cout << "Original image color channels: " << originalImageColorChannels << std::endl;
@@ -135,6 +181,9 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         std::cout << "Target image color channels: " << targetImageColorChannels << std::endl;
         std::cout << "Target image color order: " << targetImageColorOrder << std::endl;
         std::cout << "Target image layout: " << targetImageLayout << std::endl;
+        std::cout << "Scale: " << scale << std::endl;
+        printListValue("Scale values", scaleValues);
+        printListValue("Mean values", meanValues);
     }
     clock.tock();
     if (debugMode) {
@@ -176,6 +225,10 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     if (debugMode) {
         std::cout << "Color order change = " << clock.duration().count() << " ms" << std::endl;
     }
+
+    // Perform procesesing with scale and mean values. If scale and scaleValues provided only scaleValues are used for scaling.
+    // If scale and meanValues provided mean values are substracted from pixels first then scaling is made. 
+    scale_image(originalImageColorChannels, scale, meanValues, scaleValues, image);
 
     // Perform resize operation.
     clock.tick();
