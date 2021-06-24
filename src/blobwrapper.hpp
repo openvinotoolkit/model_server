@@ -20,18 +20,20 @@
 namespace ovms {
 
 class BlobWrapper {
-    public:
-        BlobWrapper(InferenceEngine::Blob::Ptr& blob) : blob(blob) {}
- //       BlobWrapper(InferenceEngine::Blob::Ptr&& blob) : blob(blob) {}
-        void registerParent(InferenceEngine::Blob::Ptr ptr) {
-            parent = ptr;
-        }
-        virtual ~BlobWrapper() = default;
-        InferenceEngine::Blob::Ptr getUnderlyingBlob() const {
-            return blob;
-        }
-    private:
-        InferenceEngine::Blob::Ptr blob;
-        InferenceEngine::Blob::Ptr parent;
+public:
+    BlobWrapper(InferenceEngine::Blob::Ptr& blob) :
+        blob(blob) {}
+    //       BlobWrapper(InferenceEngine::Blob::Ptr&& blob) : blob(blob) {}
+    void registerParent(InferenceEngine::Blob::Ptr& ptr) {
+        parent = ptr;
+    }
+    virtual ~BlobWrapper() = default;
+    InferenceEngine::Blob::Ptr getUnderlyingBlob() const {
+        return blob;
+    }
+
+private:
+    InferenceEngine::Blob::Ptr blob;
+    InferenceEngine::Blob::Ptr parent;
 };
 }  // namespace ovms

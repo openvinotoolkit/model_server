@@ -20,8 +20,6 @@
 #include <unordered_map>
 #include <utility>
 
-//#include <inference_engine.hpp>
-
 #include "blobmap.hpp"
 #include "blobwrapper.hpp"
 #include "session_id.hpp"

@@ -104,7 +104,7 @@ Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inf
                     getName(), sessionKey, modelName, sessionKey, realModelOutputName);
                 auto blob = inferRequest.GetBlob(realModelOutputName);
                 // TODO check how to move
-                //outputs.emplace(std::make_pair(output_name, std::make_shared<BlobWrapper>(std::move(blob))));
+                // outputs.emplace(std::make_pair(output_name, std::make_shared<BlobWrapper>(std::move(blob))));
                 auto blobWrapper = std::make_shared<BlobWrapper>(blob);
                 outputs.emplace(std::make_pair(output_name, std::move(blobWrapper)));
             } catch (const InferenceEngine::Exception& e) {

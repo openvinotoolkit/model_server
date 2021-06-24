@@ -251,10 +251,12 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
                << "; Actual: " << TensorInfo::shapeToString(dividedBlob->getTensorDesc().getDims());
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
             auto it = nodeSessionOutputs.find(newSessionMetadatas[i].getSessionKey());
+            auto dividedBlobWrapper = std::make_shared<BlobWrapper>(dividedBlob);
+            dividedBlobWrapper->registerParent(blob);
             if (it == nodeSessionOutputs.end()) {
-                nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{blobName, std::make_shared<BlobWrapper>(dividedBlob)}}});
+                nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{blobName, dividedBlobWrapper}}});
             } else {
-                it->second.second.emplace(blobName, std::make_shared<BlobWrapper>(dividedBlob));
+                it->second.second.emplace(blobName, dividedBlobWrapper);
             }
         }
     }
@@ -263,16 +265,55 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
 }
 
 Status Node::createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, const InferenceEngine::TensorDesc& dividedBlobDesc, InferenceEngine::Blob::Ptr blob, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName) {
-    auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
-    if (!status.ok()) {
-        return status;
+    try {
+        char* ptr = (char*)blob->buffer() + i * step;
+        switch (dividedBlobDesc.getPrecision()) {
+        case InferenceEngine::Precision::FP32:
+            dividedBlob = InferenceEngine::make_shared_blob(dividedBlobDesc, (float*)ptr);
+            break;
+        case InferenceEngine::Precision::I32:
+            dividedBlob = InferenceEngine::make_shared_blob(dividedBlobDesc, (int32_t*)ptr);
+            break;
+        case InferenceEngine::Precision::I8:
+            dividedBlob = InferenceEngine::make_shared_blob(dividedBlobDesc, (int8_t*)ptr);
+            break;
+        case InferenceEngine::Precision::U8:
+            dividedBlob = InferenceEngine::make_shared_blob(dividedBlobDesc, (uint8_t*)ptr);
+            break;
+        case InferenceEngine::Precision::FP16:
+            dividedBlob = InferenceEngine::make_shared_blob(dividedBlobDesc, (uint16_t*)ptr);
+            break;
+        case InferenceEngine::Precision::I16:
+            dividedBlob = InferenceEngine::make_shared_blob(dividedBlobDesc, (int16_t*)ptr);
+            break;
+        case InferenceEngine::Precision::U16:
+            dividedBlob = InferenceEngine::make_shared_blob(dividedBlobDesc, (uint16_t*)ptr);
+            break;
+        case InferenceEngine::Precision::I64:
+            dividedBlob = InferenceEngine::make_shared_blob(dividedBlobDesc, (int64_t*)ptr);
+            break;
+        case InferenceEngine::Precision::FP64:
+            dividedBlob = InferenceEngine::make_shared_blob(dividedBlobDesc, (double*)ptr);
+            break;
+        case InferenceEngine::Precision::BOOL:
+            dividedBlob = InferenceEngine::make_shared_blob(dividedBlobDesc, (bool*)ptr);
+            break;
+        case InferenceEngine::Precision::MIXED:
+        case InferenceEngine::Precision::Q78:
+        case InferenceEngine::Precision::BIN:
+        case InferenceEngine::Precision::CUSTOM:
+        default: {
+            SPDLOG_ERROR("Blob clone failed, unsupported precision");
+            return StatusCode::INVALID_PRECISION;
+        }
+        }
+    } catch (const InferenceEngine::Exception& e) {
+        SPDLOG_DEBUG("Blob clone failed; exception message: {}", e.what());
+        return StatusCode::OV_CLONE_BLOB_ERROR;
+    } catch (std::logic_error& e) {
+        SPDLOG_DEBUG("Blob clone failed; exception message: {}", e.what());
+        return StatusCode::OV_CLONE_BLOB_ERROR;
     }
-    if (dividedBlob->byteSize() != step) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created blob: {} have wrong byte size: {}, expected: {}",
-            getName(), metadata.getSessionKey(), blobName, dividedBlob->byteSize(), step);
-        return StatusCode::UNKNOWN_ERROR;
-    }
-    memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
     return StatusCode::OK;
 }
 }  // namespace ovms
