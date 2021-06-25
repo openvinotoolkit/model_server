@@ -167,7 +167,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     // Perform procesesing with scale and mean values. If scale and scaleValues provided only scaleValues are used for scaling.
     // If scale and meanValues provided mean values are substracted from pixels first then scaling is made.
-    scale_image(originalImageColorChannels, scale, meanValues, scaleValues, image);
+    //scale_image(originalImageColorChannels, scale, meanValues, scaleValues, image);
 
     // Perform resize operation.
     if (static_cast<int64_t>(originalImageHeight) != targetImageHeight || static_cast<int64_t>(originalImageWidth) != targetImageWidth) {
