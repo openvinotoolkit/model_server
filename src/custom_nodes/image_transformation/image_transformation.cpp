@@ -61,20 +61,17 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     // Scale.
     //
-    // If not specified (-1), the image will not be scaled.
     // When specified, all pixel values will be divided by this value.
-    float scale = get_float_parameter("scale", params, paramsCount, -1);
-    NODE_ASSERT(scale != 0 || scale == -1, "scale - when specified, must be different than 0");
+    bool isScaleDefined = false;
+    float scale = get_float_parameter("scale", params, paramsCount, isScaleDefined, -1);
+    NODE_ASSERT(scale != 0, "cannot divide by scale equal to 0");
 
     // Scale values.
     //
-    // If not specified, the image will not be scaled.
-    // Smilar to --scale but scale value should be provided per channel.
-    // The exact meaning and order of channels depend on input image.
-    std::vector<float> scaleValues;
-    get_float_parameters_list("scale_values", params, paramsCount, scaleValues);
-    for (auto v : scaleValues) {
-        NODE_ASSERT(v != 0, "scale value - when specified, must be different than 0");
+    // Smilar to --scale but scale value should be provided per color channel.
+    std::vector<float> scaleValues = get_float_list_parameter("scale_values", params, paramsCount);
+    for (auto scale : scaleValues) {
+        NODE_ASSERT(scale != 0, "cannot divide by scale equal to 0");
     }
 
     // Mean values.
@@ -82,11 +79,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     // If not specified, the image will not be scaled.
     // When specified, all pixel values will be substracted by this value per channel.
     // The exact meaning and order of channels depend on input image.
-    std::vector<float> meanValues;
-    get_float_parameters_list("mean_values", params, paramsCount, meanValues);
-    for (auto v : meanValues) {
-        NODE_ASSERT(v > 0, "scale - when specified, must be larger than 0");
-    }
+    std::vector<float> meanValues = get_float_list_parameter("mean_values", params, paramsCount);
 
     // Debug flag for additional logging.
     bool debugMode = get_string_parameter("debug", params, paramsCount) == "true";
@@ -142,8 +135,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         std::cout << "Target image color order: " << targetImageColorOrder << std::endl;
         std::cout << "Target image layout: " << targetImageLayout << std::endl;
         std::cout << "Scale: " << scale << std::endl;
-        printListValue("Scale values", scaleValues);
-        printListValue("Mean values", meanValues);
+        std::cout << "Scale values: " << floatListToString(scaleValues) << std::endl;
+        std::cout << "Mean values: " << floatListToString(meanValues) << std::endl;
     }
     // ------------- validation end ---------------
 
