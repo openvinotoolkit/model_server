@@ -23,7 +23,6 @@
 
 static constexpr const char* TENSOR_NAME = "image";
 
-
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
     // Parameters reading
 
