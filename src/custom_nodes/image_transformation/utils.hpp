@@ -29,6 +29,11 @@
         return 1;                                                         \
     }
 
+#define NODE_EXPECT(cond, msg)                                            \
+    if (!(cond)) {                                                        \
+        std::cout << "[" << __LINE__ << "] Assert: " << msg << std::endl; \
+    }
+
 template <typename T>
 void reorder_to_nhwc_2(const T* sourceNchwBuffer, T* destNhwcBuffer, int rows, int cols, int channels) {
     for (int y = 0; y < rows; ++y) {
@@ -129,6 +134,25 @@ float get_float_parameter(const std::string& name, const struct CustomNodeParam*
     return defaultValue;
 }
 
+float get_float_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsCount, bool& isDefined, float defaultValue = 0.0f) {
+    isDefined = true;
+    for (int i = 0; i < paramsCount; i++) {
+        if (name == params[i].key) {
+            try {
+                return std::stof(params[i].value);
+            } catch (std::invalid_argument& e) {
+                isDefined = false;
+                return defaultValue;
+            } catch (std::out_of_range& e) {
+                isDefined = false;
+                return defaultValue;
+            }
+        }
+    }
+    isDefined = false;
+    return defaultValue;
+}
+
 int get_int_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsCount, int defaultValue = 0) {
     for (int i = 0; i < paramsCount; i++) {
         if (name == params[i].key) {
@@ -153,30 +177,40 @@ std::string get_string_parameter(const std::string& name, const struct CustomNod
     return defaultValue;
 }
 
-void get_float_parameters_list(const std::string& name, const struct CustomNodeParam* params, int paramsCount, std::vector<float>& values) {
-    std::string value;
+std::vector<float> get_float_list_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsCount) {
+    std::string listStr;
     for (int i = 0; i < paramsCount; i++) {
         if (name == params[i].key) {
-            value = params[i].value;
+            listStr = params[i].value;
+            break;
         }
     }
 
-    if (value.length() > 2 && value.front() == '[' && value.back() == ']') {
-        value.pop_back();
-        value.erase(value.begin());
+    if (listStr.length() < 2 || listStr.front() != '[' || listStr.back() != ']') {
+        NODE_EXPECT(false, "error parsing list parameter");
+        return {};
+    }
 
-        std::stringstream ss(value);
+    listStr = listStr.substr(1, listStr.size() - 2);
 
-        while (ss.good()) {
-            std::string substr;
-            getline(ss, substr, ',');
-            try {
-                values.push_back(std::stof(substr));
-            } catch (std::invalid_argument& e) {
-            } catch (std::out_of_range& e) {
-            }
+    std::vector<float> result;
+
+    std::stringstream lineStream(listStr);
+    std::string element;
+    while (std::getline(lineStream, element, ',')) {
+        try {
+            float e = std::stof(element.c_str());
+            result.push_back(e);
+        } catch (std::invalid_argument& e) {
+            NODE_EXPECT(false, "error parsing list parameter");
+            return {};
+        } catch (std::out_of_range& e) {
+            NODE_EXPECT(false, "error parsing list parameter");
+            return {};
         }
     }
+
+    return result;
 }
 
 void scale_image(const int originalImageColorChannels, const int scale, const std::vector<float> meanValues, const std::vector<float> scaleValues, cv::Mat& image) {
@@ -214,13 +248,14 @@ void scale_image(const int originalImageColorChannels, const int scale, const st
     }
 }
 
-void printListValue(std::string name, std::vector<float> values) {
-    std::cout << name << ": [";
-    for (const auto& v : values) {
-        std::cout << v;
-        if (&v != &values.back()) {
-            std::cout << ",";
-        }
+std::string floatListToString(const std::vector<float>& values) {
+    std::stringstream ss;
+    ss << "[";
+    for (size_t i = 0; i < values.size(); ++i) {
+        if (i != 0)
+            ss << ",";
+        ss << values[i];
     }
-    std::cout << "]" << std::endl;
+    ss << "]";
+    return ss.str();
 }
