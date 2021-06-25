@@ -152,3 +152,75 @@ std::string get_string_parameter(const std::string& name, const struct CustomNod
     }
     return defaultValue;
 }
+
+void get_float_parameters_list(const std::string& name, const struct CustomNodeParam* params, int paramsCount, std::vector<float>& values) {
+    std::string value;
+    for (int i = 0; i < paramsCount; i++) {
+        if (name == params[i].key) {
+            value = params[i].value;
+        }
+    }
+
+    if (value.length() > 2 && value.front() == '[' && value.back() == ']') {
+        value.pop_back();
+        value.erase(value.begin());
+
+        std::stringstream ss(value);
+
+        while (ss.good()) {
+            std::string substr;
+            getline(ss, substr, ',');
+            try {
+                values.push_back(std::stof(substr));
+            } catch (std::invalid_argument& e) {
+            } catch (std::out_of_range& e) {
+            }
+        }
+    }
+}
+
+void scale_image(const int originalImageColorChannels, const int scale, const std::vector<float> meanValues, const std::vector<float> scaleValues, cv::Mat& image) {
+    if (scale != -1 || meanValues.size() > 0 || scaleValues.size() > 0) {
+        if (originalImageColorChannels == 1) {
+            for (float& pixel : cv::Mat1f(image)) {
+                if (meanValues.size() > 0)
+                    pixel = pixel - meanValues[0];
+
+                if (scaleValues.size() > 0) {
+                    pixel = pixel / scaleValues[0];
+                } else if (scale != -1) {
+                    pixel = pixel / scale;
+                }
+            }
+        } else if (originalImageColorChannels == 3) {
+            for (cv::Vec3f& pixel : cv::Mat3f(image)) {
+                if (meanValues.size() > 0) {
+                    for (int i = 0; i < pixel.channels; i++) {
+                        pixel[i] = pixel[i] - meanValues[i];
+                    }
+                }
+
+                if (scaleValues.size() > 0) {
+                    for (int i = 0; i < pixel.channels; i++) {
+                        pixel[i] = pixel[i] / scaleValues[i];
+                    }
+                } else if (scale != -1) {
+                    for (int i = 0; i < pixel.channels; i++) {
+                        pixel[i] = pixel[i] / scale;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void printListValue(std::string name, std::vector<float> values) {
+    std::cout << name << ": [";
+    for (const auto& v : values) {
+        std::cout << v;
+        if (&v != &values.back()) {
+            std::cout << ",";
+        }
+    }
+    std::cout << "]" << std::endl;
+}

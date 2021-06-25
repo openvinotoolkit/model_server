@@ -25,6 +25,10 @@
                         "original_image_layout": "NCHW",
                         "target_image_layout": "NHWC",
 
+                        "scale": "2",
+                        "scale_values": "1,2,3",
+                        "mean_values": "1,2,3",
+
                         "debug": "true"
 
                     },
