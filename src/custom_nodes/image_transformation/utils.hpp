@@ -187,7 +187,6 @@ std::vector<float> get_float_list_parameter(const std::string& name, const struc
     }
 
     if (listStr.length() < 2 || listStr.front() != '[' || listStr.back() != ']') {
-        NODE_EXPECT(false, "error parsing list parameter");
         return {};
     }
 
