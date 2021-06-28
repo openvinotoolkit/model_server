@@ -79,8 +79,8 @@ prepare_img_input(
     request,
     args['image_input_name'],
     args['input_image_path'],
-    int(args['image_height']),
     int(args['image_width']),
+    int(args['image_height']),
     args['input_layout'],
     args['input_color'])
 
