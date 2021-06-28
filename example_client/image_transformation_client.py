@@ -32,9 +32,6 @@ parser.add_argument('--input_image_path', required=True, help='Location to load 
 parser.add_argument('--output_image_path', required=True, help='Location where to save output image.')
 parser.add_argument('--image_width', required=False, default=1920, help='Reshape before sending to given image width. default: 1920')
 parser.add_argument('--image_height', required=False, default=1024, help='Reshape before sending to given image height. default: 1024')
-parser.add_argument('--input_layout', required=False, default='CHW', choices=['CHW', 'HWC'], help='Input image layout. default: CHW')
-parser.add_argument('--input_color', required=False, default='BGR', choices=['BGR', 'RGB', 'GRAY'], help='Input image color order. default: BGR')
-parser.add_argument('--output_layout', required=False, default='CHW', choices=['CHW', 'HWC'], help='Output image layout. default: CHW')
 parser.add_argument('--input_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC'], help='Input image layout. default: NCHW')
 parser.add_argument('--input_color', required=False, default='BGR', choices=['BGR', 'RGB', 'GRAY'], help='Input image color order. default: BGR')
 parser.add_argument('--output_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC'], help='Output image layout. default: NCHW')
@@ -82,8 +79,8 @@ prepare_img_input(
     request,
     args['image_input_name'],
     args['input_image_path'],
-    int(args['image_height']),
     int(args['image_width']),
+    int(args['image_height']),
     args['input_layout'],
     args['input_color'])
 
