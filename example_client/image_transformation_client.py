@@ -41,7 +41,7 @@ args = vars(parser.parse_args())
 
 def prepare_img_input(request, name, path, width, height, layout, color):
     img = cv2.imread(path).astype(np.float32)  # BGR color format, shape HWC
-    img = cv2.resize(img, (height, width))
+    img = cv2.resize(img, (width, height))
     if color == 'RGB':
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     elif color == 'GRAY':
