@@ -122,8 +122,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     uint64_t targetImageHeight = _targetImageHeight == -1 ? originalImageHeight : _targetImageHeight;
     uint64_t targetImageWidth = _targetImageWidth == -1 ? originalImageWidth : _targetImageWidth;
 
-    NODE_ASSERT((scaleValues.size() == 0) || (targetImageColorChannels == scaleValues.size()), "number of scale values must be equal to number of target image channels");
-    NODE_ASSERT((meanValues.size() == 0) || (targetImageColorChannels == meanValues.size()), "number of mean values must be equal to number of target image channels");
+    NODE_ASSERT(scaleValues.size() == 0 || targetImageColorChannels == scaleValues.size(), "number of scale values must be equal to number of target image channels");
+    NODE_ASSERT(meanValues.size() == 0 || targetImageColorChannels == meanValues.size(), "number of mean values must be equal to number of target image channels");
 
     auto originalImageResolution = originalImageHeight * originalImageWidth;
     auto targetImageResolution = targetImageHeight * targetImageWidth;

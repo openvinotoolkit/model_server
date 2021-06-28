@@ -25,9 +25,8 @@
                         "original_image_layout": "NCHW",
                         "target_image_layout": "NHWC",
 
-                        "scale": "2",
-                        "scale_values": "1,2,3",
-                        "mean_values": "1,2,3",
+                        "scale_values": "[0.003921568627451,0.003921568627451,0.003921568627451]",
+                        "mean_values": "[-2,-2,-2]",
 
                         "debug": "true"
 
