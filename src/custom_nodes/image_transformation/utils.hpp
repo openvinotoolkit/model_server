@@ -212,8 +212,8 @@ std::vector<float> get_float_list_parameter(const std::string& name, const struc
     return result;
 }
 
-void scale_image(const int originalImageColorChannels, const int scale, const std::vector<float> meanValues, const std::vector<float> scaleValues, cv::Mat& image) {
-    if (scale != -1 || meanValues.size() > 0 || scaleValues.size() > 0) {
+void scale_image_2(const int originalImageColorChannels, bool isScaleDefined, const float scale, const std::vector<float>& meanValues, const std::vector<float>& scaleValues, cv::Mat& image) {
+    if (isScaleDefined || meanValues.size() > 0 || scaleValues.size() > 0) {
         if (originalImageColorChannels == 1) {
             for (float& pixel : cv::Mat1f(image)) {
                 if (meanValues.size() > 0)
@@ -221,7 +221,7 @@ void scale_image(const int originalImageColorChannels, const int scale, const st
 
                 if (scaleValues.size() > 0) {
                     pixel = pixel / scaleValues[0];
-                } else if (scale != -1) {
+                } else if (isScaleDefined) {
                     pixel = pixel / scale;
                 }
             }
@@ -237,7 +237,7 @@ void scale_image(const int originalImageColorChannels, const int scale, const st
                     for (int i = 0; i < pixel.channels; i++) {
                         pixel[i] = pixel[i] / scaleValues[i];
                     }
-                } else if (scale != -1) {
+                } else if (isScaleDefined) {
                     for (int i = 0; i < pixel.channels; i++) {
                         pixel[i] = pixel[i] / scale;
                     }
@@ -245,6 +245,51 @@ void scale_image(const int originalImageColorChannels, const int scale, const st
             }
         }
     }
+}
+
+bool scale_image(
+            bool                    isScaleDefined,
+    const   float                   scale,
+    const   std::vector<float>&     meanValues,
+    const   std::vector<float>&     scaleValues,
+            cv::Mat&                image) {
+    if (!isScaleDefined && scaleValues.size() == 0 && meanValues.size() == 0) {
+        return true;
+    }
+
+    size_t colorChannels = static_cast<size_t>(image.channels());
+    if (meanValues.size() > 0 && meanValues.size() != colorChannels) {
+        return false;
+    }
+    if (scaleValues.size() > 0 && scaleValues.size() != colorChannels) {
+        return false;
+    }
+
+    std::vector<cv::Mat> channels;
+    if (meanValues.size() > 0 || scaleValues.size() > 0) {
+        cv::split(image, channels);
+        if (channels.size() != colorChannels) {
+            return false;
+        }
+    } else {
+        channels.emplace_back(image);
+    }
+
+    for (size_t i = 0; i < meanValues.size(); i++) {
+        channels[i] -= meanValues[i];
+    }
+
+    for (size_t i = 0; i < channels.size(); i++) {
+        channels[i] /= isScaleDefined ? scale : scaleValues[i];
+    }
+
+    if (channels.size() == 1) {
+        image = channels[0];
+    } else {
+        cv::merge(channels, image);
+    }
+
+    return true;
 }
 
 std::string floatListToString(const std::vector<float>& values) {

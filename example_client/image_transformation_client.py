@@ -53,10 +53,18 @@ def prepare_img_input(request, name, path, width, height, layout, color):
         img = img.transpose(2,0,1).reshape(1, c, h, w)
     else:
         img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
+    print(np.max(img))
+    #img = img / 255  # [0, 1]
+    # img = ((img / 255) * 2) - 1  # [-1, 1]
+    print(np.max(img))
     request.inputs[name].CopyFrom(make_tensor_proto(img, shape=img.shape))
 
 def save_img_output_as_jpg(output_nd, path, layout, color):
     img = output_nd[0]
+    print(np.max(img))
+    #img = img * 255  # [0, 1]
+    # img = ((img + 1) / 2) * 255  # [-1, 1]
+    print(np.max(img))
     if layout == 'NCHW':
         img = img.transpose(1,2,0)
     if color == 'RGB':
