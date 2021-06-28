@@ -1,5 +1,6 @@
 ## About this Operator
-This Operator is based on a [Helm chart](../../deploy/ovms) for OVMS. It support all the parameters from the helm chart.
+This Operator is based on a [Helm chart](https://github.com/openvinotoolkit/model_server/tree/v2021.3/deploy) for OVMS. 
+It supports all the parameters from the helm chart.
 
 It allows for easy deployment and management of OVMS service in the Kubernetes cluster by just creating `Ovms` resource.
 
