@@ -216,8 +216,8 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
         "1",        // batchsize
         1,          // NIREQ
         false,      // is stateful
+        false,      // idle sequence cleanup enabled
         false,      // low latency transformation enabled
-        60,         // stateful sequence timeout
         500,        // steteful sequence max number
         version,    // version
         modelPath,  // local path
@@ -251,8 +251,8 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
         "1",        // batchsize
         1,          // NIREQ
         false,      // is stateful
+        false,      // idle sequence cleanup enabled
         false,      // low latency transformation enabled
-        60,         // stateful sequence timeout
         500,        // steteful sequence max number
         version,    // version
         modelPath,  // local path

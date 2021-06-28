@@ -65,7 +65,7 @@ public:
         defaultBlob(defaultBlob) {}
 
     StatusCode GetName(char* name, size_t len, ResponseDesc* resp) const noexcept override {
-        snprintf(name, sizeof(stateName), stateName.c_str());
+        snprintf(name, sizeof(stateName), "%s", stateName.c_str());
         return StatusCode::OK;
     }
 
