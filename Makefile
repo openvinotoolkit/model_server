@@ -185,7 +185,7 @@ endif
 		--build-arg JOBS=$(JOBS)
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) --build-arg BASE_OS=$(BASE_OS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)
 	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && cd dist/$(DIST_OS) && \

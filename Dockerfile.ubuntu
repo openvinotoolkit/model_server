@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=ubuntu:18.04
+ARG BASE_IMAGE=ubuntu:20.04
 FROM $BASE_IMAGE as base_build
 
 LABEL version="1.0.0"
@@ -195,7 +195,7 @@ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/test/cpu_extension/ && make
 
-#RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
+RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
 
 COPY ${ovms_metadata_file} metadata.json
 

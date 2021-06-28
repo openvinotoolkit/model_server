@@ -1,0 +1,84 @@
+#
+# Copyright (c) 2020 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+ARG BASE_IMAGE=ubuntu:20.04
+FROM $BASE_IMAGE as base_build
+
+WORKDIR /
+COPY ovms.tar.xz /
+RUN env
+RUN apt update && apt install -y xz-utils
+RUN tar -xf ovms.tar.xz
+RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
+             --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
+    chown -R ovms:ovms /ovms
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+FROM $BASE_IMAGE as release
+ARG INSTALL_RPMS_FROM_URL=
+ENV INSTALL_RPMS_FROM_URL=$INSTALL_RPMS_FROM_URL
+ENV HDDL_INSTALL_DIR=/ovms/lib/hddl
+ARG INSTALL_DRIVER_VERSION="20.35.17767"
+ENV INSTALL_DRIVER_VERSION=$INSTALL_DRIVER_VERSION
+ARG GPU=1
+ENV GPU=$GPU
+ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-c"]
+WORKDIR /
+
+RUN	set -e ; \
+	set -x ; \
+        apt update -y ; \
+	if [ "$GPU" == "1" ] ; then \
+                apt install -y libnuma1 ocl-icd-libopencl1 curl; \
+	        case $INSTALL_DRIVER_VERSION in \
+                "19.41.14441") \
+                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/19.41.14441/intel-gmmlib_19.3.2_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/19.41.14441/intel-igc-core_1.0.2597_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/19.41.14441/intel-igc-opencl_1.0.2597_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/19.41.14441/intel-opencl_19.41.14441_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/19.41.14441/intel-ocloc_19.41.14441_amd64.deb ; \
+                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
+                ;; \
+                "20.35.17767") \
+                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-gmmlib_20.2.4_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-igc-core_1.0.4756_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-igc-opencl_1.0.4756_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-opencl_20.35.17767_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-ocloc_20.35.17767_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-level-zero-gpu_1.0.17767_amd64.deb ; \
+                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
+                ;; \
+                        *) \
+                        echo "ERROR: Unrecognized driver ${INSTALL_DRIVER_VERSION}." ; \
+                        exit 1 ; \
+                esac ; \
+	fi ; \
+	apt install -y ca-certificates libxml2 libtbb-dev libusb-1.0-0  libboost-thread1.67.0 libboost-system1.67.0 libboost-filesystem1.67.0 \
+	        libboost-program-options1.67.0 libboost-chrono1.67.0 libboost-date-time1.67.0 libboost-atomic1.67.0 ; \
+	apt clean ; \
+        rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
+        groupadd --gid 5000 ovms ; \
+        useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
+
+COPY --from=base_build /ovms /ovms
+ENV LD_LIBRARY_PATH=/ovms/lib
+USER ovms
+ENTRYPOINT ["/ovms/bin/ovms"]
+
