@@ -36,8 +36,38 @@ parser.add_argument('--input_layout', required=False, default='NCHW', choices=['
 parser.add_argument('--input_color', required=False, default='BGR', choices=['BGR', 'RGB', 'GRAY'], help='Input image color order. default: BGR')
 parser.add_argument('--output_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC'], help='Output image layout. default: NCHW')
 parser.add_argument('--output_color', required=False, default='BGR', choices=['BGR', 'RGB', 'GRAY'], help='Output image color order. default: BGR')
+parser.add_argument('--scale_values', required=False, default=None, nargs='*', type=float, help='scale image values before sending')
+parser.add_argument('--mean_values', required=False, default=None, nargs='*', type=float, help='mean image values before sending')
 
 args = vars(parser.parse_args())
+
+def scale(img, values):
+    channels = cv2.split(img)
+    number_of_channels = img.shape[-1]
+    if len(values) != number_of_channels:
+        print('scale values must match number of channels')
+        exit(1)
+    i = 0
+    for i in range(number_of_channels):
+        channels[i] /= values[i]
+    img = cv2.merge(channels)
+    h, w = img.shape
+    img = img.reshape(h, w, number_of_channels)
+    return img
+
+def mean(img, values):
+    channels = cv2.split(img)
+    number_of_channels = img.shape[-1]
+    if len(values) != number_of_channels:
+        print('mean values must match number of channels')
+        exit(1)
+    i = 0
+    for i in range(number_of_channels):
+        channels[i] -= values[i]
+    img = cv2.merge(channels)
+    h, w = img.shape
+    img = img.reshape(h, w, number_of_channels)
+    return img
 
 def prepare_img_input(request, name, path, width, height, layout, color):
     img = cv2.imread(path).astype(np.float32)  # BGR color format, shape HWC
@@ -48,23 +78,23 @@ def prepare_img_input(request, name, path, width, height, layout, color):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         h, w = img.shape
         img = img.reshape(h, w, 1)
+
+    if args['scale_values']:
+        img = scale(img, args['scale_values'])
+
+    if args['mean_values']:
+        img = mean(img, args['mean_values'])
+
     if layout == 'NCHW':
         h, w, c = img.shape
         img = img.transpose(2,0,1).reshape(1, c, h, w)
     else:
         img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
-    print(np.max(img))
-    #img = img / 255  # [0, 1]
-    # img = ((img / 255) * 2) - 1  # [-1, 1]
-    print(np.max(img))
+
     request.inputs[name].CopyFrom(make_tensor_proto(img, shape=img.shape))
 
 def save_img_output_as_jpg(output_nd, path, layout, color):
     img = output_nd[0]
-    print(np.max(img))
-    #img = img * 255  # [0, 1]
-    # img = ((img + 1) / 2) * 255  # [-1, 1]
-    print(np.max(img))
     if layout == 'NCHW':
         img = img.transpose(1,2,0)
     if color == 'RGB':

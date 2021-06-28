@@ -248,11 +248,11 @@ void scale_image_2(const int originalImageColorChannels, bool isScaleDefined, co
 }
 
 bool scale_image(
-            bool                    isScaleDefined,
-    const   float                   scale,
-    const   std::vector<float>&     meanValues,
-    const   std::vector<float>&     scaleValues,
-            cv::Mat&                image) {
+    bool isScaleDefined,
+    const float scale,
+    const std::vector<float>& meanValues,
+    const std::vector<float>& scaleValues,
+    cv::Mat& image) {
     if (!isScaleDefined && scaleValues.size() == 0 && meanValues.size() == 0) {
         return true;
     }
