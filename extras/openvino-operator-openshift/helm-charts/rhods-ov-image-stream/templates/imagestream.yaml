@@ -25,14 +25,17 @@ metadata:
     opendatahub.io/notebook-image-desc: >-
       Jupyter notebook image with OpenVINO Toolkit
       and dependencies to start experimenting with advanced AI/ML notebooks.
-    opendatahub.io/notebook-image-name: OpenVINO Toolkit
+    opendatahub.io/notebook-image-name: OpenVINO™ Toolkit
     opendatahub.io/notebook-image-url: 'https://github.com/openvinotoolkit/openvino_notebooks'
 spec:
+  lookupPolicy:
+    local: true
   tags:
     - name: latest
       annotations:
+        opendatahub.io/notebook-python-dependencies: >-
+          [{"name":"JupyterLab","version":"3.0.14"},{"name":"Notebook","version":"6.3.0"}]
         opendatahub.io/notebook-software: '[{"name":"Python","version":"v3.8.6"}]'
-        openshift.io/imported-from: quay.io/thoth-station/s2i-thoth-ubi8-py38
 {{- if ne .Values.build_locally "true" }}
       from:
         kind: DockerImage
