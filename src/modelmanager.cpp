@@ -27,6 +27,7 @@
 
 #include <dlfcn.h>
 #include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 #include <sys/stat.h>
@@ -546,8 +547,10 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     }
     rapidjson::Document configJson;
     rapidjson::IStreamWrapper isw(ifs);
-    if (configJson.ParseStream(isw).HasParseError()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file.");
+    rapidjson::ParseResult parseResult = configJson.ParseStream(isw);
+    if (!parseResult) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file. Error: {}",
+            rapidjson::GetParseError_En(parseResult.Code()));
         lastLoadConfigStatus = StatusCode::JSON_INVALID;
         return lastLoadConfigStatus;
     }
