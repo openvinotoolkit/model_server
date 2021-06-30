@@ -28,9 +28,7 @@ can apply required adjustments:
 --scale : All input values coming from original network inputs  will be divided by this value. When a list of inputs  is overridden by the --input parameter, this scale is  not applied for any input that does not match with the  original input of the model
 --mean_values :  Mean values to be used for the input image per  channel. Values to be provided in the (R,G,B) or (B,G,R) format. Can be defined for desired input of the model, for example: "--mean_values data[255,255,255],info[255,255,255]". The exact meaning and order of channels depend on how the original model was trained.
 
-Alternatively layout conversion can be implemented using a custom node [image transormation](../src/custom_nodes/image_transformation). Custom node can accept
-the data in layout NHWC and convert it to NCHW before passing to the target AI model. It can also replace color channel
-and rescale the data.
+In case of using DAG Scheduler, binary input must be connected to at least one `DL model` node.
 
 Blob data precision from binary input decoding is set automatically based on the target model or the [DAG pipeline](dag_scheduler.md) node.
 
@@ -124,6 +122,3 @@ encoded, there is no preprocessing needed to send the request.
 
 Binary data can significantly reduce the network utilization. In many cases it allows reducing the latency and achieve
 very high throughput even with slower network bandwidth.
-
-
-
