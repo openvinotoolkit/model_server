@@ -17,6 +17,7 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <shared_mutex>
 #include <string>
 #include <utility>
@@ -183,7 +184,7 @@ public:
          *
          * @return status
          */
-    Status retireVersions(std::shared_ptr<model_versions_t> versions);
+    Status retireVersions(std::shared_ptr<model_versions_t> versions, std::set<model_version_t> failedVersions);
 
     /**
          * @brief Retires all versions of Model

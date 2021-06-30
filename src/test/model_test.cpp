@@ -41,7 +41,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionNullWhenVersionRetired) {
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     auto fs = ovms::ModelManager::getFilesystem(config.getBasePath());
     mockModel.addVersions(versionsToChange, config, fs, versionsFailed);
-    mockModel.retireVersions(versionsToChange);
+    mockModel.retireVersions(versionsToChange, std::set<ovms::model_version_t>());
 
     std::shared_ptr<ovms::ModelInstance> defaultInstance;
     defaultInstance = mockModel.getDefaultModelInstance();
@@ -98,7 +98,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighestNonRetired) {
     versionsToChange->clear();
 
     versionsToChange->push_back(2);
-    mockModel.retireVersions(versionsToChange);
+    mockModel.retireVersions(versionsToChange, std::set<ovms::model_version_t>());
     versionsToChange->clear();
 
     std::shared_ptr<ovms::ModelInstance> defaultInstance;
@@ -123,7 +123,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighestWhenVersionReloade
     versionsToChange->clear();
 
     versionsToChange->push_back(2);
-    mockModel.retireVersions(versionsToChange);
+    mockModel.retireVersions(versionsToChange, std::set<ovms::model_version_t>());
     versionsToChange->clear();
 
     versionsToChange->push_back(2);

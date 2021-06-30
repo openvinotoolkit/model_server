@@ -159,7 +159,7 @@ Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovm
     return result;
 }
 
-Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire) {
+Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire, std::set<model_version_t> failedVersions) {
     Status result = StatusCode::OK;
     for (const auto version : *versionsToRetire) {
         SPDLOG_INFO("Will unload model: {}; version: {} ...", getName(), version);
@@ -175,7 +175,11 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
         }
         cleanupModelTmpFiles(modelVersion->getModelConfig());
         updateDefaultVersion(version);
-        modelVersion->unloadModel();
+        if (failedVersions.find(version) != failedVersions.end()) {
+            modelVersion->unloadModel(false, true);
+        } else {
+            modelVersion->unloadModel();
+        }
     }
     subscriptionManager.notifySubscribers();
     return result;

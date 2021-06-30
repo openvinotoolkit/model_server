@@ -627,11 +627,12 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
 
     // added invalid version 2
-    // expected no changes: 1 as available, 2 as ended
+    // expected no changes: 1 as available, 2 as loading with error
     modelDirectory.addVersion(2, !validVersion);
     manager.reloadModelWithVersions(config);
     ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
-    ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::END);
+    ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::LOADING);
+    ASSERT_EQ(modelInstance2->getStatus().getErrorCode(), ovms::ModelVersionStatusErrorCode::UNKNOWN);
 
     // fixed version 2
     // expected 2 as available and 1 as ended
@@ -640,6 +641,7 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     manager.reloadModelWithVersions(config);
     ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::END);
     ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
+    ASSERT_EQ(modelInstance2->getStatus().getErrorCode(), ovms::ModelVersionStatusErrorCode::OK);
 }
 
 TEST(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
@@ -1241,8 +1243,9 @@ TEST_F(GetModelInstanceTest, WithRequestedDefaultVersionUnloadedShouldReturnMode
     model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     std::shared_ptr<ovms::model_versions_t> versionsToRetire = std::make_shared<ovms::model_versions_t>();
-    versionsToRetire->emplace_back(1);
-    model->retireVersions(versionsToRetire);
+    std::set<ovms::model_version_t> versionsFailed;
+    versionsToRetire->emplace_back(1);  
+    model->retireVersions(versionsToRetire, versionsFailed);
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance(config.getName(), 0, modelInstance, modelInstanceUnloadGuardPtr);
@@ -1256,7 +1259,7 @@ TEST_F(GetModelInstanceTest, WithRequestedVersion1ShouldReturnModelVersionNotLoa
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     std::shared_ptr<ovms::model_versions_t> versionsToRetire = std::make_shared<ovms::model_versions_t>();
     versionsToRetire->emplace_back(1);
-    model->retireVersions(versionsToRetire);
+    model->retireVersions(versionsToRetire, std::set<ovms::model_version_t>());
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance(config.getName(), 1, modelInstance, modelInstanceUnloadGuardPtr);

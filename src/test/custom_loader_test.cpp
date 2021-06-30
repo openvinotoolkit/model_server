@@ -270,6 +270,20 @@ const char* expected_json_end = R"({
 }
 )";
 
+const char* expected_json_loading_error = R"({
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "LOADING",
+   "status": {
+    "error_code": "UNKNOWN",
+    "error_message": "UNKNOWN"
+   }
+  }
+ ]
+}
+)";
+
 }  // namespace
 
 class TestCustomLoader : public ::testing::Test {
@@ -1223,7 +1237,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
     json_output = "";
     error_status = GetModelStatusImpl::serializeResponse2Json(&response_const2, &json_output);
     ASSERT_EQ(error_status, StatusCode::OK);
-    EXPECT_EQ(json_output, expected_json_end);
+    EXPECT_EQ(json_output, expected_json_loading_error);
 
     // Copy back the model files & try reload
     std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);

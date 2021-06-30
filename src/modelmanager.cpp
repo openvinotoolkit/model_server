@@ -736,6 +736,7 @@ void ModelManager::getVersionsToChange(
     for (const auto& version : alreadyRegisteredVersionsWhichAreRequested) {
         try {
             if (modelVersionsInstances.at(version)->getStatus().willEndUnloaded() ||
+               (modelVersionsInstances.at(version)->getStatus().getState() == ModelVersionState::LOADING && modelVersionsInstances.at(version)->getStatus().getErrorCode() == ModelVersionStatusErrorCode::UNKNOWN) ||
                 modelVersionsInstances.at(version)->getModelConfig().isReloadRequired(newModelConfig)) {
                 if (modelVersionsInstances.at(version)->getModelConfig().isCustomLoaderConfigChanged(newModelConfig)) {
                     modelVersionsInstances.at(version)->setCustomLoaderConfigChangeFlag();
@@ -990,18 +991,20 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             blocking_status = status;
         }
     }
+    std::set<ovms::model_version_t> failedVersions;
     for (const auto version : *versionsFailed) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Removing available version {} due to load failure.", version);
         if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
             availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
         }
+        failedVersions.insert(version);
     }
     // refresh versions to retire based on failed reloads
     requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
     if (versionsToRetire->size() > 0) {
-        auto status = model->retireVersions(versionsToRetire);
+        auto status = model->retireVersions(versionsToRetire, failedVersions);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
                 config.getName(),

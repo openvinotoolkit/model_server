@@ -702,7 +702,7 @@ void ModelInstance::unloadModel(bool isPermanent, bool isError) {
     outputsInfo.clear();
     inputsInfo.clear();
     modelFiles.clear();
-    if (isPermanent) {
+    if (isPermanent && !isError) {
         status.setEnd();
     }
 
