@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.2
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.4
 FROM $BASE_IMAGE as base_build
 
 LABEL version="1.0.0"

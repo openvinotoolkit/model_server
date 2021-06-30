@@ -14,11 +14,15 @@
 # limitations under the License.
 #
 
-FROM quay.io/operator-framework/helm-operator:v1.7.2
-LABEL "Description"="OpenVINO(TM) Model Server Operator"
-LABEL "Vendor"="Intel Corporation"
+FROM quay.io/operator-framework/helm-operator:v1.8.0
+LABEL "name"="openvino-operator"
+LABEL "vendor"="Intel Corporation"
+LABEL "version"="0.2.0"
+LABEL "release"="0.2"
+LABEL "summary"="OpenVINO(TM) Operator"
+LABEL "description"="An Operator for managing OpenVINO Toolkit in OpenShift"
 ENV HOME=/opt/helm
 COPY watches.yaml ${HOME}/watches.yaml
 COPY helm-charts  ${HOME}/helm-charts
-COPY LICENSE LICENSE
+COPY LICENSE /licenses/LICENSE
 WORKDIR ${HOME}

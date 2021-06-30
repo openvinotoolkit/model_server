@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.2
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.4
 FROM $BASE_IMAGE as base_build
 RUN yum install -y xz
 WORKDIR /
@@ -24,10 +24,17 @@ RUN tar -xf ovms.tar.xz
 RUN groupadd --gid 5000 ovms && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
     chown -R ovms:ovms /ovms
-
+RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-licenses /licenses/thirdparty-licenses
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal as release
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.4 as release
+LABEL "name"="OVMS"
+LABEL "vendor"="Intel Corporation"
+LABEL "version"="2021.4"
+LABEL "release"="2021"
+LABEL "summary"="OpenVINO(TM) Model Server"
+LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"
+
 ARG INSTALL_RPMS_FROM_URL=
 ENV INSTALL_RPMS_FROM_URL=$INSTALL_RPMS_FROM_URL
 
@@ -90,6 +97,7 @@ RUN     set -e ; \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 COPY --from=base_build /ovms /ovms
+COPY --from=base_build /licenses /licenses
 ENV LD_LIBRARY_PATH=/ovms/lib
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]
