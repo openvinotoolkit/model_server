@@ -1,6 +1,6 @@
-## Prediction Use Case Example with an ONNX Model
+# Prediction Use Case Example with an ONNX Model
 
-Similar steps like in [quick start](ovms_quickstart.md) with IR model format can be executed also for ONNX model. Just the model files should be swapped.
+Steps are similar to [quick start](ovms_quickstart.md) guide with IR model format. Model Server accepts ONNX models as well with no differences in versioning. Locate ONNX model file in separate model version directory.
 Below is a complete functional use case using python 3.6 or higher.
 
 Download the model:
@@ -13,14 +13,10 @@ resnet/
 └── 1
     └── resnet50-caffe2-v1-9.onnx
 ```
-Note that the downloaded model requires additional [preprocessing function](https://github.com/onnx/models/tree/master/vision/classification/resnet#preprocessing).  
+Note that the downloaded model requires additional [preprocessing function](https://github.com/onnx/models/tree/master/vision/classification/resnet#preprocessing). Preprocessing can be performed in the client by manipulating data before sending the request. Preprocessing can be also done on the server side by creating DAG and using custom processing node. Both methods will be explained below.
 
-Start the OVMS container:
-```bash
-docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet:/model -p 9001:9001 openvino/model_server:latest \
---model_path /model --model_name resnet --port 9000
-
-```
+<a href="#client-side">Option 1: Adding preprocessing to the client side</a>  
+<a href="#server-side">Option 2: Adding preprocessing to the server side (building DAG)</a>
 
 Get an image to classify:
 ```
@@ -35,7 +31,15 @@ Get the list of imagenet classes:
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/classes.py
 ```
 
-Run inference requests with a client like presented below:
+## Option 1: Adding preprocessing to the client side <a name="#client-side"></a>
+
+Start the OVMS container with single model instance:
+```bash
+docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet:/model -p 9001:9001 openvino/model_server:latest \
+--model_path /model --model_name resnet --port 9001
+```
+
+Run inference request with a client containing `preprocess` function presented below:
 ```python
 import numpy as nu
 
@@ -58,7 +62,7 @@ def getJpeg(path, size):
     # add image preprocessing if needed by the model
     img = cv2.resize(img, (224, 224))
     img = img.astype('float32')
-    #convert to NHWC
+    #convert to NCHW
     img = img.transpose(2,0,1)
     # normalize to adjust to model training dataset
     img = preprocess(img)
@@ -80,8 +84,18 @@ output = make_ndarray(result.outputs["gpu_0/softmax_1"])
 max = np.argmax(output)
 print("Class is with highest score: {}".format(max))
 print("Detected class name: {}".format(classes.imagenet_classes[max]))
-
 ```
+
+## Option 2: Adding preprocessing to the server side (building a DAG) <a name="#server-side"></a>
+
+Create configuration file with DAG containing two sequential nodes: one being the _image transformation node_ and one _DL model node_ resnet.  
+The job of image transformation node will be to preprocess the image data to match format required by ONNX model resnet50-caffe2-v1-9.onnx.
+
+
+
+
+
+
 It shows the following output:
 ```bash
 bee.jpeg (1, 3, 224, 224) ; data range: -2.117904 : 2.64
