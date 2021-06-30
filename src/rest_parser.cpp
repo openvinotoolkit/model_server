@@ -18,6 +18,8 @@
 #include <functional>
 #include <string>
 
+#include "rest_utils.hpp"
+
 namespace ovms {
 
 RestParser::RestParser(const tensor_map_t& tensors) {
@@ -28,8 +30,8 @@ RestParser::RestParser(const tensor_map_t& tensors) {
         auto& input = (*requestProto.mutable_inputs())[name];
         input.set_dtype(tensor->getPrecisionAsDataType());
         input.mutable_tensor_content()->reserve(std::accumulate(
-                                                    tensor->getShape().begin(),
-                                                    tensor->getShape().end(),
+                                                    tensor->getEffectiveShape().begin(),
+                                                    tensor->getEffectiveShape().end(),
                                                     1,
                                                     std::multiplies<size_t>()) *
                                                 DataTypeSize(tensor->getPrecisionAsDataType()));
@@ -84,7 +86,29 @@ bool RestParser::parseSpecialInput(rapidjson::Value& doc, tensorflow::TensorProt
     return false;
 }
 
+bool isBinary(const rapidjson::Value& value) {
+    if (!value.IsObject()) {
+        return false;
+    }
+
+    if (!(value.HasMember("b64") && ((value.MemberEnd() - value.MemberBegin()) == 1))) {
+        return false;
+    }
+
+    if (!value["b64"].IsString()) {
+        return false;
+    }
+
+    return true;
+}
+
 bool RestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorProto& proto, const std::string& tensorName) {
+    if (isBinary(doc)) {
+        if (!addValue(proto, doc)) {
+            return false;
+        }
+        return true;
+    }
     if (!doc.IsArray()) {
         return false;
     }
@@ -94,13 +118,12 @@ bool RestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorPr
     if (!setDimOrValidate(proto, dim, doc.GetArray().Size())) {
         return false;
     }
-
     if (tensorName == "sequence_id" || tensorName == "sequence_control_input") {
-        if (!parseSpecialInput(doc, proto, tensorName))
+        if (!parseSpecialInput(doc, proto, tensorName)) {
             return false;
+        }
         return true;
     }
-
     if (doc.GetArray()[0].IsArray()) {
         for (auto& itr : doc.GetArray()) {
             if (!parseArray(itr, dim + 1, proto, tensorName)) {
@@ -109,8 +132,9 @@ bool RestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorPr
         }
         return true;
     } else {
-        if (!setPrecisionIfNotSet(doc.GetArray()[0], proto, tensorName))
+        if (!setDTypeIfNotSet(doc.GetArray()[0], proto, tensorName)) {
             return false;
+        }
         for (auto& value : doc.GetArray()) {
             if (!addValue(proto, value)) {
                 return false;
@@ -156,17 +180,18 @@ Status RestParser::parseRowFormat(rapidjson::Value& node) {
     if (node.GetArray().Size() == 0) {
         return StatusCode::REST_NO_INSTANCES_FOUND;
     }
-    if (node.GetArray()[0].IsObject()) {
+    if (node.GetArray()[0].IsObject() && !isBinary(node.GetArray()[0])) {
         // named format
         for (auto& instance : node.GetArray()) {
             if (!instance.IsObject()) {
                 return StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT;
             }
+
             if (!this->parseInstance(instance)) {
                 return StatusCode::REST_COULD_NOT_PARSE_INSTANCE;
             }
         }
-    } else if (node.GetArray()[0].IsArray() || node.GetArray()[0].IsNumber()) {
+    } else if (node.GetArray()[0].IsArray() || node.GetArray()[0].IsNumber() || isBinary(node.GetArray()[0])) {
         // no named format
         if (requestProto.inputs_size() != 1) {
             return StatusCode::REST_INPUT_NOT_PREALLOCATED;
@@ -273,6 +298,15 @@ bool RestParser::setDimOrValidate(tensorflow::TensorProto& proto, int dim, int s
     }
 }
 
+bool getB64FromValue(const rapidjson::Value& value, std::string& b64Val) {
+    if (!isBinary(value)) {
+        return false;
+    }
+
+    b64Val = value["b64"].GetString();
+    return true;
+}
+
 template <typename T>
 bool addToTensorContent(tensorflow::TensorProto& proto, T value) {
     if (sizeof(T) != DataTypeSize(proto.dtype())) {
@@ -299,6 +333,7 @@ bool addToTensorContent(tensorflow::TensorProto& proto, const rapidjson::Value& 
     if (value.IsUint()) {
         return addToTensorContent<T>(proto, static_cast<T>(value.GetUint()));
     }
+
     return false;
 }
 
@@ -323,6 +358,7 @@ bool addToHalfVal(tensorflow::TensorProto& proto, const rapidjson::Value& value)
         proto.add_half_val(value.GetUint());
         return true;
     }
+
     return false;
 }
 
@@ -347,30 +383,46 @@ bool addToIntVal(tensorflow::TensorProto& proto, const rapidjson::Value& value) 
         proto.add_int_val(value.GetUint());
         return true;
     }
+
     return false;
 }
 
 bool RestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
-    if (!value.IsNumber())
+    if (isBinary(value)) {
+        std::string b64Val;
+        if (!getB64FromValue(value, b64Val))
+            return false;
+        std::string decodedBytes;
+        if (decodeBase64(b64Val, decodedBytes) == StatusCode::OK) {
+            proto.add_string_val(decodedBytes.c_str(), decodedBytes.length());
+            proto.set_dtype(tensorflow::DataType::DT_STRING);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    if (!value.IsNumber()) {
         return false;
+    }
 
     switch (proto.dtype()) {
     case tensorflow::DataType::DT_FLOAT:
         return addToTensorContent<float>(proto, value);
-    case tensorflow::DataType::DT_HALF:
-        return addToHalfVal(proto, value);
-    case tensorflow::DataType::DT_DOUBLE:
-        return addToTensorContent<double>(proto, value);
     case tensorflow::DataType::DT_INT32:
         return addToTensorContent<int32_t>(proto, value);
-    case tensorflow::DataType::DT_INT16:
-        return addToTensorContent<int16_t>(proto, value);
-    case tensorflow::DataType::DT_UINT16:
-        return addToIntVal(proto, value);
     case tensorflow::DataType::DT_INT8:
         return addToTensorContent<int8_t>(proto, value);
     case tensorflow::DataType::DT_UINT8:
         return addToTensorContent<uint8_t>(proto, value);
+    case tensorflow::DataType::DT_DOUBLE:
+        return addToTensorContent<double>(proto, value);
+    case tensorflow::DataType::DT_HALF:
+        return addToHalfVal(proto, value);
+    case tensorflow::DataType::DT_INT16:
+        return addToTensorContent<int16_t>(proto, value);
+    case tensorflow::DataType::DT_UINT16:
+        return addToIntVal(proto, value);
     case tensorflow::DataType::DT_INT64:
         return addToTensorContent<int64_t>(proto, value);
     case tensorflow::DataType::DT_UINT32:
@@ -380,9 +432,12 @@ bool RestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Value
     default:
         return false;
     }
+    return false;
 }
 
-bool RestParser::setPrecisionIfNotSet(const rapidjson::Value& value, tensorflow::TensorProto& proto, const std::string& tensorName) {
+// This is still required for parsing inputs which are not present in model/DAG.
+// Such inputs are then removed from proto at the end of parsing phase.
+bool RestParser::setDTypeIfNotSet(const rapidjson::Value& value, tensorflow::TensorProto& proto, const std::string& tensorName) {
     if (tensorPrecisionMap.count(tensorName))
         return true;
 

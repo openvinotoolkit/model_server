@@ -1,0 +1,65 @@
+#
+# Copyright (c) 2020-2021 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+replicas: 1
+image_name: "openvino/model_server:latest"
+config_configmap_name: ""
+# configmap name holding the content of ovms configuration file. Excluding with model_name and model_path
+config_path: ""
+# to be used when ovms config is not included in the configmap but is mounted on the container via models_host_path or models_volume_claim param
+grpc_port: 8080
+rest_port: 8081
+file_system_poll_wait_seconds: 0
+model_name: ""
+model_path: ""
+target_device: "CPU"
+nireq: ""
+batch_size: ""
+shape: ""
+layout: ""
+model_version_policy: >-
+  {\"latest\": { \"num_versions\":1 }}
+plugin_config: >-
+  {\"CPU_THROUGHPUT_STREAMS\":\"CPU_THROUGHPUT_AUTO\"}
+stateful: ""
+gcp_creds_secret_name: ""
+# k8s secret name holding gcp credential file gcp-creds.json
+aws_access_key_id: ""
+aws_secret_access_key: ""
+aws_region: ""
+s3_compat_api_endpoint: ""
+azure_storage_connection_string: ""
+log_level: INFO
+service_type: "LoadBalancer"
+# alternatively set to NodePort or ClusterIP
+resources: {}
+  #  limits:
+  #    cpu: 8.0
+  #    memory: 512Mi
+  #    gpu.intel.com/i915: 1
+security_context: {}
+  #  runAsUser: 5000
+  #  runAsGroup: 5000
+annotations: {}
+# sidecar.istio.io/inject: "true"
+node_selector: {}
+# kubernetes.io/arch: amd64
+models_host_path: ""
+# local path on the host to be mounted as /models directory
+models_volume_claim: ""
+# persistent claim name to be mounted as /models directory. It is excluding with models_host_path.
+
+

@@ -227,6 +227,12 @@ protected:
     const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
         const tensorflow::TensorProto& requestInput);
 
+    const Status validateNumberOfBinaryInputShapeDimensions(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const bool checkBinaryInputBatchSizeMismatch(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
     const bool checkBatchSizeMismatch(const ovms::TensorInfo& networkInput,
         const tensorflow::TensorProto& requestInput);
 
@@ -308,6 +314,11 @@ private:
          */
     Status reshapeWithFullReload(const Status& status, const DynamicModelParameter& parameter);
 
+    /**
+      * Variable to tell reload is due to customloader config change
+      */
+    bool isCustomLoaderConfigChanged;
+
 public:
     /**
          * @brief A default constructor
@@ -315,7 +326,7 @@ public:
     ModelInstance(const std::string& name, model_version_t version) :
         name(name),
         version(version),
-        subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)) {}
+        subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)) { isCustomLoaderConfigChanged = false; }
 
     /**
          * @brief Destroy the Model Instance object
@@ -327,6 +338,13 @@ public:
          */
     void increasePredictRequestsHandlesCount() {
         ++predictRequestsHandlesCount;
+    }
+
+    /**
+         * @brief sets the flag in model instance indicating change in custom loader configuration.
+	 */
+    void setCustomLoaderConfigChangeFlag() {
+        isCustomLoaderConfigChanged = true;
     }
 
     /**
@@ -489,7 +507,7 @@ public:
          * @param isPermanent defines if the unload operation should be permanent and should change instance state to End after it is completed
          * otherwise model might be unloaded temporarily so the instance state should be preserved as Loading
          */
-    virtual void unloadModel(bool isPermanent = true);
+    virtual void unloadModel(bool isPermanent = true, bool isError = false);
 
     /**
          * @brief Wait for model to change to AVAILABLE state

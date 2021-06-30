@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <memory>
+#include <optional>
 #include <string>
 
 #pragma GCC diagnostic push
@@ -21,6 +23,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "logging.hpp"
 #include "node.hpp"
 #include "tensorinfo.hpp"
 
@@ -30,11 +33,15 @@ const std::string ENTRY_NODE_NAME = "request";
 
 class EntryNode : public Node {
     const tensorflow::serving::PredictRequest* request;
+    const tensor_map_t inputsInfo;
 
 public:
-    EntryNode(const tensorflow::serving::PredictRequest* request) :
-        Node(ENTRY_NODE_NAME),
-        request(request) {}
+    EntryNode(const tensorflow::serving::PredictRequest* request,
+        const tensor_map_t& inputsInfo,
+        std::optional<uint32_t> demultiplyCount = std::nullopt) :
+        Node(ENTRY_NODE_NAME, demultiplyCount),
+        request(request),
+        inputsInfo(inputsInfo) {}
 
     Status execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) override;
 
@@ -42,6 +49,7 @@ public:
 
 protected:
     Status fetchResults(BlobMap& outputs);
+    Status createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, const InferenceEngine::TensorDesc& dividedBlobDesc, InferenceEngine::Blob::Ptr blob, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName) override;
 
 public:
     // Entry nodes have no dependency
@@ -50,7 +58,11 @@ public:
     }
 
     // Deserialize proto to blob
-    Status deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob);
+    Status deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo);
+    Status deserializeBinaryInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo);
+    Status deserializeNumericalInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob);
+
+    Status isInputBinary(const std::string& name, bool& isBinary) const;
 };
 
 }  // namespace ovms

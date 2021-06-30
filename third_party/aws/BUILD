@@ -24,7 +24,7 @@ cc_library(
     hdrs = glob([
         "aws-cpp-sdk-core/include/**/*.h",
     ]),
-    strip_include_prefix = "aws-cpp-sdk-core/include"
+    strip_include_prefix = "aws-cpp-sdk-core/include",
 )
 
 cc_library(

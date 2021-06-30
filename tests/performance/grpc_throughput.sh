@@ -20,6 +20,7 @@ shift 1
 SECONDS=0
 
 ITERATION=-1
+BATCHSIZE=1
 for var in "$@"
 do
     if [ $ITERATION = 0 ]; then
@@ -28,6 +29,14 @@ do
 
     if [ $var = "--iteration" ]; then
         ITERATION=0
+    fi
+
+    if [ $BATCHSIZE = 0 ]; then
+        BATCHSIZE=$var
+    fi
+
+    if [ $var = "--batchsize" ]; then
+        BATCHSIZE=0
     fi
 done
 
@@ -43,5 +52,5 @@ if [ $? = 1 ]; then
     exit 1
 fi
 
-FPS=$((CLIENT_COUNT*ITERATION/SECONDS))
+FPS=$((CLIENT_COUNT*ITERATION*BATCHSIZE/SECONDS))
 echo "$FPS FPS"

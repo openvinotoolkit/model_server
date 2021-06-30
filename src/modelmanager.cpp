@@ -132,6 +132,12 @@ Status ModelManager::startFromConfig() {
         return status;
     }
 
+    status = modelConfig.parseLayoutParameter(config.layout());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse layout parameter");
+        return status;
+    }
+
     bool batchSizeSet = (modelConfig.getBatchingMode() != FIXED || modelConfig.getBatchSize() != 0);
     bool shapeSet = (modelConfig.getShapes().size() > 0);
 
@@ -233,15 +239,26 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
         return StatusCode::OK;
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Reading pipeline: {} configuration", pipelineName);
-    auto itr2 = pipelineConfig.FindMember("nodes");
-
-    std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, ENTRY_NODE_NAME}};
-    processPipelineInputs(pipelineConfig.FindMember("inputs"), ENTRY_NODE_NAME, info[0].outputNameAliases, pipelineName);
-    pipeline_connections_t connections;
     std::set<std::string> demultiplexerNodes;
     std::set<std::string> gatheredDemultiplexerNodes;
-    for (const auto& nodeConfig : itr2->value.GetArray()) {
+    std::optional<uint32_t> demultiplyCountEntry = std::nullopt;
+    auto demultiplyCountEntryIt = pipelineConfig.FindMember("demultiply_count");
+    if (demultiplyCountEntryIt != pipelineConfig.MemberEnd()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Pipeline: {} does have demultiply at entry node", pipelineName);
+        demultiplyCountEntry = pipelineConfig["demultiply_count"].GetUint64();
+        demultiplexerNodes.insert(ENTRY_NODE_NAME);
+    } else {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Pipeline: {} does not have demultiply at entry node", pipelineName);
+    }
+
+    std::vector<NodeInfo> info;
+    NodeInfo entryInfo{NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {}, demultiplyCountEntry};
+    info.emplace_back(std::move(entryInfo));
+    processPipelineInputs(pipelineConfig.FindMember("inputs"), ENTRY_NODE_NAME, info[0].outputNameAliases, pipelineName);
+    pipeline_connections_t connections;
+
+    auto nodesItr = pipelineConfig.FindMember("nodes");
+    for (const auto& nodeConfig : nodesItr->value.GetArray()) {
         std::string nodeName;
         nodeName = nodeConfig["name"].GetString();
 
@@ -367,6 +384,10 @@ Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Check if loader is already loaded");
     if (customloaders.find(loaderName) == nullptr) {
         // this is where library or custom loader is loaded
+        if (FileSystem::isPathEscaped(loaderConfig.getLibraryPath())) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", loaderConfig.getLibraryPath());
+            return StatusCode::PATH_INVALID;
+        }
         void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_LOCAL);
         if (!handleCL) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());
@@ -440,13 +461,15 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     }
     Status firstErrorStatus = StatusCode::OK;
     std::set<std::string> modelsInConfigFile;
+    std::set<std::string> modelsWithInvalidConfig;
     std::unordered_map<std::string, ModelConfig> newModelConfigs;
     for (const auto& configs : itr->value.GetArray()) {
         ModelConfig modelConfig;
         auto status = modelConfig.parseNode(configs["config"]);
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_CONFIG_INVALID);
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed", modelConfig.getName());
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed due to error: {}", modelConfig.getName(), status.string());
+            modelsWithInvalidConfig.emplace(modelConfig.getName());
             continue;
         }
 
@@ -482,7 +505,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         }
     }
     this->servedModelConfigs = std::move(newModelConfigs);
-    retireModelsRemovedFromConfigFile(modelsInConfigFile);
+    retireModelsRemovedFromConfigFile(modelsInConfigFile, modelsWithInvalidConfig);
     return firstErrorStatus;
 }
 
@@ -563,7 +586,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     return firstErrorStatus;
 }
 
-void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile) {
+void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile, const std::set<std::string>& modelsWithInvalidConfig) {
     std::set<std::string> modelsCurrentlyLoaded;
     for (auto& nameModelPair : getModels()) {
         modelsCurrentlyLoaded.insert(nameModelPair.first);
@@ -577,7 +600,7 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
     for (auto& modelName : modelsToUnloadAllVersions) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Retiring all versions of model: {}", modelName);
         try {
-            models.at(modelName)->retireAllVersions();
+            models.at(modelName)->retireAllVersions(modelsWithInvalidConfig.find(modelName) != modelsWithInvalidConfig.end());
         } catch (const std::out_of_range& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to retire all versions of model: {}", modelName);
         }
@@ -697,8 +720,6 @@ void ModelManager::getVersionsToChange(
                 if (bres != CustomLoaderStatus::OK) {
                     SPDLOG_LOGGER_INFO(modelmanager_logger, "The model {} is blacklisted", versionInstance->getName());
                     requestedVersions.erase(std::remove(requestedVersions.begin(), requestedVersions.end(), version), requestedVersions.end());
-                } else {
-                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "The model {} is not blacklisted", versionInstance->getName());
                 }
             }
         }
@@ -716,6 +737,9 @@ void ModelManager::getVersionsToChange(
         try {
             if (modelVersionsInstances.at(version)->getStatus().willEndUnloaded() ||
                 modelVersionsInstances.at(version)->getModelConfig().isReloadRequired(newModelConfig)) {
+                if (modelVersionsInstances.at(version)->getModelConfig().isCustomLoaderConfigChanged(newModelConfig)) {
+                    modelVersionsInstances.at(version)->setCustomLoaderConfigChangeFlag();
+                }
                 versionsToReload->push_back(version);
             }
         } catch (std::out_of_range& e) {
@@ -961,7 +985,10 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     }
 
     if (versionsToReload->size() > 0) {
-        reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
+        auto status = reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
+        if (!status.ok()) {
+            blocking_status = status;
+        }
     }
     for (const auto version : *versionsFailed) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Removing available version {} due to load failure.", version);

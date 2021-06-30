@@ -27,6 +27,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "binaryutils.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -48,6 +49,12 @@ public:
         switch (tensorInfo->getPrecision()) {
         case InferenceEngine::Precision::FP32:
             return makeBlob<float>(requestInput, tensorInfo);
+        case InferenceEngine::Precision::I32:
+            return makeBlob<int32_t>(requestInput, tensorInfo);
+        case InferenceEngine::Precision::I8:
+            return makeBlob<int8_t>(requestInput, tensorInfo);
+        case InferenceEngine::Precision::U8:
+            return makeBlob<uint8_t>(requestInput, tensorInfo);
         case InferenceEngine::Precision::FP16: {
             auto blob = InferenceEngine::make_shared_blob<uint16_t>(tensorInfo->getTensorDesc());
             blob->allocate();
@@ -60,10 +67,6 @@ public:
             }
             return blob;
         }
-        case InferenceEngine::Precision::U8:
-            return makeBlob<uint8_t>(requestInput, tensorInfo);
-        case InferenceEngine::Precision::I8:
-            return makeBlob<int8_t>(requestInput, tensorInfo);
         case InferenceEngine::Precision::U16: {
             auto blob = InferenceEngine::make_shared_blob<uint16_t>(tensorInfo->getTensorDesc());
             blob->allocate();
@@ -78,8 +81,6 @@ public:
         }
         case InferenceEngine::Precision::I16:
             return makeBlob<int16_t>(requestInput, tensorInfo);
-        case InferenceEngine::Precision::I32:
-            return makeBlob<int32_t>(requestInput, tensorInfo);
         case InferenceEngine::Precision::I64:
         case InferenceEngine::Precision::MIXED:
         case InferenceEngine::Precision::Q78:
@@ -114,22 +115,32 @@ Status deserializePredictRequest(
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
             }
             auto& requestInput = requestInputItr->second;
+            InferenceEngine::Blob::Ptr blob;
 
-            InferenceEngine::Blob::Ptr blob =
-                deserializeTensorProto<TensorProtoDeserializator>(
+            if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
+                SPDLOG_DEBUG("Request contains binary input: {}", name);
+                Status status = convertStringValToBlob(requestInput, blob, tensorInfo, false);
+                if (!status.ok()) {
+                    SPDLOG_DEBUG("Binary inputs conversion failed.");
+                    return status;
+                }
+            } else {
+                blob = deserializeTensorProto<TensorProtoDeserializator>(
                     requestInput, tensorInfo);
+            }
 
             if (blob == nullptr) {
                 Status status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
                 SPDLOG_DEBUG(status.string());
                 return status;
             }
+
             inferRequest.SetBlob(tensorInfo->getName(), blob);
         }
-        // OV implementation the InferenceEngineException is not
+        // OV implementation the InferenceEngine::Exception is not
         // a base class for all other exceptions thrown from OV.
         // OV can throw exceptions derived from std::logic_error.
-    } catch (const InferenceEngine::details::InferenceEngineException& e) {
+    } catch (const InferenceEngine::Exception& e) {
         Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
         SPDLOG_DEBUG("{}: {}", status.string(), e.what());
         return status;

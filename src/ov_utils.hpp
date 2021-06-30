@@ -15,16 +15,26 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
 #include <memory>
+#include <string>
 
 #include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
 
+#include "modelconfig.hpp"
 #include "status.hpp"
 
 namespace ovms {
 
+class TensorInfo;
+
 Status createSharedBlob(InferenceEngine::Blob::Ptr& destinationBlob, InferenceEngine::TensorDesc tensorDesc);
+
+std::string getNetworkInputsInfoString(const InferenceEngine::InputsDataMap& inputsInfo, const ModelConfig& config);
+std::string getTensorMapString(const std::map<std::string, std::shared_ptr<TensorInfo>>& tensorMap);
+const InferenceEngine::SizeVector& getEffectiveShape(InferenceEngine::TensorDesc& desc);
+const InferenceEngine::SizeVector& getEffectiveBlobShape(const InferenceEngine::Blob::Ptr& blob);
 
 template <typename T>
 Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const T sourceBlob) {

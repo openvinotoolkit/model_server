@@ -1,0 +1,46 @@
+#
+# Copyright (c) 2021 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+apiVersion: image.openshift.io/v1
+kind: "ImageStream"
+metadata:
+  name: "openvino-notebook"
+  labels:
+    application: openvino-notebook
+    opendatahub.io/notebook-image: "true"
+  annotations:
+    opendatahub.io/notebook-image-desc: >-
+      Jupyter notebook image with OpenVINO Toolkit
+      and dependencies to start experimenting with advanced AI/ML notebooks.
+    opendatahub.io/notebook-image-name: OpenVINO™ Toolkit
+    opendatahub.io/notebook-image-url: 'https://github.com/openvinotoolkit/openvino_notebooks'
+spec:
+  lookupPolicy:
+    local: true
+  tags:
+    - name: latest
+      annotations:
+        opendatahub.io/notebook-python-dependencies: >-
+          [{"name":"JupyterLab","version":"3.0.14"},{"name":"Notebook","version":"6.3.0"}]
+        opendatahub.io/notebook-software: '[{"name":"Python","version":"v3.8.6"}]'
+{{- if ne .Values.build_locally "true" }}
+      from:
+        kind: DockerImage
+        name: "{{ .Values.image_name }}"
+      importPolicy: { }
+      referencePolicy:
+        type: Source
+{{- end }}

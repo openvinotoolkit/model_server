@@ -17,6 +17,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include "absl/strings/escaping.h"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/util/json_tensor.h"
@@ -60,7 +62,8 @@ Status makeJsonFromPredictResponse(
         for (int i = 0; i < tensor.tensor_shape().dim_size(); i++) {
             expectedContentSize *= tensor.tensor_shape().dim(i).size();
         }
-        size_t expectedElementsNumber = DataTypeSize(tensor.dtype()) > 0 ? expectedContentSize / DataTypeSize(tensor.dtype()) : 0;
+        size_t dataTypeSize = DataTypeSize(tensor.dtype());
+        size_t expectedElementsNumber = dataTypeSize > 0 ? expectedContentSize / dataTypeSize : 0;
         bool seekDataInValField = false;
 
         if (tensor.tensor_content().size() == 0)
@@ -79,16 +82,6 @@ Status makeJsonFromPredictResponse(
                     tensor.add_float_val(*reinterpret_cast<float*>(tensor.mutable_tensor_content()->data() + i));
             }
             break;
-        case DataType::DT_DOUBLE:
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.double_val_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-            } else {
-                for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(double))
-                    tensor.add_double_val(*reinterpret_cast<double*>(tensor.mutable_tensor_content()->data() + i));
-            }
-            break;
         case DataType::DT_INT32:
             if (seekDataInValField) {
                 auto status = checkValField(tensor.int_val_size(), expectedElementsNumber);
@@ -97,16 +90,6 @@ Status makeJsonFromPredictResponse(
             } else {
                 for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(int32_t))
                     tensor.add_int_val(*reinterpret_cast<int32_t*>(tensor.mutable_tensor_content()->data() + i));
-            }
-            break;
-        case DataType::DT_INT16:
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.int_val_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-            } else {
-                for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(int16_t))
-                    tensor.add_int_val(*reinterpret_cast<int16_t*>(tensor.mutable_tensor_content()->data() + i));
             }
             break;
         case DataType::DT_INT8:
@@ -127,6 +110,26 @@ Status makeJsonFromPredictResponse(
             } else {
                 for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(uint8_t))
                     tensor.add_int_val(*reinterpret_cast<uint8_t*>(tensor.mutable_tensor_content()->data() + i));
+            }
+            break;
+        case DataType::DT_DOUBLE:
+            if (seekDataInValField) {
+                auto status = checkValField(tensor.double_val_size(), expectedElementsNumber);
+                if (!status.ok())
+                    return status;
+            } else {
+                for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(double))
+                    tensor.add_double_val(*reinterpret_cast<double*>(tensor.mutable_tensor_content()->data() + i));
+            }
+            break;
+        case DataType::DT_INT16:
+            if (seekDataInValField) {
+                auto status = checkValField(tensor.int_val_size(), expectedElementsNumber);
+                if (!status.ok())
+                    return status;
+            } else {
+                for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(int16_t))
+                    tensor.add_int_val(*reinterpret_cast<int16_t*>(tensor.mutable_tensor_content()->data() + i));
             }
             break;
         case DataType::DT_INT64:
@@ -181,6 +184,14 @@ Status makeJsonFromPredictResponse(
         return StatusCode::REST_PROTO_TO_STRING_ERROR;
     }
 
+    return StatusCode::OK;
+}
+
+Status decodeBase64(std::string& bytes, std::string& decodedBytes) {
+    auto status = Status(absl::Base64Unescape(bytes, &decodedBytes) ? StatusCode::OK : StatusCode::REST_BASE64_DECODE_ERROR);
+    if (!status.ok()) {
+        return status;
+    }
     return StatusCode::OK;
 }
 }  // namespace ovms

@@ -26,7 +26,6 @@ target_device: "CPU"
 nireq: ""
 plugin_config: >-
   {\"CPU_THROUGHPUT_STREAMS\":\"CPU_THROUGHPUT_AUTO\"}
-
 gcp_creds_secret_name: ""
 
 aws_access_key_id: ""
@@ -40,11 +39,12 @@ resources: {}
   #  limits:
   #    cpu: 8.0
   #    memory: 512Mi
-  #    gpu.intel.com/i915: 1
+#    gpu.intel.com/i915: 1
 security_context: {}
   #  runAsUser: 5000
-  #  runAsGroup: 5000
+#  runAsGroup: 5000
 models_host_path: ""
 models_volume_claim: ""
+
 
 

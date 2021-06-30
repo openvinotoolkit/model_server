@@ -188,7 +188,7 @@ public:
     /**
          * @brief Retires all versions of Model
          */
-    void retireAllVersions();
+    void retireAllVersions(bool isError = false);
 
     /**
          * @brief Reloads versions of Model

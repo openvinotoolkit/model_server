@@ -1208,7 +1208,7 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
     std::filesystem::remove(status_file);
     std::string bin_file = status_file_path + "/dummy.bin";
     std::filesystem::remove(bin_file);
-    ASSERT_EQ(manager.loadConfig(fileToReload), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.loadConfig(fileToReload), ovms::StatusCode::FILE_INVALID);
 
     tensorflow::serving::GetModelStatusRequest req2;
     tensorflow::serving::GetModelStatusResponse res2;

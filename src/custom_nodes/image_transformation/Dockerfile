@@ -16,8 +16,7 @@
 
 FROM centos:7
 ARG NODE_NAME=image_transformation
-RUN yum install centos-release-scl -y && yum install -y \
-    devtoolset-8-gcc*
+RUN yum update -y && yum install centos-release-scl -y && yum install -y devtoolset-8-gcc*
 
 RUN curl -s https://download.01.org/opencv/master/openvinotoolkit/thirdparty/linux/opencv/opencv_4.5.1-044_centos7.txz | tar --use-compress-program=xz -xvf -
 

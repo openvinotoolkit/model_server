@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <set>
 #include <sstream>
 
 #include <rapidjson/istreamwrapper.h>
@@ -29,6 +30,8 @@
 #include "stringutils.hpp"
 
 namespace ovms {
+
+const std::set<std::string> ModelConfig::configAllowedLayouts{"NCHW", "NHWC"};
 
 ShapeInfo::operator std::string() const {
     if (shapeMode == Mode::AUTO)
@@ -95,6 +98,13 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to shape configuration mismatch", this->name);
         return true;
     }
+    if (isCustomLoaderConfigChanged(rhs)) {
+        return true;
+    }
+    return false;
+}
+
+bool ModelConfig::isCustomLoaderConfigChanged(const ModelConfig& rhs) const {
     if (this->customLoaderOptionsConfigMap.size() != rhs.customLoaderOptionsConfigMap.size()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to custom loader config mismatch", this->name);
         return true;
@@ -276,6 +286,54 @@ Status ModelConfig::parseShapeParameter(const std::string& command) {
     return parseShapeParameter(node);
 }
 
+Status ModelConfig::parseLayoutParameter(const rapidjson::Value& node) {
+    if (!node.IsObject()) {
+        return StatusCode::LAYOUT_WRONG_FORMAT;
+    }
+
+    layouts_map_t layouts;
+    for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
+        if (!it->value.IsString()) {
+            return StatusCode::LAYOUT_WRONG_FORMAT;
+        }
+        std::string layout = it->value.GetString();
+        std::transform(layout.begin(), layout.end(), layout.begin(), ::toupper);
+        if (configAllowedLayouts.count(layout) > 0) {
+            layouts[it->name.GetString()] = layout;
+        } else {
+            SPDLOG_ERROR("Setting {} layout is not supported", layout);
+            return StatusCode::LAYOUT_WRONG_FORMAT;
+        }
+    }
+    setLayouts(layouts);
+
+    return StatusCode::OK;
+}
+
+Status ModelConfig::parseLayoutParameter(const std::string& command) {
+    this->layouts.clear();
+    this->layout = std::string();
+
+    if (command.empty()) {
+        return StatusCode::OK;
+    }
+
+    std::string upperCaseCommand;
+    std::transform(command.begin(), command.end(), std::back_inserter(upperCaseCommand), ::toupper);
+
+    if (configAllowedLayouts.count(upperCaseCommand) > 0) {
+        setLayout(upperCaseCommand);
+        return StatusCode::OK;
+    }
+
+    // parse as json
+    rapidjson::Document node;
+    if (node.Parse(command.c_str()).HasParseError()) {
+        return StatusCode::LAYOUT_WRONG_FORMAT;
+    }
+    return parseLayoutParameter(node);
+}
+
 Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
     if (str == "auto") {
         shapeInfo.shapeMode = AUTO;
@@ -387,39 +445,44 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                     firstErrorStatus = status;
                 }
                 SPDLOG_WARN("There was an error parsing shape {}", v["shape"].GetString());
-            }
-            this->addShape(ANONYMOUS_INPUT_NAME, shapeInfo);
-        } else {
-            if (v["shape"].IsArray()) {
-                // Shape for all inputs
-                ShapeInfo shapeInfo;
-                for (auto& sh : v["shape"].GetArray()) {
-                    shapeInfo.shape.push_back(sh.GetUint64());
-                }
-                this->addShape(ANONYMOUS_INPUT_NAME, shapeInfo);
             } else {
-                // Map of shapes
-                for (auto& s : v["shape"].GetObject()) {
-                    ShapeInfo shapeInfo;
-                    // check if legacy format is used
-                    if (s.value.IsString()) {
-                        auto status = ModelConfig::parseShape(shapeInfo, s.value.GetString());
-                        if (!status.ok()) {
-                            if (!firstErrorStatus.ok()) {
-                                firstErrorStatus = status;
-                            }
-                            SPDLOG_WARN("There was an error parsing shape {}", v["shape"].GetString());
+                this->addShape(ANONYMOUS_INPUT_NAME, shapeInfo);
+            }
+        } else {
+            // Map of shapes
+            for (auto& s : v["shape"].GetObject()) {
+                ShapeInfo shapeInfo;
+                bool valid = true;
+                // check if legacy format is used
+                if (s.value.IsString()) {
+                    auto status = ModelConfig::parseShape(shapeInfo, s.value.GetString());
+                    if (!status.ok()) {
+                        if (!firstErrorStatus.ok()) {
+                            firstErrorStatus = status;
                         }
-                    } else {
-                        for (auto& sh : s.value.GetArray()) {
+                        SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
+                        valid = false;
+                    }
+                } else {
+                    for (auto& sh : s.value.GetArray()) {
+                        if (sh.IsUint64()) {
                             shapeInfo.shape.push_back(sh.GetUint64());
+                        } else {
+                            SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
+                            if (!firstErrorStatus.ok()) {
+                                firstErrorStatus = StatusCode::SHAPE_WRONG_FORMAT;
+                            }
+                            valid = false;
+                            break;
                         }
                     }
-                    if (s.name.GetString() != ANONYMOUS_INPUT_NAME) {
+                }
+                if (s.name.GetString() != ANONYMOUS_INPUT_NAME) {
+                    if (valid) {
                         this->addShape(s.name.GetString(), shapeInfo);
-                    } else {
-                        SPDLOG_WARN("Provided shape name: {} is forbidden and will be omitted", ANONYMOUS_INPUT_NAME);
                     }
+                } else {
+                    SPDLOG_WARN("Provided shape name: {} is forbidden and will be omitted", ANONYMOUS_INPUT_NAME);
                 }
             }
         }
@@ -427,10 +490,14 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     if (v.HasMember("layout")) {
         if (v["layout"].IsString()) {
-            this->setLayout(v["layout"].GetString());
+            Status status = this->parseLayoutParameter(v["layout"].GetString());
+            if (!status.ok()) {
+                return status;
+            }
         } else {
-            for (auto& s : v["layout"].GetObject()) {
-                this->addLayout(s.name.GetString(), s.value.GetString());
+            Status status = this->parseLayoutParameter(v["layout"]);
+            if (!status.ok()) {
+                return status;
             }
         }
     }

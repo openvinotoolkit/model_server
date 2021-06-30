@@ -40,15 +40,15 @@ BASE_OS_TAG ?= latest
 BASE_OS_TAG_UBUNTU ?= 18.04
 BASE_OS_TAG_CENTOS ?= 7
 BASE_OS_TAG_CLEARLINUX ?= latest
-BASE_OS_TAG_REDHAT ?= 8.2
+BASE_OS_TAG_REDHAT ?= 8.4
 
 INSTALL_RPMS_FROM_URL ?=
-INSTALL_DRIVER_VERSION ?= "19.41.14441"
+INSTALL_DRIVER_VERSION ?= "20.35.17767"
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= releases/2021/2
+OV_SOURCE_BRANCH ?= master
 
 DLDT_PACKAGE_URL ?=
 OV_USE_BINARY ?= 1
@@ -79,17 +79,17 @@ ifeq ($(BASE_OS),clearlinux)
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.2
+  BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.4
   DIST_OS=redhat
   DIST_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino/packages/2021.3/l_openvino_toolkit_runtime_rhel8_p_2021.3.394.tgz
+  DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino/packages/2021.4/l_openvino_toolkit_runtime_rhel8_p_2021.4.582.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2021.3"
+PRODUCT_VERSION ?= "2021.4"
 
 OVMS_CPP_CONTAINTER_NAME ?= server-test
 OVMS_CPP_CONTAINTER_PORT ?= 9178
@@ -143,8 +143,15 @@ endif
 	fi
 	@rm missing_headers.txt
 
+	@echo "Checking forbidden functions in files..."
+	@. $(ACTIVATE); bash -c "python3 lib_search.py . functions > forbidden_functions.txt"
+	@if ! grep -FRq "All files checked for forbidden functions" forbidden_functions.txt; then\
+		error Run python3 lib_search.py . functions - to see forbidden functions file list.;\
+	fi
+	@rm forbidden_functions.txt
+
 clang-format: venv
-	@echo "Formating files with clang-format.."
+	@echo "Formatting files with clang-format.."
 	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format-6.0 -style=file -i {} \;
 
 .PHONY: docker_build

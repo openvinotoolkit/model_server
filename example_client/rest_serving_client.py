@@ -133,6 +133,7 @@ print('\tImages in shape: {}\n'.format(imgs.shape))
 
 iteration = 0
 
+session = requests.Session()
 while iteration <= iterations:
     for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
         iteration += 1
@@ -147,7 +148,7 @@ while iteration <= iterations:
         if args.get('model_version') is not None:
             version = "/versions/{}".format(args.get('model_version'))
         start_time = datetime.datetime.now()
-        result = requests.post("{}:{}/v1/models/{}{}:predict".format(args['rest_url'], args['rest_port'], args['model_name'], version), data=data_json, cert=certs, verify=verify_server)
+        result = session.post("{}:{}/v1/models/{}{}:predict".format(args['rest_url'], args['rest_port'], args['model_name'], version), data=data_json, cert=certs, verify=verify_server)
         end_time = datetime.datetime.now()
         try:
             result_dict = json.loads(result.text)

@@ -74,6 +74,9 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 						"shape": {
 							"type": ["object", "string"]
 						},
+						"layout": {
+							"type": ["object", "string"]
+						},
 						"nireq": {
 							"type": "integer",
 							"minimum": 0
@@ -197,9 +200,9 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 					"additionalProperties": { "type": "string" } 
 				},
 				"demultiply_count": {
-					"type": "integer",
-					"minimum": 0,
-					"maximum": 10000
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 10000
 				},
 				"gather_from_node": {
 					"type": "string"
@@ -231,7 +234,12 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 					"items": {
 						"$ref": "#/definitions/source_node"
 					}
-				}
+				},
+        "demultiply_count" : {
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 10000
+        }
 			},
 			"additionalProperties": false
 		},

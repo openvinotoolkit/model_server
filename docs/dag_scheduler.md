@@ -181,7 +181,7 @@ the same way. Custom node functions just like a standard mode in that respect. T
 ## Using the pipelines <a name="using-pipelines"></a>
 
 Pipelines can use the same API like the models. There are exactly the same calls for running 
-the predictions. The request format much much the pipeline definition inputs.
+the predictions. The request format must match the pipeline definition inputs.
 
 The pipeline configuration can be queried using [gRPC GetModelMetadata](model_server_grpc_api.md#model-metadata) calls and
 [REST Metadata](model_server_rest_api.md#model-metadata).
@@ -205,9 +205,9 @@ version parameter is ignored. Pipelines are not versioned. Though, they can refe
 
 ## Current limitations <a name="current-limitations"></a>
 
-- Models with ["auto" batch size or shape](shape_and_batch_size.md) cannot be referenced in pipeline
+- Models with ["auto" batch size or shape](shape_batch_size_and_layout.md) cannot be referenced in pipeline
 - Connected inputs and output for subsequent node models need to exactly match each other in terms of data shape and precision - 
-there is no automatic conversion between input/output model precisions or layouts
+there is no automatic conversion between input/output model precisions or layouts. This limitation can be addressed with a custom node to transform the data as required to match the data format.
 - REST requests with no named format (JSON body with one unnamed input) are not supported
 
 

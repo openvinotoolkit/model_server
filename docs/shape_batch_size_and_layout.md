@@ -6,6 +6,9 @@ It accepts also a value `auto` - this special phrase make the served model to se
 - Each time the input data change the batch size, the model is reloaded. It might have extra response delay for the first request.
 This feature is useful for sequential inference requests of the same batch size.
 
+*Note:* In case of frequent batch size changes in predict requests, consider using [demultiplexing feature](./demultiplexing.md#dynamic-batch-handling-with-demultiplexing) from [Directed Acyclic Graph Scheduler](./dag_scheduler.md) which is more
+performant in such situations because it is not adding extra overhead with model reloading between requests like --batch_size auto setting.
+
 - OpenVINO&trade; Model Server determines the batch size based on the size of the first dimension in the first input.
 For example with the input shape (1, 3, 225, 225), the batch size is set to 1. With input shape (8, 3, 225, 225) the batch size is set to 8.
 
@@ -26,3 +29,17 @@ it ignores the batch_size value.
 on [Shape Inference Document](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_ShapeInference.html).
 In case the model can't be reshaped, it will remain in the original parameters and all requests with incompatible input format
 will get an error. The model server will also report such problem in the logs.
+
+# Changing model input/output layout
+OpenVINO models which process image data are generated via the model optimizer with NCHW layout. Image transformation libraries like OpenCV or Pillow use NHWC layout. This makes it required to transpose the data in the client application before it can be sent to OVMS. Custom node example implementations internally also use NHWC format to perform image transformations. Transposition operations increase the overall processing latency. Layout parameter reduces the latency by changing the model in runtime to accept NHWC layout instead of NCHW. That way the whole processing cycle is more effective by avoiding unnecessary data transpositions. That is especially beneficial for models with high resolution images, where data transposition could be more expensive in processing.<br><br>
+
+Layout parameter is optional. By default layout is inherited from OpenVINO™ model. You can specify layout during conversion to IR format via Model Optimizer. You can also use this parameter for ONNX models.<br>
+
+Layout change is only supported to `NCHW` or `NHWC`. You can specify 2 forms of values:
+  * string - either `NCHW` or `NHWC`; applicable only for models with single input tensor
+  * dictionary of strings - e.g. `{"input1":"NHWC", "input2":"NCHW", "output1":"NHWC"}`; allows to specify layout for multiple inputs and outputs by name.
+
+After the model layout is changed, the requests must match the new updated shape in order NHWC instead of NCHW. For NCHW inputs it should be: `(batch, channels, height, width)` but for NHWC this is: `(batch, height, width, channels)`.
+
+Changing layout is not supported for models with input names the same as output names.<br>
+For model included in DAG, layouts of subsequent nodes must match similary to network shape and precision.
