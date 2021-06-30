@@ -82,7 +82,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.2
   DIST_OS=redhat
   DIST_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino/packages/2021.4/l_openvino_toolkit_runtime_rhel8_p_2021.4.582.tgz
+  DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino/packages/2021.4/l_openvino_toolkit_runtime_rhel8_p_2021.5.666.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
