@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:latest
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.4
 FROM $BASE_IMAGE as base_build
 RUN yum install -y xz
 WORKDIR /
@@ -27,7 +27,7 @@ RUN groupadd --gid 5000 ovms && \
 RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-licenses /licenses/thirdparty-licenses
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest as release
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.4 as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
 LABEL "version"="2021.4"
@@ -93,8 +93,8 @@ RUN     set -e ; \
         fi ; \
         microdnf install shadow-utils; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
-        groupadd --gid 5000 ovms && \
-        useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups video --shell /bin/bash --skel /dev/null ovms
+        groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
+        useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 COPY --from=base_build /ovms /ovms
 COPY --from=base_build /licenses /licenses
