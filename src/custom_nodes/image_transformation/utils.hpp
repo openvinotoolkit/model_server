@@ -151,8 +151,14 @@ bool scale_image(
         channels[i] -= meanValues[i];
     }
 
-    for (size_t i = 0; i < channels.size(); i++) {
-        channels[i] /= isScaleDefined ? scale : scaleValues[i];
+    if (scaleValues.size() > 0) {
+        for (size_t i = 0; i < channels.size(); i++) {
+            channels[i] /= scaleValues[i];
+        }
+    } else if (isScaleDefined) {
+        for (size_t i = 0; i < channels.size(); i++) {
+            channels[i] /= scale;
+        }
     }
 
     if (channels.size() == 1) {
