@@ -39,6 +39,7 @@ ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-c"]
 RUN apt update && apt install -y \
             libboost-atomic1.67.0 \
             libboost-chrono1.67.0 \
@@ -103,7 +104,7 @@ RUN apt install -y cpio
 RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
     wget $DLDT_PACKAGE_URL && \
     tar -zxf l_openvino_toolkit*.tgz && \
-    cd l_openvino_toolkit* && \
+    cd l_openvino_toolkit*/ && \
     sed -i 's/decline/accept/g' silent.cfg && \
     ./install.sh -s silent.cfg --ignore-signature && \
     rm -Rf $TEMP_DIR $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
