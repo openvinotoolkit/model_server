@@ -1,28 +1,28 @@
-# Dynamic batch size with OpenVINO&trade; Model Server Demultiplexing
+# Dynamic batch size with OpenVINO&trade; Model Server Demultiplexer
 
 ## Intoduction
-This documentation presents how to use OpenVINO&trade; Model Server to execute inference requests with dymanic batch size using [Demultiplexing in Directed Acyclic Graph Scheduler](https://github.com/openvinotoolkit/model_server/blob/develop/docs/demultiplexing.md).
+This document guides how to configure DAG Scheduler pipeline to be able to send predict request with arbitrary batch size without model reloading.
 
 With OpenVINO&trade; Model Server Demultiplexing infer request sent from client application can have various batch sizes and changing batch size does not require model reload.
 
 *Note:* When using `demultiply_count` parameters, only one demultiplexer can exist in pipeline.
 
-- The script [grpc_serving_client.py](../example_client/grpc_serving_client.py) runs desired model inference requests for the images in .npy file.
+- Example client in python grpc_serving_client.py can be used to request the pipeline. Use `--dag-batch-size-auto` flag to add additional dimension to the input shape which is required for demultiplexing feature.
 
-- The example relies on the model [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/resnet50-binary-0001/README.md).
+- The example uses model [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/resnet50-binary-0001/README.md).
 
-- While using resnet model with grpc_serving_client.py the script processes the output from the server and displays the inference results using previously prepared file with labels. Inside this file each image in input is assigned to a certain number, which indicates the correct recognision answer. 
+- While using resnet model with grpc_serving_client.py the script processes the output from the server and displays the inference results using previously prepared file with labels. Inside this file each image has assigned number, which indicates the correct recognition answer.  
 
 ## Steps
 Clone OpenVINO&trade; Model Server github repository and enter `model_server` directory.
 #### Download the pretrained model
-Download both components of the model(xml and bin file) using curl and store it in `models` directory
+Download model files and store it in `models` directory
 ```Bash
 mkdir -p models/resnet/1
 curl https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
 ```
 
-#### Pull and tag the docker image with OVMS component
+#### Pull the latest OVMS image from dockerhub
 Pull the latest version of OpenVINO&trade; Model Server from Dockerhub :
 ```Bash
 docker pull openvino/model_server:latest
@@ -84,7 +84,7 @@ Start ovms container with image pulled in previous step and mount `models` direc
 docker run --rm -d -v $(pwd)/models:/models -v $(pwd)/config.json:/config.json -p 9000:9000 openvino/model_server:latest --config_path config.json --port 9000
 ```
 
-#### Run the client:
+#### Run the client :
 ```Bash
 cd example_client
 virtualenv .venv
