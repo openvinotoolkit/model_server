@@ -674,7 +674,6 @@ TEST(ModelManager, HandlingInvalidVersionAtBeginning) {
     modelDirectory.removeVersion(2);
     modelDirectory.addVersion(2, validVersion);
     manager.reloadModelWithVersions(config);
-    ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::END);
     ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
     ASSERT_EQ(modelInstance2->getStatus().getErrorCode(), ovms::ModelVersionStatusErrorCode::OK);
 }
