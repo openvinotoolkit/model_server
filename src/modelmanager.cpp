@@ -736,7 +736,7 @@ void ModelManager::getVersionsToChange(
     for (const auto& version : alreadyRegisteredVersionsWhichAreRequested) {
         try {
             if (modelVersionsInstances.at(version)->getStatus().willEndUnloaded() ||
-               (modelVersionsInstances.at(version)->getStatus().getState() == ModelVersionState::LOADING && modelVersionsInstances.at(version)->getStatus().getErrorCode() == ModelVersionStatusErrorCode::UNKNOWN) ||
+                (modelVersionsInstances.at(version)->getStatus().getState() == ModelVersionState::LOADING && modelVersionsInstances.at(version)->getStatus().getErrorCode() == ModelVersionStatusErrorCode::UNKNOWN) ||
                 modelVersionsInstances.at(version)->getModelConfig().isReloadRequired(newModelConfig)) {
                 if (modelVersionsInstances.at(version)->getModelConfig().isCustomLoaderConfigChanged(newModelConfig)) {
                     modelVersionsInstances.at(version)->setCustomLoaderConfigChangeFlag();
@@ -967,7 +967,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     if (versionsToStart->size() > 0 || versionsToReload->size() > 0 || versionsToRetire->size() > 0) {
         reloadNeeded = true;
     }
-
+    std::set<ovms::model_version_t> failedVersions;
     while (versionsToStart->size() > 0) {
         blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Adding new versions. Status: {};", blocking_status.string());
@@ -977,6 +977,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                 if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
                     availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
                 }
+                failedVersions.insert(version);
             }
             requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
             getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
@@ -991,7 +992,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             blocking_status = status;
         }
     }
-    std::set<ovms::model_version_t> failedVersions;
+
     for (const auto version : *versionsFailed) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Removing available version {} due to load failure.", version);
         if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
