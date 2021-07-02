@@ -93,7 +93,7 @@ virtualenv .venv
 . .venv/bin/activate
 pip install -r client_requirements.txt
 
-python grpc_serving_client.py --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet50DAG --dag-batch-size-auto --transpose_input False --batchsize 1
+python grpc_serving_client.py --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet50DAG --dag-batch-size-auto --transpose_input False --batchsize 1 ; python grpc_serving_client.py --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet50DAG --dag-batch-size-auto --transpose_input False --batchsize 2;
 ```
 #### Output of the script
 ```Bash
@@ -104,92 +104,86 @@ Start processing:
         Images numpy path: imgs.npy
         Images in shape: (10, 3, 224, 224)
 
-Iteration 1; Processing time: 50.44 ms; speed 19.83 fps
+Iteration 1; Processing time: 49.00 ms; speed 20.41 fps
 imagenet top results in a single batch:
          0 airliner 404 ; Correct match.
-Iteration 2; Processing time: 47.74 ms; speed 20.95 fps
+Iteration 2; Processing time: 51.06 ms; speed 19.58 fps
 imagenet top results in a single batch:
          0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
-Iteration 3; Processing time: 43.93 ms; speed 22.76 fps
+Iteration 3; Processing time: 48.83 ms; speed 20.48 fps
 imagenet top results in a single batch:
          0 bee 309 ; Correct match.
-Iteration 4; Processing time: 48.04 ms; speed 20.82 fps
+Iteration 4; Processing time: 45.19 ms; speed 22.13 fps
 imagenet top results in a single batch:
          0 golden retriever 207 ; Correct match.
-Iteration 5; Processing time: 45.71 ms; speed 21.88 fps
+Iteration 5; Processing time: 45.77 ms; speed 21.85 fps
 imagenet top results in a single batch:
          0 gorilla, Gorilla gorilla 366 ; Correct match.
-Iteration 6; Processing time: 45.31 ms; speed 22.07 fps
+Iteration 6; Processing time: 47.98 ms; speed 20.84 fps
 imagenet top results in a single batch:
          0 magnetic compass 635 ; Correct match.
-Iteration 7; Processing time: 45.71 ms; speed 21.88 fps
+Iteration 7; Processing time: 48.27 ms; speed 20.72 fps
 imagenet top results in a single batch:
          0 peacock 84 ; Correct match.
-Iteration 8; Processing time: 45.31 ms; speed 22.07 fps
+Iteration 8; Processing time: 45.03 ms; speed 22.21 fps
 imagenet top results in a single batch:
          0 pelican 144 ; Correct match.
-Iteration 9; Processing time: 44.89 ms; speed 22.28 fps
+Iteration 9; Processing time: 45.68 ms; speed 21.89 fps
 imagenet top results in a single batch:
          0 snail 113 ; Correct match.
-Iteration 10; Processing time: 46.63 ms; speed 21.45 fps
+Iteration 10; Processing time: 47.04 ms; speed 21.26 fps
 imagenet top results in a single batch:
          0 zebra 340 ; Correct match.
 
 processing time for all iterations
-average time: 45.80 ms; average speed: 21.83 fps
-median time: 45.00 ms; median speed: 22.22 fps
-max time: 50.00 ms; min speed: 20.00 fps
-min time: 43.00 ms; max speed: 23.26 fps
-time percentile 90: 48.20 ms; speed percentile 90: 20.75 fps
-time percentile 50: 45.00 ms; speed percentile 50: 22.22 fps
-time standard deviation: 1.94
-time variance: 3.76
+average time: 47.00 ms; average speed: 21.28 fps
+median time: 47.00 ms; median speed: 21.28 fps
+max time: 51.00 ms; min speed: 19.61 fps
+min time: 45.00 ms; max speed: 22.22 fps
+time percentile 90: 49.20 ms; speed percentile 90: 20.33 fps
+time percentile 50: 47.00 ms; speed percentile 50: 21.28 fps
+time standard deviation: 1.95
+time variance: 3.80
 Classification accuracy: 100.00
-```
-Each iteration presents the results of each infer request and details for each image in batch.
-
-#### Run the client with different batch size :
-```Bash
-python grpc_serving_client.py --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet50DAG --dag-batch-size-auto --transpose_input False --batchsize 2
-```
-
-#### Output of the script
-```Bash
+...
 Start processing:
         Model name: resnet50DAG
         Iterations: 5
         Images numpy path: imgs.npy
         Images in shape: (10, 3, 224, 224)
 
-Iteration 1; Processing time: 51.59 ms; speed 38.77 fps
+Iteration 1; Processing time: 51.15 ms; speed 39.10 fps
 imagenet top results in a single batch:
          0 airliner 404 ; Correct match.
          1 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
-Iteration 2; Processing time: 48.00 ms; speed 41.67 fps
+Iteration 2; Processing time: 46.90 ms; speed 42.64 fps
 imagenet top results in a single batch:
          0 bee 309 ; Correct match.
          1 golden retriever 207 ; Correct match.
-Iteration 3; Processing time: 47.77 ms; speed 41.87 fps
+Iteration 3; Processing time: 48.66 ms; speed 41.10 fps
 imagenet top results in a single batch:
          0 gorilla, Gorilla gorilla 366 ; Correct match.
          1 magnetic compass 635 ; Correct match.
-Iteration 4; Processing time: 47.16 ms; speed 42.41 fps
+Iteration 4; Processing time: 47.30 ms; speed 42.28 fps
 imagenet top results in a single batch:
          0 peacock 84 ; Correct match.
          1 pelican 144 ; Correct match.
-Iteration 5; Processing time: 45.93 ms; speed 43.54 fps
+Iteration 5; Processing time: 50.35 ms; speed 39.72 fps
 imagenet top results in a single batch:
          0 snail 113 ; Correct match.
          1 zebra 340 ; Correct match.
 
 processing time for all iterations
-average time: 47.40 ms; average speed: 42.19 fps
-median time: 47.00 ms; median speed: 42.55 fps
+average time: 48.40 ms; average speed: 41.32 fps
+median time: 48.00 ms; median speed: 41.67 fps
 max time: 51.00 ms; min speed: 39.22 fps
-min time: 45.00 ms; max speed: 44.44 fps
-time percentile 90: 49.40 ms; speed percentile 90: 40.49 fps
-time percentile 50: 47.00 ms; speed percentile 50: 42.55 fps
-time standard deviation: 1.96
-time variance: 3.84
+min time: 46.00 ms; max speed: 43.48 fps
+time percentile 90: 50.60 ms; speed percentile 90: 39.53 fps
+time percentile 50: 48.00 ms; speed percentile 50: 41.67 fps
+time standard deviation: 1.85
+time variance: 3.44
 Classification accuracy: 100.00
 ```
+Each iteration presents the results of each infer request and details for each image in batch.
+
+With this feature we were able to successfully run two client scripts with different batch size parameters without reloading the model.
