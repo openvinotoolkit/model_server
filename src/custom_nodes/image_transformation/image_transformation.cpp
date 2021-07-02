@@ -31,10 +31,10 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     // If not specified (-1), the image will not be resized.
     // When specified, cv::resize is used to resize an image.
     // Original image size must not specified, input size is dynamic.
-    int targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
-    int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
-    NODE_ASSERT(targetImageHeight > 0 || targetImageHeight == -1, "target image height - when specified, must be larger than 0");
-    NODE_ASSERT(targetImageWidth > 0 || targetImageWidth == -1, "target image width - when specified, must be larger than 0");
+    int _targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
+    int _targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
+    NODE_ASSERT(_targetImageHeight > 0 || _targetImageHeight == -1, "target image height - when specified, must be larger than 0");
+    NODE_ASSERT(_targetImageWidth > 0 || _targetImageWidth == -1, "target image width - when specified, must be larger than 0");
 
     // Color order.
     //
@@ -58,6 +58,28 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     targetImageLayout = targetImageLayout.empty() ? originalImageLayout : targetImageLayout;
     NODE_ASSERT(originalImageLayout == "NCHW" || originalImageLayout == "NHWC", "original image layout must be NCHW or NHWC");
     NODE_ASSERT(targetImageLayout == "NCHW" || targetImageLayout == "NHWC", "target image layout must be NCHW or NHWC");
+
+    // Scale.
+    //
+    // When specified, all pixel values will be divided by this value.
+    bool isScaleDefined = false;
+    float scale = get_float_parameter("scale", params, paramsCount, isScaleDefined, -1);
+    NODE_ASSERT(scale != 0, "cannot divide by scale equal to 0");
+
+    // Scale values.
+    //
+    // Smilar to scale but scale value should be provided per color channel.
+    std::vector<float> scaleValues = get_float_list_parameter("scale_values", params, paramsCount);
+    for (auto scale : scaleValues) {
+        NODE_ASSERT(scale != 0, "cannot divide by scale equal to 0");
+    }
+
+    // Mean values.
+    //
+    // If not specified, the image will not be scaled.
+    // When specified, all pixel values will be substracted by this value per channel.
+    // The exact meaning and order of channels depend on input image.
+    std::vector<float> meanValues = get_float_list_parameter("mean_values", params, paramsCount);
 
     // Debug flag for additional logging.
     bool debugMode = get_string_parameter("debug", params, paramsCount) == "true";
@@ -97,18 +119,29 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         NODE_ASSERT(originalImageColorChannels == 3, "for color order BGR/RGB color channels must be equal to 3");
     }
 
-    targetImageHeight = targetImageHeight == -1 ? originalImageHeight : targetImageHeight;
-    targetImageWidth = targetImageWidth == -1 ? originalImageWidth : targetImageWidth;
+    uint64_t targetImageHeight = _targetImageHeight == -1 ? originalImageHeight : _targetImageHeight;
+    uint64_t targetImageWidth = _targetImageWidth == -1 ? originalImageWidth : _targetImageWidth;
+
+    NODE_ASSERT(scaleValues.size() == 0 || targetImageColorChannels == scaleValues.size(), "number of scale values must be equal to number of target image channels");
+    NODE_ASSERT(meanValues.size() == 0 || targetImageColorChannels == meanValues.size(), "number of mean values must be equal to number of target image channels");
+
+    auto originalImageResolution = originalImageHeight * originalImageWidth;
+    auto targetImageResolution = targetImageHeight * targetImageWidth;
 
     if (debugMode) {
         std::cout << "Original image size: " << cv::Size2i(originalImageWidth, originalImageHeight) << std::endl;
+        std::cout << "Original image resolution: " << originalImageResolution << std::endl;
         std::cout << "Original image color channels: " << originalImageColorChannels << std::endl;
         std::cout << "Original image color order: " << originalImageColorOrder << std::endl;
         std::cout << "Original image layout: " << originalImageLayout << std::endl;
         std::cout << "Target image size: " << cv::Size2i(targetImageWidth, targetImageHeight) << std::endl;
+        std::cout << "Target image resolution: " << targetImageResolution << std::endl;
         std::cout << "Target image color channels: " << targetImageColorChannels << std::endl;
         std::cout << "Target image color order: " << targetImageColorOrder << std::endl;
         std::cout << "Target image layout: " << targetImageLayout << std::endl;
+        std::cout << "Scale: " << (isScaleDefined ? std::to_string(scale) : "not defined") << std::endl;
+        std::cout << "Scale values: " << floatListToString(scaleValues) << std::endl;
+        std::cout << "Mean values: " << floatListToString(meanValues) << std::endl;
     }
     // ------------- validation end ---------------
 
@@ -137,9 +170,27 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         cv::cvtColor(image, image, colorIt->second);
     }
 
+    // Perform procesesing with scale and mean values. If scale and scaleValues provided only scaleValues are used for scaling.
+    // If scale and meanValues provided mean values are substracted from pixels first then scaling is made.
+    // Scaling will be applied before resize if target resolution is smaller.
+    if ((isScaleDefined || scaleValues.size() > 0 || meanValues.size() > 0) && originalImageResolution < targetImageResolution) {
+        if (debugMode) {
+            std::cout << "Performing scaling before resize operation" << std::endl;
+        }
+        NODE_ASSERT(scale_image(isScaleDefined, scale, meanValues, scaleValues, image), "Error during image scaling");
+    }
+
     // Perform resize operation.
-    if (static_cast<int64_t>(originalImageHeight) != targetImageHeight || static_cast<int64_t>(originalImageWidth) != targetImageWidth) {
+    if (originalImageHeight != targetImageHeight || originalImageWidth != targetImageWidth) {
         cv::resize(image, image, cv::Size(targetImageWidth, targetImageHeight));
+    }
+
+    // Scaling should be applied after resize if target resolution is smaller.
+    if ((isScaleDefined || scaleValues.size() > 0 || meanValues.size() > 0) && originalImageResolution >= targetImageResolution) {
+        if (debugMode) {
+            std::cout << "Performing scaling after resize operation" << std::endl;
+        }
+        NODE_ASSERT(scale_image(isScaleDefined, scale, meanValues, scaleValues, image), "Error during image scaling");
     }
 
     // Prepare output tensor
