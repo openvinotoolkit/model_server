@@ -86,7 +86,7 @@ Start ovms container with image pulled in previous step and mount `models` direc
 docker run --rm -d -v $(pwd)/models:/models -v $(pwd)/config.json:/config.json -p 9000:9000 openvino/model_server:latest --config_path config.json --port 9000
 ```
 
-#### Run the client :
+#### Run the client
 ```Bash
 cd example_client
 virtualenv .venv
