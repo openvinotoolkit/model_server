@@ -95,7 +95,7 @@ docker run -d -p 9000:9000 -v ${PWD}/models:/models -v ${PWD}/config.json:/confi
 
 Get the sample image:
 ```
-wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/models/intel/age-gender-recognition-retail-0013/assets/age-gender-recognition-retail-0001.jpg
+wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/2021.4/models/intel/age-gender-recognition-retail-0013/assets/age-gender-recognition-retail-0001.jpg
 ```
 ![image](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/age-gender-recognition-retail-0013/assets/age-gender-recognition-retail-0001.jpg)
 
