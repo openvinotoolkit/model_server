@@ -19,7 +19,7 @@ FROM $BASE_IMAGE as base_build
 
 LABEL version="1.0.0"
 
-ARG PROJECT_NAME="OpenVINO Model Server 2021.3"
+ARG PROJECT_NAME="OpenVINO Model Server 2021.4"
 
 LABEL description=${PROJECT_NAME}
 
@@ -70,13 +70,15 @@ RUN apt update && apt install -y \
             python3-dev \
             python3-setuptools \
             python3-virtualenv \
+            python3-numpy \
             unzip \
             wget \
             unzip && \
             apt clean
 
+
 # Set up Bazel
-ENV BAZEL_VERSION 2.0.0
+ENV BAZEL_VERSION 3.7.2
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
@@ -196,7 +198,7 @@ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/test/cpu_extension/ && make
 
-RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
+#RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
 
 COPY ${ovms_metadata_file} metadata.json
 
