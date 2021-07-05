@@ -129,9 +129,12 @@ sleep 1
 echo "Processing Nginx configuration..."
 cp /model_server.conf.template /etc/nginx/conf.d/model_server.conf
 sed -i "s/MODEL_SERVER_GRPC_PORT/$GRPC_OVMS_NEW_PORT/g" /etc/nginx/conf.d/model_server.conf
-sed -i "s/MODEL_SERVER_REST_PORT/$REST_OVMS_NEW_PORT/g" /etc/nginx/conf.d/model_server.conf
 sed -i "s/NGINX_LISTEN_GRPC_PORT/$GRPC_ORIGINAL_PORT/g" /etc/nginx/conf.d/model_server.conf
-sed -i "s/NGINX_LISTEN_REST_PORT/$REST_ORIGINAL_PORT/g" /etc/nginx/conf.d/model_server.conf
+if [ "$REST_ORIGINAL_PORT" != "" ] ; then
+  sed -i "s/NGINX_LISTEN_REST_PORT/$REST_ORIGINAL_PORT/g" /etc/nginx/conf.d/model_server.conf
+  sed -i "s/MODEL_SERVER_REST_PORT/$REST_OVMS_NEW_PORT/g" /etc/nginx/conf.d/model_server.conf
+fi
+
 echo "Starting Nginx..."
 nginx -g 'daemon off;' &
 NGINX_PID=$!
