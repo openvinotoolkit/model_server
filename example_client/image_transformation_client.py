@@ -51,8 +51,7 @@ def scale(img, values):
     for i in range(number_of_channels):
         channels[i] /= values[i]
     img = cv2.merge(channels)
-    h, w = img.shape
-    img = img.reshape(h, w, number_of_channels)
+    img = img.reshape(img.shape[0], img.shape[1], number_of_channels)
     return img
 
 def mean(img, values):
@@ -65,8 +64,7 @@ def mean(img, values):
     for i in range(number_of_channels):
         channels[i] -= values[i]
     img = cv2.merge(channels)
-    h, w = img.shape
-    img = img.reshape(h, w, number_of_channels)
+    img = img.reshape(img.shape[0], img.shape[1], number_of_channels)
     return img
 
 def prepare_img_input(request, name, path, width, height, layout, color):
