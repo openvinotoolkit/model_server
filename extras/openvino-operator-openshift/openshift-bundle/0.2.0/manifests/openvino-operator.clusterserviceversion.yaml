@@ -97,9 +97,10 @@ spec:
     OpenVINO Model Server on [Github](https://github.com/openvinotoolkit/model_server/tree/main/extras/openvino-operator-openshift)
 
     # Notebook
-    The Notebook resource integrates JupyterHub from OpenShift Data Science or Open Data Hub with a container image that includes developer
-    tools from the OpenVINO toolkit and a set of Jupyter notebook tutorials. It enables selecting a defined image `openvino-notebook` from
-    the Jupyter Spawner drop-down menu. The image is maintained Intel.
+    The Notebook resource integrates JupyterHub from OpenShift Data Science or Open Data Hub with a container image that includes [developer
+    tools](https://github.com/openvinotoolkit/openvino/blob/master/docs/install_guides/pypi-openvino-dev.md)
+    from the OpenVINO toolkit and a set of Jupyter notebook tutorials. It enables selecting a defined image `openvino-notebook` from
+    the Jupyter Spawner drop-down menu.
 
     Create the `Notebook` resource in the same project with JupyterHub and RedHat OpenShift Data Science operator.
     It builds the image in the cluster based on Dockerfile from [openvino_notebooks](https://github.com/openvinotoolkit/openvino_notebooks).
@@ -226,7 +227,7 @@ spec:
                   - --metrics-bind-address=127.0.0.1:8080
                   - --leader-elect
                   - --leader-election-id=ovms-operator
-                image: registry.connect.redhat.com/intel/openvino-operator:0.2.0
+                image: registry.connect.redhat.com/intel/ovms-operator:0.2.0
                 livenessProbe:
                   httpGet:
                     path: /healthz

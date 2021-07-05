@@ -98,6 +98,5 @@ RUN     set -e ; \
 
 COPY --from=base_build /ovms /ovms
 COPY --from=base_build /licenses /licenses
-ENV LD_LIBRARY_PATH=/ovms/lib
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]
