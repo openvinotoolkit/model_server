@@ -1,13 +1,12 @@
-# TF model conversion to IR with scaling for binary input
+# TensorFlow model conversion to IR with scaling for binary input
 
-This document guides how to prepare TensorFlow model to use binary input with OpenVINO&trade; Model Server.
+This document guides how to convert TensorFlow model and deploy it with the OpenVINO&trade; Model Server. It also explains how to scale the input tensors and adjust to binary JPEG and PNG input data.
 
-- In this example TF model that will be converted is [ResNet in TensorFlow](https://github.com/tensorflow/models/tree/v2.2.0/official/r1/resnet).
+- In this example TensorFlow model [ResNet](https://github.com/tensorflow/models/tree/v2.2.0/official/r1/resnet) will be used.
 
-- To convert TensorFlow model into Intermediate Representation format model_optimizer tool can be used. There are several ways to store TensorFlow model and in this guide we are going to convert SavedModel format. More information about conversion process can be found on the openVINO&trade; documentation in [Converting a TensorFlow* Model](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_Convert_Model_From_TensorFlow.html#savedmodel_format) guide.
+- TensorFlow model can be converted into Intermediate Representation format using model_optimizer tool. There are several formats for storing TensorFlow model. In this guide we present conversion from SavedModel format. More information about conversion process can be found on the [model optimizer documentation](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_Convert_Model_From_TensorFlow.html#savedmodel_format).
 
-- Sending requests with binary input requires some adjustments in deployment for both OVMS and model. More informations can be found on [Support for binary inputs data in OpenVINO Model Server](https://github.com/openvinotoolkit/model_server/blob/main/docs/binary_input.md).
-
+- Binary input format has several requirements for the model and ovms configuration. More information can be found in [binary inputs documentation](binary_input.md).
 ## Steps
 
 ### Prepering the Model
@@ -30,33 +29,35 @@ docker pull openvino/ubuntu18_dev:latest
 
 Convert the TensorFlow model to Intermediate Representation format using model_optimizer tool:
 ```Bash
-docker run -u $(id -u):$(id -g) -v `pwd`/resnet_v2/:/resnet openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo.py --saved_model_dir /resnet/ --output_dir /resnet/IR/1/ --input_shape=[1,224,224,3] --mean_values=[123.68,116.78,103.94] --reverse_input_channels
+docker run -u $(id -u):$(id -g) -v ${PWD}/resnet_v2/:/resnet openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo.py --saved_model_dir /resnet/ --output_dir /resnet/models/resnet/1/ --input_shape=[1,224,224,3] --mean_values=[123.68,116.78,103.94] --reverse_input_channels
 ```
+
+*Note:* Some models might require other parameters such as `--scale` parameter.
+- `--reverse_input_channels` - required for models that are trained with images in RGB order.
+- `--mean_values` , `--scale` - should be provided if input pre-processing operations are not a part of a topology- and the pre-processing relies on the application providing an input data. They can be determined in several ways described in [conversion parameters guide](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_Converting_Model_General.html). In this example [model pre-processing script](https://github.com/tensorflow/models/blob/v2.2.0/official/r1/resnet/imagenet_preprocessing.py) was used to determine them.
+
 
 *Note:* You can find out more about [TensorFlow Model conversion into Intermediate Representation](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_Convert_Model_From_TensorFlow.html) if your model is stored in other formats.
 
-This operation will create model files in `${PWD}/resnet_v2/IR/1/` folder.
+This operation will create model files in `${PWD}/resnet_v2/models/resnet/1/` folder.
 ```Bash
 saved_model.bin
 saved_model.mapping
 saved_model.xml
 ```
 
-Create `models/resnet/1/` directory and paste `.bin` and `.xml` files into it
-
 ### OVMS Deployment
-
-Pull the latest openVINO&trade; Model Server image
+Pull the latest openvino model_server image from dockerhub
 ```Bash
 docker pull openvino/model_server:latest
 ```
 
 Deploy OVMS using the following command:
 ```Bash
-docker run -p 9000:9000 -v ${PWD}/models:/models openvino/model_server:latest --model_path /models/resnet --model_name resnet --port 9000 --layout NHWC
+docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_server:latest --model_path /models/resnet --model_name resnet --port 9000 --layout NHWC
 ```
 
-### Requesting the Service
+### Running the inference requests from the client
 
 ```Bash
 cd example_client
@@ -66,8 +67,6 @@ pip install -r client_requirements.txt
 
 python grpc_binary_client.py --images_list input_images.txt --grpc_port 9000 --input_name input_tensor --output_name  softmax_tensor --model_name resnet
 ```
-
-### Output of the Script
 
 ```Bash
 Start processing:
