@@ -69,6 +69,7 @@ RUN yum update -d6 -y && yum install -d6 -y epel-release centos-release-scl && y
             python3-devel \
             python3-setuptools \
             python3-virtualenv \
+            python3-numpy \
             wget \
             which \
             libxml2-devel \

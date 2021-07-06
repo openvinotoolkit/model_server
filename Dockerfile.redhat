@@ -65,6 +65,7 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             python3-devel \
             python3-setuptools \
             python3-virtualenv \
+            python3-numpy \
             wget \
             which \
             yum-utils \
