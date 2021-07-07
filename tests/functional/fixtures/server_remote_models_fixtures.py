@@ -40,7 +40,8 @@ def start_server_single_model_from_gc(request):
     container_name_infix = "test-single-gs"
     envs = ['https_proxy=' + os.getenv('https_proxy', "")]
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command, envs)
+                    container_name_infix, config.start_container_command, envs,
+                    target_device=config.target_device)
     return server.start()
 
 
@@ -162,5 +163,6 @@ def start_server_single_model_from_minio(request, get_minio_server_s3):
                                  "model_path": ResnetS3.model_path}
     container_name_infix = "test-single-minio"
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command, envs)
+                    container_name_infix, config.start_container_command, envs,
+                    target_device=config.target_device)
     return server.start()
