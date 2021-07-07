@@ -15,6 +15,7 @@
 #
 
 import config
+from functional.config import target_device
 from command_wrappers.server import start_ovms_container_command
 from object_model.docker import Docker
 from utils.parametrization import generate_test_object_name
@@ -34,6 +35,7 @@ class OvmsDocker(Docker):
         self.command_args["port"] = self.grpc_port
         self.command_args["rest_port"] = self.rest_port
         self.command_args["log_level"] = self.server_log_level
+        self.command_args["target_device"] = target_device
         self.start_container_command = start_ovms_container_command(self.start_container_command, self.command_args)
 
     def start(self):
