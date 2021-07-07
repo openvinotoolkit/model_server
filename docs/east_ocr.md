@@ -179,7 +179,7 @@ Now you can create directory for text images and run the client:
 mkdir results
 ```
 ```bash
-python east_ocr_client.py --grpc_port 9000 --image_input_path ../src/custom_nodes/east_ocr/demo_images/input.jpg --pipeline_name detect_text_images --text_images_save_path ./results/
+python east_ocr_client.py --grpc_port 9000 --image_input_path ../src/custom_nodes/east_ocr/demo_images/input.jpg --pipeline_name detect_text_images --text_images_save_path ./results/ --image_layout NHWC
 Output: name[text_coordinates]
     numpy => shape[(9, 1, 4)] data[int32]
 Output: name[texts]
