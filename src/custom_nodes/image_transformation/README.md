@@ -4,6 +4,7 @@ This custom node takes image with dynamic shape (color, width, height) as an inp
 - resize to desired width and height
 - layout change between NCHW and NHWC
 - color ordering between BGR, RGB (3 color channels) and GRAY (1 color channel)
+- change data value range per channel: `[0;255]`, `[0;1]`, `[-1;1]`
 
 Important to note that this node uses OpenCV for processing so for good performance results prefers NHWC layout.
 In other cases conversion applies which reduces performance of this node.
@@ -38,4 +39,9 @@ It will compile the library inside a docker container and save the results in `l
 | target_image_color_order  | Output image color order. If specified and differs from original_image_color_order, color order conversion will be performed | `BGR` |  |
 | original_image_layout  | Input image layout. This is required to determine image shape from input shape | | &check; |
 | target_image_layout  | Output image layout. If specified and differs from original_image_layout, layout conversion will be performed | | |
+| scale  | All values will be divided by this value. When `scale_values` is specified, this value is ignored. [read more](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_Converting_Model_General.html) | | |
+| scale_values  | Scale values to be used for the input image per channel. Input data will be divided by those values. Values should be provided in the same order as output image color order. [read more](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_Converting_Model_General.html) | | |
+| mean_values  | Mean values to be used for the input image per channel. Values will be substracted from each input image data value. Values should be provided in the same order as output image color order. [read more](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_Converting_Model_General.html) | | |
 | debug  | Defines if debug messages should be displayed | false | |
+
+> **_NOTE:_**  Substracting mean values is performed before division by scale values.

@@ -9,7 +9,7 @@ saved in `image_input_dir` directory.
 - The script can adjust the input image size and change the batch size in the request. It demonstrates how to use
 the functionality of dynamic shape in OpenVINO Model Server and how to process the output from the server.
 
-- The example relies on the model [face_detection_0004](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/face-detection-retail-0004/description/face-detection-retail-0004.md).
+- The example relies on the model [face_detection_0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/face-detection-retail-0004/README.md).
 
 ### Running the Script
 

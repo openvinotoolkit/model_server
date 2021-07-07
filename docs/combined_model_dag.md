@@ -10,9 +10,9 @@ When you need to execute several predictions on the same data, you can create a 
 
 In this example the following models are used:
 
-[age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/age-gender-recognition-retail-0013/description/age-gender-recognition-retail-0013.md)
+[age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/age-gender-recognition-retail-0013/README.md)
 
-[emotions-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/emotions-recognition-retail-0003/description/emotions-recognition-retail-0003.md)
+[emotions-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/emotions-recognition-retail-0003/README.md)
 
 ```bash
 curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml -o models/age-gender-recognition-retail-0013/1/age-gender-recognition-retail-0013.bin -o models/age-gender-recognition-retail-0013/1/age-gender-recognition-retail-0013.xml
@@ -95,9 +95,9 @@ docker run -d -p 9000:9000 -v ${PWD}/models:/models -v ${PWD}/config.json:/confi
 
 Get the sample image:
 ```
-wget https://github.com/openvinotoolkit/open_model_zoo/raw/master/models/intel/age-gender-recognition-retail-0013/description/age-gender-recognition-retail-0001.jpg
+wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/2021.4/models/intel/age-gender-recognition-retail-0013/assets/age-gender-recognition-retail-0001.jpg
 ```
-![image](https://github.com/openvinotoolkit/open_model_zoo/raw/master/models/intel/age-gender-recognition-retail-0013/description/age-gender-recognition-retail-0001.jpg)
+![image](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/age-gender-recognition-retail-0013/assets/age-gender-recognition-retail-0001.jpg)
 
 Use the following code snippet to submit a request via gRPC to the serving and display the response:
 

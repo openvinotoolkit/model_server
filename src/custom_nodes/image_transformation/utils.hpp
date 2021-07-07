@@ -29,6 +29,11 @@
         return 1;                                                         \
     }
 
+#define NODE_EXPECT(cond, msg)                                            \
+    if (!(cond)) {                                                        \
+        std::cout << "[" << __LINE__ << "] Assert: " << msg << std::endl; \
+    }
+
 template <typename T>
 void reorder_to_nhwc_2(const T* sourceNchwBuffer, T* destNhwcBuffer, int rows, int cols, int channels) {
     for (int y = 0; y < rows; ++y) {
@@ -114,6 +119,57 @@ cv::Mat apply_grayscale(cv::Mat image) {
     return grayscaled;
 }
 
+bool scale_image(
+    bool isScaleDefined,
+    const float scale,
+    const std::vector<float>& meanValues,
+    const std::vector<float>& scaleValues,
+    cv::Mat& image) {
+    if (!isScaleDefined && scaleValues.size() == 0 && meanValues.size() == 0) {
+        return true;
+    }
+
+    size_t colorChannels = static_cast<size_t>(image.channels());
+    if (meanValues.size() > 0 && meanValues.size() != colorChannels) {
+        return false;
+    }
+    if (scaleValues.size() > 0 && scaleValues.size() != colorChannels) {
+        return false;
+    }
+
+    std::vector<cv::Mat> channels;
+    if (meanValues.size() > 0 || scaleValues.size() > 0) {
+        cv::split(image, channels);
+        if (channels.size() != colorChannels) {
+            return false;
+        }
+    } else {
+        channels.emplace_back(image);
+    }
+
+    for (size_t i = 0; i < meanValues.size(); i++) {
+        channels[i] -= meanValues[i];
+    }
+
+    if (scaleValues.size() > 0) {
+        for (size_t i = 0; i < channels.size(); i++) {
+            channels[i] /= scaleValues[i];
+        }
+    } else if (isScaleDefined) {
+        for (size_t i = 0; i < channels.size(); i++) {
+            channels[i] /= scale;
+        }
+    }
+
+    if (channels.size() == 1) {
+        image = channels[0];
+    } else {
+        cv::merge(channels, image);
+    }
+
+    return true;
+}
+
 float get_float_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsCount, float defaultValue = 0.0f) {
     for (int i = 0; i < paramsCount; i++) {
         if (name == params[i].key) {
@@ -126,6 +182,25 @@ float get_float_parameter(const std::string& name, const struct CustomNodeParam*
             }
         }
     }
+    return defaultValue;
+}
+
+float get_float_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsCount, bool& isDefined, float defaultValue = 0.0f) {
+    isDefined = true;
+    for (int i = 0; i < paramsCount; i++) {
+        if (name == params[i].key) {
+            try {
+                return std::stof(params[i].value);
+            } catch (std::invalid_argument& e) {
+                isDefined = false;
+                return defaultValue;
+            } catch (std::out_of_range& e) {
+                isDefined = false;
+                return defaultValue;
+            }
+        }
+    }
+    isDefined = false;
     return defaultValue;
 }
 
@@ -151,4 +226,51 @@ std::string get_string_parameter(const std::string& name, const struct CustomNod
         }
     }
     return defaultValue;
+}
+
+std::vector<float> get_float_list_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsCount) {
+    std::string listStr;
+    for (int i = 0; i < paramsCount; i++) {
+        if (name == params[i].key) {
+            listStr = params[i].value;
+            break;
+        }
+    }
+
+    if (listStr.length() < 2 || listStr.front() != '[' || listStr.back() != ']') {
+        return {};
+    }
+
+    listStr = listStr.substr(1, listStr.size() - 2);
+
+    std::vector<float> result;
+
+    std::stringstream lineStream(listStr);
+    std::string element;
+    while (std::getline(lineStream, element, ',')) {
+        try {
+            float e = std::stof(element.c_str());
+            result.push_back(e);
+        } catch (std::invalid_argument& e) {
+            NODE_EXPECT(false, "error parsing list parameter");
+            return {};
+        } catch (std::out_of_range& e) {
+            NODE_EXPECT(false, "error parsing list parameter");
+            return {};
+        }
+    }
+
+    return result;
+}
+
+std::string floatListToString(const std::vector<float>& values) {
+    std::stringstream ss;
+    ss << "[";
+    for (size_t i = 0; i < values.size(); ++i) {
+        if (i != 0)
+            ss << ",";
+        ss << values[i];
+    }
+    ss << "]";
+    return ss.str();
 }
