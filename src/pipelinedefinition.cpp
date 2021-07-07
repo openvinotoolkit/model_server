@@ -911,7 +911,7 @@ Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
                             return rhs;
                         }
                         return lhs + ", " + rhs; }));
-                SPDLOG_LOGGER_WARN(modelmanager_logger ,"Consider changing inputs of the node that gathers from mentioned demultiplexer nodes");
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Consider changing inputs of the node that gathers from mentioned demultiplexer nodes");
                 return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
             }
             auto visitedNode = std::find_if(std::begin(visitedNodes), std::end(visitedNodes),
@@ -919,7 +919,7 @@ Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
             if (visitedNode != visitedNodes.end()) {
                 if (visitedNode->second != newDemultiplyStack) {
                     SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} after node: {} exist paths that have different demultiply levels", getName(), connectedNodeName);
-                    SPDLOG_LOGGER_WARN(modelmanager_logger ,"Consider changing output connections of node: {}", connectedNodeName);
+                    SPDLOG_LOGGER_WARN(modelmanager_logger, "Consider changing output connections of node: {}", connectedNodeName);
                     return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
                 }
             } else {
