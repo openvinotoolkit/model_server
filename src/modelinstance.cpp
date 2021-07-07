@@ -672,7 +672,7 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
     }
     SPDLOG_INFO("Waiting for loaded state reached timeout for model: {} version: {}",
         getName(), getVersion());
-    if (getStatus().getState() > ModelVersionState::AVAILABLE) {
+    if (getStatus().getState() > ModelVersionState::AVAILABLE || getStatus().isFailedLoading()) {
         SPDLOG_DEBUG("Waiting for model: {}, version: {} ended since it started unloading.", getName(), getVersion());
         return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
     } else {

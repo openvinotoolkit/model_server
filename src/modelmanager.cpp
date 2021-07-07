@@ -739,7 +739,7 @@ void ModelManager::getVersionsToChange(
     for (const auto& version : alreadyRegisteredVersionsWhichAreRequested) {
         try {
             if (modelVersionsInstances.at(version)->getStatus().willEndUnloaded() ||
-                (modelVersionsInstances.at(version)->getStatus().getState() == ModelVersionState::LOADING && modelVersionsInstances.at(version)->getStatus().getErrorCode() == ModelVersionStatusErrorCode::UNKNOWN) ||
+                modelVersionsInstances.at(version)->getStatus().isFailedLoading() ||
                 modelVersionsInstances.at(version)->getModelConfig().isReloadRequired(newModelConfig)) {
                 if (modelVersionsInstances.at(version)->getModelConfig().isCustomLoaderConfigChanged(newModelConfig)) {
                     modelVersionsInstances.at(version)->setCustomLoaderConfigChangeFlag();

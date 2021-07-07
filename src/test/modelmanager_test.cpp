@@ -613,7 +613,7 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     modelInstanceUnloadGuard.reset();
     status = manager.getModelInstance(modelDirectory.name, 3, modelInstance3, modelInstanceUnloadGuard);
     modelInstanceUnloadGuard.reset();
-    ASSERT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
+    ASSERT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
 
     // dropped versions 2 and 3
     // expected version 1 as available, 2 as ended
@@ -644,40 +644,6 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     ASSERT_EQ(modelInstance2->getStatus().getErrorCode(), ovms::ModelVersionStatusErrorCode::OK);
 }
 
-TEST(ModelManager, HandlingInvalidVersionAtBeginning) {
-    DummyModelDirectoryStructure modelDirectory("HandlingInvalidVersionAtBeginning");
-    bool validVersion = true;
-    // valid version 1 and invalid 2
-    modelDirectory.addVersion(1, validVersion);
-    modelDirectory.addVersion(2, !validVersion);
-    ovms::ModelConfig config;
-    config.setBasePath("/tmp/" + modelDirectory.name);
-    config.setName(modelDirectory.name);
-    config.setNireq(1);
-    ConstructorEnabledModelManager manager;
-    manager.reloadModelWithVersions(config);
-    std::shared_ptr<ovms::ModelInstance> modelInstance1;
-    std::shared_ptr<ovms::ModelInstance> modelInstance2;
-    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
-    auto status = manager.getModelInstance(modelDirectory.name, 1, modelInstance1, modelInstanceUnloadGuard);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-    ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
-    modelInstanceUnloadGuard.reset();
-    status = manager.getModelInstance(modelDirectory.name, 2, modelInstance2, modelInstanceUnloadGuard);
-    ASSERT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
-    ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::LOADING);
-    ASSERT_EQ(modelInstance2->getStatus().getErrorCode(), ovms::ModelVersionStatusErrorCode::UNKNOWN);
-    modelInstanceUnloadGuard.reset();
-
-    // fixed version 2
-    // expected 2 as available
-    modelDirectory.removeVersion(2);
-    modelDirectory.addVersion(2, validVersion);
-    manager.reloadModelWithVersions(config);
-    ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
-    ASSERT_EQ(modelInstance2->getStatus().getErrorCode(), ovms::ModelVersionStatusErrorCode::OK);
-}
-
 TEST(ModelManager, InitialFailedLoadingVersionSavesModelVersionWithProperStatus) {
     DummyModelDirectoryStructure modelDirectory("InitialFailedLoadingVersionSavesModelVersionWithProperStatus");
     bool validVersion = true;
@@ -694,7 +660,7 @@ TEST(ModelManager, InitialFailedLoadingVersionSavesModelVersionWithProperStatus)
     EXPECT_EQ(versions.size(), 1);
     auto versionIt = versions.find(1);
     ASSERT_NE(versionIt, versions.end());
-    ASSERT_EQ(versionIt->second.getStatus().getState(), ovms::ModelVersionState::END);
+    ASSERT_EQ(versionIt->second.getStatus().getState(), ovms::ModelVersionState::LOADING);
 }
 
 TEST(ModelManager, ModelVersionFailedReloadReportsFailedStatus) {
