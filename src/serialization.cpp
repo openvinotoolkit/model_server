@@ -22,7 +22,6 @@ Status serializeBlobToTensorProto(
     const std::shared_ptr<TensorInfo>& networkOutput,
     InferenceEngine::Blob::Ptr blob) {
     responseOutput.Clear();
-    SPDLOG_ERROR("ER:{}", (void*)blob.get());
     switch (networkOutput->getPrecision()) {
     case InferenceEngine::Precision::FP32:
         responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value);
@@ -62,17 +61,19 @@ Status serializeBlobToTensorProto(
         return status;
     }
     }
-    SPDLOG_ERROR("ER");
     responseOutput.mutable_tensor_shape()->Clear();
-    SPDLOG_ERROR("ER");
-    for (auto dim : networkOutput->getEffectiveShape()) {
-        SPDLOG_ERROR("dim:{}", dim);
+    auto& effectiveNetworkOutputShape = networkOutput->getEffectiveShape();
+    auto& actualBlobShape = blob->getTensorDesc().getDims();
+    for (size_t i = 0; i < effectiveNetworkOutputShape.size(); ++i) {
+        size_t dim;
+        if (effectiveNetworkOutputShape[i] != 0) {
+            dim = effectiveNetworkOutputShape[i];
+        } else {
+            dim = actualBlobShape[i];
+        }
         responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
-    SPDLOG_ERROR("ER");
-    SPDLOG_ERROR("ER, buffer:{}, byteSize():{}", (void*)blob->buffer(), blob->byteSize());
     responseOutput.mutable_tensor_content()->assign((char*)blob->buffer(), blob->byteSize());
-    SPDLOG_ERROR("ER");
     return StatusCode::OK;
 }
 

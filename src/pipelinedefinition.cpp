@@ -175,12 +175,15 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
             getName(), info.nodeName, info.modelName);
         switch (info.kind) {
         case NodeKind::ENTRY: {
+            SPDLOG_ERROR("ER");
             auto node = std::make_unique<EntryNode>(request, getInputsInfo(), info.demultiplyCount);
             entry = node.get();
             nodes.emplace(info.nodeName, std::move(node));
+            SPDLOG_ERROR("ER");
             break;
         }
         case NodeKind::DL:
+            SPDLOG_ERROR("ER");
             nodes.emplace(info.nodeName, std::make_unique<DLNode>(
                                              info.nodeName,
                                              info.modelName,
@@ -191,6 +194,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                              info.gatherFromNode));
             break;
         case NodeKind::CUSTOM:
+            SPDLOG_ERROR("ER");
             nodes.emplace(info.nodeName, std::make_unique<CustomNode>(
                                              info.nodeName,
                                              info.library,
@@ -200,7 +204,9 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                              info.gatherFromNode));
             break;
         case NodeKind::EXIT: {
+            SPDLOG_ERROR("ER");
             auto node = std::make_unique<ExitNode>(response, getOutputsInfo(), info.gatherFromNode);
+            SPDLOG_ERROR("ER");
             exit = node.get();
             nodes.emplace(info.nodeName, std::move(node));
             break;
@@ -1012,16 +1018,22 @@ std::shared_ptr<TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_p
     return tensorInfo->createCopyWithEffectiveDimensionPrefix(demultiplyCount);
 }
 
-std::shared_ptr<TensorInfo> applyGatherShapeForTensorIfNeeded(const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape, bool isConnectionFromDemultiplexer) {
+// TODO rename to underline the importance of making copy
+std::shared_ptr<TensorInfo> applyGatherShapeForTensorIfNeeded(const std::string& mappedName, const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape, bool isConnectionFromDemultiplexer) {
+    std::shared_ptr<TensorInfo> newOwnedTensorInfo;
     if (gatherShape.size() == 0) {
-        return std::make_shared<TensorInfo>(*tensorInfo);
+        newOwnedTensorInfo = std::make_shared<TensorInfo>(*tensorInfo);
+        newOwnedTensorInfo->setMappedName(mappedName);
+        return newOwnedTensorInfo;
     }
     shape_t newShape = tensorInfo->getEffectiveShape();
     if (isConnectionFromDemultiplexer) {
         newShape.erase(newShape.begin());
     }
     newShape.insert(newShape.begin(), gatherShape.begin(), gatherShape.end());
-    return tensorInfo->createCopyWithNewShape(newShape);
+    newOwnedTensorInfo = tensorInfo->createCopyWithNewShape(newShape);
+    newOwnedTensorInfo->setMappedName(mappedName);
+    return newOwnedTensorInfo;
 }
 
 Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
@@ -1143,7 +1155,7 @@ Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo&
     }
     for (const auto& [alias, realName] : specificDependencyMapping) {
         const auto& finalName = dependencyNodeInfo.outputNameAliases.count(alias) > 0 ? dependencyNodeInfo.outputNameAliases.at(alias) : alias;
-        outputsInfo[realName] = applyGatherShapeForTensorIfNeeded(instance->getOutputsInfo().at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
+        outputsInfo[realName] = applyGatherShapeForTensorIfNeeded(realName, instance->getOutputsInfo().at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
     }
     return StatusCode::OK;
 }
@@ -1159,7 +1171,7 @@ Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeIn
     }
     for (const auto& [alias, realName] : specificDependencyMapping) {
         const auto& finalName = dependencyNodeInfo.outputNameAliases.count(alias) > 0 ? dependencyNodeInfo.outputNameAliases.at(alias) : alias;
-        outputsInfo[realName] = applyGatherShapeForTensorIfNeeded(info.at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
+        outputsInfo[realName] = applyGatherShapeForTensorIfNeeded(realName, info.at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
     }
     return StatusCode::OK;
 }
@@ -1168,6 +1180,7 @@ Status PipelineDefinition::updateOutputsInfo(const ModelManager& manager) {
     // Assumptions: this can only be called on available pipeline definition.
     // Add check if available when pipeline status will be implemented.
     outputsInfo.clear();
+    SPDLOG_ERROR("ER");
     static const auto byName = [](const std::string& name) {
         return [name](const NodeInfo& nodeInfo) {
             return nodeInfo.nodeName == name;
@@ -1181,6 +1194,7 @@ Status PipelineDefinition::updateOutputsInfo(const ModelManager& manager) {
 
         auto gatherShape = this->getNodeGatherShape(*dependantNodeInfo);
 
+        SPDLOG_ERROR("ER");
         for (const auto& [dependencyNodeName, specificDependencyMapping] : allMappings) {
             const auto& dependencyNodeInfo = std::find_if(std::begin(nodeInfos), std::end(nodeInfos), byName(dependencyNodeName));
 
@@ -1213,6 +1227,8 @@ Status PipelineDefinition::updateOutputsInfo(const ModelManager& manager) {
                 return StatusCode::UNKNOWN_ERROR;
             }
             }
+
+            SPDLOG_ERROR("ER");
         }
     }
     return StatusCode::OK;

@@ -177,7 +177,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AddSubCustomNode) {
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
         InferenceEngine::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        shape_t{1, 3},
         InferenceEngine::Layout::NC);
     const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
@@ -427,7 +427,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SeriesOfCustomNodes) {
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
         InferenceEngine::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
+        shape_t{1, 3},
         InferenceEngine::Layout::NC);
     const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
@@ -489,7 +489,15 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ParallelCustomNodes) {
         InferenceEngine::Precision::FP32,
         DUMMY_MODEL_SHAPE,
         InferenceEngine::Layout::NC);
-    const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
+    tensor_map_t outputsInfo;
+    for (size_t i = 0; i < N; ++i) {
+        const std::string outputName = pipelineOutputName + std::to_string(i);
+        outputsInfo.emplace(outputName,
+            std::make_shared<ovms::TensorInfo>(outputName,
+                InferenceEngine::Precision::FP32,
+                shape_t{1, 3},
+                InferenceEngine::Layout::NC));
+    }
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
 
     Pipeline pipeline(*input_node, *output_node);
@@ -4143,13 +4151,16 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     std::unordered_map<std::string, std::string> aliases{{"custom_node_output", "custom_node_output"}};
 
     const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    SPDLOG_ERROR("ER");
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    SPDLOG_ERROR("ER");
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
         InferenceEngine::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
-        InferenceEngine::Layout::NC);
+        shape_t{0, 1, 3, 1, 2},
+        InferenceEngine::Layout::ANY);
+    SPDLOG_ERROR("ER");
     const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
-    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo, gather);
     auto custom_node = std::make_unique<CustomNode>(
         "image_demultiplexer_node",
         createLibraryMock<LibraryProduceImages5Dimensions>(),

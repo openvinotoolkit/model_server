@@ -65,7 +65,7 @@ Status serializePredictResponse(
         SPDLOG_ERROR("ER:{}", (void*)blob.get());
         status = outputGetter.get(outputName, blob);
         //status = outputGetter.get(outputInfo->getName(), blob);
-        SPDLOG_ERROR("ER:{}", (void*)blob.get());
+        SPDLOG_ERROR("ER OutputName:{}, outputInfo->getMappedName(): {}, address:{}", outputName, outputInfo->getMappedName(), (void*)blob.get());
         if (!status.ok()) {
             return status;  // TODO
         }

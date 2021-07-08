@@ -555,11 +555,15 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
     }
     const tensor_map_t inputsInfo = inputsInfoTmp;
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
-    auto tensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
-        InferenceEngine::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
-        InferenceEngine::Layout::NC);
-    const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
+    tensor_map_t outputsInfo;
+    for (size_t i = 0; i < N; ++i) {
+        const std::string outputName = customPipelineOutputName + std::to_string(i);
+        outputsInfo.emplace(outputName,
+            std::make_shared<ovms::TensorInfo>(outputName,
+                InferenceEngine::Precision::FP32,
+                DUMMY_MODEL_SHAPE,
+                InferenceEngine::Layout::NC));
+    }
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
     Pipeline pipeline(*input_node, *output_node);
     std::unique_ptr<DLNode> dummy_nodes[N];
