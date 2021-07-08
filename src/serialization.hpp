@@ -61,24 +61,16 @@ Status serializePredictResponse(
     Status status;
     for (const auto& [outputName, outputInfo] : outputMap) {
         InferenceEngine::Blob::Ptr blob;
-        SPDLOG_ERROR("ER");
-        SPDLOG_ERROR("ER:{}", (void*)blob.get());
         status = outputGetter.get(outputName, blob);
-        //status = outputGetter.get(outputInfo->getName(), blob);
-        SPDLOG_ERROR("ER OutputName:{}, outputInfo->getMappedName(): {}, address:{}", outputName, outputInfo->getMappedName(), (void*)blob.get());
         if (!status.ok()) {
-            return status;  // TODO
+            return status;
         }
         auto& tensorProto = (*response->mutable_outputs())[outputInfo->getMappedName()];
-        SPDLOG_ERROR("ER");
         status = serializeBlobToTensorProto(tensorProto, outputInfo, blob);
         if (!status.ok()) {
             return status;
         }
-        SPDLOG_ERROR("ER");
     }
-
-    SPDLOG_ERROR("ER");
     return status;
 }
 }  // namespace ovms

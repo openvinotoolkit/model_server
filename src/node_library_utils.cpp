@@ -124,7 +124,6 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std
         shape_t shape(info[i].dims, info[i].dims + info[i].dimsCount);
 
         freeCallback(info[i].dims);
-        SPDLOG_ERROR("Here creating nane:{}, tensorINfoname:{}", name, name);
         out.emplace(name, std::make_shared<TensorInfo>(name, precision, std::move(shape)));
     }
     freeCallback(info);

@@ -4151,14 +4151,11 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     std::unordered_map<std::string, std::string> aliases{{"custom_node_output", "custom_node_output"}};
 
     const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
-    SPDLOG_ERROR("ER");
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
-    SPDLOG_ERROR("ER");
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
         InferenceEngine::Precision::FP32,
         shape_t{0, 1, 3, 1, 2},
         InferenceEngine::Layout::ANY);
-    SPDLOG_ERROR("ER");
     const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo, gather);
     auto custom_node = std::make_unique<CustomNode>(

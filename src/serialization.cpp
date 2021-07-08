@@ -100,7 +100,7 @@ Status serializePredictResponse(
         OutputGetter<InferenceEngine::InferRequest&> outputGetter(inferRequest);
         status = outputGetter.get(networkOutput->getName(), blob);
         if (!status.ok()) {
-            return status;  // TODO
+            return status;
         }
         try {
             blob = inferRequest.GetBlob(networkOutput->getName());

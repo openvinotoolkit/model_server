@@ -90,7 +90,6 @@ void checkIncrement4DimResponse(const std::string outputName,
     ASSERT_EQ(output_proto.tensor_content().size(), elementsCount * sizeof(float));
     ASSERT_EQ(output_proto.tensor_shape().dim_size(), expectedShape.size());
     for (size_t i = 0; i < expectedShape.size(); i++) {
-        SPDLOG_ERROR("Expected:{}, Actual:{}", expectedShape[i], output_proto.tensor_shape().dim(i).size());
         ASSERT_EQ(output_proto.tensor_shape().dim(i).size(), expectedShape[i]);
     }
 

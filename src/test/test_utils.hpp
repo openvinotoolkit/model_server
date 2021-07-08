@@ -36,7 +36,6 @@
 
 #include "../modelmanager.hpp"
 #include "../node_library.hpp"
-#include "../shapeinfo.hpp"
 #include "../tensorinfo.hpp"
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;

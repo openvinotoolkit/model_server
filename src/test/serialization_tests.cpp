@@ -155,9 +155,7 @@ TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
     std::shared_ptr<MockBlob> mockBlob = std::get<1>(inputs);
-    SPDLOG_ERROR("ER");
     EXPECT_CALL(*mockBlob, element_size);
-    SPDLOG_ERROR("ER");
     auto status = serializeBlobToTensorProto(responseOutput,
         std::get<0>(inputs),
         std::get<1>(inputs));

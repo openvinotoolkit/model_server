@@ -134,14 +134,12 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     const tensor_map_t inputsInfo{{customPipelineInputName, nullptr}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
-    //const tensor_map_t outputsInfo{{customPipelineOutputName, nullptr}};
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
         InferenceEngine::Precision::FP32,
         DUMMY_MODEL_SHAPE,
         InferenceEngine::Layout::NC);
     const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
-    SPDLOG_ERROR("ER");
     Pipeline pipeline(*input_node, *output_node);
     pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
     pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
@@ -150,9 +148,7 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    SPDLOG_ERROR("ER");
     pipeline.execute();
-    SPDLOG_ERROR("ER");
     const int dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
 }

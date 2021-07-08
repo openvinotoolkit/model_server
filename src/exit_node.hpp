@@ -39,10 +39,6 @@ public:
         Node(EXIT_NODE_NAME, std::nullopt, gatherFromNode),
         response(response),
         outputsInfo(outputsInfo) {
-        SPDLOG_ERROR("KAFE");
-        for (auto& [k, v] : this->outputsInfo) {
-            SPDLOG_ERROR("Exit: key:{}, {}", k, v->getName());
-        }
     }
 
     // Exit node does not have execute logic.
@@ -60,7 +56,6 @@ public:
         throw std::logic_error("This node cannot have dependant");
     }
 
-    Status serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::TensorProto& proto);
     std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) override;
 };
 
