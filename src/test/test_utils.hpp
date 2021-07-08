@@ -36,6 +36,7 @@
 
 #include "../modelmanager.hpp"
 #include "../node_library.hpp"
+#include "../shapeinfo.hpp"
 #include "../tensorinfo.hpp"
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;
@@ -103,6 +104,7 @@ constexpr const char* INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME = "output";
 constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
 
 constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life
+const std::vector<size_t> DUMMY_MODEL_SHAPE{1, 10};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"

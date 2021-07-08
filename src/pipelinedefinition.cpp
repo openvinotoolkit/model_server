@@ -200,7 +200,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                              info.gatherFromNode));
             break;
         case NodeKind::EXIT: {
-            auto node = std::make_unique<ExitNode>(response, info.gatherFromNode);
+            auto node = std::make_unique<ExitNode>(response, getOutputsInfo(), info.gatherFromNode);
             exit = node.get();
             nodes.emplace(info.nodeName, std::move(node));
             break;

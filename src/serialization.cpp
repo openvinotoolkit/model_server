@@ -22,6 +22,7 @@ Status serializeBlobToTensorProto(
     const std::shared_ptr<TensorInfo>& networkOutput,
     InferenceEngine::Blob::Ptr blob) {
     responseOutput.Clear();
+    SPDLOG_ERROR("ER:{}", (void*)blob.get());
     switch (networkOutput->getPrecision()) {
     case InferenceEngine::Precision::FP32:
         responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value);
@@ -61,11 +62,29 @@ Status serializeBlobToTensorProto(
         return status;
     }
     }
+    SPDLOG_ERROR("ER");
     responseOutput.mutable_tensor_shape()->Clear();
+    SPDLOG_ERROR("ER");
     for (auto dim : networkOutput->getEffectiveShape()) {
+        SPDLOG_ERROR("dim:{}", dim);
         responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
+    SPDLOG_ERROR("ER");
+    SPDLOG_ERROR("ER, buffer:{}, byteSize():{}", (void*)blob->buffer(), blob->byteSize());
     responseOutput.mutable_tensor_content()->assign((char*)blob->buffer(), blob->byteSize());
+    SPDLOG_ERROR("ER");
+    return StatusCode::OK;
+}
+
+template <>
+Status OutputGetter<InferenceEngine::InferRequest&>::get(const std::string& name, InferenceEngine::Blob::Ptr& blob) {
+    try {
+        blob = outputSource.GetBlob(name);
+    } catch (const InferenceEngine::Exception& e) {
+        Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
+        SPDLOG_ERROR("{}: {}", status.string(), e.what());
+        return status;
+    }
     return StatusCode::OK;
 }
 
@@ -73,25 +92,30 @@ Status serializePredictResponse(
     InferenceEngine::InferRequest& inferRequest,
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response) {
-
+    Status status;
     for (const auto& pair : outputMap) {
         auto networkOutput = pair.second;
         InferenceEngine::Blob::Ptr blob;
+        OutputGetter<InferenceEngine::InferRequest&> outputGetter(inferRequest);
+        status = outputGetter.get(networkOutput->getName(), blob);
+        if (!status.ok()) {
+            return status;  // TODO
+        }
         try {
             blob = inferRequest.GetBlob(networkOutput->getName());
         } catch (const InferenceEngine::Exception& e) {
-            Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
+            status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
             SPDLOG_ERROR("{}: {}", status.string(), e.what());
             return status;
         }
         auto& tensorProto = (*response->mutable_outputs())[networkOutput->getMappedName()];
-        auto status = serializeBlobToTensorProto(tensorProto, networkOutput, blob);
+        status = serializeBlobToTensorProto(tensorProto, networkOutput, blob);
         if (!status.ok()) {
             return status;
         }
     }
 
-    return StatusCode::OK;
+    return status;
 }
 
 }  // namespace ovms

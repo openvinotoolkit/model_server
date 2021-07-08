@@ -375,7 +375,8 @@ public:
     bool isRevalidationRequired() const {
         auto state = getStateCode();
         return (state == PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION) ||
-               (state == PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
+               (state == PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION) ||
+               (state == PipelineDefinitionStateCode::BEGIN);
     }
 
     std::tuple<ModelVersionState, ModelVersionStatusErrorCode> convertToModelStatus() const {

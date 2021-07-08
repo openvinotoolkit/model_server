@@ -20,6 +20,7 @@
 
 #include "logging.hpp"
 #include "ov_utils.hpp"
+#include "serialization.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -39,24 +40,26 @@ Status ExitNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQ
     return StatusCode::OK;
 }
 
-Status ExitNode::fetchResults(const BlobMap& inputBlobs) {
-    // Serialize results to proto
-    for (const auto& kv : inputBlobs) {
-        const auto& output_name = kv.first;
-        auto& blob = kv.second;
-        SPDLOG_DEBUG("[Node: {}] Serializing response from pipeline. Output name: {}", getName(), output_name);
-        auto& proto = (*this->response->mutable_outputs())[output_name];
-        auto status = serialize(blob, proto);
-        if (!status.ok()) {
-            return status;
-        }
-
-        SPDLOG_DEBUG("[Node: {}] Serialized blob to proto: blob name {}", getName(), output_name);
+template <>
+Status OutputGetter<const BlobMap&>::get(const std::string& name, InferenceEngine::Blob::Ptr& blob) {
+    auto it = outputSource.find(name);
+    if (it == outputSource.end()) {
+        SPDLOG_ERROR("DUPA: name not found{}", name);
+        return StatusCode::UNKNOWN_ERROR;  // TODO
     }
+    SPDLOG_ERROR("ER:{}", (void*)blob.get());
+    blob = it->second;
+    SPDLOG_ERROR("ER:{}", (void*)blob.get());
     return StatusCode::OK;
 }
 
+Status ExitNode::fetchResults(const BlobMap& inputBlobs) {
+    OutputGetter<const BlobMap&> outputGetter(inputBlobs);
+    return serializePredictResponse(outputGetter, this->outputsInfo, this->response);
+}
+
 Status ExitNode::serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::TensorProto& proto) {
+    // TODO to throw away?
     // Set size
     const auto& dims = getEffectiveBlobShape(blob);
 

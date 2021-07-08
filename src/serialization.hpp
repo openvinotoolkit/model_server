@@ -32,6 +32,17 @@
 
 namespace ovms {
 
+template <typename T>
+class OutputGetter {
+public:
+    OutputGetter(T t) :
+        outputSource(t) {}
+    Status get(const std::string& name, InferenceEngine::Blob::Ptr& blob);
+
+private:
+    T outputSource;
+};
+
 Status serializeBlobToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& networkOutput,
@@ -42,4 +53,32 @@ Status serializePredictResponse(
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response);
 
+template <typename T>
+Status serializePredictResponse(
+    OutputGetter<T>& outputGetter,
+    const tensor_map_t& outputMap,
+    tensorflow::serving::PredictResponse* response) {
+    Status status;
+    for (const auto& [outputName, outputInfo] : outputMap) {
+        InferenceEngine::Blob::Ptr blob;
+        SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("ER:{}", (void*)blob.get());
+        status = outputGetter.get(outputName, blob);
+        //status = outputGetter.get(outputInfo->getName(), blob);
+        SPDLOG_ERROR("ER:{}", (void*)blob.get());
+        if (!status.ok()) {
+            return status;  // TODO
+        }
+        auto& tensorProto = (*response->mutable_outputs())[outputInfo->getMappedName()];
+        SPDLOG_ERROR("ER");
+        status = serializeBlobToTensorProto(tensorProto, outputInfo, blob);
+        if (!status.ok()) {
+            return status;
+        }
+        SPDLOG_ERROR("ER");
+    }
+
+    SPDLOG_ERROR("ER");
+    return status;
+}
 }  // namespace ovms
