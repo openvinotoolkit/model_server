@@ -13,9 +13,17 @@ Then get to the client library directory:
 
 `cd model_server/client/python/lib`
 
-Make sure you have `setuptools` installed in your Python environment:
+Make sure you have `setuptools`, `protobuf` and `protobuf-compiler` installed in your Python environment:
 
 `pip install setuptools`
+
+`pip install protobuf`
+
+`apt install -y protobuf-compiler`
+
+To build dependencies run:
+
+`python setup.py build_apis`
 
 To build the wheel run:
 
@@ -91,4 +99,3 @@ The documentation pages should appear in `docs/_build/html`
 
 ### TODO
 Generating documentation from docstring should be automated and exposed via make target like: `make docs`
-
