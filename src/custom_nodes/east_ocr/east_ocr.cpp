@@ -35,7 +35,7 @@ struct BoxMetadata {
     float originalHeight;
 };
 
-bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const std::vector<BoxMetadata>& metadata, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, bool convertToGrayScale, int rotationAngleThreshold) {
+bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const std::vector<BoxMetadata>& metadata, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale, int rotationAngleThreshold) {
     const uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
 
@@ -60,8 +60,12 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
         if (convertToGrayScale) {
             image = apply_grayscale(image);
         }
-        auto imgBuffer = reorder_to_nchw((float*)image.data, image.rows, image.cols, image.channels());
-        std::memcpy(buffer + (i * channels * targetImageWidth * targetImageHeight), imgBuffer.data(), byteSize / outputBatch);
+        if (targetImageLayout == "NCHW") {
+            auto imgBuffer = reorder_to_nchw((float*)image.data, image.rows, image.cols, image.channels());
+            std::memcpy(buffer + (i * channels * targetImageWidth * targetImageHeight), imgBuffer.data(), byteSize / outputBatch);
+        } else {
+            std::memcpy(buffer + (i * channels * targetImageWidth * targetImageHeight), image.data, byteSize / outputBatch);
+        }
     }
 
     output->data = reinterpret_cast<uint8_t*>(buffer);
@@ -71,9 +75,15 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     NODE_ASSERT(output->dims != nullptr, "malloc has failed");
     output->dims[0] = outputBatch;
     output->dims[1] = 1;
-    output->dims[2] = channels;
-    output->dims[3] = targetImageHeight;
-    output->dims[4] = targetImageWidth;
+    if (targetImageLayout == "NCHW") {
+        output->dims[2] = channels;
+        output->dims[3] = targetImageHeight;
+        output->dims[4] = targetImageWidth;
+    } else {
+        output->dims[2] = targetImageHeight;
+        output->dims[3] = targetImageWidth;
+        output->dims[4] = channels;
+    }
     output->precision = FP32;
     return true;
 }
@@ -142,6 +152,10 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
     NODE_ASSERT(targetImageHeight > 0, "target image height must be larger than 0");
     NODE_ASSERT(targetImageWidth > 0, "target image width must be larger than 0");
+    std::string originalImageLayout = get_string_parameter("original_image_layout", params, paramsCount, "NCHW");
+    NODE_ASSERT(originalImageLayout == "NCHW" || originalImageLayout == "NHWC", "original image layout must be NCHW or NHWC");
+    std::string targetImageLayout = get_string_parameter("target_image_layout", params, paramsCount, "NCHW");
+    NODE_ASSERT(targetImageLayout == "NCHW" || targetImageLayout == "NHWC", "target image layout must be NCHW or NHWC");
     bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
     float confidenceThreshold = get_float_parameter("confidence_threshold", params, paramsCount, -1.0);
     NODE_ASSERT(confidenceThreshold >= 0 && confidenceThreshold <= 1.0, "confidence threshold must be in 0-1 range");
@@ -181,8 +195,10 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(scoresTensor->precision == FP32, "image input is not FP32");
     NODE_ASSERT(geometryTensor->precision == FP32, "image input is not FP32");
 
-    uint64_t _imageHeight = imageTensor->dims[2];
-    uint64_t _imageWidth = imageTensor->dims[3];
+    NODE_ASSERT(imageTensor->dimsCount == 4, "input image shape must have 4 dimensions");
+    NODE_ASSERT(imageTensor->dims[0] == 1, "input image batch must be 1");
+    uint64_t _imageHeight = imageTensor->dims[originalImageLayout == "NCHW" ? 2 : 1];
+    uint64_t _imageWidth = imageTensor->dims[originalImageLayout == "NCHW" ? 3 : 2];
     NODE_ASSERT(_imageHeight <= std::numeric_limits<int>::max(), "image height is too large");
     NODE_ASSERT(_imageWidth <= std::numeric_limits<int>::max(), "image width is too large");
     int imageHeight = static_cast<int>(_imageHeight);
@@ -195,8 +211,12 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(imageHeight == originalImageHeight, "original image size parameter differs from original image tensor size");
     NODE_ASSERT(imageWidth == originalImageWidth, "original image size parameter differs from original image tensor size");
 
-    cv::Mat image = nchw_to_mat(imageTensor);
-    // cv::Mat image = nhwc_to_mat(imageTensor);  // here you can support other layouts
+    cv::Mat image;
+    if (originalImageLayout == "NHWC") {
+        image = nhwc_to_mat(imageTensor);
+    } else {
+        image = nchw_to_mat(imageTensor);
+    }
 
     NODE_ASSERT(image.cols == imageWidth, "Mat generation failed");
     NODE_ASSERT(image.rows == imageHeight, "Mat generation failed");
@@ -323,7 +343,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT((*outputs) != nullptr, "malloc has failed");
     CustomNodeTensor& textImagesTensor = (*outputs)[0];
     textImagesTensor.name = TEXT_IMAGES_TENSOR_NAME;
-    if (!copy_images_into_output(&textImagesTensor, filteredBoxes, filteredMetadata, image, targetImageHeight, targetImageWidth, convertToGrayScale, rotationAngleThreshold)) {
+    if (!copy_images_into_output(&textImagesTensor, filteredBoxes, filteredMetadata, image, targetImageHeight, targetImageWidth, targetImageLayout, convertToGrayScale, rotationAngleThreshold)) {
         free(*outputs);
         return 1;
     }
@@ -355,6 +375,8 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     NODE_ASSERT(originalImageWidth > 0, "original image width must be larger than 0");
     NODE_ASSERT((originalImageHeight % 4) == 0, "original image height must be divisible by 4");
     NODE_ASSERT((originalImageWidth % 4) == 0, "original image width must be divisible by 4");
+    std::string originalImageLayout = get_string_parameter("original_image_layout", params, paramsCount, "NCHW");
+    NODE_ASSERT(originalImageLayout == "NCHW" || originalImageLayout == "NHWC", "original image layout must be NCHW or NHWC");
 
     *infoCount = 3;
     *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
@@ -365,9 +387,15 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     (*info)[0].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     NODE_ASSERT(((*info)[0].dims) != nullptr, "malloc has failed");
     (*info)[0].dims[0] = 1;
-    (*info)[0].dims[1] = 3;
-    (*info)[0].dims[2] = originalImageHeight;
-    (*info)[0].dims[3] = originalImageWidth;
+    if (originalImageLayout == "NCHW") {
+        (*info)[0].dims[1] = 3;
+        (*info)[0].dims[2] = originalImageHeight;
+        (*info)[0].dims[3] = originalImageWidth;
+    } else {
+        (*info)[0].dims[1] = originalImageHeight;
+        (*info)[0].dims[2] = originalImageWidth;
+        (*info)[0].dims[3] = 3;
+    }
     (*info)[0].precision = FP32;
 
     (*info)[1].name = SCORES_TENSOR_NAME;
@@ -397,6 +425,8 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
     NODE_ASSERT(targetImageHeight > 0, "target image height must be larger than 0");
     NODE_ASSERT(targetImageWidth > 0, "target image width must be larger than 0");
+    std::string targetImageLayout = get_string_parameter("target_image_layout", params, paramsCount, "NCHW");
+    NODE_ASSERT(targetImageLayout == "NCHW" || targetImageLayout == "NHWC", "target image layout must be NCHW or NHWC");
     bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
 
     *infoCount = 3;
@@ -409,9 +439,15 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     NODE_ASSERT(((*info)[0].dims) != nullptr, "malloc has failed");
     (*info)[0].dims[0] = 0;
     (*info)[0].dims[1] = 1;
-    (*info)[0].dims[2] = convertToGrayScale ? 1 : 3;
-    (*info)[0].dims[3] = targetImageHeight;
-    (*info)[0].dims[4] = targetImageWidth;
+    if (targetImageLayout == "NCHW") {
+        (*info)[0].dims[2] = convertToGrayScale ? 1 : 3;
+        (*info)[0].dims[3] = targetImageHeight;
+        (*info)[0].dims[4] = targetImageWidth;
+    } else {
+        (*info)[0].dims[2] = targetImageHeight;
+        (*info)[0].dims[3] = targetImageWidth;
+        (*info)[0].dims[4] = convertToGrayScale ? 1 : 3;
+    }
     (*info)[0].precision = FP32;
 
     (*info)[1].name = COORDINATES_TENSOR_NAME;
