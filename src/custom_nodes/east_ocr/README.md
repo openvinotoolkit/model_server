@@ -38,8 +38,10 @@ It will compile the library inside a docker container and save the results in `l
 | ------------- | ------------- | ------------- | ----------- |
 | original_image_width  | Required input image width |  | &check; |
 | original_image_height  | Required input image height |  | &check; |
+| original_image_layout  | Input image layout. Possible layouts: NCHW/NHWC. When using NHWC, it is possible to accept binary inputs. | NCHW | |
 | target_image_width | Target width of the text boxes in output. Boxes in the original image will be resized to that value.  |  | &check; |
 | target_image_height  | Target width of the text boxes in output. Boxes in the original image will be resized to that value. |  | &check; |
+| target_image_layout  | Output images layout. Possible layouts: NCHW/NHWC. When using NHWC, it is possible to accept binary inputs. | NCHW | |
 | convert_to_gray_scale  | Defines if output images should be in grayscale or in color  | false | |
 | confidence_threshold | Number in a range of 0-1 |  | &check; |
 | overlap_threshold | a ratio in a range of 0-1 for non-max suppression algorithm. Defines the overlapping ratio to reject detection as duplicated  | 0.3 | |
