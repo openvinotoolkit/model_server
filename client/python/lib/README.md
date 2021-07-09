@@ -13,13 +13,13 @@ Then get to the client library directory:
 
 `cd model_server/client/python/lib`
 
-Make sure you have `setuptools`, `protobuf` and `protobuf-compiler` installed in your Python environment:
+Install setuptools in your Python environment, so you can build the wheel:
 
 `pip install setuptools`
 
-`pip install protobuf`
+Install protobuf-compiler, required to compile API protos:
 
-`apt install -y protobuf-compiler`
+`apt install protobuf-compiler`
 
 To build dependencies run:
 
