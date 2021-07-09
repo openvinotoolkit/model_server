@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "serialization.hpp"
 
+#include "ov_utils.hpp"
+
 namespace ovms {
 
 Status serializeBlobToTensorProto(
@@ -22,6 +24,11 @@ Status serializeBlobToTensorProto(
     const std::shared_ptr<TensorInfo>& networkOutput,
     InferenceEngine::Blob::Ptr blob) {
     responseOutput.Clear();
+    if (networkOutput->getPrecision() != blob->getTensorDesc().getPrecision()) {
+        SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in precision expected:{} vs actual:{}",
+            networkOutput->getName(), networkOutput->getPrecision(), blob->getTensorDesc().getPrecision());
+        return StatusCode::INTERNAL_ERROR;
+    }
     switch (networkOutput->getPrecision()) {
     case InferenceEngine::Precision::FP32:
         responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value);
@@ -62,10 +69,40 @@ Status serializeBlobToTensorProto(
     }
     }
     responseOutput.mutable_tensor_shape()->Clear();
-    for (auto dim : networkOutput->getEffectiveShape()) {
+    auto& effectiveNetworkOutputShape = networkOutput->getEffectiveShape();
+    auto& actualBlobShape = getEffectiveBlobShape(blob);
+    if (effectiveNetworkOutputShape.size() != actualBlobShape.size()) {
+        SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in number of dimensions expected:{} vs actual:{}",
+            networkOutput->getName(), effectiveNetworkOutputShape.size(), actualBlobShape.size());
+        return StatusCode::INTERNAL_ERROR;
+    }
+    for (size_t i = 0; i < effectiveNetworkOutputShape.size(); ++i) {
+        size_t dim;
+        if (effectiveNetworkOutputShape[i] != 0) {
+            if (effectiveNetworkOutputShape[i] != actualBlobShape[i]) {
+                SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in dimension:{} expected:{} vs actual:{}",
+                    networkOutput->getName(), i, effectiveNetworkOutputShape[i], actualBlobShape[i]);
+                return StatusCode::INTERNAL_ERROR;
+            }
+            dim = effectiveNetworkOutputShape[i];
+        } else {
+            dim = actualBlobShape[i];
+        }
         responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
     responseOutput.mutable_tensor_content()->assign((char*)blob->buffer(), blob->byteSize());
+    return StatusCode::OK;
+}
+
+template <>
+Status OutputGetter<InferenceEngine::InferRequest&>::get(const std::string& name, InferenceEngine::Blob::Ptr& blob) {
+    try {
+        blob = outputSource.GetBlob(name);
+    } catch (const InferenceEngine::Exception& e) {
+        Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
+        SPDLOG_ERROR("{}: {}", status.string(), e.what());
+        return status;
+    }
     return StatusCode::OK;
 }
 
@@ -73,25 +110,30 @@ Status serializePredictResponse(
     InferenceEngine::InferRequest& inferRequest,
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response) {
-
+    Status status;
     for (const auto& pair : outputMap) {
         auto networkOutput = pair.second;
         InferenceEngine::Blob::Ptr blob;
+        OutputGetter<InferenceEngine::InferRequest&> outputGetter(inferRequest);
+        status = outputGetter.get(networkOutput->getName(), blob);
+        if (!status.ok()) {
+            return status;
+        }
         try {
             blob = inferRequest.GetBlob(networkOutput->getName());
         } catch (const InferenceEngine::Exception& e) {
-            Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
+            status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
             SPDLOG_ERROR("{}: {}", status.string(), e.what());
             return status;
         }
         auto& tensorProto = (*response->mutable_outputs())[networkOutput->getMappedName()];
-        auto status = serializeBlobToTensorProto(tensorProto, networkOutput, blob);
+        status = serializeBlobToTensorProto(tensorProto, networkOutput, blob);
         if (!status.ok()) {
             return status;
         }
     }
 
-    return StatusCode::OK;
+    return status;
 }
 
 }  // namespace ovms

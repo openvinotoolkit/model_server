@@ -32,11 +32,13 @@ const std::string EXIT_NODE_NAME = "response";
 
 class ExitNode : public Node {
     tensorflow::serving::PredictResponse* response;
+    const tensor_map_t outputsInfo;
 
 public:
-    ExitNode(tensorflow::serving::PredictResponse* response, std::set<std::string> gatherFromNode = {}) :
+    ExitNode(tensorflow::serving::PredictResponse* response, const tensor_map_t& outputsInfo, std::set<std::string> gatherFromNode = {}) :
         Node(EXIT_NODE_NAME, std::nullopt, gatherFromNode),
-        response(response) {
+        response(response),
+        outputsInfo(outputsInfo) {
     }
 
     // Exit node does not have execute logic.
@@ -54,7 +56,6 @@ public:
         throw std::logic_error("This node cannot have dependant");
     }
 
-    Status serialize(const InferenceEngine::Blob::Ptr& blob, tensorflow::TensorProto& proto);
     std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) override;
 };
 

@@ -85,6 +85,10 @@ const std::string& TensorInfo::getMappedName() const {
     return mapping.size() == 0 ? name : mapping;
 }
 
+void TensorInfo::setMappedName(const std::string& mappedName) {
+    mapping = mappedName;
+}
+
 const InferenceEngine::Precision TensorInfo::getPrecision() const {
     return precision;
 }
