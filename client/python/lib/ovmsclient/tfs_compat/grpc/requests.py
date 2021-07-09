@@ -160,4 +160,3 @@ def make_status_request(model_name, model_version=0):
         raise ValueError(f'model_version should be positive integer, but is negative')
     request.model_spec.version.value = model_version
     return GrpcModelStatusRequest(model_name, model_version, request)
-    
