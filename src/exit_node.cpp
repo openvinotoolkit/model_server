@@ -45,7 +45,7 @@ Status OutputGetter<const BlobMap&>::get(const std::string& name, InferenceEngin
     auto it = outputSource.find(name);
     if (it == outputSource.end()) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Failed to find expected pipeline output when serializing response: {}", name);
-        return StatusCode::UNKNOWN_ERROR;  // TODO
+        return StatusCode::INTERNAL_ERROR;
     }
     blob = it->second;
     return StatusCode::OK;
