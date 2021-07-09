@@ -151,11 +151,13 @@ def make_status_request(model_name, model_version=0):
 
     if not isinstance(model_name, str):
         raise TypeError(f'model_name should be type string, but is type {type(model_name).__name__}')
+
     if not isinstance(model_version, int):
         raise TypeError(f'model_version should be type int, but is type {type(model_version).__name__}')
+        
     if model_version < 0:
         raise ValueError(f'model_version should be positive integer, but is negative')
-        
+
     request = get_model_status_pb2.GetModelStatusRequest()
     request.model_spec.name = model_name
     request.model_spec.version.value = model_version
