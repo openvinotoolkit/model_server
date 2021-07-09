@@ -91,6 +91,7 @@ constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
 constexpr const int DUMMY_MODEL_OUTPUT_SIZE = 10;
 constexpr const float DUMMY_ADDITION_VALUE = 1.0;
+const std::vector<size_t> DUMMY_MODEL_SHAPE{1, 10};
 
 constexpr const char* SUM_MODEL_INPUT_NAME_1 = "input1";
 constexpr const char* SUM_MODEL_INPUT_NAME_2 = "input2";
@@ -103,7 +104,6 @@ constexpr const char* INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME = "output";
 constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
 
 constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life
-const std::vector<size_t> DUMMY_MODEL_SHAPE{1, 10};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
