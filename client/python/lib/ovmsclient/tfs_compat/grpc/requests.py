@@ -15,6 +15,7 @@
 #
 
 from ovmsclient.tfs_compat.base.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
+from tensorflow_serving.apis import get_model_status_pb2
 
 class GrpcPredictRequest(PredictRequest):
     pass
@@ -23,7 +24,10 @@ class GrpcModelMetadataRequest(ModelMetadataRequest):
     pass
 
 class GrpcModelStatusRequest(ModelStatusRequest):
-    pass
+
+    def __init__(self, model_name, model_version, raw_request):
+        super().__init__(model_name, model_version)
+        self.raw_request = raw_request
 
 def make_predict_request(inputs, model_name, model_version=0):
     '''
@@ -144,5 +148,16 @@ def make_status_request(model_name, model_version=0):
         >>> print(status_request)
 
     '''
+
+    request = get_model_status_pb2.GetModelStatusRequest()
+    if isinstance(model_name, str):
+        request.model_spec.name = model_name
+    else:
+        raise TypeError(f'model_name should be type string, but is type {type(model_name).__name__}')
+    if not isinstance(model_version, int):
+        raise TypeError(f'model_version should be type int, but is type {type(model_version)}')
+    if model_version < 0:
+        raise ValueError(f'model_version should be positive integer, but is negative')
+    request.model_spec.version.value = model_version
+    return GrpcModelStatusRequest(model_name, model_version, request)
     
-    raise NotImplementedError
