@@ -117,22 +117,6 @@ protected:
     ovms::tensor_map_t tensorMap;
 };
 
-class GRPCPredictRequest : public TensorflowGRPCPredict {
-public:
-    void SetUp() {
-        TensorflowGRPCPredict::SetUp();
-        (*request.mutable_inputs())[tensorName] = tensorProto;
-    }
-    void TearDown() {
-        request.mutable_inputs()->clear();
-    }
-
-public:
-    PredictRequest request;
-};
-
-class GRPCPredictRequestNegative : public GRPCPredictRequest {};
-
 class SerializeTFTensorProto : public TensorflowGRPCPredict {
 public:
     std::tuple<
@@ -149,6 +133,39 @@ public:
         return std::make_tuple(networkOutput, mockBlob);
     }
 };
+
+TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobPrecision) {
+    Precision tensorInfoPrecision = Precision::FP32;
+    shape_t tensorInfoShape{1, 3, 224, 224};
+    auto layout = Layout::NCHW;
+    const std::string name = "NOT_IMPORTANT";
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
+    const TensorDesc tensorDesc(Precision::I32, tensorInfoShape, layout);
+    InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<int32_t>(tensorDesc);
+    blob->allocate();
+    TensorProto responseOutput;
+    auto status = serializeBlobToTensorProto(responseOutput,
+        tensorInfo,
+        blob);
+    EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
+}
+
+TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobShape) {
+    Precision tensorInfoPrecision = Precision::FP32;
+    shape_t tensorInfoShape{1, 3, 224, 224};
+    shape_t blobShape{1, 3, 225, 225};
+    auto layout = Layout::NCHW;
+    const std::string name = "NOT_IMPORTANT";
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
+    const TensorDesc tensorDesc(Precision::FP32, blobShape, layout);
+    InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<float>(tensorDesc);
+    blob->allocate();
+    TensorProto responseOutput;
+    auto status = serializeBlobToTensorProto(responseOutput,
+        tensorInfo,
+        blob);
+    EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
+}
 
 TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
     Precision testedPrecision = GetParam();

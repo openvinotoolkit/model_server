@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "serialization.hpp"
 
+#include "ov_utils.hpp"
+
 namespace ovms {
 
 Status serializeBlobToTensorProto(
@@ -22,6 +24,11 @@ Status serializeBlobToTensorProto(
     const std::shared_ptr<TensorInfo>& networkOutput,
     InferenceEngine::Blob::Ptr blob) {
     responseOutput.Clear();
+    if (networkOutput->getPrecision() != blob->getTensorDesc().getPrecision()) {
+        SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in precision expected:{} vs actual:{}",
+            networkOutput->getName(), networkOutput->getPrecision(), blob->getTensorDesc().getPrecision());
+        return StatusCode::INTERNAL_ERROR;
+    }
     switch (networkOutput->getPrecision()) {
     case InferenceEngine::Precision::FP32:
         responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value);
@@ -63,10 +70,20 @@ Status serializeBlobToTensorProto(
     }
     responseOutput.mutable_tensor_shape()->Clear();
     auto& effectiveNetworkOutputShape = networkOutput->getEffectiveShape();
-    auto& actualBlobShape = blob->getTensorDesc().getDims();
+    auto& actualBlobShape = getEffectiveBlobShape(blob);
+    if (effectiveNetworkOutputShape.size() != actualBlobShape.size()) {
+        SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in number of dimensions expected:{} vs actual:{}",
+            networkOutput->getName(), effectiveNetworkOutputShape.size(), actualBlobShape.size());
+        return StatusCode::INTERNAL_ERROR;
+    }
     for (size_t i = 0; i < effectiveNetworkOutputShape.size(); ++i) {
         size_t dim;
         if (effectiveNetworkOutputShape[i] != 0) {
+            if (effectiveNetworkOutputShape[i] != actualBlobShape[i]) {
+                SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in dimension:{} expected:{} vs actual:{}",
+                    networkOutput->getName(), i, effectiveNetworkOutputShape[i], actualBlobShape[i]);
+                return StatusCode::INTERNAL_ERROR;
+            }
             dim = effectiveNetworkOutputShape[i];
         } else {
             dim = actualBlobShape[i];
