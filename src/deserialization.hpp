@@ -100,6 +100,14 @@ InferenceEngine::Blob::Ptr deserializeTensorProto(
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo);
 }
 
+template <class Requester>
+class InputSink {
+    Requester requester;
+    public:
+       InputSink(Requester requester) : requester(requester) {}
+       void give(const std::string name, InferenceEngine::Blob::Ptr blob);
+};
+
 template <class TensorProtoDeserializator>
 Status deserializePredictRequest(
     const tensorflow::serving::PredictRequest& request,

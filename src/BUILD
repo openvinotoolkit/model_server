@@ -34,6 +34,7 @@ cc_library(
 	    "customloaders.hpp",
 	    "customloaders.cpp",
         "customloaderinterface.hpp",
+        "deserialization.cpp",
         "deserialization.hpp",
         "dl_node.cpp",
         "dl_node.hpp",
