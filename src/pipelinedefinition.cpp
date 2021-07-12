@@ -904,22 +904,20 @@ Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
                 newDemultiplyStack.emplace_back(connectedNodeInfo.gatherFromNode);
             }
             if (connectedNodeInfo.kind == NodeKind::ENTRY && !newDemultiplyStack.empty()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} exists path that gathers from demultiplexer nodes that are not in path: {}.",
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} exists path that gathers from demultiplexer nodes that are not in path: {}. Consider changing inputs of the node that gathers from mentioned demultiplexer nodes",
                     getName(),
                     std::accumulate(newDemultiplyStack.back().begin(), newDemultiplyStack.back().end(), std::string{}, [](const std::string& lhs, const std::string& rhs) {
                         if (lhs.empty()) {
                             return rhs;
                         }
                         return lhs + ", " + rhs; }));
-                SPDLOG_LOGGER_WARN(modelmanager_logger, "Consider changing inputs of the node that gathers from mentioned demultiplexer nodes");
                 return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
             }
             auto visitedNode = std::find_if(std::begin(visitedNodes), std::end(visitedNodes),
                 [&connectedNodeName](const auto& visitedNode) { return visitedNode.first == connectedNodeName; });
             if (visitedNode != visitedNodes.end()) {
                 if (visitedNode->second != newDemultiplyStack) {
-                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} after node: {} exist paths that have different demultiply levels", getName(), connectedNodeName);
-                    SPDLOG_LOGGER_WARN(modelmanager_logger, "Consider changing output connections of node: {}", connectedNodeName);
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} after node: {} exist paths that have different demultiply levels. Consider changing output connections of node: {}", getName(), connectedNodeName, connectedNodeName);
                     return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
                 }
             } else {
