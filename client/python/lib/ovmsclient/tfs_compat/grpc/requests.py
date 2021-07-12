@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+from typing import Type
 from ovmsclient.tfs_compat.base.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
 from tensorflow_serving.apis import get_model_status_pb2
 
@@ -149,13 +150,23 @@ def make_status_request(model_name, model_version=0):
 
     '''
 
-    try:
-        if model_version < 0:
-            raise ValueError(f'model_version should be positive integer, but is negative')
-    except TypeError as err:
-        pass
+    _check_model_spec(model_name, model_version)
 
     request = get_model_status_pb2.GetModelStatusRequest()
     request.model_spec.name = model_name
     request.model_spec.version.value = model_version
     return GrpcModelStatusRequest(model_name, model_version, request)
+
+def _check_model_spec(model_name, model_version):
+
+    if not isinstance(model_name, str):
+        raise TypeError(f'model_name should be type string, but is type {type(model_name).__name__}')
+    
+    if not isinstance(model_version, int):
+        raise TypeError(f'model_version should be type int, but is type {type(model_version).__name__}')
+
+    if not model_version.bit_length() <= 63:
+        raise ValueError(f'model_version should have max 63 bits, but has {model_version.bit_length()}')
+
+    if model_version < 0:
+        raise ValueError(f'model_version should be positive integer, but is negative')
