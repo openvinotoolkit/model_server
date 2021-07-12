@@ -52,7 +52,7 @@ Modify the [sample resource](config/samples/intel_v1alpha1_ovms.yaml) and run th
 oc apply -f config/samples/intel_v1alpha1_ovms.yaml
 ```
 
-The available parameters](../../deploy/#helm-options-references) at the same.
+The available [parameters](../../deploy/#helm-options-references) are the same as above.
 
 <b>Note</b>: Some deployment configurations have prerequisites like creating relevant resources in Kubernetes. For example, a secret with credentials,
 persistent volume claim or configmap with a Model Server configuration file.
@@ -126,13 +126,9 @@ Overall accuracy= 100.0 %
 Average latency= 21.1 ms
 ```
 
-## OpenVINO Notebook integration with Redhat Open Data Science services.
+## Integration with OpenShift Data Science and Open Data Hub
+The Operator integrates with the JupyterHub [Spawner](https://jupyterhub.readthedocs.io/en/stable/reference/spawners.html) in [Red Hat OpenShift Data Science](https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-data-science) and [Open Data Hub](https://opendatahub.io/docs.html). Simply create a `Notebook` resource, which deploys an ImageStream containing the OpenVINO developer tools and ready-to-run Jupyter notebooks. To use the ImageStream, you must have already installed the Operator for OpenShift Data Science or Open Data Hub.  
 
-The `Notebook` resource integrates JupyterHub from OpenShift Data Science or Open Data Hub with a container image that includes developer
-tools from the OpenVINO toolkit and a set of Jupyter notebook tutorials. It enables selecting a defined image `openvino-notebook` from
-the Jupyter Spawner drop-down menu. The image is maintained by Intel.
-
-Create the `Notebook` resource in the same project with JupyterHub and RedHat OpenShift Data Science operator.
-It builds the image locally based on Dockerfile from https://github.com/openvinotoolkit/openvino_notebooks
+The `Create Notebook` button in the web console will build the container image and create an ImageStream. This enables selecting `openvino-notebook` image from the Jupyter Spawner drop-down menu. The [image](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/Dockerfile) is maintained by Intel.
 
 ![spawner](images/spawner.png)
