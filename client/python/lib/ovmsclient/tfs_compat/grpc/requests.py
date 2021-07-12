@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-from typing import Type
 from ovmsclient.tfs_compat.base.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
 from tensorflow_serving.apis import get_model_status_pb2
 
