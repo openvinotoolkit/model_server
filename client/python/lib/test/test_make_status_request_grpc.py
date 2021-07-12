@@ -20,6 +20,7 @@ def test_make_status_request_valid(name, version):
 invalid_input = [
     (12, 1, pytest.raises(TypeError), "12 has type int, but expected one of: bytes, unicode"),
     (None, -1, pytest.raises(ValueError), "model_version should be positive integer, but is negative"),
+    (None, 1, pytest.raises(TypeError), "None has type NoneType, but expected one of: bytes, unicode"),
     ("model_name", "3", pytest.raises(TypeError), "'3' has type str, but expected one of: int, long"),
     ("model_name" , None, pytest.raises(TypeError), "None has type NoneType, but expected one of: int, long"),
     ("model_name", -1, pytest.raises(ValueError), "model_version should be positive integer, but is negative"),
