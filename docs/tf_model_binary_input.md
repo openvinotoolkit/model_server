@@ -72,26 +72,26 @@ python grpc_binary_client.py --images_list input_images.txt --grpc_port 9000 --i
 Start processing:
         Model name: resnet
         Images list file: input_images.txt
-Batch: 0; Processing time: 107.76 ms; speed 9.28 fps
+Batch: 0; Processing time: 36.33 ms; speed 27.52 fps
          1 airliner 404 ; Correct match.
-Batch: 1; Processing time: 101.90 ms; speed 9.81 fps
+Batch: 1; Processing time: 18.39 ms; speed 54.38 fps
          2 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
-Batch: 2; Processing time: 100.58 ms; speed 9.94 fps
+Batch: 2; Processing time: 15.51 ms; speed 64.47 fps
          3 bee 309 ; Correct match.
-Batch: 3; Processing time: 101.75 ms; speed 9.83 fps
+Batch: 3; Processing time: 12.71 ms; speed 78.68 fps
          4 golden retriever 207 ; Correct match.
-Batch: 4; Processing time: 94.31 ms; speed 10.60 fps
+Batch: 4; Processing time: 13.15 ms; speed 76.04 fps
          5 gorilla, Gorilla gorilla 366 ; Correct match.
-Batch: 5; Processing time: 96.41 ms; speed 10.37 fps
+Batch: 5; Processing time: 12.87 ms; speed 77.69 fps
          6 magnetic compass 635 ; Correct match.
-Batch: 6; Processing time: 93.74 ms; speed 10.67 fps
+Batch: 6; Processing time: 12.22 ms; speed 81.85 fps
          7 peacock 84 ; Correct match.
-Batch: 7; Processing time: 94.35 ms; speed 10.60 fps
+Batch: 7; Processing time: 13.73 ms; speed 72.84 fps
          8 pelican 144 ; Correct match.
-Batch: 8; Processing time: 95.32 ms; speed 10.49 fps
+Batch: 8; Processing time: 13.15 ms; speed 76.05 fps
          9 snail 113 ; Correct match.
-Batch: 9; Processing time: 101.97 ms; speed 9.81 fps
+Batch: 9; Processing time: 13.74 ms; speed 72.76 fps
          10 zebra 340 ; Correct match.
 Overall accuracy= 100.0 %
-Average latency= 98.2 ms
+Average latency= 15.7 ms
 ```
