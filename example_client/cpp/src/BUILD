@@ -1,9 +1,7 @@
-# Description: Tensorflow Serving examples.
-
 cc_binary(
-    name = "resnet_client_cc",
+    name = "resnet_client",
     srcs = [
-        "resnet_client.cc",
+        "resnet_client.cpp",
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
