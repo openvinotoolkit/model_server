@@ -16,8 +16,8 @@
 # limitations under the License.
 #
 
-git clone https://github.com/tensorflow/tensorflow.git tf
-git clone https://github.com/tensorflow/serving.git tfs
+git clone --single-branch --branch v2.5.0 https://github.com/tensorflow/tensorflow.git tf
+git clone --single-branch --branch 2.5.1 https://github.com/tensorflow/serving.git tfs
 
 protoc --proto_path=$PWD/tfs --proto_path=$PWD/tf --python_out=$PWD \
 $PWD/tf/tensorflow/core/framework/*.proto \
