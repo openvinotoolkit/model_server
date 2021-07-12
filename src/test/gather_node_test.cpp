@@ -150,13 +150,13 @@ TEST_F(GatherNodeInputHandlerTest, SetInputsWithShardsHavingDifferentShapesShoul
     for (session_id_t j = 0; j < shardsCount; ++j) {
         EXPECT_FALSE(gInputHandler.isReady());
         status = gInputHandler.setInput(inputNames, inputBlobs[j], j);
+        EXPECT_EQ(status, StatusCode::OK) << status.string();
         // each input comming from different node so we call notify each time
+        status = gInputHandler.notifyFinishedDependency();
         if (!status.ok()) {
             EXPECT_EQ(status, StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS) << status.string();
             break;
         }
-        status = gInputHandler.notifyFinishedDependency();
-        EXPECT_EQ(status, StatusCode::OK) << status.string();
     }
     // The second notify should fail since the shard dimension should be different
     EXPECT_EQ(status, StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS) << status.string();

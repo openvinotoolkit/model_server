@@ -44,14 +44,6 @@ Status GatherNodeInputHandler::setInput(const std::string& inputName, InferenceE
             return StatusCode::INTERNAL_ERROR;
         }
     } else {
-        auto firstShardTensor = inputsShardsIt->second.begin()->second;
-        if (firstShardTensor->getTensorDesc() != ptr->getTensorDesc()) {
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Shard: {} tensor description differ. First shard desc: {}, current shard desc: {}",
-                shardId,
-                TensorInfo::tensorDescToString(firstShardTensor->getTensorDesc()),
-                TensorInfo::tensorDescToString(ptr->getTensorDesc()));
-            return StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS;
-        }
         auto itDidEmplacePair = inputsShardsIt->second.emplace(shardId, ptr);
         if (!itDidEmplacePair.second) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to put the same input: {} shard: {} twice", inputName, shardId);
