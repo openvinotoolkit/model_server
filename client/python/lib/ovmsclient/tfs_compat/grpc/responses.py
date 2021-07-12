@@ -27,7 +27,7 @@ class GrpcModelMetadataResponse(ModelMetadataResponse):
 class GrpcModelStatusResponse(ModelStatusResponse):
     
     @staticmethod
-    def state_names(self): 
+    def state_names(): 
         return {
         0: "UNKNOWN",
         10: "START",
