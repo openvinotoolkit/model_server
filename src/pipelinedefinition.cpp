@@ -904,7 +904,7 @@ Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
                 newDemultiplyStack.emplace_back(connectedNodeInfo.gatherFromNode);
             }
             if (connectedNodeInfo.kind == NodeKind::ENTRY && !newDemultiplyStack.empty()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} exists path that gathers from demultiplexer nodes that are not in path: {}. Consider changing inputs of the node that gathers from mentioned demultiplexer nodes",
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} exists path that gathers from nodes that are not in path: {}. Consider changing inputs of the node that gathers from mentioned demultiplexer nodes",
                     getName(),
                     std::accumulate(newDemultiplyStack.back().begin(), newDemultiplyStack.back().end(), std::string{}, [](const std::string& lhs, const std::string& rhs) {
                         if (lhs.empty()) {
