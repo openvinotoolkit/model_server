@@ -30,3 +30,25 @@ MODEL_SPEC_INVALID = [
     ("model_name", -1, ValueError, f'model_version should be in range <0, {2**63-1}>'),
     ("model_name", 9223372036854775809, ValueError, f'model_version should be in range <0, {2**63-1}>'),
 ]
+from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusResponse, ModelVersionStatus
+from tensorflow_serving.util.status_pb2 import StatusProto
+
+def generate_response(times):
+    raw_response = GetModelStatusResponse()
+    model_versions = []
+
+    for i in range(times):
+        status = StatusProto()
+        status.error_code = 1
+        status.error_message = "msg"
+
+        model_version_status = ModelVersionStatus()
+        model_version_status.version = i
+        model_version_status.state = 10
+        model_version_status.status.CopyFrom(status)
+
+        model_versions.append(model_version_status)
+    raw_response.model_version_status.extend(model_versions)
+    return raw_response
+
+MODEL_RESPONSE_CORRECT = [(generate_response(i), i) for i in range(4)]
