@@ -26,9 +26,7 @@ class GrpcModelMetadataResponse(ModelMetadataResponse):
 
 class GrpcModelStatusResponse(ModelStatusResponse):
     
-    @staticmethod
-    def state_names(): 
-        return {
+    _STATE_TO_STRING_MAPPING = {
         0: "UNKNOWN",
         10: "START",
         20: "LOADING",
@@ -42,7 +40,7 @@ class GrpcModelStatusResponse(ModelStatusResponse):
         model_version_status = self.raw_response.model_version_status
         for i in model_version_status:
             result[i.version] = dict([
-                ('state', self.state_names()[i.state]),
+                ('state', self._STATE_TO_STRING_MAPPING[i.state]),
                 ('error_code', i.status.error_code),
                 ('error_message', i.status.error_message),
             ])
