@@ -184,7 +184,7 @@ public:
          *
          * @return status
          */
-    Status retireVersions(std::shared_ptr<model_versions_t> versions, std::set<model_version_t> failedVersions);
+    Status retireVersions(std::shared_ptr<model_versions_t> versions, const std::set<model_version_t>& failedVersions);
 
     /**
          * @brief Retires all versions of Model
