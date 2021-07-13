@@ -131,7 +131,7 @@ def make_status_request(model_name, model_version=0):
 
         model_name: Name of the model that will receive the request.
 
-        model_version (optional): Version of the model that will receive the request.
+        model_version (optional): Version of the model that will receive the request. Must be type int.
             By default this value is set to 0, meaning the request will be sent to the default version of the model.
 
     Returns:
