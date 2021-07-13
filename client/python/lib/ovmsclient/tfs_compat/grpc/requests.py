@@ -159,13 +159,10 @@ def make_status_request(model_name, model_version=0):
 def _check_model_spec(model_name, model_version):
 
     if not isinstance(model_name, str):
-        raise TypeError(f'model_name should be type string, but is type {type(model_name).__name__}')
+        raise TypeError(f'model_name type should be string, but is {type(model_name).__name__}')
     
     if not isinstance(model_version, int):
-        raise TypeError(f'model_version should be type int, but is type {type(model_version).__name__}')
+        raise TypeError(f'model_version type should be int, but is {type(model_version).__name__}')
 
-    if not model_version.bit_length() <= 63:
-        raise ValueError(f'model_version should have max 63 bits, but has {model_version.bit_length()}')
-
-    if model_version < 0:
-        raise ValueError(f'model_version should be positive integer, but is negative')
+    if model_version.bit_length() > 63 or model_version < 0:
+        raise ValueError(f'model_version should be in range <0, {2**63-1}>')
