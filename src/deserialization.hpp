@@ -103,18 +103,21 @@ InferenceEngine::Blob::Ptr deserializeTensorProto(
 template <class Requester>
 class InputSink {
     Requester requester;
-    public:
-       InputSink(Requester requester) : requester(requester) {}
-       void give(const std::string name, InferenceEngine::Blob::Ptr blob);
+
+public:
+    InputSink(Requester requester) :
+        requester(requester) {}
+    Status give(const std::string name, InferenceEngine::Blob::Ptr blob);
 };
 
-template <class TensorProtoDeserializator>
+template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const tensorflow::serving::PredictRequest& request,
     const tensor_map_t& inputMap,
-    InferenceEngine::InferRequest& inferRequest) {
-    try {
-        for (const auto& pair : inputMap) {
+    Sink& inputSink) {
+    Status status;
+    for (const auto& pair : inputMap) {
+        try {
             const auto& name = pair.first;
             auto tensorInfo = pair.second;
             auto requestInputItr = request.inputs().find(name);
@@ -127,7 +130,7 @@ Status deserializePredictRequest(
 
             if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
                 SPDLOG_DEBUG("Request contains binary input: {}", name);
-                Status status = convertStringValToBlob(requestInput, blob, tensorInfo, false);
+                status = convertStringValToBlob(requestInput, blob, tensorInfo, false);
                 if (!status.ok()) {
                     SPDLOG_DEBUG("Binary inputs conversion failed.");
                     return status;
@@ -138,26 +141,28 @@ Status deserializePredictRequest(
             }
 
             if (blob == nullptr) {
-                Status status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
+                status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
                 SPDLOG_DEBUG(status.string());
                 return status;
             }
-
-            inferRequest.SetBlob(tensorInfo->getName(), blob);
+            status = inputSink.give(tensorInfo->getName(), blob);
+            if (!status.ok()) {
+                SPDLOG_DEBUG("Feeding inputs to inference performer failed:{}", status.string());
+                return status;
+            }
+            // OV implementation the InferenceEngine::Exception is not
+            // a base class for all other exceptions thrown from OV.
+            // OV can throw exceptions derived from std::logic_error.
+        } catch (const InferenceEngine::Exception& e) {
+            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+            return status;
+        } catch (std::logic_error& e) {
+            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+            return status;
         }
-        // OV implementation the InferenceEngine::Exception is not
-        // a base class for all other exceptions thrown from OV.
-        // OV can throw exceptions derived from std::logic_error.
-    } catch (const InferenceEngine::Exception& e) {
-        Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-        SPDLOG_DEBUG("{}: {}", status.string(), e.what());
-        return status;
-    } catch (std::logic_error& e) {
-        Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-        SPDLOG_DEBUG("{}: {}", status.string(), e.what());
-        return status;
     }
-
     return StatusCode::OK;
 }
 }  // namespace ovms

@@ -142,7 +142,8 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision)
     Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
     InferenceEngine::InferRequest inferRequest;
-    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inferRequest);
+    InputSink<InferRequest&> inputSink(inferRequest);
+    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink);
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION)
         << "Unsupported OVMS precision:"
         << testedPrecision
@@ -155,7 +156,8 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobExc
     std::shared_ptr<MockIInferRequestFailingInSetBlob> mInferRequestPtr =
         std::make_shared<MockIInferRequestFailingInSetBlob>();
     InferenceEngine::InferRequest inferRequest(mInferRequestPtr);
-    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inferRequest);
+    InputSink<InferRequest&> inputSink(inferRequest);
+    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink);
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION);
 }
 
@@ -192,9 +194,15 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobExc
         .Times(1)
         .WillRepeatedly(
             Throw(InferenceEngine::GeneralError("")));
-    auto status =
-        deserializePredictRequest<MockTensorProtoDeserializator>(
-            request, tensorMap, inferRequest);
+    InputSink<InferRequest&> inputSink(inferRequest);
+    Status status;
+    try {
+        status =
+            deserializePredictRequest<MockTensorProtoDeserializator>(
+                request, tensorMap, inputSink);
+    } catch (std::exception& e) {
+        SPDLOG_ERROR("wh:{}", e.what());
+    }
     EXPECT_EQ(status, ovms::StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR);
 }
 
@@ -204,7 +212,8 @@ TEST_P(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
     std::shared_ptr<MockIInferRequest> mInferRequestPtr = std::make_shared<MockIInferRequest>();
     InferenceEngine::InferRequest inferRequest(mInferRequestPtr);
     EXPECT_CALL(*mInferRequestPtr, SetBlob(_, _, _));
-    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inferRequest);
+    InputSink<InferRequest&> inputSink(inferRequest);
+    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink);
     EXPECT_TRUE(status.ok());
 }
 
