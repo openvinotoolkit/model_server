@@ -22,7 +22,7 @@ from config import MODEL_SPEC_INVALID, MODEL_SPEC_VALID
 from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
 
 @pytest.mark.parametrize("name, version", MODEL_SPEC_VALID)
-def test_make_status_request_valid(mocker, name, version):
+def test_make_status_request_valid(name, version):
     with patch('ovmsclient.tfs_compat.grpc.requests._check_model_spec') as mock_method:
         model_status_request = make_status_request(name, version)
     mock_method.assert_called_once()
