@@ -23,6 +23,7 @@
 #include <inference_engine.hpp>
 
 #include "binaryutils.hpp"
+#include "deserialization.hpp"
 #include "logging.hpp"
 
 #pragma GCC diagnostic push
@@ -62,34 +63,15 @@ Status EntryNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSes
 }
 
 Status EntryNode::fetchResults(BlobMap& outputs) {
-    // Fill outputs map with tensorflow predict request inputs. Fetch only those that are required in following nodes
-    for (const auto& node : this->next) {
-        for (const auto& pair : node.get().getMappingByDependency(*this)) {
-            const auto& outputName = pair.first;
-            if (outputs.find(outputName) != outputs.end()) {
-                continue;
-            }
-            auto it = request->inputs().find(outputName);
-            if (it == request->inputs().end()) {
-                std::stringstream ss;
-                ss << "Required input: " << outputName;
-                const std::string details = ss.str();
-                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Missing input with specific name: {}", getName(), details);
-                return Status(StatusCode::INVALID_MISSING_INPUT, details);
-            }
-            const auto& tensorProto = it->second;
-            InferenceEngine::Blob::Ptr blob;
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Deserializing input: {}", getName(), outputName);
-            auto status = deserialize(tensorProto, blob, inputsInfo.at(outputName));
-            if (!status.ok()) {
-                return status;
-            }
-            outputs[outputName] = blob;
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}]: blob with name: {} description: {} has been prepared", getName(), outputName, TensorInfo::tensorDescToString(blob->getTensorDesc()));
-        }
-    }
+    InputSink<BlobMap&> inputSink(outputs);
+    return deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, inputsInfo, inputSink);
+}
 
-    return StatusCode::OK;
+template <>
+Status InputSink<BlobMap&>::give(const std::string name, InferenceEngine::Blob::Ptr blob) {
+    Status status;
+    requester[name] = blob;
+    return status;
 }
 
 Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
