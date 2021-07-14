@@ -545,7 +545,7 @@ Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelP
     if ((this->config.isCustomLoaderRequiredToLoadModel()) && (isCustomLoaderConfigChanged)) {
         // unloading and the loading back the model
         isCustomLoaderConfigChanged = false;
-        unloadModel(isCustomLoaderConfigChanged);
+        retireModel(isCustomLoaderConfigChanged);
     }
     return loadModelImpl(config, parameter);
 }
@@ -554,7 +554,7 @@ Status ModelInstance::recoverFromReloadingError(const Status& status) {
     SPDLOG_WARN("Failed to perform complete reload with requested dynamic parameter. Model: {} version: {} with error: {}. Reloading to previous configuration",
         getName(), getVersion(), status.string());
     bool changeStatus{false};
-    unloadModel(changeStatus);
+    retireModel(changeStatus);
 
     auto recoveryStatus = reloadModel(config);
     if (!recoveryStatus.ok()) {
@@ -568,7 +568,7 @@ Status ModelInstance::reshapeWithFullReload(const Status& status, const DynamicM
     SPDLOG_WARN("Failed to reload model: {} version: {} with error: {}. Trying to perform complete reload with requested dynamic parameter",
         getName(), getVersion(), status.string());
     bool changeStatus{false};
-    unloadModel(changeStatus);
+    retireModel(changeStatus);
 
     auto recoveryStatus = reloadModel(config, parameter);
     if (!recoveryStatus.ok()) {
@@ -681,13 +681,12 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
     }
 }
 
-void ModelInstance::unloadModel(bool isPermanent, bool isError) {
+void ModelInstance::retireModel(bool isPermanent) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
-    ModelVersionStatusErrorCode errorStatus = isError ? ModelVersionStatusErrorCode::UNKNOWN : ModelVersionStatusErrorCode::OK;
     if (isPermanent) {
-        this->status.setUnloading(errorStatus);
+        this->status.setUnloading();
     } else {
-        this->status.setLoading(errorStatus);
+        this->status.setLoading();
     }
     subscriptionManager.notifySubscribers();
     while (!canUnloadInstance()) {
@@ -702,9 +701,41 @@ void ModelInstance::unloadModel(bool isPermanent, bool isError) {
     outputsInfo.clear();
     inputsInfo.clear();
     modelFiles.clear();
-    if (isPermanent && !isError) {
+    if (isPermanent) {
         status.setEnd();
     }
+
+    if (this->config.isCustomLoaderRequiredToLoadModel()) {
+        custom_loader_options_config_t customLoaderOptionsConfig = this->config.getCustomLoaderOptionsConfigMap();
+        const std::string loaderName = customLoaderOptionsConfig["loader_name"];
+        auto& customloaders = ovms::CustomLoaders::instance();
+        auto customLoaderInterfacePtr = customloaders.find(loaderName);
+        if (customLoaderInterfacePtr == nullptr) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "The loader {} is no longer available for model: {} version : {}",
+                loaderName, getName(), getVersion());
+        } else {
+            // once model is unloaded, notify custom loader object about the unload
+            customLoaderInterfacePtr->unloadModel(getName(), getVersion());
+        }
+    }
+}
+
+void ModelInstance::cleanupFailedLoad() {
+    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
+    this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
+    subscriptionManager.notifySubscribers();
+    while (!canUnloadInstance()) {
+        SPDLOG_DEBUG("Waiting to unload model: {} version: {}. Blocked by: {} inferences in progres.",
+            getName(), getVersion(), predictRequestsHandlesCount);
+        std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
+    }
+    inferRequestsQueue.reset();
+    execNetwork.reset();
+    network.reset();
+    engine.reset();
+    outputsInfo.clear();
+    inputsInfo.clear();
+    modelFiles.clear();
 
     if (this->config.isCustomLoaderRequiredToLoadModel()) {
         custom_loader_options_config_t customLoaderOptionsConfig = this->config.getCustomLoaderOptionsConfigMap();

@@ -176,11 +176,9 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire,
         cleanupModelTmpFiles(modelVersion->getModelConfig());
         updateDefaultVersion(version);
         if (failedVersions.find(version) != failedVersions.end()) {
-            bool isPermament = false;
-            bool isError = true;
-            modelVersion->unloadModel(isPermament, isError);
+            modelVersion->cleanupFailedLoad();
         } else {
-            modelVersion->unloadModel();
+            modelVersion->retireModel();
         }
     }
     subscriptionManager.notifySubscribers();
@@ -201,7 +199,11 @@ void Model::retireAllVersions(bool isError) {
     for (const auto versionModelInstancePair : modelVersions) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
         cleanupModelTmpFiles(versionModelInstancePair.second->getModelConfig());
-        versionModelInstancePair.second->unloadModel(true, isError);
+        if (isError) {
+            versionModelInstancePair.second->cleanupFailedLoad();
+        } else {
+            versionModelInstancePair.second->retireModel();
+        }
         updateDefaultVersion();
     }
     subscriptionManager.notifySubscribers();
