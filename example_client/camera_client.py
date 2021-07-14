@@ -134,7 +134,8 @@ def grab_frame(cap):
     if frame.shape[0] > 704 and frame.shape[1] > 704:
         frame = frame[0:704, 0:704]
     else:
-        frame = frame[0:frame.shape[0], 0:frame.shape[0]]
+        res = min(frame.shape[0], frame.shape[1])
+        frame = frame[0:res, 0:res]
         frame = cv2.resize(frame, (704, 704), interpolation=cv2.INTER_AREA)
     return frame
 
