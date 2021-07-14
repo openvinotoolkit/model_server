@@ -35,6 +35,7 @@ MODEL_SPEC_INVALID = [
     ("model_name", 9223372036854775809, ValueError, f'model_version should be in range <0, {2**63-1}>'),
 ]
 
+<<<<<<< HEAD
 def create_model_status_response(model_version, error_code, error_message, model_state):
     status = StatusProto()
     status.error_code = error_code
@@ -67,4 +68,55 @@ MODEL_STATUS_RESPONSE_VALID = [
     2: {"state" : ModelVersionStatus.State.LOADING, "error_code" : Code.UNKNOWN, "error_message" : "Could not load CNN"},
     3: {"state" : ModelVersionStatus.State.UNLOADING, "error_code" : Code.OK, "error_message" : ""}
 }
+=======
+ADDRESS_VALID = [
+    ("localhost"),
+    ("19.117.63.126"),
+    ("cluster.cloud.iotg.intel.com")
+]
+
+ADDRESS_INVALID = [
+    (19_117_63_126, TypeError, "address type should be string, but is int"),
+    (['localhost'], TypeError, "address type should be string, but is list"),
+    ("127.14", ValueError, "address is not valid"),
+    ("intel.-com", ValueError, "address is not valid")
+]
+
+PORT_VALID = [
+    (9000),
+    (2**16-1)
+]
+
+PORT_INVALID = [
+    ("9000", TypeError, "port type should be int, but is type str"),
+    ([2**16-1], TypeError, "port type should be int, but is type list"),
+    (2**16, ValueError, f"port should be in range <0, {2**16-1}>")
+]
+
+TLS_CONFIG_VALID = [
+    ({"client_key_path" : "valid_path", "client_cert_path" : "valid_path", "server_cert_path" : "valid_path"}),
+]
+
+TLS_CONFIG_INVALID = [
+    ({"non_client_key_path" : "valid_path", "client_cert_path" : "valid_path", "server_cert_path" : "valid_path"}, ValueError, "client_key_path is not defined in tls_config"),
+    ({"client_cert_path" : "valid_path", "server_cert_path" : "valid_path"}, ValueError, "client_key_path is not defined in tls_config"),
+    ({"client_key_path" : "valid_path", "non_client_cert_path" : "valid_path", "server_cert_path" : "valid_path"}, ValueError, "client_cert_path is not defined in tls_config"),
+    ({"client_key_path" : "valid_path", "server_cert_path" : "valid_path"}, ValueError, "client_cert_path is not defined in tls_config"),
+    ({"client_key_path" : "valid_path", "client_cert_path" : "valid_path", "non_server_cert_path" : "valid_path"}, ValueError, "server_cert_path is not defined in tls_config"),
+    ({"client_key_path" : "valid_path", "client_cert_path" : "valid_path"}, ValueError, "server_cert_path is not defined in tls_config"),
+
+    ({"client_key_path" : 1, "client_cert_path" : "valid_path", "server_cert_path" : "valid_path"}, TypeError, f'client_key_path type should be string but is type int'),
+    ({"client_key_path" : ["valid_path"], "client_cert_path" : "valid_path", "server_cert_path" : "valid_path"}, TypeError, f'client_key_path type should be string but is type list'),
+    ({"client_key_path" : 1, "client_cert_path" : "valid_path", "server_cert_path" : 1}, TypeError, f'client_key_path type should be string but is type int'),
+
+    ({"client_key_path" : "valid_path", "client_cert_path" : 1, "server_cert_path" : "valid_path"}, TypeError, f'client_cert_path type should be string but is type int'),
+    ({"client_key_path" : "valid_path", "client_cert_path" : 1, "server_cert_path" : 1}, TypeError, f'client_cert_path type should be string but is type int'),
+    ({"client_key_path" : "valid_path", "client_cert_path" : ["valid_path"], "server_cert_path" : "valid_path"}, TypeError, f'client_cert_path type should be string but is type list'),
+
+    ({"client_key_path" : "valid_path", "client_cert_path" : "valid_path", "server_cert_path" : 1}, TypeError, f'server_cert_path type should be string but is type int'),
+    ({"client_key_path" : "valid_path", "client_cert_path" : 1, "server_cert_path" : ["valid_path"]}, TypeError, f'client_cert_path type should be string but is type int'),
+    
+    ({"client_key_path" : "invalid_path", "client_cert_path" : "valid_path", "server_cert_path" : "valid_path"}, ValueError, f'invalid_path is not valid path to file'),
+
+>>>>>>> serving_client build draft + adress/port/tls_config tests draft
 ]
