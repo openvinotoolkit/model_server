@@ -970,7 +970,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     if (versionsToStart->size() > 0 || versionsToReload->size() > 0 || versionsToRetire->size() > 0) {
         reloadNeeded = true;
     }
-    std::set<ovms::model_version_t> failedVersions;
+    std::set<ovms::model_version_t> allFailedVersions;
     while (versionsToStart->size() > 0) {
         blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Adding new versions. Status: {};", blocking_status.string());
@@ -980,7 +980,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                 if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
                     availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
                 }
-                failedVersions.insert(version);
+                allFailedVersions.insert(version);
             }
             requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
             getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
@@ -1001,14 +1001,14 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
             availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
         }
-        failedVersions.insert(version);
+        allFailedVersions.insert(version);
     }
     // refresh versions to retire based on failed reloads
     requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
 
     if (versionsToRetire->size() > 0) {
-        auto status = model->retireVersions(versionsToRetire, failedVersions);
+        auto status = model->retireVersions(versionsToRetire, allFailedVersions);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
                 config.getName(),
