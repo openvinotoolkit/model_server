@@ -15,6 +15,7 @@
 #
 
 from ovmsclient.tfs_compat.base.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
+from tensorflow_serving.apis import get_model_status_pb2
 
 class GrpcPredictRequest(PredictRequest):
     pass
@@ -23,7 +24,10 @@ class GrpcModelMetadataRequest(ModelMetadataRequest):
     pass
 
 class GrpcModelStatusRequest(ModelStatusRequest):
-    pass
+
+    def __init__(self, model_name, model_version, raw_request):
+        super().__init__(model_name, model_version)
+        self.raw_request = raw_request
 
 def make_predict_request(inputs, model_name, model_version=0):
     '''
@@ -127,7 +131,7 @@ def make_status_request(model_name, model_version=0):
 
         model_name: Name of the model that will receive the request.
 
-        model_version (optional): Version of the model that will receive the request.
+        model_version (optional): Version of the model that will receive the request. Must be type int.
             By default this value is set to 0, meaning the request will be sent to the default version of the model.
 
     Returns:
@@ -144,5 +148,21 @@ def make_status_request(model_name, model_version=0):
         >>> print(status_request)
 
     '''
+
+    _check_model_spec(model_name, model_version)
+
+    request = get_model_status_pb2.GetModelStatusRequest()
+    request.model_spec.name = model_name
+    request.model_spec.version.value = model_version
+    return GrpcModelStatusRequest(model_name, model_version, request)
+
+def _check_model_spec(model_name, model_version):
+
+    if not isinstance(model_name, str):
+        raise TypeError(f'model_name type should be string, but is {type(model_name).__name__}')
     
-    raise NotImplementedError
+    if not isinstance(model_version, int):
+        raise TypeError(f'model_version type should be int, but is {type(model_version).__name__}')
+
+    if model_version.bit_length() > 63 or model_version < 0:
+        raise ValueError(f'model_version should be in range <0, {2**63-1}>')
