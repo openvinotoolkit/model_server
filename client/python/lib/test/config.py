@@ -34,22 +34,33 @@ MODEL_SPEC_INVALID = [
 from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusResponse, ModelVersionStatus
 from tensorflow_serving.util.status_pb2 import StatusProto
 
-def generate_response(times):
+def create_model_status_response(model_version, error_code, error_message, model_state):
+    status = StatusProto()
+    status.error_code = error_code
+    status.error_message = error_message
+
+    model_version_status = ModelVersionStatus()
+    model_version_status.version = model_version
+    model_version_status.state = model_state
+    model_version_status.status.CopyFrom(status)
+
+    return model_version_status
+
+def merge_model_status_responses(responses):
     raw_response = GetModelStatusResponse()
-    model_versions = []
-
-    for i in range(times):
-        status = StatusProto()
-        status.error_code = 1
-        status.error_message = "msg"
-
-        model_version_status = ModelVersionStatus()
-        model_version_status.version = i
-        model_version_status.state = 10
-        model_version_status.status.CopyFrom(status)
-
-        model_versions.append(model_version_status)
+    model_versions = [response for response in responses]
     raw_response.model_version_status.extend(model_versions)
+
     return raw_response
 
-MODEL_RESPONSE_CORRECT = [(generate_response(i), i) for i in range(4)]
+RAW_MODEL_RESPONSE = {
+    1 : (1, 1, "error" , 10),
+    2 : (2, 2, "error2", 20),
+    3 : (3, 3, "error3", 30)
+}
+
+RAW_MODEL_RESPONSE_VALID = [
+    ([RAW_MODEL_RESPONSE[1]]),
+    ([RAW_MODEL_RESPONSE[2]]),
+    ([RAW_MODEL_RESPONSE[1], RAW_MODEL_RESPONSE[2], RAW_MODEL_RESPONSE[3]]),
+]

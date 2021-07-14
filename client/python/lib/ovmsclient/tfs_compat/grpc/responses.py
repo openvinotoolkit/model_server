@@ -36,12 +36,12 @@ class GrpcModelStatusResponse(ModelStatusResponse):
         }
 
     def to_dict(self):
-        result = {}
+        result_dictionary = {}
         model_version_status = self.raw_response.model_version_status
-        for i in model_version_status:
-            result[i.version] = dict([
-                ('state', self._STATE_TO_STRING_MAPPING[i.state]),
-                ('error_code', i.status.error_code),
-                ('error_message', i.status.error_message),
+        for model_version in model_version_status:
+            result_dictionary[model_version.version] = dict([
+                ('state', self._STATE_TO_STRING_MAPPING[model_version.state]),
+                ('error_code', model_version.status.error_code),
+                ('error_message', model_version.status.error_message),
             ])
-        return result
+        return result_dictionary
