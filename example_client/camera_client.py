@@ -109,7 +109,7 @@ class RequestingThread(threading.Thread):
             is_success, buffer = cv2.imencode(".jpg", self.input_frame)
             request = predict_pb2.PredictRequest()
             request.model_spec.name = 'text'
-            request.inputs['image'].CopyFrom(make_tensor_proto([buffer.tostring()], shape=[1]))
+            request.inputs['image'].CopyFrom(make_tensor_proto([buffer.tobytes()], shape=[1]))
 
             predict_start_time = time.time()
             result = stub.Predict(request, 10.0)

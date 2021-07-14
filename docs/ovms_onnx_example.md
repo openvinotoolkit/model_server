@@ -18,8 +18,7 @@ Note that the downloaded model requires additional [preprocessing function](http
 Start the OVMS container:
 ```bash
 docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet:/model -p 9001:9001 openvino/model_server:latest \
---model_path /model --model_name resnet --port 9000
-
+--model_path /model --model_name resnet --port 9001
 ```
 
 Get an image to classify:
