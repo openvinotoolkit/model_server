@@ -32,16 +32,19 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--grpc_address', required=False, default='localhost', help='Specify url to grpc service')
 parser.add_argument('--grpc_port', required=False, default=8080, type=int, help='Specify port to grpc service')
 parser.add_argument('--num_threads', required=False, default=4, type=int, help='Number of threads for parallel service requesting')
-
+parser.add_argument('--video_source', required=False, default="0", type=str, help='Camera ID number or path to a video file')
 args = parser.parse_args()
 
 address = "{}:{}".format(args.grpc_address, args.grpc_port)
 channel = grpc.insecure_channel(address)
 stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
-# Video source - can be camera index number given by 'ls /dev/video*
-# or can be a video file, e.g. '~/Video.avi'
-cap = cv2.VideoCapture(0)
+try:
+    source = int(args.video_source)
+except ValueError:
+    source = args.video_source
+
+cap = cv2.VideoCapture(source)
 force_exit = False
 
 
@@ -104,11 +107,9 @@ class RequestingThread(threading.Thread):
             if force_exit:
                 break
             is_success, buffer = cv2.imencode(".jpg", self.input_frame)
-            io_buf = io.BytesIO(buffer).read()
-
             request = predict_pb2.PredictRequest()
             request.model_spec.name = 'text'
-            request.inputs['image'].CopyFrom(make_tensor_proto([io_buf], shape=[1]))
+            request.inputs['image'].CopyFrom(make_tensor_proto([buffer.tostring()], shape=[1]))
 
             predict_start_time = time.time()
             result = stub.Predict(request, 10.0)
@@ -129,7 +130,12 @@ for thread in threads:
 
 def grab_frame(cap):
     ret, frame = cap.read()
-    frame = cv2.resize(frame, (704, 704), interpolation=cv2.INTER_AREA)
+    # crop square and resize if original image is too small for the model
+    if frame.shape[0] > 704 and frame.shape[1] > 704:
+        frame = frame[0:704, 0:704]
+    else:
+        frame = frame[0:frame.shape[0], 0:frame.shape[0]]
+        frame = cv2.resize(frame, (704, 704), interpolation=cv2.INTER_AREA)
     return frame
 
 
