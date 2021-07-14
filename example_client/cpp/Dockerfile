@@ -61,4 +61,4 @@ RUN mkdir /bazel && \
 WORKDIR /build
 COPY . /build
 
-RUN bazel build //src:resnet_client_cc
+RUN bazel build //src:resnet_client
