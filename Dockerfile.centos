@@ -39,6 +39,7 @@ ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 
+RUN yum clean all
 RUN yum update -d6 -y && yum install -d6 -y epel-release centos-release-scl && yum install -d6 -y \
             boost-atomic \
             boost-chrono \

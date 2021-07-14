@@ -642,6 +642,40 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
 }
 
+TEST(ModelManager, InitialFailedLoadingVersionSavesModelVersionWithProperStatus) {
+    DummyModelDirectoryStructure modelDirectory("InitialFailedLoadingVersionSavesModelVersionWithProperStatus");
+    bool validVersion = true;
+    modelDirectory.addVersion(1, !validVersion);
+    ovms::ModelConfig config;
+    config.setBasePath("/tmp/" + modelDirectory.name);
+    config.setName(modelDirectory.name);
+    config.setNireq(1);
+    ConstructorEnabledModelManager manager;
+    manager.reloadModelWithVersions(config);
+    auto model = manager.findModelByName(modelDirectory.name);
+    ASSERT_NE(model, nullptr);
+    auto versions = model->getModelVersionsMapCopy();
+    EXPECT_EQ(versions.size(), 1);
+    auto versionIt = versions.find(1);
+    ASSERT_NE(versionIt, versions.end());
+    ASSERT_EQ(versionIt->second.getStatus().getState(), ovms::ModelVersionState::END);
+}
+
+TEST(ModelManager, ModelVersionFailedReloadReportsFailedStatus) {
+    DummyModelDirectoryStructure modelDirectory("ModelVersionFailedReloadReportsFailedStatus");
+    bool validVersion = true;
+    modelDirectory.addVersion(1, validVersion);
+    ovms::ModelConfig config;
+    config.setBasePath("/tmp/" + modelDirectory.name);
+    config.setName(modelDirectory.name);
+    config.setNireq(1);
+    ConstructorEnabledModelManager manager;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    // force reload with wrong shape
+    config.setTargetDevice("invalid");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE);
+}
+
 TEST(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
     const char* configWithTwoSameNames = R"({
    "model_config_list": [

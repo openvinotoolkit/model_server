@@ -4,6 +4,7 @@
             "config": {
                 "name": "east",
                 "base_path": "/OCR/east_fp32",
+                "layout": "NHWC",
                 "plugin_config": {
                     "CPU_THROUGHPUT_STREAMS":  "1"
                 }
@@ -12,6 +13,7 @@
         {
             "config": {
                 "name": "crnn",
+                "layout": "NHWC",
                 "base_path": "/OCR/crnn_tf"
             }
         }
@@ -50,8 +52,10 @@
                     "params": {
                         "original_image_width": "1920",
                         "original_image_height": "1024",
+                        "original_image_layout": "NHWC",
                         "target_image_width": "100",
                         "target_image_height": "32",
+                        "target_image_layout": "NHWC",
                         "convert_to_gray_scale": "false",
                         "confidence_threshold": "0.9",
                         "overlap_threshold": "0.2",

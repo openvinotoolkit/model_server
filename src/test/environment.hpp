@@ -17,6 +17,7 @@
 
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_DEBUG
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "../logging.hpp"
