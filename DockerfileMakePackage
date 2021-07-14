@@ -61,6 +61,7 @@ RUN find /usr/local/ssl/lib -iname 'libcrypto.so*' -exec cp -vP {} /ovms_release
 RUN if [ -f /ovms_release/lib/libbsl.so.0 ] ; then cd /ovms_release/lib/ ; rm -f libbsl.so.0 ; ln -s libbsl.so libbsl.so.0 ; fi
 RUN if [ -f /ovms_release/lib/libmvnc-hddl.so.0 ] ; then cd /ovms_release/lib/ ; rm -f libmvnc-hddl.so.0 ; ln -s libmvnc-hddl.so libmvnc-hddl.so.0 ; fi
 RUN if [ -f /ovms_release/lib/libion.so.0 ] ; then cd /ovms_release/lib/ ; rm -f libion.so.0 ; ln -s libion.so libion.so.0 ; fi
+RUN if [ -f /ovms_release/lib/libgna.so.2 ] ; then cd /ovms_release/lib/ ; rm -f libgna.so.2 ; ln -s libgna.so libgna.so.2 ; if [ -f /ovms_release/lib/libgna.so.2.0.0.1226 ] ; then cd /ovms_release/lib/ ; rm -f libgna.so.2.0.0.1226 ; ln -s libgna.so.2 libgna.so.2.0.0.1226 ; fi ; fi
 
 RUN find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \;
 WORKDIR /ovms_release/bin
