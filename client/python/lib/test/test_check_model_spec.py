@@ -27,4 +27,4 @@ def test_check_model_spec_valid(name, version):
 def test_check_model_spec_invalid(name, version, expected_exception, expected_message):
     with pytest.raises(expected_exception) as e_info:
         _check_model_spec(name, version)
-    assert str(e_info.value) == expected_message
+        assert str(e_info.value) == expected_message

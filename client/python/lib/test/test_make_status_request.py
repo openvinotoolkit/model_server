@@ -22,8 +22,10 @@ from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
 
 @pytest.mark.parametrize("name, version", MODEL_SPEC_VALID)
 def test_make_status_request_valid(mocker, name, version):
-    mocker.patch('ovmsclient.tfs_compat.grpc.requests._check_model_spec')
+    mock_method = mocker.patch('ovmsclient.tfs_compat.grpc.requests._check_model_spec')
     model_status_request = make_status_request(name, version)
+
+    mock_method.assert_called_once()
     assert isinstance(model_status_request, GrpcModelStatusRequest)
     assert model_status_request.model_version == version
     assert model_status_request.model_name == name
@@ -31,7 +33,8 @@ def test_make_status_request_valid(mocker, name, version):
 
 @pytest.mark.parametrize("name, version, expected_exception, expected_message", MODEL_SPEC_INVALID)
 def test_make_status_request_invalid(mocker, name, version, expected_exception, expected_message):
-    mocker.patch('ovmsclient.tfs_compat.grpc.requests._check_model_spec', side_effect=expected_exception(expected_message))
+    mock_method = mocker.patch('ovmsclient.tfs_compat.grpc.requests._check_model_spec', side_effect=expected_exception(expected_message))
     with pytest.raises(expected_exception) as e_info:
         model_status_request = make_status_request(name, version)
-    assert str(e_info.value) == expected_message
+        assert str(e_info.value) == expected_message
+    mock_method.assert_called_once()
