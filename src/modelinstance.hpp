@@ -514,6 +514,8 @@ public:
          */
     virtual void cleanupFailedLoad();
 
+    void unloadModelComponents();
+
     /**
          * @brief Wait for model to change to AVAILABLE state
          *

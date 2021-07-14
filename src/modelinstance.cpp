@@ -688,41 +688,19 @@ void ModelInstance::retireModel(bool isPermanent) {
     } else {
         this->status.setLoading();
     }
-    subscriptionManager.notifySubscribers();
-    while (!canUnloadInstance()) {
-        SPDLOG_DEBUG("Waiting to unload model: {} version: {}. Blocked by: {} inferences in progres.",
-            getName(), getVersion(), predictRequestsHandlesCount);
-        std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
-    }
-    inferRequestsQueue.reset();
-    execNetwork.reset();
-    network.reset();
-    engine.reset();
-    outputsInfo.clear();
-    inputsInfo.clear();
-    modelFiles.clear();
+    unloadModelComponents();
     if (isPermanent) {
         status.setEnd();
-    }
-
-    if (this->config.isCustomLoaderRequiredToLoadModel()) {
-        custom_loader_options_config_t customLoaderOptionsConfig = this->config.getCustomLoaderOptionsConfigMap();
-        const std::string loaderName = customLoaderOptionsConfig["loader_name"];
-        auto& customloaders = ovms::CustomLoaders::instance();
-        auto customLoaderInterfacePtr = customloaders.find(loaderName);
-        if (customLoaderInterfacePtr == nullptr) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "The loader {} is no longer available for model: {} version : {}",
-                loaderName, getName(), getVersion());
-        } else {
-            // once model is unloaded, notify custom loader object about the unload
-            customLoaderInterfacePtr->unloadModel(getName(), getVersion());
-        }
     }
 }
 
 void ModelInstance::cleanupFailedLoad() {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
+    unloadModelComponents();
+}
+
+void ModelInstance::unloadModelComponents() {
     subscriptionManager.notifySubscribers();
     while (!canUnloadInstance()) {
         SPDLOG_DEBUG("Waiting to unload model: {} version: {}. Blocked by: {} inferences in progres.",
