@@ -20,8 +20,6 @@ import config
 from model.models_information import ResnetBS8, AgeGender
 from object_model.server import Server
 
-from functional.config import target_device
-
 
 @pytest.fixture(scope="class")
 def start_server_batch_model(request):
