@@ -15,9 +15,10 @@
 #
 
 import pytest
-
-from ovmsclient.tfs_compat.grpc.tensors import make_ndarray
+import tensorflow as tf
+import numpy as np
 
 def test_make_ndarray_valid():
-    tensor_proto = [[1,2,3],[4,5,6]]
+    a = tf.constant([[1,2,3],[4,5,6]])
+    tensor_proto = tf.make_tensor_proto(a)
     print(make_ndarray(tensor_proto))

@@ -61,6 +61,39 @@ def make_tensor_proto(values, dtype=None, shape=None):
 
     raise NotImplementedError
 
+def as_numpy_dtype(tensor_dtype):
+    if tensor_dtype == 0:
+        raise ValueError("Tensor data type invalid")
+    elif tensor_dtype == 1:
+        return np.float32
+    elif tensor_dtype == 2:
+        return np.float64
+    elif tensor_dtype == 3:
+        return np.int32
+    elif tensor_dtype == 4:
+        return np.uint8
+    elif tensor_dtype == 5:
+        return np.int16
+    elif tensor_dtype == 6:
+        return np.int8
+    elif tensor_dtype == 7:
+        return np.string
+    elif tensor_dtype == 8:
+        return np.complex64
+    elif tensor_dtype == 9:
+        return np.int64
+    elif tensor_dtype == 10:
+        return np.bool
+    elif tensor_dtype == 17:
+        return np.uint16
+    elif tensor_dtype == 22:
+        return np.uint32
+    elif tensor_dtype == 23:
+        return np.uint64
+    else:
+        return np.uint32
+
+
 def make_ndarray(tensor_proto):
     '''
     Create numpy ndarray from tensor_proto.
@@ -86,4 +119,55 @@ def make_ndarray(tensor_proto):
         >>> output = make_ndarray(tensor_proto)
         >>> print(output)
     '''
-    return 0
+    tensor_shape = [d.size for d in tensor_proto.tensor_shape.dim]
+    size = np.prod(tensor_shape, dtype=np.int64)
+    dtype = as_numpy_dtype(tensor_proto.dtype)
+    
+    if tensor_proto.tensor_content:
+        return (np.frombuffer(tensor_proto.tensor_content,
+                            dtype=dtype).copy().reshape(tensor_shape))
+
+    if dtype == np.string:
+        values = list(tensor_proto.string_val)
+        padding = size - len(values)
+        if padding > 0:
+            last = values[-1] if values else ""
+            values.extend([last] * padding)
+        return np.array(values, dtype=dtype).reshape(tensor_shape)
+
+    if dtype == np.float16 or dtype == np.bfloat16:
+        values = np.fromiter(tensor_proto.half_val, dtype=np.uint16)
+        values.dtype = dtype
+    elif dtype == np.float32:
+        values = np.fromiter(tensor_proto.float_val, dtype=dtype)
+    elif dtype == np.float64:
+        values = np.fromiter(tensor_proto.double_val, dtype=dtype)
+    elif dtype in [
+        np.int32, np.uint8, np.uint16, np.int16, np.int8,
+        np.qint32, np.quint8, np.qint8, np.qint16, np.quint16
+    ]:
+        values = np.fromiter(tensor_proto.int_val, dtype=dtype)
+    elif dtype == np.int64:
+        values = np.fromiter(tensor_proto.int64_val, dtype=dtype)
+    elif dtype == np.uint32:
+        values = np.fromiter(tensor_proto.uint32_val, dtype=dtype)
+    elif dtype == np.uint64:
+        values = np.fromiter(tensor_proto.uint64_val, dtype=dtype)
+    elif dtype == np.complex64:
+        it = iter(tensor_proto.scomplex_val)
+        values = np.array([complex(x[0], x[1]) for x in zip(it, it)], dtype=dtype)
+    elif dtype == np.complex128:
+        it = iter(tensor_proto.dcomplex_val)
+        values = np.array([complex(x[0], x[1]) for x in zip(it, it)], dtype=dtype)
+    elif dtype == np.bool:
+        values = np.fromiter(tensor_proto.bool_val, dtype=dtype)
+    else:
+        raise TypeError("Unsupported tensor type: %s" % tensor_proto.dtype)
+
+    if values.size == 0:
+        return np.zeros(tensor_shape, dtype)
+
+    if values.size != size:
+        values = np.pad(values, (0, size - values.size), "edge")
+
+    return values.reshape(tensor_shape)
