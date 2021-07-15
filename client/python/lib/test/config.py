@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusResponse, ModelVersionStatus
+from tensorflow_serving.util.status_pb2 import StatusProto
+from enum import Enum
+
 MODEL_SPEC_VALID = [
     ("model_name", 1),
     ("3", 17),
@@ -30,9 +34,6 @@ MODEL_SPEC_INVALID = [
     ("model_name", -1, ValueError, f'model_version should be in range <0, {2**63-1}>'),
     ("model_name", 9223372036854775809, ValueError, f'model_version should be in range <0, {2**63-1}>'),
 ]
-
-from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusResponse, ModelVersionStatus
-from tensorflow_serving.util.status_pb2 import StatusProto
 
 def create_model_status_response(model_version, error_code, error_message, model_state):
     status = StatusProto()
@@ -53,14 +54,45 @@ def merge_model_status_responses(responses):
 
     return raw_response
 
-RAW_MODEL_RESPONSE = {
-    1 : (1, 1, "error" , 10),
-    2 : (2, 2, "error2", 20),
-    3 : (3, 3, "error3", 30)
-}
+class ModelState(Enum):
+    # UNKNOWN = 0
+    START = 10
+    LOADING = 20
+    AVAILABLE = 30
+    UNLOADING = 40
+    END = 50
+
+class ErrorCode(Enum):
+    OK = 0
+    # CANCELLED = 1
+    UNKNOWN = 2
+    # INVALID_ARGUMENT = 3
+    # DEADLINE_EXCEEDED = 4
+    # NOT_FOUND = 5
+    # ALREADY_EXISTS = 6
+    # PERMISSION_DENIED = 7
+    # UNAUTHENTICATED = 16
+    # RESOURCE_EXHAUSTED = 8
+    # FAILED_PRECONDITION = 9
+    # ABORTED = 10
+    # OUT_OF_RANGE = 11
+    # UNIMPLEMENTED = 12
+    # INTERNAL = 13
+    # UNAVAILABLE = 14
+    # DATA_LOSS = 15
+    # DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD = 20
 
 RAW_MODEL_RESPONSE_VALID = [
-    ([RAW_MODEL_RESPONSE[1]]),
-    ([RAW_MODEL_RESPONSE[2]]),
-    ([RAW_MODEL_RESPONSE[1], RAW_MODEL_RESPONSE[2], RAW_MODEL_RESPONSE[3]]),
+{
+    1: (ModelState.AVAILABLE.value, ErrorCode.OK.value, "")
+},
+{
+    2: (ModelState.END.value, ErrorCode.OK.value, ""),
+    3: (ModelState.AVAILABLE.value, ErrorCode.OK.value, "")
+},
+{
+    1: (ModelState.START.value, ErrorCode.OK.value, ""),
+    2: (ModelState.LOADING.value, ErrorCode.UNKNOWN.value, "Could not load CNN"),
+    3: (ModelState.UNLOADING.value, ErrorCode.OK.value, "")
+}
 ]
