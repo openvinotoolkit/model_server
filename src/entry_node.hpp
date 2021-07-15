@@ -57,11 +57,6 @@ public:
         throw std::logic_error("This node cannot have dependency");
     }
 
-    // Deserialize proto to blob
-    Status deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo);
-    Status deserializeBinaryInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo);
-    Status deserializeNumericalInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob);
-
     Status isInputBinary(const std::string& name, bool& isBinary) const;
 };
 
