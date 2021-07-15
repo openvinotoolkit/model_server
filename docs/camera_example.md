@@ -61,3 +61,5 @@ Or choose to work with video file as well:
 ```
 python3 camera_client.py --grpc_address [hostname] --grpc_port 9001 --video_source ~/video.mp4
 ```
+
+> **NOTE**: Video source is cropped to 704x704 resolution to match model input size.
