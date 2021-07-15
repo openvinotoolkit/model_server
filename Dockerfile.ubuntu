@@ -33,7 +33,7 @@ ARG TEMP_DIR=/tmp/openvino_installer
 ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
 ARG JOBS
-ARG APT_OV_PACKAGE=intel-openvino-runtime-ubuntu20-2021.3.394
+ARG APT_OV_PACKAGE=intel-openvino-runtime-ubuntu20-2021.4.582
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
@@ -73,7 +73,8 @@ RUN apt update && apt install -y \
             python3-numpy \
             unzip \
             wget \
-            unzip && \
+            unzip \
+            xz-utils && \
             apt clean
 
 

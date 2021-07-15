@@ -22,9 +22,6 @@ FROM $BUILD_IMAGE
 ARG ov_use_binary=1
 SHELL ["/bin/bash", "-c"]
 
-RUN if [ "$BASE_OS" == "centos" ] || [ "$BASE_OS" == "redhat" ] ; then true ; else exit 0 ; fi ; yum install -y xz
-RUN if [ "$BASE_OS" == "ubuntu" ] ; then true ; else exit 0 ; fi ; apt install -y xz-utils
-
 RUN mkdir /patchelf && cd /patchelf && \
 	wget https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
 	tar -xf 0.10.tar.gz && ls -lah && cd */ && \

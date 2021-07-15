@@ -75,7 +75,8 @@ RUN yum update -d6 -y && yum install -d6 -y epel-release centos-release-scl && y
             which \
             libxml2-devel \
             yum-utils \
-            unzip && \
+            unzip \
+            xz && \
             yum clean all
 
 SHELL [ "/usr/bin/scl", "enable", "devtoolset-8" ]
