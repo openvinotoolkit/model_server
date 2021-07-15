@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+from tensorflow.core.framework.tensor_pb2 import TensorProto
+
 def make_tensor_proto(values, dtype=None, shape=None):
     '''
     Create TensorProto object from values.
@@ -77,7 +79,7 @@ def as_numpy_dtype(tensor_dtype):
     elif tensor_dtype == 6:
         return np.int8
     elif tensor_dtype == 7:
-        return np.string
+        return np.str
     elif tensor_dtype == 8:
         return np.complex64
     elif tensor_dtype == 9:
@@ -127,7 +129,7 @@ def make_ndarray(tensor_proto):
         return (np.frombuffer(tensor_proto.tensor_content,
                             dtype=dtype).copy().reshape(tensor_shape))
 
-    if dtype == np.string:
+    if dtype == np.str:
         values = list(tensor_proto.string_val)
         padding = size - len(values)
         if padding > 0:
@@ -135,7 +137,7 @@ def make_ndarray(tensor_proto):
             values.extend([last] * padding)
         return np.array(values, dtype=dtype).reshape(tensor_shape)
 
-    if dtype == np.float16 or dtype == np.bfloat16:
+    if dtype == np.float16:
         values = np.fromiter(tensor_proto.half_val, dtype=np.uint16)
         values.dtype = dtype
     elif dtype == np.float32:

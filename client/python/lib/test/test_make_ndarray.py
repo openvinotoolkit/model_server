@@ -15,10 +15,41 @@
 #
 
 import pytest
-import tensorflow as tf
 import numpy as np
+from ovmsclient.tfs_compat.grpc.tensors import make_ndarray
+from tensorflow.core.framework.tensor_shape_pb2 import *
 
-def test_make_ndarray_valid():
-    a = tf.constant([[1,2,3],[4,5,6]])
-    tensor_proto = tf.make_tensor_proto(a)
-    print(make_ndarray(tensor_proto))
+shape = TensorShapeProto(dim = [TensorShapeProto.Dim(size=3)])
+
+def test_make_ndarray_valid_int():
+    tensor_proto = TensorProto(tensor_shape=shape, dtype = 6, tensor_content = bytes([1,2,3]))
+    array = make_ndarray(tensor_proto)
+    assert str(array) == "[1 2 3]"
+
+def test_make_ndarray_valid_float():
+    hex_string = "0000803f0000004000004040"
+    tensor_proto = TensorProto(tensor_shape=shape, dtype = 1, tensor_content = bytes.fromhex(hex_string))
+    array = make_ndarray(tensor_proto)
+    assert str(array) == "[1. 2. 3.]"
+
+def test_make_ndarray_valid_3_dims_shape():
+    hex_string = "0000803f00000040000040400000803f0000004000004040"
+    _shape = TensorShapeProto(dim = [TensorShapeProto.Dim(size=1), TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)])
+    tensor_proto = TensorProto(tensor_shape=_shape, dtype = 1, tensor_content = bytes.fromhex(hex_string))
+    array = make_ndarray(tensor_proto)
+    assert str(array) == "[[[1. 2. 3.]\n  [1. 2. 3.]]]"
+
+def test_make_ndarray_valid_string():
+    hex_string = "11111111"
+    tensor_proto = TensorProto(tensor_shape=shape, dtype = 7, string_val = [bytes.fromhex(hex_string)])
+    array = make_ndarray(tensor_proto)
+    assert str(array) == "['\\x11\\x11\\x11\\x11' '\\x11\\x11\\x11\\x11' '\\x11\\x11\\x11\\x11']"
+
+def test_make_ndarray_invalid_type():
+    tensor_proto = TensorProto(tensor_shape=shape)
+    tensor_proto.dtype = 0
+    with pytest.raises(ValueError) as exception_info:
+        make_ndarray(tensor_proto)
+
+    exception = exception_info.value
+    assert str(exception) == "Tensor data type invalid"
