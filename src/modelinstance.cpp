@@ -1012,7 +1012,8 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
 
     timer.start("deserialize");
     InputSink<InferRequest&> inputSink(inferRequest);
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink);
+    bool isPipeline = false;
+    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
     timer.stop("deserialize");
     if (!status.ok())
         return status;

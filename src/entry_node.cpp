@@ -64,7 +64,28 @@ Status EntryNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSes
 
 Status EntryNode::fetchResults(BlobMap& outputs) {
     InputSink<BlobMap&> inputSink(outputs);
-    return deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, inputsInfo, inputSink);
+    // Fill outputs map with tensorflow predict request inputs. Fetch only those that are required in following nodes
+    for (const auto& node : this->next) {
+        for (const auto& pair : node.get().getMappingByDependency(*this)) {
+            const auto& outputName = pair.first;
+            if (outputs.find(outputName) != outputs.end()) {
+                continue;
+            }
+            auto it = request->inputs().find(outputName);
+            if (it == request->inputs().end()) {
+                std::stringstream ss;
+                ss << "Required input: " << outputName;
+                const std::string details = ss.str();
+                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Missing input with specific name: {}", getName(), details);
+                return Status(StatusCode::INVALID_MISSING_INPUT, details);
+            }
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Deserializing input: {}, 2nd name:{}", getName(), outputName, inputsInfo.at(outputName)->getName());
+        }
+    }
+    bool isPipeline = true;
+    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, inputsInfo, inputSink, isPipeline);
+
+    return status;
 }
 
 template <>

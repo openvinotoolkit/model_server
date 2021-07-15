@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,5 +36,23 @@ Status InputSink<InferenceEngine::InferRequest&>::give(const std::string name, I
     }
 
     return status;
+}
+
+std::shared_ptr<ovms::TensorInfo> getFinalShapedTensorInfo(ovms::TensorInfo& servableInfo, const tensorflow::TensorProto& requestInput, bool isPipeline) {
+    auto potentiallyDynamicShape = servableInfo.getShape();
+    if (isPipeline) {
+        potentiallyDynamicShape = servableInfo.getEffectiveShape();
+    }
+    shape_t newShape;
+    for (int i = 0; i < requestInput.tensor_shape().dim_size(); ++i) {
+        size_t servableDimensionSize = potentiallyDynamicShape[i];
+        size_t tensorProtoDimensionSize = requestInput.tensor_shape().dim(i).size();
+        if (servableDimensionSize == 0) {
+            newShape.emplace_back(tensorProtoDimensionSize);
+        } else {
+            newShape.emplace_back(servableDimensionSize);
+        }
+    }
+    return servableInfo.createCopyWithNewShape(newShape);
 }
 }  // namespace ovms

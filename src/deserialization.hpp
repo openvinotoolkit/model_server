@@ -33,11 +33,13 @@
 
 namespace ovms {
 
+std::shared_ptr<ovms::TensorInfo> getFinalShapedTensorInfo(ovms::TensorInfo& servableInfo, const tensorflow::TensorProto& requestInput, bool isPipeline);
+
 template <typename T>
 InferenceEngine::Blob::Ptr makeBlob(const tensorflow::TensorProto& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     return InferenceEngine::make_shared_blob<T>(
-        tensorInfo->getTensorDesc(),
+        getFinalShapedTensorInfo(*tensorInfo, requestInput, isPipeline)->getTensorDesc(),
         const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
 }
 
@@ -45,18 +47,20 @@ class ConcreteTensorProtoDeserializator {
 public:
     static InferenceEngine::Blob::Ptr deserializeTensorProto(
         const tensorflow::TensorProto& requestInput,
-        const std::shared_ptr<TensorInfo>& tensorInfo) {
+        const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
         switch (tensorInfo->getPrecision()) {
         case InferenceEngine::Precision::FP32:
-            return makeBlob<float>(requestInput, tensorInfo);
+            return makeBlob<float>(requestInput, tensorInfo, isPipeline);
         case InferenceEngine::Precision::I32:
-            return makeBlob<int32_t>(requestInput, tensorInfo);
+            return makeBlob<int32_t>(requestInput, tensorInfo, isPipeline);
         case InferenceEngine::Precision::I8:
-            return makeBlob<int8_t>(requestInput, tensorInfo);
+            return makeBlob<int8_t>(requestInput, tensorInfo, isPipeline);
         case InferenceEngine::Precision::U8:
-            return makeBlob<uint8_t>(requestInput, tensorInfo);
+            return makeBlob<uint8_t>(requestInput, tensorInfo, isPipeline);
+        case InferenceEngine::Precision::I16:
+            return makeBlob<int16_t>(requestInput, tensorInfo, isPipeline);
         case InferenceEngine::Precision::FP16: {
-            auto blob = InferenceEngine::make_shared_blob<uint16_t>(tensorInfo->getTensorDesc());
+            auto blob = InferenceEngine::make_shared_blob<uint16_t>(getFinalShapedTensorInfo(*tensorInfo, requestInput, isPipeline)->getTensorDesc());
             blob->allocate();
             // Needs conversion due to zero padding for each value:
             // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
@@ -68,7 +72,7 @@ public:
             return blob;
         }
         case InferenceEngine::Precision::U16: {
-            auto blob = InferenceEngine::make_shared_blob<uint16_t>(tensorInfo->getTensorDesc());
+            auto blob = InferenceEngine::make_shared_blob<uint16_t>(getFinalShapedTensorInfo(*tensorInfo, requestInput, isPipeline)->getTensorDesc());
             blob->allocate();
             // Needs conversion due to zero padding for each value:
             // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
@@ -79,8 +83,6 @@ public:
             }
             return blob;
         }
-        case InferenceEngine::Precision::I16:
-            return makeBlob<int16_t>(requestInput, tensorInfo);
         case InferenceEngine::Precision::I64:
         case InferenceEngine::Precision::MIXED:
         case InferenceEngine::Precision::Q78:
@@ -96,8 +98,8 @@ public:
 template <class TensorProtoDeserializator>
 InferenceEngine::Blob::Ptr deserializeTensorProto(
     const tensorflow::TensorProto& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo) {
-    return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo);
+    const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+    return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, isPipeline);
 }
 
 template <class Requester>
@@ -114,7 +116,7 @@ template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const tensorflow::serving::PredictRequest& request,
     const tensor_map_t& inputMap,
-    Sink& inputSink) {
+    Sink& inputSink, bool isPipeline) {
     Status status;
     for (const auto& pair : inputMap) {
         try {
@@ -130,14 +132,14 @@ Status deserializePredictRequest(
 
             if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
                 SPDLOG_DEBUG("Request contains binary input: {}", name);
-                status = convertStringValToBlob(requestInput, blob, tensorInfo, false);
+                status = convertStringValToBlob(requestInput, blob, tensorInfo, isPipeline);
                 if (!status.ok()) {
                     SPDLOG_DEBUG("Binary inputs conversion failed.");
                     return status;
                 }
             } else {
                 blob = deserializeTensorProto<TensorProtoDeserializator>(
-                    requestInput, tensorInfo);
+                    requestInput, tensorInfo, isPipeline);
             }
 
             if (blob == nullptr) {
@@ -145,7 +147,7 @@ Status deserializePredictRequest(
                 SPDLOG_DEBUG(status.string());
                 return status;
             }
-            status = inputSink.give(tensorInfo->getName(), blob);
+            status = inputSink.give(name, blob);
             if (!status.ok()) {
                 SPDLOG_DEBUG("Feeding inputs to inference performer failed:{}", status.string());
                 return status;
@@ -163,6 +165,6 @@ Status deserializePredictRequest(
             return status;
         }
     }
-    return StatusCode::OK;
+    return status;
 }
 }  // namespace ovms

@@ -215,7 +215,6 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} failed to generate subsessions due to error: {}", getName(), e.what());
         return StatusCode::INTERNAL_ERROR;
     }
-
     for (auto& [blobName, blob] : blobMap) {
         auto tensorDesc = blob->getTensorDesc();
         auto newDims = tensorDesc.getDims();
