@@ -131,7 +131,8 @@ public:
         const string& modelName,
         const string& inputName,
         const string& outputName,
-        const BinaryData& entry) {
+        const BinaryData& entry,
+        bool& isLabelCorrect) {
 
         PredictRequest predictRequest;
         PredictResponse response;
@@ -179,10 +180,12 @@ public:
             std::cout << "most probable label: " << label << "; expected: " << entry.expectedLabel;
             if (entry.expectedLabel == label) {
                 std::cout << "; OK" << std::endl;
+                isLabelCorrect = true;
                 return true;
             } else {
                 std::cout << "; Incorrect" << std::endl;
-                return false;
+                isLabelCorrect = false;
+                return true;
             }
         } else {
             std::cout << "gRPC call return code: " << status.error_code() << ": "
@@ -204,14 +207,18 @@ public:
         int64 correctLabels = 0;
         for (int64 i = 0; i < iterations; i++) {
             ServingClient client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()));
-            if (client.predict(modelName, inputName, outputName, entries[i % entries.size()])) {
+            bool isLabelCorrect = false;
+            if (!client.predict(modelName, inputName, outputName, entries[i % entries.size()], isLabelCorrect)) {
+                return;
+            }
+            if (isLabelCorrect) {
                 correctLabels++;
             }
         }
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - begin);
 
-        std::cout << "Overall accuracy: " << (correctLabels  * 100) / iterations << "%" << std::endl;
+        std::cout << "Overall accuracy: " << (correctLabels * 100) / iterations << "%" << std::endl;
         std::cout << "Average predict time: " << (duration.count() / 1000) / iterations << "ms" << std::endl;
     }
 };

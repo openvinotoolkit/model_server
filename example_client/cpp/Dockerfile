@@ -1,6 +1,8 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+ENV DEBIAN_FRONTEND=noninteractive 
+
+RUN apt update && apt install -y --no-install-recommends \
         automake \
         build-essential \
         ca-certificates \
@@ -18,7 +20,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         openjdk-8-jre-headless \
         pkg-config \
         python-dev \
-        python3.6-dev \
         software-properties-common \
         swig \
         unzip \
