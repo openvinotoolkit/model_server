@@ -17,6 +17,7 @@
 import grpc
 from validators import ipv4, domain
 import os
+import OpenSSL.crypto
 
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
 <<<<<<< HEAD
@@ -125,8 +126,8 @@ class GrpcClient(ServingClient):
 
         if 'tls_config' in config:
             client_key, client_cert, server_cert = _prepare_certs(
-                config['tls_config']['client_key_path'],
-                config['tls_config']['client_cert_path'],
+                config['tls_config']['client_key_path'] if 'client_key_path' in config['tls_config'] else None,
+                config['tls_config']['client_cert_path'] if 'client_cert_path' in config['tls_config'] else None,
                 config['tls_config']['server_cert_path']
             )
             
@@ -148,14 +149,35 @@ class GrpcClient(ServingClient):
 
 def _prepare_certs(client_key=None, client_cert=None, server_cert=None):
     
-    with open(client_key, 'rb') as key:
-        client_key = key.read()
+    if client_key is not None:
+        with open(client_key, 'rb') as key:
+            client_key = key.read()
+        try:
+            pkey = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, client_key)
+        except OpenSSL.crypto.Error as e_info:
+            raise ValueError('client key file is not valid')
 
-    with open(client_cert, 'rb') as ca:
-        client_cert = ca.read()
-            
-    with open(server_cert, 'rb') as f:
-        server_cert = f.read()
+    if client_cert is not None:
+        with open(client_cert, 'rb') as ca:
+            client_cert = ca.read()
+        try:
+            c_cert = OpenSSL.crypto.load_certificate(
+                OpenSSL.crypto.FILETYPE_PEM,
+                client_cert
+            )
+        except OpenSSL.crypto.Error as e_info:
+            raise ValueError('client certificate file is not valid') 
+        
+    if server_cert is not None:
+        with open(server_cert, 'rb') as f:
+            server_cert = f.read()
+        try:
+            s_cert = OpenSSL.crypto.load_certificate(
+                OpenSSL.crypto.FILETYPE_PEM,
+                server_cert
+            )
+        except OpenSSL.crypto.Error as e_info:
+            raise ValueError('server certificate file is not valid') 
 
     return client_key, client_cert, server_cert
 
@@ -185,24 +207,24 @@ def _check_port(port):
     if not isinstance(port, int):
         raise TypeError(f'port type should be int, but is type {type(port).__name__}')
 
-    if port.bit_length() > 16:
+    if port.bit_length() > 16 or port < 0:
         raise ValueError(f'port should be in range <0, {2**16-1}>')
 
 def _check_tls_config(tls_config):
 
-    if 'client_key_path' not in tls_config:
-        raise ValueError(f'client_key_path is not defined in tls_config')
-    if 'client_cert_path' not in tls_config:
-        raise ValueError(f'client_cert_path is not defined in tls_config')
     if 'server_cert_path' not in tls_config:
         raise ValueError(f'server_cert_path is not defined in tls_config')
+    if 'client_key_path' in tls_config and 'client_cert_path' not in tls_config or 'client_cert_path' in tls_config and 'client_key_path' not in tls_config:
+        raise ValueError(f'none or both client_key_path and client_cert_path are required in tls_config')
     
+    valid_keys = ['server_cert_path', 'client_key_path', 'client_cert_path']
     for key in tls_config:
+        if not key in valid_keys:
+            raise ValueError(f'{key} is not valid tls_config key')
         if not isinstance(tls_config[key], str):
             raise TypeError(f'{key} type should be string but is type {type(tls_config[key]).__name__}')
         if not os.path.isfile(tls_config[key]):
-            raise ValueError(f'{key} is not valid path to file')
-        #check if certificate is there
+            raise ValueError(f'{tls_config[key]} is not valid path to file')
 
 def make_grpc_client(config):
     '''

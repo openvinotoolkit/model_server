@@ -84,39 +84,124 @@ ADDRESS_INVALID = [
 
 PORT_VALID = [
     (9000),
-    (2**16-1)
+    (2**16-1),
 ]
 
 PORT_INVALID = [
     ("9000", TypeError, "port type should be int, but is type str"),
     ([2**16-1], TypeError, "port type should be int, but is type list"),
-    (2**16, ValueError, f"port should be in range <0, {2**16-1}>")
+    (2**16, ValueError, f"port should be in range <0, {2**16-1}>"),
+    (-1, ValueError, f"port should be in range <0, {2**16-1}>")
 ]
 
+PATH_VALID = "valid_path"
+
 TLS_CONFIG_VALID = [
-    ({"client_key_path" : "valid_path", "client_cert_path" : "valid_path", "server_cert_path" : "valid_path"}),
+    ({"server_cert_path" : PATH_VALID}, 1),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, 3),
 ]
 
 TLS_CONFIG_INVALID = [
-    ({"non_client_key_path" : "valid_path", "client_cert_path" : "valid_path", "server_cert_path" : "valid_path"}, ValueError, "client_key_path is not defined in tls_config"),
-    ({"client_cert_path" : "valid_path", "server_cert_path" : "valid_path"}, ValueError, "client_key_path is not defined in tls_config"),
-    ({"client_key_path" : "valid_path", "non_client_cert_path" : "valid_path", "server_cert_path" : "valid_path"}, ValueError, "client_cert_path is not defined in tls_config"),
-    ({"client_key_path" : "valid_path", "server_cert_path" : "valid_path"}, ValueError, "client_cert_path is not defined in tls_config"),
-    ({"client_key_path" : "valid_path", "client_cert_path" : "valid_path", "non_server_cert_path" : "valid_path"}, ValueError, "server_cert_path is not defined in tls_config"),
-    ({"client_key_path" : "valid_path", "client_cert_path" : "valid_path"}, ValueError, "server_cert_path is not defined in tls_config"),
-
-    ({"client_key_path" : 1, "client_cert_path" : "valid_path", "server_cert_path" : "valid_path"}, TypeError, f'client_key_path type should be string but is type int'),
-    ({"client_key_path" : ["valid_path"], "client_cert_path" : "valid_path", "server_cert_path" : "valid_path"}, TypeError, f'client_key_path type should be string but is type list'),
-    ({"client_key_path" : 1, "client_cert_path" : "valid_path", "server_cert_path" : 1}, TypeError, f'client_key_path type should be string but is type int'),
-
-    ({"client_key_path" : "valid_path", "client_cert_path" : 1, "server_cert_path" : "valid_path"}, TypeError, f'client_cert_path type should be string but is type int'),
-    ({"client_key_path" : "valid_path", "client_cert_path" : 1, "server_cert_path" : 1}, TypeError, f'client_cert_path type should be string but is type int'),
-    ({"client_key_path" : "valid_path", "client_cert_path" : ["valid_path"], "server_cert_path" : "valid_path"}, TypeError, f'client_cert_path type should be string but is type list'),
-
-    ({"client_key_path" : "valid_path", "client_cert_path" : "valid_path", "server_cert_path" : 1}, TypeError, f'server_cert_path type should be string but is type int'),
-    ({"client_key_path" : "valid_path", "client_cert_path" : 1, "server_cert_path" : ["valid_path"]}, TypeError, f'client_cert_path type should be string but is type int'),
+    ({"client_key_path" : PATH_VALID, "server_cert_path" : PATH_VALID,} , ValueError, "none or both client_key_path and client_cert_path are required in tls_config", 0),
+    ({"client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, ValueError, "none or both client_key_path and client_cert_path are required in tls_config", 0),
     
-    ({"client_key_path" : "invalid_path", "client_cert_path" : "valid_path", "server_cert_path" : "valid_path"}, ValueError, f'invalid_path is not valid path to file'),
+    ({"non_client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, ValueError, "non_client_key_path is not valid tls_config key", 0),
+    ({"client_key_path" : PATH_VALID, "non_client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, ValueError, "non_client_cert_path is not valid tls_config key", 0),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID, "non_server_cert_path" : PATH_VALID}, ValueError, "server_cert_path is not defined in tls_config", 0),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID}, ValueError, "server_cert_path is not defined in tls_config", 0),
 
+    ({"client_key_path" : 1, "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, TypeError, f'client_key_path type should be string but is type int', 0),
+    ({"client_key_path" : [PATH_VALID], "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, TypeError, f'client_key_path type should be string but is type list', 0),
+    ({"client_key_path" : 1, "client_cert_path" : PATH_VALID, "server_cert_path" : 1}, TypeError, f'client_key_path type should be string but is type int', 0),
+
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : 1, "server_cert_path" : PATH_VALID}, TypeError, f'client_cert_path type should be string but is type int', 1),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : 1, "server_cert_path" : 1}, TypeError, f'client_cert_path type should be string but is type int', 1),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : [PATH_VALID], "server_cert_path" : PATH_VALID}, TypeError, f'client_cert_path type should be string but is type list', 1),
+
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID, "server_cert_path" : 1}, TypeError, f'server_cert_path type should be string but is type int', 2),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : 1, "server_cert_path" : [PATH_VALID]}, TypeError, f'client_cert_path type should be string but is type int', 1),
+    
+    ({"client_key_path" : "invalid", "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, ValueError, f'invalid is not valid path to file', 1),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : "/very/invalid", "server_cert_path" : PATH_VALID}, ValueError, f'/very/invalid is not valid path to file', 2),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID, "server_cert_path" : "third_invalid_path"}, ValueError, f'third_invalid_path is not valid path to file', 3),
+
+]
+
+CONFIG_VALID = [
+    ({
+        "address" : "localhost",
+        "port" : 9000
+    }, {"check_address" : 1, "check_port" : 1, "check_tls_config" : 0}),
+    ({
+        "address" : "19.117.63.126",
+        "port" : 1
+    }, {"check_address" : 1, "check_port" : 1, "check_tls_config" : 0}),
+    ({
+        "address" : "cluster.cloud.iotg.intel.com",
+        "port" : 2**16-1
+    }, {"check_address" : 1, "check_port" : 1, "check_tls_config" : 0}),
+    ({
+        "address" : "localhost",
+        "port" : 9000,
+        "tls_config" : {
+            "server_cert_path" : "valid_path"
+        }
+    }, {"check_address" : 1, "check_port" : 1, "check_tls_config" : 1}),
+    ({
+        "address" : "localhost",
+        "port" : 9000,
+        "tls_config" : {
+            "client_key_path" : "valid_path",
+            "client_cert_path" : "valid_path",
+            "server_cert_path" : "valid_path"
+        }
+    }, {"check_address" : 1, "check_port" : 1, "check_tls_config" : 1})
+]
+
+CONFIG_INVALID = [
+    ({
+
+    }, {"check_address" : 0, "check_port" : 0, "check_tls_config" : 0},
+    Exception, 'The minimal config must contain address and port', 
+    {"check_address" : None, "check_port" : None, "check_tls_config" : None}),
+    ({
+        "address" : "localhost"
+    }, {"check_address" : 0, "check_port" : 0, "check_tls_config" : 0},
+    Exception, 'The minimal config must contain address and port', 
+    {"check_address" : None, "check_port" : None, "check_tls_config" : None}),
+    ({
+        "port" : 9000
+    }, {"check_address" : 0, "check_port" : 0, "check_tls_config" : 0},
+    Exception, 'The minimal config must contain address and port', 
+    {"check_address" : None, "check_port" : None, "check_tls_config" : None}),
+
+    ({
+        "address" : ["localhost"],
+        "port" : 9000
+    }, {"check_address" : 1, "check_port" : 0, "check_tls_config" : 0},
+    TypeError, 'address type should be string, but is list', 
+    {"check_address" : TypeError('address type should be string, but is list'), "check_port" : None, "check_tls_config" : None}),
+    ({
+        "address" : "address",
+        "port" : '9000'
+    }, {"check_address" : 1, "check_port" : 0, "check_tls_config" : 0},
+    ValueError, 'address is not valid', 
+    {"check_address" : ValueError('address is not valid'), "check_port" : None, "check_tls_config" : None}),
+
+<<<<<<< HEAD
 >>>>>>> serving_client build draft + adress/port/tls_config tests draft
+=======
+    ({
+        "address" : "localhost",
+        "port" : '9000'
+    }, {"check_address" : 1, "check_port" : 1, "check_tls_config" : 0},
+    TypeError, 'port type should be int, but is type str', 
+    {"check_address" : None, "check_port" : TypeError('port type should be int, but is type str'), "check_tls_config" : None}),
+    ({
+        "address" : "localhost",
+        "port" : 2**16
+    }, {"check_address" : 1, "check_port" : 1, "check_tls_config" : 0},
+    ValueError, f"port should be in range <0, {2**16-1}>", 
+    {"check_address" : None, "check_port" : ValueError(f"port should be in range <0, {2**16-1}>"), "check_tls_config" : None}),
+>>>>>>> serving client + tests development
 ]
