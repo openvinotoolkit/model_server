@@ -1277,9 +1277,8 @@ TEST_F(GetModelInstanceTest, WithRequestedDefaultVersionUnloadedShouldReturnMode
     model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     std::shared_ptr<ovms::model_versions_t> versionsToRetire = std::make_shared<ovms::model_versions_t>();
-    std::set<ovms::model_version_t> versionsFailed;
     versionsToRetire->emplace_back(1);
-    model->retireVersions(versionsToRetire, versionsFailed);
+    model->retireVersions(versionsToRetire);
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance(config.getName(), 0, modelInstance, modelInstanceUnloadGuardPtr);
@@ -1293,7 +1292,7 @@ TEST_F(GetModelInstanceTest, WithRequestedVersion1ShouldReturnModelVersionNotLoa
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     std::shared_ptr<ovms::model_versions_t> versionsToRetire = std::make_shared<ovms::model_versions_t>();
     versionsToRetire->emplace_back(1);
-    model->retireVersions(versionsToRetire, std::set<ovms::model_version_t>());
+    model->retireVersions(versionsToRetire);
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance(config.getName(), 1, modelInstance, modelInstanceUnloadGuardPtr);

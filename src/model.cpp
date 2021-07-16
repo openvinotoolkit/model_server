@@ -159,7 +159,7 @@ Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovm
     return result;
 }
 
-Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire, const std::set<model_version_t>& failedVersions) {
+Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire) {
     Status result = StatusCode::OK;
     for (const auto version : *versionsToRetire) {
         SPDLOG_INFO("Will unload model: {}; version: {} ...", getName(), version);
@@ -175,11 +175,29 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire,
         }
         cleanupModelTmpFiles(modelVersion->getModelConfig());
         updateDefaultVersion(version);
-        if (failedVersions.find(version) != failedVersions.end()) {
-            modelVersion->cleanupFailedLoad();
-        } else {
-            modelVersion->retireModel();
+        modelVersion->retireModel();
+    }
+    subscriptionManager.notifySubscribers();
+    return result;
+}
+
+Status Model::cleanupFailedLoad(std::shared_ptr<model_versions_t> versionsToCleanUp) {
+    Status result = StatusCode::OK;
+    for (const auto version : *versionsToCleanUp) {
+        SPDLOG_INFO("Will clean up model: {}; version: {} ...", getName(), version);
+        auto modelVersion = getModelInstanceByVersion(version);
+        if (!modelVersion) {
+            Status status = StatusCode::UNKNOWN_ERROR;
+            SPDLOG_ERROR("Error occurred while cleaning up model: {}; version: {}; error: {}",
+                getName(),
+                version,
+                status.string());
+            result = status;
+            continue;
         }
+        cleanupModelTmpFiles(modelVersion->getModelConfig());
+        updateDefaultVersion(version);
+        modelVersion->cleanupFailedLoad();
     }
     subscriptionManager.notifySubscribers();
     return result;

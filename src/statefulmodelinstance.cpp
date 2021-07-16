@@ -106,7 +106,7 @@ Status StatefulModelInstance::reloadModel(const ModelConfig& config, const Dynam
 
 void StatefulModelInstance::retireModel(bool isPermanent) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
-    if (autoCleanupEnabled) {
+    if (isPermanent && autoCleanupEnabled) {
         globalSequencesViewer->unregisterFromCleanup(getName(), getVersion());
     }
     ModelInstance::retireModel(isPermanent);

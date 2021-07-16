@@ -1006,11 +1006,22 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     // refresh versions to retire based on failed reloads
     requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
-
+    std::shared_ptr<model_versions_t> versionsToCleanup = std::make_shared<model_versions_t>();
+    std::copy_if(versionsToRetire->begin(), versionsToRetire->end(), std::back_inserter(*versionsToCleanup), [&](auto& version) { return allFailedVersions.find(version) != allFailedVersions.end(); });
+    versionsToRetire->erase(std::remove_if(versionsToRetire->begin(), versionsToRetire->end(), [&](auto& version) { return allFailedVersions.find(version) != allFailedVersions.end(); }), versionsToRetire->end());
     if (versionsToRetire->size() > 0) {
-        auto status = model->retireVersions(versionsToRetire, allFailedVersions);
+        auto status = model->retireVersions(versionsToRetire);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
+                config.getName(),
+                status.string());
+            return status;
+        }
+    }
+    if (versionsToCleanup->size() > 0) {
+        auto status = model->cleanupFailedLoad(versionsToCleanup);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while cleaning up model that failed to load: {}; versions; error: {}",
                 config.getName(),
                 status.string());
             return status;
