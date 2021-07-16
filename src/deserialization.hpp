@@ -33,7 +33,7 @@
 
 namespace ovms {
 
-std::shared_ptr<ovms::TensorInfo> getFinalShapedTensorInfo(ovms::TensorInfo& servableInfo, const tensorflow::TensorProto& requestInput, bool isPipeline);
+std::shared_ptr<ovms::TensorInfo> getFinalShapedTensorInfo(const ovms::TensorInfo& servableInfo, const tensorflow::TensorProto& requestInput, bool isPipeline);
 
 template <typename T>
 InferenceEngine::Blob::Ptr makeBlob(const tensorflow::TensorProto& requestInput,
@@ -109,7 +109,7 @@ class InputSink {
 public:
     InputSink(Requester requester) :
         requester(requester) {}
-    Status give(const std::string name, InferenceEngine::Blob::Ptr blob);
+    Status give(const std::string& name, InferenceEngine::Blob::Ptr blob);
 };
 
 template <class TensorProtoDeserializator, class Sink>

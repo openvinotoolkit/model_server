@@ -18,7 +18,7 @@
 namespace ovms {
 
 template <>
-Status InputSink<InferenceEngine::InferRequest&>::give(const std::string name, InferenceEngine::Blob::Ptr blob) {
+Status InputSink<InferenceEngine::InferRequest&>::give(const std::string& name, InferenceEngine::Blob::Ptr blob) {
     Status status;
     try {
         requester.SetBlob(name, blob);
@@ -38,7 +38,7 @@ Status InputSink<InferenceEngine::InferRequest&>::give(const std::string name, I
     return status;
 }
 
-std::shared_ptr<ovms::TensorInfo> getFinalShapedTensorInfo(ovms::TensorInfo& servableInfo, const tensorflow::TensorProto& requestInput, bool isPipeline) {
+std::shared_ptr<ovms::TensorInfo> getFinalShapedTensorInfo(const ovms::TensorInfo& servableInfo, const tensorflow::TensorProto& requestInput, bool isPipeline) {
     auto potentiallyDynamicShape = servableInfo.getShape();
     if (isPipeline) {
         potentiallyDynamicShape = servableInfo.getEffectiveShape();
