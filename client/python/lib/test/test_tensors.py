@@ -65,6 +65,13 @@ def test_make_ndarray_valid_no_content_string():
     assert array.tolist() == ['', '', '']
     assert array.dtype == '<U1'
 
+def test_make_ndarray_valid_no_content_string_with_other_type_content():
+    tensor_proto = TensorProto(tensor_shape=shape, dtype = DType.STRING)
+    array = make_ndarray(tensor_proto)
+    tensor_proto.tensor_content = bytes([1,2,3])
+    assert array.tolist() == ['', '', '']
+    assert array.dtype == '<U1'
+
 def test_make_ndarray_invalid_type():
     tensor_proto = TensorProto(tensor_shape=shape)
     tensor_proto.dtype = 0
