@@ -35,7 +35,6 @@ MODEL_SPEC_INVALID = [
     ("model_name", 9223372036854775809, ValueError, f'model_version should be in range <0, {2**63-1}>'),
 ]
 
-<<<<<<< HEAD
 def create_model_status_response(model_version, error_code, error_message, model_state):
     status = StatusProto()
     status.error_code = error_code
@@ -68,7 +67,8 @@ MODEL_STATUS_RESPONSE_VALID = [
     2: {"state" : ModelVersionStatus.State.LOADING, "error_code" : Code.UNKNOWN, "error_message" : "Could not load CNN"},
     3: {"state" : ModelVersionStatus.State.UNLOADING, "error_code" : Code.OK, "error_message" : ""}
 }
-=======
+]
+
 ADDRESS_VALID = [
     ("localhost"),
     ("19.117.63.126"),
@@ -161,47 +161,138 @@ CONFIG_VALID = [
 CONFIG_INVALID = [
     ({
 
-    }, {"check_address" : 0, "check_port" : 0, "check_tls_config" : 0},
+    },
+    {"check_address" : 0, "check_port" : 0, "check_tls_config" : 0},
     Exception, 'The minimal config must contain address and port', 
     {"check_address" : None, "check_port" : None, "check_tls_config" : None}),
     ({
         "address" : "localhost"
-    }, {"check_address" : 0, "check_port" : 0, "check_tls_config" : 0},
+    },
+    {"check_address" : 0, "check_port" : 0, "check_tls_config" : 0},
     Exception, 'The minimal config must contain address and port', 
     {"check_address" : None, "check_port" : None, "check_tls_config" : None}),
     ({
         "port" : 9000
-    }, {"check_address" : 0, "check_port" : 0, "check_tls_config" : 0},
+    },
+    {"check_address" : 0, "check_port" : 0, "check_tls_config" : 0},
     Exception, 'The minimal config must contain address and port', 
     {"check_address" : None, "check_port" : None, "check_tls_config" : None}),
 
     ({
         "address" : ["localhost"],
         "port" : 9000
-    }, {"check_address" : 1, "check_port" : 0, "check_tls_config" : 0},
+    },
+    {"check_address" : 1, "check_port" : 0, "check_tls_config" : 0},
     TypeError, 'address type should be string, but is list', 
     {"check_address" : TypeError('address type should be string, but is list'), "check_port" : None, "check_tls_config" : None}),
     ({
         "address" : "address",
         "port" : '9000'
-    }, {"check_address" : 1, "check_port" : 0, "check_tls_config" : 0},
+    },
+    {"check_address" : 1, "check_port" : 0, "check_tls_config" : 0},
     ValueError, 'address is not valid', 
     {"check_address" : ValueError('address is not valid'), "check_port" : None, "check_tls_config" : None}),
-
-<<<<<<< HEAD
->>>>>>> serving_client build draft + adress/port/tls_config tests draft
-=======
     ({
         "address" : "localhost",
         "port" : '9000'
-    }, {"check_address" : 1, "check_port" : 1, "check_tls_config" : 0},
+    },
+    {"check_address" : 1, "check_port" : 1, "check_tls_config" : 0},
     TypeError, 'port type should be int, but is type str', 
     {"check_address" : None, "check_port" : TypeError('port type should be int, but is type str'), "check_tls_config" : None}),
     ({
         "address" : "localhost",
         "port" : 2**16
-    }, {"check_address" : 1, "check_port" : 1, "check_tls_config" : 0},
+    },
+    {"check_address" : 1, "check_port" : 1, "check_tls_config" : 0},
     ValueError, f"port should be in range <0, {2**16-1}>", 
     {"check_address" : None, "check_port" : ValueError(f"port should be in range <0, {2**16-1}>"), "check_tls_config" : None}),
->>>>>>> serving client + tests development
+
+    ({
+        "address" : "localhost",
+        "port" : 2**16,
+        "tls_config" : {
+
+        }
+    },
+    {"check_address" : 1, "check_port" : 1, "check_tls_config" : 1},
+    ValueError, 'server_cert_path is not defined in tls_config', 
+    {"check_address" : None, "check_port" : None, "check_tls_config" : ValueError('server_cert_path is not defined in tls_config')}),
+    ({
+        "address" : "localhost",
+        "port" : 2**16,
+        "tls_config" : {
+            "server_cert_path" : PATH_VALID,
+            "client_key_path" :PATH_VALID
+        }
+    },
+    {"check_address" : 1, "check_port" : 1, "check_tls_config" : 1},
+    ValueError, 'none or both client_key_path and client_cert_path are required in tls_config', 
+    {"check_address" : None, "check_port" : None, "check_tls_config" : ValueError('none or both client_key_path and client_cert_path are required in tls_config')}),
+    ({
+        "address" : "localhost",
+        "port" : 2**16,
+        "tls_config" : {
+            "server_cert_path" : PATH_VALID,
+            "client_key_path" :PATH_VALID,
+            "client_cert_path" : PATH_VALID,
+            "invalid_key_name" : PATH_VALID
+        }
+    },
+    {"check_address" : 1, "check_port" : 1, "check_tls_config" : 1},
+    ValueError,  'invalid_key_name is not valid tls_config key', 
+    {"check_address" : None, "check_port" : None, "check_tls_config" : ValueError('invalid_key_name is not valid tls_config key')}),
+    ({
+        "address" : "localhost",
+        "port" : 2**16,
+        "tls_config" : {
+            "server_cert_path" : PATH_VALID,
+            "client_key_path" :PATH_VALID,
+            "client_cert_path" : 123,
+        }
+    },
+    {"check_address" : 1, "check_port" : 1, "check_tls_config" : 1},
+    TypeError,  'client_cert_path type should be string but is type int', 
+    {"check_address" : None, "check_port" : None, "check_tls_config" : TypeError('client_cert_path type should be string but is type int')}),
+    ({
+        "address" : "localhost",
+        "port" : 2**16,
+        "tls_config" : {
+            "server_cert_path" : PATH_VALID,
+            "client_key_path" :"invalid_path",
+            "client_cert_path" : PATH_VALID,
+        }
+    },
+    {"check_address" : 1, "check_port" : 1, "check_tls_config" : 1},
+    ValueError,  'invalid_path is not valid path to file', 
+    {"check_address" : None, "check_port" : None, "check_tls_config" : ValueError('invalid_path is not valid path to file')}),
+]
+
+SERVER_CERT_PATH_VALID, SERVER_CERT_PATH_INVALID = "server_cert_path_valid", "server_cert_path_invalid"
+CLIENT_CERT_PATH_VALID, CLIENT_CERT_PATH_INVALID = "client_cert_path_valid", "client_cert_path_invalid"
+CLIENT_KEY_PATH_VALID, CLIENT_KEY_PATH_INVALID = "client_key_path_valid", "client_key_path_invalid"
+
+CHANNEL_CERTS_VALID = [
+    (CLIENT_KEY_PATH_VALID, CLIENT_CERT_PATH_VALID, SERVER_CERT_PATH_VALID, {"load_privatekey" : 1, "load_certificate" : 2, "open" : 3}),
+    (None, None, SERVER_CERT_PATH_VALID, {"load_privatekey" : 0, "load_certificate" : 1, "open" : 1})
+]
+
+CHANNEL_CERTS_INVALID = [
+    (None, None, SERVER_CERT_PATH_INVALID, {"load_privatekey" : 0, "load_certificate" : 1, "open" : 1},
+    ValueError, 'server certificate file is not valid',
+    {"load_privatekey" : None, "load_certificate" : ValueError('server certificate file is not valid')}),
+    (CLIENT_KEY_PATH_VALID, CLIENT_CERT_PATH_VALID, SERVER_CERT_PATH_INVALID, {"load_privatekey" : 1, "load_certificate" : 2, "open" : 3},
+    ValueError, 'server certificate file is not valid',
+    {"load_privatekey" : None, "load_certificate" : [None, ValueError('server certificate file is not valid')]}),
+    (CLIENT_KEY_PATH_INVALID, CLIENT_CERT_PATH_VALID, SERVER_CERT_PATH_INVALID, {"load_privatekey" : 1, "load_certificate" : 0, "open" : 1},
+    ValueError, 'client key file is not valid',
+    {"load_privatekey" : ValueError('client key file is not valid'), "load_certificate" : None}),
+    (CLIENT_KEY_PATH_INVALID, CLIENT_CERT_PATH_VALID, SERVER_CERT_PATH_VALID, {"load_privatekey" : 1, "load_certificate" : 0, "open" : 1},
+    ValueError, 'client key file is not valid',
+    {"load_privatekey" : ValueError('client key file is not valid'), "load_certificate" : None}),
+    (CLIENT_KEY_PATH_VALID, CLIENT_CERT_PATH_INVALID, SERVER_CERT_PATH_INVALID, {"load_privatekey" : 1, "load_certificate" : 1, "open" : 2},
+    ValueError, 'client certificate file is not valid',
+    {"load_privatekey" : None, "load_certificate" : ValueError('client certificate file is not valid')}),
+    (CLIENT_KEY_PATH_VALID, CLIENT_CERT_PATH_INVALID, SERVER_CERT_PATH_VALID, {"load_privatekey" : 1, "load_certificate" : 1, "open" : 2},
+    ValueError, 'client certificate file is not valid',
+    {"load_privatekey" : None, "load_certificate" : ValueError('client certificate file is not valid')}),
 ]

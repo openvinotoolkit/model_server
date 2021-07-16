@@ -122,7 +122,7 @@ class GrpcClient(ServingClient):
         
         _check_config(config)
 
-        address = f"{config['address']}:{config['port']}"
+        grpc_address = f"{config['address']}:{config['port']}"
 
         if 'tls_config' in config:
             client_key, client_cert, server_cert = _prepare_certs(
@@ -134,9 +134,9 @@ class GrpcClient(ServingClient):
             creds = grpc.ssl_channel_credentials(root_certificates=server_cert,
             private_key=client_key, certificate_chain=client_cert)
 
-            channel = grpc.secure_channel(address, creds)
+            channel = grpc.secure_channel(grpc_address, creds)
         else:
-            channel = grpc.insecure_channel(address)
+            channel = grpc.insecure_channel(grpc_address)
 
         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
         model_service_stub = model_service_pb2_grpc.ModelServiceStub(channel)
@@ -147,13 +147,13 @@ class GrpcClient(ServingClient):
 
         return cls(channel, stubs)
 
-def _prepare_certs(client_key=None, client_cert=None, server_cert=None):
+def _prepare_certs(client_key, client_cert, server_cert):
     
     if client_key is not None:
         with open(client_key, 'rb') as key:
             client_key = key.read()
         try:
-            pkey = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, client_key)
+            p_key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, client_key)
         except OpenSSL.crypto.Error as e_info:
             raise ValueError('client key file is not valid')
 
@@ -166,18 +166,17 @@ def _prepare_certs(client_key=None, client_cert=None, server_cert=None):
                 client_cert
             )
         except OpenSSL.crypto.Error as e_info:
-            raise ValueError('client certificate file is not valid') 
+            raise ValueError('client certificate file is not valid')
         
-    if server_cert is not None:
-        with open(server_cert, 'rb') as f:
-            server_cert = f.read()
-        try:
-            s_cert = OpenSSL.crypto.load_certificate(
-                OpenSSL.crypto.FILETYPE_PEM,
-                server_cert
-            )
-        except OpenSSL.crypto.Error as e_info:
-            raise ValueError('server certificate file is not valid') 
+    with open(server_cert, 'rb') as f:
+        server_cert = f.read()
+    try:
+        s_cert = OpenSSL.crypto.load_certificate(
+            OpenSSL.crypto.FILETYPE_PEM,
+            server_cert
+        )
+    except OpenSSL.crypto.Error as e_info:
+        raise ValueError('server certificate file is not valid')
 
     return client_key, client_cert, server_cert
 

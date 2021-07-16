@@ -19,37 +19,34 @@ import pytest
 from ovmsclient.tfs_compat.grpc.serving_client import _check_config
 from config import CONFIG_INVALID, CONFIG_VALID
 
-@pytest.mark.parametrize("config, called_counts", CONFIG_VALID)
-def test_check_config_valid(mocker, config, called_counts):
+@pytest.mark.parametrize("config, method_call_count", CONFIG_VALID)
+def test_check_config_valid(mocker, config, method_call_count):
     mock_check_address = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_address')
     mock_check_port = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_port')
     mock_check_tls_config = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_tls_config')
     
     _check_config(config)
 
-    assert mock_check_address.call_count == called_counts['check_address']
-    assert mock_check_port.call_count == called_counts['check_port']
-    assert mock_check_tls_config.call_count == called_counts['check_tls_config']
+    assert mock_check_address.call_count == method_call_count['check_address']
+    assert mock_check_port.call_count == method_call_count['check_port']
+    assert mock_check_tls_config.call_count == method_call_count['check_tls_config']
 
-@pytest.mark.parametrize("config, called_counts, expected_exception, expected_message, side_effects", CONFIG_INVALID)
-def test_check_config_invalid(mocker, config, called_counts, expected_exception, expected_message, side_effects):
+@pytest.mark.parametrize("config, method_call_count, expected_exception, expected_message, side_effect", CONFIG_INVALID)
+def test_check_config_invalid(mocker, config, method_call_count, expected_exception, expected_message, side_effect):
     mock_check_address = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_address')
-    if side_effects['check_address'] is not None:
-        mock_check_address.side_effect = side_effects['check_address']
+    mock_check_address.side_effect = side_effect['check_address']
 
     mock_check_port = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_port')
-    if side_effects['check_port'] is not None:
-        mock_check_port.side_effect = side_effects['check_port']
+    mock_check_port.side_effect = side_effect['check_port']
 
     mock_check_tls_config = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_tls_config')
-    if side_effects['check_tls_config'] is not None:
-        mock_check_tls_config.side_effect = side_effects['check_tls_config']
+    mock_check_tls_config.side_effect = side_effect['check_tls_config']
 
     with pytest.raises(expected_exception) as e_info:
         _check_config(config)
         assert str(e_info.value) == expected_message
 
-    assert mock_check_address.call_count == called_counts['check_address']
-    assert mock_check_port.call_count == called_counts['check_port']
-    assert mock_check_tls_config.call_count == called_counts['check_tls_config']
+    assert mock_check_address.call_count == method_call_count['check_address']
+    assert mock_check_port.call_count == method_call_count['check_port']
+    assert mock_check_tls_config.call_count == method_call_count['check_tls_config']
 
