@@ -17,44 +17,53 @@
 import pytest
 from tensorflow.core.framework.tensor_shape_pb2 import *
 from tensorflow.core.framework.tensor_pb2 import TensorProto
-from ovmsclient.tfs_compat.grpc.tensors import make_ndarray
+from tensorflow.core.framework.tensor_pb2 import TensorProto
+from ovmsclient.tfs_compat.grpc.tensors import make_ndarray, DType
 import numpy as np
 
 shape = TensorShapeProto(dim = [TensorShapeProto.Dim(size=3)])
 
 def test_make_ndarray_valid_int():
-    tensor_proto = TensorProto(tensor_shape=shape, dtype = 6, tensor_content = bytes([1,2,3]))
+    tensor_proto = TensorProto(tensor_shape=shape, dtype = DType.INT8, tensor_content = bytes([1,2,3]))
     array = make_ndarray(tensor_proto)
     assert array.tolist() == [1, 2, 3]
     assert array.dtype == np.int8
 
 def test_make_ndarray_valid_float():
-    hex_string = "0000803f0000004000004040"
-    tensor_proto = TensorProto(tensor_shape=shape, dtype = 1, tensor_content = bytes.fromhex(hex_string))
+    content = [1.0, 2.0, 3.0]
+    np_content = np.array(content, dtype = np.float32)
+    tensor_proto = TensorProto(tensor_shape=shape, dtype = DType.FLOAT32, tensor_content = np_content.tobytes())
     array = make_ndarray(tensor_proto)
     assert array.tolist() == [1.0, 2.0, 3.0]
     assert array.dtype == np.float32
 
 def test_make_ndarray_valid_3_dims_shape():
-    hex_string = "0000803f00000040000040400000803f0000004000004040"
+    content = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
+    np_content = np.array(content, dtype = np.float32)
     _shape = TensorShapeProto(dim = [TensorShapeProto.Dim(size=1), TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)])
-    tensor_proto = TensorProto(tensor_shape=_shape, dtype = 1, tensor_content = bytes.fromhex(hex_string))
+    tensor_proto = TensorProto(tensor_shape=_shape, dtype = DType.FLOAT32, tensor_content = np_content.tobytes())
     array = make_ndarray(tensor_proto)
     assert array.tolist() == [[[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]]
     assert array.dtype == np.float32
 
 def test_make_ndarray_valid_string():
     hex_string = "11111111"
-    tensor_proto = TensorProto(tensor_shape=shape, dtype = 7, string_val = [bytes.fromhex(hex_string)])
+    tensor_proto = TensorProto(tensor_shape=shape, dtype = DType.STRING, string_val = [bytes.fromhex(hex_string)])
     array = make_ndarray(tensor_proto)
     assert array.tolist() == ['\x11\x11\x11\x11', '\x11\x11\x11\x11', '\x11\x11\x11\x11']
     assert array.dtype == '<U4'
 
 def test_make_ndarray_valid_no_content():
-    tensor_proto = TensorProto(tensor_shape=shape, dtype = 6)
+    tensor_proto = TensorProto(tensor_shape=shape, dtype = DType.INT8)
     array = make_ndarray(tensor_proto)
     assert array.tolist() == [0, 0, 0]
     assert array.dtype == np.int8
+
+def test_make_ndarray_valid_no_content_string():
+    tensor_proto = TensorProto(tensor_shape=shape, dtype = DType.STRING)
+    array = make_ndarray(tensor_proto)
+    assert array.tolist() == ['', '', '']
+    assert array.dtype == '<U1'
 
 def test_make_ndarray_invalid_type():
     tensor_proto = TensorProto(tensor_shape=shape)
@@ -66,7 +75,7 @@ def test_make_ndarray_invalid_type():
     assert str(exception) == "Tensor data type invalid"
 
 def test_make_ndarray_invalid_no_shape():
-    tensor_proto = TensorProto(dtype = 6, tensor_content = bytes([1,2,3]))
+    tensor_proto = TensorProto(dtype = DType.INT8, tensor_content = bytes([1,2,3]))
     with pytest.raises(ValueError) as exception_info:
         make_ndarray(tensor_proto)
 
@@ -74,7 +83,7 @@ def test_make_ndarray_invalid_no_shape():
     assert str(exception) == "cannot reshape array of size 3 into shape ()"
 
 def test_make_ndarray_invalid_shape_does_not_match():
-    tensor_proto = TensorProto(tensor_shape=shape, dtype = 6, tensor_content = bytes([1,2,3,4]))
+    tensor_proto = TensorProto(tensor_shape=shape, dtype = DType.INT8, tensor_content = bytes([1,2,3,4]))
     with pytest.raises(ValueError) as exception_info:
         make_ndarray(tensor_proto)
 
