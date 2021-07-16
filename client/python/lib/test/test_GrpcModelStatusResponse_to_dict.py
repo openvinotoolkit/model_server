@@ -17,23 +17,23 @@
 import pytest
 
 from ovmsclient.tfs_compat.grpc.responses import GrpcModelStatusResponse
-from config import RAW_MODEL_RESPONSE_VALID, create_model_status_response, merge_model_status_responses
+from config import MODEL_STATUS_RESPONSE_VALID, create_model_status_response, merge_model_status_responses
 
-@pytest.mark.parametrize("model_raw_response_dict" , RAW_MODEL_RESPONSE_VALID)
+@pytest.mark.parametrize("model_raw_response_dict" , MODEL_STATUS_RESPONSE_VALID)
 def test_GrpcModelStatusResponse_to_dict_valid(model_raw_response_dict):
     model_raw_responses = []
-    for version in model_raw_response_dict:
-        model_raw_responses.append(create_model_status_response(version, model_raw_response_dict[version][1], model_raw_response_dict[version][2],
-         model_raw_response_dict[version][0]))
+    for version, status in model_raw_response_dict.items():
+        model_raw_responses.append(create_model_status_response(version, status['error_code'], status['error_message'],
+         status['state']))
     raw_response = merge_model_status_responses(model_raw_responses)
 
     response = GrpcModelStatusResponse(raw_response)
     response_dictionary = response.to_dict()
     assert isinstance(response_dictionary, dict)
     assert len(response_dictionary) == len(model_raw_response_dict)
-    for version in model_raw_response_dict:
+    for version, status in model_raw_response_dict.items():
         assert version in response_dictionary
         assert isinstance(response_dictionary[version], dict)
-        assert response_dictionary[version]['error_code'] == model_raw_response_dict[version][1]
-        assert response_dictionary[version]['error_message'] == model_raw_response_dict[version][2]
-        assert response_dictionary[version]['state'] == GrpcModelStatusResponse._STATE_TO_STRING_MAPPING[model_raw_response_dict[version][0]]
+        assert response_dictionary[version]['error_code'] == status['error_code']
+        assert response_dictionary[version]['error_message'] == status['error_message']
+        assert response_dictionary[version]['state'] == GrpcModelStatusResponse._STATE_TO_STRING_MAPPING[status['state']]

@@ -82,17 +82,17 @@ class ErrorCode(Enum):
     # DATA_LOSS = 15
     # DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD = 20
 
-RAW_MODEL_RESPONSE_VALID = [
+MODEL_STATUS_RESPONSE_VALID = [
 {
-    1: (ModelState.AVAILABLE.value, ErrorCode.OK.value, "")
+    1: {"state" : ModelState.AVAILABLE.value, "error_code" : ErrorCode.OK.value, "error_message" : ""}
 },
 {
-    2: (ModelState.END.value, ErrorCode.OK.value, ""),
-    3: (ModelState.AVAILABLE.value, ErrorCode.OK.value, "")
+    2: {"state" : ModelState.END.value, "error_code" : ErrorCode.OK.value, "error_message" : ""},
+    3: {"state" : ModelState.AVAILABLE.value, "error_code" : ErrorCode.OK.value, "error_message" : ""}
 },
 {
-    1: (ModelState.START.value, ErrorCode.OK.value, ""),
-    2: (ModelState.LOADING.value, ErrorCode.UNKNOWN.value, "Could not load CNN"),
-    3: (ModelState.UNLOADING.value, ErrorCode.OK.value, "")
+    1: {"state" : ModelState.START.value, "error_code" : ErrorCode.OK.value, "error_message" : ""},
+    2: {"state" : ModelState.LOADING.value, "error_code" : ErrorCode.UNKNOWN.value, "error_message" : "Could not load CNN"},
+    3: {"state" : ModelState.UNLOADING.value, "error_code" : ErrorCode.OK.value, "error_message" : ""}
 }
 ]
