@@ -73,7 +73,101 @@ ovms-sample   ClusterIP   172.25.199.210   <none>        8080/TCP,8081/TCP   8h
 
 The `ModelServer` service in OpenShift exposes [gRPC](docs/model_server_grpc_api.md) and [REST](../../docs/model_server_rest_api.md) API endpoints for processing AI inference requests.
 
-### Using the AI Inference Endpoints
+The readiness of models for serving can be confirmed by the READY field status in the `oc get pods` output.
+The endpoints can be also tested with a simple `curl` command with a request to REST API endpoints from any pod in the cluster:
+
+```bash
+curl http://<ovms_service_name>.<namespace>:8081/v1/config 
+```
+or
+```
+curl http://<ovms_service_name>.<namespace>:8081/v1/models/<model_name>/metadata
+```
+In the example above above, assuming namespace called `ovms`, it would be:
+```bash
+curl http://ovms-sample.ovms:8081/v1/config
+{
+"resnet" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+
+curl http://ovms-sample.ovms:8081/v1/models/resnet/metadata
+{
+ "modelSpec": {
+  "name": "resnet",
+  "signatureName": "",
+  "version": "1"
+ },
+ "metadata": {
+  "signature_def": {
+   "@type": "type.googleapis.com/tensorflow.serving.SignatureDefMap",
+   "signatureDef": {
+    "serving_default": {
+     "inputs": {
+      "0": {
+       "dtype": "DT_FLOAT",
+       "tensorShape": {
+        "dim": [
+         {
+          "size": "1",
+          "name": ""
+         },
+         {
+          "size": "3",
+          "name": ""
+         },
+         {
+          "size": "224",
+          "name": ""
+         },
+         {
+          "size": "224",
+          "name": ""
+         }
+        ],
+        "unknownRank": false
+       },
+       "name": "0"
+      }
+     },
+     "outputs": {
+      "1463": {
+       "dtype": "DT_FLOAT",
+       "tensorShape": {
+        "dim": [
+         {
+          "size": "1",
+          "name": ""
+         },
+         {
+          "size": "1000",
+          "name": ""
+         }
+        ],
+        "unknownRank": false
+       },
+       "name": "1463"
+      }
+     },
+     "methodName": ""
+    }
+   }
+  }
+ }
+}
+```
+
+### Using the AI Inference Endpoints to run predictions
 There are a few different ways to use the AI inference endpoints created by the `ModelServer` resource, such as the following: 
 - Deploy a client inside a `pod` in the cluster. A client inside the cluster can access the endpoints via the service name or the service cluster ip
 - Configure the service type as `NodePort` - this will expose the service on the Kubernetes `node` external IP address
