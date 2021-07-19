@@ -601,11 +601,20 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
         modelsToUnloadAllVersions.begin());
     modelsToUnloadAllVersions.resize(it - modelsToUnloadAllVersions.begin());
     for (auto& modelName : modelsToUnloadAllVersions) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Retiring all versions of model: {}", modelName);
-        try {
-            models.at(modelName)->retireAllVersions(modelsWithInvalidConfig.find(modelName) != modelsWithInvalidConfig.end());
-        } catch (const std::out_of_range& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to retire all versions of model: {}", modelName);
+        if (modelsWithInvalidConfig.find(modelName) == modelsWithInvalidConfig.end()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Retiring all versions of model: {}", modelName);
+            try {
+                models.at(modelName)->retireAllVersions();
+            } catch (const std::out_of_range& e) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to retire all versions of model: {}", modelName);
+            }
+        } else {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleaning up all versions of model: {}", modelName);
+            try {
+                models.at(modelName)->cleanupAllVersions();
+            } catch (const std::out_of_range& e) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to clean up all versions of model: {}", modelName);
+            }
         }
     }
 }

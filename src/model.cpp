@@ -203,7 +203,7 @@ Status Model::cleanupFailedLoad(std::shared_ptr<model_versions_t> versionsToClea
     return result;
 }
 
-void Model::retireAllVersions(bool isError) {
+void Model::retireAllVersions() {
     if (!(customLoaderName.empty())) {
         auto& customloaders = ovms::CustomLoaders::instance();
         auto loaderPtr = customloaders.find(customLoaderName);
@@ -217,11 +217,27 @@ void Model::retireAllVersions(bool isError) {
     for (const auto versionModelInstancePair : modelVersions) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
         cleanupModelTmpFiles(versionModelInstancePair.second->getModelConfig());
-        if (isError) {
-            versionModelInstancePair.second->cleanupFailedLoad();
+        versionModelInstancePair.second->retireModel();
+        updateDefaultVersion();
+    }
+    subscriptionManager.notifySubscribers();
+}
+
+void Model::cleanupAllVersions() {
+    if (!(customLoaderName.empty())) {
+        auto& customloaders = ovms::CustomLoaders::instance();
+        auto loaderPtr = customloaders.find(customLoaderName);
+        if (loaderPtr != nullptr) {
+            loaderPtr->retireModel(name);
         } else {
-            versionModelInstancePair.second->retireModel();
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Could not find custom loader for model: {} but it is using custom loader: {}", getName(), customLoaderName);
         }
+    }
+
+    for (const auto versionModelInstancePair : modelVersions) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Will unload model: {}; version: {} ...", getName(), versionModelInstancePair.first);
+        cleanupModelTmpFiles(versionModelInstancePair.second->getModelConfig());
+        versionModelInstancePair.second->cleanupFailedLoad();
         updateDefaultVersion();
     }
     subscriptionManager.notifySubscribers();
