@@ -200,7 +200,7 @@ public:
          */
     void retireAllVersions();
 
-     /**
+    /**
          * @brief Cleans up all versions of Model
          */
     void cleanupAllVersions();
