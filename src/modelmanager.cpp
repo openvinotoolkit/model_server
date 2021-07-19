@@ -601,11 +601,20 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
         modelsToUnloadAllVersions.begin());
     modelsToUnloadAllVersions.resize(it - modelsToUnloadAllVersions.begin());
     for (auto& modelName : modelsToUnloadAllVersions) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Retiring all versions of model: {}", modelName);
-        try {
-            models.at(modelName)->retireAllVersions(modelsWithInvalidConfig.find(modelName) != modelsWithInvalidConfig.end());
-        } catch (const std::out_of_range& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to retire all versions of model: {}", modelName);
+        if (modelsWithInvalidConfig.find(modelName) == modelsWithInvalidConfig.end()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Retiring all versions of model: {}", modelName);
+            try {
+                models.at(modelName)->retireAllVersions();
+            } catch (const std::out_of_range& e) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to retire all versions of model: {}", modelName);
+            }
+        } else {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleaning up all versions of model: {}", modelName);
+            try {
+                models.at(modelName)->cleanupAllVersions();
+            } catch (const std::out_of_range& e) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to clean up all versions of model: {}", modelName);
+            }
         }
     }
 }
@@ -739,6 +748,7 @@ void ModelManager::getVersionsToChange(
     for (const auto& version : alreadyRegisteredVersionsWhichAreRequested) {
         try {
             if (modelVersionsInstances.at(version)->getStatus().willEndUnloaded() ||
+                modelVersionsInstances.at(version)->getStatus().isFailedLoading() ||
                 modelVersionsInstances.at(version)->getModelConfig().isReloadRequired(newModelConfig)) {
                 if (modelVersionsInstances.at(version)->getModelConfig().isCustomLoaderConfigChanged(newModelConfig)) {
                     modelVersionsInstances.at(version)->setCustomLoaderConfigChangeFlag();
@@ -969,7 +979,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     if (versionsToStart->size() > 0 || versionsToReload->size() > 0 || versionsToRetire->size() > 0) {
         reloadNeeded = true;
     }
-
+    std::set<ovms::model_version_t> allFailedVersions;
     while (versionsToStart->size() > 0) {
         blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Adding new versions. Status: {};", blocking_status.string());
@@ -979,6 +989,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                 if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
                     availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
                 }
+                allFailedVersions.insert(version);
             }
             requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
             getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
@@ -993,20 +1004,33 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             blocking_status = status;
         }
     }
+
     for (const auto version : *versionsFailed) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Removing available version {} due to load failure.", version);
         if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
             availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
         }
+        allFailedVersions.insert(version);
     }
     // refresh versions to retire based on failed reloads
     requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
-
+    std::shared_ptr<model_versions_t> versionsToCleanup = std::make_shared<model_versions_t>();
+    std::copy_if(versionsToRetire->begin(), versionsToRetire->end(), std::back_inserter(*versionsToCleanup), [&](auto& version) { return allFailedVersions.find(version) != allFailedVersions.end(); });
+    versionsToRetire->erase(std::remove_if(versionsToRetire->begin(), versionsToRetire->end(), [&](auto& version) { return allFailedVersions.find(version) != allFailedVersions.end(); }), versionsToRetire->end());
     if (versionsToRetire->size() > 0) {
         auto status = model->retireVersions(versionsToRetire);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
+                config.getName(),
+                status.string());
+            return status;
+        }
+    }
+    if (versionsToCleanup->size() > 0) {
+        auto status = model->cleanupFailedLoad(versionsToCleanup);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while cleaning up model that failed to load: {}; versions; error: {}",
                 config.getName(),
                 status.string());
             return status;
