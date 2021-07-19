@@ -18,6 +18,40 @@ from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusResponse,
 from tensorflow.core.protobuf.error_codes_pb2 import Code
 from tensorflow_serving.util.status_pb2 import StatusProto
 
+class CallCount(Enum):
+    ZERO = 0
+    ONE = 1
+    TWO = 2
+    THREE = 3
+
+class ModelState(Enum):
+    # UNKNOWN = 0
+    START = 10
+    LOADING = 20
+    AVAILABLE = 30
+    UNLOADING = 40
+    END = 50
+
+class ErrorCode(Enum):
+    OK = 0
+    # CANCELLED = 1
+    UNKNOWN = 2
+    # INVALID_ARGUMENT = 3
+    # DEADLINE_EXCEEDED = 4
+    # NOT_FOUND = 5
+    # ALREADY_EXISTS = 6
+    # PERMISSION_DENIED = 7
+    # UNAUTHENTICATED = 16
+    # RESOURCE_EXHAUSTED = 8
+    # FAILED_PRECONDITION = 9
+    # ABORTED = 10
+    # OUT_OF_RANGE = 11
+    # UNIMPLEMENTED = 12
+    # INTERNAL = 13
+    # UNAVAILABLE = 14
+    # DATA_LOSS = 15
+    # DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD = 20
+
 MODEL_SPEC_VALID = [
     ("model_name", 1),
     ("3", 17),
@@ -94,36 +128,59 @@ PORT_INVALID = [
     (-1, ValueError, f"port should be in range <0, {2**16-1}>")
 ]
 
-PATH_VALID = "valid_path"
+#Special value for testing
+PATH_VALID, PATH_INVALID = "valid_path", "invalid_path"
+
+#Special values for testing
+SERVER_CERT_PATH_VALID, SERVER_CERT_PATH_INVALID = "server_cert_path_valid", "server_cert_path_invalid"
+CLIENT_CERT_PATH_VALID, CLIENT_CERT_PATH_INVALID = "client_cert_path_valid", "client_cert_path_invalid"
+CLIENT_KEY_PATH_VALID, CLIENT_KEY_PATH_INVALID = "client_key_path_valid", "client_key_path_invalid"
 
 TLS_CONFIG_VALID = [
-    ({"server_cert_path" : PATH_VALID}, 1),
-    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, 3),
+    ({"server_cert_path" : PATH_VALID}, CallCount.ONE.value),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, CallCount.THREE.value),
 ]
 
 TLS_CONFIG_INVALID = [
-    ({"client_key_path" : PATH_VALID, "server_cert_path" : PATH_VALID,} , ValueError, "none or both client_key_path and client_cert_path are required in tls_config", 0),
-    ({"client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, ValueError, "none or both client_key_path and client_cert_path are required in tls_config", 0),
+    ({"client_key_path" : PATH_VALID, "server_cert_path" : PATH_VALID,} , ValueError, "none or both client_key_path and client_cert_path are required in tls_config",
+    CallCount.ZERO.value, None),
+    ({"client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, ValueError, "none or both client_key_path and client_cert_path are required in tls_config",
+    CallCount.ZERO.value, None),
     
-    ({"non_client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, ValueError, "non_client_key_path is not valid tls_config key", 0),
-    ({"client_key_path" : PATH_VALID, "non_client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, ValueError, "non_client_cert_path is not valid tls_config key", 0),
-    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID, "non_server_cert_path" : PATH_VALID}, ValueError, "server_cert_path is not defined in tls_config", 0),
-    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID}, ValueError, "server_cert_path is not defined in tls_config", 0),
+    ({"non_client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, ValueError, "non_client_key_path is not valid tls_config key",
+    CallCount.ZERO.value, [True, True, True]),
+    ({"client_key_path" : PATH_VALID, "non_client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, ValueError, "non_client_cert_path is not valid tls_config key",
+    CallCount.ZERO.value, [True, True, True]),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID, "non_server_cert_path" : PATH_VALID}, ValueError, "server_cert_path is not defined in tls_config",
+    CallCount.ZERO.value, [True, True, True]),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID}, ValueError, "server_cert_path is not defined in tls_config",
+    CallCount.ZERO.value, None),
 
-    ({"client_key_path" : 1, "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, TypeError, f'client_key_path type should be string but is type int', 0),
-    ({"client_key_path" : [PATH_VALID], "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, TypeError, f'client_key_path type should be string but is type list', 0),
-    ({"client_key_path" : 1, "client_cert_path" : PATH_VALID, "server_cert_path" : 1}, TypeError, f'client_key_path type should be string but is type int', 0),
+    ({"client_key_path" : 1, "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, TypeError, f'client_key_path type should be string but is type int',
+    CallCount.ZERO.value, [False, True, True]),
+    ({"client_key_path" : [PATH_VALID], "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, TypeError, f'client_key_path type should be string but is type list',
+    CallCount.ZERO.value, [False, True, True]),
+    ({"client_key_path" : 1, "client_cert_path" : PATH_VALID, "server_cert_path" : 1}, TypeError, f'client_key_path type should be string but is type int',
+    CallCount.ZERO.value, [False, True, False]),
 
-    ({"client_key_path" : PATH_VALID, "client_cert_path" : 1, "server_cert_path" : PATH_VALID}, TypeError, f'client_cert_path type should be string but is type int', 1),
-    ({"client_key_path" : PATH_VALID, "client_cert_path" : 1, "server_cert_path" : 1}, TypeError, f'client_cert_path type should be string but is type int', 1),
-    ({"client_key_path" : PATH_VALID, "client_cert_path" : [PATH_VALID], "server_cert_path" : PATH_VALID}, TypeError, f'client_cert_path type should be string but is type list', 1),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : 1, "server_cert_path" : PATH_VALID}, TypeError, f'client_cert_path type should be string but is type int',
+    CallCount.ONE.value, [True, False, True]),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : 1, "server_cert_path" : 1}, TypeError, f'client_cert_path type should be string but is type int',
+    CallCount.ONE.value, [True, False, False]),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : [PATH_VALID], "server_cert_path" : PATH_VALID}, TypeError, f'client_cert_path type should be string but is type list', 
+    CallCount.ONE.value, [True, False, True]),
 
-    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID, "server_cert_path" : 1}, TypeError, f'server_cert_path type should be string but is type int', 2),
-    ({"client_key_path" : PATH_VALID, "client_cert_path" : 1, "server_cert_path" : [PATH_VALID]}, TypeError, f'client_cert_path type should be string but is type int', 1),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID, "server_cert_path" : 1}, TypeError, f'server_cert_path type should be string but is type int',
+    CallCount.TWO.value, [True, True, False]),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : 1, "server_cert_path" : [PATH_VALID]}, TypeError, f'client_cert_path type should be string but is type int',
+    CallCount.ONE.value, [True, False, False]),
     
-    ({"client_key_path" : "invalid", "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, ValueError, f'invalid is not valid path to file', 1),
-    ({"client_key_path" : PATH_VALID, "client_cert_path" : "/very/invalid", "server_cert_path" : PATH_VALID}, ValueError, f'/very/invalid is not valid path to file', 2),
-    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID, "server_cert_path" : "third_invalid_path"}, ValueError, f'third_invalid_path is not valid path to file', 3),
+    ({"client_key_path" : PATH_INVALID, "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_VALID}, ValueError, f'invalid is not valid path to file',
+    CallCount.ONE.value, [False, True, True]),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_INVALID, "server_cert_path" : PATH_VALID}, ValueError, f'/very/invalid is not valid path to file',
+    CallCount.TWO.value, [True, False, True]),
+    ({"client_key_path" : PATH_VALID, "client_cert_path" : PATH_VALID, "server_cert_path" : PATH_INVALID}, ValueError, f'third_invalid_path is not valid path to file',
+    CallCount.THREE.value, [True, True, False]),
 
 ]
 
@@ -131,79 +188,79 @@ CONFIG_VALID = [
     ({
         "address" : "localhost",
         "port" : 9000
-    }, {"check_address" : 1, "check_port" : 1, "check_tls_config" : 0}),
+    }, {"check_address" : CallCount.ONE.value, "check_port" : CallCount.ONE.value, "check_tls_config" : CallCount.ZERO.value}),
     ({
         "address" : "19.117.63.126",
         "port" : 1
-    }, {"check_address" : 1, "check_port" : 1, "check_tls_config" : 0}),
+    }, {"check_address" : CallCount.ONE.value, "check_port" : CallCount.ONE.value, "check_tls_config" : CallCount.ZERO.value}),
     ({
         "address" : "cluster.cloud.iotg.intel.com",
         "port" : 2**16-1
-    }, {"check_address" : 1, "check_port" : 1, "check_tls_config" : 0}),
+    }, {"check_address" : CallCount.ONE.value, "check_port" : CallCount.ONE.value, "check_tls_config" : CallCount.ZERO.value}),
     ({
         "address" : "localhost",
         "port" : 9000,
         "tls_config" : {
             "server_cert_path" : "valid_path"
         }
-    }, {"check_address" : 1, "check_port" : 1, "check_tls_config" : 1}),
+    }, {"check_address" : CallCount.ONE.value, "check_port" : CallCount.ONE.value, "check_tls_config" : CallCount.ONE.value}),
     ({
         "address" : "localhost",
         "port" : 9000,
         "tls_config" : {
-            "client_key_path" : "valid_path",
-            "client_cert_path" : "valid_path",
-            "server_cert_path" : "valid_path"
+            "client_key_path" : PATH_VALID,
+            "client_cert_path" : PATH_VALID,
+            "server_cert_path" : PATH_VALID
         }
-    }, {"check_address" : 1, "check_port" : 1, "check_tls_config" : 1})
+    }, {"check_address" : CallCount.ONE.value, "check_port" : CallCount.ONE.value, "check_tls_config" : CallCount.ONE.value})
 ]
 
 CONFIG_INVALID = [
     ({
 
     },
-    {"check_address" : 0, "check_port" : 0, "check_tls_config" : 0},
-    Exception, 'The minimal config must contain address and port', 
+    {"check_address" : CallCount.ZERO.value, "check_port" : CallCount.ZERO.value, "check_tls_config" : CallCount.ZERO.value},
+    ValueError, 'The minimal config must contain address and port', 
     {"check_address" : None, "check_port" : None, "check_tls_config" : None}),
     ({
         "address" : "localhost"
     },
-    {"check_address" : 0, "check_port" : 0, "check_tls_config" : 0},
-    Exception, 'The minimal config must contain address and port', 
+    {"check_address" : CallCount.ZERO.value, "check_port" : CallCount.ZERO.value, "check_tls_config" : CallCount.ZERO.value},
+    ValueError, 'The minimal config must contain address and port', 
     {"check_address" : None, "check_port" : None, "check_tls_config" : None}),
     ({
         "port" : 9000
     },
-    {"check_address" : 0, "check_port" : 0, "check_tls_config" : 0},
-    Exception, 'The minimal config must contain address and port', 
+    {"check_address" : CallCount.ZERO.value, "check_port" : CallCount.ZERO.value, "check_tls_config" : CallCount.ZERO.value},
+    ValueError, 'The minimal config must contain address and port', 
     {"check_address" : None, "check_port" : None, "check_tls_config" : None}),
 
     ({
         "address" : ["localhost"],
         "port" : 9000
     },
-    {"check_address" : 1, "check_port" : 0, "check_tls_config" : 0},
+    {"check_address" : CallCount.ONE.value, "check_port" : CallCount.ZERO.value, "check_tls_config" : CallCount.ZERO.value},
     TypeError, 'address type should be string, but is list', 
     {"check_address" : TypeError('address type should be string, but is list'), "check_port" : None, "check_tls_config" : None}),
     ({
         "address" : "address",
         "port" : '9000'
     },
-    {"check_address" : 1, "check_port" : 0, "check_tls_config" : 0},
+    {"check_address" : CallCount.ONE.value, "check_port" : CallCount.ZERO.value, "check_tls_config" : CallCount.ZERO.value},
     ValueError, 'address is not valid', 
     {"check_address" : ValueError('address is not valid'), "check_port" : None, "check_tls_config" : None}),
     ({
         "address" : "localhost",
         "port" : '9000'
     },
-    {"check_address" : 1, "check_port" : 1, "check_tls_config" : 0},
+    {"check_address" : CallCount.ONE.value, "check_port" : CallCount.ONE.value, "check_tls_config" : CallCount.ZERO.value},
     TypeError, 'port type should be int, but is type str', 
     {"check_address" : None, "check_port" : TypeError('port type should be int, but is type str'), "check_tls_config" : None}),
     ({
         "address" : "localhost",
         "port" : 2**16
     },
-    {"check_address" : 1, "check_port" : 1, "check_tls_config" : 0},
+    {"check_address" : CallCount.ONE.value, "check_port" : CallCount.ONE.value, "check_tls_config" : CallCount.ZERO.value},
     ValueError, f"port should be in range <0, {2**16-1}>", 
     {"check_address" : None, "check_port" : ValueError(f"port should be in range <0, {2**16-1}>"), "check_tls_config" : None}),
 
@@ -214,7 +271,7 @@ CONFIG_INVALID = [
 
         }
     },
-    {"check_address" : 1, "check_port" : 1, "check_tls_config" : 1},
+    {"check_address" : CallCount.ONE.value, "check_port" : CallCount.ONE.value, "check_tls_config" : CallCount.ONE.value},
     ValueError, 'server_cert_path is not defined in tls_config', 
     {"check_address" : None, "check_port" : None, "check_tls_config" : ValueError('server_cert_path is not defined in tls_config')}),
     ({
@@ -225,7 +282,7 @@ CONFIG_INVALID = [
             "client_key_path" :PATH_VALID
         }
     },
-    {"check_address" : 1, "check_port" : 1, "check_tls_config" : 1},
+    {"check_address" : CallCount.ONE.value, "check_port" : CallCount.ONE.value, "check_tls_config" : CallCount.ONE.value},
     ValueError, 'none or both client_key_path and client_cert_path are required in tls_config', 
     {"check_address" : None, "check_port" : None, "check_tls_config" : ValueError('none or both client_key_path and client_cert_path are required in tls_config')}),
     ({
@@ -238,7 +295,7 @@ CONFIG_INVALID = [
             "invalid_key_name" : PATH_VALID
         }
     },
-    {"check_address" : 1, "check_port" : 1, "check_tls_config" : 1},
+    {"check_address" : CallCount.ONE.value, "check_port" : CallCount.ONE.value, "check_tls_config" : CallCount.ONE.value},
     ValueError,  'invalid_key_name is not valid tls_config key', 
     {"check_address" : None, "check_port" : None, "check_tls_config" : ValueError('invalid_key_name is not valid tls_config key')}),
     ({
@@ -250,7 +307,7 @@ CONFIG_INVALID = [
             "client_cert_path" : 123,
         }
     },
-    {"check_address" : 1, "check_port" : 1, "check_tls_config" : 1},
+    {"check_address" : CallCount.ONE.value, "check_port" : CallCount.ONE.value, "check_tls_config" : CallCount.ONE.value},
     TypeError,  'client_cert_path type should be string but is type int', 
     {"check_address" : None, "check_port" : None, "check_tls_config" : TypeError('client_cert_path type should be string but is type int')}),
     ({
@@ -262,37 +319,47 @@ CONFIG_INVALID = [
             "client_cert_path" : PATH_VALID,
         }
     },
-    {"check_address" : 1, "check_port" : 1, "check_tls_config" : 1},
+    {"check_address" : CallCount.ONE.value, "check_port" : CallCount.ONE.value, "check_tls_config" : CallCount.ONE.value},
     ValueError,  'invalid_path is not valid path to file', 
     {"check_address" : None, "check_port" : None, "check_tls_config" : ValueError('invalid_path is not valid path to file')}),
 ]
 
-SERVER_CERT_PATH_VALID, SERVER_CERT_PATH_INVALID = "server_cert_path_valid", "server_cert_path_invalid"
-CLIENT_CERT_PATH_VALID, CLIENT_CERT_PATH_INVALID = "client_cert_path_valid", "client_cert_path_invalid"
-CLIENT_KEY_PATH_VALID, CLIENT_KEY_PATH_INVALID = "client_key_path_valid", "client_key_path_invalid"
-
 CHANNEL_CERTS_VALID = [
-    (CLIENT_KEY_PATH_VALID, CLIENT_CERT_PATH_VALID, SERVER_CERT_PATH_VALID, {"load_privatekey" : 1, "load_certificate" : 2, "open" : 3}),
-    (None, None, SERVER_CERT_PATH_VALID, {"load_privatekey" : 0, "load_certificate" : 1, "open" : 1})
+    (SERVER_CERT_PATH_VALID, CLIENT_CERT_PATH_VALID, CLIENT_KEY_PATH_VALID,
+    {"check_certificate_valid" : CallCount.TWO.value, "check_key_valid" : CallCount.ONE.value}),
+
+    (SERVER_CERT_PATH_VALID, None, None,
+    {"check_certificate_valid" : CallCount.ONE.value, "check_key_valid" : CallCount.ZERO.value})
 ]
 
 CHANNEL_CERTS_INVALID = [
-    (None, None, SERVER_CERT_PATH_INVALID, {"load_privatekey" : 0, "load_certificate" : 1, "open" : 1},
-    ValueError, 'server certificate file is not valid',
-    {"load_privatekey" : None, "load_certificate" : ValueError('server certificate file is not valid')}),
-    (CLIENT_KEY_PATH_VALID, CLIENT_CERT_PATH_VALID, SERVER_CERT_PATH_INVALID, {"load_privatekey" : 1, "load_certificate" : 2, "open" : 3},
-    ValueError, 'server certificate file is not valid',
-    {"load_privatekey" : None, "load_certificate" : [None, ValueError('server certificate file is not valid')]}),
-    (CLIENT_KEY_PATH_INVALID, CLIENT_CERT_PATH_VALID, SERVER_CERT_PATH_INVALID, {"load_privatekey" : 1, "load_certificate" : 0, "open" : 1},
-    ValueError, 'client key file is not valid',
-    {"load_privatekey" : ValueError('client key file is not valid'), "load_certificate" : None}),
-    (CLIENT_KEY_PATH_INVALID, CLIENT_CERT_PATH_VALID, SERVER_CERT_PATH_VALID, {"load_privatekey" : 1, "load_certificate" : 0, "open" : 1},
-    ValueError, 'client key file is not valid',
-    {"load_privatekey" : ValueError('client key file is not valid'), "load_certificate" : None}),
-    (CLIENT_KEY_PATH_VALID, CLIENT_CERT_PATH_INVALID, SERVER_CERT_PATH_INVALID, {"load_privatekey" : 1, "load_certificate" : 1, "open" : 2},
-    ValueError, 'client certificate file is not valid',
-    {"load_privatekey" : None, "load_certificate" : ValueError('client certificate file is not valid')}),
-    (CLIENT_KEY_PATH_VALID, CLIENT_CERT_PATH_INVALID, SERVER_CERT_PATH_VALID, {"load_privatekey" : 1, "load_certificate" : 1, "open" : 2},
-    ValueError, 'client certificate file is not valid',
-    {"load_privatekey" : None, "load_certificate" : ValueError('client certificate file is not valid')}),
+    (SERVER_CERT_PATH_INVALID, None, None,
+    {"check_certificate_valid" : CallCount.ONE.value, "check_key_valid" : CallCount.ZERO.value},
+    ValueError, f'{SERVER_CERT_PATH_INVALID} file is not valid certificate',
+    {"check_certificate_valid" : ValueError(f'{SERVER_CERT_PATH_INVALID} file is not valid certificate'), "check_key_valid" : None}),
+
+    (SERVER_CERT_PATH_INVALID, CLIENT_CERT_PATH_VALID, CLIENT_KEY_PATH_VALID,
+    {"check_certificate_valid" : CallCount.ONE.value, "check_key_valid" : CallCount.ZERO.value},
+    ValueError, f'{SERVER_CERT_PATH_INVALID} file is not valid certificate',
+    {"check_certificate_valid" : ValueError(f'{SERVER_CERT_PATH_INVALID} file is not valid certificate'), "check_key_valid" : None}),
+
+    (SERVER_CERT_PATH_INVALID, CLIENT_CERT_PATH_INVALID, CLIENT_KEY_PATH_VALID,
+    {"check_certificate_valid" : CallCount.ONE.value, "check_key_valid" : CallCount.ZERO.value},
+    ValueError, f'{SERVER_CERT_PATH_INVALID} file is not valid certificate',
+    {"check_certificate_valid" : ValueError(f'{SERVER_CERT_PATH_INVALID} file is not valid certificate'), "check_key_valid" : None}),
+
+    (SERVER_CERT_PATH_VALID, CLIENT_CERT_PATH_INVALID, CLIENT_KEY_PATH_VALID,
+    {"check_certificate_valid" : CallCount.TWO.value, "check_key_valid" : CallCount.ZERO.value},
+    ValueError, f'{CLIENT_CERT_PATH_INVALID} file is not valid certificate',
+    {"check_certificate_valid" : [None, ValueError(f'{CLIENT_CERT_PATH_INVALID} file is not valid certificate')], "check_key_valid" : None}),
+
+    (SERVER_CERT_PATH_INVALID, CLIENT_CERT_PATH_VALID, CLIENT_KEY_PATH_INVALID,
+    {"check_certificate_valid" : CallCount.ONE.value, "check_key_valid" : CallCount.ZERO.value},
+    ValueError, f'{SERVER_CERT_PATH_INVALID} file is not valid certificate',
+    {"check_certificate_valid" : ValueError('client certificate file is not valid'), "check_key_valid" : None}),
+
+    (SERVER_CERT_PATH_VALID, CLIENT_CERT_PATH_VALID, CLIENT_KEY_PATH_INVALID,
+    {"check_certificate_valid" : CallCount.TWO.value, "check_key_valid" : CallCount.ONE.value},
+    ValueError, f'{CLIENT_KEY_PATH_INVALID} file is not valid private key',
+    {"check_certificate_valid" : [None, None], "check_key_valid" : ValueError(f'{CLIENT_KEY_PATH_INVALID} file is not valid private key')}),
 ]

@@ -28,10 +28,10 @@ from tensorflow_serving.apis import model_service_pb2_grpc
 
 class GrpcClient(ServingClient):
 
-    def __init__(self, channel, stubs):
+    def __init__(self, channel, prediction_service_stub, model_service_stub):
         self.channel = channel
-        self.prediction_service_stub = stubs['prediction_service_stub']
-        self.model_service_stub = stubs['model_service_stub']
+        self.prediction_service_stub = prediction_service_stub
+        self.model_service_stub = model_service_stub
 
     def predict(self, request):
         '''
@@ -125,10 +125,10 @@ class GrpcClient(ServingClient):
         grpc_address = f"{config['address']}:{config['port']}"
 
         if 'tls_config' in config:
-            client_key, client_cert, server_cert = _prepare_certs(
-                config['tls_config']['client_key_path'] if 'client_key_path' in config['tls_config'] else None,
-                config['tls_config']['client_cert_path'] if 'client_cert_path' in config['tls_config'] else None,
-                config['tls_config']['server_cert_path']
+            server_cert, client_cert, client_key = _prepare_certs(
+                config['tls_config'].get('server_cert_path'),
+                config['tls_config'].get('client_cert_path'),
+                config['tls_config'].get('client_key_path')
             )
             
             creds = grpc.ssl_channel_credentials(root_certificates=server_cert,
@@ -140,50 +140,48 @@ class GrpcClient(ServingClient):
 
         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
         model_service_stub = model_service_pb2_grpc.ModelServiceStub(channel)
-        stubs = {
-            "prediction_service_stub" : prediction_service_stub,
-            "model_service_stub" : model_service_stub
-        }
 
-        return cls(channel, stubs)
+        return cls(channel, prediction_service_stub, model_service_stub)
 
-def _prepare_certs(client_key, client_cert, server_cert):
+def _prepare_certs(server_cert_path, client_cert_path, client_key_path):
     
-    if client_key is not None:
-        with open(client_key, 'rb') as key:
-            client_key = key.read()
-        try:
-            p_key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, client_key)
-        except OpenSSL.crypto.Error as e_info:
-            raise ValueError('client key file is not valid')
+    client_cert, client_key = None, None
 
-    if client_cert is not None:
-        with open(client_cert, 'rb') as ca:
-            client_cert = ca.read()
-        try:
-            c_cert = OpenSSL.crypto.load_certificate(
-                OpenSSL.crypto.FILETYPE_PEM,
-                client_cert
-            )
-        except OpenSSL.crypto.Error as e_info:
-            raise ValueError('client certificate file is not valid')
-        
-    with open(server_cert, 'rb') as f:
-        server_cert = f.read()
+    server_cert = _check_certificate_valid(server_cert_path)
+
+    if client_cert_path is not None:
+        client_cert = _check_certificate_valid(client_cert_path)
+
+    if client_key_path is not None:
+        client_key = _check_private_key_valid(client_key_path)
+
+    return server_cert, client_cert, client_key
+
+def _check_certificate_valid(certificate_path):
+    with open(certificate_path, 'rb') as f:
+        certificate = f.read()
     try:
-        s_cert = OpenSSL.crypto.load_certificate(
+        cert = OpenSSL.crypto.load_certificate(
             OpenSSL.crypto.FILETYPE_PEM,
-            server_cert
+            certificate
         )
+        return certificate
     except OpenSSL.crypto.Error as e_info:
-        raise ValueError('server certificate file is not valid')
+        raise ValueError(f'{certificate_path} file is not valid certificate')
 
-    return client_key, client_cert, server_cert
+def _check_private_key_valid(key_path):
+    with open(key_path, 'rb') as f:
+        key = f.read()
+    try:
+        p_key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
+        return key
+    except OpenSSL.crypto.Error as e_info:
+        raise ValueError(f'{key_path} file is not valid private key')
 
 def _check_config(config):
     
     if 'address' not in config or 'port' not in config:
-        raise Exception('The minimal config must contain address and port')
+        raise ValueError('The minimal config must contain address and port')
 
     _check_address(config['address'])
 
@@ -213,7 +211,8 @@ def _check_tls_config(tls_config):
 
     if 'server_cert_path' not in tls_config:
         raise ValueError(f'server_cert_path is not defined in tls_config')
-    if 'client_key_path' in tls_config and 'client_cert_path' not in tls_config or 'client_cert_path' in tls_config and 'client_key_path' not in tls_config:
+    # if 'client_key_path' in tls_config and 'client_cert_path' not in tls_config or 'client_cert_path' in tls_config and 'client_key_path' not in tls_config:
+    if ('client_key_path' in tls_config) != ('client_cert_path' in tls_config):
         raise ValueError(f'none or both client_key_path and client_cert_path are required in tls_config')
     
     valid_keys = ['server_cert_path', 'client_key_path', 'client_cert_path']

@@ -17,24 +17,19 @@
 import pytest
 
 from ovmsclient.tfs_compat.grpc.serving_client import  _check_tls_config
-from config import TLS_CONFIG_VALID, TLS_CONFIG_INVALID, PATH_VALID
+from config import TLS_CONFIG_VALID, TLS_CONFIG_INVALID
 
 @pytest.mark.parametrize("tls_config, isfile_called_count", TLS_CONFIG_VALID)
-def test_check_address_valid(mocker, tls_config, isfile_called_count):
-    mock_method = mocker.patch('os.path.isfile', side_effect=is_valid_path)
+def test_check_tls_config_valid(mocker, tls_config, isfile_called_count):
+    mock_method = mocker.patch('os.path.isfile')
     _check_tls_config(tls_config)
     assert mock_method.call_count ==  isfile_called_count
 
-@pytest.mark.parametrize("tls_config, expected_exception, expected_message, isfile_called_count", TLS_CONFIG_INVALID)
-def test_check_address_invalid(mocker, tls_config, expected_exception, expected_message, isfile_called_count):
+@pytest.mark.parametrize("tls_config, expected_exception, expected_message, isfile_called_count, is_valid_path", TLS_CONFIG_INVALID)
+def test_check_tls_config_invalid(mocker, tls_config, expected_exception, expected_message, isfile_called_count, is_valid_path):
     mock_method = mocker.patch('os.path.isfile', side_effect=is_valid_path)
     with pytest.raises(expected_exception) as e_info:
         _check_tls_config(tls_config)
         assert str(e_info.value) == expected_message
     
     assert mock_method.call_count ==  isfile_called_count
-
-def is_valid_path(path):
-    if path == PATH_VALID:
-        return True
-    return False
