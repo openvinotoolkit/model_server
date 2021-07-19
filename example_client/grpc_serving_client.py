@@ -107,7 +107,7 @@ if args.get('transpose_input') == "True":
         imgs = imgs.transpose((0,3,1,2))
     if args.get('transpose_method') == "nchw2nhwc":
         imgs = imgs.transpose((0,2,3,1))
-print('\tImages in shape: {}\n'.format(imgs.shape))
+print('\tNumpy file shape: {}\n'.format(imgs.shape))
 
 iteration = 0
 is_pipeline_request = bool(args.get('pipeline_name'))
