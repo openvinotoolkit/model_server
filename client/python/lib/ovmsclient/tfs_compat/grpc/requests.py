@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-from tensorflow_serving.apis import get_model_status_pb2
+from ovmsclient.tfs_compat.base.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
+from tensorflow_serving.apis import get_model_status_pb2, get_model_metadata_pb2
 
 from ovmsclient.tfs_compat.base.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
 
@@ -22,7 +23,9 @@ class GrpcPredictRequest(PredictRequest):
     pass
 
 class GrpcModelMetadataRequest(ModelMetadataRequest):
-    pass
+    def __init__(self, model_name, model_version, raw_request):
+        super().__init__(model_name, model_version)
+        self.raw_request = raw_request
 
 class GrpcModelStatusRequest(ModelStatusRequest):
 
@@ -122,7 +125,14 @@ def make_metadata_request(model_name, model_version=0):
         >>> print(metadata_request)
     '''
 
-    raise NotImplementedError
+    _check_model_spec(model_name, model_version)
+
+    metadata_field = "signature_def"
+    request = get_model_metadata_pb2.GetModelMetadataRequest()
+    request.model_spec.name = model_name
+    request.model_spec.version.value = model_version
+    request.metadata_field.append(metadata_field)
+    return GrpcModelMetadataRequest(model_name, model_version, request)
 
 def make_status_request(model_name, model_version=0):
     '''
