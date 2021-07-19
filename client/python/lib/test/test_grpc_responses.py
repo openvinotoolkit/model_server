@@ -24,7 +24,7 @@ from ovmsclient.tfs_compat.grpc.responses import GrpcModelStatusResponse
 from config import MODEL_STATUS_RESPONSE_VALID
 
 @pytest.mark.parametrize("model_raw_response_dict" , MODEL_STATUS_RESPONSE_VALID)
-def test_GrpcModelStatusResponse_to_dict_valid(model_raw_response_dict):
+def test_ModelStatusResponse_to_dict_valid(model_raw_response_dict):
     model_raw_responses = []
     for version, status in model_raw_response_dict.items():
         model_raw_responses.append(create_model_status_response(version, status['error_code'], status['error_message'],
