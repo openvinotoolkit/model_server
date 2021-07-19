@@ -20,11 +20,11 @@ from ovmsclient.tfs_compat.grpc.serving_client import _check_port
 from config import PORT_VALID, PORT_INVALID
 
 @pytest.mark.parametrize("address", PORT_VALID)
-def test_check_address_valid(address):
+def test_check_port_valid(address):
     _check_port(address)
 
 @pytest.mark.parametrize("address, expected_exception, expected_message", PORT_INVALID)
-def test_check_address_invalid(address, expected_exception, expected_message):
+def test_check_port_invalid(address, expected_exception, expected_message):
     with pytest.raises(expected_exception) as e_info:
         _check_port(address)
         assert str(e_info.value) == expected_message

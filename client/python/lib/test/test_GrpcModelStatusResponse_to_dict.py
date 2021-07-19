@@ -19,8 +19,9 @@ import pytest
 from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
 
 from ovmsclient.tfs_compat.grpc.responses import GrpcModelStatusResponse
-
-from config import MODEL_STATUS_RESPONSE_VALID, create_model_status_response, merge_model_status_responses
+from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusResponse, ModelVersionStatus
+from tensorflow_serving.util.status_pb2 import StatusProto
+from config import MODEL_STATUS_RESPONSE_VALID
 
 @pytest.mark.parametrize("model_raw_response_dict" , MODEL_STATUS_RESPONSE_VALID)
 def test_GrpcModelStatusResponse_to_dict_valid(model_raw_response_dict):
@@ -39,4 +40,23 @@ def test_GrpcModelStatusResponse_to_dict_valid(model_raw_response_dict):
         assert isinstance(response_dictionary[version], dict)
         assert response_dictionary[version]['error_code'] == status['error_code']
         assert response_dictionary[version]['error_message'] == status['error_message']
-        assert response_dictionary[version]['state'] == ModelVersionStatus.State.Name(status['state'])
+        assert response_dictionary[version]['state'] == GrpcModelStatusResponse._STATE_TO_STRING_MAPPING[status['state']]
+
+def create_model_status_response(model_version, error_code, error_message, model_state):
+    status = StatusProto()
+    status.error_code = error_code
+    status.error_message = error_message
+
+    model_version_status = ModelVersionStatus()
+    model_version_status.version = model_version
+    model_version_status.state = model_state
+    model_version_status.status.CopyFrom(status)
+
+    return model_version_status
+
+def merge_model_status_responses(responses):
+    raw_response = GetModelStatusResponse()
+    model_versions = [response for response in responses]
+    raw_response.model_version_status.extend(model_versions)
+
+    return raw_response

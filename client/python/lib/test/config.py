@@ -14,9 +14,13 @@
 # limitations under the License.
 #
 
+<<<<<<< HEAD
 from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusResponse, ModelVersionStatus
 from tensorflow.core.protobuf.error_codes_pb2 import Code
 from tensorflow_serving.util.status_pb2 import StatusProto
+=======
+from enum import Enum
+>>>>>>> tests + refactor
 
 class CallCount(Enum):
     ZERO = 0
@@ -68,25 +72,6 @@ MODEL_SPEC_INVALID = [
     ("model_name", -1, ValueError, f'model_version should be in range <0, {2**63-1}>'),
     ("model_name", 9223372036854775809, ValueError, f'model_version should be in range <0, {2**63-1}>'),
 ]
-
-def create_model_status_response(model_version, error_code, error_message, model_state):
-    status = StatusProto()
-    status.error_code = error_code
-    status.error_message = error_message
-
-    model_version_status = ModelVersionStatus()
-    model_version_status.version = model_version
-    model_version_status.state = model_state
-    model_version_status.status.CopyFrom(status)
-
-    return model_version_status
-
-def merge_model_status_responses(responses):
-    raw_response = GetModelStatusResponse()
-    model_versions = [response for response in responses]
-    raw_response.model_version_status.extend(model_versions)
-
-    return raw_response
 
 MODEL_STATUS_RESPONSE_VALID = [
 {
@@ -362,4 +347,20 @@ CHANNEL_CERTS_INVALID = [
     {"check_certificate_valid" : CallCount.TWO.value, "check_key_valid" : CallCount.ONE.value},
     ValueError, f'{CLIENT_KEY_PATH_INVALID} file is not valid private key',
     {"check_certificate_valid" : [None, None], "check_key_valid" : ValueError(f'{CLIENT_KEY_PATH_INVALID} file is not valid private key')}),
+]
+
+CERTIFICATE_VALID = [
+    (PATH_VALID),
+]
+
+CERTIFICATE_INVALID = [
+    (PATH_INVALID, ValueError, f'{PATH_INVALID} file is not valid certificate', ValueError(f'{PATH_INVALID} file is not valid certificate')),
+]
+
+PRIVATE_KEY_VALID = [
+    (PATH_VALID),
+]
+
+PRIVATE_KEY_INVALID = [
+    (PATH_INVALID, ValueError, f'{PATH_INVALID} file is not valid private key', ValueError(f'{PATH_INVALID} file is not valid private key')),
 ]
