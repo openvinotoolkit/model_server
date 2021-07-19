@@ -116,6 +116,7 @@ protected:
     TensorProto tensorProto;
     const char* tensorName = "Input_PRECISION_1_3_1_1_NHWC";
     ovms::tensor_map_t tensorMap;
+    bool isPipeline = false;
 };
 
 class DeserializeTFTensorProto : public TensorflowGRPCPredict {};
@@ -143,7 +144,6 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision)
     tensorMap[tensorName]->setPrecision(testedPrecision);
     InferenceEngine::InferRequest inferRequest;
     InputSink<InferRequest&> inputSink(inferRequest);
-    bool isPipeline = false;
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION)
         << "Unsupported OVMS precision:"
@@ -158,7 +158,6 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobExc
         std::make_shared<MockIInferRequestFailingInSetBlob>();
     InferenceEngine::InferRequest inferRequest(mInferRequestPtr);
     InputSink<InferRequest&> inputSink(inferRequest);
-    bool isPipeline = false;
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION) << status.string();
 }
@@ -198,7 +197,6 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobExc
             Throw(InferenceEngine::GeneralError("")));
     InputSink<InferRequest&> inputSink(inferRequest);
     Status status;
-    bool isPipeline = false;
     status = deserializePredictRequest<MockTensorProtoDeserializator>(
         request, tensorMap, inputSink, isPipeline);
     EXPECT_EQ(status, ovms::StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR) << status.string();
@@ -211,7 +209,6 @@ TEST_P(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
     InferenceEngine::InferRequest inferRequest(mInferRequestPtr);
     EXPECT_CALL(*mInferRequestPtr, SetBlob(_, _, _));
     InputSink<InferRequest&> inputSink(inferRequest);
-    bool isPipeline = false;
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
     EXPECT_TRUE(status.ok());
 }
@@ -219,7 +216,6 @@ TEST_P(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
 TEST_P(DeserializeTFTensorProtoNegative, ShouldReturnNullptrForPrecision) {
     Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
-    bool isPipeline = false;
     InferenceEngine::Blob::Ptr blobPtr = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], isPipeline);
     EXPECT_EQ(nullptr, blobPtr) << "Unsupported OVMS precision:"
                                 << testedPrecision
@@ -230,7 +226,6 @@ TEST_P(DeserializeTFTensorProto, ShouldReturnValidBlob) {
     Precision testedPrecision = GetParam();
     SetUpTensorProto(fromInferenceEnginePrecision(testedPrecision));
     tensorMap[tensorName]->setPrecision(testedPrecision);
-    bool isPipeline = false;
     InferenceEngine::Blob::Ptr blobPtr = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], isPipeline);
     EXPECT_NE(nullptr, blobPtr) << "Supported OVMS precision:"
                                 << testedPrecision

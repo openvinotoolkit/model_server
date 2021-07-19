@@ -147,7 +147,8 @@ Status deserializePredictRequest(
                 SPDLOG_DEBUG(status.string());
                 return status;
             }
-            status = inputSink.give(name, blob);
+            const std::string ovBlobName = isPipeline ? name : tensorInfo->getName();
+            status = inputSink.give(ovBlobName, blob);
             if (!status.ok()) {
                 SPDLOG_DEBUG("Feeding inputs to inference performer failed:{}", status.string());
                 return status;
