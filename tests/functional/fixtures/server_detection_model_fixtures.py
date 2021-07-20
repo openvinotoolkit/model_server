@@ -31,7 +31,8 @@ def start_server_face_detection_model_auto_shape(request):
                                  "nireq": 4}
     container_name_infix = "test-auto-shape"
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command)
+                    container_name_infix, config.start_container_command,
+                    target_device=config.target_device)
     return server.start()
 
 
@@ -46,7 +47,8 @@ def start_server_face_detection_model_named_shape(request):
                                  "nireq": 2}
     container_name_infix = "test-named-shape"
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command)
+                    container_name_infix, config.start_container_command,
+                    target_device=config.target_device)
     return server.start()
 
 
@@ -60,5 +62,6 @@ def start_server_face_detection_model_nonamed_shape(request):
                                  "nireq": 2}
     container_name_infix = "test-nonamed-shape"
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command)
+                    container_name_infix, config.start_container_command,
+                    target_device=config.target_device)
     return server.start()

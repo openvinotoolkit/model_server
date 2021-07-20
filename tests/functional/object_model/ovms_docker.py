@@ -23,7 +23,7 @@ from utils.parametrization import generate_test_object_name
 class OvmsDocker(Docker):
     def __init__(self, request, command_args, container_name_infix, start_container_command,
                  env_vars=None, image=config.image, container_log_line=config.container_log_line,
-                 server_log_level=config.log_level):
+                 server_log_level=config.log_level, target_device=None):
         self.command_args = command_args
         self.container_name_infix = container_name_infix
         self.server_log_level = server_log_level
@@ -34,6 +34,8 @@ class OvmsDocker(Docker):
         self.command_args["port"] = self.grpc_port
         self.command_args["rest_port"] = self.rest_port
         self.command_args["log_level"] = self.server_log_level
+        if target_device:
+            self.command_args["target_device"] = target_device
         self.start_container_command = start_ovms_container_command(self.start_container_command, self.command_args)
 
     def start(self):

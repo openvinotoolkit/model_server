@@ -62,6 +62,9 @@ models_path = path_to_mount if ovms_binary_path else "/opt/ml"
 """TT_MINIO_IMAGE_NAME - Docker image for Minio"""
 minio_image = os.environ.get("TT_MINIO_IMAGE_NAME", "minio/minio:latest")
 
+""" TT_TARGET_DEVICE - one of "CPU", "GPU" """
+target_device = os.environ.get("TT_TARGET_DEVICE", "CPU")
+
 start_minio_container_command = 'server --address ":{}" /data'
 
 container_minio_log_line = "Endpoint:"
