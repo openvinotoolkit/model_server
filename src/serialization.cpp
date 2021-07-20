@@ -110,23 +110,8 @@ Status serializePredictResponse(
     InferenceEngine::InferRequest& inferRequest,
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response) {
-    Status status;
-    for (const auto& pair : outputMap) {
-        auto networkOutput = pair.second;
-        InferenceEngine::Blob::Ptr blob;
-        OutputGetter<InferenceEngine::InferRequest&> outputGetter(inferRequest);
-        status = outputGetter.get(networkOutput->getName(), blob);
-        if (!status.ok()) {
-            return status;
-        }
-        auto& tensorProto = (*response->mutable_outputs())[networkOutput->getMappedName()];
-        status = serializeBlobToTensorProto(tensorProto, networkOutput, blob);
-        if (!status.ok()) {
-            return status;
-        }
-    }
-
-    return status;
+    OutputGetter<InferenceEngine::InferRequest&> outputGetter(inferRequest);
+    return serializePredictResponse(outputGetter, outputMap, response);
 }
 
 }  // namespace ovms
