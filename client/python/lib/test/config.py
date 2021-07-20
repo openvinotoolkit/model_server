@@ -113,7 +113,7 @@ PORT_INVALID = [
     (-1, ValueError, f"port should be in range <0, {2**16-1}>")
 ]
 
-#Special value for testing
+#Special values for testing
 PATH_VALID, PATH_INVALID = "valid_path", "invalid_path"
 
 #Special values for testing

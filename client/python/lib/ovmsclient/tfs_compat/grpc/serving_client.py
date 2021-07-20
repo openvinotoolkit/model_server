@@ -211,7 +211,7 @@ def _check_tls_config(tls_config):
 
     if 'server_cert_path' not in tls_config:
         raise ValueError(f'server_cert_path is not defined in tls_config')
-    # if 'client_key_path' in tls_config and 'client_cert_path' not in tls_config or 'client_cert_path' in tls_config and 'client_key_path' not in tls_config:
+
     if ('client_key_path' in tls_config) != ('client_cert_path' in tls_config):
         raise ValueError(f'none or both client_key_path and client_cert_path are required in tls_config')
     
