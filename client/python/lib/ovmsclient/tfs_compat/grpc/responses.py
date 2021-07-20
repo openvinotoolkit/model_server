@@ -24,6 +24,31 @@ class GrpcPredictResponse(PredictResponse):
 
 class GrpcModelMetadataResponse(ModelMetadataResponse):
     
+    _DTYPE_NAME = [ 'DT_INVALID',
+               'DT_FLOAT',
+               'DT_DOUBLE',
+               'DT_INT32',
+               'DT_UINT8',
+               'DT_INT16',
+               'DT_INT8',
+               'DT_STRING',
+               'DT_COMPLEX64',
+               'DT_INT64',
+               'DT_BOOL',
+               'DT_QINT8',
+               'DT_QUINT8',
+               'DT_QINT32',
+               'DT_BFLOAT16',
+               'DT_QINT16',
+               'DT_QUINT16',
+               'DT_UINT16',
+               'DT_COMPLEX128',
+               'DT_HALF',
+               'DT_RESOURCE',
+               'DT_VARIANT',
+               'DT_UINT32',
+               'DT_UINT64']
+
     def to_dict(self):
         result_dictionary = {}
 
@@ -42,7 +67,7 @@ class GrpcModelMetadataResponse(ModelMetadataResponse):
             tensor_dtype = serving_inputs[input_blob].dtype
             input_blobs_dictionary[input_blob] = dict([
                 ("shape", inputs_shape),
-                ("dtype", tensor_dtype)
+                ("dtype", self._DTYPE_NAME[tensor_dtype])
             ])
         
         serving_outputs = serving_default.outputs
@@ -55,7 +80,7 @@ class GrpcModelMetadataResponse(ModelMetadataResponse):
             tensor_dtype = serving_outputs[output_blob].dtype
             output_blobs_dictionary[output_blob] = dict([
                 ("shape", outputs_shape),
-                ("dtype", tensor_dtype)
+                ("dtype", self._DTYPE_NAME[tensor_dtype])
             ])
     
         version = self.raw_response.model_spec.version.value

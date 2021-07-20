@@ -652,5 +652,69 @@ BUILD_INVALID_CERTS = [
     },
     ValueError,  'path_to_invalid_client_certificate is not valid certificate',
     {"check_config" : CallCount.ONE, "prepare_certs" : CallCount.ONE}),
+]
     
+MODEL_METADATA_RESPONSE_VALID = [
+    {
+        'version' : 0,
+        'name' : 'resnet',
+        'inputs' : {
+            '0' : {
+                'shape' : [1, 3, 244, 244],
+                'dtype' : TensorDtype.DT_FLOAT.value
+            }
+        },
+        'outputs' : {
+            '1463' : {
+                'shape' : [1, 1000],
+                'dtype' : TensorDtype.DT_FLOAT.value
+            }
+        }
+    },
+
+    {
+        'version' : 1,
+        'name' : 'model_name',
+        'inputs' : {
+            '0' : {
+                'shape' : [1, 3, 244, 244],
+                'dtype' : TensorDtype.DT_FLOAT.value
+            },
+            '1' : {
+                'shape' : [0, 1, 3, 244, 244],
+                'dtype' : TensorDtype.DT_INT32.value
+            }
+        },
+        'outputs' : {
+            '1463' : {
+                'shape' : [1, 1000],
+                'dtype' : TensorDtype.DT_FLOAT.value
+            },
+            'second_output' : {
+                'shape' : [0, 1, 1000],
+                'dtype' : TensorDtype.DT_INT32.value
+            }
+        }
+    },
+
+    {
+        'version' : 1,
+        'name' : 'model_name',
+        'inputs' : {
+            'input1' : {
+                'shape' : [1, 3, 1080, 1920],
+                'dtype' : TensorDtype.DT_QINT32.value
+            },
+            'input2' : {
+                'shape' : [1, 3, 244, 244],
+                'dtype' : TensorDtype.DT_INT32.value
+            }
+        },
+        'outputs' : {
+            'single_output' : {
+                'shape' : [1, 7, 200 ,200],
+                'dtype' : TensorDtype.DT_FLOAT.value
+            }
+        }
+    }
 ]
