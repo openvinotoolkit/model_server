@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2021 Intel Corporation
+# Copyright (c) 2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.4
+ARG BASE_IMAGE=ubuntu:20.04
 FROM $BASE_IMAGE as base_build
 
 LABEL version="1.0.0"
@@ -23,7 +23,7 @@ ARG PROJECT_NAME="OpenVINO Model Server 2021.4"
 
 LABEL description=${PROJECT_NAME}
 
-ARG ov_source_branch=releases/2021/2
+ARG ov_source_branch=master
 ARG ovms_metadata_file
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
@@ -33,45 +33,51 @@ ARG TEMP_DIR=/tmp/openvino_installer
 ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
 ARG JOBS
-ARG YUM_OV_PACKAGE=intel-openvino-runtime-centos7
+ARG APT_OV_PACKAGE=intel-openvino-runtime-ubuntu20-2021.4.582
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
-
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && yum update -d6 -y && yum install -d6 -y \
-            boost169-atomic \
-            boost169-chrono \
-            boost169-filesystem \
-            boost169-program-options \
-            boost169-thread \
-            boost169-system \
-            boost169-date-time \
+ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
+ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-c"]
+RUN apt update && apt install -y \
+            libboost-atomic1.67.0 \
+            libboost-chrono1.67.0 \
+            libboost-filesystem1.67.0 \
+            libboost-program-options1.67.0 \
+            libboost-thread1.67.0 \
+            libboost-system1.67.0 \
+            libboost-date-time1.67.0 \
+            build-essential \
             cmake \
-            gcc-c++ \
+            automake \
+            autoconf \
             curl \
             gdb \
             git \
-            libgusb.x86_64 \
-            libusbx \
-            libcurl-devel \
+            libusb-dev \
+            libcurl4-openssl-dev \
             libtool \
-            libuuid-devel \
-            libxml2-devel \
-            make \
+            libxml2-dev \
+            libnuma-dev \
             patch \
             pkg-config \
+            python2 \
+            python2-dev \
+            python-setuptools \
             python3 \
             python3-pip \
-            python3-devel \
+            python3-dev \
             python3-setuptools \
             python3-virtualenv \
             python3-numpy \
-            wget \
-            which \
-            yum-utils \
+            python-is-python3 \
             unzip \
-            xz && \
-            yum clean all
+            wget \
+            unzip \
+            xz-utils && \
+            apt clean
+
 
 # Set up Bazel
 ENV BAZEL_VERSION 3.7.2
@@ -83,15 +89,45 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     cd / && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
+################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
+# Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ;  git clone https://github.com/openvinotoolkit/openvino /openvino ; cd /openvino ; git checkout $ov_source_branch; git submodule update --init --recursive
+WORKDIR /openvino/build
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake3 -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ && \
+    mkdir -p /opt/intel/openvino/deployment_tools/inference_engine && \
+    ln -s /openvino/bin/intel64/Release/lib/* /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ && \
+    ln -s /openvino/inference-engine/include/ /opt/intel/openvino/deployment_tools/inference_engine/
+################## END OF OPENVINO SOURCE BUILD ######################
+
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
 WORKDIR /
 # OV toolkit package
-RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
+RUN apt install -y cpio
+RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
     wget $DLDT_PACKAGE_URL && \
-    mkdir /opt/intel && \
-    tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
-    ln -s /opt/intel/l_openvino_toolkit_runtime* /opt/intel/openvino
+    tar -zxf l_openvino_toolkit*.tgz && \
+    cd l_openvino_toolkit*/ && \
+    sed -i 's/decline/accept/g' silent.cfg && \
+    ./install.sh -s silent.cfg --ignore-signature && \
+    rm -Rf $TEMP_DIR $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
 
+# apt package
+RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; else exit 0 ; fi ; \
+    echo "installing apt package" && \
+    wget https://apt.repos.intel.com/openvino/2021/GPG-PUB-KEY-INTEL-OPENVINO-2021 && \
+    apt-key add GPG-PUB-KEY-INTEL-OPENVINO-2021 && \
+    echo "deb https://apt.repos.intel.com/openvino/2021 all main" | tee /etc/apt/sources.list.d/intel-openvino-2021.list && \
+    apt update && \
+    apt install -y $APT_OV_PACKAGE
+
+RUN if [ "$ov_use_binary" = "1" ] ; then true ; else exit 0 ; fi ; \
+    ln -s /opt/intel/openvino_2021 /opt/intel/openvino
+
+# install sample apps including benchmark_app
+RUN if [ -f /opt/intel/openvino/deployment_tools/inference_engine/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/deployment_tools/inference_engine/samples/cpp/build_samples.sh ; fi
+#################### END OF OPENVINO BINARY INSTALL
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
@@ -99,19 +135,20 @@ COPY .bazelrc WORKSPACE /ovms/
 COPY external /ovms/external/
 COPY third_party /ovms/third_party/
 
-RUN alternatives --set python /usr/bin/python3
+ENV BAZEL_LINKLIBS=-l%:libstdc++.a
+RUN apt install -y python-is-python3
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
 RUN wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz && \
-	tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
-	./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
-		--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
-		--with-random --with-thread --with-atomic --with-regex \
-		--with-log --with-locale \
-		install
+tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
+./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
+--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
+--with-random --with-thread --with-atomic --with-regex \
+--with-log --with-locale \
+install
 
 # OPENSSL
 WORKDIR /openssl
@@ -122,7 +159,8 @@ RUN cd openssl && ./config --prefix=/usr/local/ssl --openssldir=/etc/pki/tls sha
 ####### Azure SDK
 
 WORKDIR /azure
-RUN git clone https://github.com/Microsoft/cpprestsdk.git && cd cpprestsdk && git checkout tags/v2.10.16 -b v2.10.16 && git submodule update --init
+RUN apt-get install -y uuid uuid-dev
+RUN git clone https://github.com/Microsoft/cpprestsdk.git && cd cpprestsdk && git checkout tags/v2.10.18 -b v2.10.18 && git submodule update --init
 
 RUN git clone https://github.com/Azure/azure-storage-cpp.git && cd azure-storage-cpp/Microsoft.WindowsAzure.Storage && git checkout tags/v7.5.0 && mkdir build.release
 
@@ -143,11 +181,9 @@ RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-b
 WORKDIR /awssdk/build
 RUN OPENSSL_ROOT_DIR=/usr/local/ssl/ cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
 RUN make --jobs=$JOBS
-RUN mv .deps/install/lib64 .deps/install/lib
+#RUN mv .deps/install/lib64 .deps/install/lib
 
 ####### End of AWS S3 SDK
-
-RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
 WORKDIR /ovms
 
@@ -156,8 +192,7 @@ COPY release_files/ /ovms/release_files/
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | cut -d'_' -f7`#g" /ovms/src/version.hpp
-
+RUN if [ "$ov_use_binary" = "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -type d | grep openvino | cut -d'_' -f2`#g" /ovms/src/version.hpp
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/:/openvino/bin/intel64/Release/lib/:/opt/intel/openvino/opencv/lib/
 
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
@@ -169,4 +204,5 @@ RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_
 
 COPY ${ovms_metadata_file} metadata.json
 
+RUN ./bazel-bin/src/./ovms --version
 RUN ./bazel-bin/src/./ovms

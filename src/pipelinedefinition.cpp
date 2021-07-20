@@ -82,7 +82,7 @@ Status PipelineDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of pipeline: {}", getName());
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Pipeline: {} inputs: {}", getName(), getTensorMapString(inputsInfo));
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Pipeline: {} outputs: {}", getName(), getTensorMapString(outputsInfo));
-    return std::move(validationResult);
+    return validationResult;
 }
 
 Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections) {
@@ -999,13 +999,13 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
 const tensor_map_t PipelineDefinition::getInputsInfo() const {
     std::shared_lock lock(metadataMtx);
     tensor_map_t copy = inputsInfo;
-    return std::move(copy);
+    return copy;
 }
 
 const tensor_map_t PipelineDefinition::getOutputsInfo() const {
     std::shared_lock lock(metadataMtx);
     tensor_map_t copy = outputsInfo;
-    return std::move(copy);
+    return copy;
 }
 
 std::shared_ptr<TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, uint32_t demultiplyCount) {
@@ -1298,7 +1298,7 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
     }
 
     std::reverse(shape.begin(), shape.end());
-    return std::move(shape);
+    return shape;
 }
 
 }  // namespace ovms

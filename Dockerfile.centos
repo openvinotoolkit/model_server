@@ -70,11 +70,13 @@ RUN yum update -d6 -y && yum install -d6 -y epel-release centos-release-scl && y
             python3-devel \
             python3-setuptools \
             python3-virtualenv \
+            python3-numpy \
             wget \
             which \
             libxml2-devel \
             yum-utils \
-            unzip && \
+            unzip \
+            xz && \
             yum clean all
 
 SHELL [ "/usr/bin/scl", "enable", "devtoolset-8" ]
@@ -82,7 +84,7 @@ ENV CC=/opt/rh/devtoolset-8/root/bin/gcc
 ENV CXX=/opt/rh/devtoolset-8/root/bin/g++
 
 # Set up Bazel
-ENV BAZEL_VERSION 2.0.0
+ENV BAZEL_VERSION 3.7.2
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
