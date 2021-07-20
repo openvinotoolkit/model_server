@@ -103,3 +103,12 @@ grpc_deps()
 
 load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 grpc_extra_deps()
+
+##################### OPEN CV ######################
+# OPENCV DEFINITION FOR BUILDING FROM BINARY RELEASE: ##########################
+new_local_repository(
+    name = "opencv",
+    build_file = "@//third_party/opencv:BUILD",
+    path = "/usr/local",
+)
+################## END OF OPENCV DEPENDENCY ##########

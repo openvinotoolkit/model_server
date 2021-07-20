@@ -37,6 +37,7 @@ limitations under the License.
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
 #include "google/protobuf/map.h"
+#include "opencv2/opencv.hpp"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/platform/types.h"
 #include "tensorflow/core/util/command_line_flags.h"
@@ -52,25 +53,28 @@ using tensorflow::serving::PredictionService;
 
 typedef google::protobuf::Map<tensorflow::string, tensorflow::TensorProto> OutMap;
 
-typedef tensorflow::string string;
-typedef tensorflow::int64 int64;
 
 struct Entry {
-    string imagePath;
-    int64 expectedLabel;
+    tensorflow::string imagePath;
+    tensorflow::int64 expectedLabel;
 };
 
 struct BinaryData {
     std::unique_ptr<char[]> imageData;
     std::streampos fileSize;
-    int64 expectedLabel;
+    tensorflow::int64 expectedLabel;
 };
 
-bool readImagesList(const string& path, std::vector<Entry>& entries) {
+struct CvMatData {
+    cv::Mat image;
+    tensorflow::int64 expectedLabel;
+};
+
+bool readImagesList(const tensorflow::string& path, std::vector<Entry>& entries) {
     entries.clear();
     std::ifstream infile(path);
-    string image = "";
-    int64 label = 0;
+    tensorflow::string image = "";
+    tensorflow::int64 label = 0;
 
     if (!infile.is_open()) {
         std::cout << "Failed to open " << path << std::endl;
@@ -109,15 +113,30 @@ bool readImagesBinary(const std::vector<Entry>& entriesIn, std::vector<BinaryDat
     return true;
 }
 
+bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>& entriesOut) {
+    entriesOut.clear();
+
+    for (const auto& entryIn : entriesIn) {
+        CvMatData entryOut;
+        entryOut.expectedLabel = entryIn.expectedLabel;
+        entryOut.image = cv::imread(entryIn.imagePath);
+        entryOut.image.convertTo(entryOut.image, CV_32F);
+        cv::resize(entryOut.image, entryOut.image, cv::Size(224, 224));
+        entriesOut.emplace_back(entryOut);
+    }
+
+    return true;
+}
+
 class ServingClient {
     std::unique_ptr<PredictionService::Stub> stub_;
 public:
     ServingClient(std::shared_ptr<Channel> channel) : stub_(PredictionService::NewStub(channel)) {}
 
-    static int64 argmax(const tensorflow::Tensor& tensor) {
+    static tensorflow::int64 argmax(const tensorflow::Tensor& tensor) {
         float topConfidence = 0;
-        int64 topLabel = -1;
-        for (int64 i = 0; i < tensor.NumElements(); i++) {
+        tensorflow::int64 topLabel = -1;
+        for (tensorflow::int64 i = 0; i < tensor.NumElements(); i++) {
             float confidence = ((float*)tensor.data())[i];
             if (topLabel == -1 || topConfidence < confidence) {
                 topLabel = i;
@@ -127,11 +146,31 @@ public:
         return topLabel;
     }
 
+    bool prepareInput(tensorflow::TensorProto& proto, const BinaryData& entry) {
+        proto.set_dtype(tensorflow::DataType::DT_STRING);
+        proto.add_string_val(entry.imageData.get(), entry.fileSize);
+        proto.mutable_tensor_shape()->add_dim()->set_size(1);
+        return true;
+    }
+
+    // nhwc only for now
+    bool prepareInput(tensorflow::TensorProto& proto, const CvMatData& entry) {
+        proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+        size_t byteSize = entry.image.total() * entry.image.elemSize();
+        proto.mutable_tensor_content()->assign((char*)entry.image.data, byteSize);
+        proto.mutable_tensor_shape()->add_dim()->set_size(1);
+        proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.cols);
+        proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.rows);
+        proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.channels());
+        return true;
+    }
+
+    template <class T>
     bool predict(
-        const string& modelName,
-        const string& inputName,
-        const string& outputName,
-        const BinaryData& entry,
+        const tensorflow::string& modelName,
+        const tensorflow::string& inputName,
+        const tensorflow::string& outputName,
+        const T& entry,
         bool& isLabelCorrect) {
 
         PredictRequest predictRequest;
@@ -145,10 +184,11 @@ public:
 
         tensorflow::TensorProto proto;
 
-        proto.set_dtype(tensorflow::DataType::DT_STRING);
-        proto.add_string_val(entry.imageData.get(), entry.fileSize);
+        this->prepareInput(proto, entry);
+        // proto.set_dtype(tensorflow::DataType::DT_STRING);
+        // proto.add_string_val(entry.imageData.get(), entry.fileSize);
 
-        proto.mutable_tensor_shape()->add_dim()->set_size(1);
+        // proto.mutable_tensor_shape()->add_dim()->set_size(1);
 
         inputs[inputName] = proto;
 
@@ -195,17 +235,18 @@ public:
         return true;
     }
 
+    template <class T>
     static void start(
-        const string& address,
-        const string& modelName,
-        const string& inputName,
-        const string& outputName,
-        const std::vector<BinaryData>& entries,
-        int64 iterations) {
+        const tensorflow::string& address,
+        const tensorflow::string& modelName,
+        const tensorflow::string& inputName,
+        const tensorflow::string& outputName,
+        const std::vector<T>& entries,
+        tensorflow::int64 iterations) {
     
         auto begin = std::chrono::high_resolution_clock::now();
-        int64 correctLabels = 0;
-        for (int64 i = 0; i < iterations; i++) {
+        tensorflow::int64 correctLabels = 0;
+        for (tensorflow::int64 i = 0; i < iterations; i++) {
             ServingClient client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()));
             bool isLabelCorrect = false;
             if (!client.predict(modelName, inputName, outputName, entries[i % entries.size()], isLabelCorrect)) {
@@ -224,13 +265,13 @@ public:
 };
 
 int main(int argc, char** argv) {
-    string address = "localhost";
-    string port = "9000";
-    string modelName = "resnet";
-    string inputName = "0";
-    string outputName = "1463";
-    int64 iterations = 0;
-    string imagesListPath = "";
+    tensorflow::string address = "localhost";
+    tensorflow::string port = "9000";
+    tensorflow::string modelName = "resnet";
+    tensorflow::string inputName = "0";
+    tensorflow::string outputName = "1463";
+    tensorflow::int64 iterations = 0;
+    tensorflow::string imagesListPath = "";
     std::vector<tensorflow::Flag> flagList = {
         tensorflow::Flag("grpc_address", &address, "url to grpc service"),
         tensorflow::Flag("grpc_port", &port, "port to grpc service"),
@@ -266,6 +307,12 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    // std::vector<CvMatData> binaryImages;
+    // if (!readImagesCvMat(entries, binaryImages)) {
+    //     std::cout << "Error reading binary images" << std::endl;
+    //     return -1;
+    // }
+
     std::cout
         << "Address: " << address << std::endl
         << "Port: " << port << std::endl
@@ -277,7 +324,7 @@ int main(int argc, char** argv) {
 
     std::cout << "Processing images..." << std::endl;
 
-    const string host = address + ":" + port;
+    const tensorflow::string host = address + ":" + port;
     ServingClient::start(host, modelName, inputName, outputName, binaryImages, iterations);
 
     return 0;

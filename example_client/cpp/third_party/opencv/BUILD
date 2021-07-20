@@ -14,17 +14,20 @@
 # limitations under the License.
 #
 
-cc_binary(
-    name = "resnet_client",
-    srcs = [
-        "resnet_client.cpp",
-    ],
-    deps = [
-        "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_protobuf//:protobuf_lite",
-        "@org_tensorflow//tensorflow/core:framework",
-        "@org_tensorflow//tensorflow/core:lib",
-        "@opencv//:opencv",
-    ]
+package(
+    default_visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "opencv",
+    srcs = glob([
+        "lib/libopencv_core.so",
+        "lib/libopencv_imgcodecs.so",
+        "lib/libopencv_imgproc.so"
+    ]),
+    hdrs = glob([
+        "include/opencv4/**/*.*"
+    ]),
+    strip_include_prefix = "include/opencv4",
+    visibility = ["//visibility:public"],
 )

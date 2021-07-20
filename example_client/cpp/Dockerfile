@@ -63,6 +63,13 @@ RUN pip3 --no-cache-dir install \
     --ignore-installed setuptools \
     --ignore-installed six
 
+WORKDIR /opencv
+RUN git clone https://github.com/opencv/opencv --depth 1 --branch 4.5.3 . && \
+    mkdir -p build && \
+    cd build && \
+    cmake .. && \
+    make && make install
+
 # Set up Bazel
 ENV BAZEL_VERSION 3.7.2
 WORKDIR /
@@ -76,6 +83,21 @@ RUN mkdir /bazel && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
 WORKDIR /build
-COPY . /build
+COPY .bazelrc WORKSPACE /build/
+COPY external /build/external/
+COPY third_party /build/third_party/
+
+RUN bazel build \
+    @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
+    @com_github_grpc_grpc//:grpc++ \
+    @com_google_protobuf//:protobuf_lite \
+    @org_tensorflow//tensorflow/core:framework \
+    @org_tensorflow//tensorflow/core:lib \
+    @opencv//:opencv
+
+COPY src/ /build/src/
 
 RUN bazel build //src:resnet_client
+
+ENV LD_LIBRARY_PATH=/usr/local/lib
+ENTRYPOINT ["/build/bazel-bin/src/resnet_client"]
