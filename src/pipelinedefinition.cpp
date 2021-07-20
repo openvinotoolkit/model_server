@@ -531,10 +531,10 @@ public:
                 pipelineName,
                 dependantNodeInfo.nodeName,
                 modelInputName,
-                TensorInfo::shapeToString(tensorInput->getEffectiveShape()),
+                TensorInfo::shapeToString(tensorInputShape),
                 dependencyNodeInfo.nodeName,
                 modelOutputName,
-                TensorInfo::shapeToString(tensorOutput->getEffectiveShape()));
+                TensorInfo::shapeToString(tensorOutputShape));
             return StatusCode::INVALID_SHAPE;
         }
         if (tensorInput->getPrecision() != tensorOutput->getPrecision()) {
