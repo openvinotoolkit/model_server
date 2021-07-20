@@ -71,6 +71,7 @@ RUN apt update && apt install -y \
             python3-setuptools \
             python3-virtualenv \
             python3-numpy \
+            python-is-python3 \
             unzip \
             wget \
             unzip \
@@ -199,7 +200,7 @@ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/test/cpu_extension/ && make
 
-#RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
+RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
 
 COPY ${ovms_metadata_file} metadata.json
 
