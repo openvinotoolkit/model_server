@@ -334,7 +334,7 @@ TEST(EnsembleMetadata, OneUnavailableNodeBeforeRevalidationShouldWork) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
     auto instance = manager.findModelInstance("dummy", 0);
     ASSERT_NE(instance, nullptr);
-    instance->unloadModel();
+    instance->retireModel();
 
     // we should still be able to get metadata since pipeline definition was not reloaded
     auto inputs2 = def->getInputsInfo();

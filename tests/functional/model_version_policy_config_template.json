@@ -4,21 +4,24 @@
       "config":{
         "name":"latest",
         "base_path":"{path}/model_ver",
-        "model_version_policy": {"latest": { "num_versions":2 }}
+        "model_version_policy": {"latest": { "num_versions":2 }},
+        "target_device": "{target_device}"
       }
     },
     {
       "config": {
         "name": "specific",
         "base_path": "{path}/model_ver",
-        "model_version_policy": {"specific": { "versions":[1, 3] }}
+        "model_version_policy": {"specific": { "versions":[1, 3] }},
+        "target_device": "{target_device}"
       }
     },
     {
       "config": {
         "name": "all",
         "base_path": "{path}/model_ver",
-        "model_version_policy": {"all": {}}
+        "model_version_policy": {"all": {}},
+        "target_device": "{target_device}"
       }
     }
   ]
