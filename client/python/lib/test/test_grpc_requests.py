@@ -60,6 +60,8 @@ def test_make_metadata_request_vaild(mocker, name, version):
     assert model_metadata_request.model_version == version
     assert model_metadata_request.model_name == name
     assert isinstance(model_metadata_request.raw_request, GetModelMetadataRequest)
+    assert len(model_metadata_request.raw_request.metadata_field) == 1
+    assert model_metadata_request.raw_request.metadata_field[0] == 'signature_def'
 
 @pytest.mark.parametrize("name, version, expected_exception, expected_message", MODEL_SPEC_INVALID)
 def test_make_metadata_request_invalid(mocker, name, version, expected_exception, expected_message):
