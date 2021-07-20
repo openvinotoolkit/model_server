@@ -197,7 +197,6 @@ def _check_address(address):
 
     if address != "localhost" and not ipv4(address) and not domain(address):
         raise ValueError(f'address is not valid')
-    
 
 def _check_port(port):
     

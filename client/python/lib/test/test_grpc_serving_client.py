@@ -20,7 +20,7 @@ import pytest
 from tensorflow_serving.apis.model_service_pb2_grpc import ModelServiceStub
 from tensorflow_serving.apis.prediction_service_pb2_grpc import PredictionServiceStub
 from ovmsclient.tfs_compat.grpc.serving_client import (GrpcClient, _check_address, _check_certificate_valid, _check_config, _check_port,
-_check_private_key_valid, _check_tls_config, _prepare_certs)
+_check_private_key_valid, _check_tls_config, _prepare_certs, make_grpc_client)
 
 from config import ADDRESS_INVALID, ADDRESS_VALID
 from config import PORT_VALID, PORT_INVALID
@@ -171,11 +171,11 @@ def test_prepare_certs_invalid(mocker, server_cert, client_cert, client_key, met
 
 
 @pytest.mark.parametrize("config, method_call_count", BUILD_VALID)
-def test_build_valid(mocker, config, method_call_count):
+def test_make_grpc_client_valid(mocker, config, method_call_count):
     mock_check_config = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_config')
     mock_prepare_certs = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._prepare_certs', return_value=(b'server_certificate', b'client_certificate', b'client_key'))
 
-    client = GrpcClient._build(config)
+    client = make_grpc_client(config)
 
     assert mock_check_config.call_count == method_call_count['check_config']
     assert mock_prepare_certs.call_count == method_call_count['prepare_certs']
@@ -184,12 +184,12 @@ def test_build_valid(mocker, config, method_call_count):
     assert type(client.prediction_service_stub) == PredictionServiceStub
 
 @pytest.mark.parametrize("config, expected_exception, expected_message, method_call_count", BUILD_INVALID)
-def test_build_invalid(mocker, config, expected_exception, expected_message, method_call_count):
+def test_make_grpc_client_invalid(mocker, config, expected_exception, expected_message, method_call_count):
     mock_check_config = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_config', side_effect=expected_exception(expected_message))
     mock_prepare_certs = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._prepare_certs')
 
     with pytest.raises(expected_exception) as e_info:
-        GrpcClient._build(config)
+        client = make_grpc_client(config)
         assert str(e_info.value) == expected_message
 
     assert mock_check_config.call_count == method_call_count['check_config']
