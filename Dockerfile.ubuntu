@@ -60,6 +60,7 @@ RUN apt update && apt install -y \
             libtool \
             libxml2-dev \
             libnuma-dev \
+            openssl-devel \
             patch \
             pkg-config \
             python2 \
@@ -150,12 +151,6 @@ tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
 --with-log --with-locale \
 install
 
-# OPENSSL
-WORKDIR /openssl
-
-RUN git clone https://github.com/openssl/openssl && cd openssl && git checkout tags/OpenSSL_1_1_1k
-RUN cd openssl && ./config --prefix=/usr/local/ssl --openssldir=/etc/pki/tls shared && make --jobs=$JOBS && make --jobs=$JOBS install || true && make --jobs=$JOBS install_runtime
-
 ####### Azure SDK
 
 WORKDIR /azure
@@ -179,7 +174,7 @@ RUN cd azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release && CASABLA
 # Build AWS S3 SDK
 RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
 WORKDIR /awssdk/build
-RUN OPENSSL_ROOT_DIR=/usr/local/ssl/ cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
+RUN cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
 RUN make --jobs=$JOBS
 #RUN mv .deps/install/lib64 .deps/install/lib
 
@@ -195,7 +190,7 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
 RUN if [ "$ov_use_binary" = "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -type d | grep openvino | cut -d'_' -f2`#g" /ovms/src/version.hpp
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/:/openvino/bin/intel64/Release/lib/:/opt/intel/openvino/opencv/lib/
 
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
+RUN TF_SYSTEM_LIBS=boringssl bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/test/cpu_extension/ && make
