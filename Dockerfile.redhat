@@ -101,7 +101,7 @@ COPY external /ovms/external/
 COPY third_party /ovms/third_party/
 
 RUN alternatives --set python /usr/bin/python3
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+RUN TF_SYSTEM_LIBS=boringssl bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
 ####### Azure SDK needs new boost:
@@ -155,7 +155,7 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/:/openvino/bin/intel64/Release/lib/:/opt/intel/openvino/opencv/lib/
 
-RUN TF_SYSTEM_LIBS=boringssl bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/test/cpu_extension/ && make
