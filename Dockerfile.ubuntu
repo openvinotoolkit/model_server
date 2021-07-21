@@ -60,7 +60,7 @@ RUN apt update && apt install -y \
             libtool \
             libxml2-dev \
             libnuma-dev \
-            openssl-devel \
+            libssl-dev \
             patch \
             pkg-config \
             python2 \
