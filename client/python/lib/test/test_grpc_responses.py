@@ -18,6 +18,8 @@ import pytest
 
 from tensorflow.core.protobuf.meta_graph_pb2 import SignatureDef, TensorInfo
 from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
+from tensorflow.core.framework.types_pb2 import DataType
+
 from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataResponse, SignatureDefMap
 from tensorflow_serving.apis.model_pb2 import ModelSpec
 from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusResponse, ModelVersionStatus
@@ -26,6 +28,7 @@ from tensorflow_serving.util.status_pb2 import StatusProto
 from google.protobuf.any_pb2 import Any
 
 from ovmsclient.tfs_compat.grpc.responses import GrpcModelMetadataResponse, GrpcModelStatusResponse
+
 from config import MODEL_METADATA_RESPONSE_VALID, MODEL_STATUS_RESPONSE_VALID
 
 @pytest.mark.parametrize("model_raw_status_response_dict" , MODEL_STATUS_RESPONSE_VALID)
@@ -67,9 +70,7 @@ def test_ModelMetadataResponse_to_dict_valid(model_raw_metadata_response_dict):
         assert isinstance(inputs[input], dict)
         assert 'shape' in inputs[input] and 'dtype' in inputs[input]
         assert inputs[input]['shape'] == model_raw_metadata_response_dict['inputs'][input]['shape']
-        assert inputs[input]['dtype'] == GrpcModelMetadataResponse._DTYPE_NAME[
-            model_raw_metadata_response_dict['inputs'][input]['dtype']
-        ]
+        assert inputs[input]['dtype'] == DataType.Name(model_raw_metadata_response_dict['inputs'][input]['dtype'])
 
 
     outputs = response_dictionary[version]['outputs']
@@ -79,9 +80,7 @@ def test_ModelMetadataResponse_to_dict_valid(model_raw_metadata_response_dict):
         assert isinstance(outputs[output], dict)
         assert 'shape' in outputs[output] and 'dtype' in outputs[output]
         assert outputs[output]['shape'] == model_raw_metadata_response_dict['outputs'][output]['shape']
-        assert outputs[output]['dtype'] == GrpcModelMetadataResponse._DTYPE_NAME[
-            model_raw_metadata_response_dict['outputs'][output]['dtype']
-        ]
+        assert outputs[output]['dtype'] == DataType.Name(model_raw_metadata_response_dict['outputs'][output]['dtype'])
 
 def create_model_metadata_response(model_raw_metadata_response_dict):
     raw_response = GetModelMetadataResponse()

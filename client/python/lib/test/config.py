@@ -15,6 +15,7 @@
 #
 
 from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
+from tensorflow.core.framework.types_pb2 import DataType
 
 from tensorflow.core.protobuf.error_codes_pb2 import Code
 from enum import IntEnum
@@ -661,13 +662,13 @@ MODEL_METADATA_RESPONSE_VALID = [
         'inputs' : {
             '0' : {
                 'shape' : [1, 3, 244, 244],
-                'dtype' : TensorDtype.DT_FLOAT.value
+                'dtype' : DataType.DT_FLOAT
             }
         },
         'outputs' : {
             '1463' : {
                 'shape' : [1, 1000],
-                'dtype' : TensorDtype.DT_FLOAT.value
+                'dtype' : DataType.DT_FLOAT
             }
         }
     },
@@ -678,21 +679,21 @@ MODEL_METADATA_RESPONSE_VALID = [
         'inputs' : {
             '0' : {
                 'shape' : [1, 3, 244, 244],
-                'dtype' : TensorDtype.DT_FLOAT.value
+                'dtype' : DataType.DT_FLOAT
             },
             '1' : {
                 'shape' : [0, 1, 3, 244, 244],
-                'dtype' : TensorDtype.DT_INT32.value
+                'dtype' : DataType.DT_INT32
             }
         },
         'outputs' : {
             '1463' : {
                 'shape' : [1, 1000],
-                'dtype' : TensorDtype.DT_FLOAT.value
+                'dtype' : DataType.DT_FLOAT
             },
             'second_output' : {
                 'shape' : [0, 1, 1000],
-                'dtype' : TensorDtype.DT_INT32.value
+                'dtype' : DataType.DT_INT32
             }
         }
     },
@@ -703,17 +704,17 @@ MODEL_METADATA_RESPONSE_VALID = [
         'inputs' : {
             'input1' : {
                 'shape' : [1, 3, 1080, 1920],
-                'dtype' : TensorDtype.DT_QINT32.value
+                'dtype' : DataType.DT_QINT32
             },
             'input2' : {
                 'shape' : [1, 3, 244, 244],
-                'dtype' : TensorDtype.DT_INT32.value
+                'dtype' : DataType.DT_INT32
             }
         },
         'outputs' : {
             'single_output' : {
                 'shape' : [1, 7, 200 ,200],
-                'dtype' : TensorDtype.DT_FLOAT.value
+                'dtype' : DataType.DT_FLOAT
             }
         }
     }
