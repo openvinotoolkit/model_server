@@ -29,30 +29,30 @@ limitations under the License.
 // limitations under the License.
 //*****************************************************************************
 
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <chrono>
 
-#include "grpcpp/create_channel.h"
-#include "grpcpp/security/credentials.h"
 #include "google/protobuf/map.h"
-#include "opencv2/opencv.hpp"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/platform/types.h"
 #include "tensorflow/core/util/command_line_flags.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
+#include "grpcpp/create_channel.h"
+#include "grpcpp/security/credentials.h"
+#include "opencv2/opencv.hpp"
+
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
 
+using tensorflow::serving::PredictionService;
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
-using tensorflow::serving::PredictionService;
 
 typedef google::protobuf::Map<tensorflow::string, tensorflow::TensorProto> OutMap;
-
 
 struct Entry {
     tensorflow::string imagePath;
@@ -159,8 +159,10 @@ bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>
 
 class ServingClient {
     std::unique_ptr<PredictionService::Stub> stub_;
+
 public:
-    ServingClient(std::shared_ptr<Channel> channel) : stub_(PredictionService::NewStub(channel)) {}
+    ServingClient(std::shared_ptr<Channel> channel) :
+        stub_(PredictionService::NewStub(channel)) {}
 
     static tensorflow::int64 argmax(const tensorflow::Tensor& tensor) {
         float topConfidence = 0;
@@ -206,7 +208,6 @@ public:
         const tensorflow::string& outputName,
         const T& entry,
         bool& isLabelCorrect) {
-
         PredictRequest predictRequest;
         PredictResponse response;
         ClientContext context;
@@ -259,7 +260,7 @@ public:
             }
         } else {
             std::cout << "gRPC call return code: " << status.error_code() << ": "
-                        << status.error_message() << std::endl;
+                      << status.error_message() << std::endl;
             return false;
         }
         return true;
@@ -273,7 +274,6 @@ public:
         const tensorflow::string& outputName,
         const std::vector<T>& entries,
         tensorflow::int64 iterations) {
-    
         auto begin = std::chrono::high_resolution_clock::now();
         tensorflow::int64 correctLabels = 0;
         for (tensorflow::int64 i = 0; i < iterations; i++) {
@@ -311,8 +311,7 @@ int main(int argc, char** argv) {
         tensorflow::Flag("output_name", &outputName, "output tensor name with classification result"),
         tensorflow::Flag("iterations", &iterations, "number of images per thread, by default each thread will use all images from list"),
         tensorflow::Flag("images_list", &imagesListPath, "path to a file with a list of labeled images"),
-        tensorflow::Flag("layout", &layout, "binary, nhwc or nchw")
-    };
+        tensorflow::Flag("layout", &layout, "binary, nhwc or nchw")};
 
     tensorflow::string usage = tensorflow::Flags::Usage(argv[0], flagList);
     const bool result = tensorflow::Flags::Parse(&argc, argv, flagList);
