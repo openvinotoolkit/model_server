@@ -16,9 +16,11 @@
 
 import pytest
 
-from ovmsclient.tfs_compat.grpc.requests import GrpcModelMetadataRequest, _check_model_spec, make_metadata_request, make_status_request, GrpcModelStatusRequest
 from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
 from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
+
+from ovmsclient.tfs_compat.grpc.requests import GrpcModelMetadataRequest, _check_model_spec, make_metadata_request, make_status_request, GrpcModelStatusRequest
+
 from config import MODEL_SPEC_INVALID, MODEL_SPEC_VALID
 
 @pytest.mark.parametrize("name, version", MODEL_SPEC_VALID)
