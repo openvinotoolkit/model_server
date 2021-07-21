@@ -63,16 +63,24 @@ class Docker:
 
         volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
                                                             'mode': 'ro'}}
+        if config.target_device == "MYRIAD":
+            volumes_dict["/dev"] = {'bind': "/dev", 'mode': 'ro'}
+            network = "host"
+            privileged = True
+            ports = None
+        else:
+            network = None
+            privileged = False
+            ports = {'{}/tcp'.format(self.grpc_port): self.grpc_port, '{}/tcp'.format(self.rest_port):  self.rest_port}
 
         self.container = self.client.containers.run(image=self.image, detach=True,
                                                     name=self.container_name,
-                                                    ports={'{}/tcp'.format(self.grpc_port):
-                                                               self.grpc_port,
-                                                           '{}/tcp'.format(self.rest_port):
-                                                               self.rest_port},
+                                                    ports=ports,
                                                     volumes=volumes_dict,
+                                                    network=network,
                                                     command=self.start_container_command,
-                                                    environment=self.env_vars_container)
+                                                    environment=self.env_vars_container,
+                                                    privileged=privileged)
         self.ensure_container_status(status=CONTAINER_STATUS_RUNNING, terminal_statuses=TERMINAL_STATUSES)
         self.ensure_logs_contains()
         logger.info(f"Container started grpc_port:{self.grpc_port}\trest_port{self.rest_port}")
