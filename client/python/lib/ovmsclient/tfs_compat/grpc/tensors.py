@@ -15,6 +15,7 @@
 #
 
 from tensorflow.core.framework.tensor_pb2 import TensorProto
+from tensorflow.core.framework.types_pb2 import DataType
 from enum import IntEnum
 import numpy as np
 
@@ -65,50 +66,36 @@ def make_tensor_proto(values, dtype=None, shape=None):
 
     raise NotImplementedError
 
-class DType(IntEnum):
-    INVALID   = 0
-    FLOAT32   = 1
-    FLOAT64   = 2
-    INT32     = 3
-    UINT8     = 4
-    INT16     = 5
-    INT8      = 6
-    STRING    = 7
-    COMPLEX64 = 8
-    INT64     = 9
-    BOOL      = 10
-    UINT16    = 17
-    UINT32    = 22
-    UINT64    = 23
-
 def _as_numpy_dtype(tensor_dtype):
-    if tensor_dtype == DType.INVALID:
+    if tensor_dtype == DataType.DT_INVALID:
         raise ValueError("Tensor data type invalid")
-    elif tensor_dtype == DType.FLOAT32:
+    elif tensor_dtype == DataType.DT_FLOAT:
         return np.float32
-    elif tensor_dtype == DType.FLOAT64:
+    elif tensor_dtype == DataType.DT_DOUBLE:
         return np.float64
-    elif tensor_dtype == DType.INT32:
+    elif tensor_dtype == DataType.DT_INT32:
         return np.int32
-    elif tensor_dtype == DType.UINT8:
+    elif tensor_dtype == DataType.DT_UINT8:
         return np.uint8
-    elif tensor_dtype == DType.INT16:
+    elif tensor_dtype == DataType.DT_INT16:
         return np.int16
-    elif tensor_dtype == DType.INT8:
+    elif tensor_dtype == DataType.DT_INT8:
         return np.int8
-    elif tensor_dtype == DType.STRING:
+    elif tensor_dtype == DataType.DT_STRING:
         return np.str
-    elif tensor_dtype == DType.COMPLEX64:
+    elif tensor_dtype == DataType.DT_COMPLEX64:
         return np.complex64
-    elif tensor_dtype == DType.INT64:
+    elif tensor_dtype == DataType.DT_COMPLEX128:
+        return np.complex128
+    elif tensor_dtype == DataType.DT_INT64:
         return np.int64
-    elif tensor_dtype == DType.BOOL:
+    elif tensor_dtype == DataType.DT_BOOL:
         return np.bool
-    elif tensor_dtype == DType.UINT16:
+    elif tensor_dtype == DataType.DT_UINT16:
         return np.uint16
-    elif tensor_dtype == DType.UINT32:
+    elif tensor_dtype == DataType.DT_UINT32:
         return np.uint32
-    elif tensor_dtype == DType.UINT64:
+    elif tensor_dtype == DataType.DT_UINT64:
         return np.uint64
     else:
         return np.uint32
@@ -147,14 +134,6 @@ def make_ndarray(tensor_proto):
         return (np.frombuffer(tensor_proto.tensor_content,
                             dtype=np_dtype).copy().reshape(shape))
 
-    if np_dtype == np.str:
-        values = list(tensor_proto.string_val)
-        padding = num_elements - len(values)
-        if padding > 0:
-            last = values[-1] if values else ""
-            values.extend([last] * padding)
-        return np.array(values, dtype=np_dtype).reshape(shape)
-
     if np_dtype == np.float16:
         values = np.fromiter(tensor_proto.half_val, dtype=np.uint16)
         values.dtype = np_dtype
@@ -162,9 +141,7 @@ def make_ndarray(tensor_proto):
         values = np.fromiter(tensor_proto.float_val, dtype=np_dtype)
     elif np_dtype == np.float64:
         values = np.fromiter(tensor_proto.double_val, dtype=np_dtype)
-    elif np_dtype in [
-        np.int32, np.uint8, np.uint16, np.int16, np.int8
-    ]:
+    elif np_dtype in [np.int32, np.uint8, np.uint16, np.int16, np.int8]:
         values = np.fromiter(tensor_proto.int_val, dtype=np_dtype)
     elif np_dtype == np.int64:
         values = np.fromiter(tensor_proto.int64_val, dtype=np_dtype)
@@ -180,6 +157,13 @@ def make_ndarray(tensor_proto):
         values = np.array([complex(x[0], x[1]) for x in zip(it, it)], dtype=np_dtype)
     elif np_dtype == np.bool:
         values = np.fromiter(tensor_proto.bool_val, dtype=np_dtype)
+    elif np_dtype == np.str:
+        values = list(tensor_proto.string_val)
+        padding = num_elements - len(values)
+        if padding > 0:
+            last = values[-1] if values else ""
+            values.extend([last] * padding)
+        return np.array(values, dtype=np_dtype).reshape(shape)
     else:
         raise TypeError("Unsupported tensor type: %s" % tensor_proto.dtype)
 
