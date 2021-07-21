@@ -19,6 +19,7 @@ from tensorflow import make_tensor_proto, make_ndarray
 from tensorflow_serving.apis import prediction_service_pb2_grpc, model_service_pb2_grpc, predict_pb2, \
     get_model_metadata_pb2, get_model_status_pb2
 
+import config
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
 from utils.logger import get_logger
 
@@ -41,13 +42,14 @@ def create_channel(address: str = DEFAULT_ADDRESS, port: str = DEFAULT_GRPC_PORT
 def infer(img, input_tensor, grpc_stub, model_spec_name,
           model_spec_version, output_tensors):
     request = predict_pb2.PredictRequest()
+    timeout = 300 if config.target_device == "GPU" else 10
     request.model_spec.name = model_spec_name
     if model_spec_version is not None:
         request.model_spec.version.value = model_spec_version
     logger.info("Input shape: {}".format(img.shape))
     request.inputs[input_tensor].CopyFrom(
         make_tensor_proto(img, shape=list(img.shape)))
-    result = grpc_stub.Predict(request, 10.0)
+    result = grpc_stub.Predict(request, timeout)
     data = {}
     for output_tensor in output_tensors:
         data[output_tensor] = make_ndarray(result.outputs[output_tensor])

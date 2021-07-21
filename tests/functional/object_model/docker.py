@@ -61,6 +61,7 @@ class Docker:
 
         logger.info(f"Starting container: {self.container_name}")
 
+        ### Defaults ###
         volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
                                                             'mode': 'ro'}}
         network = None
@@ -68,6 +69,7 @@ class Docker:
         ports = {'{}/tcp'.format(self.grpc_port): self.grpc_port, '{}/tcp'.format(self.rest_port): self.rest_port}
         devices = None
 
+        ### Per device custom settings ###
         if config.target_device == "MYRIAD":
             volumes_dict["/dev"] = {'bind': "/dev", 'mode': 'ro'}
             network = "host"

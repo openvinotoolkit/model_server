@@ -17,6 +17,7 @@
 import json
 import numpy as np
 import requests
+import config
 from utils.parametrization import get_ports_prefixes
 from google.protobuf.json_format import Parse
 from tensorflow_serving.apis import get_model_metadata_pb2, \
@@ -108,7 +109,8 @@ def process_json_output(result_dict, output_tensors):
 def infer_rest(img, input_tensor, rest_url,
                output_tensors, request_format):
     data_json = prepare_body_format(img, request_format, input_tensor)
-    result = requests.post(rest_url, data=data_json)
+    timeout = 300 if config.target_device == "GPU" else 10
+    result = requests.post(rest_url, data=data_json, timeout=timeout)
     output_json = json.loads(result.text)
     data = process_json_output(output_json, output_tensors)
     return data
