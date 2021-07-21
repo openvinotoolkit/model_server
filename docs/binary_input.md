@@ -32,6 +32,8 @@ In case of using DAG Scheduler, binary input must be connected to at least one `
 
 Blob data precision from binary input decoding is set automatically based on the target model or the [DAG pipeline](dag_scheduler.md) node.
 
+In case the model requires additional conversion refer to [TensorFlow model conversion for binary inputs](tf_model_binary_input.md).
+
 ## API specification
 
 - [gRPC API Reference Guide](./model_server_grpc_api.md)
