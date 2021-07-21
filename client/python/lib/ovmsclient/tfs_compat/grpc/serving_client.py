@@ -158,25 +158,26 @@ def _prepare_certs(server_cert_path, client_cert_path, client_key_path):
     return server_cert, client_cert, client_key
 
 def _check_certificate_valid(certificate_path):
+    certificate = None
     with open(certificate_path, 'rb') as f:
         certificate = f.read()
     try:
-        cert = OpenSSL.crypto.load_certificate(
-            OpenSSL.crypto.FILETYPE_PEM,
-            certificate
-        )
-        return certificate
+        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certificate)
     except OpenSSL.crypto.Error as e_info:
         raise ValueError(f'{certificate_path} file is not valid certificate')
 
+    return certificate
+
 def _check_private_key_valid(key_path):
+    key = None
     with open(key_path, 'rb') as f:
         key = f.read()
     try:
         p_key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
-        return key
     except OpenSSL.crypto.Error as e_info:
         raise ValueError(f'{key_path} file is not valid private key')
+    
+    return key
 
 def _check_config(config):
     
