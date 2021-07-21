@@ -38,7 +38,7 @@ Status InputSink<InferenceEngine::InferRequest&>::give(const std::string& name, 
     return status;
 }
 
-InferenceEngine::TensorDesc getFinalShapedTensorDesc(const ovms::TensorInfo& servableInfo, const tensorflow::TensorProto& requestInput, bool isPipeline) {
+InferenceEngine::TensorDesc getFinalTensorDesc(const ovms::TensorInfo& servableInfo, const tensorflow::TensorProto& requestInput, bool isPipeline) {
     InferenceEngine::Precision precision = servableInfo.getPrecision();
     if (!isPipeline) {
         return InferenceEngine::TensorDesc(precision, servableInfo.getShape(), servableInfo.getLayout());
