@@ -68,7 +68,32 @@ struct BinaryData {
 struct CvMatData {
     cv::Mat image;
     tensorflow::int64 expectedLabel;
+    tensorflow::string layout;
 };
+
+template <typename T>
+std::vector<T> reorderToNchw(const T* nhwcVector, int rows, int cols, int channels) {
+    std::vector<T> nchwVector(rows * cols * channels);
+    for (int y = 0; y < rows; ++y) {
+        for (int x = 0; x < cols; ++x) {
+            for (int c = 0; c < channels; ++c) {
+                nchwVector[c * (rows * cols) + y * cols + x] = reinterpret_cast<const T*>(nhwcVector)[y * channels * cols + x * channels + c];
+            }
+        }
+    }
+    return nchwVector;
+}
+
+const cv::Mat reorderMatToNchw(cv::Mat* mat) {
+    uint64_t channels = mat->channels();
+    uint64_t rows = mat->rows;
+    uint64_t cols = mat->cols;
+    auto nchwVector = reorderToNchw<float>((float*)mat->data, rows, cols, channels);
+
+    cv::Mat image(rows, cols, CV_32FC3);
+    std::memcpy(image.data, nchwVector.data(), nchwVector.size() * sizeof(float));
+    return image;
+}
 
 bool readImagesList(const tensorflow::string& path, std::vector<Entry>& entries) {
     entries.clear();
@@ -113,15 +138,19 @@ bool readImagesBinary(const std::vector<Entry>& entriesIn, std::vector<BinaryDat
     return true;
 }
 
-bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>& entriesOut) {
+bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>& entriesOut, const tensorflow::string& layout) {
     entriesOut.clear();
 
     for (const auto& entryIn : entriesIn) {
         CvMatData entryOut;
+        entryOut.layout = layout;
         entryOut.expectedLabel = entryIn.expectedLabel;
         entryOut.image = cv::imread(entryIn.imagePath);
         entryOut.image.convertTo(entryOut.image, CV_32F);
         cv::resize(entryOut.image, entryOut.image, cv::Size(224, 224));
+        if (layout == "nchw") {
+            entryOut.image = reorderMatToNchw(&entryOut.image);
+        }
         entriesOut.emplace_back(entryOut);
     }
 
@@ -153,15 +182,20 @@ public:
         return true;
     }
 
-    // nhwc only for now
     bool prepareInput(tensorflow::TensorProto& proto, const CvMatData& entry) {
         proto.set_dtype(tensorflow::DataType::DT_FLOAT);
         size_t byteSize = entry.image.total() * entry.image.elemSize();
         proto.mutable_tensor_content()->assign((char*)entry.image.data, byteSize);
         proto.mutable_tensor_shape()->add_dim()->set_size(1);
-        proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.cols);
-        proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.rows);
-        proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.channels());
+        if (entry.layout == "nchw") {
+            proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.channels());
+            proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.cols);
+            proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.rows);
+        } else {
+            proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.cols);
+            proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.rows);
+            proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.channels());
+        }
         return true;
     }
 
@@ -185,10 +219,6 @@ public:
         tensorflow::TensorProto proto;
 
         this->prepareInput(proto, entry);
-        // proto.set_dtype(tensorflow::DataType::DT_STRING);
-        // proto.add_string_val(entry.imageData.get(), entry.fileSize);
-
-        // proto.mutable_tensor_shape()->add_dim()->set_size(1);
 
         inputs[inputName] = proto;
 
@@ -272,6 +302,7 @@ int main(int argc, char** argv) {
     tensorflow::string outputName = "1463";
     tensorflow::int64 iterations = 0;
     tensorflow::string imagesListPath = "";
+    tensorflow::string layout = "binary";
     std::vector<tensorflow::Flag> flagList = {
         tensorflow::Flag("grpc_address", &address, "url to grpc service"),
         tensorflow::Flag("grpc_port", &port, "port to grpc service"),
@@ -279,13 +310,14 @@ int main(int argc, char** argv) {
         tensorflow::Flag("input_name", &inputName, "input tensor name with image"),
         tensorflow::Flag("output_name", &outputName, "output tensor name with classification result"),
         tensorflow::Flag("iterations", &iterations, "number of images per thread, by default each thread will use all images from list"),
-        tensorflow::Flag("images_list", &imagesListPath, "path to a file with a list of labeled images")
+        tensorflow::Flag("images_list", &imagesListPath, "path to a file with a list of labeled images"),
+        tensorflow::Flag("layout", &layout, "binary, nhwc or nchw")
     };
 
     tensorflow::string usage = tensorflow::Flags::Usage(argv[0], flagList);
     const bool result = tensorflow::Flags::Parse(&argc, argv, flagList);
 
-    if (!result || imagesListPath.empty() || iterations < 0) {
+    if (!result || imagesListPath.empty() || iterations < 0 || (layout != "binary" && layout != "nchw" && layout != "nhwc")) {
         std::cout << usage;
         return -1;
     }
@@ -301,31 +333,32 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    std::vector<BinaryData> binaryImages;
-    if (!readImagesBinary(entries, binaryImages)) {
-        std::cout << "Error reading binary images" << std::endl;
-        return -1;
-    }
-
-    // std::vector<CvMatData> binaryImages;
-    // if (!readImagesCvMat(entries, binaryImages)) {
-    //     std::cout << "Error reading binary images" << std::endl;
-    //     return -1;
-    // }
-
     std::cout
         << "Address: " << address << std::endl
         << "Port: " << port << std::endl
-        << "Images list path: " << imagesListPath << std::endl;
-
-    if (iterations == 0) {
-        iterations = binaryImages.size();
-    }
-
-    std::cout << "Processing images..." << std::endl;
+        << "Images list path: " << imagesListPath << std::endl
+        << "Layout: " << layout << std::endl;
 
     const tensorflow::string host = address + ":" + port;
-    ServingClient::start(host, modelName, inputName, outputName, binaryImages, iterations);
+    if (iterations == 0) {
+        iterations = entries.size();
+    }
+
+    if (layout == "binary") {
+        std::vector<BinaryData> images;
+        if (!readImagesBinary(entries, images)) {
+            std::cout << "Error reading binary images" << std::endl;
+            return -1;
+        }
+        ServingClient::start(host, modelName, inputName, outputName, images, iterations);
+    } else {
+        std::vector<CvMatData> images;
+        if (!readImagesCvMat(entries, images, layout)) {
+            std::cout << "Error reading binary images" << std::endl;
+            return -1;
+        }
+        ServingClient::start(host, modelName, inputName, outputName, images, iterations);
+    }
 
     return 0;
 }
