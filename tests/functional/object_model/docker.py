@@ -63,20 +63,24 @@ class Docker:
 
         volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
                                                             'mode': 'ro'}}
+        network = None
+        privileged = False
+        ports = {'{}/tcp'.format(self.grpc_port): self.grpc_port, '{}/tcp'.format(self.rest_port): self.rest_port}
+        devices = None
+
         if config.target_device == "MYRIAD":
             volumes_dict["/dev"] = {'bind': "/dev", 'mode': 'ro'}
             network = "host"
             privileged = True
             ports = None
-        else:
-            network = None
-            privileged = False
-            ports = {'{}/tcp'.format(self.grpc_port): self.grpc_port, '{}/tcp'.format(self.rest_port):  self.rest_port}
+        elif config.target_device == "GPU":
+            devices = ["/dev/dri:/dev/dri:mrw"]
 
         self.container = self.client.containers.run(image=self.image, detach=True,
                                                     name=self.container_name,
                                                     ports=ports,
                                                     volumes=volumes_dict,
+                                                    devices=devices,
                                                     network=network,
                                                     command=self.start_container_command,
                                                     environment=self.env_vars_container,
