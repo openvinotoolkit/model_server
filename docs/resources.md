@@ -14,6 +14,7 @@ These samples include python scripts and installation steps to use OpenVINO&trad
 - [DAG Scheduler with OCR pipeline](east_ocr.md)
 - [DAG Scheduler pipeline with combined models](combined_model_dag.md)
 - [DAG Scheduler with vehicle detection](vehicles_analysis_dag.md)
+- [Dynamic batch size with demultiplexer](dynamic_batch_size.md)
 - [Stateful model for audio recognition](stateful_models.md)     
 - [Clients for gRPC and REST API calls](https://github.com/openvinotoolkit/model_server/tree/main/example_client) : Example python scripts for gRPC and REST API calls with resnet classification models
 
