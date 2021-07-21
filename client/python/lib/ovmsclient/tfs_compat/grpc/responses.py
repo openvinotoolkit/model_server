@@ -14,11 +14,10 @@
 # limitations under the License.
 #
 
-from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
-
-from ovmsclient.tfs_compat.base.responses import PredictResponse, ModelMetadataResponse, ModelStatusResponse
 from tensorflow_serving.apis import get_model_metadata_pb2
 from tensorflow.core.framework.types_pb2 import DataType
+
+from ovmsclient.tfs_compat.base.responses import PredictResponse, ModelMetadataResponse, ModelStatusResponse
 
 class GrpcPredictResponse(PredictResponse):
     pass
