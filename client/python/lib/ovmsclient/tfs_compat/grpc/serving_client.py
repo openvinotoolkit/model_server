@@ -15,7 +15,6 @@
 #
 
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
-from abc import ABC
 
 class GrpcClient(ServingClient):
 
