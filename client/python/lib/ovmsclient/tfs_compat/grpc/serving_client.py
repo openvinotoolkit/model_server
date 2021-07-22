@@ -20,11 +20,8 @@ import os
 import OpenSSL.crypto
 
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
-<<<<<<< HEAD
-=======
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from tensorflow_serving.apis import model_service_pb2_grpc
->>>>>>> serving_client build draft + adress/port/tls_config tests draft
 
 class GrpcClient(ServingClient):
 

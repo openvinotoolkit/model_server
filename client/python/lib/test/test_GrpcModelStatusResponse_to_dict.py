@@ -17,10 +17,10 @@
 import pytest
 
 from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
-
-from ovmsclient.tfs_compat.grpc.responses import GrpcModelStatusResponse
 from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusResponse, ModelVersionStatus
 from tensorflow_serving.util.status_pb2 import StatusProto
+
+from ovmsclient.tfs_compat.grpc.responses import GrpcModelStatusResponse
 from config import MODEL_STATUS_RESPONSE_VALID
 
 @pytest.mark.parametrize("model_raw_response_dict" , MODEL_STATUS_RESPONSE_VALID)
@@ -40,7 +40,7 @@ def test_GrpcModelStatusResponse_to_dict_valid(model_raw_response_dict):
         assert isinstance(response_dictionary[version], dict)
         assert response_dictionary[version]['error_code'] == status['error_code']
         assert response_dictionary[version]['error_message'] == status['error_message']
-        assert response_dictionary[version]['state'] == GrpcModelStatusResponse._STATE_TO_STRING_MAPPING[status['state']]
+        assert response_dictionary[version]['state'] == ModelVersionStatus.State.Name(status['state'])
 
 def create_model_status_response(model_version, error_code, error_message, model_state):
     status = StatusProto()
