@@ -393,7 +393,7 @@ BUILD_VALID = [
     }, {"check_config" : CallCount.ONE, "prepare_certs" : CallCount.ONE})
 ]
 
-BUILD_INVALID = [
+BUILD_INVALID_CONFIG = [
     ({
 
     },
@@ -436,7 +436,7 @@ BUILD_INVALID = [
 
     ({
         "address" : "localhost",
-        "port" : 2**16,
+        "port" : 9000,
         "tls_config" : {
 
         }
@@ -445,7 +445,7 @@ BUILD_INVALID = [
     {"check_config" : CallCount.ONE, "prepare_certs" : CallCount.ZERO}),
     ({
         "address" : "localhost",
-        "port" : 2**16,
+        "port" : 9000,
         "tls_config" : {
             "server_cert_path" : PATH_VALID,
             "client_key_path" : PATH_VALID
@@ -455,7 +455,7 @@ BUILD_INVALID = [
     {"check_config" : CallCount.ONE, "prepare_certs" : CallCount.ZERO}),
     ({
         "address" : "localhost",
-        "port" : 2**16,
+        "port" : 9000,
         "tls_config" : {
             "server_cert_path" : PATH_VALID,
             "client_key_path" : PATH_VALID,
@@ -467,7 +467,7 @@ BUILD_INVALID = [
     {"check_config" : CallCount.ONE, "prepare_certs" : CallCount.ZERO}),
     ({
         "address" : "localhost",
-        "port" : 2**16,
+        "port" : 9000,
         "tls_config" : {
             "server_cert_path" : PATH_VALID,
             "client_key_path" :PATH_VALID,
@@ -478,7 +478,7 @@ BUILD_INVALID = [
     {"check_config" : CallCount.ONE, "prepare_certs" : CallCount.ZERO}),
     ({
         "address" : "localhost",
-        "port" : 2**16,
+        "port" : 9000,
         "tls_config" : {
             "server_cert_path" : PATH_VALID,
             "client_key_path" : "invalid_path",
@@ -487,4 +487,40 @@ BUILD_INVALID = [
     },
     ValueError,  'invalid_path is not valid path to file',
     {"check_config" : CallCount.ONE, "prepare_certs" : CallCount.ZERO}),
+]
+
+BUILD_INVALID_CERTS = [
+    ({
+        "address" : "localhost",
+        "port" : 9000,
+        "tls_config" : {
+            "server_cert_path" : PATH_VALID,
+            "client_key_path" : "path_to_invalid_private_key",
+            "client_cert_path" : PATH_VALID,
+        }
+    },
+    ValueError,  'path_to_invalid_private_key file is not valid private key',
+    {"check_config" : CallCount.ONE, "prepare_certs" : CallCount.ONE}),
+    ({
+        "address" : "localhost",
+        "port" : 9000,
+        "tls_config" : {
+            "server_cert_path" : "path_to_invalid_server_certificate",
+            "client_key_path" : PATH_VALID,
+            "client_cert_path" : PATH_VALID,
+        }
+    },
+    ValueError,  'path_to_invalid_server_certificate is not valid certificate',
+    {"check_config" : CallCount.ONE, "prepare_certs" : CallCount.ONE}),
+    ({
+        "address" : "localhost",
+        "port" : 9000,
+        "tls_config" : {
+            "server_cert_path" : PATH_VALID,
+            "client_key_path" : PATH_VALID,
+            "client_cert_path" : "path_to_invalid_client_certificate",
+        }
+    },
+    ValueError,  'path_to_invalid_client_certificate is not valid certificate',
+    {"check_config" : CallCount.ONE, "prepare_certs" : CallCount.ONE}),
 ]
