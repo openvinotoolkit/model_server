@@ -191,7 +191,7 @@ std::vector<session_key_t> Node::getReadySessions() const {
             readySessions.emplace_back(sessionKey);
         }
     }
-    return readySessions;
+    return std::move(readySessions);
 }
 
 Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
