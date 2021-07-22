@@ -17,6 +17,7 @@
 import pytest
 
 from ovmsclient.tfs_compat.grpc.requests import _check_model_spec
+
 from config import MODEL_SPEC_INVALID, MODEL_SPEC_VALID
 
 @pytest.mark.parametrize("name, version", MODEL_SPEC_VALID)

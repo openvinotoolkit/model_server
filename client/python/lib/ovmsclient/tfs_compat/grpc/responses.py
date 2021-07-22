@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
+
 from ovmsclient.tfs_compat.base.responses import PredictResponse, ModelMetadataResponse, ModelStatusResponse
 
 class GrpcPredictResponse(PredictResponse):
@@ -25,22 +27,13 @@ class GrpcModelMetadataResponse(ModelMetadataResponse):
         raise NotImplementedError
 
 class GrpcModelStatusResponse(ModelStatusResponse):
-    
-    _STATE_TO_STRING_MAPPING = {
-        0: "UNKNOWN",
-        10: "START",
-        20: "LOADING",
-        30: "AVAILABLE",
-        40: "UNLOADING",
-        50: "END"
-        }
 
     def to_dict(self):
         result_dictionary = {}
         model_version_status = self.raw_response.model_version_status
         for model_version in model_version_status:
             result_dictionary[model_version.version] = dict([
-                ('state', self._STATE_TO_STRING_MAPPING[model_version.state]),
+                ('state', ModelVersionStatus.State.Name(model_version.state)),
                 ('error_code', model_version.status.error_code),
                 ('error_message', model_version.status.error_message),
             ])

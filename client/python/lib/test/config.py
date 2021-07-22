@@ -15,8 +15,8 @@
 #
 
 from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusResponse, ModelVersionStatus
+from tensorflow.core.protobuf.error_codes_pb2 import Code
 from tensorflow_serving.util.status_pb2 import StatusProto
-from enum import Enum
 
 MODEL_SPEC_VALID = [
     ("model_name", 1),
@@ -54,45 +54,17 @@ def merge_model_status_responses(responses):
 
     return raw_response
 
-class ModelState(Enum):
-    # UNKNOWN = 0
-    START = 10
-    LOADING = 20
-    AVAILABLE = 30
-    UNLOADING = 40
-    END = 50
-
-class ErrorCode(Enum):
-    OK = 0
-    # CANCELLED = 1
-    UNKNOWN = 2
-    # INVALID_ARGUMENT = 3
-    # DEADLINE_EXCEEDED = 4
-    # NOT_FOUND = 5
-    # ALREADY_EXISTS = 6
-    # PERMISSION_DENIED = 7
-    # UNAUTHENTICATED = 16
-    # RESOURCE_EXHAUSTED = 8
-    # FAILED_PRECONDITION = 9
-    # ABORTED = 10
-    # OUT_OF_RANGE = 11
-    # UNIMPLEMENTED = 12
-    # INTERNAL = 13
-    # UNAVAILABLE = 14
-    # DATA_LOSS = 15
-    # DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD = 20
-
 MODEL_STATUS_RESPONSE_VALID = [
 {
-    1: {"state" : ModelState.AVAILABLE.value, "error_code" : ErrorCode.OK.value, "error_message" : ""}
+    1: {"state" : ModelVersionStatus.State.AVAILABLE, "error_code" : Code.OK, "error_message" : ""}
 },
 {
-    2: {"state" : ModelState.END.value, "error_code" : ErrorCode.OK.value, "error_message" : ""},
-    3: {"state" : ModelState.AVAILABLE.value, "error_code" : ErrorCode.OK.value, "error_message" : ""}
+    2: {"state" : ModelVersionStatus.State.END, "error_code" : Code.OK, "error_message" : ""},
+    3: {"state" : ModelVersionStatus.State.AVAILABLE, "error_code" : Code.OK, "error_message" : ""}
 },
 {
-    1: {"state" : ModelState.START.value, "error_code" : ErrorCode.OK.value, "error_message" : ""},
-    2: {"state" : ModelState.LOADING.value, "error_code" : ErrorCode.UNKNOWN.value, "error_message" : "Could not load CNN"},
-    3: {"state" : ModelState.UNLOADING.value, "error_code" : ErrorCode.OK.value, "error_message" : ""}
+    1: {"state" : ModelVersionStatus.State.START, "error_code" : Code.OK, "error_message" : ""},
+    2: {"state" : ModelVersionStatus.State.LOADING, "error_code" : Code.UNKNOWN, "error_message" : "Could not load CNN"},
+    3: {"state" : ModelVersionStatus.State.UNLOADING, "error_code" : Code.OK, "error_message" : ""}
 }
 ]
