@@ -33,13 +33,13 @@
 
 namespace ovms {
 
-std::shared_ptr<ovms::TensorInfo> getFinalShapedTensorInfo(const ovms::TensorInfo& servableInfo, const tensorflow::TensorProto& requestInput, bool isPipeline);
+InferenceEngine::TensorDesc getFinalTensorDesc(const ovms::TensorInfo& servableInfo, const tensorflow::TensorProto& requestInput, bool isPipeline);
 
 template <typename T>
 InferenceEngine::Blob::Ptr makeBlob(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     return InferenceEngine::make_shared_blob<T>(
-        getFinalShapedTensorInfo(*tensorInfo, requestInput, isPipeline)->getTensorDesc(),
+        getFinalTensorDesc(*tensorInfo, requestInput, isPipeline),
         const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
 }
 
@@ -60,7 +60,7 @@ public:
         case InferenceEngine::Precision::I16:
             return makeBlob<int16_t>(requestInput, tensorInfo, isPipeline);
         case InferenceEngine::Precision::FP16: {
-            auto blob = InferenceEngine::make_shared_blob<uint16_t>(getFinalShapedTensorInfo(*tensorInfo, requestInput, isPipeline)->getTensorDesc());
+            auto blob = InferenceEngine::make_shared_blob<uint16_t>(getFinalTensorDesc(*tensorInfo, requestInput, isPipeline));
             blob->allocate();
             // Needs conversion due to zero padding for each value:
             // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
@@ -72,7 +72,7 @@ public:
             return blob;
         }
         case InferenceEngine::Precision::U16: {
-            auto blob = InferenceEngine::make_shared_blob<uint16_t>(getFinalShapedTensorInfo(*tensorInfo, requestInput, isPipeline)->getTensorDesc());
+            auto blob = InferenceEngine::make_shared_blob<uint16_t>(getFinalTensorDesc(*tensorInfo, requestInput, isPipeline));
             blob->allocate();
             // Needs conversion due to zero padding for each value:
             // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
