@@ -38,21 +38,19 @@ Status InputSink<InferenceEngine::InferRequest&>::give(const std::string& name, 
     return status;
 }
 
-std::shared_ptr<ovms::TensorInfo> getFinalShapedTensorInfo(const ovms::TensorInfo& servableInfo, const tensorflow::TensorProto& requestInput, bool isPipeline) {
-    auto potentiallyDynamicShape = servableInfo.getShape();
-    if (isPipeline) {
-        potentiallyDynamicShape = servableInfo.getEffectiveShape();
+InferenceEngine::TensorDesc getFinalTensorDesc(const ovms::TensorInfo& servableInfo, const tensorflow::TensorProto& requestInput, bool isPipeline) {
+    InferenceEngine::Precision precision = servableInfo.getPrecision();
+    if (!isPipeline) {
+        return InferenceEngine::TensorDesc(precision, servableInfo.getShape(), servableInfo.getLayout());
     }
-    shape_t newShape;
-    for (int i = 0; i < requestInput.tensor_shape().dim_size(); ++i) {
-        size_t servableDimensionSize = potentiallyDynamicShape[i];
-        size_t tensorProtoDimensionSize = requestInput.tensor_shape().dim(i).size();
-        if (servableDimensionSize == 0) {
-            newShape.emplace_back(tensorProtoDimensionSize);
-        } else {
-            newShape.emplace_back(servableDimensionSize);
+    auto potentiallyDynamicShape = servableInfo.getEffectiveShape();
+    if (isPipeline) {  // to be potentially removed if support for dynamic shape reportin will be added to models
+        for (int i = 0; i < requestInput.tensor_shape().dim_size(); ++i) {
+            if (potentiallyDynamicShape[i] == 0) {
+                potentiallyDynamicShape[i] = requestInput.tensor_shape().dim(i).size();
+            }
         }
     }
-    return servableInfo.createCopyWithNewShape(newShape);
+    return InferenceEngine::TensorDesc(precision, potentiallyDynamicShape, InferenceEngine::Layout::ANY);
 }
 }  // namespace ovms
