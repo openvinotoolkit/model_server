@@ -56,6 +56,10 @@ protected:
             InferenceEngine::Precision::FP32,
             DUMMY_MODEL_SHAPE,
             InferenceEngine::Layout::NC);
+        dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
+            InferenceEngine::Precision::FP32,
+            DUMMY_MODEL_SHAPE,
+            InferenceEngine::Layout::NC);
     }
 
     template <typename T>
@@ -81,7 +85,11 @@ protected:
     template <typename T>
     std::unique_ptr<Pipeline> prepareSingleNodePipelineWithLibraryMock() {
         const std::vector<float> inputValues{3.5, 2.1, -0.2};
-        const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+        auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
+            InferenceEngine::Precision::FP32,
+            shape_t{1, 3},
+            InferenceEngine::Layout::NC);
+        const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
         this->prepareRequest(inputValues);
         auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
         const tensor_map_t outputsInfo{{pipelineOutputName, dagDummyModelOutputTensorInfo}};
@@ -162,6 +170,7 @@ protected:
     static constexpr const char* pipelineInputName = "pipeline_input";
     const std::string pipelineOutputName = "pipeline_output";
     std::shared_ptr<ovms::TensorInfo> dagDummyModelOutputTensorInfo;
+    std::shared_ptr<ovms::TensorInfo> dagDummyModelInputTensorInfo;
 };
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AddSubCustomNode) {
@@ -174,7 +183,11 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AddSubCustomNode) {
     const float addValue = 2.5;
     const float subValue = 4.8;
 
-    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
+        InferenceEngine::Precision::FP32,
+        shape_t{1, 3},
+        InferenceEngine::Layout::NC);
+    const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
         InferenceEngine::Precision::FP32,
@@ -256,6 +269,10 @@ protected:
             InferenceEngine::Precision::FP32,
             DUMMY_MODEL_SHAPE,
             InferenceEngine::Layout::NC);
+        dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
+            InferenceEngine::Precision::FP32,
+            DUMMY_MODEL_SHAPE,
+            InferenceEngine::Layout::NC);
     }
 };
 
@@ -290,7 +307,11 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
 
     // create pipeline
     std::vector<std::unique_ptr<Node>> nodes(2 + 3 * demultiplicationLayersCount);  // entry + exit + (choose + differentOps + dummy) * layerCount
-    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}, {pipelineFactorsName, nullptr}};
+    const tensor_map_t inputsInfo{{pipelineInputName, dagDummyModelInputTensorInfo}, {pipelineFactorsName,
+                                                                                         std::make_shared<ovms::TensorInfo>(pipelineFactorsName,
+                                                                                             InferenceEngine::Precision::FP32,
+                                                                                             shape_t{1, 4},
+                                                                                             InferenceEngine::Layout::NC)}};
     nodes[0] = std::make_unique<EntryNode>(&predictRequest, inputsInfo);
     const tensor_map_t outputsInfo{{pipelineOutputName, dagDummyModelOutputTensorInfo}};
     nodes[1] = std::make_unique<ExitNode>(&response, outputsInfo);
@@ -359,7 +380,11 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
     // create pipeline
     size_t nodesCount = 2 + 3 * demultiplicationLayersCount;  // entry + exit + (choose + differentOps + dummy) * layerCount
     std::vector<std::unique_ptr<Node>> nodes(nodesCount);
-    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}, {pipelineFactorsName, nullptr}};
+    const tensor_map_t inputsInfo{{pipelineInputName, dagDummyModelInputTensorInfo}, {pipelineFactorsName,
+                                                                                         std::make_shared<ovms::TensorInfo>(pipelineFactorsName,
+                                                                                             InferenceEngine::Precision::FP32,
+                                                                                             shape_t{1, 4},
+                                                                                             InferenceEngine::Layout::NC)}};
     nodes[0] = std::make_unique<EntryNode>(&predictRequest, inputsInfo);
     const tensor_map_t outputsInfo{{pipelineOutputName, dagDummyModelOutputTensorInfo}};
     nodes[nodesCount - 1] = std::make_unique<ExitNode>(&response, outputsInfo);
@@ -420,7 +445,11 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SeriesOfCustomNodes) {
     const std::array<float, PARAMETERS_PAIRS_COUNT> addValues{1.5, -2.4};
     const std::array<float, PARAMETERS_PAIRS_COUNT> subValues{-5.1, 1.9};
 
-    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
+        InferenceEngine::Precision::FP32,
+        shape_t{1, 3},
+        InferenceEngine::Layout::NC);
+    const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
         InferenceEngine::Precision::FP32,
@@ -480,7 +509,11 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ParallelCustomNodes) {
     const std::array<float, PARAMETERS_PAIRS_COUNT> addValues{4.5, 0.2, -0.6, 0.4, -2.5};
     const std::array<float, PARAMETERS_PAIRS_COUNT> subValues{8.5, -3.2, 10.0, -0.5, 2.4};
 
-    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
+        InferenceEngine::Precision::FP32,
+        shape_t{1, 3},
+        InferenceEngine::Layout::NC);
+    const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     tensor_map_t outputsInfo;
     for (size_t i = 0; i < N; ++i) {
@@ -538,7 +571,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomAndDLNodes) {
     const float addValues[] = {-0.85, 30.2};
     const float subValues[] = {1.35, -28.5};
 
-    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    const tensor_map_t inputsInfo{{pipelineInputName, dagDummyModelInputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     const tensor_map_t outputsInfo{{pipelineOutputName, dagDummyModelOutputTensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
@@ -4139,7 +4172,11 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     std::set<std::string> gather = {"image_demultiplexer_node"};
     std::unordered_map<std::string, std::string> aliases{{"custom_node_output", "custom_node_output"}};
 
-    const tensor_map_t inputsInfo{{pipelineInputName, nullptr}};
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        InferenceEngine::Precision::FP32,
+        shape_t{0, 3, 1, 2},
+        InferenceEngine::Layout::ANY);
+    const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
         InferenceEngine::Precision::FP32,

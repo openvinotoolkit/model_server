@@ -119,13 +119,6 @@ Status serializePredictResponse(
         if (!status.ok()) {
             return status;
         }
-        try {
-            blob = inferRequest.GetBlob(networkOutput->getName());
-        } catch (const InferenceEngine::Exception& e) {
-            status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
-            SPDLOG_ERROR("{}: {}", status.string(), e.what());
-            return status;
-        }
         auto& tensorProto = (*response->mutable_outputs())[networkOutput->getMappedName()];
         status = serializeBlobToTensorProto(tensorProto, networkOutput, blob);
         if (!status.ok()) {

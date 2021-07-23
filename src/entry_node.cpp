@@ -23,6 +23,7 @@
 #include <inference_engine.hpp>
 
 #include "binaryutils.hpp"
+#include "deserialization.hpp"
 #include "logging.hpp"
 
 #pragma GCC diagnostic push
@@ -62,121 +63,16 @@ Status EntryNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSes
 }
 
 Status EntryNode::fetchResults(BlobMap& outputs) {
-    // Fill outputs map with tensorflow predict request inputs. Fetch only those that are required in following nodes
-    for (const auto& node : this->next) {
-        for (const auto& pair : node.get().getMappingByDependency(*this)) {
-            const auto& outputName = pair.first;
-            if (outputs.find(outputName) != outputs.end()) {
-                continue;
-            }
-            auto it = request->inputs().find(outputName);
-            if (it == request->inputs().end()) {
-                std::stringstream ss;
-                ss << "Required input: " << outputName;
-                const std::string details = ss.str();
-                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Missing input with specific name: {}", getName(), details);
-                return Status(StatusCode::INVALID_MISSING_INPUT, details);
-            }
-            const auto& tensorProto = it->second;
-            InferenceEngine::Blob::Ptr blob;
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Deserializing input: {}", getName(), outputName);
-            auto status = deserialize(tensorProto, blob, inputsInfo.at(outputName));
-            if (!status.ok()) {
-                return status;
-            }
-            outputs[outputName] = blob;
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}]: blob with name: {} description: {} has been prepared", getName(), outputName, TensorInfo::tensorDescToString(blob->getTensorDesc()));
-        }
-    }
+    InputSink<BlobMap&> inputSink(outputs);
+    bool isPipeline = true;
+    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, inputsInfo, inputSink, isPipeline);
 
-    return StatusCode::OK;
+    return status;
 }
 
-Status EntryNode::deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    if (proto.dtype() == tensorflow::DataType::DT_STRING) {
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Request contains binary input: {}", tensorInfo->getName());
-        return deserializeBinaryInput(proto, blob, tensorInfo);
-    } else {
-        return deserializeNumericalInput(proto, blob);
-    }
-}
-
-Status EntryNode::deserializeBinaryInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    return convertStringValToBlob(proto, blob, tensorInfo, true);
-}
-
-Status EntryNode::deserializeNumericalInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob) {
-    InferenceEngine::TensorDesc description;
-    if (proto.tensor_content().size() == 0) {
-        const std::string details = "Tensor content size can't be 0";
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] {}", getName(), details);
-        return Status(StatusCode::INVALID_CONTENT_SIZE, details);
-    }
-
-    // Assuming content is in proto.tensor_content
-
-    InferenceEngine::SizeVector shape;
-    for (int i = 0; i < proto.tensor_shape().dim_size(); i++) {
-        shape.emplace_back(proto.tensor_shape().dim(i).size());
-    }
-
-    description.setDims(shape);
-
-    size_t tensor_count = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-
-    if (proto.tensor_content().size() != tensor_count * tensorflow::DataTypeSize(proto.dtype())) {
-        std::stringstream ss;
-        ss << "Expected: " << tensor_count * tensorflow::DataTypeSize(proto.dtype()) << "; Actual: " << proto.tensor_content().size();
-        const std::string details = ss.str();
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node {}] Invalid size of tensor proto - {}", getName(), details);
-        return Status(StatusCode::INVALID_CONTENT_SIZE, details);
-    }
-
-    // description.setLayout();  // Layout info is stored in model instance. If we find out it is required, then need to be set right before inference.
-    try {
-        switch (proto.dtype()) {
-        case tensorflow::DataType::DT_FLOAT:
-            description.setPrecision(InferenceEngine::Precision::FP32);
-            blob = InferenceEngine::make_shared_blob<float>(description, (float*)proto.tensor_content().data());
-            break;
-        case tensorflow::DataType::DT_INT32:
-            description.setPrecision(InferenceEngine::Precision::I32);
-            blob = InferenceEngine::make_shared_blob<int32_t>(description, (int32_t*)proto.tensor_content().data());
-            break;
-        case tensorflow::DataType::DT_INT8:
-            description.setPrecision(InferenceEngine::Precision::I8);
-            blob = InferenceEngine::make_shared_blob<int8_t>(description, (int8_t*)proto.tensor_content().data());
-            break;
-        case tensorflow::DataType::DT_UINT8:
-            description.setPrecision(InferenceEngine::Precision::U8);
-            blob = InferenceEngine::make_shared_blob<uint8_t>(description, (uint8_t*)proto.tensor_content().data());
-            break;
-        case tensorflow::DataType::DT_INT16:
-            description.setPrecision(InferenceEngine::Precision::I16);
-            blob = InferenceEngine::make_shared_blob<int16_t>(description, (int16_t*)proto.tensor_content().data());
-            break;
-        case tensorflow::DataType::DT_HALF:
-        case tensorflow::DataType::DT_UINT16:
-        case tensorflow::DataType::DT_INT64:
-        default: {
-            std::stringstream ss;
-            ss << "Actual: " << TensorInfo::getDataTypeAsString(proto.dtype());
-            const std::string details = ss.str();
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Unsupported deserialization precision - {}", getName(), details);
-            return Status(StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION, details);
-        }
-        }
-    } catch (const InferenceEngine::Exception& e) {
-        Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception thrown during deserialization from make_shared_blob; {}; exception message: {}",
-            getName(), status.string(), e.what());
-        return status;
-    } catch (std::logic_error& e) {
-        Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception thrown during deserialization from make_shared_blob; {}; exception message: {}",
-            getName(), status.string(), e.what());
-        return status;
-    }
+template <>
+Status InputSink<BlobMap&>::give(const std::string& name, InferenceEngine::Blob::Ptr blob) {
+    requester[name] = blob;
     return StatusCode::OK;
 }
 
