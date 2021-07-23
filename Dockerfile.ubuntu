@@ -53,6 +53,7 @@ RUN apt update && apt install -y \
             automake \
             autoconf \
             curl \
+            g++-8 \
             gdb \
             git \
             libusb-dev \
@@ -82,6 +83,8 @@ RUN apt update && apt install -y \
 # Set up Bazel
 ENV BAZEL_VERSION 3.7.2
 WORKDIR /bazel
+RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 8
+RUN g++ --version
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
     chmod +x bazel-*.sh && \
