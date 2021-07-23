@@ -83,6 +83,8 @@ RUN apt update && apt install -y \
 
 # Set up Bazel
 ENV BAZEL_VERSION 3.7.2
+ENV CC=/usr/bin/gcc-8
+ENV CXX=/usr/bin/g++-8
 WORKDIR /bazel
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 8
 RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 8
