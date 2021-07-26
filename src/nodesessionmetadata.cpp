@@ -53,7 +53,7 @@ std::vector<NodeSessionMetadata> NodeSessionMetadata::generateSubsessions(const 
                     return rhs;
                 }
                 return lhs + ", " + rhs; }));
-    return std::move(metas);
+    return metas;
 }
 
 std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& ignoredNodeNames) const {

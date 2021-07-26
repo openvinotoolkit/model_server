@@ -49,7 +49,7 @@ template <typename T>
 std::vector<T> reorder_to_nhwc(const T* nchwVector, int rows, int cols, int channels) {
     std::vector<T> nhwcVector(rows * cols * channels);
     reorder_to_nhwc_2(nchwVector, nhwcVector.data(), rows, cols, channels);
-    return std::move(nhwcVector);
+    return nhwcVector;
 }
 
 template <typename T>
@@ -67,7 +67,7 @@ template <typename T>
 std::vector<T> reorder_to_nchw(const T* nhwcVector, int rows, int cols, int channels) {
     std::vector<T> nchwVector(rows * cols * channels);
     reorder_to_nchw_2(nhwcVector, nchwVector.data(), rows, cols, channels);
-    return std::move(nchwVector);
+    return nchwVector;
 }
 
 const cv::Mat nhwc_to_mat(const CustomNodeTensor* input) {
