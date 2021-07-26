@@ -90,7 +90,7 @@ Status serializeBlobToTensorProto(
         }
         responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
-    responseOutput.mutable_tensor_content()->assign((char*)blob->buffer(), blob->byteSize());
+    responseOutput.mutable_tensor_content()->assign((char*)InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<char*>(), blob->byteSize());
     return StatusCode::OK;
 }
 
