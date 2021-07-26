@@ -16,6 +16,8 @@
 import time
 from typing import List
 
+from datetime import datetime
+
 import docker
 from retry.api import retry_call
 
@@ -46,6 +48,8 @@ class Docker:
         self.start_container_command = start_container_command
         self.env_vars_container = env_vars_container if env_vars_container else []
         self.container_log_line = container_log_line
+        self.last_log_fetch_time = datetime.now()
+        self.logs = ""
 
     def start(self):
 
@@ -81,14 +85,23 @@ class Docker:
 
     def save_container_logs(self):
         if config.log_level == "DEBUG":
-            logs = self.container.logs().decode()
+            logs = self.get_logs()
             logger.info(logs)
             if config.artifacts_dir != "":
                 save_container_logs_to_file(container=self.container, logs=logs)
 
+    def get_logs(self):
+        until = self.last_log_fetch_time
+        self.last_log_fetch_time = datetime.now()
+        self.logs = self.logs + self.container.logs(until=until).decode()
+        return self.logs
+
     def ensure_logs(self):
-        logs = str(self.container.logs())
-        assert self.container_log_line in logs
+        logs = self.get_logs()
+        if self.container_log_line not in logs:
+            if config.log_level == "DEBUG":
+                logger.info(str(logs))
+            assert False, f"Not found required phrase {self.container_log_line}"
 
     def ensure_logs_contains(self):
         return retry_call(self.ensure_logs, exceptions=AssertionError, **Docker.GETTING_LOGS_RETRY)
