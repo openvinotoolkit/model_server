@@ -177,14 +177,21 @@ public:
         return topLabel;
     }
 
-    bool prepareInput(tensorflow::TensorProto& proto, const BinaryData& entry) {
+    // Pre-processing function for binary images.
+    // Images loaded from disk are packed into gRPC request proto.
+    bool prepareInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const BinaryData& entry, const tensorflow::string& inputName) {
+        tensorflow::TensorProto proto;
         proto.set_dtype(tensorflow::DataType::DT_STRING);
         proto.add_string_val(entry.imageData.get(), entry.fileSize);
         proto.mutable_tensor_shape()->add_dim()->set_size(1);
+        inputs[inputName] = proto;
         return true;
     }
 
-    bool prepareInput(tensorflow::TensorProto& proto, const CvMatData& entry) {
+    // Pre-processing function for images in array format.
+    // Images loaded from disk are packed into tensor_content in plain array format (using OpenCV) either in NCHW or NHWC layout.
+    bool prepareInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const CvMatData& entry, const tensorflow::string& inputName) {
+        tensorflow::TensorProto proto;
         proto.set_dtype(tensorflow::DataType::DT_FLOAT);
         size_t byteSize = entry.image.total() * entry.image.elemSize();
         proto.mutable_tensor_content()->assign((char*)entry.image.data, byteSize);
@@ -198,6 +205,26 @@ public:
             proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.rows);
             proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.channels());
         }
+        inputs[inputName] = proto;
+        return true;
+    }
+
+    // Post-processing function for resnet classification.
+    // Most probable label is selected from the output.
+    bool interpretOutputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& outputs, const tensorflow::string& outputName, tensorflow::int64& predictedLabel) {
+        auto it = outputs.find(outputName);
+        if (it == outputs.end()) {
+            std::cout << "cannot find output " << outputName << std::endl;
+            return false;
+        }
+        tensorflow::TensorProto& resultTensorProto = it->second;
+        tensorflow::Tensor tensor;
+        bool converted = tensor.FromProto(resultTensorProto);
+        if (!converted) {
+            std::cout << "the result tensor[" << it->first << "] convert failed." << std::endl;
+            return false;
+        }
+        predictedLabel = this->argmax(tensor);
         return true;
     }
 
@@ -217,52 +244,35 @@ public:
 
         google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs = *predictRequest.mutable_inputs();
 
-        tensorflow::TensorProto proto;
+        // Pre-processing step.
+        // Packing image into gRPC message.
+        this->prepareInputs(inputs, entry, inputName);
 
-        this->prepareInput(proto, entry);
-
-        inputs[inputName] = proto;
-
+        // Actual predict request.
         auto start = std::chrono::high_resolution_clock::now();
         Status status = stub_->Predict(&context, predictRequest, &response);
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - start);
 
-        if (status.ok()) {
-            std::cout << "call predict ok" << std::endl;
-            std::cout << "call predict time: " << duration.count() / 1000 << "ms" << std::endl;
-            std::cout << "outputs size is " << response.outputs_size() << std::endl;
-
-            auto it = response.mutable_outputs()->find(outputName);
-            if (it == response.mutable_outputs()->end()) {
-                std::cout << "cannot find output " << outputName << std::endl;
-                return false;
-            }
-
-            tensorflow::TensorProto& resultTensorProto = it->second;
-            tensorflow::Tensor tensor;
-            bool converted = tensor.FromProto(resultTensorProto);
-            if (!converted) {
-                std::cout << "the result tensor[" << it->first << "] convert failed." << std::endl;
-                return false;
-            }
-
-            auto label = this->argmax(tensor);
-            std::cout << "most probable label: " << label << "; expected: " << entry.expectedLabel;
-            if (entry.expectedLabel == label) {
-                std::cout << "; OK" << std::endl;
-                isLabelCorrect = true;
-                return true;
-            } else {
-                std::cout << "; Incorrect" << std::endl;
-                isLabelCorrect = false;
-                return true;
-            }
-        } else {
+        // gRPC error handling.
+        if (!status.ok()) {
             std::cout << "gRPC call return code: " << status.error_code() << ": "
                       << status.error_message() << std::endl;
             return false;
         }
+
+        std::cout << "call predict ok" << std::endl;
+        std::cout << "call predict time: " << duration.count() / 1000 << "ms" << std::endl;
+        std::cout << "outputs size is " << response.outputs_size() << std::endl;
+
+        // Post-processing step.
+        // Extracting most probable label from resnet output.
+        tensorflow::int64 predictedLabel = -1;
+        if (!this->interpretOutputs(*response.mutable_outputs(), outputName, predictedLabel)) {
+            return false;
+        }
+        isLabelCorrect = predictedLabel == entry.expectedLabel;
+
         return true;
     }
 
@@ -288,9 +298,8 @@ public:
         }
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - begin);
-
         std::cout << "Overall accuracy: " << (correctLabels * 100) / iterations << "%" << std::endl;
-        std::cout << "Average predict time: " << (duration.count() / 1000) / iterations << "ms" << std::endl;
+        std::cout << "Total time divided by number of requests: " << (duration.count() / 1000) / iterations << "ms" << std::endl;
     }
 };
 
