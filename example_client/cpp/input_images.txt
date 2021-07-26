@@ -1,0 +1,10 @@
+/workspace/images/airliner.jpeg 404
+/workspace/images/arctic-fox.jpeg 279
+/workspace/images/bee.jpeg 309
+/workspace/images/golden_retriever.jpeg 207
+/workspace/images/gorilla.jpeg 366
+/workspace/images/magnetic_compass.jpeg 635
+/workspace/images/peacock.jpeg 84
+/workspace/images/pelican.jpeg 144
+/workspace/images/snail.jpeg 113
+/workspace/images/zebra.jpeg 340

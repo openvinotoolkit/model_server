@@ -20,6 +20,3 @@ default: docker_build
 
 docker_build:
 	@docker build -t cpp_clients_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} .
-	@rm -Rf bin
-	@mkdir -p bin
-	@docker cp $$(docker create --rm cpp_clients_build_image:latest):/build/bazel-bin/src/resnet_client ./bin/resnet_client
