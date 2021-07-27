@@ -91,15 +91,7 @@ Status serializeBlobToTensorProto(
         }
         responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
-    SPDLOG_INFO("Pre cast");
-    auto memoryBlob = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob);
-    SPDLOG_INFO("Pre rwmap");
-    auto rwmapFromBlob = memoryBlob->rwmap();
-    SPDLOG_INFO("Pre as");
-    auto asFromRwmap = rwmapFromBlob.as<char*>();
-    SPDLOG_INFO("Pre assign");
-    responseOutput.mutable_tensor_content()->assign(asFromRwmap, blob->byteSize());
-    SPDLOG_INFO("Post assign");
+    responseOutput.mutable_tensor_content()->assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rwmap().as<char*>(), blob->byteSize());
     return StatusCode::OK;
 }
 
