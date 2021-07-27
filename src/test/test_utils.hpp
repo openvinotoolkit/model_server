@@ -32,7 +32,6 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
 
 #include "../modelmanager.hpp"
 #include "../node_library.hpp"
@@ -175,7 +174,6 @@ static std::string readableError(const float* expected_output, const float* actu
 
 // returns path to a file.
 std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json");
-#pragma GCC diagnostic pop
 
 template <typename T>
 static std::vector<T> asVector(const std::string& tensor_content) {

@@ -68,4 +68,3 @@ TEST(Sequence, UpdateSequenceState) {
     state2BlobSequenceData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(sequenceMemoryState.at("state2"))->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(sequenceMemoryState.at("state2"))->rmap().as<float*>() + elementsCount2);
     EXPECT_EQ(state2BlobSequenceData, state2);
 }
-#pragma GCC diagnostic pop

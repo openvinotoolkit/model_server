@@ -23,7 +23,6 @@ Status serializeBlobToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& networkOutput,
     InferenceEngine::Blob::Ptr blob) {
-    SPDLOG_INFO("Starting function");
     responseOutput.Clear();
     if (networkOutput->getPrecision() != blob->getTensorDesc().getPrecision()) {
         SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in precision expected:{} vs actual:{}",

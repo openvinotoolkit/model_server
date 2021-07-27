@@ -1258,4 +1258,3 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
     ASSERT_EQ(error_status, StatusCode::OK);
     EXPECT_EQ(json_output, expected_json_available);
 }
-#pragma GCC diagnostic pop

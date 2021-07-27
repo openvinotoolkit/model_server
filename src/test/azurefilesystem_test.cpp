@@ -154,4 +154,3 @@ TEST(DISABLED_AzureFileSystem, file_details) {
     check_file_access(getPrivateFilePath(), fs.get());
     check_dir_access(getPrivateDirPath(), fs.get());
 }
-#pragma GCC diagnostic pop

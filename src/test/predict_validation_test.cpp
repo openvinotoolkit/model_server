@@ -518,4 +518,3 @@ TEST_F(PredictValidation, RequestNegativeValueInShape) {
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
 }
 
-#pragma GCC diagnostic pop
