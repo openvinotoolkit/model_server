@@ -73,7 +73,7 @@ const std::map<model_version_t, const ModelInstance&> Model::getModelVersionsMap
     for (auto& [modelVersion, modelInstancePtr] : modelVersions) {
         modelInstancesMapCopy.insert({modelVersion, *modelInstancePtr});
     }
-    return std::move(modelInstancesMapCopy);
+    return modelInstancesMapCopy;
 }
 
 const std::map<model_version_t, std::shared_ptr<ModelInstance>>& Model::getModelVersions() const {
