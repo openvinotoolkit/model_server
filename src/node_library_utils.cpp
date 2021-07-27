@@ -87,7 +87,7 @@ std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const std
     for (const auto& [name, blob] : blobMap) {
         const auto& dims = getEffectiveBlobShape(blob);
         inputTensors[i].name = static_cast<const char*>(name.c_str());
-        inputTensors[i].data = static_cast<uint8_t*>(blob->buffer());
+        inputTensors[i].data = static_cast<uint8_t*>(InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rwmap());
         inputTensors[i].dataBytes = static_cast<uint64_t>(blob->byteSize());
         inputTensors[i].dims = const_cast<uint64_t*>(dims.data());
         inputTensors[i].dimsCount = static_cast<uint64_t>(dims.size());

@@ -334,7 +334,7 @@ public:
         ASSERT_THAT(output, Each(Eq(0.)));
         auto blobOutput = inferRequest.GetBlob(DUMMY_MODEL_OUTPUT_NAME);
         ASSERT_EQ(blobOutput->byteSize(), outputSize * sizeof(float));
-        std::memcpy(output.data(), blobOutput->cbuffer(), outputSize * sizeof(float));
+        std::memcpy(output.data(), InferenceEngine::as<InferenceEngine::MemoryBlob>(blobOutput)->rmap(), outputSize * sizeof(float));
         EXPECT_THAT(output, Each(Eq(2.)));
     }
 
