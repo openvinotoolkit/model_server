@@ -39,7 +39,7 @@ std::vector<T> reorder_to_nhwc(const T* nchwVector, int rows, int cols, int chan
             }
         }
     }
-    return std::move(nhwcVector);
+    return nhwcVector;
 }
 
 template <typename T>
@@ -52,7 +52,7 @@ std::vector<T> reorder_to_nchw(const T* nhwcVector, int rows, int cols, int chan
             }
         }
     }
-    return std::move(nchwVector);
+    return nchwVector;
 }
 
 const cv::Mat nhwc_to_mat(const CustomNodeTensor* input) {

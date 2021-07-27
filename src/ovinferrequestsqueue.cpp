@@ -34,7 +34,7 @@ std::future<int> OVInferRequestsQueue::getIdleStream() {
         lk.unlock();
         idleStreamPromise.set_value(value);
     }
-    return std::move(idleStreamFuture);
+    return idleStreamFuture;
 }
 
 void OVInferRequestsQueue::returnStream(int streamID) {
