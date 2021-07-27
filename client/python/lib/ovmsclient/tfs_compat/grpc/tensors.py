@@ -14,57 +14,11 @@
 # limitations under the License.
 #
 
+from tensorflow.core.framework.tensor_shape_pb2 import *
 from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow.core.framework.types_pb2 import DataType
 from enum import IntEnum
 import numpy as np
-
-def make_tensor_proto(values, dtype=None, shape=None):
-    '''
-    Create TensorProto object from values.
-
-    Args:
-
-        values: Values to put in the TensorProto.
-            The accepted types are: python scalar, pythons list, numpy scalar and numpy ndarray.
-            Python scalars and lists are internally converted to their numpy counterparts before further processing.
-            String values are converted to bytes and placed in TensorProto string_val field. 
-
-        dtype (optional): tensor_pb2 DataType value. 
-            If not provided, the function will try to infer the data type from **values** argument.
-
-        shape (optional): The list of integers defining the shape of the tensor. 
-            If not provided, the function will try to infer the shape from **values** argument.
-
-    Returns:
-        TensorProto object filled with **values**.
-
-    Raises:
-        TypeError:  if unsupported types are provided.
-        ValueError: if arguments have inappropriate values.
-
-    Examples:
-
-        With python list:
-
-        >>> data = [[1, 2, 3], [4, 5, 6]]
-        >>> tensor_proto = make_tensor_proto(data)
-        >>> print(tensor_proto)
-
-        With numpy array:
-
-        >>> data = np.array([[1, 2, 3], [4, 5, 6]], np.int32)
-        >>> tensor_proto = make_tensor_proto(data)
-        >>> print(tensor_proto)
-
-        With binary data:
-
-        >>> data = bytes([1, 2, 3, 4, 5, 6])
-        >>> tensor_proto = make_tensor_proto(data)
-        >>> print(tensor_proto)
-    '''
-
-    raise NotImplementedError
 
 def _as_numpy_dtype(tensor_dtype):
     if tensor_dtype == DataType.DT_INVALID:
@@ -100,6 +54,116 @@ def _as_numpy_dtype(tensor_dtype):
     else:
         return np.uint32
 
+def _is_array_like(value):
+    if isinstance(value, list) or isinstance(value, np.ndarray):
+        return True
+    else:
+        return False
+
+def make_tensor_proto(values, dtype=None, shape=None):
+    '''
+    Create TensorProto object from values.
+
+    Args:
+
+        values: Values to put in the TensorProto.
+            The accepted types are: python scalar, pythons list, numpy scalar and numpy ndarray.
+            Python scalars and lists are internally converted to their numpy counterparts before further processing.
+            Bytes values are placed in TensorProto string_val field. 
+
+        dtype (optional): tensor_pb2 DataType value. 
+            If not provided, the function will try to infer the data type from **values** argument.
+
+        shape (optional): The list of integers defining the shape of the tensor. 
+            If not provided, the function will try to infer the shape from **values** argument.
+
+    Returns:
+        TensorProto object filled with **values**.
+
+    Raises:
+        TypeError:  if unsupported types are provided.
+        ValueError: if arguments have inappropriate values.
+
+    Examples:
+
+        With python list:
+
+        >>> data = [[1, 2, 3], [4, 5, 6]]
+        >>> tensor_proto = make_tensor_proto(data)
+        >>> print(tensor_proto)
+
+        With numpy array:
+
+        >>> data = np.array([[1, 2, 3], [4, 5, 6]], np.int32)
+        >>> tensor_proto = make_tensor_proto(data)
+        >>> print(tensor_proto)
+
+        With binary data:
+
+        >>> data = bytes([1, 2, 3, 4, 5, 6])
+        >>> tensor_proto = make_tensor_proto(data)
+        >>> print(tensor_proto)
+    '''
+    if shape is None:
+        infered_shape = []
+    else:
+        infered_shape = shape
+    
+    value = values
+    while dtype is None or (shape is None and _is_array_like(value)):
+        if _is_array_like(value):
+            if shape is None:
+                infered_shape.append(len(value))
+            if(len(value)>0):
+                value = value[0]
+        elif isinstance(value, str):
+            dtype = DataType.DT_STRING
+        elif isinstance(value, np.float64):
+            dtype = DataType.DT_DOUBLE
+        elif isinstance(value, np.float32):
+            dtype = DataType.DT_FLOAT
+        elif isinstance(value, float):
+            dtype = DataType.DT_DOUBLE
+        elif isinstance(value, np.uint8):
+            dtype = DataType.DT_UINT8
+        elif isinstance(value, np.uint16):
+            dtype = DataType.DT_UINT16
+        elif isinstance(value, np.uint32):
+            dtype = DataType.DT_UINT32
+        elif isinstance(value, np.uint64):
+            dtype = DataType.DT_UINT64
+        elif isinstance(value, np.int8):
+            dtype = DataType.DT_INT8
+        elif isinstance(value, np.int16):
+            dtype = DataType.DT_INT16
+        elif isinstance(value, np.int32):
+            dtype = DataType.DT_INT32
+        elif isinstance(value, np.int64):
+            dtype = DataType.DT_INT64
+        elif isinstance(value, int):
+            dtype = DataType.DT_INT32
+        elif isinstance(value, np.complex64):
+            dtype = DataType.DT_COMPLEX64
+        elif isinstance(value, np.complex128):
+            dtype = DataType.DT_COMPLEX128
+        elif isinstance(value, complex):
+            dtype = DataType.DT_COMPLEX64
+        elif isinstance(value, bool):
+            dtype = DataType.DT_BOOL
+        else:
+            dtype = DataType.DT_INT32    
+
+    dims = []
+    for d in infered_shape:
+        dims.append(TensorShapeProto.Dim(size=d))
+    tensor_shape = TensorShapeProto(dim = dims)
+    np_dtype = _as_numpy_dtype(dtype)
+    if dtype == DataType.DT_STRING:
+        tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape, string_val=values)
+    else:
+        np_values = np.array(values, np_dtype)
+        tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape, tensor_content=np_values.tobytes())
+    return tensor_proto
 
 def make_ndarray(tensor_proto):
     '''
