@@ -23,6 +23,7 @@ Status serializeBlobToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& networkOutput,
     InferenceEngine::Blob::Ptr blob) {
+    SPDLOG_INFO("Starting function");
     responseOutput.Clear();
     if (networkOutput->getPrecision() != blob->getTensorDesc().getPrecision()) {
         SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in precision expected:{} vs actual:{}",
@@ -90,8 +91,15 @@ Status serializeBlobToTensorProto(
         }
         responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
-    // responseOutput.mutable_tensor_content()->assign((char*)InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rwmap().as<char*>(), blob->byteSize());
-    responseOutput.mutable_tensor_content()->assign((char*)blob->buffer(), blob->byteSize());
+    SPDLOG_INFO("Pre cast");
+    auto memoryBlob = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob);
+    SPDLOG_INFO("Pre rwmap");
+    auto rwmapFromBlob = memoryBlob->rwmap();
+    SPDLOG_INFO("Pre as");
+    auto asFromRwmap = rwmapFromBlob.as<char*>();
+    SPDLOG_INFO("Pre assign");
+    responseOutput.mutable_tensor_content()->assign(asFromRwmap, blob->byteSize());
+    SPDLOG_INFO("Post assign");
     return StatusCode::OK;
 }
 
