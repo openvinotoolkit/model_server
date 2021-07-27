@@ -108,7 +108,7 @@ venv:$(ACTIVATE)
 $(ACTIVATE):
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
-	@. $(ACTIVATE); pip$(PY_VERSION) install --upgrade pip==21.1.2
+	@. $(ACTIVATE); pip$(PY_VERSION) install --upgrade pip==21.1.3
 	@. $(ACTIVATE); pip$(PY_VERSION) install -vUqq setuptools
 	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r tests/requirements.txt
 	@touch $(ACTIVATE)
