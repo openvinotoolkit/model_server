@@ -19,9 +19,10 @@ from validators import ipv4, domain
 import os
 import OpenSSL.crypto
 
-from ovmsclient.tfs_compat.base.serving_client import ServingClient
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from tensorflow_serving.apis import model_service_pb2_grpc
+
+from ovmsclient.tfs_compat.base.serving_client import ServingClient
 
 class GrpcClient(ServingClient):
 
