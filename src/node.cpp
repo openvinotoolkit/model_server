@@ -270,7 +270,7 @@ Status Node::createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, const In
             getName(), metadata.getSessionKey(), blobName, dividedBlob->byteSize(), step);
         return StatusCode::UNKNOWN_ERROR;
     }
-    memcpy((char*)dividedBlob->buffer(), (char*)blob->buffer() + i * step, step);
+    memcpy(InferenceEngine::as<InferenceEngine::MemoryBlob>(dividedBlob)->wmap().as<char*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<char*>() + i * step, step);
     return StatusCode::OK;
 }
 }  // namespace ovms

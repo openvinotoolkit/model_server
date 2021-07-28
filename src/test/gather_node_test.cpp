@@ -83,7 +83,7 @@ TEST_F(GatherNodeInputHandlerTest, ThreePredecessorNodesWithSubsessionSize2) {
         const auto& blob = blobMap.at(inputNames[i]);
         EXPECT_EQ(blob->size(), blobsData[i].size() * shardsCount);
         EXPECT_THAT(blob->getTensorDesc().getDims(), ElementsAre(shardsCount, 1, blobsData[i].size()));
-        EXPECT_EQ(std::memcmp((char*)((const void*)blob->cbuffer()), resultBlobsData[i].data(), resultBlobsData[i].size() * sizeof(float)), 0);
+        EXPECT_EQ(std::memcmp((char*)((const void*)InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap()), resultBlobsData[i].data(), resultBlobsData[i].size() * sizeof(float)), 0);
     }
 }
 
@@ -130,7 +130,7 @@ TEST_F(GatherNodeInputHandlerTest, GatheringOnTwoDemultiplexersAtOnce) {
     const auto& blob = blobMap.at(inputName);
     EXPECT_EQ(blob->size(), blobsData.size());
     EXPECT_THAT(blob->getTensorDesc().getDims(), ElementsAre(demultiplyCounts[0], demultiplyCounts[1], 1, elementCountPerShard));
-    EXPECT_EQ(std::memcmp((char*)((const void*)blob->cbuffer()), blobsData.data(), blobsData.size() * sizeof(float)), 0);
+    EXPECT_EQ(std::memcmp((char*)((const void*)InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap()), blobsData.data(), blobsData.size() * sizeof(float)), 0);
 }
 
 TEST_F(GatherNodeInputHandlerTest, SetInputsWithShardsHavingDifferentShapesShouldReturnErrorWhenGathering) {
@@ -266,5 +266,5 @@ TEST_F(GatherNodeTest, FullFlowGatherInNonExitNode) {
     std::vector<float> resultBlobData(nodeRawResults1.size() * shardsCount);
     std::copy(nodeRawResults1.begin(), nodeRawResults1.end(), resultBlobData.begin());
     std::copy(nodeRawResults2.begin(), nodeRawResults2.end(), resultBlobData.begin() + nodeRawResults1.size());
-    EXPECT_EQ(memcmp((char*)((const void*)gatheredBlob->cbuffer()), resultBlobData.data(), resultBlobData.size() * sizeof(float)), 0);
+    EXPECT_EQ(memcmp((char*)((const void*)InferenceEngine::as<InferenceEngine::MemoryBlob>(gatheredBlob)->rmap()), resultBlobData.data(), resultBlobData.size() * sizeof(float)), 0);
 }

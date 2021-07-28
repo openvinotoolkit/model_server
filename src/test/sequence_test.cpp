@@ -61,11 +61,11 @@ TEST(Sequence, UpdateSequenceState) {
     ASSERT_TRUE(sequenceMemoryState.count("state2"));
 
     std::vector<float> state1BlobSequenceData;
-    state1BlobSequenceData.assign((float*)sequenceMemoryState.at("state1")->buffer(), ((float*)sequenceMemoryState.at("state1")->buffer()) + elementsCount1);
+    state1BlobSequenceData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(sequenceMemoryState.at("state1"))->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(sequenceMemoryState.at("state1"))->rmap().as<float*>() + elementsCount1);
     EXPECT_EQ(state1BlobSequenceData, state1);
 
     std::vector<float> state2BlobSequenceData;
-    state2BlobSequenceData.assign((float*)sequenceMemoryState.at("state2")->buffer(), ((float*)sequenceMemoryState.at("state2")->buffer()) + elementsCount2);
+    state2BlobSequenceData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(sequenceMemoryState.at("state2"))->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(sequenceMemoryState.at("state2"))->rmap().as<float*>() + elementsCount2);
     EXPECT_EQ(state2BlobSequenceData, state2);
 }
 #pragma GCC diagnostic pop
