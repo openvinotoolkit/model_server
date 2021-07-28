@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 import os
+from logging import FileHandler
 
 import grpc  # noqa
 import pytest
@@ -27,7 +28,7 @@ from utils.logger import get_logger
 from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
 from utils.parametrization import get_tests_suffix
-from config import test_dir, test_dir_cleanup
+from config import test_dir, test_dir_cleanup, artifacts_dir
 
 logger = get_logger(__name__)
 
@@ -135,3 +136,13 @@ def exception_catcher(when: str, outcome):
             else exception_info.exconly()
         exception_logger.error('Unhandled Exception during {}: \n{}'
                                .format(when.capitalize(), str(exc_repr)))
+
+
+
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_runtest_protocol(item: "Item", nextitem: "Optional[Item]"):
+    log_path = os.path.join(artifacts_dir, f"{item.location[2]}.log")
+    test_log_handler = FileHandler(log_path)
+    logger.addHandler(test_log_handler)
+    yield
+    logger.removeHandler(test_log_handler)
