@@ -154,7 +154,7 @@ TEST_F(BinaryUtilsTest, positive_precision_changed) {
 
     ASSERT_EQ(convertStringValToBlob(stringVal, blob, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(blob->size(), 3);
-    uint8_t* ptr = (uint8_t*)InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<uint8_t*>();
+    uint8_t* ptr = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<uint8_t*>();
     int I32_size = 4;
     EXPECT_EQ(std::equal(ptr, ptr + blob->size() * I32_size, rgb_precision_changed_expected_blob), true);
 }
