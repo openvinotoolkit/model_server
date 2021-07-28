@@ -142,18 +142,21 @@ def exception_catcher(when: str, outcome):
 
 
 
+
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_runtest_logstart(nodeid, location):
     if artifacts_dir:
         test_name = "".join(list(map(lambda x: x if x.isalnum() else '_', location[2])))
         log_path = os.path.join(artifacts_dir, f"{test_name}.log")
-        logger._test_log_handler = FileHandler(log_path)
-        logger.addHandler(logger._test_log_handler)
+        _root_logger = get_logger(None)
+        _root_logger._test_log_handler = FileHandler(log_path)
+        _root_logger.addHandler(_root_logger._test_log_handler)
     yield
 
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_runtest_logfinish(nodeid, location):
     if artifacts_dir:
-        logger.removeHandler(logger._test_log_handler)
+        _root_logger = get_logger(None)
+        _root_logger.removeHandler(_root_logger._test_log_handler)
     yield
