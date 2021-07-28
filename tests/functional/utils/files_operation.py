@@ -25,5 +25,6 @@ def save_container_logs_to_file(container, logs, dir_path: str = config.artifact
     file_name = f"{container.name}_{test_case}_{time_stamp}.log"
     os.makedirs(dir_path, exist_ok=True)
     file_path = os.path.join(dir_path, file_name)
+    assert 0, f"{os.environ.get('PYTEST_CURRENT_TEST')}\n{file_name}"
     with open(file_path, "w+") as text_file:
         text_file.write(logs)
