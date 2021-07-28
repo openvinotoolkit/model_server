@@ -14,10 +14,9 @@
 # limitations under the License.
 #
 
-from tensorflow.core.framework.tensor_shape_pb2 import *
+from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
 from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow.core.framework.types_pb2 import DataType
-from enum import IntEnum
 import numpy as np
 
 def _as_numpy_dtype(tensor_dtype):
@@ -55,10 +54,7 @@ def _as_numpy_dtype(tensor_dtype):
         return np.uint32
 
 def _is_array_like(value):
-    if isinstance(value, list) or isinstance(value, np.ndarray):
-        return True
-    else:
-        return False
+    return isinstance(value, list) or isinstance(value, np.ndarray)
 
 def make_tensor_proto(values, dtype=None, shape=None):
     '''
@@ -106,16 +102,22 @@ def make_tensor_proto(values, dtype=None, shape=None):
     '''
     if shape is None:
         infered_shape = []
-    else:
+    elif _is_array_like(shape):
+        if shape != list(np.array(values).shape):
+            raise ValueError(f'shape provided does not match values array shape')
         infered_shape = shape
+    else:
+        raise TypeError(f'shape type should be list, but is {type(shape).__name__}')
     
     value = values
     while dtype is None or (shape is None and _is_array_like(value)):
         if _is_array_like(value):
             if shape is None:
                 infered_shape.append(len(value))
-            if(len(value)>0):
+            if len(value)>0:
                 value = value[0]
+            else:
+                value = None
         elif isinstance(value, str):
             dtype = DataType.DT_STRING
         elif isinstance(value, np.float64):
@@ -157,10 +159,10 @@ def make_tensor_proto(values, dtype=None, shape=None):
     for d in infered_shape:
         dims.append(TensorShapeProto.Dim(size=d))
     tensor_shape = TensorShapeProto(dim = dims)
-    np_dtype = _as_numpy_dtype(dtype)
     if dtype == DataType.DT_STRING:
         tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape, string_val=values)
     else:
+        np_dtype = _as_numpy_dtype(dtype)
         np_values = np.array(values, np_dtype)
         tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape, tensor_content=np_values.tobytes())
     return tensor_proto

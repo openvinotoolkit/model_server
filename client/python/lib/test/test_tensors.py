@@ -15,7 +15,7 @@
 #
 
 import pytest
-from tensorflow.core.framework.tensor_shape_pb2 import *
+from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
 from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow.core.framework.types_pb2 import DataType
 from ovmsclient.tfs_compat.grpc.tensors import make_ndarray, make_tensor_proto
@@ -111,6 +111,23 @@ def test_make_tensor_proto_valid_int():
     np_values = np.array(values, np.int8)
     assert tensor_proto.tensor_content == np_values.tobytes()
     assert tensor_proto.dtype == DataType.DT_INT8
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=3)])
+
+def test_make_tensor_proto_valid_empty_list():
+    values = []
+    tensor_proto = make_tensor_proto(shape=[0], dtype = DataType.DT_INT8, values = values)
+    np_values = np.array(values, np.int8)
+    assert tensor_proto.tensor_content == np_values.tobytes()
+    assert tensor_proto.dtype == DataType.DT_INT8
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=0)])
+
+def test_make_tensor_proto_valid_empty_list_of_empty_lists():
+    values = [[],[],[]]
+    tensor_proto = make_tensor_proto(shape=[3,0], dtype = DataType.DT_INT8, values = values)
+    np_values = np.array(values, np.int8)
+    assert tensor_proto.tensor_content == np_values.tobytes()
+    assert tensor_proto.dtype == DataType.DT_INT8
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=3), TensorShapeProto.Dim(size=0)])
 
 def test_make_tensor_proto_valid_float():
     values = [1.0, 2.0, 3.0]
@@ -118,28 +135,31 @@ def test_make_tensor_proto_valid_float():
     np_values = np.array(values, np.float32)
     assert tensor_proto.tensor_content == np_values.tobytes()
     assert tensor_proto.dtype == DataType.DT_FLOAT
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=3)])
 
 def test_make_tensor_proto_valid_scalar():
     values = 5.0
-    tensor_proto = make_tensor_proto(shape=[3], dtype = DataType.DT_FLOAT, values = values)
+    tensor_proto = make_tensor_proto(shape= [], dtype = DataType.DT_FLOAT, values = values)
     np_values = np.array(values, np.float32)
     assert tensor_proto.tensor_content == np_values.tobytes()
     assert tensor_proto.dtype == DataType.DT_FLOAT
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [])
 
 def test_make_tensor_proto_valid_string():
     values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
-    tensor_proto = make_tensor_proto(shape=[4], dtype = DataType.DT_STRING, values = [values])
+    tensor_proto = make_tensor_proto(shape=[1], dtype = DataType.DT_STRING, values = [values])
     np_values = np.array(values)
     assert tensor_proto.string_val == [np_values.tobytes()]
     assert tensor_proto.dtype == DataType.DT_STRING
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=1)])
 
 def test_make_tensor_proto_valid_string_batch_size_2():
     values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
-    print(type(values))
-    tensor_proto = make_tensor_proto(shape=[4], dtype = DataType.DT_STRING, values = [values, values])
+    tensor_proto = make_tensor_proto(shape=None, dtype = DataType.DT_STRING, values = [values, values])
     np_values = np.array(values)
     assert tensor_proto.string_val == [np_values.tobytes(), np_values.tobytes()]
     assert tensor_proto.dtype == DataType.DT_STRING
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=2)])
 
 def test_make_tensor_proto_valid_2_dims_shape():
     values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
@@ -147,6 +167,7 @@ def test_make_tensor_proto_valid_2_dims_shape():
     np_values = np.array(values, np.float32)
     assert tensor_proto.tensor_content == np_values.tobytes()
     assert tensor_proto.dtype == DataType.DT_FLOAT
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)])
 
 def test_make_tensor_proto_valid_ndarray():
     values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
@@ -157,6 +178,7 @@ def test_make_tensor_proto_valid_ndarray():
     tensor_proto = make_tensor_proto(values = array, dtype = DataType.DT_FLOAT)
     assert tensor_proto.tensor_content == np_values.tobytes()
     assert tensor_proto.dtype == DataType.DT_FLOAT
+    assert tensor_proto.tensor_shape == _shape
 
 def test_make_tensor_proto_valid_no_dtype_provided():
     values = [1.0, 2.0, 3.0]
@@ -164,6 +186,7 @@ def test_make_tensor_proto_valid_no_dtype_provided():
     np_values = np.array(values)
     assert tensor_proto.tensor_content == np_values.tobytes()
     assert tensor_proto.dtype == DataType.DT_DOUBLE
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=3)])
 
 def test_make_tensor_proto_valid_no_shape_provided():
     values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
@@ -177,7 +200,7 @@ def test_make_tensor_proto_valid_no_shape_provided():
 def test_make_tensor_proto_invalid_dtype_provided():
     values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
     with pytest.raises(TypeError) as exception_info:
-        make_tensor_proto(shape = [100, 6,7,8], dtype = DataType.DT_STRING, values = values)
+        make_tensor_proto(shape = None, dtype = DataType.DT_STRING, values = values)
 
     exception = exception_info.value
     assert str(exception) == "[1.0, 2.0, 3.0] has type list, but expected one of: bytes"
@@ -188,4 +211,12 @@ def test_make_tensor_proto_invalid_dimsions():
         make_tensor_proto(shape=[2,3], dtype = DataType.DT_FLOAT, values = values)
 
     exception = exception_info.value
-    assert str(exception) == "setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (2,) + inhomogeneous part."
+    assert str(exception) == "shape provided does not match values array shape"
+
+def test_make_tensor_proto_invalid_shape_type():
+    values = 5.0
+    with pytest.raises(TypeError) as exception_info:
+        make_tensor_proto(shape=0, dtype = DataType.DT_FLOAT, values = values)
+
+    exception = exception_info.value
+    assert str(exception) == "shape type should be list, but is int"
