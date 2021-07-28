@@ -190,3 +190,4 @@ TEST_F(OvmsParamsTest, hostname_ip_regex) {
     EXPECT_EQ(ovms::Config::instance().check_hostname_or_ip(too_long), false);
 }
 
+#pragma GCC diagnostic pop

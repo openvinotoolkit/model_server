@@ -124,3 +124,4 @@ TEST_F(StatefulConfigTest, ChangedValues) {
     auto idleSequenceCleanup = modelConfig.getIdleSequenceCleanup();
     ASSERT_EQ(idleSequenceCleanup, true);
 }
+#pragma GCC diagnostic pop

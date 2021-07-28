@@ -26,7 +26,12 @@
 
 #include "../sequence.hpp"
 #include "../sequence_manager.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma GCC diagnostic pop
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mock_iinferrequest.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>
@@ -120,6 +125,7 @@ static void addState(ovms::model_memory_state_t& states, std::string name, std::
     states.push_back(VariableState(ivarPtr));
 }
 
+#pragma GCC diagnostic pop
 
 class MockIInferRequestStateful : public MockIInferRequest {
 public:
@@ -163,3 +169,4 @@ public:
         return ovms::SequenceManager::terminateSequence(sequenceId);
     }
 };
+#pragma GCC diagnostic pop

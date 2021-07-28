@@ -795,3 +795,4 @@ TEST_F(TestPredict, PerformInferenceWithBinaryInputNoInputShape) {
     ASSERT_EQ(performInferenceWithRequest(request, response, "increment_1x3x4x5"), ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
+#pragma GCC diagnostic pop
