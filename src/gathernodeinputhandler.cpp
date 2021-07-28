@@ -87,7 +87,9 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
             }
             const auto memstep = blob->byteSize();
             size_t offset = shardId * memstep;
-            memcpy((char*)consolidatedBlob->buffer() + offset, blob->cbuffer(), memstep);
+            memcpy(InferenceEngine::as<InferenceEngine::MemoryBlob>(consolidatedBlob)->wmap().as<char*>() + offset,
+                InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<char*>(),
+                memstep);
         }
         inputBlobs.insert({inputName, consolidatedBlob});
     }
