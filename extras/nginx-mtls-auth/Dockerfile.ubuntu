@@ -19,20 +19,16 @@ FROM $BASE_IMAGE
 USER root
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-c"]
-RUN     set -e ; \
-        set -x ; \
-        mkdir /certs ; \
-        apt update -y; \
-        apt install -y curl nginx ; \
-        apt clean ; \
-        curl -o /usr/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64 ; \
-        chmod +x /usr/bin/dumb-init ; \
-        touch /run/nginx.pid ; mkdir -p /var/lib/nginx/tmp/ ; \
-        chmod -R 777 /etc/nginx/conf.d/ /var/log/nginx/ /certs/ /var/lib/nginx/ /var/lib/nginx/tmp/ ; \
-        sed -i 's,listen       80 default_server;,listen       unix:/tmp/nginx-default.sock;,' /etc/nginx/nginx.conf ; \
-        sed -i 's,listen       \[::\]:80 default_server;,,' /etc/nginx/nginx.conf ; \
-        sed -i 's,pid /run/nginx.pid;,pid /tmp/nginx.pid;,' /etc/nginx/nginx.conf ; \
-        sed -i 's,user nginx;,,' /etc/nginx/nginx.conf ;
+RUN set -e ; \
+    set -x ; \
+    mkdir /certs ; \
+    apt update -y; \
+    apt install -y curl nginx dumb-init ; \
+    apt clean ; \
+    touch /run/nginx.pid ; mkdir -p /var/lib/nginx/tmp/ ; \
+    chmod -R 777 /etc/nginx/conf.d/ /var/log/nginx/ /certs/ /var/lib/nginx/ /var/lib/nginx/tmp/ ; \
+    sed -i 's,pid /run/nginx.pid;,pid /tmp/nginx.pid;,' /etc/nginx/nginx.conf ; \
+    sed -i 's,user www-data;,,' /etc/nginx/nginx.conf ;
 
 COPY ovms_wrapper /
 COPY model_server.conf.template /
