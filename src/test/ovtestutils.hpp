@@ -99,8 +99,10 @@ public:
     InferenceEngine::LockedMemory<void> rwmap() noexcept {
         return LockedMemory<void>(_allocator.get(), to, 0);
     }
+    InferenceEngine::LockedMemory<const void> rmap() const noexcept {
+        return LockedMemory<const void>(_allocator.get(), to, 0);
+    }
     MOCK_METHOD(InferenceEngine::LockedMemory<const void>, cbuffer, (), (const, noexcept));
-    MOCK_METHOD(InferenceEngine::LockedMemory<const void>, rmap, (), (const, noexcept));
     MOCK_METHOD(InferenceEngine::LockedMemory<void>, wmap, (), (noexcept));
     MOCK_METHOD(const std::shared_ptr<InferenceEngine::IAllocator>&, getAllocator, (), (const, noexcept));
     MOCK_METHOD(void*, getHandle, (), (const, noexcept));
