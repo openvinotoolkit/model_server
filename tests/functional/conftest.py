@@ -81,6 +81,9 @@ def pytest_configure():
         init_conf_logger.info("Possible conflicting container names: {} "
                               "for given tests_suffix: {}".format(container_names, get_tests_suffix()))
 
+    if artifacts_dir:
+        os.makedirs(artifacts_dir, exist_ok=True)
+
 
 def pytest_unconfigure():
     # Perform cleanup.
@@ -140,9 +143,17 @@ def exception_catcher(when: str, outcome):
 
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
-def pytest_runtest_protocol(item: "Item", nextitem: "Optional[Item]"):
-    log_path = os.path.join(artifacts_dir, f"{item.location[2]}.log")
-    test_log_handler = FileHandler(log_path)
-    logger.addHandler(test_log_handler)
+def pytest_runtest_logstart(nodeid, location):
+    if artifacts_dir:
+        test_name = "".join(list(map(lambda x: x if x.isalnum() else '_', location[2])))
+        log_path = os.path.join(artifacts_dir, f"{test_name}.log")
+        logger._test_log_handler = FileHandler(log_path)
+        logger.addHandler(logger._test_log_handler)
     yield
-    logger.removeHandler(test_log_handler)
+
+
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_runtest_logfinish(nodeid, location):
+    if artifacts_dir:
+        logger.removeHandler(logger._test_log_handler)
+    yield
