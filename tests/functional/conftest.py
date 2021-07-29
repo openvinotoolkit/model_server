@@ -27,6 +27,7 @@ from utils.cleanup import clean_hanging_docker_resources, delete_test_directory,
 from utils.logger import get_logger
 from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
+from utils.files_operation import get_path_friendly_test_name
 from utils.parametrization import get_tests_suffix
 from config import test_dir, test_dir_cleanup, artifacts_dir
 
@@ -146,7 +147,7 @@ def exception_catcher(when: str, outcome):
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_runtest_logstart(nodeid, location):
     if artifacts_dir:
-        test_name = "".join(list(map(lambda x: x if x.isalnum() else '_', location[2])))
+        test_name = get_path_friendly_test_name(location)
         log_path = os.path.join(artifacts_dir, f"{test_name}.log")
         _root_logger = get_logger(None)
         _root_logger._test_log_handler = FileHandler(log_path)

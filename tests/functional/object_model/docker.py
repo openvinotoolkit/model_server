@@ -84,11 +84,11 @@ class Docker:
         return self.container, {"grpc_port": self.grpc_port, "rest_port": self.rest_port}
 
     def save_container_logs(self):
+        logs = self.get_logs()
         if config.log_level == "DEBUG":
-            logs = self.get_logs()
             logger.info(logs)
-            if config.artifacts_dir != "":
-                save_container_logs_to_file(container=self.container, logs=logs)
+        if config.artifacts_dir != "":
+            save_container_logs_to_file(logs=logs)
 
     def get_logs(self):
         until = self.last_log_fetch_time
