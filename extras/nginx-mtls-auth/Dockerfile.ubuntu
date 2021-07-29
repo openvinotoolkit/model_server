@@ -23,7 +23,7 @@ RUN set -e ; \
     set -x ; \
     mkdir /certs ; \
     apt update -y; \
-    apt install -y curl nginx dumb-init ; \
+    apt install -y nginx dumb-init ; \
     apt clean ; \
     touch /run/nginx.pid ; mkdir -p /var/lib/nginx/tmp/ ; \
     chmod -R 777 /etc/nginx/conf.d/ /var/log/nginx/ /certs/ /var/lib/nginx/ /var/lib/nginx/tmp/ ; \
