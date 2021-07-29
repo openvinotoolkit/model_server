@@ -225,7 +225,7 @@ InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images
     InferenceEngine::TensorDesc desc{tensorInfo->getPrecision(), dims, InferenceEngine::Layout::ANY};
     InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<T>(desc);
     blob->allocate();
-    char* ptr = (char*)blob->buffer();
+    char* ptr = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<char*>();
     for (cv::Mat image : images) {
         memcpy(ptr, (char*)image.data, image.total() * image.elemSize());
         ptr += (image.total() * image.elemSize());

@@ -60,11 +60,11 @@ public:
         case InferenceEngine::Precision::I16:
             return makeBlob<int16_t>(requestInput, tensorInfo, isPipeline);
         case InferenceEngine::Precision::FP16: {
-            auto blob = InferenceEngine::make_shared_blob<uint16_t>(getFinalTensorDesc(*tensorInfo, requestInput, isPipeline));
+            InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<uint16_t>(getFinalTensorDesc(*tensorInfo, requestInput, isPipeline));
             blob->allocate();
             // Needs conversion due to zero padding for each value:
             // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
-            uint16_t* ptr = blob->buffer().as<uint16_t*>();
+            uint16_t* ptr = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->wmap();
             auto size = static_cast<size_t>(requestInput.half_val_size());
             for (size_t i = 0; i < size; i++) {
                 ptr[i] = requestInput.half_val(i);
@@ -72,11 +72,11 @@ public:
             return blob;
         }
         case InferenceEngine::Precision::U16: {
-            auto blob = InferenceEngine::make_shared_blob<uint16_t>(getFinalTensorDesc(*tensorInfo, requestInput, isPipeline));
+            InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<uint16_t>(getFinalTensorDesc(*tensorInfo, requestInput, isPipeline));
             blob->allocate();
             // Needs conversion due to zero padding for each value:
             // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
-            uint16_t* ptr = blob->buffer().as<uint16_t*>();
+            uint16_t* ptr = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->wmap();
             auto size = static_cast<size_t>(requestInput.int_val_size());
             for (size_t i = 0; i < size; i++) {
                 ptr[i] = requestInput.int_val(i);

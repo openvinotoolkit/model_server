@@ -1223,7 +1223,7 @@ TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
     EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
 
     std::vector<float> currentBlobIrData;
-    currentBlobIrData.assign((float*)stateCloneBlob->buffer(), ((float*)stateCloneBlob->buffer()) + elementsCount);
+    currentBlobIrData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>() + elementsCount);
     EXPECT_EQ(currentBlobIrData, currentState);
 
     // Perform preprocessing (load state from sequence to infer request)
@@ -1232,7 +1232,7 @@ TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
 
     // Check if InferRequest memory state has been reset to default
     EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
-    currentBlobIrData.assign((float*)stateCloneBlob->buffer(), ((float*)stateCloneBlob->buffer()) + elementsCount);
+    currentBlobIrData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>() + elementsCount);
     EXPECT_EQ(currentBlobIrData, defaultState);
 }
 
@@ -1255,7 +1255,7 @@ TEST_F(StatefulModelInstanceTest, PreprocessingIntermediateRequest) {
         EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
 
         std::vector<float> currentBlobIrData;
-        currentBlobIrData.assign((float*)stateCloneBlob->buffer(), ((float*)stateCloneBlob->buffer()) + elementsCount);
+        currentBlobIrData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>() + elementsCount);
         EXPECT_EQ(currentBlobIrData, defaultState);
 
         // Inject sequence with newState as the last state written to sequence memory state
@@ -1269,7 +1269,7 @@ TEST_F(StatefulModelInstanceTest, PreprocessingIntermediateRequest) {
 
         // Check if InferRequest memory state has been updated to sequence memory state
         EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
-        currentBlobIrData.assign((float*)stateCloneBlob->buffer(), ((float*)stateCloneBlob->buffer()) + elementsCount);
+        currentBlobIrData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>() + elementsCount);
         EXPECT_EQ(currentBlobIrData, newState);
     }
 }
@@ -1293,7 +1293,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
     EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
 
     std::vector<float> currentBlobIrData;
-    currentBlobIrData.assign((float*)stateCloneBlob->buffer(), ((float*)stateCloneBlob->buffer()) + elementsCount);
+    currentBlobIrData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>() + elementsCount);
     EXPECT_EQ(currentBlobIrData, currentState);
 
     tensorflow::serving::PredictResponse response;
@@ -1304,7 +1304,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
 
     // Check if InferRequest memory state has been reset to default
     EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
-    currentBlobIrData.assign((float*)stateCloneBlob->buffer(), ((float*)stateCloneBlob->buffer()) + elementsCount);
+    currentBlobIrData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>() + elementsCount);
     EXPECT_EQ(currentBlobIrData, defaultState);
 }
 
@@ -1327,7 +1327,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         EXPECT_EQ(ovms::blobClone(stateCloneBlob, irMemoryState[0].GetState()), ovms::StatusCode::OK);
 
         std::vector<float> currentBlobIrData;
-        currentBlobIrData.assign((float*)stateCloneBlob->buffer(), ((float*)stateCloneBlob->buffer()) + elementsCount);
+        currentBlobIrData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>() + elementsCount);
         EXPECT_EQ(currentBlobIrData, defaultState);
 
         // Inject sequence with newState as the last state written to sequence memory state
@@ -1340,7 +1340,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         EXPECT_TRUE(currentSequenceMemoryState.count("state"));
         InferenceEngine::Blob::Ptr sanityBlob = currentSequenceMemoryState.at("state");
         std::vector<float> sanityBlobIrData;
-        sanityBlobIrData.assign((float*)sanityBlob->buffer(), ((float*)sanityBlob->buffer()) + elementsCount);
+        sanityBlobIrData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(sanityBlob)->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(sanityBlob)->rmap().as<float*>() + elementsCount);
         EXPECT_EQ(sanityBlobIrData, newState);
 
         tensorflow::serving::PredictResponse response;
@@ -1351,7 +1351,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         EXPECT_TRUE(updatedSequenceMemoryState.count("state"));
         InferenceEngine::Blob::Ptr chengedBlob = updatedSequenceMemoryState.at("state");
         std::vector<float> sequenceBlobIrData;
-        sequenceBlobIrData.assign((float*)chengedBlob->buffer(), ((float*)chengedBlob->buffer()) + elementsCount);
+        sequenceBlobIrData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(chengedBlob)->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(chengedBlob)->rmap().as<float*>() + elementsCount);
         EXPECT_EQ(sequenceBlobIrData, defaultState);
         EXPECT_TRUE(CheckSequenceIdResponse(response, sequenceId));
     }
