@@ -113,9 +113,25 @@ def test_make_tensor_proto_valid_int():
     assert tensor_proto.dtype == DataType.DT_INT8
     assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=3)])
 
+def test_make_tensor_proto_valid_int_reshape():
+    values = [1, 2, 3]
+    tensor_proto = make_tensor_proto(shape=[4], dtype = DataType.DT_INT8, values = values)
+    np_values = np.array(values, np.int8)
+    assert tensor_proto.tensor_content == np_values.tobytes()
+    assert tensor_proto.dtype == DataType.DT_INT8
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=4)])
+
 def test_make_tensor_proto_valid_empty_list():
     values = []
     tensor_proto = make_tensor_proto(shape=[0], dtype = DataType.DT_INT8, values = values)
+    np_values = np.array(values, np.int8)
+    assert tensor_proto.tensor_content == np_values.tobytes()
+    assert tensor_proto.dtype == DataType.DT_INT8
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=0)])
+
+def test_make_tensor_proto_valid_empty_list_no_shape_provided():
+    values = []
+    tensor_proto = make_tensor_proto(shape=None, dtype = DataType.DT_INT8, values = values)
     np_values = np.array(values, np.int8)
     assert tensor_proto.tensor_content == np_values.tobytes()
     assert tensor_proto.dtype == DataType.DT_INT8
@@ -128,6 +144,22 @@ def test_make_tensor_proto_valid_empty_list_of_empty_lists():
     assert tensor_proto.tensor_content == np_values.tobytes()
     assert tensor_proto.dtype == DataType.DT_INT8
     assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=3), TensorShapeProto.Dim(size=0)])
+
+def test_make_tensor_proto_valid_empty_list_of_empty_lists_no_shape_provied():
+    values = [[],[],[]]
+    tensor_proto = make_tensor_proto(shape=[3,0], dtype = DataType.DT_INT8, values = values)
+    np_values = np.array(values, np.int8)
+    assert tensor_proto.tensor_content == np_values.tobytes()
+    assert tensor_proto.dtype == DataType.DT_INT8
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=3), TensorShapeProto.Dim(size=0)])
+
+def test_make_tensor_proto_valid_empty_list_of_empty_lists_reshape():
+    values = [[],[],[]]
+    tensor_proto = make_tensor_proto(shape=[4,2], dtype = DataType.DT_INT8, values = values)
+    np_values = np.array(values, np.int8)
+    assert tensor_proto.tensor_content == np_values.tobytes()
+    assert tensor_proto.dtype == DataType.DT_INT8
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=4), TensorShapeProto.Dim(size=2)])
 
 def test_make_tensor_proto_valid_float():
     values = [1.0, 2.0, 3.0]
@@ -162,6 +194,14 @@ def test_make_tensor_proto_valid_string_batch_size_2():
     assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=2)])
 
 def test_make_tensor_proto_valid_2_dims_shape():
+    values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
+    tensor_proto = make_tensor_proto(shape=[2,3], dtype = DataType.DT_FLOAT, values = values)
+    np_values = np.array(values, np.float32)
+    assert tensor_proto.tensor_content == np_values.tobytes()
+    assert tensor_proto.dtype == DataType.DT_FLOAT
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)])
+    
+def test_make_tensor_proto_valid_2_dims_shape_reshape():
     values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
     tensor_proto = make_tensor_proto(shape=[2,3], dtype = DataType.DT_FLOAT, values = values)
     np_values = np.array(values, np.float32)
@@ -211,7 +251,7 @@ def test_make_tensor_proto_invalid_dimsions():
         make_tensor_proto(shape=[2,3], dtype = DataType.DT_FLOAT, values = values)
 
     exception = exception_info.value
-    assert str(exception) == "shape provided does not match values array shape"
+    assert str(exception) == "setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (2,) + inhomogeneous part."
 
 def test_make_tensor_proto_invalid_shape_type():
     values = 5.0

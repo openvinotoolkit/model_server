@@ -103,8 +103,6 @@ def make_tensor_proto(values, dtype=None, shape=None):
     if shape is None:
         infered_shape = []
     elif _is_array_like(shape):
-        if shape != list(np.array(values).shape):
-            raise ValueError(f'shape provided does not match values array shape')
         infered_shape = shape
     else:
         raise TypeError(f'shape type should be list, but is {type(shape).__name__}')
