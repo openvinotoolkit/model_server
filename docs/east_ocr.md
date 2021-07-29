@@ -67,12 +67,12 @@ export_model('./east_icdar2015_resnet_v1_50_rbox/model.ckpt-49491',"./model.pb")
 Freeze the model in checkpoint format and save it in proto buffer format in `model.pb`:
 
 ```bash
-docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw -w /EAST openvino/ubuntu18_dev:latest python3 freeze_east_model.py
+docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw -w /EAST openvino/ubuntu18_dev:2021.3 python3 freeze_east_model.py
 ```
 
 Convert the TensorFlow frozen model to Intermediate Representation format using the model_optimizer tool:
 ```bash
-docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo.py \
+docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw openvino/ubuntu18_dev:2021.3 deployment_tools/model_optimizer/mo.py \
 --framework=tf --input_shape=[1,1024,1920,3] --input=input_images --output=feature_fusion/Conv_7/Sigmoid,feature_fusion/concat_3  \
 --input_model /EAST/model.pb --output_dir /EAST/IR/1/
 ```
@@ -110,13 +110,15 @@ Install the following python dependencies in your python virtual environment:
 virtualenv .venv ; source .venv/bin/activate
 pip install tensorflow==1.15.0 opencv-python matplotlib easydict
 ```
+> NOTE: If you encounter errors installing `tensorflow==1.15.0`, downgrade python.
+
 Run the demo code via 
 ```bash
 python3 tools/demo_shadownet.py --image_path data/test_images/test_01.jpg --weights_path model/shadownet/shadownet_2017-10-17-11-47-46.ckpt-199999
 ```
 Convert the frozen TensorFlow graph to OpenVINO format:
 ```
-docker run -u $(id -u):$(id -g) -v ${PWD}/:/CRNN_Tensorflow:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo_tf.py \
+docker run -u $(id -u):$(id -g) -v ${PWD}/:/CRNN_Tensorflow:rw openvino/ubuntu18_dev:2021.3 deployment_tools/model_optimizer/mo_tf.py \
 --input_model /CRNN_Tensorflow/frozen_graph.pb \
 --output_dir /CRNN_Tensorflow/IR/1/
 ```
