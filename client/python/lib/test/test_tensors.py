@@ -220,3 +220,19 @@ def test_make_tensor_proto_invalid_shape_type():
 
     exception = exception_info.value
     assert str(exception) == "shape type should be list, but is int"
+
+def test_make_tensor_proto_invalid_dimensions_no_shape_provided():
+    values = [[1,2,3], [4,5]]
+    with pytest.raises(ValueError) as exception_info:
+        make_tensor_proto(shape=None, dtype = DataType.DT_INT8, values = values)
+
+    exception = exception_info.value
+    assert str(exception) == "setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (2,) + inhomogeneous part."
+
+def test_make_tensor_proto_invalid_dtype_as_float():
+    values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
+    with pytest.raises(TypeError) as exception_info:
+        make_tensor_proto(shape = None, dtype = int, values = values)
+
+    exception = exception_info.value
+    assert str(exception) == "<class 'int'> has type type, but expected one of: int, long"
