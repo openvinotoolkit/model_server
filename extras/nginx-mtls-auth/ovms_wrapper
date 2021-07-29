@@ -100,10 +100,6 @@ echo "${new_args[@]}"
 
 echo "Requested ports: GRPC: $GRPC_ORIGINAL_PORT ; REST: $REST_ORIGINAL_PORT "
 
-cat /etc/nginx/nginx.conf
-nginx -v
-cat /etc/os-release
-
 # select ports other than specified original:
 GRPC_OVMS_NEW_PORT=7000
 while [ $GRPC_OVMS_NEW_PORT -eq $GRPC_ORIGINAL_PORT ] || [ $GRPC_OVMS_NEW_PORT -eq $REST_ORIGINAL_PORT ]
