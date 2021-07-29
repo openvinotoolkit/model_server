@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 import os
+from logging import FileHandler
 
 import grpc  # noqa
 import pytest
@@ -26,8 +27,9 @@ from utils.cleanup import clean_hanging_docker_resources, delete_test_directory,
 from utils.logger import get_logger
 from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
+from utils.files_operation import get_path_friendly_test_name
 from utils.parametrization import get_tests_suffix
-from config import test_dir, test_dir_cleanup
+from config import test_dir, test_dir_cleanup, artifacts_dir
 
 logger = get_logger(__name__)
 
@@ -79,6 +81,9 @@ def pytest_configure():
     if container_names:
         init_conf_logger.info("Possible conflicting container names: {} "
                               "for given tests_suffix: {}".format(container_names, get_tests_suffix()))
+
+    if artifacts_dir:
+        os.makedirs(artifacts_dir, exist_ok=True)
 
 
 def pytest_unconfigure():
@@ -135,3 +140,24 @@ def exception_catcher(when: str, outcome):
             else exception_info.exconly()
         exception_logger.error('Unhandled Exception during {}: \n{}'
                                .format(when.capitalize(), str(exc_repr)))
+
+
+
+
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_runtest_logstart(nodeid, location):
+    if artifacts_dir:
+        test_name = get_path_friendly_test_name(location)
+        log_path = os.path.join(artifacts_dir, f"{test_name}.log")
+        _root_logger = get_logger(None)
+        _root_logger._test_log_handler = FileHandler(log_path)
+        _root_logger.addHandler(_root_logger._test_log_handler)
+    yield
+
+
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_runtest_logfinish(nodeid, location):
+    if artifacts_dir:
+        _root_logger = get_logger(None)
+        _root_logger.removeHandler(_root_logger._test_log_handler)
+    yield

@@ -14,9 +14,20 @@
 # limitations under the License.
 #
 
-.PHONY: default build
+package(
+    default_visibility = ["//visibility:public"],
+)
 
-default: docker_build
-
-docker_build:
-	@docker build -t cpp_clients_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} .
+cc_library(
+    name = "opencv",
+    srcs = glob([
+        "lib/libopencv_core.so",
+        "lib/libopencv_imgcodecs.so",
+        "lib/libopencv_imgproc.so"
+    ]),
+    hdrs = glob([
+        "include/opencv4/**/*.*"
+    ]),
+    strip_include_prefix = "include/opencv4",
+    visibility = ["//visibility:public"],
+)

@@ -100,15 +100,15 @@ Status EntryNode::createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, con
     // when demultiplying from entry node from tensor content we can skip allocation for sharded blobs
     // and reuse memory from original blob since its memory is kept for whole duration of predict request
     if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::FP32) {
-        dividedBlob = InferenceEngine::make_shared_blob<float>(dividedBlobDesc, (float*)blob->buffer() + i * step / sizeof(float));
+        dividedBlob = InferenceEngine::make_shared_blob<float>(dividedBlobDesc, InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<float*>() + i * step / sizeof(float));
     } else if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::I32) {
-        dividedBlob = InferenceEngine::make_shared_blob<int32_t>(dividedBlobDesc, (int32_t*)blob->buffer() + i * step / sizeof(int32_t));
+        dividedBlob = InferenceEngine::make_shared_blob<int32_t>(dividedBlobDesc, InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<int32_t*>() + i * step / sizeof(int32_t));
     } else if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::I8) {
-        dividedBlob = InferenceEngine::make_shared_blob<int8_t>(dividedBlobDesc, (int8_t*)blob->buffer() + i * step / sizeof(int8_t));
+        dividedBlob = InferenceEngine::make_shared_blob<int8_t>(dividedBlobDesc, InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<int8_t*>() + i * step / sizeof(int8_t));
     } else if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::U8) {
-        dividedBlob = InferenceEngine::make_shared_blob<uint8_t>(dividedBlobDesc, (uint8_t*)blob->buffer() + i * step / sizeof(uint8_t));
+        dividedBlob = InferenceEngine::make_shared_blob<uint8_t>(dividedBlobDesc, InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<uint8_t*>() + i * step / sizeof(uint8_t));
     } else if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::I16) {
-        dividedBlob = InferenceEngine::make_shared_blob<int16_t>(dividedBlobDesc, (int16_t*)blob->buffer() + i * step / sizeof(int16_t));
+        dividedBlob = InferenceEngine::make_shared_blob<int16_t>(dividedBlobDesc, InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<int16_t*>() + i * step / sizeof(int16_t));
     } else {
         return Node::createShardedBlob(dividedBlob, dividedBlobDesc, blob, i, step, metadata, blobName);
     }

@@ -22,7 +22,7 @@ STYLE_CHECK_OPTS := --extensions=hpp,cc,cpp,h \
 	--recursive \
 	--linelength=120 \
 	--filter=-build/c++11,-runtime/references,-whitespace/braces,-whitespace/indent,-build/include_order,-runtime/indentation_namespace,-build/namespaces,-whitespace/line_length,-runtime/string,-readability/casting,-runtime/explicit,-readability/todo
-STYLE_CHECK_DIRS := src
+STYLE_CHECK_DIRS := src example_client/cpp
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
@@ -110,7 +110,7 @@ $(ACTIVATE):
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
 	@. $(ACTIVATE); pip$(PY_VERSION) install --upgrade pip
 	@. $(ACTIVATE); pip$(PY_VERSION) install -vUqq setuptools
-	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r tests/requirements.txt
+	@. $(ACTIVATE); pip$(PY_VERSION) install -r tests/requirements.txt --use-deprecated=legacy-resolver
 	@touch $(ACTIVATE)
 
 style: venv clang-format

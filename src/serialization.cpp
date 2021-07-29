@@ -90,7 +90,7 @@ Status serializeBlobToTensorProto(
         }
         responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
-    responseOutput.mutable_tensor_content()->assign((char*)blob->buffer(), blob->byteSize());
+    responseOutput.mutable_tensor_content()->assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<char*>(), blob->byteSize());
     return StatusCode::OK;
 }
 
@@ -117,13 +117,6 @@ Status serializePredictResponse(
         OutputGetter<InferenceEngine::InferRequest&> outputGetter(inferRequest);
         status = outputGetter.get(networkOutput->getName(), blob);
         if (!status.ok()) {
-            return status;
-        }
-        try {
-            blob = inferRequest.GetBlob(networkOutput->getName());
-        } catch (const InferenceEngine::Exception& e) {
-            status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
-            SPDLOG_ERROR("{}: {}", status.string(), e.what());
             return status;
         }
         auto& tensorProto = (*response->mutable_outputs())[networkOutput->getMappedName()];
