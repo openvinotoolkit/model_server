@@ -14,10 +14,9 @@
 # limitations under the License.
 #
 
-import grpc
+from grpc import ssl_channel_credentials, secure_channel, insecure_channel
 from validators import ipv4, domain
 import os
-import OpenSSL.crypto
 
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from tensorflow_serving.apis import model_service_pb2_grpc
@@ -129,12 +128,12 @@ class GrpcClient(ServingClient):
                 config['tls_config'].get('client_key_path')
             )
             
-            creds = grpc.ssl_channel_credentials(root_certificates=server_cert,
+            creds = ssl_channel_credentials(root_certificates=server_cert,
             private_key=client_key, certificate_chain=client_cert)
 
-            channel = grpc.secure_channel(grpc_address, creds)
+            channel = secure_channel(grpc_address, creds)
         else:
-            channel = grpc.insecure_channel(grpc_address)
+            channel = insecure_channel(grpc_address)
 
         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
         model_service_stub = model_service_pb2_grpc.ModelServiceStub(channel)
@@ -145,37 +144,25 @@ def _prepare_certs(server_cert_path, client_cert_path, client_key_path):
     
     client_cert, client_key = None, None
 
-    server_cert = _check_certificate_valid(server_cert_path)
+    server_cert = _open_certificate(server_cert_path)
 
     if client_cert_path is not None:
-        client_cert = _check_certificate_valid(client_cert_path)
+        client_cert = _open_certificate(client_cert_path)
 
     if client_key_path is not None:
-        client_key = _check_private_key_valid(client_key_path)
+        client_key = _open_private_key(client_key_path)
 
     return server_cert, client_cert, client_key
 
-def _check_certificate_valid(certificate_path):
-    certificate = None
+def _open_certificate(certificate_path):
     with open(certificate_path, 'rb') as f:
         certificate = f.read()
-    try:
-        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certificate)
-    except OpenSSL.crypto.Error as e_info:
-        raise ValueError(f'{certificate_path} file is not valid certificate')
+        return certificate
 
-    return certificate
-
-def _check_private_key_valid(key_path):
-    key = None
+def _open_private_key(key_path):
     with open(key_path, 'rb') as f:
         key = f.read()
-    try:
-        p_key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
-    except OpenSSL.crypto.Error as e_info:
-        raise ValueError(f'{key_path} file is not valid private key')
-    
-    return key
+        return key
 
 def _check_config(config):
     

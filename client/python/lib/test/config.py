@@ -456,78 +456,14 @@ CHANNEL_CERTS_VALID = [
     {"check_certificate_valid" : CallCount.ONE, "check_key_valid" : CallCount.ZERO})
 ]
 
-# (server_cert_path, client_cert_path, client_key_path,
-# method_call_count_dictionary= {"method_name" : CallCount.NumberOfCalls},
-# expected_exception, expected_message,
-# side_effect_dictionary = {"method_name" : method_name_side_effect})
-CHANNEL_CERTS_INVALID = [
-    (SERVER_CERT_PATH_INVALID, None, None,
-    {"check_certificate_valid" : CallCount.ONE, "check_key_valid" : CallCount.ZERO},
-    ValueError, f'{SERVER_CERT_PATH_INVALID} file is not valid certificate',
-    {
-        "check_certificate_valid" : ValueError(f'{SERVER_CERT_PATH_INVALID} file is not valid certificate'), 
-        "check_key_valid" : None
-    }),
-
-    (SERVER_CERT_PATH_INVALID, CLIENT_CERT_PATH_VALID, CLIENT_KEY_PATH_VALID,
-    {"check_certificate_valid" : CallCount.ONE, "check_key_valid" : CallCount.ZERO},
-    ValueError, f'{SERVER_CERT_PATH_INVALID} file is not valid certificate',
-    {
-        "check_certificate_valid" : ValueError(f'{SERVER_CERT_PATH_INVALID} file is not valid certificate'), 
-        "check_key_valid" : None
-    }),
-
-    (SERVER_CERT_PATH_INVALID, CLIENT_CERT_PATH_INVALID, CLIENT_KEY_PATH_VALID,
-    {"check_certificate_valid" : CallCount.ONE, "check_key_valid" : CallCount.ZERO},
-    ValueError, f'{SERVER_CERT_PATH_INVALID} file is not valid certificate',
-    {
-        "check_certificate_valid" : ValueError(f'{SERVER_CERT_PATH_INVALID} file is not valid certificate'), 
-        "check_key_valid" : None
-    }),
-
-    (SERVER_CERT_PATH_VALID, CLIENT_CERT_PATH_INVALID, CLIENT_KEY_PATH_VALID,
-    {"check_certificate_valid" : CallCount.TWO, "check_key_valid" : CallCount.ZERO},
-    ValueError, f'{CLIENT_CERT_PATH_INVALID} file is not valid certificate',
-    {
-        "check_certificate_valid" : [None, ValueError(f'{CLIENT_CERT_PATH_INVALID} file is not valid certificate')], 
-        "check_key_valid" : None
-    }),
-
-    (SERVER_CERT_PATH_INVALID, CLIENT_CERT_PATH_VALID, CLIENT_KEY_PATH_INVALID,
-    {"check_certificate_valid" : CallCount.ONE, "check_key_valid" : CallCount.ZERO},
-    ValueError, f'{SERVER_CERT_PATH_INVALID} file is not valid certificate',
-    {
-        "check_certificate_valid" : ValueError('client certificate file is not valid'), 
-        "check_key_valid" : None
-    }),
-
-    (SERVER_CERT_PATH_VALID, CLIENT_CERT_PATH_VALID, CLIENT_KEY_PATH_INVALID,
-    {"check_certificate_valid" : CallCount.TWO, "check_key_valid" : CallCount.ONE},
-    ValueError, f'{CLIENT_KEY_PATH_INVALID} file is not valid private key',
-    {
-        "check_certificate_valid" : [None, None], 
-        "check_key_valid" : ValueError(f'{CLIENT_KEY_PATH_INVALID} file is not valid private key')
-    }),
-]
-
 # (certificate_path)
 CERTIFICATE_VALID = [
     (PATH_VALID),
 ]
 
-# (certificate_path, expected_exception, expected_message)
-CERTIFICATE_INVALID = [
-    (PATH_INVALID, ValueError, f'{PATH_INVALID} file is not valid certificate', ValueError(f'{PATH_INVALID} file is not valid certificate')),
-]
-
 # (key_path)
 PRIVATE_KEY_VALID = [
     (PATH_VALID),
-]
-
-# (key_path, expected_exception, expected_message)
-PRIVATE_KEY_INVALID = [
-    (PATH_INVALID, ValueError, f'{PATH_INVALID} file is not valid private key', ValueError(f'{PATH_INVALID} file is not valid private key')),
 ]
 
 # (config_dictionary,

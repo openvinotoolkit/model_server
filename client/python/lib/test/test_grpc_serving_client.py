@@ -20,16 +20,16 @@ import pytest
 from tensorflow_serving.apis.model_service_pb2_grpc import ModelServiceStub
 from tensorflow_serving.apis.prediction_service_pb2_grpc import PredictionServiceStub
 
-from ovmsclient.tfs_compat.grpc.serving_client import (GrpcClient, _check_address, _check_certificate_valid, _check_config, _check_port,
-_check_private_key_valid, _check_tls_config, _prepare_certs, make_grpc_client)
+from ovmsclient.tfs_compat.grpc.serving_client import (_check_address, _open_certificate, _check_config, _check_port,
+_open_private_key, _check_tls_config, _prepare_certs, make_grpc_client)
 
 from config import ADDRESS_INVALID, ADDRESS_VALID
 from config import PORT_VALID, PORT_INVALID
 from config import TLS_CONFIG_VALID, TLS_CONFIG_INVALID
 from config import CONFIG_INVALID, CONFIG_VALID
-from config import CERTIFICATE_INVALID, CERTIFICATE_VALID
-from config import PRIVATE_KEY_INVALID, PRIVATE_KEY_VALID
-from config import CHANNEL_CERTS_INVALID, CHANNEL_CERTS_VALID
+from config import CERTIFICATE_VALID
+from config import PRIVATE_KEY_VALID
+from config import CHANNEL_CERTS_VALID
 from config import BUILD_INVALID_CONFIG, BUILD_VALID, BUILD_INVALID_CERTS
 
 @pytest.mark.parametrize("address", ADDRESS_VALID)
@@ -99,77 +99,30 @@ def test_check_config_invalid(mocker, config, method_call_count, expected_except
     assert mock_check_tls_config.call_count == method_call_count['check_tls_config']
 
 @pytest.mark.parametrize("certificate_path", CERTIFICATE_VALID)
-def test_check_certificate_valid_valid(mocker, certificate_path):
-    mock_load_certificate = mocker.patch('OpenSSL.crypto.load_certificate')
-
+def test_open_certificate_valid(mocker, certificate_path):
     mock_open = mocker.patch('builtins.open', mocker.mock_open(read_data='certificate'))
 
-    certificate = _check_certificate_valid(certificate_path)
-    assert mock_load_certificate.call_count == 1
+    certificate = _open_certificate(certificate_path)
     assert mock_open.call_count == 1
     assert certificate == 'certificate'
-    
-
-@pytest.mark.parametrize("certificate_path, expected_exception, expected_message, load_certificate_side_effect", CERTIFICATE_INVALID)
-def test_check_certificate_valid_invalid(mocker, certificate_path, expected_exception, expected_message, load_certificate_side_effect):
-    mock_load_certificate = mocker.patch('OpenSSL.crypto.load_certificate', side_effect=load_certificate_side_effect)
-
-    mock_open = mocker.patch('builtins.open')
-
-    with pytest.raises(expected_exception) as e_info:
-        _check_certificate_valid(certificate_path)
-        assert str(e_info.value) == expected_message
-
-    assert mock_load_certificate.call_count == 1
-    assert mock_open.call_count == 1
 
 @pytest.mark.parametrize("private_key_path", PRIVATE_KEY_VALID)
-def test_check_private_key_valid_valid(mocker, private_key_path):
-    mock_load_private_key = mocker.patch('OpenSSL.crypto.load_privatekey')
-
+def test_open_private_key_valid(mocker, private_key_path):
     mock_open = mocker.patch('builtins.open', mocker.mock_open(read_data='privatekey'))
 
-    private_key = _check_private_key_valid(private_key_path)
-    assert mock_load_private_key.call_count == 1
+    private_key = _open_private_key(private_key_path)
     assert mock_open.call_count == 1
     assert private_key == 'privatekey'
-    
-
-@pytest.mark.parametrize("private_key_path, expected_exception, expected_message, load_privatekey_side_effect", PRIVATE_KEY_INVALID)
-def test_check_private_key_valid_invalid(mocker, private_key_path, expected_exception, expected_message, load_privatekey_side_effect):
-    mock_load_private_key = mocker.patch('OpenSSL.crypto.load_privatekey', side_effect=load_privatekey_side_effect)
-
-    mock_open = mocker.patch('builtins.open')
-
-    with pytest.raises(expected_exception) as e_info:
-        _check_private_key_valid(private_key_path)
-        assert str(e_info.value) == expected_message
-
-    assert mock_load_private_key.call_count == 1
-    assert mock_open.call_count == 1
 
 @pytest.mark.parametrize("server_cert, client_cert, client_key, method_call_count", CHANNEL_CERTS_VALID)
 def test_prepare_certs_valid(mocker, server_cert, client_cert, client_key, method_call_count):
-    mock_check_certificate_valid = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_certificate_valid')
-    mock_check_key_valid = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_private_key_valid')
+    mock_open_certificate = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._open_certificate')
+    mock_check_key_valid = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._open_private_key')
 
     _prepare_certs(server_cert, client_cert, client_key)
 
-    assert mock_check_certificate_valid.call_count == method_call_count['check_certificate_valid']
+    assert mock_open_certificate.call_count == method_call_count['check_certificate_valid']
     assert mock_check_key_valid.call_count == method_call_count['check_key_valid']
-
-@pytest.mark.parametrize("server_cert, client_cert, client_key, method_call_count, expected_exception, expected_message, side_effect", CHANNEL_CERTS_INVALID)
-def test_prepare_certs_invalid(mocker, server_cert, client_cert, client_key, method_call_count, expected_exception, expected_message, side_effect):
-    mock_check_certificate_valid = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_certificate_valid', side_effect=side_effect["check_certificate_valid"])
-    mock_check_key_valid = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_private_key_valid', side_effect=side_effect["check_key_valid"])
-
-    with pytest.raises(expected_exception) as e_info:
-        _prepare_certs(server_cert, client_cert, client_key)
-        assert str(e_info.value) == expected_message
-
-    assert mock_check_certificate_valid.call_count == method_call_count['check_certificate_valid']
-    assert mock_check_key_valid.call_count == method_call_count['check_key_valid']
-
 
 @pytest.mark.parametrize("config, method_call_count", BUILD_VALID)
 def test_make_grpc_client_valid(mocker, config, method_call_count):
