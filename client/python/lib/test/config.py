@@ -45,11 +45,7 @@ MODEL_SPEC_INVALID = [
 ]
 
 # responses_dictionary = {
-#    model_version : {
-#                       "state" : ModelVersionStatus.State from response
-#                       "error_code" : Code from response
-#                       "error_message" : error message from response
-#                    }
+#    model_version : { expected_status }
 # }
 MODEL_STATUS_RESPONSE_VALID = [
 {
@@ -78,7 +74,14 @@ ADDRESS_INVALID = [
     (19_117_63_126, TypeError, "address type should be string, but is int"),
     (['localhost'], TypeError, "address type should be string, but is list"),
     ("127.14", ValueError, "address is not valid"),
-    ("intel.-com", ValueError, "address is not valid")
+    ("intel.-com", ValueError, "address is not valid"),
+    ("192.168.abc.4", ValueError, "address is not valid"),
+    ("900.80.70.11", ValueError, "address is not valid"),
+    ("....", ValueError, "adress is not valid"),
+    ("1000.1000.1000.1000", ValueError, "adress is not valid"),
+    ("19.-117.63.126", ValueError, "adress is not valid"),
+    ("0.0.0.0.0", ValueError, "adress is not valid"),
+    ("0.0.0.0.", ValueError, "adress is not valid"),
 ]
 
 # (port)
@@ -95,10 +98,10 @@ PORT_INVALID = [
     (-1, ValueError, f"port should be in range <0, {2**16-1}>")
 ]
 
-#Special values for testing
+# Special values for testing
 PATH_VALID, PATH_INVALID = "valid_path", "invalid_path"
 
-#Special values for testing
+# Special values for testing
 SERVER_CERT_PATH_VALID, SERVER_CERT_PATH_INVALID = "server_cert_path_valid", "server_cert_path_invalid"
 CLIENT_CERT_PATH_VALID, CLIENT_CERT_PATH_INVALID = "client_cert_path_valid", "client_cert_path_invalid"
 CLIENT_KEY_PATH_VALID, CLIENT_KEY_PATH_INVALID = "client_key_path_valid", "client_key_path_invalid"
