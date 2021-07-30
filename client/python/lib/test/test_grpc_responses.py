@@ -40,30 +40,30 @@ def test_ModelStatusResponse_to_dict_valid(model_raw_status_response_dict):
     raw_response = merge_model_status_responses(model_raw_responses)
 
     response = GrpcModelStatusResponse(raw_response)
-    response_dictionary = response.to_dict()
-    assert isinstance(response_dictionary, dict)
-    assert len(response_dictionary) == len(model_raw_status_response_dict)
+    response_dict = response.to_dict()
+    assert isinstance(response_dict, dict)
+    assert len(response_dict) == len(model_raw_status_response_dict)
     for version, status in model_raw_status_response_dict.items():
-        assert version in response_dictionary
-        assert isinstance(response_dictionary[version], dict)
-        assert response_dictionary[version]['error_code'] == status['error_code']
-        assert response_dictionary[version]['error_message'] == status['error_message']
-        assert response_dictionary[version]['state'] == ModelVersionStatus.State.Name(status['state'])
+        assert version in response_dict
+        assert isinstance(response_dict[version], dict)
+        assert response_dict[version]['error_code'] == status['error_code']
+        assert response_dict[version]['error_message'] == status['error_message']
+        assert response_dict[version]['state'] == ModelVersionStatus.State.Name(status['state'])
 
 @pytest.mark.parametrize("model_raw_metadata_response_dict" , MODEL_METADATA_RESPONSE_VALID)
 def test_ModelMetadataResponse_to_dict_valid(model_raw_metadata_response_dict):
     raw_response = create_model_metadata_response(model_raw_metadata_response_dict)
 
     response = GrpcModelMetadataResponse(raw_response)
-    response_dictionary = response.to_dict()
-    assert isinstance(response_dictionary, dict)
-    assert len(response_dictionary) == 1
+    response_dict = response.to_dict()
+    assert isinstance(response_dict, dict)
+    assert len(response_dict) == 1
 
     version = model_raw_metadata_response_dict['version']
-    assert version in response_dictionary
-    assert 'inputs' in response_dictionary[version] and 'outputs' in response_dictionary[version]
+    assert version in response_dict
+    assert 'inputs' in response_dict[version] and 'outputs' in response_dict[version]
 
-    inputs = response_dictionary[version]['inputs']
+    inputs = response_dict[version]['inputs']
     assert len(inputs) == len(model_raw_metadata_response_dict['inputs'])
     for input in inputs:
         assert input in model_raw_metadata_response_dict['inputs']
@@ -73,7 +73,7 @@ def test_ModelMetadataResponse_to_dict_valid(model_raw_metadata_response_dict):
         assert inputs[input]['dtype'] == DataType.Name(model_raw_metadata_response_dict['inputs'][input]['dtype'])
 
 
-    outputs = response_dictionary[version]['outputs']
+    outputs = response_dict[version]['outputs']
     assert len(outputs) == len(model_raw_metadata_response_dict['outputs'])
     for output in outputs:
         assert output in model_raw_metadata_response_dict['outputs']

@@ -654,7 +654,12 @@ BUILD_INVALID_CERTS = [
     ValueError,  'path_to_invalid_client_certificate is not valid certificate',
     {"check_config" : CallCount.ONE, "prepare_certs" : CallCount.ONE}),
 ]
-    
+# response_dict = {
+# 'version' : model_version,
+# 'name' : model_name,
+# 'inputs' : inputs_dict,
+# 'outputs' : outputs_dict
+# }
 MODEL_METADATA_RESPONSE_VALID = [
     {
         'version' : 0,
