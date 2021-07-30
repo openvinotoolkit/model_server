@@ -50,3 +50,9 @@ class Server:
 
     def stop(self):
         self.ovms.stop()
+
+    @classmethod
+    def stop_current_instance(cls):
+        if Server.current_instance:
+            Server.current_instance.stop()
+            Server.current_instance = None
