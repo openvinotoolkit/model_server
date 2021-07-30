@@ -21,19 +21,18 @@ from model.models_information import ResnetBS8, AgeGender
 from object_model.server import Server
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def start_server_batch_model(request):
-
     start_server_command_args = {"model_name": ResnetBS8.name,
                                  "model_path": ResnetBS8.model_path}
     container_name_infix = "test-batch"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
                     target_device=config.target_device)
-    return server.start()
+    yield server.start()
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def start_server_batch_model_2out(request):
 
     start_server_command_args = {"model_name": AgeGender.name,
@@ -42,10 +41,10 @@ def start_server_batch_model_2out(request):
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
                     target_device=config.target_device)
-    return server.start()
+    yield server.start()
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def start_server_batch_model_auto(request):
 
     start_server_command_args = {"model_name": ResnetBS8.name,
@@ -55,10 +54,10 @@ def start_server_batch_model_auto(request):
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
                     target_device=config.target_device)
-    return server.start()
+    yield server.start()
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def start_server_batch_model_auto_2out(request):
 
     start_server_command_args = {"model_name": AgeGender.name,
@@ -68,10 +67,10 @@ def start_server_batch_model_auto_2out(request):
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
                     target_device=config.target_device)
-    return server.start()
+    yield server.start()
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def start_server_batch_model_bs4(request):
 
     start_server_command_args = {"model_name": ResnetBS8.name,
@@ -81,10 +80,10 @@ def start_server_batch_model_bs4(request):
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
                     target_device=config.target_device)
-    return server.start()
+    yield server.start()
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def start_server_batch_model_auto_bs4_2out(request):
 
     start_server_command_args = {"model_name": AgeGender.name,
@@ -93,4 +92,4 @@ def start_server_batch_model_auto_bs4_2out(request):
     container_name_infix = "test-batch4-2out"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command)
-    return server.start()
+    yield server.start()

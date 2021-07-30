@@ -27,7 +27,7 @@ from object_model.server import Server
 from utils.parametrization import get_tests_suffix
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def start_server_single_model_from_gc(request):
 
     start_server_command_args = {"model_name": Resnet.name,
@@ -42,7 +42,7 @@ def start_server_single_model_from_gc(request):
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command, envs,
                     target_device=config.target_device)
-    return server.start()
+    yield server.start()
 
 
 @pytest.fixture(scope="session")
@@ -137,7 +137,7 @@ def get_minio_server_s3(start_minio_server):
     return s3, ports, minio_container
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def start_server_single_model_from_minio(request, get_minio_server_s3):
 
     aws_access_key_id = os.getenv('MINIO_ACCESS_KEY')
@@ -165,4 +165,4 @@ def start_server_single_model_from_minio(request, get_minio_server_s3):
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command, envs,
                     target_device=config.target_device)
-    return server.start()
+    yield server.start()
