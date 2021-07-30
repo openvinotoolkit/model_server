@@ -33,6 +33,7 @@ parser.add_argument('--grpc_address', required=False, default='localhost', help=
 parser.add_argument('--grpc_port', required=False, default=8080, type=int, help='Specify port to grpc service')
 parser.add_argument('--num_threads', required=False, default=4, type=int, help='Number of threads for parallel service requesting')
 parser.add_argument('--video_source', required=False, default="0", type=str, help='Camera ID number or path to a video file')
+parser.add_argument('--use_case', required=False, default="text_spotting", type=str, choices=['text_spotting', 'ocr'], help='Which servable to request and how to postprocess')
 args = parser.parse_args()
 
 address = "{}:{}".format(args.grpc_address, args.grpc_port)
@@ -48,7 +49,30 @@ cap = cv2.VideoCapture(source)
 force_exit = False
 
 
-def draw_boxes(frame, result):
+def decode(text):
+    word = ''
+    last_character = None
+    for character in text:
+        if character == last_character:
+            continue
+        elif character == '_':
+            last_character = None
+        else:
+            last_character = character
+            word += character
+    return word
+
+
+def get_text(output):
+    alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789_'
+    preds = output.argmax(2)
+    word = ''
+    for i in range(preds.shape[0]):
+        word += alphabet[preds[i,0]]
+    return decode(word)
+
+
+def draw_boxes_spotting(frame, result):
     output = make_ndarray(result.outputs['boxes'])
     for i in range(0, 100):  # there is returned 200 detections for each image in the batch
         detection = output[i,:]
@@ -58,6 +82,20 @@ def draw_boxes(frame, result):
             x_max = int(detection[2])
             y_max = int(detection[3])
             frame = cv2.rectangle(frame,(x_min,y_min),(x_max,y_max),(0,0,255),1)
+    return frame
+
+
+def draw_boxes_ocr(frame, result):
+    texts = make_ndarray(result.outputs['texts'])
+    text_coordinates = make_ndarray(result.outputs['text_coordinates'])
+    for i in range(len(texts)):
+        text = get_text(texts[i])
+        x_min = text_coordinates[i][0][0]
+        y_min = text_coordinates[i][0][1]
+        x_max = text_coordinates[i][0][0] + text_coordinates[i][0][2]
+        y_max = text_coordinates[i][0][1] + text_coordinates[i][0][3]
+        frame = cv2.rectangle(frame,(x_min,y_min),(x_max,y_max),(36,255,12),1)
+        cv2.putText(frame, text, (x_min, y_min-5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (36,255,12), 1)
     return frame
 
 
@@ -108,16 +146,30 @@ class RequestingThread(threading.Thread):
                 break
             is_success, buffer = cv2.imencode(".jpg", self.input_frame)
             request = predict_pb2.PredictRequest()
-            request.model_spec.name = 'text'
+            request.model_spec.name = 'detect_text_images' if args.use_case == 'ocr' else 'text'
             request.inputs['image'].CopyFrom(make_tensor_proto([buffer.tobytes()], shape=[1]))
 
             predict_start_time = time.time()
-            result = stub.Predict(request, 10.0)
+            result = None
+            try:
+                result = stub.Predict(request, 10.0)
+            except grpc.RpcError as err:
+                if err.code() == grpc.StatusCode.ABORTED:
+                    pass
+                else:
+                    raise err
+
             predict_duration = time.time() - predict_start_time
             predict_duration *= 1000
             self.predict_durations.append(predict_duration)
 
-            self.output_frame = draw_boxes(self.input_frame, result)
+            if result is None:
+                self.output_frame = np.array(self.input_frame, copy=True)
+            else:
+                if args.use_case == 'ocr':
+                    self.output_frame = draw_boxes_ocr(self.input_frame, result)
+                else:
+                    self.output_frame = draw_boxes_spotting(self.input_frame, result)
             self.notify_output_ready()
         print(f"Stopping requesting thread index: {self.index}")
 
@@ -129,14 +181,16 @@ for thread in threads:
 
 
 def grab_frame(cap):
+    WIDTH = 704
+    HEIGHT = 704
     ret, frame = cap.read()
-    # crop square and resize if original image is too small for the model
-    if frame.shape[0] > 704 and frame.shape[1] > 704:
-        frame = frame[0:704, 0:704]
+    # crop and resize if original image is too small or too big for the model
+    if frame.shape[0] > HEIGHT and frame.shape[1] > WIDTH:
+        frame = frame[0:HEIGHT, 0:WIDTH]
     else:
         res = min(frame.shape[0], frame.shape[1])
         frame = frame[0:res, 0:res]
-        frame = cv2.resize(frame, (704, 704), interpolation=cv2.INTER_AREA)
+        frame = cv2.resize(frame, (HEIGHT, WIDTH), interpolation=cv2.INTER_AREA)
     return frame
 
 
