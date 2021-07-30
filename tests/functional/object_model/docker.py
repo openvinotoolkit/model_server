@@ -52,17 +52,6 @@ class Docker:
         self.logs = ""
 
     def start(self):
-
-        def finalizer():
-            if self.container is not None:
-                logger.info(f"Stopping container: {self.container_name}")
-                self.save_container_logs()
-                self.container.stop()
-                self.container.remove()
-                logger.info(f"Container successfully closed and removed: {self.container_name}")
-
-        self.request.addfinalizer(finalizer)
-
         logger.info(f"Starting container: {self.container_name}")
 
         volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
@@ -82,6 +71,15 @@ class Docker:
         logger.info(f"Container started grpc_port:{self.grpc_port}\trest_port{self.rest_port}")
         logger.debug(f"Container starting command args: {self.start_container_command}")
         return self.container, {"grpc_port": self.grpc_port, "rest_port": self.rest_port}
+
+    def stop(self):
+        if self.container is not None:
+            logger.info(f"Stopping container: {self.container_name}")
+            self.save_container_logs()
+            self.container.stop()
+            self.container.remove()
+            self.container = None
+            logger.info(f"Container successfully closed and removed: {self.container_name}")
 
     def save_container_logs(self):
         logs = self.get_logs()

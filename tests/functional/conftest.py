@@ -22,6 +22,7 @@ from _pytest._code import ExceptionInfo, filter_traceback  # noqa
 from _pytest.outcomes import OutcomeException
 
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
+from object_model.server import Server
 from utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
     get_containers_with_tests_suffix, get_docker_client
 from utils.logger import get_logger
@@ -97,6 +98,8 @@ def pytest_unconfigure():
         cleanup_logger.info("Deleting test directory: {}".format(test_dir))
         delete_test_directory()
 
+    assert Server.current_instance is None, "Unstopped Server instance leftover."
+
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_call():
@@ -161,3 +164,9 @@ def pytest_runtest_logfinish(nodeid, location):
         _root_logger = get_logger(None)
         _root_logger.removeHandler(_root_logger._test_log_handler)
     yield
+
+
+def pytest_runtest_teardown(item):
+    if Server.current_instance:
+        Server.current_instance.stop()
+        Server.current_instance = None
