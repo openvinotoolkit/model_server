@@ -224,3 +224,6 @@ The custom node generates the following text images retrieved from the original 
 
 ## Accurracy
 Please note that it is possible to swap the models included in DAG with your own to adjust pipeline accuracy for various scenarios and datasets.
+
+## Images from camera
+You can also use examplary camera client with model server configured in this page. Refer to: [link](camera_example.md).
