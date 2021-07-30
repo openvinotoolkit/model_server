@@ -51,18 +51,18 @@ class Docker:
         self.last_log_fetch_time = datetime.now()
         self.logs = ""
 
+    def __del__(self):
+        self.stop_container()
+
+    def stop_container(self):
+        if self.container is not None:
+            logger.info(f"Stopping container: {self.container_name}")
+            self.save_container_logs()
+            self.container.stop()
+            self.container.remove()
+            logger.info(f"Container successfully closed and removed: {self.container_name}")
+
     def start(self):
-
-        def finalizer():
-            if self.container is not None:
-                logger.info(f"Stopping container: {self.container_name}")
-                self.save_container_logs()
-                self.container.stop()
-                self.container.remove()
-                logger.info(f"Container successfully closed and removed: {self.container_name}")
-
-        self.request.addfinalizer(finalizer)
-
         logger.info(f"Starting container: {self.container_name}")
 
         volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
