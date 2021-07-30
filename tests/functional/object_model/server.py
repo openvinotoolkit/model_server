@@ -37,9 +37,9 @@ class Server:
 
     def start(self):
         if config.ovms_binary_path is not None:
-            self.ovms = OvmsBinary(self.request, self.command_args, self.start_container_command, self.env_vars)
+            ovms = OvmsBinary(self.request, self.command_args, self.start_container_command, self.env_vars)
         else:
-            self.ovms = OvmsDocker(self.request, self.command_args, self.container_name_infix,
+            ovms = OvmsDocker(self.request, self.command_args, self.container_name_infix,
                               self.start_container_command, self.env_vars,
                               self.image, self.container_log_line, self.server_log_level, self.target_device)
-        return self.ovms.start()
+        return ovms.start()

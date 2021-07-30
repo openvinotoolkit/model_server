@@ -38,7 +38,7 @@ def start_server_update_flow_latest(request):
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
                     target_device=config.target_device)
-    yield server.start()
+    return server.start()
 
 
 @pytest.fixture(scope="function")
@@ -55,4 +55,4 @@ def start_server_update_flow_specific(request):
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
                     target_device=config.target_device)
-    yield server.start()
+    return server.start()
