@@ -23,7 +23,7 @@ from model.models_information import Resnet, ResnetONNX, AgeGender
 from object_model.server import Server
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="class")
 def start_server_single_model(request):
 
     start_server_command_args = {"model_name": Resnet.name,
@@ -37,9 +37,9 @@ def start_server_single_model(request):
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
                     env_variables, target_device=config.target_device)
-    yield server.start()
+    return server.start()
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="class")
 def start_server_single_model_onnx(request):
 
     start_server_command_args = {"model_name": ResnetONNX.name,
@@ -53,9 +53,9 @@ def start_server_single_model_onnx(request):
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
                     env_variables, target_device=config.target_device)
-    yield server.start()
+    return server.start()
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="class")
 def start_server_with_mapping(request):
 
     def delete_mapping_file():
@@ -73,4 +73,4 @@ def start_server_with_mapping(request):
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
                     target_device=config.target_device)
-    yield server.start()
+    return server.start()

@@ -24,7 +24,7 @@ from model.models_information import FaceDetection, PVBFaceDetectionV2, AgeGende
 from object_model.server import Server
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="class")
 def start_server_model_ver_policy(request):
 
     shutil.copyfile('tests/functional/mapping_config.json',
@@ -35,7 +35,7 @@ def start_server_model_ver_policy(request):
 
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command)
-    yield server.start()
+    return server.start()
 
 
 @pytest.fixture(autouse=True, scope="session")
