@@ -64,4 +64,4 @@ python3 camera_client.py --grpc_address [hostname] --grpc_port 9001 --video_sour
 
 > **NOTE**: Video source is cropped to 704x704 resolution to match model input size.
 
-You can also specify `--use_case ocr` parameter to interpret outputs as OCR pipeline results. In this case the script will visualise bounding boxes together with recognized text words. To prepare model server configuration, follow this example: [link](east_ocr.md).
+You can also specify `--use_case ocr` parameter to interpret outputs as OCR pipeline results. In this case the script will visualise bounding boxes together with recognized text words. To prepare model server configuration, follow this [OCR pipeline example with EAST model](east_ocr.md).
