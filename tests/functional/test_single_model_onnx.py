@@ -21,13 +21,13 @@ from constants import MODEL_SERVICE, ERROR_SHAPE
 from model.models_information import ResnetONNX
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status
-from utils.logger import get_logger
+import logging
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
 from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_rest, \
     get_model_metadata_response_rest, get_model_status_response_rest
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class TestSingleModelInference:

@@ -21,11 +21,21 @@ import config
 LOGGER_LEVEL = "INFO"
 
 
-def get_logger(name):
-    logger = logging.getLogger(name)
+def init_logger():
+    logger = logging.getLogger(None)
     log_formatter = logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s")
     logger.setLevel(config.log_level)
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(log_formatter)
     logger.addHandler(console_handler)
-    return logger
+#
+# def get_logger(name):
+#     logger = logging.getLogger(name)
+#     if name is None:    # Set only for root logger
+#         log_formatter = logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s")
+#         logger.setLevel(config.log_level)
+#         console_handler = logging.StreamHandler()
+#         console_handler.setFormatter(log_formatter)
+#         logger.console_handler = console_handler
+#         logger.addHandler(console_handler)
+#     return logger

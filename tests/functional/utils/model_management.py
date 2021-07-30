@@ -18,10 +18,10 @@ import os
 import shutil
 from pathlib import Path
 
-from utils.logger import get_logger
+import logging
 from utils.parametrization import get_tests_suffix, generate_test_object_name
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def copy_model(model, version, destination_path):

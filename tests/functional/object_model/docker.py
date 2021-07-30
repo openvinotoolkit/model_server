@@ -24,9 +24,9 @@ from retry.api import retry_call
 import config
 from utils.parametrization import get_ports_for_fixture
 from utils.files_operation import save_container_logs_to_file
-from utils.logger import get_logger
+import logging
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 CONTAINER_STATUS_RUNNING = "running"
 TERMINAL_STATUSES = ["exited"]
 

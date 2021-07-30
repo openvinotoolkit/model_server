@@ -24,12 +24,12 @@ from constants import MODEL_SERVICE
 from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2
 from utils.grpc import create_channel, get_model_metadata, model_metadata_response, \
     get_model_status
-from utils.logger import get_logger
+import logging
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
 from utils.rest import get_metadata_url, get_status_url, get_model_status_response_rest
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class TestModelVerPolicy:
