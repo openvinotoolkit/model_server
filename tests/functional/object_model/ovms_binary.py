@@ -82,6 +82,9 @@ class OvmsBinary:
 
         return self.process, {"grpc_port": self.grpc_port, "rest_port": self.rest_port}
 
+    def stop(self):
+        pass
+
     @staticmethod
     def ensure_logs(logs_queue):
         logs = ""
