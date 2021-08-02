@@ -662,7 +662,7 @@ BUILD_INVALID_CERTS = [
 # }
 MODEL_METADATA_RESPONSE_VALID = [
     {
-        'version' : 0,
+        'version' : 2,
         'name' : 'resnet',
         'inputs' : {
             '0' : {
