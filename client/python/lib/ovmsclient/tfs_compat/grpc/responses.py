@@ -31,38 +31,28 @@ class GrpcModelMetadataResponse(ModelMetadataResponse):
         signature_def = self.raw_response.metadata['signature_def']
         signature_map = get_model_metadata_pb2.SignatureDefMap()
         signature_map.ParseFromString(signature_def.value)
-        serving_default = signature_map.ListFields()[0][1]['serving_default']
+        model_signature = signature_map.ListFields()[0][1]['serving_default']
         
-        serving_inputs = serving_default.inputs
-        input_blobs = {key : {} for key in serving_inputs.keys()}
-        tensor_shape = {key: serving_inputs[key].tensor_shape for key in serving_inputs.keys()}
-
-        input_blobs_dict = {}
-        for input_blob in input_blobs:
-            inputs_shape = [d.size for d in tensor_shape[input_blob].dim]
-            tensor_dtype = serving_inputs[input_blob].dtype
-            input_blobs_dict[input_blob] = dict([
-                ("shape", inputs_shape),
-                ("dtype", DataType.Name(tensor_dtype))
+        inputs_metadata = {}
+        for input_name, input_info in model_signature.inputs.items():
+            input_shape = [d.size for d in input_info.tensor_shape.dim]
+            inputs_metadata[input_name] = dict([
+                ("shape", input_shape),
+                ("dtype", DataType.Name(input_info.dtype))
             ])
         
-        serving_outputs = serving_default.outputs
-        output_blobs = {key: {} for key in serving_outputs.keys()}
-        tensor_shape = {key: serving_outputs[key].tensor_shape for key in serving_outputs.keys()}
-
-        output_blobs_dict = {}
-        for output_blob in output_blobs:
-            outputs_shape = [d.size for d in tensor_shape[output_blob].dim]
-            tensor_dtype = serving_outputs[output_blob].dtype
-            output_blobs_dict[output_blob] = dict([
-                ("shape", outputs_shape),
-                ("dtype", DataType.Name(tensor_dtype))
+        outputs_metadata = {}
+        for output_name, output_info in model_signature.outputs.items():
+            output_shape = [d.size for d in output_info.tensor_shape.dim]
+            outputs_metadata[output_name] = dict([
+                ("shape", output_shape),
+                ("dtype", DataType.Name(output_info.dtype))
             ])
     
         version = self.raw_response.model_spec.version.value
         result_dict[version] = dict([
-            ("inputs", input_blobs_dict),
-            ("outputs", output_blobs_dict)
+            ("inputs", inputs_metadata),
+            ("outputs", outputs_metadata)
         ])
         return result_dict
 
