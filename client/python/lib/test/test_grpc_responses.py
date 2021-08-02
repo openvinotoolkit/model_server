@@ -91,7 +91,7 @@ def create_model_metadata_response(model_raw_metadata_response_dict):
 
     raw_response.model_spec.CopyFrom(model_spec)
 
-    metadata = SignatureDef()
+    signature_def = SignatureDef()
     
     inputs = model_raw_metadata_response_dict['inputs']
     for input_name, input_info in inputs.items():
@@ -104,7 +104,7 @@ def create_model_metadata_response(model_raw_metadata_response_dict):
         ])
         input_tensor_info.tensor_shape.CopyFrom(input_tensor_shape)
 
-        metadata.inputs[input_name].CopyFrom(input_tensor_info)
+        signature_def.inputs[input_name].CopyFrom(input_tensor_info)
 
     outputs = model_raw_metadata_response_dict['outputs']
     for output_name, output_info in outputs.items():
@@ -117,17 +117,17 @@ def create_model_metadata_response(model_raw_metadata_response_dict):
         ])
         output_tensor_info.tensor_shape.CopyFrom(output_tensor_shape)
 
-        metadata.outputs[output_name].CopyFrom(output_tensor_info)
+        signature_def.outputs[output_name].CopyFrom(output_tensor_info)
 
     signature_def_map = SignatureDefMap()
-    signature_def_map.signature_def['serving_default'].CopyFrom(metadata)
+    signature_def_map.signature_def['serving_default'].CopyFrom(signature_def)
     serialized_metadata = signature_def_map.SerializeToString()
 
-    signature_def = Any()
-    signature_def.type_url = "type.googleapis.com/tensorflow.serving.SignatureDefMap"
-    signature_def.value = serialized_metadata
+    metadata = Any()
+    metadata.type_url = "type.googleapis.com/tensorflow.serving.SignatureDefMap"
+    metadata.value = serialized_metadata
 
-    raw_response.metadata['signature_def'].CopyFrom(signature_def)
+    raw_response.metadata['signature_def'].CopyFrom(metadata)
 
     return raw_response
 
