@@ -20,10 +20,10 @@ from constants import MODEL_SERVICE, ERROR_SHAPE
 from model.models_information import Resnet
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status
-from utils.logger import get_logger
+import logging
 from utils.models_utils import ModelVersionState, ErrorCode, ERROR_MESSAGE
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class TestSingleModelInferenceS3:

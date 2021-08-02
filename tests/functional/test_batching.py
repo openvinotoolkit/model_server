@@ -20,10 +20,10 @@ import os
 from constants import ERROR_SHAPE
 from model.models_information import ResnetBS8, AgeGender
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response
-from utils.logger import get_logger
+import logging
 from utils.rest import get_predict_url, get_metadata_url, infer_rest, get_model_metadata_response_rest
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class TestBatchModelInference:
