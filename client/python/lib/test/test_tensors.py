@@ -75,35 +75,31 @@ def test_make_ndarray_valid_no_content_string_with_other_type_content():
 def test_make_ndarray_invalid_type():
     tensor_proto = TensorProto(tensor_shape=shape)
     tensor_proto.dtype = 0
-    with pytest.raises(ValueError) as exception_info:
+    with pytest.raises(TypeError) as exception_info:
         make_ndarray(tensor_proto)
-
-    exception = exception_info.value
-    assert str(exception) == "Tensor data type invalid"
+        exception = exception_info.value
+        assert str(exception) == "Unsupported tensor type: 0"
 
 def test_make_ndarray_invalid_no_shape():
     tensor_proto = TensorProto(dtype = DataType.DT_INT8, tensor_content = bytes([1,2,3]))
     with pytest.raises(ValueError) as exception_info:
         make_ndarray(tensor_proto)
-
-    exception = exception_info.value
-    assert str(exception) == "cannot reshape array of size 3 into shape ()"
+        exception = exception_info.value
+        assert str(exception) == "cannot reshape array of size 3 into shape ()"
 
 def test_make_ndarray_invalid_shape_does_not_match():
     tensor_proto = TensorProto(tensor_shape=shape, dtype = DataType.DT_INT8, tensor_content = bytes([1,2,3,4]))
     with pytest.raises(ValueError) as exception_info:
         make_ndarray(tensor_proto)
+        exception = exception_info.value
+        assert str(exception) == "cannot reshape array of size 4 into shape (3,)"
 
-    exception = exception_info.value
-    assert str(exception) == "cannot reshape array of size 4 into shape (3,)"
-
-def test_make_ndarray_invalid_no_type():
-    tensor_proto = TensorProto(tensor_shape=shape, tensor_content = bytes([1,2,3]))
-    with pytest.raises(ValueError) as exception_info:
-        make_ndarray(tensor_proto)
-
-    exception = exception_info.value
-    assert str(exception) == "Tensor data type invalid"
+# def test_make_ndarray_invalid_no_type():
+#     tensor_proto = TensorProto(tensor_shape=shape, tensor_content = bytes([1,2,3]))
+#     with pytest.raises(ValueError) as exception_info:
+#         make_ndarray(tensor_proto)
+#         exception = exception_info.value
+#         assert str(exception) == "Tensor data type invalid"
 
 def test_make_tensor_proto_valid_int():
     values = [1, 2, 3]
@@ -112,14 +108,6 @@ def test_make_tensor_proto_valid_int():
     assert tensor_proto.tensor_content == np_values.tobytes()
     assert tensor_proto.dtype == DataType.DT_INT8
     assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=3)])
-
-def test_make_tensor_proto_valid_int_reshape():
-    values = [1, 2, 3]
-    tensor_proto = make_tensor_proto(shape=[4], dtype = DataType.DT_INT8, values = values)
-    np_values = np.array(values, np.int8)
-    assert tensor_proto.tensor_content == np_values.tobytes()
-    assert tensor_proto.dtype == DataType.DT_INT8
-    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=4)])
 
 def test_make_tensor_proto_valid_empty_list():
     values = []
@@ -147,19 +135,11 @@ def test_make_tensor_proto_valid_empty_list_of_empty_lists():
 
 def test_make_tensor_proto_valid_empty_list_of_empty_lists_no_shape_provied():
     values = [[],[],[]]
-    tensor_proto = make_tensor_proto(shape=[3,0], dtype = DataType.DT_INT8, values = values)
+    tensor_proto = make_tensor_proto(dtype = DataType.DT_INT8, values = values)
     np_values = np.array(values, np.int8)
     assert tensor_proto.tensor_content == np_values.tobytes()
     assert tensor_proto.dtype == DataType.DT_INT8
     assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=3), TensorShapeProto.Dim(size=0)])
-
-def test_make_tensor_proto_valid_empty_list_of_empty_lists_reshape():
-    values = [[],[],[]]
-    tensor_proto = make_tensor_proto(shape=[4,2], dtype = DataType.DT_INT8, values = values)
-    np_values = np.array(values, np.int8)
-    assert tensor_proto.tensor_content == np_values.tobytes()
-    assert tensor_proto.dtype == DataType.DT_INT8
-    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=4), TensorShapeProto.Dim(size=2)])
 
 def test_make_tensor_proto_valid_float():
     values = [1.0, 2.0, 3.0]
@@ -171,27 +151,27 @@ def test_make_tensor_proto_valid_float():
 
 def test_make_tensor_proto_valid_scalar():
     values = 5.0
-    tensor_proto = make_tensor_proto(shape= [], dtype = DataType.DT_FLOAT, values = values)
+    tensor_proto = make_tensor_proto(shape= [1], dtype = DataType.DT_FLOAT, values = values)
     np_values = np.array(values, np.float32)
-    assert tensor_proto.tensor_content == np_values.tobytes()
+    assert tensor_proto.float_val[0] == np_values
     assert tensor_proto.dtype == DataType.DT_FLOAT
-    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [])
-
-def test_make_tensor_proto_valid_string():
-    values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
-    tensor_proto = make_tensor_proto(shape=[1], dtype = DataType.DT_STRING, values = [values])
-    np_values = np.array(values)
-    assert tensor_proto.string_val == [np_values.tobytes()]
-    assert tensor_proto.dtype == DataType.DT_STRING
     assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=1)])
 
-def test_make_tensor_proto_valid_string_batch_size_2():
-    values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
-    tensor_proto = make_tensor_proto(shape=None, dtype = DataType.DT_STRING, values = [values, values])
-    np_values = np.array(values)
-    assert tensor_proto.string_val == [np_values.tobytes(), np_values.tobytes()]
-    assert tensor_proto.dtype == DataType.DT_STRING
-    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=2)])
+# def test_make_tensor_proto_valid_string():
+#     values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
+#     tensor_proto = make_tensor_proto(shape=[1], dtype = DataType.DT_STRING, values = [values])
+#     np_values = np.array(values)
+#     assert tensor_proto.string_val == [np_values.tobytes()]
+#     assert tensor_proto.dtype == DataType.DT_STRING
+#     assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=1)])
+
+# def test_make_tensor_proto_valid_string_batch_size_2():
+#     values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
+#     tensor_proto = make_tensor_proto(shape=None, dtype = DataType.DT_STRING, values = [values, values])
+#     np_values = np.array(values)
+#     assert tensor_proto.string_val == [np_values.tobytes(), np_values.tobytes()]
+#     assert tensor_proto.dtype == DataType.DT_STRING
+#     assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=2)])
 
 def test_make_tensor_proto_valid_2_dims_shape():
     values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
@@ -203,16 +183,16 @@ def test_make_tensor_proto_valid_2_dims_shape():
     
 def test_make_tensor_proto_valid_2_dims_shape_reshape():
     values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
-    tensor_proto = make_tensor_proto(shape=[2,3], dtype = DataType.DT_FLOAT, values = values)
+    tensor_proto = make_tensor_proto(shape=[6], dtype = DataType.DT_FLOAT, values = values)
     np_values = np.array(values, np.float32)
     assert tensor_proto.tensor_content == np_values.tobytes()
     assert tensor_proto.dtype == DataType.DT_FLOAT
-    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)])
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=6)])
 
-def test_make_tensor_proto_valid_ndarray():
+def test_make_tensor_proto_valid_make_ndarray_valid():
     values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
     np_values = np.array(values, dtype = np.float32)
-    _shape = TensorShapeProto(dim = [TensorShapeProto.Dim(size=1), TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)])
+    _shape = TensorShapeProto(dim = [TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)])
     tensor_proto = TensorProto(tensor_shape=_shape, dtype = DataType.DT_FLOAT, tensor_content = np_values.tobytes())
     array = make_ndarray(tensor_proto)
     tensor_proto = make_tensor_proto(values = array, dtype = DataType.DT_FLOAT)
@@ -237,42 +217,65 @@ def test_make_tensor_proto_valid_no_shape_provided():
     assert tensor_proto.tensor_shape == expected_shape
     assert tensor_proto.dtype == DataType.DT_FLOAT
 
-def test_make_tensor_proto_invalid_dtype_provided():
-    values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
-    with pytest.raises(TypeError) as exception_info:
-        make_tensor_proto(shape = None, dtype = DataType.DT_STRING, values = values)
-
-    exception = exception_info.value
-    assert str(exception) == "[1.0, 2.0, 3.0] has type list, but expected one of: bytes"
+# def test_make_tensor_proto_invalid_dtype_provided():
+#     values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
+#     with pytest.raises(TypeError) as exception_info:
+#         make_tensor_proto(shape = None, dtype = DataType.DT_STRING, values = values)
+#         exception = exception_info.value
+#         assert str(exception) == "[1.0, 2.0, 3.0] has type list, but expected one of: bytes"
 
 def test_make_tensor_proto_invalid_dimsions():
     values = [[1.0, 2.0], [1.0, 2.0, 3.0]]
     with pytest.raises(ValueError) as exception_info:
         make_tensor_proto(shape=[2,3], dtype = DataType.DT_FLOAT, values = values)
-
-    exception = exception_info.value
-    assert str(exception) == "setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (2,) + inhomogeneous part."
+        exception = exception_info.value
+        assert str(exception) == "The requested array has inhomogeneous shape. Detected shape was (2,) + inhomogeneous part"
 
 def test_make_tensor_proto_invalid_shape_type():
     values = 5.0
     with pytest.raises(TypeError) as exception_info:
         make_tensor_proto(shape=0, dtype = DataType.DT_FLOAT, values = values)
-
-    exception = exception_info.value
-    assert str(exception) == "shape type should be list, but is int"
+        exception = exception_info.value
+        assert str(exception) == "shape type should be list or tuple, but is int"
 
 def test_make_tensor_proto_invalid_dimensions_no_shape_provided():
     values = [[1,2,3], [4,5]]
     with pytest.raises(ValueError) as exception_info:
         make_tensor_proto(shape=None, dtype = DataType.DT_INT8, values = values)
+        exception = exception_info.value
+        assert str(exception) == "The requested array has inhomogeneous shape. Detected shape was (2,) + inhomogeneous part"
 
-    exception = exception_info.value
-    assert str(exception) == "setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (2,) + inhomogeneous part."
+def test_make_tensor_proto_invalid_values_dtype():
+    values = [np.float128(2.5)]
+    with pytest.raises(TypeError) as exception_info:
+        make_tensor_proto(shape = None, dtype = None, values = values)
+        exception = exception_info.value
+        assert str(exception) == "values provieded are not valid"
 
 def test_make_tensor_proto_invalid_dtype_as_float():
     values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
     with pytest.raises(TypeError) as exception_info:
         make_tensor_proto(shape = None, dtype = int, values = values)
+        exception = exception_info.value
+        assert str(exception) == "<class 'int'> is not valid dtype value"
 
-    exception = exception_info.value
-    assert str(exception) == "<class 'int'> has type type, but expected one of: int, long"
+def test_make_tensor_proto_invalid_int_reshape():
+    values = [1, 2, 3]
+    with pytest.raises(ValueError) as exception_info:
+        make_tensor_proto(shape=[4], dtype = DataType.DT_INT8, values = values)
+        exception = exception_info.value
+        assert str(exception) == "cannot reshape array of size 3 into shape (4,)"
+
+def test_make_tensor_proto_invalid_empty_list_of_empty_lists_reshape():
+    values = [[],[],[]]
+    with pytest.raises(ValueError) as exception_info:
+        make_tensor_proto(shape=[4,2], dtype = DataType.DT_INT8, values = values)
+        exception = exception_info.value
+        assert str(exception) == "cannot reshape array of size 0 into shape (4,2)"
+
+def test_make_tensor_proto_invalid_values_type():
+    values = (1,2,3)
+    with pytest.raises(TypeError) as exception_info:
+        make_tensor_proto(shape=None, dtype = None, values = values)
+        exception = exception_info.value
+        assert str(exception) == "values type should be (list, np.ndarray, scalar), but is tuple"

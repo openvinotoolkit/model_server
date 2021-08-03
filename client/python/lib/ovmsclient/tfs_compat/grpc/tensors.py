@@ -14,47 +14,43 @@
 # limitations under the License.
 #
 
+from typing import NamedTuple
 from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
 from tensorflow.core.framework.tensor_pb2 import TensorProto
-from tensorflow.core.framework.types_pb2 import DataType
+from tensorflow.core.framework.types_pb2 import DT_BOOL, DT_COMPLEX128, DT_COMPLEX64, DT_DOUBLE, DT_FLOAT, DT_HALF, DT_INT16, DT_INT32, DT_INT64, DT_INT8, DT_STRING, DT_UINT16, DT_UINT32, DT_UINT64, DT_UINT8
 import numpy as np
 
-def _as_numpy_dtype(tensor_dtype):
-    if tensor_dtype == DataType.DT_INVALID:
-        raise ValueError("Tensor data type invalid")
-    elif tensor_dtype == DataType.DT_FLOAT:
-        return np.float32
-    elif tensor_dtype == DataType.DT_DOUBLE:
-        return np.float64
-    elif tensor_dtype == DataType.DT_INT32:
-        return np.int32
-    elif tensor_dtype == DataType.DT_UINT8:
-        return np.uint8
-    elif tensor_dtype == DataType.DT_INT16:
-        return np.int16
-    elif tensor_dtype == DataType.DT_INT8:
-        return np.int8
-    elif tensor_dtype == DataType.DT_STRING:
-        return np.str
-    elif tensor_dtype == DataType.DT_COMPLEX64:
-        return np.complex64
-    elif tensor_dtype == DataType.DT_COMPLEX128:
-        return np.complex128
-    elif tensor_dtype == DataType.DT_INT64:
-        return np.int64
-    elif tensor_dtype == DataType.DT_BOOL:
-        return np.bool
-    elif tensor_dtype == DataType.DT_UINT16:
-        return np.uint16
-    elif tensor_dtype == DataType.DT_UINT32:
-        return np.uint32
-    elif tensor_dtype == DataType.DT_UINT64:
-        return np.uint64
-    else:
-        return np.uint32
+class TensorType(NamedTuple):
+    TensorDtype: str
+    TensorProtoField: str
+
+NP_TO_TENSOR_MAP = {
+    np.float16: TensorType(TensorDtype=DT_HALF, TensorProtoField="half_val"),
+    np.float32: TensorType(TensorDtype=DT_FLOAT, TensorProtoField="float_val"),
+    np.float64: TensorType(TensorDtype=DT_DOUBLE, TensorProtoField="double_val"),
+    np.int8: TensorType(TensorDtype=DT_INT8, TensorProtoField="int_val"),
+    np.int16: TensorType(TensorDtype=DT_INT16, TensorProtoField="int_val"),
+    np.int32: TensorType(TensorDtype=DT_INT32, TensorProtoField="int_val"),
+    np.int64: TensorType(TensorDtype=DT_INT64, TensorProtoField="int64_val"),
+    np.uint8: TensorType(TensorDtype=DT_UINT8, TensorProtoField="int_val"),
+    np.uint16: TensorType(TensorDtype=DT_UINT16, TensorProtoField="int_val"),
+    np.uint32: TensorType(TensorDtype=DT_UINT32, TensorProtoField="uint32_val"),
+    np.uint64: TensorType(TensorDtype=DT_UINT64, TensorProtoField="uint64_val"),
+    np.complex64: TensorType(TensorDtype=DT_COMPLEX64, TensorProtoField="scomplex_val"),
+    np.complex128: TensorType(TensorDtype=DT_COMPLEX128, TensorProtoField="dcomplex_val"),
+    np.str: TensorType(TensorDtype=DT_STRING, TensorProtoField="string_val"),
+    np.bool: TensorType(TensorDtype=DT_BOOL, TensorProtoField="bool_val"),
+}
+
+TENSOR_TO_NP_MAP = {v.TensorDtype: k for k, v in NP_TO_TENSOR_MAP.items()}
+
+TENSOR_DTYPE_TO_PROTOFIELD = {v.TensorDtype : v.TensorProtoField for v in NP_TO_TENSOR_MAP.values()}
 
 def _is_array_like(value):
-    return isinstance(value, list) or isinstance(value, np.ndarray)
+    return isinstance(value, (list, np.ndarray))
+
+def _is_shape_valid(shape):
+    return isinstance(shape, (list, tuple))
 
 def make_tensor_proto(values, dtype=None, shape=None):
     '''
@@ -101,68 +97,55 @@ def make_tensor_proto(values, dtype=None, shape=None):
         >>> print(tensor_proto)
     '''
     if shape is None:
-        infered_shape = []
-    elif _is_array_like(shape):
-        infered_shape = shape
+        inferred_shape = []
+    elif _is_shape_valid(shape):
+        inferred_shape = list(shape)
     else:
-        raise TypeError(f'shape type should be list, but is {type(shape).__name__}')
+        raise TypeError(f'shape type should be list or tuple, but is {type(shape).__name__}')
     
-    value = values
-    while dtype is None or (shape is None and _is_array_like(value)):
-        if _is_array_like(value):
-            if shape is None:
-                infered_shape.append(len(value))
-            if len(value)>0:
-                value = value[0]
+    tensor_values = values
+    if np.isscalar(tensor_values):
+        tensor_values = [tensor_values]
+
+    if _is_array_like(tensor_values):
+        if dtype is None:
+            tensor_values = np.array(tensor_values)
+            tensor_type = NP_TO_TENSOR_MAP.get(tensor_values.dtype.type)
+            if tensor_type is not None:
+                dtype = tensor_type.TensorDtype
             else:
-                value = None
-        elif isinstance(value, str):
-            dtype = DataType.DT_STRING
-        elif isinstance(value, np.float64):
-            dtype = DataType.DT_DOUBLE
-        elif isinstance(value, np.float32):
-            dtype = DataType.DT_FLOAT
-        elif isinstance(value, float):
-            dtype = DataType.DT_DOUBLE
-        elif isinstance(value, np.uint8):
-            dtype = DataType.DT_UINT8
-        elif isinstance(value, np.uint16):
-            dtype = DataType.DT_UINT16
-        elif isinstance(value, np.uint32):
-            dtype = DataType.DT_UINT32
-        elif isinstance(value, np.uint64):
-            dtype = DataType.DT_UINT64
-        elif isinstance(value, np.int8):
-            dtype = DataType.DT_INT8
-        elif isinstance(value, np.int16):
-            dtype = DataType.DT_INT16
-        elif isinstance(value, np.int32):
-            dtype = DataType.DT_INT32
-        elif isinstance(value, np.int64):
-            dtype = DataType.DT_INT64
-        elif isinstance(value, int):
-            dtype = DataType.DT_INT32
-        elif isinstance(value, np.complex64):
-            dtype = DataType.DT_COMPLEX64
-        elif isinstance(value, np.complex128):
-            dtype = DataType.DT_COMPLEX128
-        elif isinstance(value, complex):
-            dtype = DataType.DT_COMPLEX64
-        elif isinstance(value, bool):
-            dtype = DataType.DT_BOOL
+                if tensor_values.dtype == object:
+                    raise ValueError(f"The requested array has inhomogeneous shape. Detected shape was {tensor_values.shape} + inhomogeneous part")
+                else:
+                    raise TypeError(f"values provieded are not valid")
         else:
-            dtype = DataType.DT_INT32    
+            np_dtype = TENSOR_TO_NP_MAP.get(dtype)
+            if np_dtype is None:
+                raise TypeError(f"{dtype} is not valid dtype value")
+            tensor_values = np.array(tensor_values, dtype=np_dtype)
+    else:
+        raise TypeError(f"values type should be (list, np.ndarray, scalar), but is {type(shape).__name__}")
+
+    if inferred_shape == []:
+        inferred_shape = list(tensor_values.shape)
+    elif inferred_shape != list(tensor_values.shape):
+        tensor_values = tensor_values.reshape(inferred_shape)
 
     dims = []
-    for d in infered_shape:
+    for d in inferred_shape:
         dims.append(TensorShapeProto.Dim(size=d))
     tensor_shape = TensorShapeProto(dim = dims)
-    if dtype == DataType.DT_STRING:
-        tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape, string_val=values)
+    if dtype == DT_STRING:
+        tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape, string_val=tensor_values)
+    elif np.isscalar(values):
+        tensor_proto_args = {
+            "dtype" : dtype,
+            "tensor_shape" : tensor_shape,
+            TENSOR_DTYPE_TO_PROTOFIELD.get(dtype) : tensor_values
+        }
+        tensor_proto = TensorProto(**tensor_proto_args)
     else:
-        np_dtype = _as_numpy_dtype(dtype)
-        np_values = np.array(values, np_dtype)
-        tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape, tensor_content=np_values.tobytes())
+        tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape, tensor_content=tensor_values.tobytes())
     return tensor_proto
 
 def make_ndarray(tensor_proto):
@@ -192,7 +175,7 @@ def make_ndarray(tensor_proto):
     '''
     shape = [d.size for d in tensor_proto.tensor_shape.dim]
     num_elements = np.prod(shape, dtype=np.int64)
-    np_dtype = _as_numpy_dtype(tensor_proto.dtype)
+    np_dtype = TENSOR_TO_NP_MAP.get(tensor_proto.dtype)
     
     if tensor_proto.tensor_content:
         return (np.frombuffer(tensor_proto.tensor_content,
