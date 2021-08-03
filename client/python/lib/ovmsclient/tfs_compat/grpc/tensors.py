@@ -104,9 +104,11 @@ def make_tensor_proto(values, dtype=None, shape=None):
         raise TypeError(f'shape type should be list or tuple, but is {type(shape).__name__}')
     
     tensor_values = values
+    # scalars are packed into 1 elemt list
     if np.isscalar(tensor_values):
         tensor_values = [tensor_values]
 
+    # create np.ndarray from values and find its dtype if not provided
     if _is_array_like(tensor_values):
         if dtype is None:
             tensor_values = np.array(tensor_values)
@@ -116,10 +118,8 @@ def make_tensor_proto(values, dtype=None, shape=None):
             elif tensor_values.dtype.type == np.bytes_:
                 dtype = DT_STRING
             else:
-                if tensor_values.dtype == object:
-                    raise ValueError(f"The requested array has inhomogeneous shape. Detected shape was {tensor_values.shape} + inhomogeneous part")
-                else:
-                    raise TypeError(f"values provided are not valid")
+                raise TypeError(f"values provided are not valid")
+        # binary input
         elif dtype == DT_STRING:
             tensor_values = np.array(tensor_values)
         else:
@@ -128,6 +128,7 @@ def make_tensor_proto(values, dtype=None, shape=None):
                 raise TypeError(f"{dtype} is not valid dtype value")
             
             tensor_values = np.array(tensor_values)
+            # input was binary, but dtype was not DT_STRING
             if tensor_values.dtype.type == np.bytes_:
                 tensor_values = np.frombuffer(tensor_values.tobytes(), dtype=np_dtype)
             else:
@@ -151,6 +152,7 @@ def make_tensor_proto(values, dtype=None, shape=None):
     if dtype == DT_STRING:
         tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape, string_val=tensor_values.tolist())
     elif np.isscalar(values):
+        # picking the right field for TensorProto() call
         tensor_proto_args = {
             "dtype" : dtype,
             "tensor_shape" : tensor_shape,

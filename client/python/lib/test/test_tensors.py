@@ -266,7 +266,21 @@ def test_make_tensor_proto_invalid_dimsions():
     with pytest.raises(ValueError) as exception_info:
         make_tensor_proto(shape=[2,3], dtype = DataType.DT_FLOAT, values = values)
         exception = exception_info.value
-        assert str(exception) == "The requested array has inhomogeneous shape. Detected shape was (2,) + inhomogeneous part"
+        assert str(exception) == "setting an array element with a sequence"
+
+def test_make_tensor_proto_invalid_dimsions_2():
+    values = [[(1,2,3)],[(1,2)],[(1,2,3)]]
+    with pytest.raises(ValueError) as exception_info:
+        make_tensor_proto(shape=[2,3], dtype = DataType.DT_FLOAT, values = values)
+        exception = exception_info.value
+        assert str(exception) == "setting an array element with a sequence"
+
+def test_make_tensor_proto_invalid_binary():
+    values = [1,2,3]
+    with pytest.raises(TypeError) as exception_info:
+        make_tensor_proto(shape=None, dtype = DataType.DT_STRING, values = values)
+        exception = exception_info.value
+        assert str(exception) == "1 has type int, but expected one of: bytes"
 
 def test_make_tensor_proto_invalid_shape_type():
     values = 5.0
