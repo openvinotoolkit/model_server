@@ -398,6 +398,7 @@ cc_test(
         "-luuid",
         "-lstdc++fs",
         "-lcrypto",
+        "-lssl",
     ],
     deps = [
         "//src:ovms_lib",

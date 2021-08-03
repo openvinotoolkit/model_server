@@ -19,6 +19,43 @@ workspace(name = "ovms")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+# overriding tensorflow serving bazel dependency
+# alternative would be to use cmake build of grpc and flag
+# to use system ssl instead
+new_local_repository(
+    name = "boringssl",
+    path = "/usr/",
+    build_file_content = """
+cc_library(
+    name = "ssl",
+    hdrs = glob(["include/openssl/*"]),
+    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
+    copts = ["-lcrypto", "-lssl"],
+    visibility = ["//visibility:public"],
+)
+cc_library(
+    name = "crypto",
+    hdrs = glob(["include/openssl/*"]),
+    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
+    copts = ["-lcrypto", "-lssl"],
+    visibility = ["//visibility:public"],
+)
+""",
+)
+# overriding GCS curl dependency to force using system provided openssl
+new_local_repository(
+    name = "libcurl",
+    path = "/usr/",
+    build_file_content = """
+cc_library(
+    name = "curl",
+    hdrs = glob(["include/x86_64/curl/*"]),
+    srcs = glob(["lib/x86_64-linux-gnu/libcurl.so"]),
+    copts = ["-lcrypto", "-lssl"],
+    visibility = ["//visibility:public"],
+)
+""",
+)
 # Tensorflow serving
 git_repository(
     name = "tensorflow_serving",
@@ -35,7 +72,8 @@ tensorflow_http_archive(
     name = "org_tensorflow",
     sha256 = "cb99f136dc5c89143669888a44bfdd134c086e1e2d9e36278c1eb0f03fe62d76",
     git_commit = "a4dfb8d1a71385bd6d122e4f27f86dcebb96712d",
-    patch = "tf.patch"
+    patch = "tf.patch",
+    repo_mapping = {"@curl" : "@curl"}
 )
 
 load("@tensorflow_serving//tensorflow_serving:workspace.bzl", "tf_serving_workspace")
@@ -97,6 +135,7 @@ http_archive(
     sha256 = "a370bcf2913717c674a7250c4a310250448ffeb751b930be559a6f1887155f3b",
     strip_prefix = "google-cloud-cpp-0.21.0",
     url = "https://github.com/googleapis/google-cloud-cpp/archive/v0.21.0.tar.gz",
+    repo_mapping = {"@com_github_curl_curl" : "@curl"}
 )
 
 load("@com_github_googleapis_google_cloud_cpp//bazel:google_cloud_cpp_deps.bzl", "google_cloud_cpp_deps")
