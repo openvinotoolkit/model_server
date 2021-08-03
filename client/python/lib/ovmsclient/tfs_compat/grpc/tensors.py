@@ -113,22 +113,35 @@ def make_tensor_proto(values, dtype=None, shape=None):
             tensor_type = NP_TO_TENSOR_MAP.get(tensor_values.dtype.type)
             if tensor_type is not None:
                 dtype = tensor_type.TensorDtype
+            elif tensor_values.dtype.type == np.bytes_:
+                dtype = DT_STRING
             else:
                 if tensor_values.dtype == object:
                     raise ValueError(f"The requested array has inhomogeneous shape. Detected shape was {tensor_values.shape} + inhomogeneous part")
                 else:
-                    raise TypeError(f"values provieded are not valid")
+                    raise TypeError(f"values provided are not valid")
+        elif dtype == DT_STRING:
+            tensor_values = np.array(tensor_values)
         else:
             np_dtype = TENSOR_TO_NP_MAP.get(dtype)
             if np_dtype is None:
                 raise TypeError(f"{dtype} is not valid dtype value")
-            tensor_values = np.array(tensor_values, dtype=np_dtype)
+            
+            tensor_values = np.array(tensor_values)
+            if tensor_values.dtype.type == np.bytes_:
+                tensor_values = np.frombuffer(tensor_values.tobytes(), dtype=np_dtype)
+            else:
+                tensor_values = tensor_values.astype(np_dtype)
     else:
         raise TypeError(f"values type should be (list, np.ndarray, scalar), but is {type(shape).__name__}")
 
     if inferred_shape == []:
+        if tensor_values.dtype.type == np.bytes_ and len(tensor_values.shape) > 1:
+            raise ValueError(f"Bytes values with dtype DT_STRING cannot have shape {tensor_values.shape}")
         inferred_shape = list(tensor_values.shape)
     elif inferred_shape != list(tensor_values.shape):
+        if dtype == DT_STRING:
+            raise ValueError(f"Bytes values cannot be reshaped to {inferred_shape}")
         tensor_values = tensor_values.reshape(inferred_shape)
 
     dims = []
@@ -136,7 +149,7 @@ def make_tensor_proto(values, dtype=None, shape=None):
         dims.append(TensorShapeProto.Dim(size=d))
     tensor_shape = TensorShapeProto(dim = dims)
     if dtype == DT_STRING:
-        tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape, string_val=tensor_values)
+        tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape, string_val=tensor_values.tolist())
     elif np.isscalar(values):
         tensor_proto_args = {
             "dtype" : dtype,

@@ -157,21 +157,58 @@ def test_make_tensor_proto_valid_scalar():
     assert tensor_proto.dtype == DataType.DT_FLOAT
     assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=1)])
 
-# def test_make_tensor_proto_valid_string():
-#     values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
-#     tensor_proto = make_tensor_proto(shape=[1], dtype = DataType.DT_STRING, values = [values])
-#     np_values = np.array(values)
-#     assert tensor_proto.string_val == [np_values.tobytes()]
-#     assert tensor_proto.dtype == DataType.DT_STRING
-#     assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=1)])
+def test_make_tensor_proto_valid_string():
+    values = bytes([0x13, 0x00, 0x00, 0x00, 0x08])
+    tensor_proto = make_tensor_proto(shape=[1], dtype = DataType.DT_STRING, values = values)
+    np_values = np.array(values)
+    assert tensor_proto.string_val[0] == np_values.tobytes()
+    assert tensor_proto.dtype == DataType.DT_STRING
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=1)])
+    
+def test_make_tensor_proto_invalid_string_reshape():
+    values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
+    with pytest.raises(ValueError) as exception_info:
+        make_tensor_proto(shape=[6], dtype = DataType.DT_STRING, values = values)
+        exception = exception_info.value
+        assert str(exception) == "Bytes values cannot be reshaped to [6]"
 
-# def test_make_tensor_proto_valid_string_batch_size_2():
-#     values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
-#     tensor_proto = make_tensor_proto(shape=None, dtype = DataType.DT_STRING, values = [values, values])
-#     np_values = np.array(values)
-#     assert tensor_proto.string_val == [np_values.tobytes(), np_values.tobytes()]
-#     assert tensor_proto.dtype == DataType.DT_STRING
-#     assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=2)])
+def test_make_tensor_proto_valid_string_no_dtype_provided():
+    values = bytes([0x13, 0x00, 0x00, 0x00, 0x08])
+    tensor_proto = make_tensor_proto(shape=[1], dtype = None, values = values)
+    np_values = np.array(values)
+    assert tensor_proto.string_val[0] == np_values.tobytes()
+    assert tensor_proto.dtype == DataType.DT_STRING
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=1)])
+
+def test_make_tensor_proto_valid_string_to_float_dtype():
+    values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
+    tensor_proto = make_tensor_proto(shape=[3], dtype = DataType.DT_INT16, values = values)
+    np_values = np.frombuffer(np.array(values).tobytes(), dtype = np.int16).tolist()
+    assert tensor_proto.int_val == np_values
+    assert tensor_proto.dtype == DataType.DT_INT16
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=3)])
+
+def test_make_tensor_proto_valid_string_to_float_dtype():
+    values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
+    with pytest.raises(ValueError) as exception_info:
+        make_tensor_proto(shape= None, dtype = DataType.DT_FLOAT, values = values)
+        exception = exception_info.value
+        assert str(exception) == "buffer size must be a multiple of element size"
+
+def test_make_tensor_proto_valid_string_batch_size_2():
+    values = bytes([0x13, 0x00, 0x00, 0x00, 0x08])
+    tensor_proto = make_tensor_proto(shape=None, dtype = DataType.DT_STRING, values = [values, values])
+    np_values = np.array(values)
+    assert tensor_proto.string_val == [np_values.tobytes(), np_values.tobytes()]
+    assert tensor_proto.dtype == DataType.DT_STRING
+    assert tensor_proto.tensor_shape == TensorShapeProto(dim = [TensorShapeProto.Dim(size=2)])
+
+def test_make_tensor_proto_invalid_string_2D_array():
+    values = bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
+    with pytest.raises(ValueError) as exception_info:
+        make_tensor_proto(shape= None, dtype = DataType.DT_STRING, values = [[values, values],[values, values]])
+        exception = exception_info.value
+        assert str(exception) == "Bytes values with dtype DT_STRING cannot have shape (2, 2)"
 
 def test_make_tensor_proto_valid_2_dims_shape():
     values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
@@ -250,7 +287,7 @@ def test_make_tensor_proto_invalid_values_dtype():
     with pytest.raises(TypeError) as exception_info:
         make_tensor_proto(shape = None, dtype = None, values = values)
         exception = exception_info.value
-        assert str(exception) == "values provieded are not valid"
+        assert str(exception) == "values provided are not valid"
 
 def test_make_tensor_proto_invalid_dtype_as_float():
     values = [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
