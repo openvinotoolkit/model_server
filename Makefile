@@ -53,7 +53,7 @@ OV_SOURCE_BRANCH ?= master
 DLDT_PACKAGE_URL ?=
 OV_USE_BINARY ?= 1
 YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7
-APT_OV_PACKAGE ?= intel-openvino-runtime-ubuntu20-2021.3.394
+APT_OV_PACKAGE ?= intel-openvino-runtime-ubuntu20-2021.4.582
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
 
