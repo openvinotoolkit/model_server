@@ -111,7 +111,7 @@ def test_make_tensor_proto_valid_int():
 
 def test_make_tensor_proto_valid_empty_list():
     values = []
-    tensor_proto = make_tensor_proto(shape=[0], dtype = DataType.DT_INT8, values = values)
+    tensor_proto = make_tensor_proto(shape=[], dtype = DataType.DT_INT8, values = values)
     np_values = np.array(values, np.int8)
     assert tensor_proto.tensor_content == np_values.tobytes()
     assert tensor_proto.dtype == DataType.DT_INT8
