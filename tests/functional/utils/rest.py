@@ -22,9 +22,9 @@ from utils.parametrization import get_ports_prefixes
 from google.protobuf.json_format import Parse
 from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2
-from utils.logger import get_logger
+import logging
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 DEFAULT_ADDRESS = 'localhost'
 DEFAULT_REST_PORT = "{}00".format(get_ports_prefixes()["rest_ports_prefix"])

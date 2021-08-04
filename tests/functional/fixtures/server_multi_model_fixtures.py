@@ -50,4 +50,4 @@ def start_server_multi_model(request, start_minio_server, get_minio_server_s3):
     container_name_infix = "test-multi"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command, envs)
-    yield server.start()
+    return server.start()

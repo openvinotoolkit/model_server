@@ -24,9 +24,9 @@ from retry.api import retry_call
 import config
 from utils.parametrization import get_ports_for_fixture
 from utils.files_operation import save_container_logs_to_file
-from utils.logger import get_logger
+import logging
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 CONTAINER_STATUS_RUNNING = "running"
 TERMINAL_STATUSES = ["exited"]
 
@@ -51,18 +51,18 @@ class Docker:
         self.last_log_fetch_time = datetime.now()
         self.logs = ""
 
-    def __del__(self):
-        self.stop_container()
-
-    def stop_container(self):
-        if self.container is not None:
-            logger.info(f"Stopping container: {self.container_name}")
-            self.save_container_logs()
-            self.container.stop()
-            self.container.remove()
-            logger.info(f"Container successfully closed and removed: {self.container_name}")
-
     def start(self):
+
+        def finalizer():
+            if self.container is not None:
+                logger.info(f"Stopping container: {self.container_name}")
+                self.save_container_logs()
+                self.container.stop()
+                self.container.remove()
+                logger.info(f"Container successfully closed and removed: {self.container_name}")
+
+        self.request.addfinalizer(finalizer)
+
         logger.info(f"Starting container: {self.container_name}")
 
         ### Defaults ###

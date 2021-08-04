@@ -22,9 +22,9 @@ import shutil
 
 import config
 from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2, FaceDetection, PVBFaceDetectionV1, ResnetONNX
-from utils.logger import get_logger
+import logging
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 models_to_download = [AgeGender, FaceDetection, PVBDetection, PVBFaceDetectionV1, PVBFaceDetectionV2, ResnetONNX]
 
