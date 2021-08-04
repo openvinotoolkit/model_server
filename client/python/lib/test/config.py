@@ -15,6 +15,7 @@
 #
 
 from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
+from tensorflow.core.framework.types_pb2 import DataType
 
 from tensorflow.core.protobuf.error_codes_pb2 import Code
 from enum import IntEnum
@@ -44,7 +45,7 @@ MODEL_SPEC_INVALID = [
     ("model_name", 9223372036854775809, ValueError, f'model_version should be in range <0, {2**63-1}>'),
 ]
 
-# responses_dictionary = {
+# responses_dict = {
 #    model_version : { expected_status }
 # }
 MODEL_STATUS_RESPONSE_VALID = [
@@ -106,7 +107,7 @@ SERVER_CERT_PATH_VALID, SERVER_CERT_PATH_INVALID = "server_cert_path_valid", "se
 CLIENT_CERT_PATH_VALID, CLIENT_CERT_PATH_INVALID = "client_cert_path_valid", "client_cert_path_invalid"
 CLIENT_KEY_PATH_VALID, CLIENT_KEY_PATH_INVALID = "client_key_path_valid", "client_key_path_invalid"
 
-# (tls_config_dictionary, isfile_method_call_count)
+# (tls_config_dict, isfile_method_call_count)
 TLS_CONFIG_VALID = [
     ({
         "server_cert_path" : PATH_VALID
@@ -120,7 +121,7 @@ TLS_CONFIG_VALID = [
     CallCount.THREE),
 ]
 
-# (tls_config_dictionary,
+# (tls_config_dict,
 # expected_exception, expected_message,
 # isfile_method_call_count, [is_valid_client_key_path, is_valid_client_cert_path, is_valid_client_server_cert_path])
 TLS_CONFIG_INVALID = [
@@ -248,7 +249,7 @@ TLS_CONFIG_INVALID = [
 
 ]
 
-# (config_dictionary, method_call_count_dictionary= {"method_name" : CallCount.NumberOfCalls})
+# (config_dict, method_call_count_dict= {"method_name" : CallCount.NumberOfCalls})
 CONFIG_VALID = [
     ({
         "address" : "localhost",
@@ -280,9 +281,9 @@ CONFIG_VALID = [
     }, {"check_address" : CallCount.ONE, "check_port" : CallCount.ONE, "check_tls_config" : CallCount.ONE})
 ]
 
-# (config_dictionary, method_call_count_dictionary= {"method_name" : CallCount.NumberOfCalls},
+# (config_dict, method_call_count_dict= {"method_name" : CallCount.NumberOfCalls},
 # expected_exception, expected_message,
-# side_effect_dictionary = {"method_name" : method_name_side_effect})
+# side_effect_dict = {"method_name" : method_name_side_effect})
 CONFIG_INVALID = [
     ({
 
@@ -450,7 +451,7 @@ CONFIG_INVALID = [
 ]
 
 # (server_cert_path, client_cert_path, client_key_path,
-# method_call_count_dictionary= {"method_name" : CallCount.NumberOfCalls})
+# method_call_count_dict= {"method_name" : CallCount.NumberOfCalls})
 CHANNEL_CERTS_VALID = [
     (SERVER_CERT_PATH_VALID, CLIENT_CERT_PATH_VALID, CLIENT_KEY_PATH_VALID,
     {"check_certificate_valid" : CallCount.TWO, "check_key_valid" : CallCount.ONE}),
@@ -469,8 +470,8 @@ PRIVATE_KEY_VALID = [
     (PATH_VALID),
 ]
 
-# (config_dictionary,
-# method_call_count_dictionary= {"method_name" : CallCount.NumberOfCalls})
+# (config_dict,
+# method_call_count_dict= {"method_name" : CallCount.NumberOfCalls})
 BUILD_VALID = [
     ({
         "address" : "localhost",
@@ -502,9 +503,9 @@ BUILD_VALID = [
     }, {"check_config" : CallCount.ONE, "prepare_certs" : CallCount.ONE})
 ]
 
-# (config_dictionary,
+# (config_dict,
 # expected_exception, expected_message,
-# method_call_count_dictionary= {"method_name" : CallCount.NumberOfCalls})
+# method_call_count_dict= {"method_name" : CallCount.NumberOfCalls})
 BUILD_INVALID_CONFIG = [
     ({
 
@@ -613,9 +614,9 @@ BUILD_INVALID_CONFIG = [
 
 ]
 
-# (config_dictionary,
+# (config_dict,
 # expected_exception, expected_message,
-# method_call_count_dictionary= {"method_name" : CallCount.NumberOfCalls})
+# method_call_count_dict= {"method_name" : CallCount.NumberOfCalls})
 BUILD_INVALID_CERTS = [
     ({
         "address" : "localhost",
@@ -652,5 +653,74 @@ BUILD_INVALID_CERTS = [
     },
     ValueError,  'path_to_invalid_client_certificate is not valid certificate',
     {"check_config" : CallCount.ONE, "prepare_certs" : CallCount.ONE}),
-    
+]
+# response_dict = {
+# 'version' : model_version,
+# 'name' : model_name,
+# 'inputs' : inputs_dict,
+# 'outputs' : outputs_dict
+# }
+MODEL_METADATA_RESPONSE_VALID = [
+    {
+        'version' : 2,
+        'name' : 'resnet',
+        'inputs' : {
+            '0' : {
+                'shape' : [1, 3, 244, 244],
+                'dtype' : DataType.DT_FLOAT
+            }
+        },
+        'outputs' : {
+            '1463' : {
+                'shape' : [1, 1000],
+                'dtype' : DataType.DT_FLOAT
+            }
+        }
+    },
+
+    {
+        'version' : 1,
+        'name' : 'model_name',
+        'inputs' : {
+            '0' : {
+                'shape' : [1, 3, 244, 244],
+                'dtype' : DataType.DT_FLOAT
+            },
+            '1' : {
+                'shape' : [0, 1, 3, 244, 244],
+                'dtype' : DataType.DT_INT32
+            }
+        },
+        'outputs' : {
+            '1463' : {
+                'shape' : [1, 1000],
+                'dtype' : DataType.DT_FLOAT
+            },
+            'second_output' : {
+                'shape' : [0, 1, 1000],
+                'dtype' : DataType.DT_INT32
+            }
+        }
+    },
+
+    {
+        'version' : 1,
+        'name' : 'model_name',
+        'inputs' : {
+            'input1' : {
+                'shape' : [1, 3, 1080, 1920],
+                'dtype' : DataType.DT_QINT32
+            },
+            'input2' : {
+                'shape' : [1, 3, 244, 244],
+                'dtype' : DataType.DT_INT32
+            }
+        },
+        'outputs' : {
+            'single_output' : {
+                'shape' : [1, 7, 200 ,200],
+                'dtype' : DataType.DT_FLOAT
+            }
+        }
+    }
 ]
