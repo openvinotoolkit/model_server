@@ -77,7 +77,7 @@ class Docker:
                                                     environment=self.env_vars_container)
         self.ensure_container_status(status=CONTAINER_STATUS_RUNNING, terminal_statuses=TERMINAL_STATUSES)
         self.ensure_logs_contains()
-        logger.info(f"Container started grpc_port:{self.grpc_port}\trest_port{self.rest_port}")
+        logger.info(f"Container started grpc_port:{self.grpc_port}\trest_port:{self.rest_port}")
         logger.debug(f"Container starting command args: {self.start_container_command}")
         return self.container, {"grpc_port": self.grpc_port, "rest_port": self.rest_port}
 

@@ -22,7 +22,7 @@ from object_model.minio_docker import MinioDocker
 from object_model.server import Server
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def start_server_multi_model(request, start_minio_server, get_minio_server_s3):
 
     aws_access_key_id = os.getenv('MINIO_ACCESS_KEY')
