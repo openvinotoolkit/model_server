@@ -67,4 +67,4 @@ target_device = os.environ.get("TT_TARGET_DEVICE", "CPU")
 
 start_minio_container_command = 'server --address ":{}" /data'
 
-container_minio_log_line = "Documentation: https://docs.min.io"
+container_minio_log_line = "Endpoint:"
