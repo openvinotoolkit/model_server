@@ -52,6 +52,15 @@ class Docker:
         self.logs = ""
 
     def start(self):
+        start_result = None
+        try:
+            start_result = self._start()
+        finally:
+            if start_result is None:
+                self.stop()  # Failed to start container so clean it up
+        return start_result
+
+    def _start(self):
         logger.info(f"Starting container: {self.container_name}")
 
         volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',

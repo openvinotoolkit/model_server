@@ -46,13 +46,19 @@ class Server:
                               self.start_container_command, self.env_vars,
                               self.image, self.container_log_line, self.server_log_level, self.target_device)
         Server.current_instance = self
-        return self.ovms.start()
+        start_result = None
+        try:
+            start_result = self.ovms.start()
+        finally:
+            if start_result is None:
+                self.stop()
+        return start_result
 
     def stop(self):
         self.ovms.stop()
+        Server.current_instance = None
 
     @classmethod
     def stop_current_instance(cls):
         if Server.current_instance:
             Server.current_instance.stop()
-            Server.current_instance = None
