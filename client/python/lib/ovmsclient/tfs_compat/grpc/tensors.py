@@ -50,7 +50,25 @@ def _is_array_like(value):
     return isinstance(value, (list, np.ndarray))
 
 def _is_shape_valid(shape):
-    return isinstance(shape, (list, tuple))
+    if not isinstance(shape, (list, tuple)):
+        return False
+    if not all(isinstance(n, int) and n >= 0 for n in shape):
+        raise ValueError(f'shape elements should be unsigned integers')
+    return True
+
+def _cast_ndarray_to_dtype(values, dtype):
+    try:
+        return values.astype(dtype)
+    except ValueError as e_info:
+        # when values has inhomogeneous shape
+        raise ValueError(f'could not cast values to {dtype}. {e_info}')
+
+def _cast_bytes_to_dtype(values, dtype):
+    try:
+        return np.frombuffer(values, dtype=dtype)
+    except ValueError as e_info:
+        # not enough bytes to fill dtype
+        raise ValueError(f'could not cast bytes to {dtype}. {e_info}')
 
 def make_tensor_proto(values, dtype=None, shape=None):
     '''
@@ -104,11 +122,11 @@ def make_tensor_proto(values, dtype=None, shape=None):
         raise TypeError(f'shape type should be list or tuple, but is {type(shape).__name__}')
     
     tensor_values = values
-    # scalars are packed into 1 elemt list
+    # scalars are packed into 1 element list
     if np.isscalar(tensor_values):
         tensor_values = [tensor_values]
 
-    # create np.ndarray from values and find its dtype if not provided
+    # create numpy ndarray from values and find its dtype if not provided
     if _is_array_like(tensor_values):
         if dtype is None:
             tensor_values = np.array(tensor_values)
@@ -118,32 +136,34 @@ def make_tensor_proto(values, dtype=None, shape=None):
             elif tensor_values.dtype.type == np.bytes_:
                 dtype = DT_STRING
             else:
-                raise TypeError(f"values provided are not valid")
+                raise TypeError(f"provided values type is not valid")
         # binary input
         elif dtype == DT_STRING:
-            tensor_values = np.array(tensor_values)
+            tensor_values = _cast_ndarray_to_dtype(np.array(tensor_values), np.bytes_)
         else:
             np_dtype = TENSOR_TO_NP_MAP.get(dtype)
             if np_dtype is None:
                 raise TypeError(f"{dtype} is not valid dtype value")
             
             tensor_values = np.array(tensor_values)
-            # input was binary, but dtype was not DT_STRING
+            # values are binary, but dtype was not DT_STRING
             if tensor_values.dtype.type == np.bytes_:
-                tensor_values = np.frombuffer(tensor_values.tobytes(), dtype=np_dtype)
+                tensor_values = _cast_bytes_to_dtype(tensor_values.tobytes(), dtype=np_dtype)
             else:
-                tensor_values = tensor_values.astype(np_dtype)
+                tensor_values = _cast_ndarray_to_dtype(tensor_values, np_dtype)
     else:
-        raise TypeError(f"values type should be (list, np.ndarray, scalar), but is {type(shape).__name__}")
+        raise TypeError(f"values type should be (list, np.ndarray, scalar), but is {type(tensor_values).__name__}")
 
     if inferred_shape == []:
-        if tensor_values.dtype.type == np.bytes_ and len(tensor_values.shape) > 1:
-            raise ValueError(f"Bytes values with dtype DT_STRING cannot have shape {tensor_values.shape}")
+        if dtype == DT_STRING and len(tensor_values.shape) > 1:
+            raise ValueError(f"bytes values with dtype DT_STRING cannot have shape {tuple(tensor_values.shape)}")
         inferred_shape = list(tensor_values.shape)
     elif inferred_shape != list(tensor_values.shape):
-        if dtype == DT_STRING:
-            raise ValueError(f"Bytes values cannot be reshaped to {inferred_shape}")
+        if dtype == DT_STRING and len(inferred_shape) > 1:
+            raise ValueError(f"bytes values cannot be reshaped to {tuple(inferred_shape)}")
         tensor_values = tensor_values.reshape(inferred_shape)
+    elif inferred_shape == list(tensor_values.shape) and dtype == DT_STRING and len(inferred_shape) > 1 :
+        raise ValueError(f"bytes values with dtype DT_STRING cannot have shape {tuple(tensor_values.shape)}")
 
     dims = []
     for d in inferred_shape:
@@ -152,7 +172,7 @@ def make_tensor_proto(values, dtype=None, shape=None):
     if dtype == DT_STRING:
         tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape, string_val=tensor_values.tolist())
     elif np.isscalar(values):
-        # picking the right field for TensorProto() call
+        # picking the right field of TensorProto to put data in
         tensor_proto_args = {
             "dtype" : dtype,
             "tensor_shape" : tensor_shape,
