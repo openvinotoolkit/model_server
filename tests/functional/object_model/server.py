@@ -45,13 +45,14 @@ class Server:
             self.ovms = OvmsDocker(self.request, self.command_args, self.container_name_infix,
                               self.start_container_command, self.env_vars,
                               self.image, self.container_log_line, self.server_log_level, self.target_device)
-        Server.current_instance = self
         start_result = None
         try:
             start_result = self.ovms.start()
         finally:
             if start_result is None:
                 self.stop()
+            else:
+                Server.current_instance = self
         return start_result
 
     def stop(self):

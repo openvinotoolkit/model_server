@@ -18,10 +18,12 @@ import os
 import errno
 import re
 import socket
+import logging
 from datetime import datetime
 
 from utils.helpers import SingletonMeta
 
+logger = logging.getLogger(__name__)
 
 def get_ports_prefixes():
     ports_prefixes = os.environ.get("PORTS_PREFIX", "90 55")
@@ -59,6 +61,9 @@ def get_ports_for_fixture():
         grpc_port = ports_prefixes["grpc_ports_prefix"] + port_suffix
         rest_port = ports_prefixes["rest_ports_prefix"] + port_suffix
 
+        assert 0 < grpc_port <= 65535, f"Port is out of range grpc_port={grpc_port}"
+        assert 0 < rest_port <= 65535, f"Port is out of range rest_port={rest_port}"
+
         location_grpc = ("", int(grpc_port))
         location_rest = ("", int(rest_port))
         try:
@@ -74,6 +79,7 @@ def get_ports_for_fixture():
                                 "while getting ports for fixture {}:".format(e))
             # Other error means address is in use and we must proceed
             # to the next candidate
+            logger.debug(str(e))
             continue
 
         # No exception raised - port is available.
