@@ -17,11 +17,15 @@
 from grpc import ssl_channel_credentials, secure_channel, insecure_channel
 from validators import ipv4, domain
 import os
+from grpc import RpcError
 
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from tensorflow_serving.apis import model_service_pb2_grpc
+from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
 
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
+from ovmsclient.tfs_compat.grpc.requests import GrpcModelStatusRequest
+from ovmsclient.tfs_compat.grpc.responses import GrpcModelStatusResponse
 
 class GrpcClient(ServingClient):
 
@@ -112,7 +116,15 @@ class GrpcClient(ServingClient):
             >>> type(response)
         '''
 
-        raise NotImplementedError
+        _check_model_status_request(request)
+
+        raw_response = None
+        try:
+            raw_response = self.model_service_stub.GetModelStatus(request.raw_request, 10.0)
+        except RpcError as e_info:
+            raise ConnectionError(f'There was an error during sending ModelStatusRequest. Grpc exited with: \n{e_info.code().name} - {e_info.details()}')
+
+        return GrpcModelStatusResponse(raw_response)
 
     @classmethod
     def _build(cls, config):
@@ -139,6 +151,20 @@ class GrpcClient(ServingClient):
         model_service_stub = model_service_pb2_grpc.ModelServiceStub(channel)
 
         return cls(channel, prediction_service_stub, model_service_stub)
+
+def _check_model_status_request(request):
+
+    if not isinstance(request, GrpcModelStatusRequest):
+        raise TypeError(f'request type should be GrpcModelStatusRequest, but is {type(request).__name__}')
+
+    if not isinstance(request.raw_request, GetModelStatusRequest):
+        raise TypeError(f'request is not valid GrpcModelStatusRequest')
+
+    if request.raw_request.model_spec.name != request.model_name:
+        raise ValueError(f'request is not valid GrpcModelStatusRequest')
+
+    if request.raw_request.model_spec.version.value != request.model_version:
+        raise ValueError(f'request is not valid GrpcModelStatusRequest')
 
 def _prepare_certs(server_cert_path, client_cert_path, client_key_path):
     
