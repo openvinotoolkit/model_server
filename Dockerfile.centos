@@ -134,6 +134,9 @@ RUN if [ -f /opt/intel/openvino/deployment_tools/inference_engine/samples/cpp/bu
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
+# since bazel does not have easy way to pass if down the dependencies to have select the sources
+# for libcurl & ssl we hack it this way
+RUN sed -i "s:lib/x86_64-linux-gnu:lib64:g" WORKSPACE
 COPY external /ovms/external/
 COPY third_party /ovms/third_party/
 
