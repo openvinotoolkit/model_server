@@ -99,7 +99,7 @@ WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
 # since bazel does not have easy way to pass if down the dependencies to have select the sources
 # for libcurl & ssl we hack it this way
-RUN sed -i "s:lib/x86_64-linux-gnu:lib64:g" WORKSPACE
+RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
 COPY external /ovms/external/
 COPY third_party /ovms/third_party/
 
