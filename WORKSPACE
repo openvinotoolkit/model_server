@@ -26,17 +26,26 @@ new_local_repository(
     name = "boringssl",
     path = "/usr/",
     build_file_content = """
+#constraint_setting(name = "linux_distribution_family")
+#constraint_value(constraint_setting = "linux_distribution_family", name = "fedora") # like RHEL/CentOS
+#constraint_value(constraint_setting = "linux_distribution_family", name = "debian") # like Ubuntu
 cc_library(
     name = "ssl",
     hdrs = glob(["include/openssl/*"]),
-    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
+    srcs = select({
+        ":debian": glob(["lib64/libssl.so"]),
+        ":fedora": glob(["lib/x86_64-linux-gnu/libssl.so"])
+        }),
     copts = ["-lcrypto", "-lssl"],
     visibility = ["//visibility:public"],
 )
 cc_library(
     name = "crypto",
     hdrs = glob(["include/openssl/*"]),
-    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
+    srcs = select({
+        ":debian": glob(["lib64/libssl.so"]),
+        ":fedora": glob(["lib/x86_64-linux-gnu/libssl.so"])
+        }),
     copts = ["-lcrypto", "-lssl"],
     visibility = ["//visibility:public"],
 )
@@ -50,7 +59,10 @@ new_local_repository(
 cc_library(
     name = "curl",
     hdrs = glob(["include/x86_64/curl/*"]),
-    srcs = glob(["lib/x86_64-linux-gnu/libcurl.so"]),
+    srcs = select(
+        ":debian": glob(["lib64/libcurl.so"]),
+        ":fedora": glob(["lib/x86_64-linux-gnu/libcurl.so"])
+        }),
     copts = ["-lcrypto", "-lssl"],
     visibility = ["//visibility:public"],
 )

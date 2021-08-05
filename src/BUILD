@@ -13,6 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+#config_setting(
+#    name = "linux_distribution_family",
+#    constraint_values = [
+#        ":debian", # like Ubuntu
+#        ":fedora", # like RHEL/CentOS
+#    ],
+#)
+
+constraint_setting(name = "linux_distribution_family")
+constraint_value(constraint_setting = "linux_distribution_family", name = "fedora") # like RHEL/CentOS
+constraint_value(constraint_setting = "linux_distribution_family", name = "debian") # like Ubuntu
 
 cc_library(
     name = "ovms_lib",
