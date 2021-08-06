@@ -23,6 +23,7 @@ ARG PROJECT_NAME="OpenVINO Model Server 2021.4"
 LABEL description=${PROJECT_NAME}
 ARG ovms_metadata_file
 ARG INSTALL_DIR=/opt/intel/openvino
+ARG INSTALL_DIR=/opt/intel/openvino
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
@@ -89,7 +90,7 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
-RUN wget https://sourceforge.net/projects/boost/files/boost/1.69.0/boost_1_69_0.tar.gz/download && \
+RUN wget https://sourceforge.net/projects/boost/files/boost/1.69.0/boost_1_69_0.tar.gz && \
 tar xvf boost_1_69_0.tar.gz && cd boost_1_69_0 && ./bootstrap.sh && \
 ./b2 cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
 --with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
