@@ -46,12 +46,13 @@ def test_make_ndarray_valid_3_dims_shape():
     assert array.tolist() == [[[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]]
     assert array.dtype == np.float32
 
+dtype_4_bytes = 'S4'
 def test_make_ndarray_valid_string():
     hex_string = "11111111"
     tensor_proto = TensorProto(tensor_shape=shape, dtype = DataType.DT_STRING, string_val = [bytes.fromhex(hex_string)])
     array = make_ndarray(tensor_proto)
     assert array.tolist() == [b'\x11\x11\x11\x11', b'\x11\x11\x11\x11', b'\x11\x11\x11\x11']
-    assert array.dtype == 'S4'
+    assert array.dtype == dtype_4_bytes
 
 def test_make_ndarray_valid_no_content():
     tensor_proto = TensorProto(tensor_shape=shape, dtype = DataType.DT_INT8)
@@ -59,17 +60,18 @@ def test_make_ndarray_valid_no_content():
     assert array.tolist() == [0, 0, 0]
     assert array.dtype == np.int8
 
+dtype_1_byte = 'S1'
 def test_make_ndarray_valid_no_content_string():
     tensor_proto = TensorProto(tensor_shape=shape, dtype = DataType.DT_STRING)
     array = make_ndarray(tensor_proto)
     assert array.tolist() == [b'', b'', b'']
-    assert array.dtype == 'S1'
+    assert array.dtype == dtype_1_byte
 
 def test_make_ndarray_valid_no_content_string_with_other_type_content():
     tensor_proto = TensorProto(tensor_shape=shape, dtype = DataType.DT_STRING)
     array = make_ndarray(tensor_proto)
     assert array.tolist() == [b'', b'', b'']
-    assert array.dtype == 'S1'
+    assert array.dtype == dtype_1_byte
 
 def test_make_ndarray_invalid_type():
     tensor_proto = TensorProto(tensor_shape=shape)

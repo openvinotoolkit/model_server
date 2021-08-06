@@ -78,6 +78,9 @@ def _get_dense_dimensions(values):
     else:
         return [len(values)] + _get_dense_dimensions(values[0])
 
+def _is_bytes_shape_valid(inferred_shape, tensor_values):
+    return (len(inferred_shape) > 1 or (len(tensor_values.shape) > 1 and inferred_shape == []))
+
 def make_tensor_proto(values, dtype=None, shape=None):
     '''
     Create TensorProto object from values.
@@ -147,23 +150,20 @@ def make_tensor_proto(values, dtype=None, shape=None):
                 dtype = tensor_type.TensorDtype
             else:
                 raise TypeError(f"provided values type is not valid")
-        # binary input
-        elif dtype == DT_STRING:
-            tensor_values = _cast_ndarray_to_dtype(tensor_values, np.bytes_)
         else:
             np_dtype = TENSOR_TO_NP_MAP.get(dtype)
             if np_dtype is None:
                 raise TypeError(f"{dtype} is not valid dtype value")
             
             # values are binary, but dtype was not DT_STRING
-            if tensor_values.dtype.type == np.bytes_:
+            if tensor_values.dtype.type == np.bytes_ and dtype != DT_STRING:
                 tensor_values = _cast_bytes_to_dtype(tensor_values.tobytes(), dtype=np_dtype)
             else:
                 tensor_values = _cast_ndarray_to_dtype(tensor_values, np_dtype)
     else:
         raise TypeError(f"values type should be (list, np.ndarray, scalar), but is {type(tensor_values).__name__}")
 
-    if dtype == DT_STRING and (len(inferred_shape) > 1 or (len(tensor_values.shape) > 1 and inferred_shape == [])): #do funkcji
+    if dtype == DT_STRING and _is_bytes_shape_valid(inferred_shape, tensor_values):
         raise ValueError(f"bytes values with dtype DT_STRING must be in shape [N]")
     elif inferred_shape == []:
         inferred_shape = list(tensor_values.shape)
