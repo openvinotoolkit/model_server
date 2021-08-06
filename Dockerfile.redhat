@@ -25,9 +25,7 @@ LABEL description=${PROJECT_NAME}
 
 ARG ov_source_branch=releases/2021/2
 ARG ovms_metadata_file
-ARG ov_use_binary=1
-ARG DLDT_PACKAGE_URL
-ARG OPENVINO_NAME=${DLDT_PACKAGE_URL}
+
 ARG INSTALL_DIR=/opt/intel/openvino
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
@@ -84,29 +82,6 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     cd / && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
-################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
-WORKDIR /
-# OV toolkit package
-RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
-    wget $DLDT_PACKAGE_URL && \
-    mkdir /opt/intel && \
-    tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
-    ln -s /opt/intel/l_openvino_toolkit_runtime* /opt/intel/openvino
-
-
-# Build OpenVINO Model Server
-WORKDIR /ovms
-COPY .bazelrc WORKSPACE /ovms/
-# since bazel does not have easy way to pass if down the dependencies to have select the sources
-# for libcurl & ssl we hack it this way
-RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
-COPY external /ovms/external/
-COPY third_party /ovms/third_party/
-
-RUN alternatives --set python /usr/bin/python3
-RUN TF_SYSTEM_LIBS="curl" bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
-RUN TF_SYSTEM_LIBS="curl" bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
-
 ####### Azure SDK needs new boost:
 WORKDIR /boost
 RUN wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz && \
@@ -118,6 +93,7 @@ RUN wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.
 		install
 
 ####### Azure SDK
+COPY third_party /ovms/third_party/
 
 WORKDIR /azure
 RUN git clone https://github.com/Microsoft/cpprestsdk.git && cd cpprestsdk && git checkout tags/v2.10.16 -b v2.10.16 && git submodule update --init
@@ -145,12 +121,39 @@ RUN mv .deps/install/lib64 .deps/install/lib
 
 ####### End of AWS S3 SDK
 
+ARG ov_use_binary=1
+ARG DLDT_PACKAGE_URL
+ARG OPENVINO_NAME=${DLDT_PACKAGE_URL}
+
+################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
+WORKDIR /
+# OV toolkit package
+RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
+    wget $DLDT_PACKAGE_URL && \
+    mkdir /opt/intel && \
+    tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
+    ln -s /opt/intel/l_openvino_toolkit_runtime* /opt/intel/openvino
+
+
+# Build OpenVINO Model Server
+WORKDIR /ovms
+COPY .bazelrc WORKSPACE /ovms/
+# since bazel does not have easy way to pass if down the dependencies to have select the sources
+# for libcurl & ssl we hack it this way
+RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
+COPY external /ovms/external/
+COPY third_party /ovms/third_party/
+
+RUN alternatives --set python /usr/bin/python3
+RUN TF_SYSTEM_LIBS="curl" bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+RUN TF_SYSTEM_LIBS="curl" bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
+
+
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
 WORKDIR /ovms
 
 COPY src/ /ovms/src/
-COPY release_files/ /ovms/release_files/
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
@@ -168,3 +171,5 @@ RUN TF_SYSTEM_LIBS="curl" bazel test ${debug_bazel_flags} --jobs $JOBS --test_su
 COPY ${ovms_metadata_file} metadata.json
 
 RUN ./bazel-bin/src/./ovms
+COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
+COPY release_files/LICENSE /ovms/release_files/LICENSE
