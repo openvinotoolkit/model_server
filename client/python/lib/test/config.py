@@ -78,11 +78,11 @@ ADDRESS_INVALID = [
     ("intel.-com", ValueError, "address is not valid"),
     ("192.168.abc.4", ValueError, "address is not valid"),
     ("900.80.70.11", ValueError, "address is not valid"),
-    ("....", ValueError, "adress is not valid"),
-    ("1000.1000.1000.1000", ValueError, "adress is not valid"),
-    ("19.-117.63.126", ValueError, "adress is not valid"),
-    ("0.0.0.0.0", ValueError, "adress is not valid"),
-    ("0.0.0.0.", ValueError, "adress is not valid"),
+    ("....", ValueError, "address is not valid"),
+    ("1000.1000.1000.1000", ValueError, "address is not valid"),
+    ("19.-117.63.126", ValueError, "address is not valid"),
+    ("0.0.0.0.0", ValueError, "address is not valid"),
+    ("0.0.0.0.", ValueError, "address is not valid"),
 ]
 
 # (port)
@@ -143,14 +143,14 @@ TLS_CONFIG_INVALID = [
         "client_cert_path" : PATH_VALID, 
         "server_cert_path" : PATH_VALID
     }, 
-    ValueError, "non_client_key_path is not valid tls_config key",
+    ValueError, "none or both client_key_path and client_cert_path are required in tls_config",
     CallCount.ZERO, [True, True, True]),
     ({
         "client_key_path" : PATH_VALID, 
         "non_client_cert_path" : PATH_VALID, 
         "server_cert_path" : PATH_VALID
     }, 
-    ValueError, "non_client_cert_path is not valid tls_config key",
+    ValueError, "none or both client_key_path and client_cert_path are required in tls_config",
     CallCount.ZERO, [True, True, True]),
     ({
         "client_key_path" : PATH_VALID, 
@@ -230,21 +230,21 @@ TLS_CONFIG_INVALID = [
         "client_cert_path" : PATH_VALID, 
         "server_cert_path" : PATH_VALID
     }, 
-    ValueError, f'invalid is not valid path to file',
+    ValueError, f'invalid_path is not valid path to file',
     CallCount.ONE, [False, True, True]),
     ({
         "client_key_path" : PATH_VALID, 
         "client_cert_path" : PATH_INVALID, 
         "server_cert_path" : PATH_VALID
     }, 
-    ValueError, f'/very/invalid is not valid path to file',
+    ValueError, f'invalid_path is not valid path to file',
     CallCount.TWO, [True, False, True]),
     ({
         "client_key_path" : PATH_VALID, 
         "client_cert_path" : PATH_VALID, 
         "server_cert_path" : PATH_INVALID
     }, 
-    ValueError, f'third_invalid_path is not valid path to file',
+    ValueError, f'invalid_path is not valid path to file',
     CallCount.THREE, [True, True, False]),
 
 ]

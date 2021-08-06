@@ -31,7 +31,8 @@ def test_check_model_spec_valid(name, version):
 def test_check_model_spec_invalid(name, version, expected_exception, expected_message):
     with pytest.raises(expected_exception) as e_info:
         _check_model_spec(name, version)
-        assert str(e_info.value) == expected_message
+    
+    assert str(e_info.value) == expected_message
 
 @pytest.mark.parametrize("name, version", MODEL_SPEC_VALID)
 def test_make_status_request_valid(mocker, name, version):
@@ -49,7 +50,8 @@ def test_make_status_request_invalid(mocker, name, version, expected_exception, 
     mock_method = mocker.patch('ovmsclient.tfs_compat.grpc.requests._check_model_spec', side_effect=expected_exception(expected_message))
     with pytest.raises(expected_exception) as e_info:
         model_status_request = make_status_request(name, version)
-        assert str(e_info.value) == expected_message
+    
+    assert str(e_info.value) == expected_message
     mock_method.assert_called_once()
 
 @pytest.mark.parametrize("name, version", MODEL_SPEC_VALID)
@@ -70,5 +72,6 @@ def test_make_metadata_request_invalid(mocker, name, version, expected_exception
     mock_method = mocker.patch('ovmsclient.tfs_compat.grpc.requests._check_model_spec', side_effect=expected_exception(expected_message))
     with pytest.raises(expected_exception) as e_info:
         model_metadata_request = make_metadata_request(name, version)
-        assert str(e_info.value) == expected_message
+    
+    assert str(e_info.value) == expected_message
     mock_method.assert_called_once()
