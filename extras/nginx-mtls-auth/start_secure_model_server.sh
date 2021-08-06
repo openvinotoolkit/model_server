@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-MTLS_IMAGE=${1:-"openvino/model_server:nginx-mtls"}
+MTLS_IMAGE=${1:-"openvino/model_server:latest-nginx-mtls"}
 
 echo "Loading configuration file from test_config.sh..."
 source test_config.sh
@@ -51,7 +51,7 @@ docker run --rm -ti \
         -p $REST_PORT:$REST_PORT \
         -p $GRPC_PORT:$GRPC_PORT \
         $MTLS_IMAGE \
-        --model_path /models/face-detection --model_name face-detection --grpc_bind_address 8.8.8.8 --port $GRPC_PORT --rest_bind_address 1.1.1.1 --rest_port $REST_PORT --log_level DEBUG --shape auto
+        --model_path /models/face-detection --model_name face-detection --grpc_bind_address 8.8.8.8 --port $GRPC_PORT --rest_bind_address 1.1.1.1 --rest_port $REST_PORT --log_level DEBUG --file_system_poll_wait_seconds 0 --shape auto
 #                                                                                           ^^^^^^^                                       ^^^^^^^
 #                                                                                           [___________________________________________________}
 #                                                                                             those will be replaced by 127.0.0.1 by supervisor.
