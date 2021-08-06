@@ -71,6 +71,8 @@ DIST_OS_TAG ?= $(BASE_OS_TAG)
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   BASE_IMAGE=ubuntu:$(BASE_OS_TAG_UBUNTU)
+  # Temporarily build from APT
+  DLDT_PACKAGE_URL=""
 endif
 ifeq ($(BASE_OS),centos)
   BASE_OS_TAG=$(BASE_OS_TAG_CENTOS)

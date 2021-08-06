@@ -43,8 +43,9 @@ WORKDIR /
 RUN	set -e ; \
 	set -x ; \
         apt update -y ; \
+        apt install -y curl; \
 	if [ "$GPU" == "1" ] ; then \
-                apt install -y libnuma1 ocl-icd-libopencl1 curl; \
+                apt install -y libnuma1 ocl-icd-libopencl1; \
 	        case $INSTALL_DRIVER_VERSION in \
                 "19.41.14441") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
