@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+from numpy import array, float64, int32, int8
 from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
 from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
@@ -820,4 +821,40 @@ PREDICT_REQUEST_VALID = [
     {
 
     }, 'model_name', 0)
+]
+PREDICT_RESPONSE_VALID = [
+    ({
+        "1463" : TensorProto(dtype=DataType.DT_INT8,
+        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=3)]),
+        tensor_content=array([1,2,3], dtype=int8).tobytes()),
+    }, "model_name", 0,
+    {
+        "1463" : array([1,2,3], dtype=int8)
+    }),
+
+    ({
+        "1463" : TensorProto(dtype=DataType.DT_INT32,
+        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)]),
+        tensor_content=array([1,2,3,4,5,6], dtype=int32).tobytes()),
+        "2" : TensorProto(dtype=DataType.DT_DOUBLE,
+        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=1)]),
+        double_val=array([12.0], dtype=float64)),
+    }, "model_name", 0,
+    {
+        "1463" : array([[1,2,3], [4,5,6]], dtype=int32),
+        "2" : array([12.0], dtype=float64)
+    }),
+
+    ({
+        "1463" : TensorProto(dtype=DataType.DT_STRING,
+        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=2)]),
+        string_val=[bytes([1,2,3]), bytes([4,5])]),
+        "2" : TensorProto(dtype=DataType.DT_STRING,
+        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=1)]),
+        string_val=[bytes([1,2,3])]),
+    }, "model_name", 0,
+    {
+        "1463" : [bytes([1,2,3]), bytes([4,5])],
+        "2" : [bytes([1,2,3])]
+    }),
 ]
