@@ -52,7 +52,8 @@ RUN /bin/mkdir -p '/usr/local/lib' && \
     /bin/mkdir -p '/usr/local/include/libusb-1.0' && \
     /usr/bin/install -c -m 644 libusb.h '/usr/local/include/libusb-1.0' && \
     /bin/mkdir -p '/usr/local/lib/pkgconfig' && \
-    cd /opt/libusb-1.0.22/ && /usr/bin/install -c -m 644 libusb-1.0.pc '/usr/local/lib/pkgconfig'
+    cd /opt/libusb-1.0.22/ && /usr/bin/install -c -m 644 libusb-1.0.pc '/usr/local/lib/pkgconfig' && \
+    rm -Rf /usr/local/lib/*a
 
 WORKDIR /
 COPY ovms.tar.xz /
@@ -111,7 +112,7 @@ RUN	set -e ; \
         groupadd --gid 5000 ovms ; \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
-COPY --from=base_build /usr/local/lib/libusb-1.0.so* /ovms/lib/
+COPY --from=base_build /usr/local/lib/ /ovms/lib/
 RUN apt-get update && apt-get install -y --no-install-recommends libxml2 && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 # for HDDL
 RUN apt-get update && \
