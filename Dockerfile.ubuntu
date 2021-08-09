@@ -19,9 +19,6 @@ FROM $BASE_IMAGE as base_build
 
 LABEL version="1.0.0"
 
-ARG PROJECT_NAME="OpenVINO Model Server 2021.4"
-LABEL description=${PROJECT_NAME}
-ARG ovms_metadata_file
 ARG INSTALL_DIR=/opt/intel/openvino
 ARG INSTALL_DIR=/opt/intel/openvino
 ARG TEMP_DIR=/tmp/openvino_installer
@@ -187,6 +184,9 @@ WORKDIR /ovms
 
 COPY src/ /ovms/src/
 
+ARG PROJECT_NAME="OpenVINO Model Server 2021.4"
+LABEL description=${PROJECT_NAME}
+
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
 RUN if [ "$ov_use_binary" = "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -type d | grep openvino | cut -d'_' -f2`#g" /ovms/src/version.hpp
@@ -199,6 +199,7 @@ RUN cd /ovms/src/test/cpu_extension/ && make
 
 RUN TF_SYSTEM_LIBS="curl" bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
 
+ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
 
 RUN ./bazel-bin/src/./ovms --version
