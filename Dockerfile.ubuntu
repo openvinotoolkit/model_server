@@ -120,11 +120,14 @@ RUN cd azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release && CASABLA
 ####### End of Azure SDK
 
 # Build AWS S3 SDK
-RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
+RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.9.76 --single-branch --depth 1 /awssdk
+WORKDIR /awssdk
+RUN git submodule update --init --recursive
 WORKDIR /awssdk/build
 RUN cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
 RUN make --jobs=$JOBS
 #RUN mv .deps/install/lib64 .deps/install/lib
+RUN make install
 
 ####### End of AWS S3 SDK
 
