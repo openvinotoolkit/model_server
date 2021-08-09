@@ -775,17 +775,20 @@ PREDICT_REQUEST_VALID = [
         "input1" : {
             "field" : "tensor_content",
             "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=3)]),
-            "dtype" : DataType.DT_INT64
+            "dtype" : DataType.DT_INT64,
+            'value' : array([1,2,3]).tobytes()
         },
         "input2" : {
             "field" : "tensor_content",
             "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=3)]),
-            "dtype" : DataType.DT_DOUBLE
+            "dtype" : DataType.DT_DOUBLE,
+            'value' : array([1.0,2.0,3.0]).tobytes()
         },
         "input3" : {
             "field" : "tensor_content",
             "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=2)]),
-            "dtype" : DataType.DT_INT32
+            "dtype" : DataType.DT_INT32,
+            'value' : array([[int32(3), int32(1)], [int32(4), int32(16)]]).tobytes()
         },
     }, 'model_name', 0),
     
@@ -800,12 +803,14 @@ PREDICT_REQUEST_VALID = [
         "input2" : {
             "field" : "double_val",
             "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=1)]),
-            "dtype" : DataType.DT_DOUBLE
+            "dtype" : DataType.DT_DOUBLE,
+            'value' : array([5.0])
         },
         "input3" : {
             "field" : "string_val",
             "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=1)]),
-            "dtype" : DataType.DT_STRING
+            "dtype" : DataType.DT_STRING,
+            'value' : [bytes([1,2,3])]
         }
     }, 'model_name', 0),
 

@@ -82,29 +82,25 @@ def test_make_metadata_request_invalid(mocker, name, version, expected_exception
 @pytest.mark.parametrize("inputs, expected_proto, name, version", PREDICT_REQUEST_VALID)
 def test_make_predict_request_valid(inputs, expected_proto, name, version):
     model_predict_request = make_predict_request(inputs ,name, version)
+
+    raw_predict_request = model_predict_request.raw_request
     
     assert isinstance(model_predict_request, GrpcPredictRequest)
     assert model_predict_request.model_name == name
     assert model_predict_request.model_version == version
     assert model_predict_request.inputs == inputs
-    assert isinstance(model_predict_request.raw_request, PredictRequest)
-    assert model_predict_request.raw_request.model_spec.name == name
-    assert model_predict_request.raw_request.model_spec.version.value == version
-    assert len(inputs.keys()) == len(list(model_predict_request.raw_request.inputs.keys()))
+    assert isinstance(raw_predict_request, PredictRequest)
+    assert raw_predict_request.model_spec.name == name
+    assert raw_predict_request.model_spec.version.value == version
+    assert len(inputs.keys()) == len(list(raw_predict_request.inputs.keys()))
     for key, value in inputs.items():
-        assert isinstance(model_predict_request.raw_request.inputs[key], TensorProto)
+        assert isinstance(raw_predict_request.inputs[key], TensorProto)
         if isinstance(value, TensorProto):
-            assert value == model_predict_request.raw_request.inputs[key]
+            assert value == raw_predict_request.inputs[key]
         else:
-            np_values = array(value)
-            if expected_proto[key]["field"] == "tensor_content":
-                assert model_predict_request.raw_request.inputs[key].__getattribute__(expected_proto[key]['field']) == np_values.tobytes()
-            elif expected_proto[key]["field"] == "string_val":
-                assert model_predict_request.raw_request.inputs[key].__getattribute__(expected_proto[key]['field']) == [value]
-            else:
-                assert model_predict_request.raw_request.inputs[key].__getattribute__(expected_proto[key]['field']) == np_values
-            assert model_predict_request.raw_request.inputs[key].tensor_shape == expected_proto[key]['shape']
-            assert model_predict_request.raw_request.inputs[key].dtype == expected_proto[key]['dtype']
+            assert raw_predict_request.inputs[key].__getattribute__(expected_proto[key]['field']) == expected_proto[key]['value']
+            assert raw_predict_request.inputs[key].tensor_shape == expected_proto[key]['shape']
+            assert raw_predict_request.inputs[key].dtype == expected_proto[key]['dtype']
 
 @pytest.mark.parametrize("name, version, expected_exception, expected_message", MODEL_SPEC_INVALID)
 def test_make_predict_request_invalid_model_spec(mocker, name, version, expected_exception, expected_message):
@@ -126,4 +122,3 @@ def test_make_predict_request_invalid_inputs(mocker, inputs, name, version, expe
     
     assert str(e_info.value) == expected_message
     mock_method.assert_called_once()
-    
