@@ -787,6 +787,7 @@ PREDICT_REQUEST_VALID = [
             "dtype" : DataType.DT_INT32
         },
     }, 'model_name', 0),
+    
     ({
         "input1" : make_tensor_proto([1,2,3,4,5,6], shape=[2,3], dtype=DataType.DT_INT8),
         "input2" : 5.0,
@@ -803,5 +804,12 @@ PREDICT_REQUEST_VALID = [
             "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=1)]),
             "dtype" : DataType.DT_STRING
         }
+    }, 'model_name', 0),
+
+    ({
+
+    },
+    {
+
     }, 'model_name', 0)
 ]
