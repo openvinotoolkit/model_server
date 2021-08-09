@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
 from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
 from tensorflow.core.framework.types_pb2 import DataType
@@ -789,7 +790,9 @@ PREDICT_REQUEST_VALID = [
     }, 'model_name', 0),
     
     ({
-        "input1" : make_tensor_proto([1,2,3,4,5,6], shape=[2,3], dtype=DataType.DT_INT8),
+        "input1" : TensorProto(dtype=DataType.DT_INT8,
+        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)]),
+        tensor_content=array([1,2,3,4,5,6]).tobytes()),
         "input2" : 5.0,
         "input3" : bytes([1,2,3])
     },
