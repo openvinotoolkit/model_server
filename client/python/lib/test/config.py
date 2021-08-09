@@ -899,16 +899,12 @@ MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE = [
 # ({"model_name" : model_name, "model_version" : model_version, "model_raw_name": raw_request_model_name, "model_raw_version" : raw_request_model_version},
 # expected_message, grpc_error_status_code, grpc_error_details)
 GET_MODEL_STATUS_INVALID_GRPC = [
-    ({"model_name" : "name", "model_version" : 0, "model_raw_name" : "name", "model_raw_version" : 0},
-    f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - failed to connect to all adresses",
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - failed to connect to all adresses",
     StatusCode.UNAVAILABLE, "failed to connect to all adresses"),
-    ({"model_name" : "name", "model_version" : 0, "model_raw_name" : "name", "model_raw_version" : 0},
-    f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - Empty update",
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - Empty update",
     StatusCode.UNAVAILABLE, "Empty update"),
-    ({"model_name" : "name", "model_version" : 0, "model_raw_name" : "name", "model_raw_version" : 0},
-    f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested version is not found",
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested version is not found",
     StatusCode.NOT_FOUND, "Model with requested version is not found"),
-    ({"model_name" : "name", "model_version" : 0, "model_raw_name" : "name", "model_raw_version" : 0},
-    f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested name is not found",
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested name is not found",
     StatusCode.NOT_FOUND, "Model with requested name is not found"),
 ]

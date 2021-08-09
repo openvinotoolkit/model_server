@@ -206,8 +206,7 @@ def test_make_grpc_client_invalid_certs(mocker, config, expected_exception, expe
 
 @pytest.mark.parametrize("request_parameters_dict", MODEL_STATUS_REQUEST_VALID)
 def test_get_model_status_valid(mocker, valid_grpc_serving_client_min, valid_model_status_response, request_parameters_dict):
-    model_status_request = create_model_status_request(request_parameters_dict['model_name'],
-        request_parameters_dict['model_version'], request_parameters_dict['model_raw_name'], request_parameters_dict['model_raw_version'])
+    model_status_request = mocker.Mock()
     
     mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_model_status_request')
     valid_grpc_serving_client_min.model_service_stub.GetModelStatus = mocker.Mock(return_value=valid_model_status_response.raw_response)
@@ -219,10 +218,9 @@ def test_get_model_status_valid(mocker, valid_grpc_serving_client_min, valid_mod
     assert type(response) == type(valid_model_status_response)
     assert response.raw_response == valid_model_status_response.raw_response
 
-@pytest.mark.parametrize("request_parameters_dict, expected_message, grpc_error_status_code, grpc_error_details", GET_MODEL_STATUS_INVALID_GRPC)
-def test_get_model_status_invalid_grpc(mocker, valid_grpc_serving_client_min, request_parameters_dict, expected_message, grpc_error_status_code, grpc_error_details):
-    model_status_request = create_model_status_request(request_parameters_dict['model_name'],
-        request_parameters_dict['model_version'], request_parameters_dict['model_raw_name'], request_parameters_dict['model_raw_version'])
+@pytest.mark.parametrize("expected_message, grpc_error_status_code, grpc_error_details", GET_MODEL_STATUS_INVALID_GRPC)
+def test_get_model_status_invalid_grpc(mocker, valid_grpc_serving_client_min, expected_message, grpc_error_status_code, grpc_error_details):
+    model_status_request = mocker.Mock()
 
     mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_model_status_request')
     valid_grpc_serving_client_min.model_service_stub.GetModelStatus = mocker.Mock(side_effect=create_grpc_error(grpc_error_status_code, grpc_error_details))
