@@ -1230,7 +1230,7 @@ TEST_F(StatefulModelInstanceTest, PreprocessingIntermediateRequest) {
         ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
 
         // Reset inferRequest state to default for new iteration
-        DummyStatefulModel::resetVariableState(inferRequest);
+        realModel.resetVariableState(inferRequest);
 
         // Check if InferRequest has been initialized properly
         const ovms::model_memory_state_t& irMemoryState = inferRequest.QueryState();
@@ -1305,7 +1305,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
 
         // Reset inferRequest state to default for new iteration
-        DummyStatefulModel::resetVariableState(inferRequest);
+        realModel.resetVariableState(inferRequest);
         // Set newState as current state in the inferRequest
         realModel.setVariableState(inferRequest, newState);
 
