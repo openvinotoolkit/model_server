@@ -58,14 +58,14 @@ def get_ports_for_fixture():
     while not port_found:
         port_suffix = get_ports_suffix()
 
-        grpc_port = ports_prefixes["grpc_ports_prefix"] + port_suffix
-        rest_port = ports_prefixes["rest_ports_prefix"] + port_suffix
+        grpc_port = int(ports_prefixes["grpc_ports_prefix"] + port_suffix)
+        rest_port = int(ports_prefixes["rest_ports_prefix"] + port_suffix)
 
         assert 0 < grpc_port <= 65535, f"Port is out of range grpc_port={grpc_port}"
         assert 0 < rest_port <= 65535, f"Port is out of range rest_port={rest_port}"
 
-        location_grpc = ("", int(grpc_port))
-        location_rest = ("", int(rest_port))
+        location_grpc = ("", grpc_port)
+        location_rest = ("", rest_port)
         try:
             sock_grpc = socket.socket()
             sock_grpc.bind(location_grpc)
