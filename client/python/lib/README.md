@@ -10,6 +10,7 @@ The client library requires Python in version >= 3.6. Validated and recommended 
 ### Linux
 For one-step building and installation simply run:
 `make install` 
+
 This command will:
  - create virtual environment `.venv` in the `lib` directory,
  - build Tensorflow Serving API
