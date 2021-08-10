@@ -42,52 +42,6 @@ using namespace InferenceEngine;
 const std::string SEQUENCE_ID_INPUT = "sequence_id";
 const std::string SEQUENCE_CONTROL_INPUT = "sequence_control_input";
 
-/*
-class MockIVariableState : public IVariableState {
-public:
-    MOCK_METHOD(StatusCode, GetName, (char* name, size_t len, ResponseDesc* resp), (const, noexcept, override));
-    MOCK_METHOD(StatusCode, Reset, (ResponseDesc * resp), (noexcept, override));
-    MOCK_METHOD(StatusCode, SetState, (Blob::Ptr newState, ResponseDesc* resp), (noexcept, override));
-    MOCK_METHOD(StatusCode, GetState, (Blob::CPtr & state, ResponseDesc* resp), (const, noexcept, override));
-};
-
-class MockIVariableStateWithData : public MockIVariableState {
-public:
-    std::string stateName;
-    Blob::Ptr currentBlob;
-    const Blob::Ptr defaultBlob;
-
-    MockIVariableStateWithData(std::string name, Blob::Ptr currentBlob) :
-        stateName(name),
-        currentBlob(currentBlob) {}
-
-    MockIVariableStateWithData(std::string name, Blob::Ptr currentBlob, Blob::Ptr defaultBlob) :
-        stateName(name),
-        currentBlob(currentBlob),
-        defaultBlob(defaultBlob) {}
-
-    StatusCode GetName(char* name, size_t len, ResponseDesc* resp) const noexcept override {
-        snprintf(name, sizeof(stateName), "%s", stateName.c_str());
-        return StatusCode::OK;
-    }
-
-    StatusCode GetState(Blob::CPtr& state, ResponseDesc* resp) const noexcept override {
-        state = currentBlob;
-        return StatusCode::OK;
-    }
-
-    StatusCode Reset(ResponseDesc* resp) noexcept override {
-        currentBlob = defaultBlob;
-        return StatusCode::OK;
-    }
-
-    StatusCode SetState(Blob::Ptr newState, ResponseDesc* resp) noexcept override {
-        currentBlob = newState;
-        return StatusCode::OK;
-    }
-};
-*/
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 static void setRequestSequenceId(tensorflow::serving::PredictRequest* request, uint64_t sequenceId) {
