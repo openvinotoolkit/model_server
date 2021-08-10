@@ -32,7 +32,8 @@ pipeline {
               """
               echo shortCommit
               build job: "ovmsc/util-common/ovmsc-test-on-commit", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]]
-          }    
+              echo currentBuild.getBuildCauses().toString()
+          }
         }
     }
 }
