@@ -89,17 +89,17 @@ def make_management_client(config):
                         "server_cert_path": <Path to server certificate file>
                     }
                 }
-                
+
             With following types accepted:
 
             ==================  ==========
-            address             string  
+            address             string
             port                integer
             client_key_path     string
             client_cert_path    string
             server_cert_path    string
             ==================  ==========
-                
+
             The minimal config must contain address and port.
 
     Returns:
@@ -126,7 +126,7 @@ def make_management_client(config):
         ...     "tls_config": {
         ...         "client_key_path": "/opt/tls/client.key",
         ...         "client_cert_path": "/opt/tls/client.crt",
-        ...         "server_cert_path": "/opt/tls/server.crt"    
+        ...         "server_cert_path": "/opt/tls/server.crt"
         ...      }
         ... }
         >>> client = make_management_client(config)

@@ -16,6 +16,7 @@
 
 from abc import ABC, abstractmethod
 
+
 class ServingClient(ABC):
 
     @abstractmethod

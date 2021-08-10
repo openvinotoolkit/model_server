@@ -29,6 +29,7 @@ from ovmsclient.tfs_compat.base.serving_client import ServingClient
 from ovmsclient.tfs_compat.grpc.requests import GrpcModelStatusRequest, GrpcModelMetadataRequest, GrpcPredictRequest
 from ovmsclient.tfs_compat.grpc.responses import GrpcModelStatusResponse, GrpcModelMetadataResponse, GrpcPredictResponse
 
+
 class GrpcClient(ServingClient):
 
     def __init__(self, channel, prediction_service_stub, model_service_stub):
@@ -146,7 +147,7 @@ class GrpcClient(ServingClient):
 
     @classmethod
     def _build(cls, config):
-        
+
         _check_config(config)
 
         grpc_address = f"{config['address']}:{config['port']}"
@@ -157,9 +158,9 @@ class GrpcClient(ServingClient):
                 config['tls_config'].get('client_cert_path'),
                 config['tls_config'].get('client_key_path')
             )
-            
+
             creds = ssl_channel_credentials(root_certificates=server_cert,
-            private_key=client_key, certificate_chain=client_cert)
+                                            private_key=client_key, certificate_chain=client_cert)
 
             channel = secure_channel(grpc_address, creds)
         else:
@@ -219,7 +220,7 @@ def _check_predict_request(request):
         raise ValueError(f'request is not valid GrpcPredictRequest')
 
 def _prepare_certs(server_cert_path, client_cert_path, client_key_path):
-    
+
     client_cert, client_key = None, None
 
     server_cert = _open_certificate(server_cert_path)
@@ -232,18 +233,21 @@ def _prepare_certs(server_cert_path, client_cert_path, client_key_path):
 
     return server_cert, client_cert, client_key
 
+
 def _open_certificate(certificate_path):
     with open(certificate_path, 'rb') as f:
         certificate = f.read()
         return certificate
+
 
 def _open_private_key(key_path):
     with open(key_path, 'rb') as f:
         key = f.read()
         return key
 
+
 def _check_config(config):
-    
+
     if 'address' not in config or 'port' not in config:
         raise ValueError('The minimal config must contain address and port')
 
@@ -253,39 +257,43 @@ def _check_config(config):
 
     if 'tls_config' in config:
         _check_tls_config(config['tls_config'])
-    
+
+
 def _check_address(address):
 
     if not isinstance(address, str):
         raise TypeError(f'address type should be string, but is {type(address).__name__}')
 
     if address != "localhost" and not ipv4(address) and not domain(address):
-        raise ValueError(f'address is not valid')
+        raise ValueError('address is not valid')
+
 
 def _check_port(port):
-    
+
     if not isinstance(port, int):
         raise TypeError(f'port type should be int, but is type {type(port).__name__}')
 
     if port.bit_length() > 16 or port < 0:
         raise ValueError(f'port should be in range <0, {2**16-1}>')
 
+
 def _check_tls_config(tls_config):
 
     if 'server_cert_path' not in tls_config:
-        raise ValueError(f'server_cert_path is not defined in tls_config')
+        raise ValueError('server_cert_path is not defined in tls_config')
 
     if ('client_key_path' in tls_config) != ('client_cert_path' in tls_config):
-        raise ValueError(f'none or both client_key_path and client_cert_path are required in tls_config')
-    
+        raise ValueError('none or both client_key_path and client_cert_path are required in tls_config')
+
     valid_keys = ['server_cert_path', 'client_key_path', 'client_cert_path']
     for key in tls_config:
-        if not key in valid_keys:
+        if key not in valid_keys:
             raise ValueError(f'{key} is not valid tls_config key')
         if not isinstance(tls_config[key], str):
             raise TypeError(f'{key} type should be string but is type {type(tls_config[key]).__name__}')
         if not os.path.isfile(tls_config[key]):
             raise ValueError(f'{tls_config[key]} is not valid path to file')
+
 
 def make_grpc_client(config):
     '''
@@ -306,17 +314,17 @@ def make_grpc_client(config):
                         "server_cert_path": <Path to server certificate file>
                     }
                 }
-                
+
             With following types accepted:
 
             ==================  ==========
-            address             string  
+            address             string
             port                integer
             client_key_path     string
             client_cert_path    string
             server_cert_path    string
             ==================  ==========
-                
+
             The minimal config must contain address and port.
 
     Returns:
@@ -343,7 +351,7 @@ def make_grpc_client(config):
         ...     "tls_config": {
         ...         "client_key_path": "/opt/tls/client.key",
         ...         "client_cert_path": "/opt/tls/client.crt",
-        ...         "server_cert_path": "/opt/tls/server.crt"    
+        ...         "server_cert_path": "/opt/tls/server.crt"
         ...      }
         ... }
         >>> client = make_grpc_client(config)

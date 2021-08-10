@@ -71,12 +71,13 @@ def test_PredictResponse_to_dict_invalid(outputs_dict, model_name, model_version
     
     assert str(e_info.value) == expected_message
 
-@pytest.mark.parametrize("model_raw_status_response_dict" , MODEL_STATUS_RESPONSE_VALID)
+
+@pytest.mark.parametrize("model_raw_status_response_dict", MODEL_STATUS_RESPONSE_VALID)
 def test_ModelStatusResponse_to_dict_valid(model_raw_status_response_dict):
     model_raw_responses = []
     for version, status in model_raw_status_response_dict.items():
         model_raw_responses.append(create_model_status_response(version, status['error_code'], status['error_message'],
-         status['state']))
+                                   status['state']))
     raw_response = merge_model_status_responses(model_raw_responses)
 
     response = GrpcModelStatusResponse(raw_response)
@@ -91,13 +92,14 @@ def test_ModelStatusResponse_to_dict_valid(model_raw_status_response_dict):
         assert response_dict[version]['error_message'] == status['error_message']
         assert response_dict[version]['state'] == ModelVersionStatus.State.Name(status['state'])
 
-@pytest.mark.parametrize("model_raw_metadata_response_dict" , MODEL_METADATA_RESPONSE_VALID)
+
+@pytest.mark.parametrize("model_raw_metadata_response_dict", MODEL_METADATA_RESPONSE_VALID)
 def test_ModelMetadataResponse_to_dict_valid(model_raw_metadata_response_dict):
     raw_response = create_model_metadata_response(model_raw_metadata_response_dict)
 
     response = GrpcModelMetadataResponse(raw_response)
     response_dict = response.to_dict()
-    
+
     assert isinstance(response_dict, dict)
     assert len(response_dict) == 1
 
@@ -114,7 +116,6 @@ def test_ModelMetadataResponse_to_dict_valid(model_raw_metadata_response_dict):
         assert inputs[input]['shape'] == model_raw_metadata_response_dict['inputs'][input]['shape']
         assert inputs[input]['dtype'] == DataType.Name(model_raw_metadata_response_dict['inputs'][input]['dtype'])
 
-
     outputs = response_dict[version]['outputs']
     assert len(outputs) == len(model_raw_metadata_response_dict['outputs'])
     for output in outputs:
@@ -123,6 +124,7 @@ def test_ModelMetadataResponse_to_dict_valid(model_raw_metadata_response_dict):
         assert 'shape' in outputs[output] and 'dtype' in outputs[output]
         assert outputs[output]['shape'] == model_raw_metadata_response_dict['outputs'][output]['shape']
         assert outputs[output]['dtype'] == DataType.Name(model_raw_metadata_response_dict['outputs'][output]['dtype'])
+
 
 def create_model_metadata_response(model_raw_metadata_response_dict):
     raw_response = GetModelMetadataResponse()
@@ -134,7 +136,7 @@ def create_model_metadata_response(model_raw_metadata_response_dict):
     raw_response.model_spec.CopyFrom(model_spec)
 
     signature_def = SignatureDef()
-    
+
     inputs = model_raw_metadata_response_dict['inputs']
     for input_name, input_info in inputs.items():
         input_tensor_info = TensorInfo()
@@ -173,6 +175,7 @@ def create_model_metadata_response(model_raw_metadata_response_dict):
 
     return raw_response
 
+
 def create_model_status_response(model_version, error_code, error_message, model_state):
     status = StatusProto()
     status.error_code = error_code
@@ -184,6 +187,7 @@ def create_model_status_response(model_version, error_code, error_message, model
     model_version_status.status.CopyFrom(status)
 
     return model_version_status
+
 
 def merge_model_status_responses(responses):
     raw_response = GetModelStatusResponse()
