@@ -124,8 +124,7 @@ RUN apt-get update && \
         libboost-chrono1.71.0 \
         libboost-date-time1.71.0 \
         libboost-atomic1.71.0 \
-        libjson-c4 \
-        libxxf86vm-dev && \
+        libjson-c4 && \
     rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 COPY --from=base_build /ovms /ovms
