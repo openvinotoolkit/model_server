@@ -41,6 +41,7 @@ def test_ModelStatusResponse_to_dict_valid(model_raw_status_response_dict):
 
     response = GrpcModelStatusResponse(raw_response)
     response_dict = response.to_dict()
+
     assert isinstance(response_dict, dict)
     assert len(response_dict) == len(model_raw_status_response_dict)
     for version, status in model_raw_status_response_dict.items():
@@ -56,6 +57,7 @@ def test_ModelMetadataResponse_to_dict_valid(model_raw_metadata_response_dict):
 
     response = GrpcModelMetadataResponse(raw_response)
     response_dict = response.to_dict()
+    
     assert isinstance(response_dict, dict)
     assert len(response_dict) == 1
 

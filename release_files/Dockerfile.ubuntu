@@ -17,10 +17,45 @@
 ARG BASE_IMAGE=ubuntu:20.04
 FROM $BASE_IMAGE as base_build
 
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl tzdata ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# for VPU
+ARG BUILD_DEPENDENCIES="autoconf \
+                        automake \
+                        build-essential \
+                        libtool \
+                        unzip"
+
+# hadolint ignore=DL3008
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ${BUILD_DEPENDENCIES} && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt
+RUN curl -L https://github.com/libusb/libusb/archive/v1.0.22.zip --output v1.0.22.zip && \
+    unzip v1.0.22.zip && rm -rf v1.0.22.zip
+
+WORKDIR /opt/libusb-1.0.22
+RUN ./bootstrap.sh && \
+    ./configure --disable-udev --enable-shared && \
+    make -j4
+
+WORKDIR /opt/libusb-1.0.22/libusb
+RUN /bin/mkdir -p '/usr/local/lib' && \
+    /bin/bash ../libtool   --mode=install /usr/bin/install -c   libusb-1.0.la '/usr/local/lib' && \
+    /bin/mkdir -p '/usr/local/include/libusb-1.0' && \
+    /usr/bin/install -c -m 644 libusb.h '/usr/local/include/libusb-1.0' && \
+    /bin/mkdir -p '/usr/local/lib/pkgconfig' && \
+    cd /opt/libusb-1.0.22/ && /usr/bin/install -c -m 644 libusb-1.0.pc '/usr/local/lib/pkgconfig'
+
 WORKDIR /
 COPY ovms.tar.xz /
-RUN env
-RUN apt update && apt install -y xz-utils
 RUN tar -xf ovms.tar.xz
 RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
              --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
@@ -43,8 +78,9 @@ WORKDIR /
 RUN	set -e ; \
 	set -x ; \
         apt update -y ; \
+        apt install -y curl; \
 	if [ "$GPU" == "1" ] ; then \
-                apt install -y libnuma1 ocl-icd-libopencl1 curl; \
+                apt install -y libnuma1 ocl-icd-libopencl1; \
 	        case $INSTALL_DRIVER_VERSION in \
                 "19.41.14441") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
@@ -70,15 +106,27 @@ RUN	set -e ; \
                         exit 1 ; \
                 esac ; \
 	fi ; \
-	apt install -y ca-certificates libxml2 libtbb-dev libusb-1.0-0  libboost-thread1.67.0 libboost-system1.67.0 libboost-filesystem1.67.0 \
-	        libboost-program-options1.67.0 libboost-chrono1.67.0 libboost-date-time1.67.0 libboost-atomic1.67.0 ; \
 	apt clean ; \
         rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
         groupadd --gid 5000 ovms ; \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
+COPY --from=base_build /usr/local/lib/ /ovms/lib/
+RUN apt-get update && apt-get install -y --no-install-recommends libxml2 && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+# for HDDL
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libboost-filesystem1.71.0 \
+        libboost-thread1.71.0 \
+        libboost-thread1.71.0 \
+        libboost-program-options1.71.0 \
+        libboost-chrono1.71.0 \
+        libboost-date-time1.71.0 \
+        libboost-atomic1.71.0 \
+        libjson-c4 \
+        libxxf86vm-dev && \
+    rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+
 COPY --from=base_build /ovms /ovms
-ENV LD_LIBRARY_PATH=/ovms/lib
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]
-

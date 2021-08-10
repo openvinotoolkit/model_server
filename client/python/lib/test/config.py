@@ -14,11 +14,16 @@
 # limitations under the License.
 #
 
+from tensorflow.core.framework.tensor_pb2 import TensorProto
+from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
 from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
 from tensorflow.core.framework.types_pb2 import DataType
 
 from tensorflow.core.protobuf.error_codes_pb2 import Code
 from enum import IntEnum
+from numpy import array, float128, int32
+
+from ovmsclient.tfs_compat.grpc.tensors import make_tensor_proto
 
 class CallCount(IntEnum):
     ZERO = 0
@@ -78,11 +83,11 @@ ADDRESS_INVALID = [
     ("intel.-com", ValueError, "address is not valid"),
     ("192.168.abc.4", ValueError, "address is not valid"),
     ("900.80.70.11", ValueError, "address is not valid"),
-    ("....", ValueError, "adress is not valid"),
-    ("1000.1000.1000.1000", ValueError, "adress is not valid"),
-    ("19.-117.63.126", ValueError, "adress is not valid"),
-    ("0.0.0.0.0", ValueError, "adress is not valid"),
-    ("0.0.0.0.", ValueError, "adress is not valid"),
+    ("....", ValueError, "address is not valid"),
+    ("1000.1000.1000.1000", ValueError, "address is not valid"),
+    ("19.-117.63.126", ValueError, "address is not valid"),
+    ("0.0.0.0.0", ValueError, "address is not valid"),
+    ("0.0.0.0.", ValueError, "address is not valid"),
 ]
 
 # (port)
@@ -143,14 +148,14 @@ TLS_CONFIG_INVALID = [
         "client_cert_path" : PATH_VALID, 
         "server_cert_path" : PATH_VALID
     }, 
-    ValueError, "non_client_key_path is not valid tls_config key",
+    ValueError, "none or both client_key_path and client_cert_path are required in tls_config",
     CallCount.ZERO, [True, True, True]),
     ({
         "client_key_path" : PATH_VALID, 
         "non_client_cert_path" : PATH_VALID, 
         "server_cert_path" : PATH_VALID
     }, 
-    ValueError, "non_client_cert_path is not valid tls_config key",
+    ValueError, "none or both client_key_path and client_cert_path are required in tls_config",
     CallCount.ZERO, [True, True, True]),
     ({
         "client_key_path" : PATH_VALID, 
@@ -230,21 +235,21 @@ TLS_CONFIG_INVALID = [
         "client_cert_path" : PATH_VALID, 
         "server_cert_path" : PATH_VALID
     }, 
-    ValueError, f'invalid is not valid path to file',
+    ValueError, f'invalid_path is not valid path to file',
     CallCount.ONE, [False, True, True]),
     ({
         "client_key_path" : PATH_VALID, 
         "client_cert_path" : PATH_INVALID, 
         "server_cert_path" : PATH_VALID
     }, 
-    ValueError, f'/very/invalid is not valid path to file',
+    ValueError, f'invalid_path is not valid path to file',
     CallCount.TWO, [True, False, True]),
     ({
         "client_key_path" : PATH_VALID, 
         "client_cert_path" : PATH_VALID, 
         "server_cert_path" : PATH_INVALID
     }, 
-    ValueError, f'third_invalid_path is not valid path to file',
+    ValueError, f'invalid_path is not valid path to file',
     CallCount.THREE, [True, True, False]),
 
 ]
@@ -654,6 +659,7 @@ BUILD_INVALID_CERTS = [
     ValueError,  'path_to_invalid_client_certificate is not valid certificate',
     {"check_config" : CallCount.ONE, "prepare_certs" : CallCount.ONE}),
 ]
+
 # response_dict = {
 # 'version' : model_version,
 # 'name' : model_name,
@@ -723,4 +729,95 @@ MODEL_METADATA_RESPONSE_VALID = [
             }
         }
     }
+]
+
+# inputs_dict,
+# model_name, model_version, expected_exception, expected_message
+PREDICT_REQUEST_INVALID_INPUTS = [
+    ([],
+    'model_name', 0, TypeError, "inputs type should be dict, but is list"),
+    (('input1', [1,2,3]),
+    'model_name', 0, TypeError, "inputs type should be dict, but is tuple"),
+    ({
+        1 : [1,2,3],
+        "input2" : [1,2]
+    }, 'model_name', 0, TypeError, "inputs keys should be type str, but found int"),
+    ({
+        "input1" : [[1.0, 2.0], [1.0, 2.0, 3.0]]
+    }, 'model_name', 0, ValueError, "argument must be a dense tensor: [[1.0, 2.0], [1.0, 2.0, 3.0]] - got shape [2], but wanted [2, 2]"),
+    ({
+        "input1" : [[(1,2,3)],[(1,2)],[(1,2,3)]]
+    }, 'model_name', 0, TypeError, "provided values type is not valid"),
+    ({
+        "input1" : float128(2.5)
+    }, 'model_name', 0, TypeError, "provided values type is not valid"),
+    ({
+        "input1" : (1,2,3)
+    }, 'model_name', 0, TypeError, "values type should be (list, np.ndarray, scalar), but is tuple"),
+    ({
+        "input1" : [
+            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]), bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])],
+            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]), bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])]
+        ]
+    }, 'model_name', 0, ValueError, "bytes values with dtype DT_STRING must be in shape [N]"),
+]
+
+# inputs_dict,
+# expected_proto_dict,
+# model_name, model_version
+PREDICT_REQUEST_VALID = [
+    ({
+        "input1" : [1,2,3],
+        "input2" : array([1.0,2.0,3.0]),
+        "input3" : [[int32(3), int32(1)], [int32(4), int32(16)]],
+    },
+    {
+        "input1" : {
+            "field" : "tensor_content",
+            "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=3)]),
+            "dtype" : DataType.DT_INT64,
+            'value' : array([1,2,3]).tobytes()
+        },
+        "input2" : {
+            "field" : "tensor_content",
+            "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=3)]),
+            "dtype" : DataType.DT_DOUBLE,
+            'value' : array([1.0,2.0,3.0]).tobytes()
+        },
+        "input3" : {
+            "field" : "tensor_content",
+            "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=2)]),
+            "dtype" : DataType.DT_INT32,
+            'value' : array([[int32(3), int32(1)], [int32(4), int32(16)]]).tobytes()
+        },
+    }, 'model_name', 0),
+    
+    ({
+        "input1" : TensorProto(dtype=DataType.DT_INT8,
+        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)]),
+        tensor_content=array([1,2,3,4,5,6]).tobytes()),
+        "input2" : 5.0,
+        "input3" : bytes([1,2,3])
+    },
+    {
+        "input2" : {
+            "field" : "double_val",
+            "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=1)]),
+            "dtype" : DataType.DT_DOUBLE,
+            'value' : array([5.0])
+        },
+        "input3" : {
+            "field" : "string_val",
+            "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=1)]),
+            "dtype" : DataType.DT_STRING,
+            'value' : [bytes([1,2,3])]
+        }
+    }, 'model_name', 0),
+
+    ({
+
+    },
+    {
+
+    }, 'model_name', 0)
 ]

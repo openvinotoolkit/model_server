@@ -40,7 +40,8 @@ def test_check_address_valid(address):
 def test_check_address_invalid(address, expected_exception, expected_message):
     with pytest.raises(expected_exception) as e_info:
         _check_address(address)
-        assert str(e_info.value) == expected_message
+    
+    assert str(e_info.value) == expected_message
 
 @pytest.mark.parametrize("address", PORT_VALID)
 def test_check_port_valid(address):
@@ -50,12 +51,14 @@ def test_check_port_valid(address):
 def test_check_port_invalid(address, expected_exception, expected_message):
     with pytest.raises(expected_exception) as e_info:
         _check_port(address)
-        assert str(e_info.value) == expected_message
+    
+    assert str(e_info.value) == expected_message
 
 @pytest.mark.parametrize("tls_config, isfile_called_count", TLS_CONFIG_VALID)
 def test_check_tls_config_valid(mocker, tls_config, isfile_called_count):
     mock_method = mocker.patch('os.path.isfile')
     _check_tls_config(tls_config)
+    
     assert mock_method.call_count ==  isfile_called_count
 
 @pytest.mark.parametrize("tls_config, expected_exception, expected_message, isfile_called_count, is_valid_path", TLS_CONFIG_INVALID)
@@ -63,8 +66,8 @@ def test_check_tls_config_invalid(mocker, tls_config, expected_exception, expect
     mock_method = mocker.patch('os.path.isfile', side_effect=is_valid_path)
     with pytest.raises(expected_exception) as e_info:
         _check_tls_config(tls_config)
-        assert str(e_info.value) == expected_message
     
+    assert str(e_info.value) == expected_message
     assert mock_method.call_count ==  isfile_called_count
 
 @pytest.mark.parametrize("config, method_call_count", CONFIG_VALID)
@@ -92,8 +95,8 @@ def test_check_config_invalid(mocker, config, method_call_count, expected_except
 
     with pytest.raises(expected_exception) as e_info:
         _check_config(config)
-        assert str(e_info.value) == expected_message
-
+    
+    assert str(e_info.value) == expected_message
     assert mock_check_address.call_count == method_call_count['check_address']
     assert mock_check_port.call_count == method_call_count['check_port']
     assert mock_check_tls_config.call_count == method_call_count['check_tls_config']
@@ -103,6 +106,7 @@ def test_open_certificate_valid(mocker, certificate_path):
     mock_open = mocker.patch('builtins.open', mocker.mock_open(read_data='certificate'))
 
     certificate = _open_certificate(certificate_path)
+    
     assert mock_open.call_count == 1
     assert certificate == 'certificate'
 
@@ -111,6 +115,7 @@ def test_open_private_key_valid(mocker, private_key_path):
     mock_open = mocker.patch('builtins.open', mocker.mock_open(read_data='privatekey'))
 
     private_key = _open_private_key(private_key_path)
+    
     assert mock_open.call_count == 1
     assert private_key == 'privatekey'
 
@@ -144,8 +149,8 @@ def test_make_grpc_client_invalid_config(mocker, config, expected_exception, exp
 
     with pytest.raises(expected_exception) as e_info:
         client = make_grpc_client(config)
-        assert str(e_info.value) == expected_message
-
+    
+    assert str(e_info.value) == expected_message
     assert mock_check_config.call_count == method_call_count['check_config']
     assert mock_prepare_certs.call_count == method_call_count['prepare_certs']
 
@@ -156,7 +161,7 @@ def test_make_grpc_client_invalid_certs(mocker, config, expected_exception, expe
 
     with pytest.raises(expected_exception) as e_info:
         client = make_grpc_client(config)
-        assert str(e_info.value) == expected_message
-
+    
+    assert str(e_info.value) == expected_message
     assert mock_check_config.call_count == method_call_count['check_config']
     assert mock_prepare_certs.call_count == method_call_count['prepare_certs']
