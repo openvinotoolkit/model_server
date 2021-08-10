@@ -1223,7 +1223,6 @@ TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
 }
 
 TEST_F(StatefulModelInstanceTest, PreprocessingIntermediateRequest) {
-
     InferenceEngine::InferRequest inferRequest = realModel.createInferRequest();
     for (uint32_t sequenceControlInput : {ovms::NO_CONTROL_INPUT, ovms::SEQUENCE_END}) {
         // Prepare model instance and processing spec
@@ -1284,7 +1283,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
 
     std::vector<float> currentBlobIrData;
     currentBlobIrData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(stateCloneBlob)->rmap().as<float*>() + elementsCount);
-    EXPECT_EQ(currentBlobIrData,currentState);
+    EXPECT_EQ(currentBlobIrData, currentState);
 
     tensorflow::serving::PredictResponse response;
     ovms::Sequence sequence(sequenceId);

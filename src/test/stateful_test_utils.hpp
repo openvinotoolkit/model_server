@@ -119,7 +119,7 @@ static bool CheckSequenceIdResponse(tensorflow::serving::PredictResponse& respon
 }
 
 class DummyStatefulModel {
-    private:
+private:
     const std::string MODEL_PATH = std::filesystem::current_path().u8string() + "/src/test/summator/1/summator.xml";
 
     std::shared_ptr<InferenceEngine::CNNNetwork> cnnNetworkPtr;
@@ -127,14 +127,13 @@ class DummyStatefulModel {
     std::shared_ptr<InferenceEngine::InferRequest> inferRequestPtr;
 
     const Precision statePrecision{Precision::FP32};
-    const std::vector<size_t> stateShape{1,1};
+    const std::vector<size_t> stateShape{1, 1};
     const Layout stateLayout{Layout::NC};
     const TensorDesc stateDesc{statePrecision, stateShape, stateLayout};
 
     const std::string stateName = "state";
 
-    public:
-
+public:
     DummyStatefulModel() {
         InferenceEngine::Core engine;
         cnnNetworkPtr = std::make_shared<InferenceEngine::CNNNetwork>(engine.ReadNetwork(MODEL_PATH));
@@ -161,7 +160,7 @@ class DummyStatefulModel {
 
     static void setVariableState(InferenceEngine::InferRequest& inferRequest, std::vector<float> values) {
         DummyStatefulModel::resetVariableState(inferRequest);
-        std::vector<size_t> shape{1,1};
+        std::vector<size_t> shape{1, 1};
         const Precision precision{Precision::FP32};
         const Layout layout{Layout::NC};
         const TensorDesc desc{precision, shape, layout};
