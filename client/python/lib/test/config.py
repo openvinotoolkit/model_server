@@ -858,3 +858,15 @@ PREDICT_RESPONSE_VALID = [
         "2" : [bytes([1,2,3])]
     }),
 ]
+
+PREDICT_RESPONSE_INVALID = [
+    ({
+        "1463" : TensorProto(),
+    }, "model_name", 0, TypeError, "Unsupported tensor type: 0"),
+    ({
+        "1463" : TensorProto(dtype=DataType.DT_INVALID),
+    }, "model_name", 0, TypeError, "Unsupported tensor type: 0"),
+    ({
+        "1463" : TensorProto(dtype=DataType.DT_RESOURCE),
+    }, "model_name", 0, TypeError, "Unsupported tensor type: 20"),
+]
