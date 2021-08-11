@@ -33,5 +33,5 @@ Create `numpy ndarray` from **tensor_proto**.
 data = np.array([[1, 2, 3], [4, 5, 6]], np.int32)
 tensor_proto = make_tensor_proto(data)
 output = make_ndarray(tensor_proto)
-    
+
 ```

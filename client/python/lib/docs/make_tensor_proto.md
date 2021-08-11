@@ -15,10 +15,10 @@ Creates `TensorProto` object from **values**.
  The accepted types are: python scalar, pythons list, numpy scalar and numpy ndarray. Python scalars and lists are internally converted to their numpy counterparts before further processing. Bytes values are placed in `TensorProto` <b>string_val</b> field.  
 
 
- - <b>`dtype`</b> (optional):  tensor_pb2 DataType value.   If not provided, the function will try to infer the data type from **values** argument. 
+ - <b>`dtype`</b> <i>(optional)</i>:  tensor_pb2 DataType value.   If not provided, the function will try to infer the data type from **values** argument. 
 
 
- - <b>`shape`</b> (optional):  The list or tuple of integers defining the shape of the tensor. If not provided, the function will try to infer the shape from **values** argument. 
+ - <b>`shape`</b> <i>(optional)</i>:  The list or tuple of integers defining the shape of the tensor. If not provided, the function will try to infer the shape from **values** argument. 
 
 
 **Returns:**
