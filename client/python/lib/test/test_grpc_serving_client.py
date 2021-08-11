@@ -69,6 +69,8 @@ def create_model_status_request(name, version, raw_name, raw_version):
     raw_request.model_spec.name = raw_name
     raw_request.model_spec.version.value = raw_version
     return GrpcModelStatusRequest(name, version, raw_request)
+
+@pytest.fixture
 def valid_model_metadata_response():
     model_raw_metadata_response_dict = {
         'version' : 2,

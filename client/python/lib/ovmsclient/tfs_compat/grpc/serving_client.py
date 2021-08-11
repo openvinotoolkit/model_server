@@ -170,6 +170,13 @@ def _check_model_status_request(request):
 
     if not isinstance(request.raw_request, GetModelStatusRequest):
         raise TypeError(f'request is not valid GrpcModelStatusRequest')
+
+    if request.raw_request.model_spec.name != request.model_name:
+        raise ValueError(f'request is not valid GrpcModelStatusRequest')
+
+    if request.raw_request.model_spec.version.value != request.model_version:
+        raise ValueError(f'request is not valid GrpcModelStatusRequest')
+        
 def _check_model_metadata_request(request):
 
     if not isinstance(request, GrpcModelMetadataRequest):
