@@ -101,7 +101,7 @@ def pytest_unconfigure():
         cleanup_logger.info("Deleting test directory: {}".format(test_dir))
         delete_test_directory()
 
-    assert Server.current_instance is None, "Unstopped Server instance leftover."
+    assert Server.running_instances is [], "Unstopped Server instance leftover."
 
 
 @pytest.hookimpl(hookwrapper=True)

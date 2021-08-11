@@ -99,7 +99,7 @@ class Docker:
         if config.log_level == "DEBUG":
             logger.info(logs)
         if config.artifacts_dir != "":
-            save_container_logs_to_file(logs=logs)
+            save_container_logs_to_file(logs=logs, location=self.request.node.location)
 
     def get_logs(self):
         until = self.last_log_fetch_time
