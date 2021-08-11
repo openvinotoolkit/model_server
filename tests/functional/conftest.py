@@ -170,8 +170,8 @@ def pytest_runtest_logfinish(nodeid, location):
 
 
 def pytest_runtest_teardown(item):
-    Server.stop_current_instance()
+    Server.stop_all_instances()
 
 
 def pytest_exception_interact(node, call, report):
-    Server.stop_current_instance()
+    Server.stop_all_instances()
