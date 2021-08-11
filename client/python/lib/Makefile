@@ -43,6 +43,11 @@ install-package: venv
 	@. $(ACTIVATE); python setup.py bdist_wheel
 	@. $(ACTIVATE); pip install dist/ovmsclient-0.1-py3-none-any.whl
 
+reinstall-package: venv
+	@echo "Rebuilding and reinstalling ovmsclient package"
+	@. $(ACTIVATE); python setup.py bdist_wheel
+	@. $(ACTIVATE); pip install dist/ovmsclient-0.1-py3-none-any.whl --force-reinstall --no-deps
+
 test: venv
 	@echo "Running ovmsclient tests"
 	@. $(ACTIVATE); pytest -v tests/

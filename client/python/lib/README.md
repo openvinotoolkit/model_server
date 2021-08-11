@@ -22,9 +22,10 @@ This command will:
 
  After installation is successfully completed you can import `ovmsclient` modules with the python `import` statement.
 
- There are also standalone targets that perform tasks done via `make install`. They might be useful for development purposes:
+ There are also standalone targets that might be useful for development purposes:
  - `make build-deps` - builds Tensorflow Serving API
  - `make install-package` - builds and installs `ovmsclient` package (requires TFS API built)
+ - `make reinstall-package` - rebuilds and reinstalls `ovmsclient` package (requires TFS API built)
  - `make test` - runs tests (requires `ovmsclient` package installed)
  - `make clean` - removes all intermediate files generated during installation
 
