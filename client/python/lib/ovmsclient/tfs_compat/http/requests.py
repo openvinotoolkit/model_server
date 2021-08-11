@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-from ovmsclient.tfs_compat.base.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
+from ovmsclient.tfs_compat.base.requests import (PredictRequest, ModelMetadataRequest,
+                                                 ModelStatusRequest)
 
 
 class HttpPredictRequest(PredictRequest):
@@ -78,7 +79,7 @@ def make_predict_request(inputs, model_name, model_version=0):
         ...     },
         ...     model_name="model")
         >>> print(predict_request)
-    '''
+    '''  # noqa: E501
 
     raise NotImplementedError
 
@@ -106,7 +107,7 @@ def make_metadata_request(model_name, model_version=0):
 
         >>> metadata_request = make_metadata_request(model_name="model", model_version=2)
         >>> print(metadata_request)
-    '''
+    '''  # noqa: E501
 
     raise NotImplementedError
 
@@ -135,6 +136,6 @@ def make_status_request(model_name, model_version=0):
         >>> status_request = make_status_request(model_name="model", model_version=2)
         >>> print(status_request)
 
-    '''
+    '''  # noqa: E501
 
     raise NotImplementedError

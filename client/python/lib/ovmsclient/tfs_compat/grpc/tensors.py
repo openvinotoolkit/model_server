@@ -135,7 +135,7 @@ def make_tensor_proto(values, dtype=None, shape=None):
         >>> data = bytes([1, 2, 3, 4, 5, 6])
         >>> tensor_proto = make_tensor_proto(data)
         >>> print(tensor_proto)
-    '''
+    '''  # noqa: E501
     if shape is None:
         inferred_shape = []
     elif _is_shape_valid(shape):
@@ -153,7 +153,8 @@ def make_tensor_proto(values, dtype=None, shape=None):
         dense_dimensions = _get_dense_dimensions(tensor_values)
         tensor_values = np.array(tensor_values)
         if(list(tensor_values.shape) != dense_dimensions):
-            raise ValueError(f'argument must be a dense tensor: {values} - got shape {list(tensor_values.shape)}, but wanted {dense_dimensions}')
+            raise ValueError(f'argument must be a dense tensor: {values} - got shape '
+                             f'{list(tensor_values.shape)}, but wanted {dense_dimensions}')
 
         if dtype is None:
             tensor_type = NP_TO_TENSOR_MAP.get(tensor_values.dtype.type)
@@ -172,7 +173,8 @@ def make_tensor_proto(values, dtype=None, shape=None):
             else:
                 tensor_values = _cast_ndarray_to_dtype(tensor_values, np_dtype)
     else:
-        raise TypeError(f"values type should be (list, np.ndarray, scalar), but is {type(tensor_values).__name__}")
+        raise TypeError("values type should be (list, np.ndarray, scalar), but is "
+                        f"{type(tensor_values).__name__}")
 
     if dtype == DataType.DT_STRING and _is_bytes_shape_valid(inferred_shape, tensor_values):
         raise ValueError("bytes values with dtype DT_STRING must be in shape [N]")
@@ -186,7 +188,8 @@ def make_tensor_proto(values, dtype=None, shape=None):
         dims.append(TensorShapeProto.Dim(size=d))
     tensor_shape = TensorShapeProto(dim=dims)
     if dtype == DataType.DT_STRING:
-        tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape, string_val=tensor_values.tolist())
+        tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape,
+                                   string_val=tensor_values.tolist())
     elif np.isscalar(values):
         # picking the right field of TensorProto to put data in
         tensor_proto_args = {
@@ -196,7 +199,8 @@ def make_tensor_proto(values, dtype=None, shape=None):
         }
         tensor_proto = TensorProto(**tensor_proto_args)
     else:
-        tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape, tensor_content=tensor_values.tobytes())
+        tensor_proto = TensorProto(dtype=dtype, tensor_shape=tensor_shape,
+                                   tensor_content=tensor_values.tobytes())
     return tensor_proto
 
 
@@ -224,7 +228,7 @@ def make_ndarray(tensor_proto):
 
         >>> output = make_ndarray(tensor_proto)
         >>> print(output)
-    '''
+    '''  # noqa: E501
     shape = [d.size for d in tensor_proto.tensor_shape.dim]
     num_elements = np.prod(shape, dtype=np.int64)
     np_dtype = TENSOR_TO_NP_MAP.get(tensor_proto.dtype)

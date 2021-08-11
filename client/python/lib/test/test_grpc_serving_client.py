@@ -20,8 +20,10 @@ import pytest
 from tensorflow_serving.apis.model_service_pb2_grpc import ModelServiceStub
 from tensorflow_serving.apis.prediction_service_pb2_grpc import PredictionServiceStub
 
-from ovmsclient.tfs_compat.grpc.serving_client import (_check_address, _open_certificate, _check_config, _check_port,
-                                                       _open_private_key, _check_tls_config, _prepare_certs, make_grpc_client)
+from ovmsclient.tfs_compat.grpc.serving_client import (_check_address, _open_certificate,
+                                                       _check_config, _check_port,
+                                                       _open_private_key, _check_tls_config,
+                                                       _prepare_certs, make_grpc_client)
 
 from config import ADDRESS_INVALID, ADDRESS_VALID
 from config import PORT_VALID, PORT_INVALID
@@ -67,8 +69,10 @@ def test_check_tls_config_valid(mocker, tls_config, isfile_called_count):
     assert mock_method.call_count == isfile_called_count
 
 
-@pytest.mark.parametrize("tls_config, expected_exception, expected_message, isfile_called_count, is_valid_path", TLS_CONFIG_INVALID)
-def test_check_tls_config_invalid(mocker, tls_config, expected_exception, expected_message, isfile_called_count, is_valid_path):
+@pytest.mark.parametrize("tls_config, expected_exception,"
+                         "expected_message, isfile_called_count, is_valid_path", TLS_CONFIG_INVALID)
+def test_check_tls_config_invalid(mocker, tls_config, expected_exception,
+                                  expected_message, isfile_called_count, is_valid_path):
     mock_method = mocker.patch('os.path.isfile', side_effect=is_valid_path)
     with pytest.raises(expected_exception) as e_info:
         _check_tls_config(tls_config)
@@ -81,7 +85,8 @@ def test_check_tls_config_invalid(mocker, tls_config, expected_exception, expect
 def test_check_config_valid(mocker, config, method_call_count):
     mock_check_address = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_address')
     mock_check_port = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_port')
-    mock_check_tls_config = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_tls_config')
+    mock_check_tls_config = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client'
+                                         '._check_tls_config')
 
     _check_config(config)
 
@@ -90,15 +95,18 @@ def test_check_config_valid(mocker, config, method_call_count):
     assert mock_check_tls_config.call_count == method_call_count['check_tls_config']
 
 
-@pytest.mark.parametrize("config, method_call_count, expected_exception, expected_message, side_effect", CONFIG_INVALID)
-def test_check_config_invalid(mocker, config, method_call_count, expected_exception, expected_message, side_effect):
+@pytest.mark.parametrize("config, method_call_count,"
+                         "expected_exception, expected_message, side_effect", CONFIG_INVALID)
+def test_check_config_invalid(mocker, config, method_call_count,
+                              expected_exception, expected_message, side_effect):
     mock_check_address = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_address')
     mock_check_address.side_effect = side_effect['check_address']
 
     mock_check_port = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_port')
     mock_check_port.side_effect = side_effect['check_port']
 
-    mock_check_tls_config = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_tls_config')
+    mock_check_tls_config = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client'
+                                         '._check_tls_config')
     mock_check_tls_config.side_effect = side_effect['check_tls_config']
 
     with pytest.raises(expected_exception) as e_info:
@@ -130,10 +138,13 @@ def test_open_private_key_valid(mocker, private_key_path):
     assert private_key == 'privatekey'
 
 
-@pytest.mark.parametrize("server_cert, client_cert, client_key, method_call_count", CHANNEL_CERTS_VALID)
+@pytest.mark.parametrize("server_cert, client_cert,"
+                         "client_key, method_call_count", CHANNEL_CERTS_VALID)
 def test_prepare_certs_valid(mocker, server_cert, client_cert, client_key, method_call_count):
-    mock_open_certificate = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._open_certificate')
-    mock_check_key_valid = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._open_private_key')
+    mock_open_certificate = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client'
+                                         '._open_certificate')
+    mock_check_key_valid = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client'
+                                        '._open_private_key')
 
     _prepare_certs(server_cert, client_cert, client_key)
 
@@ -144,7 +155,10 @@ def test_prepare_certs_valid(mocker, server_cert, client_cert, client_key, metho
 @pytest.mark.parametrize("config, method_call_count", BUILD_VALID)
 def test_make_grpc_client_valid(mocker, config, method_call_count):
     mock_check_config = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_config')
-    mock_prepare_certs = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._prepare_certs', return_value=(b'server_certificate', b'client_certificate', b'client_key'))
+    mock_prepare_certs = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._prepare_certs',
+                                      return_value=(b'server_certificate',
+                                                    b'client_certificate',
+                                                    b'client_key'))
 
     client = make_grpc_client(config)
 
@@ -155,9 +169,12 @@ def test_make_grpc_client_valid(mocker, config, method_call_count):
     assert type(client.prediction_service_stub) == PredictionServiceStub
 
 
-@pytest.mark.parametrize("config, expected_exception, expected_message, method_call_count", BUILD_INVALID_CONFIG)
-def test_make_grpc_client_invalid_config(mocker, config, expected_exception, expected_message, method_call_count):
-    mock_check_config = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_config', side_effect=expected_exception(expected_message))
+@pytest.mark.parametrize("config, expected_exception,"
+                         "expected_message, method_call_count", BUILD_INVALID_CONFIG)
+def test_make_grpc_client_invalid_config(mocker, config, expected_exception,
+                                         expected_message, method_call_count):
+    mock_check_config = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_config',
+                                     side_effect=expected_exception(expected_message))
     mock_prepare_certs = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._prepare_certs')
 
     with pytest.raises(expected_exception) as e_info:
@@ -168,10 +185,13 @@ def test_make_grpc_client_invalid_config(mocker, config, expected_exception, exp
     assert mock_prepare_certs.call_count == method_call_count['prepare_certs']
 
 
-@pytest.mark.parametrize("config, expected_exception, expected_message, method_call_count", BUILD_INVALID_CERTS)
-def test_make_grpc_client_invalid_certs(mocker, config, expected_exception, expected_message, method_call_count):
+@pytest.mark.parametrize("config, expected_exception,"
+                         "expected_message, method_call_count", BUILD_INVALID_CERTS)
+def test_make_grpc_client_invalid_certs(mocker, config, expected_exception,
+                                        expected_message, method_call_count):
     mock_check_config = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_config')
-    mock_prepare_certs = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._prepare_certs', side_effect=expected_exception(expected_message))
+    mock_prepare_certs = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._prepare_certs',
+                                      side_effect=expected_exception(expected_message))
 
     with pytest.raises(expected_exception) as e_info:
         make_grpc_client(config)

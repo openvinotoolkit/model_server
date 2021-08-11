@@ -76,7 +76,8 @@ def test_PredictResponse_to_dict_invalid(outputs_dict, model_name, model_version
 def test_ModelStatusResponse_to_dict_valid(model_raw_status_response_dict):
     model_raw_responses = []
     for version, status in model_raw_status_response_dict.items():
-        model_raw_responses.append(create_model_status_response(version, status['error_code'], status['error_message'],
+        model_raw_responses.append(create_model_status_response(version,
+                                   status['error_code'], status['error_message'],
                                    status['state']))
     raw_response = merge_model_status_responses(model_raw_responses)
 
@@ -114,7 +115,8 @@ def test_ModelMetadataResponse_to_dict_valid(model_raw_metadata_response_dict):
         assert isinstance(inputs[input], dict)
         assert 'shape' in inputs[input] and 'dtype' in inputs[input]
         assert inputs[input]['shape'] == model_raw_metadata_response_dict['inputs'][input]['shape']
-        assert inputs[input]['dtype'] == DataType.Name(model_raw_metadata_response_dict['inputs'][input]['dtype'])
+        assert (inputs[input]['dtype']
+                == DataType.Name(model_raw_metadata_response_dict['inputs'][input]['dtype']))
 
     outputs = response_dict[version]['outputs']
     assert len(outputs) == len(model_raw_metadata_response_dict['outputs'])
@@ -122,8 +124,10 @@ def test_ModelMetadataResponse_to_dict_valid(model_raw_metadata_response_dict):
         assert output in model_raw_metadata_response_dict['outputs']
         assert isinstance(outputs[output], dict)
         assert 'shape' in outputs[output] and 'dtype' in outputs[output]
-        assert outputs[output]['shape'] == model_raw_metadata_response_dict['outputs'][output]['shape']
-        assert outputs[output]['dtype'] == DataType.Name(model_raw_metadata_response_dict['outputs'][output]['dtype'])
+        assert (outputs[output]['shape']
+                == model_raw_metadata_response_dict['outputs'][output]['shape'])
+        assert (outputs[output]['dtype']
+                == DataType.Name(model_raw_metadata_response_dict['outputs'][output]['dtype']))
 
 
 def create_model_metadata_response(model_raw_metadata_response_dict):

@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-from ovmsclient.tfs_compat.base.responses import PredictResponse, ModelMetadataResponse, ModelStatusResponse
+from ovmsclient.tfs_compat.base.responses import (PredictResponse, ModelMetadataResponse,
+                                                  ModelStatusResponse)
 
 
 class HttpPredictResponse(PredictResponse):

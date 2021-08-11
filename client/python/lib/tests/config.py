@@ -55,7 +55,8 @@ MODEL_SPEC_INVALID = [
     ("model_name", "3", TypeError, "model_version type should be int, but is str"),
     ("model_name", None, TypeError, "model_version type should be int, but is NoneType"),
     ("model_name", -1, ValueError, f'model_version should be in range <0, {2**63-1}>'),
-    ("model_name", 9223372036854775809, ValueError, f'model_version should be in range <0, {2**63-1}>'),
+    ("model_name", 9223372036854775809, ValueError,
+     f'model_version should be in range <0, {2**63-1}>'),
 ]
 
 # responses_dict = {
@@ -68,7 +69,8 @@ MODEL_STATUS_RESPONSE_VALID = [{
     3: {"state": ModelVersionStatus.State.AVAILABLE, "error_code": Code.OK, "error_message": ""}
 }, {
     1: {"state": ModelVersionStatus.State.START, "error_code": Code.OK, "error_message": ""},
-    2: {"state": ModelVersionStatus.State.LOADING, "error_code": Code.UNKNOWN, "error_message": "Could not load CNN"},
+    2: {"state": ModelVersionStatus.State.LOADING, "error_code": Code.UNKNOWN,
+        "error_message": "Could not load CNN"},
     3: {"state": ModelVersionStatus.State.UNLOADING, "error_code": Code.OK, "error_message": ""}
 }
 ]
@@ -113,9 +115,12 @@ PORT_INVALID = [
 PATH_VALID, PATH_INVALID = "valid_path", "invalid_path"
 
 # Special values for testing
-SERVER_CERT_PATH_VALID, SERVER_CERT_PATH_INVALID = "server_cert_path_valid", "server_cert_path_invalid"
-CLIENT_CERT_PATH_VALID, CLIENT_CERT_PATH_INVALID = "client_cert_path_valid", "client_cert_path_invalid"
-CLIENT_KEY_PATH_VALID, CLIENT_KEY_PATH_INVALID = "client_key_path_valid", "client_key_path_invalid"
+SERVER_CERT_PATH_VALID = "server_cert_path_valid"
+SERVER_CERT_PATH_INVALID = "server_cert_path_invalid"
+CLIENT_CERT_PATH_VALID = "client_cert_path_valid"
+CLIENT_CERT_PATH_INVALID = "client_cert_path_invalid"
+CLIENT_KEY_PATH_VALID = "client_key_path_valid"
+CLIENT_KEY_PATH_INVALID = "client_key_path_invalid"
 
 # (tls_config_dict, isfile_method_call_count)
 TLS_CONFIG_VALID = [
@@ -133,7 +138,7 @@ TLS_CONFIG_VALID = [
 
 # (tls_config_dict,
 # expected_exception, expected_message,
-# isfile_method_call_count, [is_valid_client_key_path, is_valid_client_cert_path, is_valid_client_server_cert_path])
+# isfile_method_call_count, [is_valid_client_key_path, is_valid_client_cert_path, is_valid_client_server_cert_path])  # noqa: E501
 TLS_CONFIG_INVALID = [
     ({
         "client_key_path": PATH_VALID,
@@ -264,22 +269,30 @@ CONFIG_VALID = [
     ({
         "address": "localhost",
         "port": 9000
-    }, {"check_address": CallCount.ONE, "check_port": CallCount.ONE, "check_tls_config": CallCount.ZERO}),
+    }, {"check_address": CallCount.ONE,
+        "check_port": CallCount.ONE,
+        "check_tls_config": CallCount.ZERO}),
     ({
         "address": "19.117.63.126",
         "port": 1
-    }, {"check_address": CallCount.ONE, "check_port": CallCount.ONE, "check_tls_config": CallCount.ZERO}),
+    }, {"check_address": CallCount.ONE,
+        "check_port": CallCount.ONE,
+        "check_tls_config": CallCount.ZERO}),
     ({
         "address": "cluster.cloud.iotg.intel.com",
         "port": 2**16-1
-    }, {"check_address": CallCount.ONE, "check_port": CallCount.ONE, "check_tls_config": CallCount.ZERO}),
+    }, {"check_address": CallCount.ONE,
+        "check_port": CallCount.ONE,
+        "check_tls_config": CallCount.ZERO}),
     ({
         "address": "localhost",
         "port": 9000,
         "tls_config": {
             "server_cert_path": "valid_path"
         }
-    }, {"check_address": CallCount.ONE, "check_port": CallCount.ONE, "check_tls_config": CallCount.ONE}),
+    }, {"check_address": CallCount.ONE,
+        "check_port": CallCount.ONE,
+        "check_tls_config": CallCount.ONE}),
     ({
         "address": "localhost",
         "port": 9000,
@@ -288,7 +301,9 @@ CONFIG_VALID = [
             "client_cert_path": PATH_VALID,
             "server_cert_path": PATH_VALID
         }
-    }, {"check_address": CallCount.ONE, "check_port": CallCount.ONE, "check_tls_config": CallCount.ONE})
+    }, {"check_address": CallCount.ONE,
+        "check_port": CallCount.ONE,
+        "check_tls_config": CallCount.ONE})
 ]
 
 # (config_dict, method_call_count_dict= {"method_name": CallCount.NumberOfCalls},
@@ -298,7 +313,9 @@ CONFIG_INVALID = [
     ({
 
     },
-     {"check_address": CallCount.ZERO, "check_port": CallCount.ZERO, "check_tls_config": CallCount.ZERO},
+     {"check_address": CallCount.ZERO,
+      "check_port": CallCount.ZERO,
+      "check_tls_config": CallCount.ZERO},
      ValueError, 'The minimal config must contain address and port',
      {
         "check_address": None,
@@ -309,7 +326,9 @@ CONFIG_INVALID = [
     ({
         "address": "localhost"
     },
-     {"check_address": CallCount.ZERO, "check_port": CallCount.ZERO, "check_tls_config": CallCount.ZERO},
+     {"check_address": CallCount.ZERO,
+      "check_port": CallCount.ZERO,
+      "check_tls_config": CallCount.ZERO},
      ValueError, 'The minimal config must contain address and port',
      {
         "check_address": None,
@@ -320,7 +339,9 @@ CONFIG_INVALID = [
     ({
         "port": 9000
     },
-     {"check_address": CallCount.ZERO, "check_port": CallCount.ZERO, "check_tls_config": CallCount.ZERO},
+     {"check_address": CallCount.ZERO,
+      "check_port": CallCount.ZERO,
+      "check_tls_config": CallCount.ZERO},
      ValueError, 'The minimal config must contain address and port',
      {
         "check_address": None,
@@ -332,7 +353,9 @@ CONFIG_INVALID = [
         "address": ["localhost"],
         "port": 9000
     },
-     {"check_address": CallCount.ONE, "check_port": CallCount.ZERO, "check_tls_config": CallCount.ZERO},
+     {"check_address": CallCount.ONE,
+      "check_port": CallCount.ZERO,
+      "check_tls_config": CallCount.ZERO},
      TypeError, 'address type should be string, but is list',
      {
         "check_address": TypeError('address type should be string, but is list'),
@@ -344,7 +367,9 @@ CONFIG_INVALID = [
         "address": "address",
         "port": '9000'
     },
-     {"check_address": CallCount.ONE, "check_port": CallCount.ZERO, "check_tls_config": CallCount.ZERO},
+     {"check_address": CallCount.ONE,
+      "check_port": CallCount.ZERO,
+      "check_tls_config": CallCount.ZERO},
      ValueError, 'address is not valid',
      {
         "check_address": ValueError('address is not valid'),
@@ -356,7 +381,9 @@ CONFIG_INVALID = [
         "address": "localhost",
         "port": '9000'
     },
-     {"check_address": CallCount.ONE, "check_port": CallCount.ONE, "check_tls_config": CallCount.ZERO},
+     {"check_address": CallCount.ONE,
+      "check_port": CallCount.ONE,
+      "check_tls_config": CallCount.ZERO},
      TypeError, 'port type should be int, but is type str',
      {
         "check_address": None,
@@ -368,7 +395,9 @@ CONFIG_INVALID = [
         "address": "localhost",
         "port": 2**16
     },
-     {"check_address": CallCount.ONE, "check_port": CallCount.ONE, "check_tls_config": CallCount.ZERO},
+     {"check_address": CallCount.ONE,
+      "check_port": CallCount.ONE,
+      "check_tls_config": CallCount.ZERO},
      ValueError, f"port should be in range <0, {2**16-1}>",
      {
         "check_address": None,
@@ -383,7 +412,9 @@ CONFIG_INVALID = [
 
         }
     },
-     {"check_address": CallCount.ONE, "check_port": CallCount.ONE, "check_tls_config": CallCount.ONE},
+     {"check_address": CallCount.ONE,
+      "check_port": CallCount.ONE,
+      "check_tls_config": CallCount.ONE},
      ValueError, 'server_cert_path is not defined in tls_config',
      {
         "check_address": None,
@@ -399,12 +430,15 @@ CONFIG_INVALID = [
             "client_key_path": PATH_VALID
         }
     },
-     {"check_address": CallCount.ONE, "check_port": CallCount.ONE, "check_tls_config": CallCount.ONE},
+     {"check_address": CallCount.ONE,
+      "check_port": CallCount.ONE,
+      "check_tls_config": CallCount.ONE},
      ValueError, 'none or both client_key_path and client_cert_path are required in tls_config',
      {
         "check_address": None,
         "check_port": None,
-        "check_tls_config": ValueError('none or both client_key_path and client_cert_path are required in tls_config')
+        "check_tls_config": ValueError('none or both client_key_path and'
+                                       'client_cert_path are required in tls_config')
     }),
 
     ({
@@ -417,7 +451,9 @@ CONFIG_INVALID = [
             "invalid_key_name": PATH_VALID
         }
     },
-     {"check_address": CallCount.ONE, "check_port": CallCount.ONE, "check_tls_config": CallCount.ONE},
+     {"check_address": CallCount.ONE,
+      "check_port": CallCount.ONE,
+      "check_tls_config": CallCount.ONE},
      ValueError,  'invalid_key_name is not valid tls_config key',
      {
         "check_address": None,
@@ -434,7 +470,9 @@ CONFIG_INVALID = [
             "client_cert_path": 123,
         }
     },
-     {"check_address": CallCount.ONE, "check_port": CallCount.ONE, "check_tls_config": CallCount.ONE},
+     {"check_address": CallCount.ONE,
+      "check_port": CallCount.ONE,
+      "check_tls_config": CallCount.ONE},
      TypeError,  'client_cert_path type should be string but is type int',
      {
         "check_address": None,
@@ -451,7 +489,9 @@ CONFIG_INVALID = [
             "client_cert_path": PATH_VALID,
         }
     },
-     {"check_address": CallCount.ONE, "check_port": CallCount.ONE, "check_tls_config": CallCount.ONE},
+     {"check_address": CallCount.ONE,
+      "check_port": CallCount.ONE,
+      "check_tls_config": CallCount.ONE},
      ValueError,  'invalid_path is not valid path to file',
      {
         "check_address": None,
@@ -749,7 +789,9 @@ PREDICT_REQUEST_INVALID_INPUTS = [
     }, 'model_name', 0, TypeError, "inputs keys should be type str, but found int"),
     ({
         "input1": [[1.0, 2.0], [1.0, 2.0, 3.0]]
-    }, 'model_name', 0, ValueError, "argument must be a dense tensor: [[1.0, 2.0], [1.0, 2.0, 3.0]] - got shape [2], but wanted [2, 2]"),
+    }, 'model_name', 0, ValueError,
+     ("argument must be a dense tensor: [[1.0, 2.0], [1.0, 2.0, 3.0]]- "
+      "got shape [2], but wanted [2, 2]")),
     ({
         "input1": [[(1, 2, 3)], [(1, 2)], [(1, 2, 3)]]
     }, 'model_name', 0, TypeError, "provided values type is not valid"),
@@ -758,11 +800,14 @@ PREDICT_REQUEST_INVALID_INPUTS = [
     }, 'model_name', 0, TypeError, "provided values type is not valid"),
     ({
         "input1": (1, 2, 3)
-    }, 'model_name', 0, TypeError, "values type should be (list, np.ndarray, scalar), but is tuple"),
+    }, 'model_name', 0, TypeError,
+     "values type should be (list, np.ndarray, scalar), but is tuple"),
     ({
         "input1": [
-            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]), bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])],
-            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]), bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])]
+            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
+             bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])],
+            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
+             bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])]
         ]
     }, 'model_name', 0, ValueError, "bytes values with dtype DT_STRING must be in shape [N]"),
 ]
@@ -790,7 +835,8 @@ PREDICT_REQUEST_VALID = [
         },
         "input3": {
             "field": "tensor_content",
-            "shape": TensorShapeProto(dim=[TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=2)]),
+            "shape": TensorShapeProto(dim=[TensorShapeProto.Dim(size=2),
+                                           TensorShapeProto.Dim(size=2)]),
             "dtype": DataType.DT_INT32,
             'value': array([[int32(3), int32(1)], [int32(4), int32(16)]]).tobytes()
         },
@@ -798,7 +844,8 @@ PREDICT_REQUEST_VALID = [
 
     ({
         "input1": TensorProto(dtype=DataType.DT_INT8,
-                              tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)]),
+                              tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=2),
+                                                            TensorShapeProto.Dim(size=3)]),
                               tensor_content=array([1, 2, 3, 4, 5, 6]).tobytes()),
         "input2": 5.0,
         "input3": bytes([1, 2, 3])

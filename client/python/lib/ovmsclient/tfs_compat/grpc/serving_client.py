@@ -283,14 +283,16 @@ def _check_tls_config(tls_config):
         raise ValueError('server_cert_path is not defined in tls_config')
 
     if ('client_key_path' in tls_config) != ('client_cert_path' in tls_config):
-        raise ValueError('none or both client_key_path and client_cert_path are required in tls_config')
+        raise ValueError('none or both client_key_path and client_cert_path '
+                         'are required in tls_config')
 
     valid_keys = ['server_cert_path', 'client_key_path', 'client_cert_path']
     for key in tls_config:
         if key not in valid_keys:
             raise ValueError(f'{key} is not valid tls_config key')
         if not isinstance(tls_config[key], str):
-            raise TypeError(f'{key} type should be string but is type {type(tls_config[key]).__name__}')
+            raise TypeError(f'{key} type should be string but is type '
+                            f'{type(tls_config[key]).__name__}')
         if not os.path.isfile(tls_config[key]):
             raise ValueError(f'{tls_config[key]} is not valid path to file')
 

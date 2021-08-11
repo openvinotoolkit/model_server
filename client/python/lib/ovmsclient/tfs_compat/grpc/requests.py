@@ -105,7 +105,7 @@ def make_predict_request(inputs, model_name, model_version=0):
         ...     model_name="model",
         ...     model_version=2)
         >>> print(predict_request)
-    '''
+    '''  # noqa: E501
 
     _check_model_spec(model_name, model_version)
 
@@ -118,7 +118,8 @@ def make_predict_request(inputs, model_name, model_version=0):
 
     for input_name, input_data in inputs.items():
         if not isinstance(input_name, str):
-            raise TypeError(f'inputs keys should be type str, but found {type(input_name).__name__}')
+            raise TypeError(f'inputs keys should be type str, but found '
+                            f'{type(input_name).__name__}')
         if isinstance(input_data, TensorProto):
             request.inputs[input_name].CopyFrom(input_data)
         else:
@@ -150,7 +151,7 @@ def make_metadata_request(model_name, model_version=0):
 
         >>> metadata_request = make_metadata_request(model_name="model", model_version=2)
         >>> print(metadata_request)
-    '''
+    '''  # noqa: E501
 
     _check_model_spec(model_name, model_version)
 
@@ -186,7 +187,7 @@ def make_status_request(model_name, model_version=0):
         >>> status_request = make_status_request(model_name="model", model_version=2)
         >>> print(status_request)
 
-    '''
+    '''  # noqa: E501
 
     _check_model_spec(model_name, model_version)
 
