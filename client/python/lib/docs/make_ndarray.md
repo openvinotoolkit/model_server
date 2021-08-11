@@ -35,3 +35,7 @@ tensor_proto = make_tensor_proto(data)
 output = make_ndarray(tensor_proto)
 
 ```
+
+---
+
+<a href="README.md">Return to the main page</a>

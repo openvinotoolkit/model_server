@@ -81,3 +81,7 @@ config = {
 client = make_grpc_client(config)
 
 ```
+
+---
+
+<a href="README.md">Return to the main page</a>

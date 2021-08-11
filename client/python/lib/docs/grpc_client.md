@@ -126,3 +126,7 @@ request = make_predict_request({"input": [1, 2, 3]}, "model")
 response = client.predict(request)
 
 ```
+
+---
+
+<a href="README.md">Return to the main page</a>

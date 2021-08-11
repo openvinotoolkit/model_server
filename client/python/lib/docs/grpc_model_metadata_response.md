@@ -38,3 +38,7 @@ Returns metadata in dictionary format:
 } 
 
 ```
+
+---
+
+<a href="README.md">Return to the main page</a>

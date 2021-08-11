@@ -20,7 +20,7 @@ Create `GrpcPredictRequest` object.
     | Key | Value type |
     |---|---|
     | input_name | string |
-    | input_data | python scalar, python liste, numpy scalar, numpy array, TensorProto |        
+    | input_data | python scalar, python list, numpy scalar, numpy array, TensorProto |        
 
     If provided **input_data** is not TensorProto, the `make_tensor_proto` function with default parameters will be called internally. 
 
@@ -65,3 +65,7 @@ predict_request = make_predict_request(
     model_version=2
 )
 ```
+
+---
+
+<a href="README.md">Return to the main page</a>

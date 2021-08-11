@@ -50,3 +50,7 @@ data = bytes([1, 2, 3, 4, 5, 6])
 tensor_proto = make_tensor_proto(data)
 
 ```
+
+---
+
+<a href="README.md">Return to the main page</a>

@@ -40,3 +40,7 @@ Create `GrpcModelStatusRequest` object.
 ```python 
 status_request = make_status_request(model_name="model", model_version=2)
 ```
+
+---
+
+<a href="README.md">Return to the main page</a>

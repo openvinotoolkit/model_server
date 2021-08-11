@@ -33,3 +33,7 @@ Create `GrpcModelMetadataRequest` object.
 ```python
 metadata_request = make_metadata_request(model_name="model", model_version=2)
 ```
+
+---
+
+<a href="README.md">Return to the main page</a>
