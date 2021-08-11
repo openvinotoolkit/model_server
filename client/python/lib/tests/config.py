@@ -17,15 +17,18 @@
 from numpy import array, float64, int32, int8
 from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
-from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
 from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
 from tensorflow.core.framework.types_pb2 import DataType
 from tensorflow.core.protobuf.error_codes_pb2 import Code
 from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
+from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
+from tensorflow_serving.apis.predict_pb2 import PredictRequest
+
 from enum import IntEnum
 from numpy import array, float128, int32
 
 from ovmsclient.tfs_compat.grpc.tensors import make_tensor_proto
+from ovmsclient.tfs_compat.grpc.requests import GrpcPredictRequest
 from grpc import StatusCode
 
 class CallCount(IntEnum):
@@ -948,4 +951,68 @@ GET_MODEL_METADATA_INVALID_GRPC = [
     StatusCode.NOT_FOUND, "Model with requested version is not found"),
     (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested name is not found",
     StatusCode.NOT_FOUND, "Model with requested name is not found"),
+]
+
+# ({"model_name" : model_name, "model_version" : model_version, "model_raw_name": raw_request_model_name, "model_raw_version" : raw_request_model_version, 
+# "inputs_dict" : inputs_for_request, "inputs_raw_dict" : inputs_for_raw_request})
+PREDICT_REQUEST_VALID_SPEC = [
+    ({"model_name" : "name", "model_version" : 0, "model_raw_name" : "name", "model_raw_version" : 0,
+      "inputs_dict" : {
+          "0" : TensorProto(dtype=DataType.DT_INT8,
+                            tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]),
+                            tensor_content=array([1, 2, 3]).tobytes())
+      },
+      "inputs_raw_dict" : {
+          "0" : TensorProto(dtype=DataType.DT_INT8,
+                            tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]),
+                            tensor_content=array([1, 2, 3]).tobytes())
+      }}),
+]
+
+# ({"model_name" : model_name, "model_version" : model_version, "model_raw_name": raw_request_model_name, "model_raw_version" : raw_request_model_version, 
+# "inputs_dict" : inputs_for_request, "inputs_raw_dict" : inputs_for_raw_request},
+# expected_exception, expected_message)
+PREDICT_REQUEST_INVALID_SPEC_RAW_REQUEST = [
+    ({"model_name" : "name", "model_version" : 0, "model_raw_name" : "other_name", "model_raw_version" : 0,
+      "inputs_dict" : {
+          "0" : TensorProto()
+      },
+      "inputs_raw_dict" : {
+          "0" : TensorProto()
+      }}, ValueError, 'request is not valid GrpcPredictRequest'),
+    ({"model_name" : "other_name", "model_version" : 0, "model_raw_name" : "name", "model_raw_version" : 0,
+      "inputs_dict" : {
+          "0" : TensorProto()
+      },
+      "inputs_raw_dict" : {
+          "0" : TensorProto()
+      }}, ValueError, 'request is not valid GrpcPredictRequest'),
+    ({"model_name" : "name", "model_version" : 1, "model_raw_name" : "name", "model_raw_version" : 0,
+      "inputs_dict" : {
+          "0" : TensorProto()
+      },
+      "inputs_raw_dict" : {
+          "0" : TensorProto()
+      }}, ValueError, 'request is not valid GrpcPredictRequest'),
+    ({"model_name" : "name", "model_version" : 0, "model_raw_name" : "name", "model_raw_version" : 1,
+      "inputs_dict" : {
+          "0" : TensorProto()
+      },
+      "inputs_raw_dict" : {
+          "0" : TensorProto()
+      }}, ValueError, 'request is not valid GrpcPredictRequest'),
+    ({"model_name" : "name", "model_version" : 0, "model_raw_name" : "name", "model_raw_version" : 0,
+      "inputs_dict" : {
+          "0" : TensorProto()
+      },
+      "inputs_raw_dict" : {
+          "1" : TensorProto()
+      }}, ValueError, 'request is not valid GrpcPredictRequest'),
+]
+
+# (predict_request, expected_exception, expected_message)
+PREDICT_REQUEST_INVALID_SPEC_TYPE = [
+    (None, TypeError, 'request type should be GrpcPredictRequest, but is NoneType'),
+    (PredictRequest, TypeError, f'request type should be GrpcPredictRequest, but is GeneratedProtocolMessageType'),
+    (GrpcPredictRequest({},"",0,"raw_request"), TypeError, 'request is not valid GrpcPredictRequest'),
 ]
