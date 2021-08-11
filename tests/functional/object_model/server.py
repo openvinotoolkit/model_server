@@ -58,7 +58,8 @@ class Server:
 
     def stop(self):
         self.ovms.stop()
-        Server.running_instances.remove(self)
+        if self in Server.running_instances:
+            Server.running_instances.remove(self)
 
     @classmethod
     def stop_all_instances(cls):
