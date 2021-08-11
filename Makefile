@@ -26,7 +26,7 @@ STYLE_CHECK_DIRS := src example_client/cpp
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
-JOBS ?= $(shell nproc --all)
+JOBS ?= $(shell python3 -c 'import multiprocessing as mp; print(mp.cpu_count())')
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
 # Currently supported BASE_OS values are: ubuntu centos clearlinux
@@ -123,16 +123,9 @@ style: venv clang-format
 
 sdl-check: venv
 	@echo "Checking SDL requirements..."
-	@echo "Checking docker files..."        
-ifneq ($(shell find . -type f -name 'Dockerfile.*' | xargs grep ADD | wc -l), 0)
-	$(error Replace COPY with ADD in dockerfiles)
-endif
-ifneq ($(shell grep -rl "docker run" . | xargs grep "docker run" | grep ":shared" | wc -l), 1)
-	$(error Do not use shared mount in docker files.)
-endif
-ifneq ($(shell grep -rl "bind-propagation=shared" | wc -l), 1)
-	$(error Do not use shared mount in docker files.)
-endif
+	@echo "Checking docker files..."
+	@bash -c "if [ $$(find . -type f -name 'Dockerfile.*' -exec grep ADD {} \; | wc -l | xargs ) -eq 0 ]; then echo 'ok'; else echo 'replace ADD with COPY in dockerfiles'; exit 1 ; fi"
+
 	@echo "Checking python files..."
 	@. $(ACTIVATE); bash -c "bandit example_client/*.py > bandit.txt"
 	@if ! grep -FRq "No issues identified." bandit.txt; then\
@@ -142,7 +135,9 @@ endif
 	@echo "Checking license headers in files..."
 	@. $(ACTIVATE); bash -c "python3 lib_search.py . > missing_headers.txt"
 	@if ! grep -FRq "All files have headers" missing_headers.txt; then\
-		error Run python3 lib_search.py . to see missing headers file list.;\
+        echo "Files with missing headers";\
+        cat missing_headers.txt;\
+		exit 1;\
 	fi
 	@rm missing_headers.txt
 
