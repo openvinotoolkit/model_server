@@ -14,15 +14,21 @@
 # limitations under the License.
 #
 
-from tensorflow_serving.apis import get_model_status_pb2
+from tensorflow.core.framework.tensor_pb2 import TensorProto
+from tensorflow_serving.apis import get_model_status_pb2, get_model_metadata_pb2, predict_pb2
 
 from ovmsclient.tfs_compat.base.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
+from ovmsclient.tfs_compat.grpc.tensors import make_tensor_proto
 
 class GrpcPredictRequest(PredictRequest):
-    pass
+    def __init__(self, inputs, model_name, model_version, raw_request):
+        super().__init__(inputs, model_name, model_version)
+        self.raw_request = raw_request
 
 class GrpcModelMetadataRequest(ModelMetadataRequest):
-    pass
+    def __init__(self, model_name, model_version, raw_request):
+        super().__init__(model_name, model_version)
+        self.raw_request = raw_request
 
 class GrpcModelStatusRequest(ModelStatusRequest):
 
@@ -95,7 +101,25 @@ def make_predict_request(inputs, model_name, model_version=0):
         ...     model_version=2)
         >>> print(predict_request)
     '''
-    raise NotImplementedError
+    
+    _check_model_spec(model_name, model_version)
+
+    if not isinstance(inputs, dict):
+        raise TypeError(f'inputs type should be dict, but is {type(inputs).__name__}')
+
+    request = predict_pb2.PredictRequest()
+    request.model_spec.name = model_name
+    request.model_spec.version.value = model_version
+
+    for input_name, input_data in inputs.items():
+        if not isinstance(input_name, str):
+            raise TypeError(f'inputs keys should be type str, but found {type(input_name).__name__}')
+        if isinstance(input_data, TensorProto):
+            request.inputs[input_name].CopyFrom(input_data)
+        else:
+            request.inputs[input_name].CopyFrom(make_tensor_proto(input_data))
+
+    return GrpcPredictRequest(inputs, model_name, model_version, request)
 
 def make_metadata_request(model_name, model_version=0):
     '''
@@ -122,7 +146,14 @@ def make_metadata_request(model_name, model_version=0):
         >>> print(metadata_request)
     '''
 
-    raise NotImplementedError
+    _check_model_spec(model_name, model_version)
+
+    metadata_field = "signature_def"
+    request = get_model_metadata_pb2.GetModelMetadataRequest()
+    request.model_spec.name = model_name
+    request.model_spec.version.value = model_version
+    request.metadata_field.append(metadata_field)
+    return GrpcModelMetadataRequest(model_name, model_version, request)
 
 def make_status_request(model_name, model_version=0):
     '''

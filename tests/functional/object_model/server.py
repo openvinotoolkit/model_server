@@ -16,9 +16,9 @@
 import config
 from object_model.ovms_binary import OvmsBinary
 from object_model.ovms_docker import OvmsDocker
-from utils.logger import get_logger
+import logging
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Server:

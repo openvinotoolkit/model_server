@@ -15,6 +15,8 @@
 #
 
 from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
+from tensorflow_serving.apis import get_model_metadata_pb2
+from tensorflow.core.framework.types_pb2 import DataType
 
 from ovmsclient.tfs_compat.base.responses import PredictResponse, ModelMetadataResponse, ModelStatusResponse
 
@@ -22,19 +24,47 @@ class GrpcPredictResponse(PredictResponse):
     pass
 
 class GrpcModelMetadataResponse(ModelMetadataResponse):
-    
+
     def to_dict(self):
-        raise NotImplementedError
+        result_dict = {}
+
+        signature_def = self.raw_response.metadata['signature_def']
+        signature_map = get_model_metadata_pb2.SignatureDefMap()
+        signature_map.ParseFromString(signature_def.value)
+        model_signature = signature_map.ListFields()[0][1]['serving_default']
+        
+        inputs_metadata = {}
+        for input_name, input_info in model_signature.inputs.items():
+            input_shape = [d.size for d in input_info.tensor_shape.dim]
+            inputs_metadata[input_name] = dict([
+                ("shape", input_shape),
+                ("dtype", DataType.Name(input_info.dtype))
+            ])
+        
+        outputs_metadata = {}
+        for output_name, output_info in model_signature.outputs.items():
+            output_shape = [d.size for d in output_info.tensor_shape.dim]
+            outputs_metadata[output_name] = dict([
+                ("shape", output_shape),
+                ("dtype", DataType.Name(output_info.dtype))
+            ])
+    
+        version = self.raw_response.model_spec.version.value
+        result_dict[version] = dict([
+            ("inputs", inputs_metadata),
+            ("outputs", outputs_metadata)
+        ])
+        return result_dict
 
 class GrpcModelStatusResponse(ModelStatusResponse):
 
     def to_dict(self):
-        result_dictionary = {}
+        result_dict = {}
         model_version_status = self.raw_response.model_version_status
         for model_version in model_version_status:
-            result_dictionary[model_version.version] = dict([
+            result_dict[model_version.version] = dict([
                 ('state', ModelVersionStatus.State.Name(model_version.state)),
                 ('error_code', model_version.status.error_code),
                 ('error_message', model_version.status.error_message),
             ])
-        return result_dictionary
+        return result_dict

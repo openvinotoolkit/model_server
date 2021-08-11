@@ -19,10 +19,10 @@ import pytest
 from constants import ERROR_SHAPE
 from model.models_information import FaceDetection
 from utils.grpc import create_channel, infer
-from utils.logger import get_logger
+import logging
 from utils.rest import get_predict_url, infer_rest
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 auto_shapes = [
     {'in': (1, 3, 300, 300), 'out': (1, 1, 200, 7)},

@@ -20,9 +20,9 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, model_service_p
     get_model_metadata_pb2, get_model_status_pb2
 
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
-from utils.logger import get_logger
+import logging
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 DEFAULT_GRPC_PORT = "9000"
 DEFAULT_ADDRESS = 'localhost'
