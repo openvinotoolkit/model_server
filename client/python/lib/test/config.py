@@ -14,11 +14,18 @@
 # limitations under the License.
 #
 
+from numpy import array, float64, int32, int8
+from tensorflow.core.framework.tensor_pb2 import TensorProto
+from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
 from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
 from tensorflow.core.framework.types_pb2 import DataType
-
 from tensorflow.core.protobuf.error_codes_pb2 import Code
+from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
 from enum import IntEnum
+from numpy import array, float128, int32
+
+from ovmsclient.tfs_compat.grpc.tensors import make_tensor_proto
+from grpc import StatusCode
 
 class CallCount(IntEnum):
     ZERO = 0
@@ -654,6 +661,7 @@ BUILD_INVALID_CERTS = [
     ValueError,  'path_to_invalid_client_certificate is not valid certificate',
     {"check_config" : CallCount.ONE, "prepare_certs" : CallCount.ONE}),
 ]
+
 # response_dict = {
 # 'version' : model_version,
 # 'name' : model_name,
@@ -723,4 +731,180 @@ MODEL_METADATA_RESPONSE_VALID = [
             }
         }
     }
+]
+
+# inputs_dict,
+# model_name, model_version, expected_exception, expected_message
+PREDICT_REQUEST_INVALID_INPUTS = [
+    ([],
+    'model_name', 0, TypeError, "inputs type should be dict, but is list"),
+    (('input1', [1,2,3]),
+    'model_name', 0, TypeError, "inputs type should be dict, but is tuple"),
+    ({
+        1 : [1,2,3],
+        "input2" : [1,2]
+    }, 'model_name', 0, TypeError, "inputs keys should be type str, but found int"),
+    ({
+        "input1" : [[1.0, 2.0], [1.0, 2.0, 3.0]]
+    }, 'model_name', 0, ValueError, "argument must be a dense tensor: [[1.0, 2.0], [1.0, 2.0, 3.0]] - got shape [2], but wanted [2, 2]"),
+    ({
+        "input1" : [[(1,2,3)],[(1,2)],[(1,2,3)]]
+    }, 'model_name', 0, TypeError, "provided values type is not valid"),
+    ({
+        "input1" : float128(2.5)
+    }, 'model_name', 0, TypeError, "provided values type is not valid"),
+    ({
+        "input1" : (1,2,3)
+    }, 'model_name', 0, TypeError, "values type should be (list, np.ndarray, scalar), but is tuple"),
+    ({
+        "input1" : [
+            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]), bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])],
+            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]), bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])]
+        ]
+    }, 'model_name', 0, ValueError, "bytes values with dtype DT_STRING must be in shape [N]"),
+]
+
+# inputs_dict,
+# expected_proto_dict,
+# model_name, model_version
+PREDICT_REQUEST_VALID = [
+    ({
+        "input1" : [1,2,3],
+        "input2" : array([1.0,2.0,3.0]),
+        "input3" : [[int32(3), int32(1)], [int32(4), int32(16)]],
+    },
+    {
+        "input1" : {
+            "field" : "tensor_content",
+            "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=3)]),
+            "dtype" : DataType.DT_INT64,
+            'value' : array([1,2,3]).tobytes()
+        },
+        "input2" : {
+            "field" : "tensor_content",
+            "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=3)]),
+            "dtype" : DataType.DT_DOUBLE,
+            'value' : array([1.0,2.0,3.0]).tobytes()
+        },
+        "input3" : {
+            "field" : "tensor_content",
+            "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=2)]),
+            "dtype" : DataType.DT_INT32,
+            'value' : array([[int32(3), int32(1)], [int32(4), int32(16)]]).tobytes()
+        },
+    }, 'model_name', 0),
+    
+    ({
+        "input1" : TensorProto(dtype=DataType.DT_INT8,
+        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)]),
+        tensor_content=array([1,2,3,4,5,6]).tobytes()),
+        "input2" : 5.0,
+        "input3" : bytes([1,2,3])
+    },
+    {
+        "input2" : {
+            "field" : "double_val",
+            "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=1)]),
+            "dtype" : DataType.DT_DOUBLE,
+            'value' : array([5.0])
+        },
+        "input3" : {
+            "field" : "string_val",
+            "shape" : TensorShapeProto(dim = [TensorShapeProto.Dim(size=1)]),
+            "dtype" : DataType.DT_STRING,
+            'value' : [bytes([1,2,3])]
+        }
+    }, 'model_name', 0),
+
+    ({
+
+    },
+    {
+
+    }, 'model_name', 0)
+]
+PREDICT_RESPONSE_VALID = [
+    ({
+        "1463" : TensorProto(dtype=DataType.DT_INT8,
+        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=3)]),
+        tensor_content=array([1,2,3], dtype=int8).tobytes()),
+    }, "model_name", 0,
+    {
+        "1463" : array([1,2,3], dtype=int8)
+    }),
+
+    ({
+        "1463" : TensorProto(dtype=DataType.DT_INT32,
+        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)]),
+        tensor_content=array([1,2,3,4,5,6], dtype=int32).tobytes()),
+        "2" : TensorProto(dtype=DataType.DT_DOUBLE,
+        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=1)]),
+        double_val=array([12.0], dtype=float64)),
+    }, "model_name", 0,
+    {
+        "1463" : array([[1,2,3], [4,5,6]], dtype=int32),
+        "2" : array([12.0], dtype=float64)
+    }),
+
+    ({
+        "1463" : TensorProto(dtype=DataType.DT_STRING,
+        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=2)]),
+        string_val=[bytes([1,2,3]), bytes([4,5])]),
+        "2" : TensorProto(dtype=DataType.DT_STRING,
+        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=1)]),
+        string_val=[bytes([1,2,3])]),
+    }, "model_name", 0,
+    {
+        "1463" : [bytes([1,2,3]), bytes([4,5])],
+        "2" : [bytes([1,2,3])]
+    }),
+]
+
+PREDICT_RESPONSE_INVALID = [
+    ({
+        "1463" : TensorProto(),
+    }, "model_name", 0, TypeError, "Unsupported tensor type: 0"),
+    ({
+        "1463" : TensorProto(dtype=DataType.DT_INVALID),
+    }, "model_name", 0, TypeError, "Unsupported tensor type: 0"),
+    ({
+        "1463" : TensorProto(dtype=DataType.DT_RESOURCE),
+    }, "model_name", 0, TypeError, "Unsupported tensor type: 20"),
+]
+
+# ({"model_name" : model_name, "model_version" : model_version, "model_raw_name": raw_request_model_name, "model_raw_version" : raw_request_model_version})
+MODEL_STATUS_REQUEST_VALID = [
+    ({"model_name" : "name", "model_version" : 0, "model_raw_name" : "name", "model_raw_version" : 0}),
+]
+
+# ({"model_name" : model_name, "model_version" : model_version, "model_raw_name": raw_request_model_name, "model_raw_version" : raw_request_model_version},
+# expected_exception, expected_message)
+MODEL_STATUS_REQUEST_INVALID_RAW_REQUEST = [
+    ({"model_name" : "name", "model_version" : 0, "model_raw_name" : "other_name", "model_raw_version" : 0},
+    ValueError, 'request is not valid GrpcModelStatusRequest'),
+    ({"model_name" : "other_name", "model_version" : 0, "model_raw_name" : "name", "model_raw_version" : 0},
+    ValueError, 'request is not valid GrpcModelStatusRequest'),
+    ({"model_name" : "name", "model_version" : 0, "model_raw_name" : "name", "model_raw_version" : 1},
+    ValueError, 'request is not valid GrpcModelStatusRequest'),
+    ({"model_name" : "name", "model_version" : 1, "model_raw_name" : "name", "model_raw_version" : 0},
+    ValueError, 'request is not valid GrpcModelStatusRequest'),
+]
+
+# (request, expeceted_exception, expected_message)
+MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE = [
+    (None, TypeError, "request type should be GrpcModelStatusRequest, but is NoneType"),
+    (GetModelStatusRequest(), TypeError, "request type should be GrpcModelStatusRequest, but is GetModelStatusRequest"),
+]
+
+# ({"model_name" : model_name, "model_version" : model_version, "model_raw_name": raw_request_model_name, "model_raw_version" : raw_request_model_version},
+# expected_message, grpc_error_status_code, grpc_error_details)
+GET_MODEL_STATUS_INVALID_GRPC = [
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - failed to connect to all adresses",
+    StatusCode.UNAVAILABLE, "failed to connect to all adresses"),
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - Empty update",
+    StatusCode.UNAVAILABLE, "Empty update"),
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested version is not found",
+    StatusCode.NOT_FOUND, "Model with requested version is not found"),
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested name is not found",
+    StatusCode.NOT_FOUND, "Model with requested name is not found"),
 ]
