@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import os
 from typing import Any
 
 
@@ -36,3 +36,26 @@ class SingletonMeta(type):
         if cls not in cls._instances:
             cls._instances[cls] = super().__call__(*args, **kwargs)
         return cls._instances[cls]
+
+
+def get_int(key_name, fallback=None):
+    value = os.environ.get(key_name, fallback)
+    if value != fallback:
+        try:
+            value = int(value)
+        except ValueError:
+            raise ValueError("Value '{}' of {} env variable cannot be cast to int.".format(value, key_name))
+    return value
+
+
+def get_xdist_worker_count():
+    return int(os.environ.get("PYTEST_XDIST_WORKER_COUNT", "1"))
+
+
+def get_xdist_worker_nr():
+    xdist_current_worker = os.environ.get("PYTEST_XDIST_WORKER", "master")
+    if xdist_current_worker == "master":
+        xdist_current_worker = 0
+    else:
+        xdist_current_worker = int(xdist_current_worker.lstrip("gw"))
+    return xdist_current_worker

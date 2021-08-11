@@ -22,7 +22,8 @@ import docker
 from retry.api import retry_call
 
 import config
-from utils.parametrization import get_ports_for_fixture
+from utils.grpc import port_manager_grpc
+from utils.rest import port_manager_rest
 from utils.files_operation import save_container_logs_to_file
 import logging
 
@@ -40,7 +41,8 @@ class Docker:
     def __init__(self, request, container_name, start_container_command,
                  env_vars_container=None, image=config.image, container_log_line=config.container_log_line):
         self.client = docker.from_env()
-        self.grpc_port, self.rest_port = get_ports_for_fixture()
+        self.grpc_port = port_manager_grpc.get_port()
+        self.rest_port = port_manager_rest.get_port()
         self.image = image
         self.container = None
         self.request = request
@@ -87,6 +89,8 @@ class Docker:
             self.save_container_logs()
             self.container.stop()
             self.container.remove()
+            port_manager_grpc.release_port(self.grpc_port)
+            port_manager_rest.release_port(self.rest_port)
             self.container = None
             logger.info(f"Container successfully closed and removed: {self.container_name}")
 

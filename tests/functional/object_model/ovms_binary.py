@@ -24,7 +24,9 @@ from retry.api import retry_call
 
 import config
 from command_wrappers.server import start_ovms_container_command
-from utils.parametrization import get_ports_for_fixture
+
+from utils.grpc import port_manager_grpc
+from utils.rest import port_manager_rest
 
 
 class OvmsBinary:
@@ -36,7 +38,8 @@ class OvmsBinary:
     def __init__(self, request, command_args, start_command, env_vars=None, cwd=None):
         self.request = request
         self.command_args = command_args
-        self.grpc_port, self.rest_port = get_ports_for_fixture()
+        self.grpc_port = port_manager_grpc.get_port()
+        self.rest_port = port_manager_rest.get_port()
         self.command_args["port"] = self.grpc_port
         self.command_args["rest_port"] = self.rest_port
         self.command = shlex.split("./" + os.path.basename(config.ovms_binary_path) +
@@ -60,6 +63,8 @@ class OvmsBinary:
             self.logs_flag = False
             time.sleep(2)
             get_logs_thread.join()
+            port_manager_grpc.release_port(self.grpc_port)
+            port_manager_rest.release_port(self.rest_port)
 
         self.request.addfinalizer(finalizer)
 
