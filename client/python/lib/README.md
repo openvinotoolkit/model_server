@@ -2,7 +2,7 @@
 
 Model server client library is a set of objects and methods designed to simplify user interaction with the instance of the model server. The library contains functions that hide API specific aspects so user doesn't have to know about creating protos, preparing requests, reading responses etc. and can focus on the application itself rather than dealing with API calls to OVMS.
 
-See [API documentation](docs/README.md)
+See [API documentation](docs/README.md) for details on what the library provides.
 
 
 ## Installation

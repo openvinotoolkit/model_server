@@ -27,7 +27,9 @@ Send `GrpcModelMetadataRequest` to the server and return response.
 
 **Raises:**
  
- - <b>`TypeError`</b>:   if provided argument is of wrong type.
+ - <b>`TypeError`</b>:   if request argument is of wrong type.
+ - <b>`ValueError`</b>:   if request argument has invalid contents.
+ - <b>`ConnectionError`</b>:   if there was an error while sending request to the server.
 
 
 **Examples:**
@@ -68,7 +70,9 @@ Send `GrpcModelStatusRequest` to the server and return response.
 
 **Raises:**
  
- - <b>`TypeError`</b>:   if provided argument is of wrong type. 
+ - <b>`TypeError`</b>:   if request argument is of wrong type.
+ - <b>`ValueError`</b>:   if request argument has invalid contents.
+ - <b>`ConnectionError`</b>:   if there was an error while sending request to the server.
 
 
 **Examples:**
@@ -110,7 +114,9 @@ Send `GrpcPredictRequest` to the server and return response.
 
 **Raises:**
  
- - <b>`TypeError`</b>:   if provided argument is of wrong type. Many more for different serving reponses... 
+ - <b>`TypeError`</b>:   if request argument is of wrong type.
+ - <b>`ValueError`</b>:   if request argument has invalid contents.
+ - <b>`ConnectionError`</b>:   if there was an error while sending request to the server.
 
 
 **Examples:**

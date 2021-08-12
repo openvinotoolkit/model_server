@@ -22,5 +22,6 @@ Client classes:
 - [GrpcClient](grpc_client.md)
 
 Server response classes:
+- [GrpcPredictResponse](grpc_predict_response.md)
 - [GrpcModelMetadataResponse](grpc_model_metadata_response.md)
 - [GrpcModelStatusResponse](grpc_model_status_response.md)
