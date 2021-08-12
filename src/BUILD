@@ -13,6 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+#config_setting(
+#    name = "linux_distribution_family",
+#    constraint_values = [
+#        ":debian", # like Ubuntu
+#        ":fedora", # like RHEL/CentOS
+#    ],
+#)
+
+constraint_setting(name = "linux_distribution_family")
+constraint_value(constraint_setting = "linux_distribution_family", name = "fedora") # like RHEL/CentOS
+constraint_value(constraint_setting = "linux_distribution_family", name = "debian") # like Ubuntu
 
 cc_library(
     name = "ovms_lib",
@@ -160,9 +171,7 @@ cc_library(
         "@rapidjson//:rapidjson",
         "@spdlog//:spdlog",
         "@cxxopts//:cxxopts",
-        "@awssdk//:s3",
         "@awssdk//:core",
-        "@awssdk//:deps",
 	    "@azure//:storage",
 	    "@cpprest//:sdk",
 	    "@boost//:lib",
@@ -322,7 +331,6 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
-        "@crypto_lib//:libcrypto",
     ]
 )
 
@@ -393,12 +401,15 @@ cc_test(
         "test/add_two_inputs_model/1/add.bin",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.xml",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.bin",
+        "test/summator/1/summator.xml",
+        "test/summator/1/summator.bin",
     ],
     linkopts = [
         "-lxml2",
         "-luuid",
         "-lstdc++fs",
         "-lcrypto",
+        "-lssl",
     ],
     deps = [
         "//src:ovms_lib",
@@ -413,7 +424,6 @@ cc_test(
         "//src:libcustom_node_model_zoo_intel_object_detection.so",
         "//src:libcustom_node_image_transformation.so",
         "@com_google_googletest//:gtest",
-        "@crypto_lib//:libcrypto",
     ],
     copts = [
         "-Wall",

@@ -41,6 +41,7 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; rm -vrf /ovm
 RUN find /ovms/bazel-out/k8-*/bin -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
 RUN cd /ovms_release/lib/ ; rm -f libazurestorage.so.* ; ln -s libazurestorage.so libazurestorage.so.7 ;ln -s libazurestorage.so libazurestorage.so.7.5
 RUN cd /ovms_release/lib/ ; rm -f libcpprest.so.2.10 ; ln -s libcpprest.so libcpprest.so.2.10
+RUN rm -f /ovms_release/lib/libssl.so
 RUN rm -f /ovms_release/lib/libsampleloader*
 RUN rm -f /ovms_release/lib/lib_node*
 RUN rm -f /ovms_release/lib/libcustom_node*
@@ -53,7 +54,6 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/in
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/deployment_tools/inference_engine/external/ -iname '*.so*' -exec cp -v {} /ovms_release/lib/ \;
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/opencv/lib/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \; && rm /ovms_release/lib/libopencv_highgui*
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp /opt/intel/openvino/opencv/etc/licenses/* /ovms/release_files/thirdparty-licenses/;
-RUN find /usr/local/ssl/lib -iname 'libcrypto.so*' -exec cp -vP {} /ovms_release/lib/ \;
 
 RUN if [ -f /ovms_release/lib/libbsl.so.0 ] ; then cd /ovms_release/lib/ ; rm -f libbsl.so.0 ; ln -s libbsl.so libbsl.so.0 ; fi
 RUN if [ -f /ovms_release/lib/libmvnc-hddl.so.0 ] ; then cd /ovms_release/lib/ ; rm -f libmvnc-hddl.so.0 ; ln -s libmvnc-hddl.so libmvnc-hddl.so.0 ; fi

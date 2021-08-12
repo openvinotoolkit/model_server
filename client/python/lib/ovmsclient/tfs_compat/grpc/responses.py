@@ -19,9 +19,16 @@ from tensorflow_serving.apis import get_model_metadata_pb2
 from tensorflow.core.framework.types_pb2 import DataType
 
 from ovmsclient.tfs_compat.base.responses import PredictResponse, ModelMetadataResponse, ModelStatusResponse
+from ovmsclient.tfs_compat.grpc.tensors import make_ndarray
 
 class GrpcPredictResponse(PredictResponse):
-    pass
+    def to_dict(self):
+        result_dict = {}
+
+        for key, value in self.raw_response.outputs.items():
+            result_dict[key] = make_ndarray(value)
+        
+        return result_dict
 
 class GrpcModelMetadataResponse(ModelMetadataResponse):
 

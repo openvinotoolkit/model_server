@@ -17,19 +17,23 @@
 import json
 import numpy as np
 import requests
-import config
 from utils.parametrization import get_ports_prefixes
 from google.protobuf.json_format import Parse
 from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2
 import logging
 
+from utils.port_manager import PortManager
+from config import rest_ovms_starting_port, ports_pool_size, target_device
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_ADDRESS = 'localhost'
-DEFAULT_REST_PORT = "{}00".format(get_ports_prefixes()["rest_ports_prefix"])
+DEFAULT_REST_PORT = "{}".format(rest_ovms_starting_port)
 PREDICT = ':predict'
 METADATA = '/metadata'
+
+port_manager_rest = PortManager("rest", starting_port=rest_ovms_starting_port, pool_size=ports_pool_size)
 
 
 def get_url(model: str, address: str = DEFAULT_ADDRESS, port: str = DEFAULT_REST_PORT,
@@ -109,7 +113,7 @@ def process_json_output(result_dict, output_tensors):
 def infer_rest(img, input_tensor, rest_url,
                output_tensors, request_format):
     data_json = prepare_body_format(img, request_format, input_tensor)
-    timeout = 300 if config.target_device == "GPU" else 10
+    timeout = 300 if target_device == "GPU" else 10
     result = requests.post(rest_url, data=data_json, timeout=timeout)
     output_json = json.loads(result.text)
     data = process_json_output(output_json, output_tensors)

@@ -19,14 +19,17 @@ from tensorflow import make_tensor_proto, make_ndarray
 from tensorflow_serving.apis import prediction_service_pb2_grpc, model_service_pb2_grpc, predict_pb2, \
     get_model_metadata_pb2, get_model_status_pb2
 
-import config
+from config import grpc_ovms_starting_port, ports_pool_size
+from utils.port_manager import PortManager
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
 import logging
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_GRPC_PORT = "9000"
+DEFAULT_GRPC_PORT = str(grpc_ovms_starting_port)
 DEFAULT_ADDRESS = 'localhost'
+
+port_manager_grpc = PortManager("gRPC", starting_port=grpc_ovms_starting_port, pool_size=ports_pool_size)
 
 
 def create_channel(address: str = DEFAULT_ADDRESS, port: str = DEFAULT_GRPC_PORT, service: int = PREDICTION_SERVICE):

@@ -14,14 +14,23 @@
 # limitations under the License.
 #
 
-from grpc._channel import Channel
+from grpc._channel import _RPCState, _InactiveRpcError, Channel
 import pytest
 
+from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
 from tensorflow_serving.apis.model_service_pb2_grpc import ModelServiceStub
 from tensorflow_serving.apis.prediction_service_pb2_grpc import PredictionServiceStub
+from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
+from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
+from tensorflow.core.protobuf.error_codes_pb2 import Code
+from tensorflow.core.framework.types_pb2 import DataType
 
 from ovmsclient.tfs_compat.grpc.serving_client import (_check_address, _open_certificate, _check_config, _check_port,
-_open_private_key, _check_tls_config, _prepare_certs, make_grpc_client)
+_open_private_key, _check_tls_config, _prepare_certs, make_grpc_client, _check_model_status_request, _check_model_metadata_request)
+from ovmsclient.tfs_compat.grpc.requests import GrpcModelStatusRequest
+from ovmsclient.tfs_compat.grpc.responses import GrpcModelStatusResponse
+from ovmsclient.tfs_compat.grpc.requests import GrpcModelMetadataRequest
+from ovmsclient.tfs_compat.grpc.responses import GrpcModelMetadataResponse
 
 from config import ADDRESS_INVALID, ADDRESS_VALID
 from config import PORT_VALID, PORT_INVALID
@@ -31,6 +40,69 @@ from config import CERTIFICATE_VALID
 from config import PRIVATE_KEY_VALID
 from config import CHANNEL_CERTS_VALID
 from config import BUILD_INVALID_CONFIG, BUILD_VALID, BUILD_INVALID_CERTS
+from config import MODEL_STATUS_REQUEST_VALID, MODEL_STATUS_REQUEST_INVALID_RAW_REQUEST, MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE
+from config import GET_MODEL_STATUS_INVALID_GRPC
+from config import MODEL_METADATA_REQUEST_VALID, MODEL_METADATA_REQUEST_INVALID_RAW_REQUEST, MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE
+from config import GET_MODEL_METADATA_INVALID_GRPC
+
+from test_grpc_responses import create_model_metadata_response
+from test_grpc_responses import create_model_status_response, merge_model_status_responses
+
+@pytest.fixture
+def valid_grpc_serving_client_min():
+    config = {
+        "address" : "localhost",
+        "port" : 9000
+    }
+    return make_grpc_client(config)
+
+@pytest.fixture
+def valid_model_status_response():
+    raw_response = merge_model_status_responses([
+        create_model_status_response(1, Code.OK, "OK", ModelVersionStatus.State.AVAILABLE),
+        create_model_status_response(0, Code.UNKNOWN, "UNKNOWN", ModelVersionStatus.State.LOADING)
+    ])
+    return GrpcModelStatusResponse(raw_response)
+
+def create_model_status_request(name, version, raw_name, raw_version):
+    raw_request = GetModelStatusRequest()
+    raw_request.model_spec.name = raw_name
+    raw_request.model_spec.version.value = raw_version
+    return GrpcModelStatusRequest(name, version, raw_request)
+
+@pytest.fixture
+def valid_model_metadata_response():
+    model_raw_metadata_response_dict = {
+        'version' : 2,
+        'name' : 'resnet',
+        'inputs' : {
+            '0' : {
+                'shape' : [1, 3, 244, 244],
+                'dtype' : DataType.DT_FLOAT
+            }
+        },
+        'outputs' : {
+            '1463' : {
+                'shape' : [1, 1000],
+                'dtype' : DataType.DT_FLOAT
+            }
+        }
+    }
+    raw_response = create_model_metadata_response(model_raw_metadata_response_dict)
+    return GrpcModelMetadataResponse(raw_response)
+
+def create_model_metadata_request(name, version, raw_name, raw_version, metadata_field_list):
+    raw_request = GetModelMetadataRequest()
+    raw_request.model_spec.name = raw_name
+    raw_request.model_spec.version.value = raw_version
+    for field in metadata_field_list:
+        raw_request.metadata_field.append(field)
+    return GrpcModelMetadataRequest(name, version, raw_request)
+
+def create_grpc_error(code, details):
+    grpc_state = _RPCState(due=(), initial_metadata=None, trailing_metadata=None, code=code, details=details)
+    grpc_error = _InactiveRpcError(grpc_state)
+    return grpc_error
 
 @pytest.mark.parametrize("address", ADDRESS_VALID)
 def test_check_address_valid(address):
@@ -40,7 +112,8 @@ def test_check_address_valid(address):
 def test_check_address_invalid(address, expected_exception, expected_message):
     with pytest.raises(expected_exception) as e_info:
         _check_address(address)
-        assert str(e_info.value) == expected_message
+    
+    assert str(e_info.value) == expected_message
 
 @pytest.mark.parametrize("address", PORT_VALID)
 def test_check_port_valid(address):
@@ -50,12 +123,14 @@ def test_check_port_valid(address):
 def test_check_port_invalid(address, expected_exception, expected_message):
     with pytest.raises(expected_exception) as e_info:
         _check_port(address)
-        assert str(e_info.value) == expected_message
+    
+    assert str(e_info.value) == expected_message
 
 @pytest.mark.parametrize("tls_config, isfile_called_count", TLS_CONFIG_VALID)
 def test_check_tls_config_valid(mocker, tls_config, isfile_called_count):
     mock_method = mocker.patch('os.path.isfile')
     _check_tls_config(tls_config)
+    
     assert mock_method.call_count ==  isfile_called_count
 
 @pytest.mark.parametrize("tls_config, expected_exception, expected_message, isfile_called_count, is_valid_path", TLS_CONFIG_INVALID)
@@ -63,8 +138,8 @@ def test_check_tls_config_invalid(mocker, tls_config, expected_exception, expect
     mock_method = mocker.patch('os.path.isfile', side_effect=is_valid_path)
     with pytest.raises(expected_exception) as e_info:
         _check_tls_config(tls_config)
-        assert str(e_info.value) == expected_message
     
+    assert str(e_info.value) == expected_message
     assert mock_method.call_count ==  isfile_called_count
 
 @pytest.mark.parametrize("config, method_call_count", CONFIG_VALID)
@@ -92,8 +167,8 @@ def test_check_config_invalid(mocker, config, method_call_count, expected_except
 
     with pytest.raises(expected_exception) as e_info:
         _check_config(config)
-        assert str(e_info.value) == expected_message
-
+    
+    assert str(e_info.value) == expected_message
     assert mock_check_address.call_count == method_call_count['check_address']
     assert mock_check_port.call_count == method_call_count['check_port']
     assert mock_check_tls_config.call_count == method_call_count['check_tls_config']
@@ -103,6 +178,7 @@ def test_open_certificate_valid(mocker, certificate_path):
     mock_open = mocker.patch('builtins.open', mocker.mock_open(read_data='certificate'))
 
     certificate = _open_certificate(certificate_path)
+    
     assert mock_open.call_count == 1
     assert certificate == 'certificate'
 
@@ -111,6 +187,7 @@ def test_open_private_key_valid(mocker, private_key_path):
     mock_open = mocker.patch('builtins.open', mocker.mock_open(read_data='privatekey'))
 
     private_key = _open_private_key(private_key_path)
+    
     assert mock_open.call_count == 1
     assert private_key == 'privatekey'
 
@@ -144,8 +221,8 @@ def test_make_grpc_client_invalid_config(mocker, config, expected_exception, exp
 
     with pytest.raises(expected_exception) as e_info:
         client = make_grpc_client(config)
-        assert str(e_info.value) == expected_message
-
+    
+    assert str(e_info.value) == expected_message
     assert mock_check_config.call_count == method_call_count['check_config']
     assert mock_prepare_certs.call_count == method_call_count['prepare_certs']
 
@@ -156,7 +233,152 @@ def test_make_grpc_client_invalid_certs(mocker, config, expected_exception, expe
 
     with pytest.raises(expected_exception) as e_info:
         client = make_grpc_client(config)
-        assert str(e_info.value) == expected_message
-
+    
+    assert str(e_info.value) == expected_message
     assert mock_check_config.call_count == method_call_count['check_config']
     assert mock_prepare_certs.call_count == method_call_count['prepare_certs']
+
+def test_get_model_status_valid(mocker, valid_grpc_serving_client_min, valid_model_status_response):
+    model_status_request = mocker.Mock()
+    
+    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_model_status_request')
+    valid_grpc_serving_client_min.model_service_stub.GetModelStatus = mocker.Mock(return_value=valid_model_status_response.raw_response)
+
+    response = valid_grpc_serving_client_min.get_model_status(model_status_request)
+
+    assert mock_check_request.call_count == 1
+    assert valid_grpc_serving_client_min.model_service_stub.GetModelStatus.call_count == 1
+    assert type(response) == type(valid_model_status_response)
+    assert response.raw_response == valid_model_status_response.raw_response
+
+@pytest.mark.parametrize("expected_message, grpc_error_status_code, grpc_error_details", GET_MODEL_STATUS_INVALID_GRPC)
+def test_get_model_status_invalid_grpc(mocker, valid_grpc_serving_client_min, expected_message, grpc_error_status_code, grpc_error_details):
+    model_status_request = mocker.Mock()
+
+    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_model_status_request')
+    valid_grpc_serving_client_min.model_service_stub.GetModelStatus = mocker.Mock(side_effect=create_grpc_error(grpc_error_status_code, grpc_error_details))
+
+    with pytest.raises(ConnectionError) as e_info:
+        response = valid_grpc_serving_client_min.get_model_status(model_status_request)
+    
+    assert str(e_info.value) == expected_message
+    assert mock_check_request.call_count == 1
+    assert valid_grpc_serving_client_min.model_service_stub.GetModelStatus.call_count == 1
+
+@pytest.mark.parametrize("request_parameters_dict, expected_exception, expected_message", MODEL_STATUS_REQUEST_INVALID_RAW_REQUEST)
+def test_get_model_status_invalid_raw_request(mocker, valid_grpc_serving_client_min, request_parameters_dict, expected_exception, expected_message):
+    model_status_request = create_model_status_request(request_parameters_dict['model_name'],
+        request_parameters_dict['model_version'], request_parameters_dict['model_raw_name'], request_parameters_dict['model_raw_version'])
+    
+    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_model_status_request', side_effect=expected_exception(expected_message))
+    with pytest.raises(expected_exception) as e_info:
+        response = valid_grpc_serving_client_min.get_model_status(model_status_request)
+        
+    assert str(e_info.value) == expected_message
+    assert mock_check_request.call_count == 1
+
+
+@pytest.mark.parametrize("model_status_request, expected_exception, expected_message", MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE)
+def test_get_model_status_invalid_request_type(mocker, valid_grpc_serving_client_min, model_status_request, expected_exception, expected_message):
+    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_model_status_request', side_effect=expected_exception(expected_message))
+    with pytest.raises(expected_exception) as e_info:
+        response = valid_grpc_serving_client_min.get_model_status(model_status_request)
+        
+    assert str(e_info.value) == expected_message
+    assert mock_check_request.call_count == 1
+
+@pytest.mark.parametrize("request_parameters_dict", MODEL_STATUS_REQUEST_VALID)
+def test_check_model_status_request_valid(request_parameters_dict):
+    model_status_request = create_model_status_request(request_parameters_dict['model_name'],
+        request_parameters_dict['model_version'], request_parameters_dict['model_raw_name'], request_parameters_dict['model_raw_version'])
+    
+    _check_model_status_request(model_status_request)
+
+@pytest.mark.parametrize("request_parameters_dict, expected_exception, expected_message", MODEL_STATUS_REQUEST_INVALID_RAW_REQUEST)
+def test_check_model_status_request_invalid_raw_request(request_parameters_dict, expected_exception, expected_message):
+    model_status_request = create_model_status_request(request_parameters_dict['model_name'],
+        request_parameters_dict['model_version'], request_parameters_dict['model_raw_name'], request_parameters_dict['model_raw_version'])
+    
+    with pytest.raises(expected_exception) as e_info:
+        _check_model_status_request(model_status_request)
+        
+    assert str(e_info.value) == expected_message
+
+@pytest.mark.parametrize("model_status_request, expected_exception, expected_message", MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE)
+def test_check_model_status_request_invalid_type(model_status_request, expected_exception, expected_message):
+    with pytest.raises(expected_exception) as e_info:
+        _check_model_status_request(model_status_request)
+        
+    assert str(e_info.value) == expected_message
+@pytest.mark.parametrize("request_parameters_dict", MODEL_METADATA_REQUEST_VALID)
+def test_check_model_metadata_request_valid(request_parameters_dict):
+    model_metadata_request = create_model_metadata_request(request_parameters_dict['model_name'], request_parameters_dict['model_version'],
+        request_parameters_dict['model_raw_name'], request_parameters_dict['model_raw_version'], request_parameters_dict['metadata_field_list'])
+
+    _check_model_metadata_request(model_metadata_request)
+
+@pytest.mark.parametrize("request_parameters_dict, expected_exception, expected_message", MODEL_METADATA_REQUEST_INVALID_RAW_REQUEST)
+def test_check_model_metadata_request_invalid_raw_request(request_parameters_dict, expected_exception, expected_message):
+    model_metadata_request = create_model_metadata_request(request_parameters_dict['model_name'], request_parameters_dict['model_version'],
+        request_parameters_dict['model_raw_name'], request_parameters_dict['model_raw_version'], request_parameters_dict['metadata_field_list'])
+
+    with pytest.raises(expected_exception) as e_info:
+        _check_model_metadata_request(model_metadata_request)
+    
+    assert str(e_info.value) == expected_message
+
+@pytest.mark.parametrize("model_metadata_request, expected_exception, expected_message", MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE)
+def test_check_model_metadata_request_invalid_type(model_metadata_request, expected_exception, expected_message):
+    with pytest.raises(expected_exception) as e_info:
+        _check_model_metadata_request(model_metadata_request)
+
+    assert str(e_info.value) == expected_message
+
+def test_get_model_metadata_valid(mocker, valid_grpc_serving_client_min, valid_model_metadata_response):
+    model_metadata_request = mocker.Mock()
+
+    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_model_metadata_request')
+    valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata = mocker.Mock(return_value=valid_model_metadata_response.raw_response)
+
+    response = valid_grpc_serving_client_min.get_model_metadata(model_metadata_request)
+
+    assert mock_check_request.call_count == 1
+    assert valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata.call_count == 1
+    assert type(response) == type(valid_model_metadata_response)
+    assert response.raw_response == valid_model_metadata_response.raw_response
+
+@pytest.mark.parametrize("expected_message, grpc_error_status_code, grpc_error_details", GET_MODEL_METADATA_INVALID_GRPC)
+def test_get_model_metadata_invalid_grpc(mocker, valid_grpc_serving_client_min, expected_message, grpc_error_status_code, grpc_error_details):
+    model_metadata_request = mocker.Mock()
+
+    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_model_metadata_request')
+    valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata = mocker.Mock(side_effect=create_grpc_error(grpc_error_status_code, grpc_error_details))
+
+    with pytest.raises(ConnectionError) as e_info:
+        response = valid_grpc_serving_client_min.get_model_metadata(model_metadata_request)
+
+    assert str(e_info.value) == expected_message
+    assert mock_check_request.call_count == 1
+    assert valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata.call_count == 1
+
+@pytest.mark.parametrize("request_parameters_dict, expected_exception, expected_message", MODEL_METADATA_REQUEST_INVALID_RAW_REQUEST)
+def test_get_model_metadata_invalid_raw_request(mocker, valid_grpc_serving_client_min, request_parameters_dict, expected_exception, expected_message):
+    model_metadata_request = create_model_metadata_request(request_parameters_dict['model_name'], request_parameters_dict['model_version'],
+        request_parameters_dict['model_raw_name'], request_parameters_dict['model_raw_version'], request_parameters_dict['metadata_field_list'])
+
+    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_model_metadata_request', side_effect=expected_exception(expected_message))
+    with pytest.raises(expected_exception) as e_info:
+        response = valid_grpc_serving_client_min.get_model_metadata(model_metadata_request)
+
+    assert str(e_info.value) == expected_message
+    assert mock_check_request.call_count == 1
+
+@pytest.mark.parametrize("model_metadata_request, expected_exception, expected_message", MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE)
+def test_get_model_metadata_invalid_type(mocker, valid_grpc_serving_client_min, model_metadata_request, expected_exception, expected_message):
+    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_model_metadata_request', side_effect=expected_exception(expected_message))
+
+    with pytest.raises(expected_exception) as e_info:
+        response = valid_grpc_serving_client_min.get_model_metadata(model_metadata_request)
+    
+    assert str(e_info.value) == expected_message
+    assert mock_check_request.call_count == 1

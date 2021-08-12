@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+from numpy import ndarray
+from numpy.core.numeric import array_equal
 import pytest
 
 from tensorflow.core.protobuf.meta_graph_pb2 import SignatureDef, TensorInfo
@@ -23,13 +25,51 @@ from tensorflow.core.framework.types_pb2 import DataType
 from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataResponse, SignatureDefMap
 from tensorflow_serving.apis.model_pb2 import ModelSpec
 from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusResponse, ModelVersionStatus
+from tensorflow_serving.apis.predict_pb2 import PredictResponse
 from tensorflow_serving.util.status_pb2 import StatusProto
 
 from google.protobuf.any_pb2 import Any
 
-from ovmsclient.tfs_compat.grpc.responses import GrpcModelMetadataResponse, GrpcModelStatusResponse
+from ovmsclient.tfs_compat.grpc.responses import GrpcModelMetadataResponse, GrpcModelStatusResponse, GrpcPredictResponse
 
-from config import MODEL_METADATA_RESPONSE_VALID, MODEL_STATUS_RESPONSE_VALID
+from config import MODEL_METADATA_RESPONSE_VALID, MODEL_STATUS_RESPONSE_VALID, PREDICT_RESPONSE_VALID, PREDICT_RESPONSE_INVALID
+
+@pytest.mark.parametrize("outputs_dict, model_name, model_version, expected_outputs_dict", PREDICT_RESPONSE_VALID)
+def test_PredictResponse_to_dict_valid(outputs_dict, model_name, model_version, expected_outputs_dict):
+    predict_raw_response = PredictResponse()
+
+    predict_raw_response.model_spec.name = model_name
+    predict_raw_response.model_spec.version.value = model_version
+
+    for key, value in outputs_dict.items():
+        predict_raw_response.outputs[key].CopyFrom(value)
+
+    predict_response = GrpcPredictResponse(predict_raw_response)
+    response_dict = predict_response.to_dict()
+
+    assert isinstance(response_dict, dict)
+    assert len(response_dict) == len(outputs_dict)
+    raw_response = predict_response.raw_response
+    for output_name, array in response_dict.items():
+        assert output_name in raw_response.outputs.keys()
+        assert type(array) is ndarray
+        assert array_equal(array, expected_outputs_dict[output_name])
+
+@pytest.mark.parametrize("outputs_dict, model_name, model_version, expected_exception, expected_message", PREDICT_RESPONSE_INVALID)
+def test_PredictResponse_to_dict_invalid(outputs_dict, model_name, model_version, expected_exception, expected_message):
+    predict_raw_response = PredictResponse()
+
+    predict_raw_response.model_spec.name = model_name
+    predict_raw_response.model_spec.version.value = model_version
+
+    for key, value in outputs_dict.items():
+        predict_raw_response.outputs[key].CopyFrom(value)
+
+    predict_response = GrpcPredictResponse(predict_raw_response)
+    with pytest.raises(expected_exception) as e_info:
+        response_dict = predict_response.to_dict()
+    
+    assert str(e_info.value) == expected_message
 
 @pytest.mark.parametrize("model_raw_status_response_dict" , MODEL_STATUS_RESPONSE_VALID)
 def test_ModelStatusResponse_to_dict_valid(model_raw_status_response_dict):
@@ -41,6 +81,7 @@ def test_ModelStatusResponse_to_dict_valid(model_raw_status_response_dict):
 
     response = GrpcModelStatusResponse(raw_response)
     response_dict = response.to_dict()
+
     assert isinstance(response_dict, dict)
     assert len(response_dict) == len(model_raw_status_response_dict)
     for version, status in model_raw_status_response_dict.items():
@@ -56,6 +97,7 @@ def test_ModelMetadataResponse_to_dict_valid(model_raw_metadata_response_dict):
 
     response = GrpcModelMetadataResponse(raw_response)
     response_dict = response.to_dict()
+    
     assert isinstance(response_dict, dict)
     assert len(response_dict) == 1
 

@@ -63,6 +63,7 @@ RUN yum update -d6 -y && yum install -d6 -y epel-release centos-release-scl && y
             make \
             numactl-libs \
             ocl-icd \
+            openssl-devel \
             patch \
             pkg-config \
             python3 \
@@ -133,12 +134,15 @@ RUN if [ -f /opt/intel/openvino/deployment_tools/inference_engine/samples/cpp/bu
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
+# since bazel does not have easy way to pass if down the dependencies to have select the sources
+# for libcurl & ssl we hack it this way for the linker
+RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
 COPY external /ovms/external/
 COPY third_party /ovms/third_party/
 
 ENV BAZEL_LINKLIBS=-l%:libstdc++.a
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
+RUN TF_SYSTEM_LIBS="curl" bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+RUN TF_SYSTEM_LIBS="curl" bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
@@ -149,12 +153,6 @@ RUN wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.
 		--with-random --with-thread --with-atomic --with-regex \
 		--with-log --with-locale \
 		install
-
-# OPENSSL
-WORKDIR /openssl
-
-RUN git clone https://github.com/openssl/openssl && cd openssl && git checkout tags/OpenSSL_1_1_1k
-RUN cd openssl && ./config --prefix=/usr/local/ssl --openssldir=/etc/pki/tls shared && make --jobs=$JOBS && make --jobs=$JOBS install || true && make --jobs=$JOBS install_runtime
 
 ####### Azure SDK
 
@@ -176,11 +174,13 @@ RUN cd azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release && CASABLA
 ####### End of Azure SDK
 
 # Build AWS S3 SDK
-RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
+RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.9.76 --single-branch --depth 1 /awssdk
+WORKDIR /awssdk
+RUN git submodule update --init --recursive
 WORKDIR /awssdk/build
-RUN OPENSSL_ROOT_DIR=/usr/local/ssl/ cmake3 -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
+RUN cmake3 -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_INSTALL_LIBDIR="lib" -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " ..
 RUN make --jobs=$JOBS
-RUN mv .deps/install/lib64 .deps/install/lib
+RUN make install
 
 ####### End of AWS S3 SDK
 
@@ -196,12 +196,12 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -type d | grep openvino | cut -d'_' -f2`#g" /ovms/src/version.hpp
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/:/openvino/bin/intel64/Release/lib/:/opt/intel/openvino/opencv/lib/
 
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
+RUN TF_SYSTEM_LIBS="curl" bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
+RUN TF_SYSTEM_LIBS="curl" bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN if [ -f /opt/intel/openvino/bin/setupvars.sh ];  then cd /ovms/src/test/cpu_extension/ && make ; fi
 
-RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
+RUN TF_SYSTEM_LIBS="curl" bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
 
 COPY ${ovms_metadata_file} metadata.json
 
