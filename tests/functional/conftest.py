@@ -157,6 +157,8 @@ def pytest_runtest_logstart(nodeid, location):
         log_path = os.path.join(artifacts_dir, f"{test_name}.log")
         _root_logger = logging.getLogger(None)
         _root_logger._test_log_handler = FileHandler(log_path)
+        formatter = logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s")
+        _root_logger._test_log_handler.setFormatter(formatter)
         _root_logger.addHandler(_root_logger._test_log_handler)
     yield
 
