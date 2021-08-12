@@ -17,7 +17,6 @@
 import json
 import numpy as np
 import requests
-from utils.parametrization import get_ports_prefixes
 from google.protobuf.json_format import Parse
 from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2
