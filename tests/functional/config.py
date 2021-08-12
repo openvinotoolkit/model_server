@@ -16,6 +16,7 @@
 
 import os
 
+from utils.helpers import get_int
 from utils.parametrization import generate_test_object_name
 
 try:
@@ -68,3 +69,12 @@ target_device = os.environ.get("TT_TARGET_DEVICE", "CPU")
 start_minio_container_command = 'server --address ":{}" /data'
 
 container_minio_log_line = "Console endpoint is listening on a dynamic port"
+
+""" TT_GRPC_OVMS_STARTING_PORT - Grpc port where ovms should be exposed"""
+grpc_ovms_starting_port = get_int("TT_GRPC_OVMS_STARTING_PORT", 9001)
+
+""" TT_REST_OVMS_STARTING_PORT - Rest port where ovms should be exposed"""
+rest_ovms_starting_port = get_int("TT_REST_OVMS_STARTING_PORT", 8001)
+
+""" TT_PORTS_POOL_SIZE- Ports pool size"""
+ports_pool_size = get_int("TT_PORTS_POOL_SIZE", 100)

@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 
 class Server:
+    running_instances = []
+
     def __init__(self, request, command_args, container_name_infix, start_container_command,
                  env_vars=None, image=config.image, container_log_line=config.container_log_line,
                  server_log_level=config.log_level, target_device=None):
@@ -36,10 +38,30 @@ class Server:
         self.target_device = target_device
 
     def start(self):
+        assert self not in Server.running_instances
+
         if config.ovms_binary_path is not None:
-            ovms = OvmsBinary(self.request, self.command_args, self.start_container_command, self.env_vars)
+            self.ovms = OvmsBinary(self.request, self.command_args, self.start_container_command, self.env_vars)
         else:
-            ovms = OvmsDocker(self.request, self.command_args, self.container_name_infix,
+            self.ovms = OvmsDocker(self.request, self.command_args, self.container_name_infix,
                               self.start_container_command, self.env_vars,
                               self.image, self.container_log_line, self.server_log_level, self.target_device)
-        return ovms.start()
+        start_result = None
+        try:
+            start_result = self.ovms.start()
+        finally:
+            if start_result is None:
+                self.stop()
+            else:
+                Server.running_instances.append(self)
+        return start_result
+
+    def stop(self):
+        self.ovms.stop()
+        if self in Server.running_instances:
+            Server.running_instances.remove(self)
+
+    @classmethod
+    def stop_all_instances(cls):
+        for instance in cls.running_instances:
+            instance.stop()

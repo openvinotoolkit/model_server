@@ -17,18 +17,22 @@
 import json
 import numpy as np
 import requests
-from utils.parametrization import get_ports_prefixes
 from google.protobuf.json_format import Parse
 from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2
 import logging
 
+from utils.port_manager import PortManager
+from config import rest_ovms_starting_port, ports_pool_size
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_ADDRESS = 'localhost'
-DEFAULT_REST_PORT = "{}00".format(get_ports_prefixes()["rest_ports_prefix"])
+DEFAULT_REST_PORT = "{}".format(rest_ovms_starting_port)
 PREDICT = ':predict'
 METADATA = '/metadata'
+
+port_manager_rest = PortManager("rest", starting_port=rest_ovms_starting_port, pool_size=ports_pool_size)
 
 
 def get_url(model: str, address: str = DEFAULT_ADDRESS, port: str = DEFAULT_REST_PORT,

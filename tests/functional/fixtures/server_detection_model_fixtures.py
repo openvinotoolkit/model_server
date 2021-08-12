@@ -21,7 +21,7 @@ from model.models_information import FaceDetection
 from object_model.server import Server
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def start_server_face_detection_model_auto_shape(request):
 
     start_server_command_args = {"model_name": FaceDetection.name,
@@ -36,7 +36,7 @@ def start_server_face_detection_model_auto_shape(request):
     return server.start()
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def start_server_face_detection_model_named_shape(request):
 
     start_server_command_args = {"model_name": FaceDetection.name,
@@ -52,7 +52,7 @@ def start_server_face_detection_model_named_shape(request):
     return server.start()
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def start_server_face_detection_model_nonamed_shape(request):
 
     start_server_command_args = {"model_name": FaceDetection.name,

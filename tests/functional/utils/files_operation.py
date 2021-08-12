@@ -22,14 +22,16 @@ def get_path_friendly_test_name(location=None):
     if location:
         test_case = location[2].replace(".", "_")
     else:
-        test_case = os.environ.get('PYTEST_CURRENT_TEST').split(' ')[0].split("::")
-        test_case = "_".join(test_case[1:])
+        test_case = os.environ.get('PYTEST_CURRENT_TEST', "")
+        if test_case:
+            test_case = test_case.split(' ')[0].split("::")
+            test_case = "_".join(test_case[1:])
     return test_case
 
 
-def save_container_logs_to_file(logs, dir_path: str = config.artifacts_dir):
+def save_container_logs_to_file(logs, dir_path: str = config.artifacts_dir, location = None):
     time_stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    file_name = f"ovms_{get_path_friendly_test_name()}_{time_stamp}.log"
+    file_name = f"ovms_{get_path_friendly_test_name(location)}_{time_stamp}.log"
     os.makedirs(dir_path, exist_ok=True)
     file_path = os.path.join(dir_path, file_name)
     with open(file_path, "w+") as text_file:
