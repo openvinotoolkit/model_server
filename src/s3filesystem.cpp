@@ -166,7 +166,8 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
             provider,
             config,
             Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
-            true);
+            true,
+            Aws::S3::US_EAST_1_REGIONAL_ENDPOINT_OPTION::LEGACY);
     }
 }
 
