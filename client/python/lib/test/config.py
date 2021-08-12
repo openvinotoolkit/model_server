@@ -17,6 +17,7 @@
 from numpy import array, float64, int32, int8
 from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
+from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
 from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
 from tensorflow.core.framework.types_pb2 import DataType
 from tensorflow.core.protobuf.error_codes_pb2 import Code
@@ -899,6 +900,46 @@ MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE = [
 # ({"model_name" : model_name, "model_version" : model_version, "model_raw_name": raw_request_model_name, "model_raw_version" : raw_request_model_version},
 # expected_message, grpc_error_status_code, grpc_error_details)
 GET_MODEL_STATUS_INVALID_GRPC = [
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - failed to connect to all adresses",
+    StatusCode.UNAVAILABLE, "failed to connect to all adresses"),
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - Empty update",
+    StatusCode.UNAVAILABLE, "Empty update"),
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested version is not found",
+    StatusCode.NOT_FOUND, "Model with requested version is not found"),
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested name is not found",
+    StatusCode.NOT_FOUND, "Model with requested name is not found"),
+]
+
+# ({"model_name" : model_name, "model_version" : model_version, "model_raw_name": raw_request_model_name, "model_raw_version" : raw_request_model_version, 
+# "metadata_field_list" : raw_request_metadata_fields})
+MODEL_METADATA_REQUEST_VALID = [
+    ({"model_name" : "name", "model_version" : 0, "model_raw_name" : "name", "model_raw_version" : 0, "metadata_field_list" : ["signature_def"]}),
+]
+
+# ({"model_name" : model_name, "model_version" : model_version, "model_raw_name": raw_request_model_name, "model_raw_version" : raw_request_model_version, 
+# "metadata_field_list" : raw_request_metadata_fields},
+# expected_exception, expected_message)
+MODEL_METADATA_REQUEST_INVALID_RAW_REQUEST = [
+    ({"model_name" : "name", "model_version" : 0, "model_raw_name" : "other_name", "model_raw_version" : 0, "metadata_field_list" : ["signature_def"]},
+    ValueError, 'request is not valid GrpcModelStatusRequest'),
+    ({"model_name" : "other_name", "model_version" : 0, "model_raw_name" : "name", "model_raw_version" : 0, "metadata_field_list" : ["signature_def"]},
+    ValueError, 'request is not valid GrpcModelStatusRequest'),
+    ({"model_name" : "name", "model_version" : 0, "model_raw_name" : "name", "model_raw_version" : 1, "metadata_field_list" : ["signature_def"]},
+    ValueError, 'request is not valid GrpcModelStatusRequest'),
+    ({"model_name" : "name", "model_version" : 1, "model_raw_name" : "name", "model_raw_version" : 0, "metadata_field_list" : ["signature_def"]},
+    ValueError, 'request is not valid GrpcModelStatusRequest'),
+    ({"model_name" : "name", "model_version" : 1, "model_raw_name" : "name", "model_raw_version" : 1, "metadata_field_list" : ["invalid"]},
+    ValueError, 'request is not valid GrpcModelStatusRequest'),
+]
+
+# (request, expected_exception, expected_message)
+MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE = [
+    (None, TypeError, "request type should be GrpcModelMetadataRequest, but is NoneType"),
+    (GetModelMetadataRequest(), TypeError, "request type should be GrpcModelMetadataRequest, but is GetModelMetadataRequest"),
+]
+
+# expected_message, grpc_error_status_code, grpc_error_details)
+GET_MODEL_METADATA_INVALID_GRPC = [
     (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - failed to connect to all adresses",
     StatusCode.UNAVAILABLE, "failed to connect to all adresses"),
     (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - Empty update",
