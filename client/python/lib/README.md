@@ -33,5 +33,8 @@ For that consider using `pip install` with `--force-reinstall` and `--no-deps` o
 Apart from `make build`, there are also other targets available:
  - `make build-deps` - downloads and compiles TFS API protos
  - `make build-package` - builds only `ovmsclient` package (requires TFS API protos compiled)
- - `make test` - runs tests (requires `ovmsclient` package installed)
+ - `make test` - runs tests on `ovmsclient` package. By default the package located in `dist/` directory is used. To specify custom package path pass `PACKAGE_PATH` option like: 
+
+   `make test PACKAGE_PATH=/opt/packages/ovmsclient-0.1-py3-none-any.whl`
+
  - `make clean` - removes all intermediate files generated while building the package
