@@ -5,29 +5,36 @@ Model server client library is a set of objects and methods designed to simplify
 
 ## Installation
 
-The client library requires Python in version >= 3.6. Validated and recommended way of installing the library is with the use of virtual python environment.
+The client library requires Python in version >= 3.6.
 
 ### Linux
-For one-step building and installation simply run:
-`make install` 
 
-This command will:
- - create virtual environment `.venv` in the `lib` directory,
- - build Tensorflow Serving API
- - build `ovmsclient` package and install it in `.venv`
- - run tests to make sure the library is working correctly
+Prerequisites:
+ - Python 3.6 +
+ - Python package [setuptools](https://pypi.org/project/setuptools/)
+ - [protobuf-compiler](https://grpc.io/docs/protoc-installation/)
 
- To change the directory of the virtual environment from `.venv` to something else, provide the directory of your choice with `VIRTUALENV_DIR` argument:
- `make install VIRTUALENV_DIR=ovms_venv` 
+To build the package run:
 
- After installation is successfully completed you can import `ovmsclient` modules with the python `import` statement.
+   `make build`
 
- There are also standalone targets that might be useful for development purposes:
- - `make build-deps` - builds Tensorflow Serving API
- - `make install-package` - builds and installs `ovmsclient` package (requires TFS API built)
- - `make reinstall-package` - rebuilds and reinstalls `ovmsclient` package (requires TFS API built)
+This command will create pip wheel placed in `dist` directory.
+
+*Note*: For development purposes, you may want to repeatedly rebuild the package.
+Assuming you have TFS API built, you can use `make build-package` target to build only the `ovmsclient` package and ommit downloading and building the TFS API.
+
+To install the package run:
+
+   `pip install dist/ovmsclient-0.1-py3-none-any.whl`
+
+*Note*: For development purposes you may want to repeatedly reinstall the package.
+For that consider using `pip install` with `--force-reinstall` and `--no-deps` options.
+
+Apart from `make build`, there are also other targets available:
+ - `make build-deps` - downloads and compiles TFS API protos
+ - `make build-package` - builds only `ovmsclient` package (requires TFS API protos compiled)
  - `make test` - runs tests (requires `ovmsclient` package installed)
- - `make clean` - removes all intermediate files generated during installation
+ - `make clean` - removes all intermediate files generated while building the package
 
 
 ## Generating documentation
