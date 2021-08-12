@@ -19,9 +19,7 @@ FROM $BASE_IMAGE as base_build
 
 LABEL version="1.0.0"
 
-ARG PROJECT_NAME="OpenVINO Model Server 2021.4"
 
-LABEL description=${PROJECT_NAME}
 
 ARG ov_source_branch=releases/2021/2
 ARG ovms_metadata_file
@@ -154,6 +152,9 @@ RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 WORKDIR /ovms
 
 COPY src/ /ovms/src/
+
+ARG PROJECT_NAME="OpenVINO Model Server 2021.4"
+LABEL description=${PROJECT_NAME}
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"

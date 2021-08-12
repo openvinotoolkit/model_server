@@ -52,7 +52,8 @@ RUN /bin/mkdir -p '/usr/local/lib' && \
     /bin/mkdir -p '/usr/local/include/libusb-1.0' && \
     /usr/bin/install -c -m 644 libusb.h '/usr/local/include/libusb-1.0' && \
     /bin/mkdir -p '/usr/local/lib/pkgconfig' && \
-    cd /opt/libusb-1.0.22/ && /usr/bin/install -c -m 644 libusb-1.0.pc '/usr/local/lib/pkgconfig'
+    cd /opt/libusb-1.0.22/ && /usr/bin/install -c -m 644 libusb-1.0.pc '/usr/local/lib/pkgconfig' && \
+    rm -Rf /usr/local/lib/*a
 
 WORKDIR /
 COPY ovms.tar.xz /
@@ -123,8 +124,7 @@ RUN apt-get update && \
         libboost-chrono1.71.0 \
         libboost-date-time1.71.0 \
         libboost-atomic1.71.0 \
-        libjson-c4 \
-        libxxf86vm-dev && \
+        libjson-c4 && \
     rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 COPY --from=base_build /ovms /ovms
