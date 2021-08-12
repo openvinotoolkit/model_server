@@ -13,7 +13,11 @@ Create `GrpcPredictRequest` object.
  
  - <b>`inputs`</b>:  Python dictionary in format 
     ```python
-    {<input_name>:<input_data>}
+    {
+        ...
+        <input_name>:<input_data>
+        ...
+    }
     ```               
     Following types are accepted: 
 
