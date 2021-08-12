@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+from grpc import StatusCode
 from numpy import array, float64, int32, int8
 from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
@@ -27,9 +28,7 @@ from tensorflow_serving.apis.predict_pb2 import PredictRequest
 from enum import IntEnum
 from numpy import array, float128, int32
 
-from ovmsclient.tfs_compat.grpc.tensors import make_tensor_proto
 from ovmsclient.tfs_compat.grpc.requests import GrpcPredictRequest
-from grpc import StatusCode
 
 class CallCount(IntEnum):
     ZERO = 0
@@ -1015,4 +1014,21 @@ PREDICT_REQUEST_INVALID_SPEC_TYPE = [
     (None, TypeError, 'request type should be GrpcPredictRequest, but is NoneType'),
     (PredictRequest, TypeError, f'request type should be GrpcPredictRequest, but is GeneratedProtocolMessageType'),
     (GrpcPredictRequest({},"",0,"raw_request"), TypeError, 'request is not valid GrpcPredictRequest'),
+]
+
+PREDICT_INVAlID_GRPC = [
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - failed to connect to all adresses",
+    StatusCode.UNAVAILABLE, "failed to connect to all adresses"),
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested version is not found",
+    StatusCode.NOT_FOUND, "Model with requested version is not found"),
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested name is not found",
+    StatusCode.NOT_FOUND, "Model with requested name is not found"),
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - Invalid input precision - Expected: FP32; Actual: I64",
+    StatusCode.INVALID_ARGUMENT, "Invalid input precision - Expected: FP32; Actual: I64"),
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - Invalid number of inputs - Expected: 1; Actual: 0",
+    StatusCode.INVALID_ARGUMENT, "Invalid number of inputs - Expected: 1; Actual: 0"),
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - Missing input with specific name - Required input: 0",
+    StatusCode.INVALID_ARGUMENT, "Missing input with specific name - Required input: 0"),
+    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - Invalid number of shape dimensions - Expected: (1,3,224,224); Actual: (3)",
+    StatusCode.INVALID_ARGUMENT, "Invalid number of shape dimensions - Expected: (1,3,224,224); Actual: (3)"),
 ]

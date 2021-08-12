@@ -52,6 +52,7 @@ from config import GET_MODEL_STATUS_INVALID_GRPC
 from config import MODEL_METADATA_REQUEST_VALID, MODEL_METADATA_REQUEST_INVALID_RAW_REQUEST, MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE
 from config import GET_MODEL_METADATA_INVALID_GRPC
 from config import PREDICT_REQUEST_VALID_SPEC, PREDICT_REQUEST_INVALID_SPEC_RAW_REQUEST, PREDICT_REQUEST_INVALID_SPEC_TYPE
+from config import PREDICT_INVAlID_GRPC
 
 from test_grpc_responses import create_model_metadata_response
 from test_grpc_responses import create_model_status_response, merge_model_status_responses
@@ -444,10 +445,52 @@ def test_check_predict_request_invalid_type(predict_request, expected_exception,
 
     assert str(e_info.value) == expected_message
 
-# def test_predict_valid():
+def test_predict_valid(mocker, valid_grpc_serving_client_min, valid_predict_response):
+    predict_request = mocker.Mock()
 
-# def test_predict_invalid_grpc():
+    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_predict_request')
+    valid_grpc_serving_client_min.prediction_service_stub.Predict = mocker.Mock(return_value=valid_predict_response.raw_response)
 
-# def test_predict_invalid_raw_request():
+    response = valid_grpc_serving_client_min.predict(predict_request)
 
-# def test_predict_invalid_type():
+    assert mock_check_request.call_count == 1
+    assert valid_grpc_serving_client_min.prediction_service_stub.Predict.call_count == 1
+    assert type(response) == type(valid_predict_response)
+    assert response.raw_response == valid_predict_response.raw_response
+
+@pytest.mark.parametrize("expected_message, grpc_error_status_code, grpc_error_details", PREDICT_INVAlID_GRPC)
+def test_predict_invalid_grpc(mocker, valid_grpc_serving_client_min, expected_message, grpc_error_status_code, grpc_error_details):
+    predict_request = mocker.Mock()
+
+    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_predict_request')
+    valid_grpc_serving_client_min.prediction_service_stub.Predict = mocker.Mock(side_effect=create_grpc_error(grpc_error_status_code, grpc_error_details))
+
+    with pytest.raises(ConnectionError) as e_info:
+        response = valid_grpc_serving_client_min.predict(predict_request)
+
+    assert str(e_info.value) == expected_message
+    assert mock_check_request.call_count == 1
+    assert valid_grpc_serving_client_min.prediction_service_stub.Predict.call_count == 1
+
+@pytest.mark.parametrize("request_parameter_dict, expected_exception, expected_message", PREDICT_REQUEST_INVALID_SPEC_RAW_REQUEST)
+def test_predict_invalid_raw_request(mocker, valid_grpc_serving_client_min, request_parameter_dict, expected_exception, expected_message):
+    predict_request = create_predict_request(request_parameter_dict['model_name'], request_parameter_dict['model_version'],
+                                             request_parameter_dict['model_raw_name'], request_parameter_dict['model_raw_version'],
+                                             request_parameter_dict['inputs_dict'], request_parameter_dict['inputs_raw_dict'])
+    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_predict_request', side_effect=expected_exception(expected_message))
+
+    with pytest.raises(expected_exception) as e_info:
+        response = valid_grpc_serving_client_min.predict(predict_request)
+
+    assert str(e_info.value) == expected_message
+    assert mock_check_request.call_count == 1
+
+@pytest.mark.parametrize("predict_request, expected_exception, expected_message", PREDICT_REQUEST_INVALID_SPEC_TYPE)
+def test_predict_invalid_type(mocker, valid_grpc_serving_client_min, predict_request, expected_exception, expected_message):
+    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client._check_predict_request', side_effect=expected_exception(expected_message))
+
+    with pytest.raises(expected_exception) as e_info:
+        response = valid_grpc_serving_client_min.predict(predict_request)
+
+    assert str(e_info.value) == expected_message
+    assert mock_check_request.call_count == 1
