@@ -14,7 +14,7 @@ Prerequisites:
  - Python package [setuptools](https://pypi.org/project/setuptools/)
  - [protobuf-compiler](https://grpc.io/docs/protoc-installation/)
 
-To build the package run:
+**To build the package run:**
 
    `make build`
 
@@ -23,7 +23,7 @@ This command will create pip wheel placed in `dist` directory.
 *Note*: For development purposes, you may want to repeatedly rebuild the package.
 Assuming you have TFS API built, you can use `make build-package` target to build only the `ovmsclient` package and ommit downloading and building the TFS API.
 
-To install the package run:
+**To install the package run:**
 
    `pip install dist/ovmsclient-0.1-py3-none-any.whl`
 
