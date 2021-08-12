@@ -39,33 +39,23 @@ TEST(Sequence, SequenceDisabled) {
 
 TEST(Sequence, UpdateSequenceState) {
     ovms::model_memory_state_t newState;
+    DummyStatefulModel model;
+    std::vector<float> expectedState{10};
+    InferenceEngine::InferRequest auxInferRequest = model.createInferRequest();
 
-    std::vector<size_t> shape1{1, 10};
-    size_t elementsCount1 = std::accumulate(shape1.begin(), shape1.end(), 1, std::multiplies<size_t>());
-    std::vector<float> state1(elementsCount1);
-    std::iota(state1.begin(), state1.end(), 0);
-    addState(newState, "state1", shape1, state1);
-
-    std::vector<size_t> shape2{1, 20};
-    size_t elementsCount2 = std::accumulate(shape2.begin(), shape2.end(), 1, std::multiplies<size_t>());
-    std::vector<float> state2(elementsCount2);
-    std::iota(state2.begin(), state2.end(), 10);
-    addState(newState, "state2", shape2, state2);
-
+    model.setVariableState(auxInferRequest, expectedState);
+    InferenceEngine::VariableState memoryState = model.getVariableState(auxInferRequest);
+    newState.push_back(memoryState);
     uint64_t sequenceId = 3;
     ovms::Sequence sequence(sequenceId);
     sequence.updateMemoryState(newState);
 
     const ovms::sequence_memory_state_t& sequenceMemoryState = sequence.getMemoryState();
-    ASSERT_TRUE(sequenceMemoryState.count("state1"));
-    ASSERT_TRUE(sequenceMemoryState.count("state2"));
+    const std::string stateName = model.getStateName();
+    ASSERT_TRUE(sequenceMemoryState.count(stateName));
 
-    std::vector<float> state1BlobSequenceData;
-    state1BlobSequenceData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(sequenceMemoryState.at("state1"))->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(sequenceMemoryState.at("state1"))->rmap().as<float*>() + elementsCount1);
-    EXPECT_EQ(state1BlobSequenceData, state1);
-
-    std::vector<float> state2BlobSequenceData;
-    state2BlobSequenceData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(sequenceMemoryState.at("state2"))->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(sequenceMemoryState.at("state2"))->rmap().as<float*>() + elementsCount2);
-    EXPECT_EQ(state2BlobSequenceData, state2);
+    std::vector<float> stateBlobSequenceData;
+    stateBlobSequenceData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(sequenceMemoryState.at(stateName))->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(sequenceMemoryState.at(stateName))->rmap().as<float*>() + 1);
+    EXPECT_EQ(stateBlobSequenceData, expectedState);
 }
 #pragma GCC diagnostic pop

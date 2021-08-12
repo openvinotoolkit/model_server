@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <thread>
@@ -40,50 +41,6 @@ using namespace InferenceEngine;
 
 const std::string SEQUENCE_ID_INPUT = "sequence_id";
 const std::string SEQUENCE_CONTROL_INPUT = "sequence_control_input";
-
-class MockIVariableState : public IVariableState {
-public:
-    MOCK_METHOD(StatusCode, GetName, (char* name, size_t len, ResponseDesc* resp), (const, noexcept, override));
-    MOCK_METHOD(StatusCode, Reset, (ResponseDesc * resp), (noexcept, override));
-    MOCK_METHOD(StatusCode, SetState, (Blob::Ptr newState, ResponseDesc* resp), (noexcept, override));
-    MOCK_METHOD(StatusCode, GetState, (Blob::CPtr & state, ResponseDesc* resp), (const, noexcept, override));
-};
-
-class MockIVariableStateWithData : public MockIVariableState {
-public:
-    std::string stateName;
-    Blob::Ptr currentBlob;
-    const Blob::Ptr defaultBlob;
-
-    MockIVariableStateWithData(std::string name, Blob::Ptr currentBlob) :
-        stateName(name),
-        currentBlob(currentBlob) {}
-
-    MockIVariableStateWithData(std::string name, Blob::Ptr currentBlob, Blob::Ptr defaultBlob) :
-        stateName(name),
-        currentBlob(currentBlob),
-        defaultBlob(defaultBlob) {}
-
-    StatusCode GetName(char* name, size_t len, ResponseDesc* resp) const noexcept override {
-        snprintf(name, sizeof(stateName), "%s", stateName.c_str());
-        return StatusCode::OK;
-    }
-
-    StatusCode GetState(Blob::CPtr& state, ResponseDesc* resp) const noexcept override {
-        state = currentBlob;
-        return StatusCode::OK;
-    }
-
-    StatusCode Reset(ResponseDesc* resp) noexcept override {
-        currentBlob = defaultBlob;
-        return StatusCode::OK;
-    }
-
-    StatusCode SetState(Blob::Ptr newState, ResponseDesc* resp) noexcept override {
-        currentBlob = newState;
-        return StatusCode::OK;
-    }
-};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -115,34 +72,60 @@ static bool CheckSequenceIdResponse(tensorflow::serving::PredictResponse& respon
     return true;
 }
 
-static void addState(ovms::model_memory_state_t& states, std::string name, std::vector<size_t>& shape, std::vector<float>& values) {
-    const Precision precision{Precision::FP32};
-    const Layout layout{Layout::NC};
-    const TensorDesc desc{precision, shape, layout};
+class DummyStatefulModel {
+private:
+    const std::string MODEL_PATH = std::filesystem::current_path().u8string() + "/src/test/summator/1/summator.xml";
 
-    Blob::Ptr stateBlob = make_shared_blob<float>(desc, values.data());
-    std::shared_ptr<IVariableState> ivarPtr = std::make_shared<MockIVariableStateWithData>(name, stateBlob);
-    states.push_back(VariableState(ivarPtr));
-}
+    std::shared_ptr<InferenceEngine::CNNNetwork> cnnNetworkPtr;
+    std::shared_ptr<InferenceEngine::ExecutableNetwork> execNetworkPtr;
+    std::shared_ptr<InferenceEngine::InferRequest> inferRequestPtr;
 
-#pragma GCC diagnostic pop
+    const Precision statePrecision{Precision::FP32};
+    const std::vector<size_t> stateShape{1, 1};
+    const Layout stateLayout{Layout::NC};
+    const TensorDesc stateDesc{statePrecision, stateShape, stateLayout};
 
-class MockIInferRequestStateful : public MockIInferRequest {
+    const std::string stateName = "state";
+
 public:
-    IVariableState::Ptr memoryState;
-
-    MockIInferRequestStateful(std::string name, Blob::Ptr currentBlob, Blob::Ptr defaultBlob) {
-        this->memoryState = std::make_shared<MockIVariableStateWithData>(name, currentBlob, defaultBlob);
+    DummyStatefulModel() {
+        InferenceEngine::Core engine;
+        cnnNetworkPtr = std::make_shared<InferenceEngine::CNNNetwork>(engine.ReadNetwork(MODEL_PATH));
+        execNetworkPtr = std::make_shared<InferenceEngine::ExecutableNetwork>(engine.LoadNetwork(*cnnNetworkPtr, "CPU"));
     }
 
-    InferenceEngine::StatusCode QueryState(IVariableState::Ptr& pState, size_t idx, ResponseDesc* resp) noexcept override {
-        if (idx == 0) {
-            pState = memoryState;
-            return InferenceEngine::StatusCode::OK;
-        }
-        return InferenceEngine::StatusCode::OUT_OF_BOUNDS;
+    InferenceEngine::InferRequest createInferRequest() {
+        return execNetworkPtr->CreateInferRequest();
+    }
+
+    const std::string getStateName() {
+        return stateName;
+    }
+
+    static InferenceEngine::VariableState getVariableState(InferenceEngine::InferRequest& inferRequest) {
+        std::vector<InferenceEngine::VariableState> memoryState = inferRequest.QueryState();
+        return memoryState[0];
+    }
+
+    static void resetVariableState(InferenceEngine::InferRequest& inferRequest) {
+        std::vector<InferenceEngine::VariableState> memoryState = inferRequest.QueryState();
+        memoryState[0].Reset();
+    }
+
+    static void setVariableState(InferenceEngine::InferRequest& inferRequest, std::vector<float> values) {
+        DummyStatefulModel::resetVariableState(inferRequest);
+        std::vector<size_t> shape{1, 1};
+        const Precision precision{Precision::FP32};
+        const Layout layout{Layout::NC};
+        const TensorDesc desc{precision, shape, layout};
+
+        Blob::Ptr inputBlob = make_shared_blob<float>(desc, values.data());
+        inferRequest.SetBlob("input", inputBlob);
+        inferRequest.Infer();
     }
 };
+
+#pragma GCC diagnostic pop
 
 class MockedSequenceManager : public ovms::SequenceManager {
 public:
