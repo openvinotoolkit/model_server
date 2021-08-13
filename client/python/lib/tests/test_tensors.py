@@ -471,6 +471,7 @@ def test_make_tensor_proto_invalid_shape_element_values():
     exception = exception_info.value
     assert str(exception) == "shape type should be list or tuple with unsigned integers"
 
+@pytest.mark.causes_deprecation_warning
 def test_make_tensor_proto_invalid_dimensions():
     values = [[1.0, 2.0], [1.0, 2.0, 3.0]]
     with pytest.raises(ValueError) as exception_info:
@@ -485,6 +486,7 @@ def test_make_tensor_proto_invalid_string_to_float_dtype():
     exception = exception_info.value
     assert str(exception) == "could not cast bytes to <class 'numpy.float32'>. buffer size must be a multiple of element size"
 
+@pytest.mark.causes_deprecation_warning
 def test_make_tensor_proto_invalid_string_dimensions():
     values = bytes([0x13, 0x00])
     with pytest.raises(ValueError) as exception_info:
@@ -492,6 +494,7 @@ def test_make_tensor_proto_invalid_string_dimensions():
     exception = exception_info.value
     assert str(exception) == f"argument must be a dense tensor: {[[values, values, values], [values, values]]} - got shape [2], but wanted [2, 3]"
 
+@pytest.mark.causes_deprecation_warning
 def test_make_tensor_proto_invalid_dimensions_2():
     values = [[(1,2,3)],[(1,2)],[(1,2,3)]]
     with pytest.raises(ValueError) as exception_info:
@@ -499,6 +502,7 @@ def test_make_tensor_proto_invalid_dimensions_2():
     exception = exception_info.value
     assert str(exception) == "could not cast values to <class 'numpy.float32'>. setting an array element with a sequence."
 
+@pytest.mark.causes_deprecation_warning
 def test_make_tensor_proto_invalid_dimensions_no_shape_provided():
     values = [[1,2,3], [4,5]]
     with pytest.raises(ValueError) as exception_info:
