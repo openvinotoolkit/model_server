@@ -103,7 +103,6 @@ def pytest_unconfigure():
         delete_test_directory()
 
     Server.stop_all_instances()
-    MinioDocker.stop_running_instance()
 
 
 @pytest.hookimpl(hookwrapper=True)

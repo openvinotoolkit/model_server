@@ -97,7 +97,8 @@ class Docker:
         if config.log_level == "DEBUG":
             logger.info(logs)
         if config.artifacts_dir != "":
-            save_container_logs_to_file(logs=logs, location=self.request.node.location)
+            location = getattr(self.request.node, "location", None)
+            save_container_logs_to_file(logs=logs, location=location)
 
     def get_logs(self):
         self.logs = self.container.logs().decode()
@@ -109,6 +110,7 @@ class Docker:
             assert False, f"Not found required phrase {self.container_log_line}"
 
     def ensure_logs_contains(self):
+        result = None
         try:
             result = retry_call(self.ensure_logs, exceptions=AssertionError, **Docker.GETTING_LOGS_RETRY)
         except:
@@ -122,6 +124,7 @@ class Docker:
 
     def ensure_status(self, status, terminal_statuses=None):
         current_status = self.get_container_status()
+        logger.debug(f"Ensure container status, expected_status={status}\t current_status={current_status}")
         if terminal_statuses is not None and current_status in terminal_statuses:
             raise RuntimeError("Received terminal status '{}' for container {}".format(current_status,
                                                                                        self.container_name))

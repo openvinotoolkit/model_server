@@ -23,8 +23,6 @@ from utils.helpers import SingletonMeta
 
 
 class MinioDocker(Docker, metaclass=SingletonMeta):
-    running_instance = None
-
     def __init__(self, request, container_name, start_container_command=config.start_minio_container_command,
                  env_vars_container=None, image=config.minio_image,
                  container_log_line=config.container_minio_log_line):
@@ -45,15 +43,6 @@ class MinioDocker(Docker, metaclass=SingletonMeta):
                 else:
                     MinioDocker.running_instance = self
         return self.start_result
-
-    def stop(self):
-        super().stop()
-        MinioDocker.running_instance = None
-
-    @classmethod
-    def stop_running_instance(cls):
-        if cls.running_instance:
-            cls.running_instance.stop()
 
     @staticmethod
     def get_ip(container):
