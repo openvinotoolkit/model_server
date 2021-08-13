@@ -68,7 +68,7 @@ def get_docker_network(request, get_docker_context):
     return network
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def start_minio_server(request, get_docker_context):
 
     """sudo docker run -d -p 9099:9000 minio/minio server /data"""
@@ -94,7 +94,7 @@ def start_minio_server(request, get_docker_context):
     return minio_docker.start()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def get_minio_server_s3(start_minio_server):
 
     path_to_mount = config.path_to_mount + '/{}/{}'.format(Resnet.name, Resnet.version)

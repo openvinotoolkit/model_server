@@ -23,6 +23,7 @@ from _pytest._code import ExceptionInfo, filter_traceback  # noqa
 from _pytest.outcomes import OutcomeException
 
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
+from object_model.minio_docker import MinioDocker
 from object_model.server import Server
 from utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
     get_containers_with_tests_suffix, get_docker_client
@@ -102,6 +103,7 @@ def pytest_unconfigure():
         delete_test_directory()
 
     Server.stop_all_instances()
+    MinioDocker.stop_running_instance()
 
 
 @pytest.hookimpl(hookwrapper=True)
