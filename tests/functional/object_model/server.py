@@ -36,6 +36,7 @@ class Server:
         self.container_log_line = container_log_line
         self.server_log_level = server_log_level
         self.target_device = target_device
+        self.started_by_fixture = request.fixturename
 
     def start(self):
         assert self not in Server.running_instances
@@ -65,3 +66,10 @@ class Server:
     def stop_all_instances(cls):
         for instance in cls.running_instances:
             instance.stop()
+
+    @classmethod
+    def stop_by_fixture_name(cls, fixture_name):
+        logger.debug(f"Stopping server instance spawned by {fixture_name}")
+        instance = list(filter(lambda x: x.started_by_fixture == fixture_name, cls.running_instances))
+        assert len(instance) == 1
+        instance[0].stop()
