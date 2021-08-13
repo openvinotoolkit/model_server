@@ -55,5 +55,5 @@ clean:
 
 style: venv
 	@. $(ACTIVATE); pip install flake8
-	@echo "Running ovmsclient and tests style check",
+	@echo "Running ovmsclient style checks",
 	@. $(ACTIVATE); flake8 ovmsclient tests/ --max-line-length=100 --count
