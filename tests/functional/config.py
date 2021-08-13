@@ -74,7 +74,7 @@ container_minio_log_line = "Console endpoint is listening on a dynamic port"
 grpc_ovms_starting_port = get_int("TT_GRPC_OVMS_STARTING_PORT", 9001)
 
 """ TT_REST_OVMS_STARTING_PORT - Rest port where ovms should be exposed"""
-rest_ovms_starting_port = get_int("TT_REST_OVMS_STARTING_PORT", 8001)
+rest_ovms_starting_port = get_int("TT_REST_OVMS_STARTING_PORT", 18001)
 
 """ TT_PORTS_POOL_SIZE- Ports pool size"""
-ports_pool_size = get_int("TT_PORTS_POOL_SIZE", 100)
+ports_pool_size = get_int("TT_PORTS_POOL_SIZE", 5000)

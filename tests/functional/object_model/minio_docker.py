@@ -19,6 +19,8 @@ import config
 from object_model.docker import Docker
 from utils.parametrization import generate_test_object_name
 
+from object_model.server import Server
+
 
 class MinioDocker(Docker):
 
@@ -32,7 +34,19 @@ class MinioDocker(Docker):
 
     def start(self):
         self.start_container_command = self.start_container_command.format(self.grpc_port)
-        return super().start()
+        try:
+            start_result = super().start()
+        finally:
+            if start_result is None:
+                self.stop()
+            else:
+                Server.running_instances.append(self)
+        return start_result
+
+    def stop(self):
+        super().stop()
+        if self in Server.running_instances:
+            Server.running_instances.remove(self)
 
     @staticmethod
     def get_ip(container):
