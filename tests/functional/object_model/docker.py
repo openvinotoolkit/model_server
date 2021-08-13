@@ -34,7 +34,7 @@ TERMINAL_STATUSES = ["exited"]
 
 class Docker:
     
-    COMMON_RETRY = {"tries": 90, "delay": 2}
+    COMMON_RETRY = {"tries": 360, "delay": 0.5}
     GETTING_LOGS_RETRY = COMMON_RETRY
     GETTING_STATUS_RETRY = COMMON_RETRY
 
