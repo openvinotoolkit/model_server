@@ -47,7 +47,6 @@ build: build-deps build-package
 test: venv
 	@echo "Installing ovmsclient package from: $(PACKAGE_PATH)"
 	@. $(ACTIVATE); pip install $(PACKAGE_PATH) --force-reinstall
-	@. $(ACTIVATE); pip install flake8
 	@echo "Running ovmsclient tests"
 	@. $(ACTIVATE); pytest -v tests/
 
@@ -55,5 +54,6 @@ clean:
 	@rm -rf tensorflow/ tensorflow_serving/ build/ dist/
 
 style: venv
-	@echo "Running ovmsclient and tests style check"
+	@. $(ACTIVATE); pip install flake8
+	@echo "Running ovmsclient and tests style check",
 	@. $(ACTIVATE); flake8 ovmsclient tests/ --max-line-length=100 --count
