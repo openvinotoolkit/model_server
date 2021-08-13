@@ -69,7 +69,7 @@ class Server:
 
     @classmethod
     def stop_by_fixture_name(cls, fixture_name):
-        logger.debug(f"Stopping server instance spawned by {fixture_name}")
         instance = list(filter(lambda x: x.started_by_fixture == fixture_name, cls.running_instances))
-        assert len(instance) == 1
-        instance[0].stop()
+        if instance:
+            logger.debug(f"Stopping server instance spawned by {fixture_name}")
+            instance[0].stop()
