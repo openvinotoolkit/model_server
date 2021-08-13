@@ -30,12 +30,18 @@ from tensorflow_serving.util.status_pb2 import StatusProto
 
 from google.protobuf.any_pb2 import Any
 
-from ovmsclient.tfs_compat.grpc.responses import GrpcModelMetadataResponse, GrpcModelStatusResponse, GrpcPredictResponse
+from ovmsclient.tfs_compat.grpc.responses import (GrpcModelMetadataResponse,
+                                                  GrpcModelStatusResponse,
+                                                  GrpcPredictResponse)
 
-from config import MODEL_METADATA_RESPONSE_VALID, MODEL_STATUS_RESPONSE_VALID, PREDICT_RESPONSE_VALID, PREDICT_RESPONSE_INVALID
+from config import (MODEL_METADATA_RESPONSE_VALID, MODEL_STATUS_RESPONSE_VALID,
+                    PREDICT_RESPONSE_VALID, PREDICT_RESPONSE_INVALID)
 
-@pytest.mark.parametrize("outputs_dict, model_name, model_version, expected_outputs_dict", PREDICT_RESPONSE_VALID)
-def test_PredictResponse_to_dict_valid(outputs_dict, model_name, model_version, expected_outputs_dict):
+
+@pytest.mark.parametrize("outputs_dict, model_name, model_version,"
+                         "expected_outputs_dict", PREDICT_RESPONSE_VALID)
+def test_PredictResponse_to_dict_valid(outputs_dict, model_name, model_version,
+                                       expected_outputs_dict):
     predict_raw_response = PredictResponse()
 
     predict_raw_response.model_spec.name = model_name
@@ -55,8 +61,11 @@ def test_PredictResponse_to_dict_valid(outputs_dict, model_name, model_version, 
         assert type(array) is ndarray
         assert array_equal(array, expected_outputs_dict[output_name])
 
-@pytest.mark.parametrize("outputs_dict, model_name, model_version, expected_exception, expected_message", PREDICT_RESPONSE_INVALID)
-def test_PredictResponse_to_dict_invalid(outputs_dict, model_name, model_version, expected_exception, expected_message):
+
+@pytest.mark.parametrize("outputs_dict, model_name, model_version, expected_exception,"
+                         "expected_message", PREDICT_RESPONSE_INVALID)
+def test_PredictResponse_to_dict_invalid(outputs_dict, model_name, model_version,
+                                         expected_exception, expected_message):
     predict_raw_response = PredictResponse()
 
     predict_raw_response.model_spec.name = model_name
@@ -67,8 +76,8 @@ def test_PredictResponse_to_dict_invalid(outputs_dict, model_name, model_version
 
     predict_response = GrpcPredictResponse(predict_raw_response)
     with pytest.raises(expected_exception) as e_info:
-        response_dict = predict_response.to_dict()
-    
+        predict_response.to_dict()
+
     assert str(e_info.value) == expected_message
 
 

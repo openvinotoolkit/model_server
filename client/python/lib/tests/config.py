@@ -15,8 +15,8 @@
 #
 
 from grpc import StatusCode
-from numpy import array, float64, int32, int8
-from ovmsclient.tfs_compat.base.requests import ModelStatusRequest
+from numpy import array, float64, int32, int8, float128
+from enum import IntEnum
 from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
 from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
@@ -26,10 +26,9 @@ from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
 from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
 from tensorflow_serving.apis.predict_pb2 import PredictRequest
 
-from enum import IntEnum
-from numpy import array, float128, int32
+from ovmsclient.tfs_compat.grpc.requests import (GrpcModelMetadataRequest, GrpcModelStatusRequest,
+                                                 GrpcPredictRequest)
 
-from ovmsclient.tfs_compat.grpc.requests import GrpcModelMetadataRequest, GrpcModelStatusRequest, GrpcPredictRequest
 
 class CallCount(IntEnum):
     ZERO = 0
@@ -437,7 +436,7 @@ CONFIG_INVALID = [
      {
         "check_address": None,
         "check_port": None,
-        "check_tls_config": ValueError('none or both client_key_path and'
+        "check_tls_config": ValueError('none or both client_key_path and '
                                        'client_cert_path are required in tls_config')
     }),
 
@@ -790,7 +789,7 @@ PREDICT_REQUEST_INVALID_INPUTS = [
     ({
         "input1": [[1.0, 2.0], [1.0, 2.0, 3.0]]
     }, 'model_name', 0, ValueError,
-     ("argument must be a dense tensor: [[1.0, 2.0], [1.0, 2.0, 3.0]]- "
+     ("argument must be a dense tensor: [[1.0, 2.0], [1.0, 2.0, 3.0]] - "
       "got shape [2], but wanted [2, 2]")),
     ({
         "input1": [[(1, 2, 3)], [(1, 2)], [(1, 2, 3)]]
@@ -874,211 +873,276 @@ PREDICT_REQUEST_VALID = [
 # (response_outputs_dict, model_name, model_version, expected_outputs_dict)
 PREDICT_RESPONSE_VALID = [
     ({
-        "1463" : TensorProto(dtype=DataType.DT_INT8,
-        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=3)]),
-        tensor_content=array([1,2,3], dtype=int8).tobytes()),
+        "1463": TensorProto(dtype=DataType.DT_INT8,
+                            tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]),
+                            tensor_content=array([1, 2, 3], dtype=int8).tobytes()),
     }, "model_name", 0,
-    {
-        "1463" : array([1,2,3], dtype=int8)
+     {
+        "1463": array([1, 2, 3], dtype=int8)
     }),
 
     ({
-        "1463" : TensorProto(dtype=DataType.DT_INT32,
-        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)]),
-        tensor_content=array([1,2,3,4,5,6], dtype=int32).tobytes()),
-        "2" : TensorProto(dtype=DataType.DT_DOUBLE,
-        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=1)]),
-        double_val=array([12.0], dtype=float64)),
+        "1463": TensorProto(dtype=DataType.DT_INT32,
+                            tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=2),
+                                                          TensorShapeProto.Dim(size=3)]),
+                            tensor_content=array([1, 2, 3, 4, 5, 6], dtype=int32).tobytes()),
+        "2": TensorProto(dtype=DataType.DT_DOUBLE,
+                         tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]),
+                         double_val=array([12.0], dtype=float64)),
     }, "model_name", 0,
-    {
-        "1463" : array([[1,2,3], [4,5,6]], dtype=int32),
-        "2" : array([12.0], dtype=float64)
+     {
+        "1463": array([[1, 2, 3], [4, 5, 6]], dtype=int32),
+        "2": array([12.0], dtype=float64)
     }),
 
     ({
-        "1463" : TensorProto(dtype=DataType.DT_STRING,
-        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=2)]),
-        string_val=[bytes([1,2,3]), bytes([4,5])]),
-        "2" : TensorProto(dtype=DataType.DT_STRING,
-        tensor_shape=TensorShapeProto(dim= [TensorShapeProto.Dim(size=1)]),
-        string_val=[bytes([1,2,3])]),
+        "1463": TensorProto(dtype=DataType.DT_STRING,
+                            tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=2)]),
+                            string_val=[bytes([1, 2, 3]), bytes([4, 5])]),
+        "2": TensorProto(dtype=DataType.DT_STRING,
+                         tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]),
+                         string_val=[bytes([1, 2, 3])]),
     }, "model_name", 0,
-    {
-        "1463" : [bytes([1,2,3]), bytes([4,5])],
-        "2" : [bytes([1,2,3])]
+     {
+        "1463": [bytes([1, 2, 3]), bytes([4, 5])],
+        "2": [bytes([1, 2, 3])]
     }),
 ]
 
 # (response_outputs_dict, model_name, model_version, expected_exception, expected_message)
 PREDICT_RESPONSE_INVALID = [
     ({
-        "1463" : TensorProto(),
+        "1463": TensorProto(),
     }, "model_name", 0, TypeError, "Unsupported tensor type: 0"),
     ({
-        "1463" : TensorProto(dtype=DataType.DT_INVALID),
+        "1463": TensorProto(dtype=DataType.DT_INVALID),
     }, "model_name", 0, TypeError, "Unsupported tensor type: 0"),
     ({
-        "1463" : TensorProto(dtype=DataType.DT_RESOURCE),
+        "1463": TensorProto(dtype=DataType.DT_RESOURCE),
     }, "model_name", 0, TypeError, "Unsupported tensor type: 20"),
 ]
 
-# ({"model_name" : model_name, "model_version" : model_version, "raw_request_model_name": raw_request_model_name, "raw_request_model_version" : raw_request_model_version})
+# ({"model_name": model_name, "model_version": model_version,
+#   "raw_request_model_name": raw_request_model_name, "raw_request_model_version": raw_request_model_version})# noqa : E501
 MODEL_STATUS_REQUEST_VALID = [
-    ({"model_name" : "name", "model_version" : 0, "raw_request_model_name" : "name", "raw_request_model_version" : 0}),
+    ({"model_name": "name", "model_version": 0,
+      "raw_request_model_name": "name", "raw_request_model_version": 0}),
 ]
 
-# ({"model_name" : model_name, "model_version" : model_version, "raw_request_model_name": raw_request_model_name, "raw_request_model_version" : raw_request_model_version},
+# ({"model_name": model_name, "model_version": model_version,
+#   "raw_request_model_name": raw_request_model_name, "raw_request_model_version": raw_request_model_version},# noqa : E501
 # expected_exception, expected_message)
 MODEL_STATUS_REQUEST_INVALID_RAW_REQUEST = [
-    ({"model_name" : "name", "model_version" : 0, "raw_request_model_name" : "other_name", "raw_request_model_version" : 0},
-    ValueError, 'request is not valid GrpcModelStatusRequest'),
-    ({"model_name" : "other_name", "model_version" : 0, "raw_request_model_name" : "name", "raw_request_model_version" : 0},
-    ValueError, 'request is not valid GrpcModelStatusRequest'),
-    ({"model_name" : "name", "model_version" : 0, "raw_request_model_name" : "name", "raw_request_model_version" : 1},
-    ValueError, 'request is not valid GrpcModelStatusRequest'),
-    ({"model_name" : "name", "model_version" : 1, "raw_request_model_name" : "name", "raw_request_model_version" : 0},
-    ValueError, 'request is not valid GrpcModelStatusRequest'),
+    ({"model_name": "name", "model_version": 0,
+      "raw_request_model_name": "other_name", "raw_request_model_version": 0},
+     ValueError, 'request is not valid GrpcModelStatusRequest'),
+    ({"model_name": "other_name", "model_version": 0,
+      "raw_request_model_name": "name", "raw_request_model_version": 0},
+     ValueError, 'request is not valid GrpcModelStatusRequest'),
+    ({"model_name": "name", "model_version": 0,
+      "raw_request_model_name": "name", "raw_request_model_version": 1},
+     ValueError, 'request is not valid GrpcModelStatusRequest'),
+    ({"model_name": "name", "model_version": 1,
+      "raw_request_model_name": "name", "raw_request_model_version": 0},
+     ValueError, 'request is not valid GrpcModelStatusRequest'),
 ]
 
 # (request, expeceted_exception, expected_message)
 MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE = [
-    (None, TypeError, "request type should be GrpcModelStatusRequest, but is NoneType"),
-    (GetModelStatusRequest(), TypeError, "request type should be GrpcModelStatusRequest, but is GetModelStatusRequest"),
-    (GrpcModelStatusRequest('model_name', 0, 'raw_request'), TypeError, "request is not valid GrpcModelStatusRequest")
+    (None, TypeError,
+     "request type should be GrpcModelStatusRequest, but is NoneType"),
+    (GetModelStatusRequest(), TypeError,
+     "request type should be GrpcModelStatusRequest, but is GetModelStatusRequest"),
+    (GrpcModelStatusRequest('model_name', 0, 'raw_request'), TypeError,
+     "request is not valid GrpcModelStatusRequest")
 ]
 
-# ({"model_name" : model_name, "model_version" : model_version, "raw_request_model_name": raw_request_model_name, "raw_request_model_version" : raw_request_model_version},
-# expected_message, grpc_error_status_code, grpc_error_details)
+
+# (expected_message, grpc_error_status_code, grpc_error_details)
 GET_MODEL_STATUS_INVALID_GRPC = [
-    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - failed to connect to all adresses",
-    StatusCode.UNAVAILABLE, "failed to connect to all adresses"),
-    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - Empty update",
-    StatusCode.UNAVAILABLE, "Empty update"),
-    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested version is not found",
-    StatusCode.NOT_FOUND, "Model with requested version is not found"),
-    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested name is not found",
-    StatusCode.NOT_FOUND, "Model with requested name is not found"),
+    ("There was an error during sending ModelStatusRequest. "
+     f"Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - failed to connect to all adresses",
+     StatusCode.UNAVAILABLE, "failed to connect to all adresses"),
+    ("There was an error during sending ModelStatusRequest. "
+     f"Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - Empty update",
+     StatusCode.UNAVAILABLE, "Empty update"),
+    ("There was an error during sending ModelStatusRequest. "
+     f"Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested version is not found",
+     StatusCode.NOT_FOUND, "Model with requested version is not found"),
+    ("There was an error during sending ModelStatusRequest. "
+     f"Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested name is not found",
+     StatusCode.NOT_FOUND, "Model with requested name is not found"),
 ]
 
-# ({"model_name" : model_name, "model_version" : model_version, "raw_request_model_name": raw_request_model_name, "raw_request_model_version" : raw_request_model_version, 
-# "metadata_field_list" : raw_request_metadata_fields})
+# ({"model_name": model_name, "model_version": model_version,
+#   "raw_request_model_name": raw_request_model_name, "raw_request_model_version": raw_request_model_version,# noqa : E501
+# "metadata_field_list": raw_request_metadata_fields})
 MODEL_METADATA_REQUEST_VALID = [
-    ({"model_name" : "name", "model_version" : 0, "raw_request_model_name" : "name", "raw_request_model_version" : 0, "metadata_field_list" : ["signature_def"]}),
+    ({"model_name": "name", "model_version": 0,
+      "raw_request_model_name": "name", "raw_request_model_version": 0,
+      "metadata_field_list": ["signature_def"]}),
 ]
 
-# ({"model_name" : model_name, "model_version" : model_version, "raw_request_model_name": raw_request_model_name, "raw_request_model_version" : raw_request_model_version, 
-# "metadata_field_list" : raw_request_metadata_fields},
+# ({"model_name": model_name, "model_version": model_version,
+#   "raw_request_model_name": raw_request_model_name, "raw_request_model_version": raw_request_model_version,# noqa : E501
+# "metadata_field_list": raw_request_metadata_fields},
 # expected_exception, expected_message)
 MODEL_METADATA_REQUEST_INVALID_RAW_REQUEST = [
-    ({"model_name" : "name", "model_version" : 0, "raw_request_model_name" : "other_name", "raw_request_model_version" : 0, "metadata_field_list" : ["signature_def"]},
-    ValueError, 'request is not valid GrpcModelMetadataRequest'),
-    ({"model_name" : "other_name", "model_version" : 0, "raw_request_model_name" : "name", "raw_request_model_version" : 0, "metadata_field_list" : ["signature_def"]},
-    ValueError, 'request is not valid GrpcModelMetadataRequest'),
-    ({"model_name" : "name", "model_version" : 0, "raw_request_model_name" : "name", "raw_request_model_version" : 1, "metadata_field_list" : ["signature_def"]},
-    ValueError, 'request is not valid GrpcModelMetadataRequest'),
-    ({"model_name" : "name", "model_version" : 1, "raw_request_model_name" : "name", "raw_request_model_version" : 0, "metadata_field_list" : ["signature_def"]},
-    ValueError, 'request is not valid GrpcModelMetadataRequest'),
-    ({"model_name" : "name", "model_version" : 1, "raw_request_model_name" : "name", "raw_request_model_version" : 1, "metadata_field_list" : ["invalid"]},
-    ValueError, 'request is not valid GrpcModelMetadataRequest'),
+    ({"model_name": "name", "model_version": 0,
+      "raw_request_model_name": "other_name", "raw_request_model_version": 0,
+      "metadata_field_list": ["signature_def"]},
+     ValueError, 'request is not valid GrpcModelMetadataRequest'),
+    ({"model_name": "other_name", "model_version": 0,
+      "raw_request_model_name": "name", "raw_request_model_version": 0,
+      "metadata_field_list": ["signature_def"]},
+     ValueError, 'request is not valid GrpcModelMetadataRequest'),
+    ({"model_name": "name", "model_version": 0,
+      "raw_request_model_name": "name", "raw_request_model_version": 1,
+      "metadata_field_list": ["signature_def"]},
+     ValueError, 'request is not valid GrpcModelMetadataRequest'),
+    ({"model_name": "name", "model_version": 1,
+      "raw_request_model_name": "name", "raw_request_model_version": 0,
+      "metadata_field_list": ["signature_def"]},
+     ValueError, 'request is not valid GrpcModelMetadataRequest'),
+    ({"model_name": "name", "model_version": 1,
+      "raw_request_model_name": "name", "raw_request_model_version": 1,
+      "metadata_field_list": ["invalid"]},
+     ValueError, 'request is not valid GrpcModelMetadataRequest'),
 ]
 
 # (request, expected_exception, expected_message)
 MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE = [
-    (None, TypeError, "request type should be GrpcModelMetadataRequest, but is NoneType"),
-    (GetModelMetadataRequest(), TypeError, "request type should be GrpcModelMetadataRequest, but is GetModelMetadataRequest"),
-    (GrpcModelMetadataRequest('model_name', 0, 'raw_request'), TypeError, "request is not valid GrpcModelMetadataRequest")
+    (None, TypeError,
+     "request type should be GrpcModelMetadataRequest, but is NoneType"),
+    (GetModelMetadataRequest(), TypeError,
+     "request type should be GrpcModelMetadataRequest, but is GetModelMetadataRequest"),
+    (GrpcModelMetadataRequest('model_name', 0, 'raw_request'), TypeError,
+     "request is not valid GrpcModelMetadataRequest")
 ]
 
 # expected_message, grpc_error_status_code, grpc_error_details)
 GET_MODEL_METADATA_INVALID_GRPC = [
-    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - failed to connect to all adresses",
-    StatusCode.UNAVAILABLE, "failed to connect to all adresses"),
-    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - Empty update",
-    StatusCode.UNAVAILABLE, "Empty update"),
-    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested version is not found",
-    StatusCode.NOT_FOUND, "Model with requested version is not found"),
-    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested name is not found",
-    StatusCode.NOT_FOUND, "Model with requested name is not found"),
+    ("There was an error during sending ModelMetadataRequest. "
+     f"Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - failed to connect to all adresses",
+     StatusCode.UNAVAILABLE, "failed to connect to all adresses"),
+    ("There was an error during sending ModelMetadataRequest. "
+     f"Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - Empty update",
+     StatusCode.UNAVAILABLE, "Empty update"),
+    ("There was an error during sending ModelMetadataRequest. "
+     f"Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested version is not found",
+     StatusCode.NOT_FOUND, "Model with requested version is not found"),
+    ("There was an error during sending ModelMetadataRequest. "
+     f"Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested name is not found",
+     StatusCode.NOT_FOUND, "Model with requested name is not found"),
 ]
 
-# ({"model_name" : model_name, "model_version" : model_version, "raw_request_model_name": raw_request_model_name, "raw_request_model_version" : raw_request_model_version, 
-# "inputs_dict" : inputs_for_request, "raw_request_inputs_dict" : inputs_for_raw_request})
+# ({"model_name": model_name, "model_version": model_version,
+#   "raw_request_model_name": raw_request_model_name, "raw_request_model_version": raw_request_model_version,# noqa : E501
+# "inputs_dict": inputs_for_request, "raw_request_inputs_dict": inputs_for_raw_request})
 PREDICT_REQUEST_VALID_SPEC = [
-    ({"model_name" : "name", "model_version" : 0, "raw_request_model_name" : "name", "raw_request_model_version" : 0,
-      "inputs_dict" : {
-          "0" : TensorProto(dtype=DataType.DT_INT8,
-                            tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]),
-                            tensor_content=array([1, 2, 3]).tobytes())
+    ({"model_name": "name", "model_version": 0,
+      "raw_request_model_name": "name", "raw_request_model_version": 0,
+      "inputs_dict": {
+          "0": TensorProto(dtype=DataType.DT_INT8,
+                           tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]),
+                           tensor_content=array([1, 2, 3]).tobytes())
       },
-      "raw_request_inputs_dict" : {
-          "0" : TensorProto(dtype=DataType.DT_INT8,
-                            tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]),
-                            tensor_content=array([1, 2, 3]).tobytes())
+      "raw_request_inputs_dict": {
+          "0": TensorProto(dtype=DataType.DT_INT8,
+                           tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]),
+                           tensor_content=array([1, 2, 3]).tobytes())
       }}),
 ]
 
-# ({"model_name" : model_name, "model_version" : model_version, "raw_request_model_name": raw_request_model_name, "raw_request_model_version" : raw_request_model_version, 
-# "inputs_dict" : inputs_for_request, "raw_request_inputs_dict" : inputs_for_raw_request},
+# ({"model_name": model_name, "model_version": model_version,
+#   "raw_request_model_name": raw_request_model_name, "raw_request_model_version": raw_request_model_version,# noqa : E501
+# "inputs_dict": inputs_for_request, "raw_request_inputs_dict": inputs_for_raw_request},
 # expected_exception, expected_message)
 PREDICT_REQUEST_INVALID_SPEC_RAW_REQUEST = [
-    ({"model_name" : "name", "model_version" : 0, "raw_request_model_name" : "other_name", "raw_request_model_version" : 0,
-      "inputs_dict" : {
-          "0" : TensorProto()
+    ({"model_name": "name", "model_version": 0,
+      "raw_request_model_name": "other_name", "raw_request_model_version": 0,
+      "inputs_dict": {
+          "0": TensorProto()
       },
-      "raw_request_inputs_dict" : {
-          "0" : TensorProto()
+      "raw_request_inputs_dict": {
+          "0": TensorProto()
       }}, ValueError, 'request is not valid GrpcPredictRequest'),
-    ({"model_name" : "other_name", "model_version" : 0, "raw_request_model_name" : "name", "raw_request_model_version" : 0,
-      "inputs_dict" : {
-          "0" : TensorProto()
+    ({"model_name": "other_name", "model_version": 0,
+      "raw_request_model_name": "name", "raw_request_model_version": 0,
+      "inputs_dict": {
+          "0": TensorProto()
       },
-      "raw_request_inputs_dict" : {
-          "0" : TensorProto()
+      "raw_request_inputs_dict": {
+          "0": TensorProto()
       }}, ValueError, 'request is not valid GrpcPredictRequest'),
-    ({"model_name" : "name", "model_version" : 1, "raw_request_model_name" : "name", "raw_request_model_version" : 0,
-      "inputs_dict" : {
-          "0" : TensorProto()
+    ({"model_name": "name", "model_version": 1,
+      "raw_request_model_name": "name", "raw_request_model_version": 0,
+      "inputs_dict": {
+          "0": TensorProto()
       },
-      "raw_request_inputs_dict" : {
-          "0" : TensorProto()
+      "raw_request_inputs_dict": {
+          "0": TensorProto()
       }}, ValueError, 'request is not valid GrpcPredictRequest'),
-    ({"model_name" : "name", "model_version" : 0, "raw_request_model_name" : "name", "raw_request_model_version" : 1,
-      "inputs_dict" : {
-          "0" : TensorProto()
+    ({"model_name": "name", "model_version": 0,
+      "raw_request_model_name": "name", "raw_request_model_version": 1,
+      "inputs_dict": {
+          "0": TensorProto()
       },
-      "raw_request_inputs_dict" : {
-          "0" : TensorProto()
+      "raw_request_inputs_dict": {
+          "0": TensorProto()
       }}, ValueError, 'request is not valid GrpcPredictRequest'),
-    ({"model_name" : "name", "model_version" : 0, "raw_request_model_name" : "name", "raw_request_model_version" : 0,
-      "inputs_dict" : {
-          "0" : TensorProto()
+    ({"model_name": "name", "model_version": 0,
+      "raw_request_model_name": "name", "raw_request_model_version": 0,
+      "inputs_dict": {
+          "0": TensorProto()
       },
-      "raw_request_inputs_dict" : {
-          "1" : TensorProto()
+      "raw_request_inputs_dict": {
+          "1": TensorProto()
       }}, ValueError, 'request is not valid GrpcPredictRequest'),
 ]
 
 # (predict_request, expected_exception, expected_message)
 PREDICT_REQUEST_INVALID_SPEC_TYPE = [
-    (None, TypeError, 'request type should be GrpcPredictRequest, but is NoneType'),
-    (PredictRequest(), TypeError, f'request type should be GrpcPredictRequest, but is PredictRequest'),
-    (GrpcPredictRequest({},"model_name",0,"raw_request"), TypeError, 'request is not valid GrpcPredictRequest'),
+    (None, TypeError,
+     'request type should be GrpcPredictRequest, but is NoneType'),
+    (PredictRequest(), TypeError,
+     'request type should be GrpcPredictRequest, but is PredictRequest'),
+    (GrpcPredictRequest({}, "model_name", 0, "raw_request"),
+     TypeError, 'request is not valid GrpcPredictRequest'),
 ]
 
 # (expected_message, grpc_error_status_code, grpc_error_details)
 PREDICT_INVAlID_GRPC = [
-    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - failed to connect to all adresses",
-    StatusCode.UNAVAILABLE, "failed to connect to all adresses"),
-    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested version is not found",
-    StatusCode.NOT_FOUND, "Model with requested version is not found"),
-    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested name is not found",
-    StatusCode.NOT_FOUND, "Model with requested name is not found"),
-    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - Invalid input precision - Expected: FP32; Actual: I64",
-    StatusCode.INVALID_ARGUMENT, "Invalid input precision - Expected: FP32; Actual: I64"),
-    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - Invalid number of inputs - Expected: 1; Actual: 0",
-    StatusCode.INVALID_ARGUMENT, "Invalid number of inputs - Expected: 1; Actual: 0"),
-    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - Missing input with specific name - Required input: 0",
-    StatusCode.INVALID_ARGUMENT, "Missing input with specific name - Required input: 0"),
-    (f"There was an error during sending ModelStatusRequest. Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - Invalid number of shape dimensions - Expected: (1,3,224,224); Actual: (3)",
-    StatusCode.INVALID_ARGUMENT, "Invalid number of shape dimensions - Expected: (1,3,224,224); Actual: (3)"),
+    ("There was an error during sending PredictRequest. "
+     f"Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - "
+     "failed to connect to all adresses",
+     StatusCode.UNAVAILABLE, "failed to connect to all adresses"),
+    ("There was an error during sending PredictRequest. "
+     f"Grpc exited with: \n{StatusCode.NOT_FOUND.name} - "
+     "Model with requested version is not found",
+     StatusCode.NOT_FOUND, "Model with requested version is not found"),
+    ("There was an error during sending PredictRequest. "
+     f"Grpc exited with: \n{StatusCode.NOT_FOUND.name} - "
+     "Model with requested name is not found",
+     StatusCode.NOT_FOUND, "Model with requested name is not found"),
+    ("There was an error during sending PredictRequest. "
+     f"Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - "
+     "Invalid input precision - Expected: FP32; Actual: I64",
+     StatusCode.INVALID_ARGUMENT, ("Invalid input precision - "
+                                   "Expected: FP32; Actual: I64")),
+    ("There was an error during sending PredictRequest. "
+     f"Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - "
+     "Invalid number of inputs - Expected: 1; Actual: 0",
+     StatusCode.INVALID_ARGUMENT, ("Invalid number of inputs - "
+                                   "Expected: 1; Actual: 0")),
+    ("There was an error during sending PredictRequest. "
+     f"Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - "
+     "Missing input with specific name - Required input: 0",
+     StatusCode.INVALID_ARGUMENT, ("Missing input with specific name - "
+                                   "Required input: 0")),
+    ("There was an error during sending PredictRequest. "
+     f"Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - "
+     "Invalid number of shape dimensions - Expected: (1,3,224,224); Actual: (3)",
+     StatusCode.INVALID_ARGUMENT, ("Invalid number of shape dimensions - "
+                                   "Expected: (1,3,224,224); Actual: (3)")),
 ]

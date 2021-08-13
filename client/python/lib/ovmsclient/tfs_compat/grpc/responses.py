@@ -29,7 +29,7 @@ class GrpcPredictResponse(PredictResponse):
 
         for key, value in self.raw_response.outputs.items():
             result_dict[key] = make_ndarray(value)
-        
+
         return result_dict
 
 

@@ -52,3 +52,7 @@ test: venv
 
 clean:
 	@rm -rf tensorflow/ tensorflow_serving/ build/ dist/
+
+style: venv
+	@echo "Running ovmsclient and tests style check"
+	@. $(ACTIVATE); flake8 ovmsclient tests/ --max-line-length=100 --count

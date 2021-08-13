@@ -17,7 +17,6 @@
 from grpc import RpcError, ssl_channel_credentials, secure_channel, insecure_channel
 from validators import ipv4, domain
 import os
-from grpc import RpcError
 
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from tensorflow_serving.apis import model_service_pb2_grpc
@@ -26,8 +25,11 @@ from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataReque
 from tensorflow_serving.apis.predict_pb2 import PredictRequest
 
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
-from ovmsclient.tfs_compat.grpc.requests import GrpcModelStatusRequest, GrpcModelMetadataRequest, GrpcPredictRequest
-from ovmsclient.tfs_compat.grpc.responses import GrpcModelStatusResponse, GrpcModelMetadataResponse, GrpcPredictResponse
+from ovmsclient.tfs_compat.grpc.requests import (GrpcModelStatusRequest, GrpcModelMetadataRequest,
+                                                 GrpcPredictRequest)
+from ovmsclient.tfs_compat.grpc.responses import (GrpcModelStatusResponse,
+                                                  GrpcModelMetadataResponse,
+                                                  GrpcPredictResponse)
 
 
 class GrpcClient(ServingClient):
@@ -69,7 +71,8 @@ class GrpcClient(ServingClient):
         try:
             raw_response = self.prediction_service_stub.Predict(request.raw_request, 10.0)
         except RpcError as e_info:
-            raise ConnectionError(f'There was an error during sending ModelStatusRequest. Grpc exited with: \n{e_info.code().name} - {e_info.details()}')
+            raise ConnectionError('There was an error during sending PredictRequest. '
+                                  f'Grpc exited with: \n{e_info.code().name} - {e_info.details()}')
 
         return GrpcPredictResponse(raw_response)
 
@@ -105,7 +108,8 @@ class GrpcClient(ServingClient):
         try:
             raw_response = self.prediction_service_stub.GetModelMetadata(request.raw_request, 10.0)
         except RpcError as e_info:
-            raise ConnectionError(f'There was an error during sending ModelStatusRequest. Grpc exited with: \n{e_info.code().name} - {e_info.details()}')
+            raise ConnectionError('There was an error during sending ModelMetadataRequest. '
+                                  f'Grpc exited with: \n{e_info.code().name} - {e_info.details()}')
 
         return GrpcModelMetadataResponse(raw_response)
 
@@ -141,7 +145,8 @@ class GrpcClient(ServingClient):
         try:
             raw_response = self.model_service_stub.GetModelStatus(request.raw_request, 10.0)
         except RpcError as e_info:
-            raise ConnectionError(f'There was an error during sending ModelStatusRequest. Grpc exited with: \n{e_info.code().name} - {e_info.details()}')
+            raise ConnectionError('There was an error during sending ModelStatusRequest. '
+                                  f'Grpc exited with: \n{e_info.code().name} - {e_info.details()}')
 
         return GrpcModelStatusResponse(raw_response)
 
@@ -171,53 +176,60 @@ class GrpcClient(ServingClient):
 
         return cls(channel, prediction_service_stub, model_service_stub)
 
+
 def _check_model_status_request(request):
 
     if not isinstance(request, GrpcModelStatusRequest):
-        raise TypeError(f'request type should be GrpcModelStatusRequest, but is {type(request).__name__}')
+        raise TypeError('request type should be GrpcModelStatusRequest, '
+                        f'but is {type(request).__name__}')
 
     if not isinstance(request.raw_request, GetModelStatusRequest):
-        raise TypeError(f'request is not valid GrpcModelStatusRequest')
+        raise TypeError('request is not valid GrpcModelStatusRequest')
 
     if request.raw_request.model_spec.name != request.model_name:
-        raise ValueError(f'request is not valid GrpcModelStatusRequest')
+        raise ValueError('request is not valid GrpcModelStatusRequest')
 
     if request.raw_request.model_spec.version.value != request.model_version:
-        raise ValueError(f'request is not valid GrpcModelStatusRequest')
-        
+        raise ValueError('request is not valid GrpcModelStatusRequest')
+
+
 def _check_model_metadata_request(request):
 
     if not isinstance(request, GrpcModelMetadataRequest):
-        raise TypeError(f'request type should be GrpcModelMetadataRequest, but is {type(request).__name__}')
+        raise TypeError('request type should be GrpcModelMetadataRequest, '
+                        f'but is {type(request).__name__}')
 
     if not isinstance(request.raw_request, GetModelMetadataRequest):
-        raise TypeError(f'request is not valid GrpcModelMetadataRequest')
+        raise TypeError('request is not valid GrpcModelMetadataRequest')
 
     if request.raw_request.model_spec.name != request.model_name:
-        raise ValueError(f'request is not valid GrpcModelMetadataRequest')
+        raise ValueError('request is not valid GrpcModelMetadataRequest')
 
     if request.raw_request.model_spec.version.value != request.model_version:
-        raise ValueError(f'request is not valid GrpcModelMetadataRequest')
+        raise ValueError('request is not valid GrpcModelMetadataRequest')
 
     if list(request.raw_request.metadata_field) != ['signature_def']:
-        raise ValueError(f'request is not valid GrpcModelMetadataRequest')
+        raise ValueError('request is not valid GrpcModelMetadataRequest')
+
 
 def _check_predict_request(request):
 
     if not isinstance(request, GrpcPredictRequest):
-        raise TypeError(f'request type should be GrpcPredictRequest, but is {type(request).__name__}')
+        raise TypeError('request type should be GrpcPredictRequest, '
+                        f'but is {type(request).__name__}')
 
     if not isinstance(request.raw_request, PredictRequest):
-        raise TypeError(f'request is not valid GrpcPredictRequest')
+        raise TypeError('request is not valid GrpcPredictRequest')
 
     if request.raw_request.model_spec.name != request.model_name:
-        raise ValueError(f'request is not valid GrpcPredictRequest')
-    
+        raise ValueError('request is not valid GrpcPredictRequest')
+
     if request.raw_request.model_spec.version.value != request.model_version:
-        raise ValueError(f'request is not valid GrpcPredictRequest')
-    
+        raise ValueError('request is not valid GrpcPredictRequest')
+
     if list(request.inputs.keys()) != list(request.raw_request.inputs.keys()):
-        raise ValueError(f'request is not valid GrpcPredictRequest')
+        raise ValueError('request is not valid GrpcPredictRequest')
+
 
 def _prepare_certs(server_cert_path, client_cert_path, client_key_path):
 
