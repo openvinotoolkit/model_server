@@ -82,9 +82,6 @@ Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const InferenceEngine:
 }
 
 bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    if (tensorInfo->getLayout() != InferenceEngine::Layout::NHWC) {
-        return false;
-    }
     int cols = 0;
     int rows = 0;
     if (tensorInfo->getEffectiveShape().size() == 4) {
@@ -103,9 +100,6 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
 }
 
 Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    if (tensorInfo->getLayout() != InferenceEngine::Layout::NHWC) {
-        return StatusCode::UNSUPPORTED_LAYOUT;
-    }
     int cols = 0;
     int rows = 0;
     if (tensorInfo->getEffectiveShape().size() == 4) {
@@ -123,10 +117,6 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
 
 Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     const cv::Mat input) {
-    if (tensorInfo->getLayout() != InferenceEngine::Layout::NHWC) {
-        return StatusCode::UNSUPPORTED_LAYOUT;
-    }
-
     size_t numberOfChannels = 0;
     if (tensorInfo->getEffectiveShape().size() == 4) {
         numberOfChannels = tensorInfo->getEffectiveShape()[3];
@@ -164,10 +154,6 @@ Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Ma
 
 Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     const tensorflow::TensorProto& src) {
-    if (tensorInfo->getLayout() != InferenceEngine::Layout::NHWC) {
-        return StatusCode::UNSUPPORTED_LAYOUT;
-    }
-
     // 4 for default pipelines, 5 for pipelines with demultiplication at entry
     bool isShapeDimensionValid = tensorInfo->getEffectiveShape().size() == 4 ||
                                  (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getEffectiveShape().size() == 5);
@@ -188,30 +174,6 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
         cv::Mat image = convertStringValToMat(src.string_val(i));
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
-
-        auto status = validateInput(tensorInfo, image);
-        if (status != StatusCode::OK) {
-            return status;
-        }
-
-        if (!isPrecisionEqual(image.depth(), tensorInfo->getPrecision())) {
-            cv::Mat imageCorrectPrecision;
-            status = convertPrecision(image, imageCorrectPrecision, tensorInfo->getPrecision());
-
-            if (status != StatusCode::OK) {
-                return status;
-            }
-            image = std::move(imageCorrectPrecision);
-        }
-
-        if (resizeNeeded(image, tensorInfo)) {
-            cv::Mat imageResized;
-            status = resizeMat(image, imageResized, tensorInfo);
-            if (!status.ok()) {
-                return status;
-            }
-            image = std::move(imageResized);
-        }
         images.push_back(image);
     }
 
@@ -222,6 +184,9 @@ template <typename T>
 InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     auto dims = isPipeline ? tensorInfo->getEffectiveShape() : tensorInfo->getShape();
     dims[0] = images.size();
+    dims[1] = images[0].rows;
+    dims[2] = images[0].cols;
+    dims[3] = images[0].channels();
     InferenceEngine::TensorDesc desc{tensorInfo->getPrecision(), dims, InferenceEngine::Layout::ANY};
     InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<T>(desc);
     blob->allocate();
@@ -261,14 +226,9 @@ InferenceEngine::Blob::Ptr convertMatsToBlob(std::vector<cv::Mat>& images, const
 }
 
 Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
-    auto status = validateTensor(tensorInfo, src);
-    if (status != StatusCode::OK) {
-        return status;
-    }
-
     std::vector<cv::Mat> images;
 
-    status = convertTensorToMatsMatchingTensorInfo(src, images, tensorInfo);
+    auto status = convertTensorToMatsMatchingTensorInfo(src, images, tensorInfo);
     if (!status.ok()) {
         return status;
     }
