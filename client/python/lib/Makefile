@@ -1,0 +1,54 @@
+#
+# Copyright (c) 2021 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+VIRTUALENV_EXE := python3 -m virtualenv -p python3
+VIRTUALENV_DIR := .venv
+ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
+
+PACKAGE_PATH := dist/ovmsclient-0.1-py3-none-any.whl
+
+.PHONY: build-deps build-package build test clean
+
+venv:$(ACTIVATE)
+	@echo -n "Using virtual environment: $(VIRTUALENV_DIR)\n"
+	@. $(ACTIVATE); python3 --version
+
+$(ACTIVATE):
+	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
+	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
+	@. $(ACTIVATE); pip install --upgrade pip
+	@. $(ACTIVATE); pip install -r tests/requirements.txt
+	@touch $(ACTIVATE)
+
+build-deps:
+	@echo "Building dependencies"
+	@python setup.py build_apis
+
+build-package:
+	@echo "Building ovmsclient package"
+	@python setup.py bdist_wheel
+
+build: build-deps build-package
+	@echo "Build completed successfully. The wheel should be present in dist/ directory"
+
+test: venv
+	@echo "Installing ovmsclient package from: $(PACKAGE_PATH)"
+	@. $(ACTIVATE); pip install $(PACKAGE_PATH) --force-reinstall
+	@echo "Running ovmsclient tests"
+	@. $(ACTIVATE); pytest -v tests/
+
+clean:
+	@rm -rf tensorflow/ tensorflow_serving/ build/ dist/
