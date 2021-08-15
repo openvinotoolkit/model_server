@@ -24,7 +24,6 @@ from _pytest._code import ExceptionInfo, filter_traceback  # noqa
 from _pytest.outcomes import OutcomeException
 
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
-from object_model.minio_docker import MinioDocker
 from object_model.server import Server
 from utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
     get_containers_with_tests_suffix, get_docker_client
@@ -134,6 +133,7 @@ def pytest_runtestloop(session):
             if len(server_fixtures_to_item[fixture]) == 0:
                 # No other tests will use this docker instance so we can close it.
                 Server.stop_by_fixture_name(fixture)
+        yield
 
 
 @pytest.hookimpl(hookwrapper=True)

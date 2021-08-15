@@ -40,8 +40,6 @@ class MinioDocker(Docker, metaclass=SingletonMeta):
             finally:
                 if self.start_result is None:
                     self.stop()
-                else:
-                    MinioDocker.running_instance = self
         return self.start_result
 
     @staticmethod
