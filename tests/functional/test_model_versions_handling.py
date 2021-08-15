@@ -17,6 +17,7 @@
 import pytest
 import numpy as np
 
+from config import target_device
 from constants import MODEL_SERVICE
 from model.models_information import PVBFaceDetectionV2, PVBFaceDetection
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
@@ -29,7 +30,8 @@ from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_
 
 logger = logging.getLogger(__name__)
 
-
+# TestModelVersionHandling - requires multiple models to be loaded, too much for NCS (MYRIAD) device
+@pytest.mark.skipif(target_device=="MYRIAD", reason="NOT TO BE REPORTED IF SKIPPED")
 class TestModelVersionHandling:
     model_name = "pvb_face_multi_version"
 
