@@ -14,28 +14,34 @@
 # limitations under the License.
 #
 
-from numpy import array
 import pytest
 
 from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
 from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
 
-from ovmsclient.tfs_compat.grpc.requests import GrpcModelMetadataRequest, GrpcPredictRequest, _check_model_spec, make_metadata_request, make_predict_request, make_status_request, GrpcModelStatusRequest
+from ovmsclient.tfs_compat.grpc.requests import (GrpcModelMetadataRequest, GrpcPredictRequest,
+                                                 _check_model_spec, make_metadata_request,
+                                                 make_predict_request, make_status_request,
+                                                 GrpcModelStatusRequest)
 
-from config import MODEL_SPEC_INVALID, MODEL_SPEC_VALID, PREDICT_REQUEST_INVALID_INPUTS, PREDICT_REQUEST_VALID
+from config import (MODEL_SPEC_INVALID, MODEL_SPEC_VALID,
+                    PREDICT_REQUEST_INVALID_INPUTS, PREDICT_REQUEST_VALID)
 from tensorflow_serving.apis.predict_pb2 import PredictRequest
+
 
 @pytest.mark.parametrize("name, version", MODEL_SPEC_VALID)
 def test_check_model_spec_valid(name, version):
     _check_model_spec(name, version)
 
+
 @pytest.mark.parametrize("name, version, expected_exception, expected_message", MODEL_SPEC_INVALID)
 def test_check_model_spec_invalid(name, version, expected_exception, expected_message):
     with pytest.raises(expected_exception) as e_info:
         _check_model_spec(name, version)
-    
+
     assert str(e_info.value) == expected_message
+
 
 @pytest.mark.parametrize("name, version", MODEL_SPEC_VALID)
 def test_make_status_request_valid(mocker, name, version):
@@ -48,14 +54,17 @@ def test_make_status_request_valid(mocker, name, version):
     assert model_status_request.model_name == name
     assert isinstance(model_status_request.raw_request, GetModelStatusRequest)
 
+
 @pytest.mark.parametrize("name, version, expected_exception, expected_message", MODEL_SPEC_INVALID)
 def test_make_status_request_invalid(mocker, name, version, expected_exception, expected_message):
-    mock_method = mocker.patch('ovmsclient.tfs_compat.grpc.requests._check_model_spec', side_effect=expected_exception(expected_message))
+    mock_method = mocker.patch('ovmsclient.tfs_compat.grpc.requests._check_model_spec',
+                               side_effect=expected_exception(expected_message))
     with pytest.raises(expected_exception) as e_info:
-        model_status_request = make_status_request(name, version)
-    
+        make_status_request(name, version)
+
     assert str(e_info.value) == expected_message
     mock_method.assert_called_once()
+
 
 @pytest.mark.parametrize("name, version", MODEL_SPEC_VALID)
 def test_make_metadata_request_vaild(mocker, name, version):
@@ -70,21 +79,24 @@ def test_make_metadata_request_vaild(mocker, name, version):
     assert len(model_metadata_request.raw_request.metadata_field) == 1
     assert model_metadata_request.raw_request.metadata_field[0] == 'signature_def'
 
+
 @pytest.mark.parametrize("name, version, expected_exception, expected_message", MODEL_SPEC_INVALID)
 def test_make_metadata_request_invalid(mocker, name, version, expected_exception, expected_message):
-    mock_method = mocker.patch('ovmsclient.tfs_compat.grpc.requests._check_model_spec', side_effect=expected_exception(expected_message))
+    mock_method = mocker.patch('ovmsclient.tfs_compat.grpc.requests._check_model_spec',
+                               side_effect=expected_exception(expected_message))
     with pytest.raises(expected_exception) as e_info:
-        model_metadata_request = make_metadata_request(name, version)
-    
+        make_metadata_request(name, version)
+
     assert str(e_info.value) == expected_message
     mock_method.assert_called_once()
 
+
 @pytest.mark.parametrize("inputs, expected_proto, name, version", PREDICT_REQUEST_VALID)
 def test_make_predict_request_valid(inputs, expected_proto, name, version):
-    model_predict_request = make_predict_request(inputs ,name, version)
+    model_predict_request = make_predict_request(inputs, name, version)
 
     raw_predict_request = model_predict_request.raw_request
-    
+
     assert isinstance(model_predict_request, GrpcPredictRequest)
     assert model_predict_request.model_name == name
     assert model_predict_request.model_version == version
@@ -98,28 +110,35 @@ def test_make_predict_request_valid(inputs, expected_proto, name, version):
         if isinstance(value, TensorProto):
             assert value == raw_predict_request.inputs[key]
         else:
-            assert raw_predict_request.inputs[key].__getattribute__(expected_proto[key]['field']) == expected_proto[key]['value']
+            assert (raw_predict_request.inputs[key].__getattribute__(expected_proto[key]['field'])
+                    == expected_proto[key]['value'])
             assert raw_predict_request.inputs[key].tensor_shape == expected_proto[key]['shape']
             assert raw_predict_request.inputs[key].dtype == expected_proto[key]['dtype']
 
+
 @pytest.mark.parametrize("name, version, expected_exception, expected_message", MODEL_SPEC_INVALID)
-def test_make_predict_request_invalid_model_spec(mocker, name, version, expected_exception, expected_message):
+def test_make_predict_request_invalid_model_spec(mocker, name, version,
+                                                 expected_exception, expected_message):
     inputs = {
-        "input" : [1,2,3]
+        "input": [1, 2, 3]
     }
-    mock_method = mocker.patch('ovmsclient.tfs_compat.grpc.requests._check_model_spec', side_effect=expected_exception(expected_message))
+    mock_method = mocker.patch('ovmsclient.tfs_compat.grpc.requests._check_model_spec',
+                               side_effect=expected_exception(expected_message))
     with pytest.raises(expected_exception) as e_info:
-        model_predict_request = make_predict_request(inputs ,name, version)
-    
+        make_predict_request(inputs, name, version)
+
     assert str(e_info.value) == expected_message
     mock_method.assert_called_once()
 
+
 @pytest.mark.causes_deprecation_warning
-@pytest.mark.parametrize("inputs, name, version, expected_exception, expected_message", PREDICT_REQUEST_INVALID_INPUTS)
-def test_make_predict_request_invalid_inputs(mocker, inputs, name, version, expected_exception, expected_message):
+@pytest.mark.parametrize("""inputs, name, version,
+                            expected_exception, expected_message""", PREDICT_REQUEST_INVALID_INPUTS)
+def test_make_predict_request_invalid_inputs(mocker, inputs, name, version,
+                                             expected_exception, expected_message):
     mock_method = mocker.patch('ovmsclient.tfs_compat.grpc.requests._check_model_spec')
     with pytest.raises(expected_exception) as e_info:
-        model_predict_request = make_predict_request(inputs ,name, version)
-    
+        make_predict_request(inputs, name, version)
+
     assert str(e_info.value) == expected_message
     mock_method.assert_called_once()

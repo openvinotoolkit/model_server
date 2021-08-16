@@ -16,21 +16,23 @@
 
 from abc import ABC, abstractmethod
 
+
 class PredictResponse(ABC):
-    
+
     def __init__(self, raw_response):
         self.raw_response = raw_response
 
+
 class ModelMetadataResponse(ABC):
-    
+
     def __init__(self, raw_response):
         self.raw_response = raw_response
-    
+
     @abstractmethod
     def to_dict(self):
         '''
         Return metadata in dictionary format:
-        
+
         .. code-block::
 
             {
@@ -58,11 +60,12 @@ class ModelMetadataResponse(ABC):
 
         pass
 
+
 class ModelStatusResponse(ABC):
-    
+
     def __init__(self, raw_response):
         self.raw_response = raw_response
-    
+
     @abstractmethod
     def to_dict(self):
         '''
