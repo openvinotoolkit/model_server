@@ -132,7 +132,7 @@ sdl-check: venv
 		error Run bandit on src/*.py and example_client/*.py to fix issues.;\
 	fi
 	@rm bandit.txt
-    @. $(ACTIVATE); bash -c "-r client/python/lib/ovmsclient/ > bandit2.txt"
+	@. $(ACTIVATE); bash -c "bandit -r client/python/lib/ovmsclient/ > bandit2.txt"
 	@if ! grep -FRq "No issues identified." bandit2.txt; then\
 		error Run bandit on  client/python/lib/ovmsclient/ to fix issues.;\
 	fi
