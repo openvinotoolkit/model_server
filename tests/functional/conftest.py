@@ -133,7 +133,7 @@ def pytest_runtestloop(session):
             if len(server_fixtures_to_item[fixture]) == 0:
                 # No other tests will use this docker instance so we can close it.
                 Server.stop_by_fixture_name(fixture)
-        yield
+    yield
 
 
 @pytest.hookimpl(hookwrapper=True)
