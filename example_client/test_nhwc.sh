@@ -1,0 +1,1 @@
+python3 grpc_serving_client.py --grpc_port 11337 --model_name image_transformation_test --images_numpy_path ./imgs.npy --input_name 0 --output_name 1463 --transpose_input True --transpose_method nchw2nhwc --iteration 2 --labels_numpy_path ./lbs.npy --batchsize 1
