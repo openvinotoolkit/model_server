@@ -132,6 +132,11 @@ sdl-check: venv
 		error Run bandit on src/*.py and example_client/*.py to fix issues.;\
 	fi
 	@rm bandit.txt
+    @. $(ACTIVATE); bash -c "-r client/python/lib/ovmsclient/ > bandit2.txt"
+	@if ! grep -FRq "No issues identified." bandit2.txt; then\
+		error Run bandit on  client/python/lib/ovmsclient/ to fix issues.;\
+	fi
+	@rm bandit2.txt
 	@echo "Checking license headers in files..."
 	@. $(ACTIVATE); bash -c "python3 lib_search.py . > missing_headers.txt"
 	@if ! grep -FRq "All files have headers" missing_headers.txt; then\
