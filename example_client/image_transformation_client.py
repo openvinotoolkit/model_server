@@ -88,12 +88,6 @@ def prepare_img_input(request, name, path, width, height, layout, color):
     if args['mean_values']:
         img = mean(img, args['mean_values'])
 
-    if layout == 'BINARY':
-        # Convert data to binary
-        # Pack binary
-        # return
-        pass
-
     if layout == 'NCHW':
         h, w, c = img.shape
         img = img.transpose(2,0,1).reshape(1, c, h, w)

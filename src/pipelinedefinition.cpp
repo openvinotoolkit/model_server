@@ -29,6 +29,7 @@
 #include "pipeline.hpp"
 #include "pipelinedefinitionunloadguard.hpp"
 #include "prediction_service_utils.hpp"
+#include "tensorinfo.hpp"  // to remove
 
 namespace ovms {
 
@@ -1112,6 +1113,8 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                         }
                     } else {
                         inputsInfo[alias] = tensorInfo;
+                        SPDLOG_INFO("XXXXXXXXXXXXX S: {}", TensorInfo::shapeToString(tensorInfo->getShape()));
+                        SPDLOG_INFO("XXXXXXXXXXXXX ES: {}", TensorInfo::shapeToString(tensorInfo->getEffectiveShape()));
                     }
                 }
                 break;
@@ -1129,6 +1132,8 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
         uint32_t demultiplyCount = it->demultiplyCount.value();
         for (auto& [inputName, inputTensorInfo] : inputsInfo) {
             inputTensorInfo = applyDemultiplexerShapeForTensor(inputTensorInfo, demultiplyCount);
+            SPDLOG_INFO("YYYYYYYY S: {}", TensorInfo::shapeToString(inputTensorInfo->getShape()));
+            SPDLOG_INFO("YYYYYYYYY ES: {}", TensorInfo::shapeToString(inputTensorInfo->getEffectiveShape()));
         }
     }
     return StatusCode::OK;
