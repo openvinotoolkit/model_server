@@ -23,7 +23,7 @@ from utils.parametrization import get_tests_suffix
 from object_model.server import Server
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def start_server_update_flow_latest(request):
 
     update_test_dir = config.path_to_mount + '/update-{}/'.format(get_tests_suffix())
@@ -41,7 +41,7 @@ def start_server_update_flow_latest(request):
     return server.start()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def start_server_update_flow_specific(request):
 
     update_test_dir = config.path_to_mount + '/update-{}/'.format(get_tests_suffix())

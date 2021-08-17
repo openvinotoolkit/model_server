@@ -27,7 +27,7 @@ from object_model.server import Server
 from utils.parametrization import get_tests_suffix
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def start_server_single_model_from_gc(request):
 
     start_server_command_args = {"model_name": Resnet.name,
@@ -68,7 +68,7 @@ def get_docker_network(request, get_docker_context):
     return network
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def start_minio_server(request, get_docker_context):
 
     """sudo docker run -d -p 9099:9000 minio/minio server /data"""
@@ -94,7 +94,7 @@ def start_minio_server(request, get_docker_context):
     return minio_docker.start()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def get_minio_server_s3(start_minio_server):
 
     path_to_mount = config.path_to_mount + '/{}/{}'.format(Resnet.name, Resnet.version)
@@ -124,20 +124,19 @@ def get_minio_server_s3(start_minio_server):
                         config=Config(signature_version='s3v4'),
                         region_name=aws_region)
 
-    bucket_conf = {'LocationConstraint': aws_region}
+    bucket = s3.Bucket('inference')
+    if not bucket.creation_date:
+        bucket_conf = {'LocationConstraint': aws_region}
+        s3.create_bucket(Bucket='inference',
+                         CreateBucketConfiguration=bucket_conf)
 
-    s3.create_bucket(Bucket='inference',
-                     CreateBucketConfiguration=bucket_conf)
-
-    s3.Bucket('inference').upload_file(input_bin,
-                                       '{name}/{version}/{name}.bin'.format(name=Resnet.name, version=Resnet.version))
-    s3.Bucket('inference').upload_file(input_xml,
-                                       '{name}/{version}/{name}.xml'.format(name=Resnet.name, version=Resnet.version))
+    bucket.upload_file(input_bin, '{name}/{version}/{name}.bin'.format(name=Resnet.name, version=Resnet.version))
+    bucket.upload_file(input_xml, '{name}/{version}/{name}.xml'.format(name=Resnet.name, version=Resnet.version))
 
     return s3, ports, minio_container
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def start_server_single_model_from_minio(request, get_minio_server_s3):
 
     aws_access_key_id = os.getenv('MINIO_ACCESS_KEY')

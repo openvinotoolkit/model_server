@@ -34,7 +34,7 @@ TERMINAL_STATUSES = ["exited"]
 
 class Docker:
     
-    COMMON_RETRY = {"tries": 90, "delay": 2}
+    COMMON_RETRY = {"tries": 360, "delay": 0.5}
     GETTING_LOGS_RETRY = COMMON_RETRY
     GETTING_STATUS_RETRY = COMMON_RETRY
 
@@ -50,7 +50,6 @@ class Docker:
         self.start_container_command = start_container_command
         self.env_vars_container = env_vars_container if env_vars_container else []
         self.container_log_line = container_log_line
-        self.last_log_fetch_time = datetime.now()
         self.logs = ""
 
     def start(self):
@@ -87,8 +86,7 @@ class Docker:
         if self.container is not None:
             logger.info(f"Stopping container: {self.container_name}")
             self.save_container_logs()
-            self.container.stop()
-            self.container.remove()
+            self.container.remove(force=True)       # Container will be stopped and cleaned
             port_manager_grpc.release_port(self.grpc_port)
             port_manager_rest.release_port(self.rest_port)
             self.container = None
@@ -99,23 +97,26 @@ class Docker:
         if config.log_level == "DEBUG":
             logger.info(logs)
         if config.artifacts_dir != "":
-            save_container_logs_to_file(logs=logs, location=self.request.node.location)
+            location = getattr(self.request.node, "location", None)
+            save_container_logs_to_file(logs=logs, location=location)
 
     def get_logs(self):
-        until = self.last_log_fetch_time
-        self.last_log_fetch_time = datetime.now()
-        self.logs = self.logs + self.container.logs(until=until).decode()
+        self.logs = self.container.logs().decode()
         return self.logs
 
     def ensure_logs(self):
         logs = self.get_logs()
         if self.container_log_line not in logs:
-            if config.log_level == "DEBUG":
-                logger.info(str(logs))
             assert False, f"Not found required phrase {self.container_log_line}"
 
     def ensure_logs_contains(self):
-        return retry_call(self.ensure_logs, exceptions=AssertionError, **Docker.GETTING_LOGS_RETRY)
+        result = None
+        try:
+            result = retry_call(self.ensure_logs, exceptions=AssertionError, **Docker.GETTING_LOGS_RETRY)
+        except:
+            if config.log_level == "DEBUG":
+                logger.info(str(self.get_logs()))
+        return result
 
     def get_container_status(self):
         container = self.client.containers.get(self.container.id)
@@ -123,6 +124,7 @@ class Docker:
 
     def ensure_status(self, status, terminal_statuses=None):
         current_status = self.get_container_status()
+        logger.debug(f"Ensure container status, expected_status={status}\t current_status={current_status}")
         if terminal_statuses is not None and current_status in terminal_statuses:
             raise RuntimeError("Received terminal status '{}' for container {}".format(current_status,
                                                                                        self.container_name))
