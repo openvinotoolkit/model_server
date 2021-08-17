@@ -112,7 +112,7 @@ $(ACTIVATE):
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
 	@. $(ACTIVATE); pip$(PY_VERSION) install --upgrade pip
 	@. $(ACTIVATE); pip$(PY_VERSION) install -vUqq setuptools
-	@. $(ACTIVATE); pip$(PY_VERSION) install -r tests/requirements.txt --use-deprecated=legacy-resolver
+	@. $(ACTIVATE); pip$(PY_VERSION) install -qq -r tests/requirements.txt --use-deprecated=legacy-resolver
 	@touch $(ACTIVATE)
 
 style: venv clang-format
