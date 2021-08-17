@@ -84,13 +84,9 @@ protected:
     }
 
     void prepareBinaryRequest(const std::string& jpegPath, PredictRequest& request, const std::string& customPipelineInputName, int batchSize = 1) {
-        std::ifstream DataFile;
-        DataFile.open(jpegPath, std::ios::binary);
-        DataFile.seekg(0, std::ios::end);
-        size_t filesize = DataFile.tellg();
-        DataFile.seekg(0);
-        std::unique_ptr<char[]> image_bytes(new char[filesize]);
-        DataFile.read(image_bytes.get(), filesize);
+        size_t filesize;
+        std::unique_ptr<char[]> image_bytes;
+        readImage(jpegPath, filesize, image_bytes);
 
         tensorflow::TensorProto& inputProto = (*request.mutable_inputs())[customPipelineInputName];
         inputProto.set_dtype(tensorflow::DataType::DT_STRING);
@@ -98,6 +94,21 @@ protected:
             inputProto.add_string_val(image_bytes.get(), filesize);
         }
         inputProto.mutable_tensor_shape()->add_dim()->set_size(batchSize);
+    }
+
+    void prepareMisalignedBinaryImageRequest(const std::string& image1, const std::string& image2, PredictRequest& request, const std::string& customPipelineInputName) {
+        tensorflow::TensorProto& inputProto = (*request.mutable_inputs())[customPipelineInputName];
+        inputProto.set_dtype(tensorflow::DataType::DT_STRING);
+
+        size_t filesize;
+        std::unique_ptr<char[]> image_bytes;
+        readImage(image1, filesize, image_bytes);
+        inputProto.add_string_val(image_bytes.get(), filesize);
+
+        readImage(image2, filesize, image_bytes);
+        inputProto.add_string_val(image_bytes.get(), filesize);
+
+        inputProto.mutable_tensor_shape()->add_dim()->set_size(2);
     }
 
     void checkDummyResponse(int seriesLength, int batchSize = 1) {
@@ -3598,6 +3609,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithInnerNhwcConnection) {
 class EnsembleFlowTestBinaryInput : public EnsembleFlowTest {
 public:
     const std::string imagePath = "/ovms/src/test/binaryutils/rgb.jpg";
+    const std::string imagePath2x2 = "/ovms/src/test/binaryutils/rgb2x2.jpg";
     const std::string graycaleImagePath = "/ovms/src/test/binaryutils/grayscale.jpg";
 };
 
@@ -4082,4 +4094,81 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryDemultiplexer) {
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
     checkIncrement4DimResponse("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
+}
+
+static const char* pipelineWithOnlyDynamicCustomNode = R"(
+{
+    "model_config_list": [],
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_dynamic_image",
+            "base_path": "/ovms/bazel-bin/src/lib_node_dynamic_image.so"
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_dynamic_image",
+                    "type": "custom",
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output_numbers",
+                         "alias": "custom_node_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "custom_node",
+                                     "data_item": "custom_node_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+// This test ensure binary inputs work for pipelines with layout ANY.
+// Such pipelines have only custom nodes as entry nodes.
+// In this case we do not reject the request but create NHWC content out of that.
+TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineWithOnlyDynamicCustomNode, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    // BS=1
+    int batchSize = 1;
+    prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse("pipeline_output", {44.0, 35.0, 245.0}, request, response, {1, 1, 1, 3});
+
+    request.Clear();
+    response.Clear();
+    pipeline = nullptr;
+
+    // BS=2
+    batchSize = 2;
+    prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, request, response, {2, 1, 1, 3});
+
+    request.Clear();
+    response.Clear();
+    pipeline = nullptr;
+
+    // BS=2, resolutions not aligned
+    prepareMisalignedBinaryImageRequest(imagePath, imagePath2x2, request, "pipeline_input");
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);
 }

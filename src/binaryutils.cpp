@@ -81,7 +81,7 @@ Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const InferenceEngine:
     return StatusCode::OK;
 }
 
-bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tensorInfo, cv::Mat* referenceImage) {
+bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tensorInfo) {
     if (tensorInfo->getLayout() != InferenceEngine::Layout::NHWC && tensorInfo->getLayout() != InferenceEngine::Layout::ANY) {
         return false;
     }
@@ -96,17 +96,13 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
     } else {
         return false;
     }
-    if (cols == 0 && referenceImage) {
-        cols = referenceImage->cols;
-    }
-    if (rows == 0 && referenceImage) {
-        rows = referenceImage->rows;
-    }
-    if (cols == 0) {
-        cols = image.cols;
-    }
-    if (rows == 0) {
-        rows = image.rows;
+    if (tensorInfo->getLayout() == InferenceEngine::Layout::ANY) {
+        if (cols == 0) {
+            cols = image.cols;
+        }
+        if (rows == 0) {
+            rows = image.rows;
+        }
     }
     if (cols != image.cols || rows != image.rows) {
         return true;
@@ -114,7 +110,7 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
     return false;
 }
 
-Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorInfo>& tensorInfo, cv::Mat* referenceImage) {
+Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
     if (tensorInfo->getLayout() != InferenceEngine::Layout::NHWC && tensorInfo->getLayout() != InferenceEngine::Layout::ANY) {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
@@ -129,17 +125,13 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
     } else {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
-    if (cols == 0 && referenceImage) {
-        cols = referenceImage->cols;
-    }
-    if (rows == 0 && referenceImage) {
-        rows = referenceImage->rows;
-    }
-    if (cols == 0) {
-        cols = src.cols;
-    }
-    if (rows == 0) {
-        rows = src.rows;
+    if (tensorInfo->getLayout() == InferenceEngine::Layout::ANY) {
+        if (cols == 0) {
+            cols = src.cols;
+        }
+        if (rows == 0) {
+            rows = src.rows;
+        }
     }
     cv::resize(src, dst, cv::Size(cols, rows));
     return StatusCode::OK;
@@ -147,7 +139,7 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
 
 Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     const cv::Mat input,
-    cv::Mat* referenceImage) {
+    cv::Mat* firstBatchImage) {
     if (tensorInfo->getLayout() != InferenceEngine::Layout::NHWC && tensorInfo->getLayout() != InferenceEngine::ANY) {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
@@ -161,8 +153,8 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     } else {
         return StatusCode::INVALID_NO_OF_CHANNELS;
     }
-    if (numberOfChannels == 0 && referenceImage) {
-        numberOfChannels = referenceImage->channels();
+    if (numberOfChannels == 0 && firstBatchImage) {
+        numberOfChannels = firstBatchImage->channels();
     }
     if (numberOfChannels == 0) {
         return StatusCode::OK; 
@@ -178,9 +170,17 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     return StatusCode::OK;
 }
 
+Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* firstBatchImage) {
+    if (input.cols == firstBatchImage->cols && input.rows == firstBatchImage->rows) {
+        return StatusCode::OK;
+    }
+    SPDLOG_ERROR("Binary images need to have resolutions matched");
+    return StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH;
+}
+
 bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     const int batchSize) {
-    if (batchSize < 0)
+    if (batchSize <= 0)
         return true;
     if (tensorInfo->getEffectiveShape()[0] == 0) {
         return false;
@@ -190,8 +190,16 @@ bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     return false;
 }
 
-Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Mat input, cv::Mat* referenceImage) {
-    return validateNumberOfChannels(tensorInfo, input, referenceImage);
+Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage) {
+    // Layout ANY is for pipelines with only custom node as entry.
+    // In this case we need to be sure multiple batch images are aligned to the same resolution.
+    if (firstBatchImage && tensorInfo->getLayout() == InferenceEngine::Layout::ANY) {
+        auto status = validateResolutionAgainstFirstBatchImage(input, firstBatchImage);
+        if (!status.ok()) {
+            return status;
+        }
+    }
+    return validateNumberOfChannels(tensorInfo, input, firstBatchImage);
 }
 
 Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
@@ -216,14 +224,13 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
 }
 
 Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    cv::Mat* referenceImage = nullptr;
-
     for (int i = 0; i < src.string_val_size(); i++) {
         cv::Mat image = convertStringValToMat(src.string_val(i));
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
 
-        auto status = validateInput(tensorInfo, image, referenceImage);
+        cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
+        auto status = validateInput(tensorInfo, image, firstImage);
         if (status != StatusCode::OK) {
             return status;
         }
@@ -237,33 +244,35 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
             }
             image = std::move(imageCorrectPrecision);
         }
-        if (resizeNeeded(image, tensorInfo, referenceImage)) {
+        if (resizeNeeded(image, tensorInfo)) {
             cv::Mat imageResized;
-            status = resizeMat(image, imageResized, tensorInfo, referenceImage);
+            status = resizeMat(image, imageResized, tensorInfo);
             if (!status.ok()) {
                 return status;
             }
             image = std::move(imageResized);
         }
         images.push_back(image);
-        if (!referenceImage) {
-            referenceImage = &images.at(0);
-        }
     }
 
     return StatusCode::OK;
 }
 
+InferenceEngine::SizeVector getShapeFromImages(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    InferenceEngine::SizeVector dims;
+    dims.push_back(images.size());
+    if (tensorInfo->isInfluencedByDemultiplexer()) {
+        dims.push_back(1);
+    }
+    dims.push_back(images[0].rows);
+    dims.push_back(images[0].cols);
+    dims.push_back(images[0].channels());
+    return dims;
+}
+
 template <typename T>
 InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
-    auto dims = isPipeline ? tensorInfo->getEffectiveShape() : tensorInfo->getShape();
-    dims[0] = images.size();
-    if (isPipeline) {
-        // BUG: what if entry is demultiplied?
-        dims[1] = dims[1] == 0 ? images[0].rows : dims[1];
-        dims[2] = dims[2] == 0 ? images[0].cols : dims[2];
-        dims[3] = dims[3] == 0 ? images[0].channels() : dims[3];
-    }
+    auto dims = !isPipeline ? tensorInfo->getShape() : getShapeFromImages(images, tensorInfo);
     InferenceEngine::TensorDesc desc{tensorInfo->getPrecision(), dims, InferenceEngine::Layout::ANY};
     InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<T>(desc);
     blob->allocate();
