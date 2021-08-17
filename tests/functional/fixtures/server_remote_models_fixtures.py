@@ -124,15 +124,14 @@ def get_minio_server_s3(start_minio_server):
                         config=Config(signature_version='s3v4'),
                         region_name=aws_region)
 
-    bucket_conf = {'LocationConstraint': aws_region}
+    bucket = s3.Bucket('inference')
+    if not bucket.creation_date:
+        bucket_conf = {'LocationConstraint': aws_region}
+        s3.create_bucket(Bucket='inference',
+                         CreateBucketConfiguration=bucket_conf)
 
-    s3.create_bucket(Bucket='inference',
-                     CreateBucketConfiguration=bucket_conf)
-
-    s3.Bucket('inference').upload_file(input_bin,
-                                       '{name}/{version}/{name}.bin'.format(name=Resnet.name, version=Resnet.version))
-    s3.Bucket('inference').upload_file(input_xml,
-                                       '{name}/{version}/{name}.xml'.format(name=Resnet.name, version=Resnet.version))
+    bucket.upload_file(input_bin, '{name}/{version}/{name}.bin'.format(name=Resnet.name, version=Resnet.version))
+    bucket.upload_file(input_xml, '{name}/{version}/{name}.xml'.format(name=Resnet.name, version=Resnet.version))
 
     return s3, ports, minio_container
 
