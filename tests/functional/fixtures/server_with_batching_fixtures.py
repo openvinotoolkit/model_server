@@ -21,7 +21,7 @@ from model.models_information import ResnetBS8, AgeGender
 from object_model.server import Server
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def start_server_batch_model(request):
     start_server_command_args = {"model_name": ResnetBS8.name,
                                  "model_path": ResnetBS8.model_path}
@@ -32,7 +32,7 @@ def start_server_batch_model(request):
     return server.start()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def start_server_batch_model_2out(request):
 
     start_server_command_args = {"model_name": AgeGender.name,
@@ -44,7 +44,7 @@ def start_server_batch_model_2out(request):
     return server.start()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def start_server_batch_model_auto(request):
 
     start_server_command_args = {"model_name": ResnetBS8.name,
@@ -57,7 +57,7 @@ def start_server_batch_model_auto(request):
     return server.start()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def start_server_batch_model_auto_2out(request):
 
     start_server_command_args = {"model_name": AgeGender.name,
@@ -70,7 +70,7 @@ def start_server_batch_model_auto_2out(request):
     return server.start()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def start_server_batch_model_bs4(request):
 
     start_server_command_args = {"model_name": ResnetBS8.name,
@@ -83,7 +83,7 @@ def start_server_batch_model_bs4(request):
     return server.start()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def start_server_batch_model_auto_bs4_2out(request):
 
     start_server_command_args = {"model_name": AgeGender.name,

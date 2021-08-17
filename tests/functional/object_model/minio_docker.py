@@ -17,11 +17,12 @@ from docker import DockerClient
 
 import config
 from object_model.docker import Docker
+from object_model.server import Server
 from utils.parametrization import generate_test_object_name
+from utils.helpers import SingletonMeta
 
 
-class MinioDocker(Docker):
-
+class MinioDocker(Docker, metaclass=SingletonMeta):
     def __init__(self, request, container_name, start_container_command=config.start_minio_container_command,
                  env_vars_container=None, image=config.minio_image,
                  container_log_line=config.container_minio_log_line):
@@ -29,10 +30,17 @@ class MinioDocker(Docker):
         super().__init__(request, container_name, start_container_command,
                          env_vars_container, image, container_log_line)
         self.start_container_command = start_container_command.format(self.grpc_port)
+        self.start_result = None
 
     def start(self):
-        self.start_container_command = self.start_container_command.format(self.grpc_port)
-        return super().start()
+        if not self.start_result:
+            self.start_container_command = self.start_container_command.format(self.grpc_port)
+            try:
+                self.start_result = super().start()
+            finally:
+                if self.start_result is None:
+                    self.stop()
+        return self.start_result
 
     @staticmethod
     def get_ip(container):

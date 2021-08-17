@@ -14,20 +14,25 @@
 # limitations under the License.
 #
 
-from ovmsclient.tfs_compat.base.responses import PredictResponse, ModelMetadataResponse, ModelStatusResponse
+from ovmsclient.tfs_compat.base.responses import (PredictResponse, ModelMetadataResponse,
+                                                  ModelStatusResponse)
+
 
 class HttpPredictResponse(PredictResponse):
     pass
 
+
 class HttpModelMetadataResponse(ModelMetadataResponse):
-    
+
     def to_dict(self):
         pass
 
+
 class HttpModelStatusResponse(ModelStatusResponse):
-    
+
     def to_dict(self):
         pass
+
 
 class HttpConfigStatusResponse:
 

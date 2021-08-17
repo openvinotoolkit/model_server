@@ -18,8 +18,10 @@ from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
 from tensorflow_serving.apis import get_model_metadata_pb2
 from tensorflow.core.framework.types_pb2 import DataType
 
-from ovmsclient.tfs_compat.base.responses import PredictResponse, ModelMetadataResponse, ModelStatusResponse
+from ovmsclient.tfs_compat.base.responses import (PredictResponse, ModelMetadataResponse,
+                                                  ModelStatusResponse)
 from ovmsclient.tfs_compat.grpc.tensors import make_ndarray
+
 
 class GrpcPredictResponse(PredictResponse):
     def to_dict(self):
@@ -27,8 +29,9 @@ class GrpcPredictResponse(PredictResponse):
 
         for key, value in self.raw_response.outputs.items():
             result_dict[key] = make_ndarray(value)
-        
+
         return result_dict
+
 
 class GrpcModelMetadataResponse(ModelMetadataResponse):
 
@@ -39,7 +42,7 @@ class GrpcModelMetadataResponse(ModelMetadataResponse):
         signature_map = get_model_metadata_pb2.SignatureDefMap()
         signature_map.ParseFromString(signature_def.value)
         model_signature = signature_map.ListFields()[0][1]['serving_default']
-        
+
         inputs_metadata = {}
         for input_name, input_info in model_signature.inputs.items():
             input_shape = [d.size for d in input_info.tensor_shape.dim]
@@ -47,7 +50,7 @@ class GrpcModelMetadataResponse(ModelMetadataResponse):
                 ("shape", input_shape),
                 ("dtype", DataType.Name(input_info.dtype))
             ])
-        
+
         outputs_metadata = {}
         for output_name, output_info in model_signature.outputs.items():
             output_shape = [d.size for d in output_info.tensor_shape.dim]
@@ -55,13 +58,14 @@ class GrpcModelMetadataResponse(ModelMetadataResponse):
                 ("shape", output_shape),
                 ("dtype", DataType.Name(output_info.dtype))
             ])
-    
+
         version = self.raw_response.model_spec.version.value
         result_dict[version] = dict([
             ("inputs", inputs_metadata),
             ("outputs", outputs_metadata)
         ])
         return result_dict
+
 
 class GrpcModelStatusResponse(ModelStatusResponse):
 

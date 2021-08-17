@@ -14,17 +14,21 @@
 # limitations under the License.
 #
 
-from enum import Enum
-from ovmsclient.tfs_compat.base.requests import PredictRequest, ModelMetadataRequest, ModelStatusRequest
+from ovmsclient.tfs_compat.base.requests import (PredictRequest, ModelMetadataRequest,
+                                                 ModelStatusRequest)
+
 
 class HttpPredictRequest(PredictRequest):
     pass
 
+
 class HttpModelMetadataRequest(ModelMetadataRequest):
     pass
 
+
 class HttpModelStatusRequest(ModelStatusRequest):
     pass
+
 
 def make_predict_request(inputs, model_name, model_version=0):
     '''
@@ -41,11 +45,11 @@ def make_predict_request(inputs, model_name, model_version=0):
                     <input_name>: <input_data>,
                     ...
                 }
-            
+
             Following types are accepted:
 
             ============  ==================
-            input_name    | string  
+            input_name    | string
             input_data    | python scalar,
                           | python list,
                           | numpy scalar,
@@ -66,18 +70,19 @@ def make_predict_request(inputs, model_name, model_version=0):
         ValueError: if arguments have inappropriate values.
 
     Examples:
-        Request to the default version of the model called "model" that has 2 inputs:  
+        Request to the default version of the model called "model" that has 2 inputs:
 
         >>> predict_request = make_predict_request(
         ...     inputs={
         ...         "binary_input": bytes([1, 2, 3, 4, 5, 6]),
         ...         "numeric_input: np.array([[1, 2, 3], [4, 5, 6]], np.int32)
-        ...     }, 
+        ...     },
         ...     model_name="model")
         >>> print(predict_request)
-    '''
+    '''  # noqa: E501
 
     raise NotImplementedError
+
 
 def make_metadata_request(model_name, model_version=0):
     '''
@@ -98,13 +103,14 @@ def make_metadata_request(model_name, model_version=0):
         ValueError: if arguments have inappropriate values.
 
     Examples:
-        Request to the second version of the model called "model":  
+        Request to the second version of the model called "model":
 
         >>> metadata_request = make_metadata_request(model_name="model", model_version=2)
         >>> print(metadata_request)
-    '''
+    '''  # noqa: E501
 
     raise NotImplementedError
+
 
 def make_status_request(model_name, model_version=0):
     '''
@@ -125,11 +131,11 @@ def make_status_request(model_name, model_version=0):
         ValueError: if arguments have inappropriate values.
 
     Examples:
-        Request to the second version of the model called "model":  
+        Request to the second version of the model called "model":
 
         >>> status_request = make_status_request(model_name="model", model_version=2)
         >>> print(status_request)
 
-    '''
-    
+    '''  # noqa: E501
+
     raise NotImplementedError

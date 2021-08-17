@@ -15,6 +15,7 @@
 #
 import logging
 import os
+from collections import defaultdict
 from logging import FileHandler
 
 import grpc  # noqa
@@ -101,7 +102,38 @@ def pytest_unconfigure():
         cleanup_logger.info("Deleting test directory: {}".format(test_dir))
         delete_test_directory()
 
+    if len(Server.running_instances) > 0:
+        logger.warning("Test got unstopped docker instances")
     Server.stop_all_instances()
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtestloop(session):
+    # Override default runtestloop in order to sort test execution by used fixtures
+    # This operation will ensure that only required containers will run and container will be cleared after all usages.
+
+    # Collect all fixtures that starts Docker instance
+    # This map will keep fixture usages in tests
+    server_fixtures_to_item = defaultdict(lambda: [])
+    for item in session.items:
+        item._server_fixtures = list(filter(lambda x: "start_server_" in x, item.fixturenames))
+        for fixture in item._server_fixtures:
+            server_fixtures_to_item[fixture].append(item)
+
+    # Sort test items using required fixtures as key (group test by fixture)
+    sorted_items = sorted(session.items, key=lambda x: x._server_fixtures )
+
+    for i, item in enumerate(sorted_items):
+        nextitem = sorted_items[i + 1] if i + 1 < len(sorted_items) else None
+        item.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
+
+        # Test finished: remove test item for all fixtures that was used
+        for fixture in item._server_fixtures:
+            server_fixtures_to_item[fixture].remove(item)
+            if len(server_fixtures_to_item[fixture]) == 0:
+                # No other tests will use this docker instance so we can close it.
+                Server.stop_by_fixture_name(fixture)
+    yield
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -169,11 +201,3 @@ def pytest_runtest_logfinish(nodeid, location):
         _root_logger = logging.getLogger(None)
         _root_logger.removeHandler(_root_logger._test_log_handler)
     yield
-
-
-def pytest_runtest_teardown(item):
-    Server.stop_all_instances()
-
-
-def pytest_exception_interact(node, call, report):
-    Server.stop_all_instances()
