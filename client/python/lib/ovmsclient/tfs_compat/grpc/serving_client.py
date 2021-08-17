@@ -31,6 +31,8 @@ from ovmsclient.tfs_compat.grpc.responses import (GrpcModelStatusResponse,
                                                   GrpcModelMetadataResponse,
                                                   GrpcPredictResponse)
 
+from ovmsclient.util.ovmsclient_export import ovmsclient_export
+
 
 class GrpcClient(ServingClient):
 
@@ -308,7 +310,7 @@ def _check_tls_config(tls_config):
         if not os.path.isfile(tls_config[key]):
             raise ValueError(f'{tls_config[key]} is not valid path to file')
 
-
+@ovmsclient_export("make_grpc_client", grpc="make_client")
 def make_grpc_client(config):
     '''
     Create GrpcClient object.

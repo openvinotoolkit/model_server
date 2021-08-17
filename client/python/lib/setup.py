@@ -35,9 +35,13 @@ class BuildApis(Command):
 
     def build_tfs_api(self):
         subprocess.run(["sh", "./scripts/build_tfs_api.sh"])
+    
+    def build_ovmsclient_api(self):
+        subprocess.run(["sh", "./scripts/build_ovmsclient_api.sh"])
 
     def run(self):
         self.build_tfs_api()
+        self.build_ovmsclient_api()
 
 
 setuptools.setup(
