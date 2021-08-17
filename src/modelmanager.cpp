@@ -530,28 +530,72 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
     return firstErrorStatus;
 }
 
+class LoudFileInfoReporter {
+    const std::string filename;
+    std::stringstream ss;
+
+public:
+    LoudFileInfoReporter(const std::string& name) :
+        filename(name) {
+        if (filename == "") {
+            return;
+        }
+        struct stat statTime;
+
+        if (stat(filename.c_str(), &statTime) != 0) {
+            SPDLOG_ERROR("Failed to debug-read fileconfig");
+            return;
+        }
+        ss << "FileInfoReporter: " << filename
+           << " time modification [s]: " << statTime.st_ctim.tv_sec
+           << " [ns]: " << statTime.st_ctim.tv_nsec << std::endl;
+        std::ifstream file(filename);
+        std::string some;
+        while (file) {
+            file >> some;
+            ss << some << std::endl;
+        }
+    }
+    void log(const std::string com = "") {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, ss.str());
+    }
+    ~LoudFileInfoReporter() {
+    }
+};
+
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     configFilename = jsonFilename;
+    LoudFileInfoReporter loud(jsonFilename);
 
     struct stat statTime;
     stat(configFilename.c_str(), &statTime);
     lastConfigChangeTime = statTime.st_ctim;
-
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading configuration from {}", jsonFilename);
-    std::ifstream ifs(jsonFilename.c_str());
-    if (!ifs.good()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is invalid {}", jsonFilename);
-        lastLoadConfigStatus = StatusCode::CONFIG_FILE_INVALID;
-        return lastLoadConfigStatus;
-    }
     rapidjson::Document configJson;
-    rapidjson::IStreamWrapper isw(ifs);
-    rapidjson::ParseResult parseResult = configJson.ParseStream(isw);
-    if (!parseResult) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file. Error: {}",
-            rapidjson::GetParseError_En(parseResult.Code()));
-        lastLoadConfigStatus = StatusCode::JSON_INVALID;
+
+    uint16_t counter = 0;
+    Status intermediateStatus;
+    do {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading configuration from {} for: {} time", jsonFilename, counter + 1);
+        std::ifstream ifs(jsonFilename.c_str());
+        if (!ifs.good()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is invalid {}", jsonFilename);
+            intermediateStatus = StatusCode::CONFIG_FILE_INVALID;
+            loud.log(std::to_string(counter));
+            continue;
+        }
+        rapidjson::IStreamWrapper isw(ifs);
+        rapidjson::ParseResult parseResult = configJson.ParseStream(isw);
+        if (!parseResult) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file. Error: {}",
+                rapidjson::GetParseError_En(parseResult.Code()));
+            intermediateStatus = StatusCode::JSON_INVALID;
+            loud.log(std::to_string(counter));
+            continue;
+        }
+    } while (++counter < 2 && !intermediateStatus.ok());
+    if (!intermediateStatus.ok()) {
+        lastLoadConfigStatus = intermediateStatus;
         return lastLoadConfigStatus;
     }
 
