@@ -50,8 +50,8 @@ class TestModelReshaping:
             self.run_inference_grpc(imgs, FaceDetection.output_name, shape['out'],
                                     True, FaceDetection.name, stub)
 
-    # test_single_local_model_reshaping_fixed - requires 2 containers to be loaded, too much for NCS (MYRIAD) device
-    @pytest.mark.skipif(target_device == "MYRIAD", reason="NOT TO BE REPORTED IF SKIPPED")
+    @pytest.mark.skipif(target_device == "MYRIAD",
+                        reason="requires 2 containers to be loaded too much for NCS (MYRIAD) device")
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
@@ -83,8 +83,8 @@ class TestModelReshaping:
                                     request_format, rest_url)
 
 
-    # test_single_local_model_reshaping_fixed_rest - requires 2 containers to be loaded, too much for NCS (MYRIAD) device
-    @pytest.mark.skipif(target_device == "MYRIAD", reason="NOT TO BE REPORTED IF SKIPPED")
+    @pytest.mark.skipif(target_device == "MYRIAD",
+                        reason="requires 2 containers to be loaded too much for NCS (MYRIAD) device")
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
@@ -105,8 +105,8 @@ class TestModelReshaping:
             self.run_inference_rest(imgs, FaceDetection.output_name, fixed_shape['out'],
                                     is_correct, request_format, rest_url)
 
-    # test_multi_local_model_reshaping_auto - requires 2 containers to be loaded, too much for NCS (MYRIAD) device
-    @pytest.mark.skipif(target_device == "MYRIAD", reason="NOT TO BE REPORTED IF SKIPPED")
+    @pytest.mark.skipif(target_device == "MYRIAD",
+                        reason="requires 2 containers to be loaded, too much for NCS (MYRIAD) device")
     def test_multi_local_model_reshaping_auto(self, start_server_multi_model):
 
         _, ports = start_server_multi_model
@@ -120,8 +120,8 @@ class TestModelReshaping:
                                     "face_detection_auto", stub)
 
 
-    # test_multi_local_model_reshaping_fixed - requires 2 containers to be loaded, too much for NCS (MYRIAD) device
-    @pytest.mark.skipif(target_device == "MYRIAD", reason="NOT TO BE REPORTED IF SKIPPED")
+    @pytest.mark.skipif(target_device == "MYRIAD",
+                        reason="requires multiple models to be loaded, too much for NCS (MYRIAD) device")
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
@@ -140,8 +140,8 @@ class TestModelReshaping:
             self.run_inference_grpc(imgs, FaceDetection.output_name, fixed_shape['out'],
                                     is_correct, model_name, stub)
 
-    # test_multi_local_model_reshaping_auto_rest - requires 2 containers to be loaded, too much for NCS (MYRIAD) device
-    @pytest.mark.skipif(target_device == "MYRIAD", reason="NOT TO BE REPORTED IF SKIPPED")
+    @pytest.mark.skipif(target_device == "MYRIAD",
+                        reason="requires 2 containers to be loaded, too much for NCS (MYRIAD) device")
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
@@ -155,8 +155,8 @@ class TestModelReshaping:
             self.run_inference_rest(imgs, FaceDetection.output_name, shape['out'], True,
                                     request_format, rest_url)
 
-    # test_multi_local_model_reshaping_fixed_rest - requires 2 containers to be loaded, too much for NCS (MYRIAD) device
-    @pytest.mark.skipif(target_device == "MYRIAD", reason="NOT TO BE REPORTED IF SKIPPED")
+    @pytest.mark.skipif(target_device == "MYRIAD",
+                        reason="requires 2 containers to be loaded, too much for NCS (MYRIAD) device")
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])

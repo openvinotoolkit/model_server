@@ -32,8 +32,8 @@ from utils.rest import get_metadata_url, get_status_url, get_model_status_respon
 
 logger = logging.getLogger(__name__)
 
-# TestModelVerPolicy - requires multiple models to be loaded, too much for NCS (MYRIAD) device
-@pytest.mark.skipif(target_device=="MYRIAD", reason="NOT TO BE REPORTED IF SKIPPED")
+@pytest.mark.skipif(target_device=="MYRIAD",
+                    reason="requires multiple models to be loaded, too much for NCS (MYRIAD) device")
 class TestModelVerPolicy:
 
     @pytest.mark.parametrize("model_name, throw_error", [

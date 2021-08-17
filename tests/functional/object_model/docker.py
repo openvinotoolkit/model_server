@@ -100,7 +100,9 @@ class Docker:
         if self.container is not None:
             logger.info(f"Stopping container: {self.container_name}")
             self.save_container_logs()
-            self.container.remove(force=True)       # Container will be stopped and cleaned
+            self.container.stop()
+            self.container.wait()
+            self.container.remove(v=True)
             port_manager_grpc.release_port(self.grpc_port)
             port_manager_rest.release_port(self.rest_port)
             self.container = None

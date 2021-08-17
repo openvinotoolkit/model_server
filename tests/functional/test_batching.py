@@ -18,6 +18,7 @@ import numpy as np
 import json
 import os
 from constants import ERROR_SHAPE
+from config import target_device
 from model.models_information import ResnetBS8, AgeGender
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response
 import logging

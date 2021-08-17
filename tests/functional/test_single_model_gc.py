@@ -18,6 +18,7 @@ import pytest
 import numpy as np
 
 from constants import MODEL_SERVICE, ERROR_SHAPE
+from config import target_device
 from model.models_information import Resnet, ResnetGS
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status
@@ -27,6 +28,11 @@ from utils.models_utils import ModelVersionState, ErrorCode, ERROR_MESSAGE
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.skipif(target_device == "MYRIAD",
+                    reason="""
+                            Cannot load network into target device; error: [ GENERAL_ERROR ] 
+                            /home/jenkins/agent/workspace/private-ci/ie/build-linux-centos76/b/repos/openvino/inference-engine/src/vpu/graph_transformer/src/frontend/frontend.cpp:439 Failed to compile layer "610/variance/Fused_Add_": [ GENERAL_ERROR ] 
+                            """)
 class TestSingleModelInferenceGc:
 
     def test_run_inference(self, start_server_single_model_from_gc):
