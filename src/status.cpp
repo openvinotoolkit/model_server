@@ -363,7 +363,7 @@ const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::htt
     {StatusCode::INTERNAL_ERROR, net_http::HTTPStatusCode::ERROR},
 
     // Binary input
-    {StatusCode::INVALID_NO_OF_CHANNELS,net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::INVALID_NO_OF_CHANNELS, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, net_http::HTTPStatusCode::BAD_REQUEST},
 };
 

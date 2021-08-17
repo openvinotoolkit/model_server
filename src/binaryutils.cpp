@@ -157,7 +157,7 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
         numberOfChannels = firstBatchImage->channels();
     }
     if (numberOfChannels == 0) {
-        return StatusCode::OK; 
+        return StatusCode::OK;
     }
     if ((unsigned int)(input.channels()) != numberOfChannels) {
         SPDLOG_DEBUG("Binary data sent to input: {} has invalid number of channels. Expected: {} Actual: {}",
