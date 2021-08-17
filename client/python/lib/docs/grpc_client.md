@@ -13,7 +13,7 @@
 get_model_metadata(request)
 ```
 
-Send `GrpcModelMetadataRequest` to the server and return response.
+Send [`GrpcModelMetadataRequest`](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/lib/ovmsclient/tfs_compat/grpc/requests.py#L31) to the server and return response.
 
 
 **Args:**
@@ -56,7 +56,7 @@ response = client.get_model_metadata(request)
 get_model_status(request)
 ```
 
-Send `GrpcModelStatusRequest` to the server and return response. 
+Send [`GrpcModelStatusRequest`](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/lib/ovmsclient/tfs_compat/grpc/requests.py#L37) to the server and return response. 
 
 
 **Args:**
@@ -100,7 +100,7 @@ response = client.get_model_status(request)
 predict(request)
 ```
 
-Send `GrpcPredictRequest` to the server and return response. 
+Send [`GrpcPredictRequest`](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/lib/ovmsclient/tfs_compat/grpc/requests.py#L25) to the server and return response. 
 
 
 **Args:**

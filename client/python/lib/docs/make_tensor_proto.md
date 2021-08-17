@@ -46,7 +46,8 @@ tensor_proto = make_tensor_proto(data)
 
 
 # With binary data:
-data = bytes([1, 2, 3, 4, 5, 6])
+with open("image.jpg", "rb") as f:
+    data = f.read()
 tensor_proto = make_tensor_proto(data)
 
 ```
