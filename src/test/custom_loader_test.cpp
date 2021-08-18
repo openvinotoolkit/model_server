@@ -1258,4 +1258,72 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
     ASSERT_EQ(error_status, StatusCode::OK);
     EXPECT_EQ(json_output, expected_json_available);
 }
+
+
+TEST_F(TestCustomLoader, CustomLoaderLoadBlackListedModel) {
+    // Copy dummy model to temporary destination
+    std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
+
+    // Create Sample Custom Loader Config
+    std::string cl_config_file_path = cl_models_path;
+    std::string cl_config_str = ENABLE_FORCE_BLACKLIST_CHECK;
+    std::string cl_config_file = cl_config_file_path + "/customloader_config";
+    createConfigFileWithContent(cl_config_str, cl_config_file);
+
+    // Replace model path in the config string
+    std::string configStr = custom_loader_config_model_blacklist;
+    configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
+    configStr.replace(configStr.find("sample-loader-config"), std::string("sample-loader-config").size(), cl_config_file);
+
+    // Create config file
+    std::string fileToReload = cl_models_path + "/cl_config.json";
+    createConfigFileWithContent(configStr, fileToReload);
+
+    // Create status file
+    std::string status_file_path = cl_model_1_path + "1";
+    std::string status_str = "DISABLED";
+    std::string status_file = status_file_path + "/dummy.status";
+    createConfigFileWithContent(status_str, status_file);
+    ovms::Status status1 = manager.loadConfig(fileToReload);
+    ASSERT_TRUE(status1 == ovms::StatusCode::INTERNAL_ERROR);
+
+    tensorflow::serving::GetModelStatusRequest req1;
+    tensorflow::serving::GetModelStatusResponse res1;
+
+    auto model_spec1 = req1.mutable_model_spec();
+    model_spec1->Clear();
+    model_spec1->set_name("dummy");
+    model_spec1->mutable_version()->set_value(1);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req1, &res1, manager), StatusCode::OK);
+
+    const tensorflow::serving::GetModelStatusResponse response_const1 = res1;
+    std::string json_output1;
+    Status error_status1 = GetModelStatusImpl::serializeResponse2Json(&response_const1, &json_output1);
+    ASSERT_EQ(error_status1, StatusCode::OK);
+    EXPECT_EQ(json_output1, expected_json_loading_error);
+
+    // remove enable_file from config file
+    std::string status_config = ", \"enable_file\": \"dummy.status\"";
+    configStr.replace(configStr.find(status_config), std::string(status_config).size(), "");
+    createConfigFileWithContent(configStr, fileToReload);
+
+    ovms::Status status2 = manager.loadConfig(fileToReload);
+    ASSERT_TRUE(status2 == ovms::StatusCode::OK);
+
+    tensorflow::serving::GetModelStatusRequest req2;
+    tensorflow::serving::GetModelStatusResponse res2;
+
+    auto model_spec2 = req2.mutable_model_spec();
+    model_spec2->Clear();
+    model_spec2->set_name("dummy");
+    model_spec2->mutable_version()->set_value(1);
+    ASSERT_EQ(GetModelStatusImpl::getModelStatus(&req2, &res2, manager), StatusCode::OK);
+
+    const tensorflow::serving::GetModelStatusResponse response_const2 = res2;
+    std::string json_output2;
+    Status error_status2 = GetModelStatusImpl::serializeResponse2Json(&response_const2, &json_output2);
+    ASSERT_EQ(error_status2, StatusCode::OK);
+    EXPECT_EQ(json_output2, expected_json_available);
+}
+
 #pragma GCC diagnostic pop
