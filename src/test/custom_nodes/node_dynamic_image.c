@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -51,8 +50,6 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     for (uint64_t i = 0; i < output->dataBytes; i += sizeof(float)) {
         *(float*)(output->data + i) = *(float*)(input->data + i) + addValue;
     }
-
-    fflush(stdout);
     return 0;
 }
 
@@ -85,7 +82,6 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
 }
 
 int release(void* ptr) {
-    fflush(stdout);
     free(ptr);
     return 0;
 }

@@ -4142,7 +4142,6 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY) {
     ConstructorEnabledModelManager manager;
     std::unique_ptr<Pipeline> pipeline;
 
-    // BS=1
     int batchSize = 1;
     prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
 
@@ -4156,7 +4155,6 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY) {
     response.Clear();
     pipeline = nullptr;
 
-    // BS=2
     batchSize = 2;
     prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
@@ -4167,7 +4165,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY) {
     response.Clear();
     pipeline = nullptr;
 
-    // BS=2, resolutions not aligned
+    batchSize = 2;
     prepareMisalignedBinaryImageRequest(imagePath, imagePath2x2, request, "pipeline_input");
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);
@@ -4217,7 +4215,6 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     ConstructorEnabledModelManager manager;
     std::unique_ptr<Pipeline> pipeline;
 
-    // BS=1
     int batchSize = 1;
     prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
 
@@ -4231,7 +4228,6 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     response.Clear();
     pipeline = nullptr;
 
-    // BS=2
     batchSize = 2;
     prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
@@ -4242,7 +4238,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     response.Clear();
     pipeline = nullptr;
 
-    // BS=2, resolutions not aligned
+    batchSize = 2;
     prepareMisalignedBinaryImageRequest(imagePath, imagePath2x2, request, "pipeline_input");
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);

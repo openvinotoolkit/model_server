@@ -174,7 +174,7 @@ Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* fi
     if (input.cols == firstBatchImage->cols && input.rows == firstBatchImage->rows) {
         return StatusCode::OK;
     }
-    SPDLOG_ERROR("Binary images need to have resolutions matched");
+    SPDLOG_ERROR("Each binary image in request need to have resolution matched");
     return StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH;
 }
 
@@ -191,8 +191,10 @@ bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
 }
 
 Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage) {
-    // Layout ANY is for pipelines with only custom node as entry.
-    // In this case we need to be sure multiple batch images are aligned to the same resolution.
+    // For pipelines with only custom nodes entry, there is no way to deduce layout.
+    // With unknown layout, there is no way to deduce pipeline input resolution.
+    // This forces binary utility to create blobs with resolution inherited from input binary image from request.
+    // To achieve it, in this specific case we require all binary images to have the same resolution.
     if (firstBatchImage && tensorInfo->getLayout() == InferenceEngine::Layout::ANY) {
         auto status = validateResolutionAgainstFirstBatchImage(input, firstBatchImage);
         if (!status.ok()) {

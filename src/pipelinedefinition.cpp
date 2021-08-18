@@ -29,7 +29,6 @@
 #include "pipeline.hpp"
 #include "pipelinedefinitionunloadguard.hpp"
 #include "prediction_service_utils.hpp"
-#include "tensorinfo.hpp"  // to remove
 
 namespace ovms {
 
