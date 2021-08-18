@@ -112,7 +112,7 @@ def process_json_output(result_dict, output_tensors):
 def infer_rest(img, input_tensor, rest_url,
                output_tensors, request_format):
     data_json = prepare_body_format(img, request_format, input_tensor)
-    result = requests.post(rest_url, data=data_json)
+    result = requests.post(rest_url, data=data_json, timeout=360)
     output_json = json.loads(result.text)
     data = process_json_output(output_json, output_tensors)
     return data

@@ -69,7 +69,7 @@ class TestModelVerPolicy:
             request = get_model_metadata(model_name=model_name,
                                          version=versions[x])
             if not throw_error[x]:
-                response = stub.GetModelMetadata(request, 10)
+                response = stub.GetModelMetadata(request, 60)
                 input_metadata, output_metadata = model_metadata_response(
                     response=response)
 
@@ -81,7 +81,7 @@ class TestModelVerPolicy:
                 assert expected_output_metadata == output_metadata
             else:
                 with pytest.raises(Exception) as e:
-                    stub.GetModelMetadata(request, 10)
+                    stub.GetModelMetadata(request, 60)
                 assert "Model with requested version is not found" in str(e.value)
 
     @pytest.mark.parametrize("model_name, throw_error", [

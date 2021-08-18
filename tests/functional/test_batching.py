@@ -116,7 +116,7 @@ class TestBatchModelInference:
         expected_input_metadata = {ResnetBS8.input_name: {'dtype': 1, 'shape': list(ResnetBS8.input_shape)}}
         expected_output_metadata = {ResnetBS8.output_name: {'dtype': 1, 'shape': list(ResnetBS8.output_shape)}}
         request = get_model_metadata(model_name=ResnetBS8.name)
-        response = stub.GetModelMetadata(request, 10)
+        response = stub.GetModelMetadata(request, 60)
         input_metadata, output_metadata = model_metadata_response(response=response)
         logger.info("Input metadata: {}".format(input_metadata))
         logger.info("Output metadata: {}".format(output_metadata))

@@ -68,7 +68,7 @@ class TestSingleModelInferenceS3:
         expected_input_metadata = {Resnet.input_name: {'dtype': 1, 'shape': list(Resnet.input_shape)}}
         expected_output_metadata = {Resnet.output_name: {'dtype': 1, 'shape': list(Resnet.output_shape)}}
         request = get_model_metadata(model_name=Resnet.name)
-        response = stub.GetModelMetadata(request, 10)
+        response = stub.GetModelMetadata(request, 60)
         input_metadata, output_metadata = model_metadata_response(response=response)
         logger.info("Input metadata: {}".format(input_metadata))
         logger.info("Output metadata: {}".format(output_metadata))

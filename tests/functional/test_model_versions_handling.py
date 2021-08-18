@@ -68,7 +68,7 @@ class TestModelVersionHandling:
 
         request = get_model_metadata(model_name=self.model_name,
                                      version=version)
-        response = stub.GetModelMetadata(request, 10)
+        response = stub.GetModelMetadata(request, 60)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
         logger.info("Input metadata: {}".format(input_metadata))

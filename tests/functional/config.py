@@ -15,6 +15,7 @@
 #
 
 import os
+import sys
 
 from utils.helpers import get_int
 from utils.parametrization import generate_test_object_name
@@ -78,3 +79,7 @@ rest_ovms_starting_port = get_int("TT_REST_OVMS_STARTING_PORT", 18001)
 
 """ TT_PORTS_POOL_SIZE- Ports pool size"""
 ports_pool_size = get_int("TT_PORTS_POOL_SIZE", 5000)
+
+"""  """
+using_xdist = ('-n' in sys.argv) or ('-c' in sys.argv)
+

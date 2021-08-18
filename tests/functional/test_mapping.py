@@ -71,7 +71,7 @@ class TestSingleModelMappingInference:
         for output_name, shape in AgeGender.output_shape.items():
             expected_output_metadata[output_name] = {'dtype': 1, 'shape': list(shape)}
         request = get_model_metadata(model_name=AgeGender.name)
-        response = stub.GetModelMetadata(request, 10)
+        response = stub.GetModelMetadata(request, 60)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
         logger.info("Input metadata: {}".format(input_metadata))

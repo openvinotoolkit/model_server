@@ -73,7 +73,7 @@ class TestSingleModelInference:
         expected_input_metadata = {ResnetONNX.input_name: {'dtype': 1, 'shape': list(ResnetONNX.input_shape)}}
         expected_output_metadata = {ResnetONNX.output_name: {'dtype': 1, 'shape': list(ResnetONNX.output_shape)}}
         request = get_model_metadata(model_name=ResnetONNX.name)
-        response = stub.GetModelMetadata(request, 10)
+        response = stub.GetModelMetadata(request, 60)
         input_metadata, output_metadata = model_metadata_response(response=response)
         logger.info("Input metadata: {}".format(input_metadata))
         logger.info("Output metadata: {}".format(output_metadata))
