@@ -27,10 +27,15 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         return 2;
     }
 
+
     const struct CustomNodeTensor* input = &inputs[0];
 
-    if (input->precision != FP32) {
+    if (input->dimsCount != 4) {
         return 3;
+    }
+
+    if (input->precision != FP32) {
+        return 4;
     }
 
     float addValue = 8.0f;

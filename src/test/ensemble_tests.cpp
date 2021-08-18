@@ -4136,7 +4136,7 @@ static const char* pipelineWithOnlyDynamicCustomNode = R"(
 // This test ensure binary inputs work for pipelines with layout ANY.
 // Such pipelines have only custom nodes as entry nodes.
 // In this case we do not reject the request but create NHWC content out of that.
-TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY) {
+TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_RequestBS1) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineWithOnlyDynamicCustomNode, fileToReload);
     ConstructorEnabledModelManager manager;
@@ -4150,25 +4150,44 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY) {
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
     checkIncrement4DimResponse("pipeline_output", {44.0, 35.0, 245.0}, request, response, {1, 1, 1, 3});
+}
 
-    request.Clear();
-    response.Clear();
-    pipeline = nullptr;
+TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_RequestBS2) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineWithOnlyDynamicCustomNode, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
 
-    batchSize = 2;
+    int batchSize = 2;
     prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
     checkIncrement4DimResponse("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, request, response, {2, 1, 1, 3});
+}
 
-    request.Clear();
-    response.Clear();
-    pipeline = nullptr;
+TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_RequestMisaligned) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineWithOnlyDynamicCustomNode, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
 
-    batchSize = 2;
     prepareMisalignedBinaryImageRequest(imagePath, imagePath2x2, request, "pipeline_input");
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);
+}
+
+TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_RequestNhwc) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineWithOnlyDynamicCustomNode, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    prepareRequest({1.0, 2.0, 3.0, 4.0}, request, "pipeline_input", {1, 4, 1});  // should be [1, 4, 1, 1]
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
 }
 
 static const char* pipelineWithOnlyDynamicCustomNodeAndDemultiplexer = R"(
@@ -4209,7 +4228,7 @@ static const char* pipelineWithOnlyDynamicCustomNodeAndDemultiplexer = R"(
     ]
 })";
 
-TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemultiplexer) {
+TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemultiplexer_RequestBS1) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineWithOnlyDynamicCustomNodeAndDemultiplexer, fileToReload);
     ConstructorEnabledModelManager manager;
@@ -4223,23 +4242,42 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
     checkIncrement4DimResponse("pipeline_output", {44.0, 35.0, 245.0}, request, response, {1, 1, 1, 1, 3});
+}
 
-    request.Clear();
-    response.Clear();
-    pipeline = nullptr;
+TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemultiplexer_RequestBS2) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineWithOnlyDynamicCustomNodeAndDemultiplexer, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
 
-    batchSize = 2;
+    int batchSize = 2;
     prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
     checkIncrement4DimResponse("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, request, response, {2, 1, 1, 1, 3});
+}
 
-    request.Clear();
-    response.Clear();
-    pipeline = nullptr;
+TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemultiplexer_RequestMisaligned) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineWithOnlyDynamicCustomNodeAndDemultiplexer, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
 
-    batchSize = 2;
     prepareMisalignedBinaryImageRequest(imagePath, imagePath2x2, request, "pipeline_input");
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);
+}
+
+TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemultiplexer_RequestNhwc) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineWithOnlyDynamicCustomNodeAndDemultiplexer, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    prepareRequest({1.0, 2.0, 3.0, 4.0}, request, "pipeline_input", {1, 1, 4, 1});  // should be [1, 1, 4, 1, 1]
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
 }
