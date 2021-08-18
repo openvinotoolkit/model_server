@@ -1,10 +1,17 @@
 <a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/requests.py#L124"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
-## <kbd>function</kbd> `make_metadata_request`
+## <kbd>function</kbd> `make_grpc_metadata_request`
 
 ```python
-make_metadata_request(model_name, model_version=0)
+make_grpc_metadata_request(model_name, model_version=0)
 ```
+
+
+**Aliases:**
+- `make_metadata_request` in [`grpcclient`](grpcclient.md) namespace
+
+
+**Description**:
 
 Create `GrpcModelMetadataRequest` object. 
 
@@ -31,7 +38,7 @@ Create `GrpcModelMetadataRequest` object.
  Request to the second version of the model called "model":   
 
 ```python
-metadata_request = make_metadata_request(model_name="model", model_version=2)
+metadata_request = make_grpc_metadata_request(model_name="model", model_version=2)
 ```
 
 ---

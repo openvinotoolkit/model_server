@@ -1,13 +1,18 @@
 <a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/requests.py#L158"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
-## <kbd>function</kbd> `make_status_request`
+## <kbd>function</kbd> `make_grpc_status_request`
 
 ```python
-make_status_request(model_name, model_version=0)
+make_grpc_status_request(model_name, model_version=0)
 ```
 
-Create `GrpcModelStatusRequest` object. 
+**Aliases:**
+- `make_status_request` in [`grpcclient`](grpcclient.md) namespace
 
+
+**Description**:
+
+Create `GrpcModelStatusRequest` object. 
 
 
 **Args:**
@@ -38,7 +43,7 @@ Create `GrpcModelStatusRequest` object.
  Request to the second version of the model called "model":   
 
 ```python 
-status_request = make_status_request(model_name="model", model_version=2)
+status_request = make_grpc_status_request(model_name="model", model_version=2)
 ```
 
 ---

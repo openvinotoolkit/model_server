@@ -6,8 +6,13 @@
 make_grpc_client(config)
 ```
 
-Creates `GrpcClient` object. 
+**Aliases:**
+- `make_client` in [`grpcclient`](grpcclient.md) namespace
 
+
+**Description**:
+
+Creates `GrpcClient` object. 
 
 
 **Args:**

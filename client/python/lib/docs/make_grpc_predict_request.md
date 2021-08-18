@@ -1,12 +1,19 @@
 <a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/requests.py#L39"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
-## <kbd>function</kbd> `make_predict_request`
+## <kbd>function</kbd> `make_grpc_predict_request`
 
 ```python
-make_predict_request(inputs, model_name, model_version=0)
+make_grpc_predict_request(inputs, model_name, model_version=0)
 ```
 
-Create `GrpcPredictRequest` object. 
+
+**Aliases:**
+- `make_predict_request` in [`grpcclient`](grpcclient.md) namespace
+
+
+**Description**:
+
+Creates `GrpcPredictRequest` object. 
 
 
 **Args:**
@@ -48,7 +55,7 @@ Create `GrpcPredictRequest` object.
  Request to the default version of the model called "model" that has 2 inputs:   
 
 ```python 
-predict_request = make_predict_request(
+predict_request = make_grpc_predict_request(
     inputs={
         "binary_input": bytes([1, 2, 3, 4, 5, 6]),
         "numeric_input": np.array([[1, 2, 3], [4, 5, 6]], np.int32)
@@ -61,7 +68,7 @@ Request to the second version of the model called "model" that has 1 input.
 Providing data as `TensorProto` to make sure desired data type is set for the input:
 
 ```python
-predict_request = make_predict_request(
+predict_request = make_grpc_predict_request(
     inputs={
         "input": make_tensor_proto([1, 2, 3], dtype=DataTypes.float32)
     }, 
