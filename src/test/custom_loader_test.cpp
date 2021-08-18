@@ -1259,7 +1259,6 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
     EXPECT_EQ(json_output, expected_json_available);
 }
 
-
 TEST_F(TestCustomLoader, CustomLoaderLoadBlackListedModel) {
     // Copy dummy model to temporary destination
     std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
