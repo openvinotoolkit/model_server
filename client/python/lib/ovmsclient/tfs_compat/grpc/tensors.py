@@ -154,7 +154,8 @@ def make_tensor_proto(values, dtype=None, shape=None):
     # create numpy ndarray from values and find its dtype if not provided
     if _is_array_like(tensor_values):
         dense_dimensions = _get_dense_dimensions(tensor_values)
-        tensor_values = np.array(tensor_values)
+        if isinstance(tensor_values, list):
+            tensor_values = np.array(tensor_values)
         if(list(tensor_values.shape) != dense_dimensions):
             raise ValueError(f'argument must be a dense tensor: {values} - got shape '
                              f'{list(tensor_values.shape)}, but wanted {dense_dimensions}')
