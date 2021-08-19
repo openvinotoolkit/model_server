@@ -23,6 +23,7 @@ import pytest
 from _pytest._code import ExceptionInfo, filter_traceback  # noqa
 from _pytest.outcomes import OutcomeException
 
+from utils.xdist_utils import OvmsCLoadScheduling
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
 from object_model.server import Server
 from utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
@@ -32,7 +33,7 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
 from utils.files_operation import get_path_friendly_test_name
 from utils.parametrization import get_tests_suffix
-from config import test_dir, test_dir_cleanup, artifacts_dir
+from config import test_dir, test_dir_cleanup, artifacts_dir, using_xdist
 
 logger = logging.getLogger(__name__)
 
