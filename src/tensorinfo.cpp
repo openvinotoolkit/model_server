@@ -309,6 +309,7 @@ std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const shape_t& sh
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithEffectiveDimensionPrefix(size_t dim) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->influencedByDemultiplexer = true;
+    copy->effectiveShape = this->getEffectiveShape();
     copy->effectiveShape.insert(copy->effectiveShape.begin(), dim);
     return copy;
 }

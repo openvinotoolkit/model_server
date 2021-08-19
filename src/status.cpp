@@ -195,6 +195,9 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::CUSTOM_LOADER_NOT_PRESENT, "The custom loader is not present in loaders list"},
     {StatusCode::CUSTOM_LOADER_INIT_FAILED, "Custom Loader LoadInit failed"},
     {StatusCode::CUSTOM_LOADER_ERROR, "Custom Loader Generic / Unknown Error"},
+
+    {StatusCode::INVALID_NO_OF_CHANNELS, "Invalid number of channels in binary input"},
+    {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, "Binary input images for this pipeline are required to have the same resolution"},
 };
 
 const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
@@ -263,6 +266,10 @@ const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusM
 
     // GetModelStatus
     {StatusCode::INTERNAL_ERROR, grpc::StatusCode::INTERNAL},
+
+    // Binary input
+    {StatusCode::INVALID_NO_OF_CHANNELS, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, grpc::StatusCode::INVALID_ARGUMENT},
 };
 
 const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap = {
@@ -354,6 +361,10 @@ const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::htt
 
     // GetModelStatus
     {StatusCode::INTERNAL_ERROR, net_http::HTTPStatusCode::ERROR},
+
+    // Binary input
+    {StatusCode::INVALID_NO_OF_CHANNELS, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, net_http::HTTPStatusCode::BAD_REQUEST},
 };
 
 }  // namespace ovms

@@ -114,14 +114,18 @@ bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vecto
     return true;
 }
 
-void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
+void readImage(const std::string& path, size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
     std::ifstream DataFile;
-    DataFile.open("/ovms/src/test/binaryutils/rgb.jpg", std::ios::binary);
+    DataFile.open(path, std::ios::binary);
     DataFile.seekg(0, std::ios::end);
     filesize = DataFile.tellg();
     DataFile.seekg(0);
     image_bytes = std::make_unique<char[]>(filesize);
     DataFile.read(image_bytes.get(), filesize);
+}
+
+void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
+    return readImage("/ovms/src/test/binaryutils/rgb.jpg", filesize, image_bytes);
 }
 
 tensorflow::serving::PredictRequest prepareBinaryPredictRequest(const std::string& inputName, const int batchSize) {
