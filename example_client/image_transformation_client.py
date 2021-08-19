@@ -32,7 +32,7 @@ parser.add_argument('--input_image_path', required=True, help='Location to load 
 parser.add_argument('--output_image_path', required=True, help='Location where to save output image.')
 parser.add_argument('--image_width', required=False, default=1920, help='Reshape before sending to given image width. default: 1920')
 parser.add_argument('--image_height', required=False, default=1024, help='Reshape before sending to given image height. default: 1024')
-parser.add_argument('--input_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC'], help='Input image layout. default: NCHW')
+parser.add_argument('--input_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC', 'BINARY'], help='Input image layout. default: NCHW')
 parser.add_argument('--input_color', required=False, default='BGR', choices=['BGR', 'RGB', 'GRAY'], help='Input image color order. default: BGR')
 parser.add_argument('--output_layout', required=False, default='NCHW', choices=['NCHW', 'NHWC'], help='Output image layout. default: NCHW')
 parser.add_argument('--output_color', required=False, default='BGR', choices=['BGR', 'RGB', 'GRAY'], help='Output image color order. default: BGR')
@@ -68,6 +68,11 @@ def mean(img, values):
     return img
 
 def prepare_img_input(request, name, path, width, height, layout, color):
+    if layout == 'BINARY':
+        with open(path, 'rb') as f:
+            request.inputs[name].CopyFrom(make_tensor_proto([f.read()], shape=[1]))
+        return
+
     img = cv2.imread(path).astype(np.float32)  # BGR color format, shape HWC
     img = cv2.resize(img, (width, height))
     if color == 'RGB':

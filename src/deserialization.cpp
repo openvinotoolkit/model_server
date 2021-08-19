@@ -43,14 +43,10 @@ InferenceEngine::TensorDesc getFinalTensorDesc(const ovms::TensorInfo& servableI
     if (!isPipeline) {
         return InferenceEngine::TensorDesc(precision, servableInfo.getShape(), servableInfo.getLayout());
     }
-    auto potentiallyDynamicShape = servableInfo.getEffectiveShape();
-    if (isPipeline) {  // to be potentially removed if support for dynamic shape reportin will be added to models
-        for (int i = 0; i < requestInput.tensor_shape().dim_size(); ++i) {
-            if (potentiallyDynamicShape[i] == 0) {
-                potentiallyDynamicShape[i] = requestInput.tensor_shape().dim(i).size();
-            }
-        }
+    InferenceEngine::SizeVector shape;
+    for (size_t i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
+        shape.push_back(requestInput.tensor_shape().dim(i).size());
     }
-    return InferenceEngine::TensorDesc(precision, potentiallyDynamicShape, InferenceEngine::Layout::ANY);
+    return InferenceEngine::TensorDesc(precision, shape, InferenceEngine::Layout::ANY);
 }
 }  // namespace ovms
