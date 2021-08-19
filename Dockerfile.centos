@@ -186,6 +186,9 @@ RUN make install
 
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
+WORKDIR /example_cpp_client
+COPY example_client/cpp/ /example_cpp_client/cpp
+
 WORKDIR /ovms
 
 COPY src/ /ovms/src/
