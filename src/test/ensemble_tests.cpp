@@ -176,6 +176,164 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     checkDummyResponse(dummySeriallyConnectedCount);
 }
 
+class EnsembleFlowValidationTest : public EnsembleFlowTest {
+public:
+    std::unique_ptr<Pipeline> createDummyPipeline(ConstructorEnabledModelManager& managerWithDummyModel) {
+        const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+        auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+        auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
+        const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+        auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+        auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+        pipeline->connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+        pipeline->connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+        pipeline->push(std::move(input_node));
+        pipeline->push(std::move(model_node));
+        pipeline->push(std::move(output_node));
+        return pipeline;
+    }
+};
+
+TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorNumberOfInputs) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    request.Clear();
+    auto& proto1 = (*request.mutable_inputs())["input1"];
+    auto& proto2 = (*request.mutable_inputs())["input2"];
+
+    auto pipeline = createDummyPipeline(managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_NO_OF_INPUTS);
+    proto1.Clear();
+    proto2.Clear();
+}
+
+TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorMissingInput) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    request.Clear();
+    auto& proto1 = (*request.mutable_inputs())["input1"];
+
+    auto pipeline = createDummyPipeline(managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_MISSING_INPUT);
+    proto1.Clear();
+}
+
+TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorShapeValueNegative) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    request.Clear();
+    auto& proto1 = (*request.mutable_inputs())[customPipelineInputName];
+    proto1.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto1.mutable_tensor_shape()->add_dim()->set_size(-10);
+
+    auto pipeline = createDummyPipeline(managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorBinaryInputWrongNumberOfShapeDimensions) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    request.Clear();
+    auto& proto1 = (*request.mutable_inputs())[customPipelineInputName];
+    proto1.set_dtype(tensorflow::DataType::DT_STRING);
+    proto1.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto1.mutable_tensor_shape()->add_dim()->set_size(1);
+
+    auto pipeline = createDummyPipeline(managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+}
+
+TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorBinaryInputBatchSizeMismatch) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    request.Clear();
+    auto& proto1 = (*request.mutable_inputs())[customPipelineInputName];
+    proto1.set_dtype(tensorflow::DataType::DT_STRING);
+    proto1.mutable_tensor_shape()->add_dim()->set_size(2);
+
+    auto pipeline = createDummyPipeline(managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_BATCH_SIZE);
+}
+
+TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorPrecisionMismatch) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    request.Clear();
+    auto& proto1 = (*request.mutable_inputs())[customPipelineInputName];
+    proto1.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto1.mutable_tensor_shape()->add_dim()->set_size(10);
+    proto1.set_dtype(tensorflow::DataType::DT_INT32);
+
+    auto pipeline = createDummyPipeline(managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_PRECISION);
+}
+
+TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorInvalidNumberOfShapeDimensions) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    request.Clear();
+    auto& proto1 = (*request.mutable_inputs())[customPipelineInputName];
+    proto1.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto1.mutable_tensor_shape()->add_dim()->set_size(10);
+    proto1.mutable_tensor_shape()->add_dim()->set_size(3);
+    proto1.set_dtype(tensorflow::DataType::DT_FLOAT);
+
+    auto pipeline = createDummyPipeline(managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+}
+
+TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorInvalidBatchSize) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    request.Clear();
+    auto& proto1 = (*request.mutable_inputs())[customPipelineInputName];
+    proto1.mutable_tensor_shape()->add_dim()->set_size(2);
+    proto1.mutable_tensor_shape()->add_dim()->set_size(10);
+    proto1.set_dtype(tensorflow::DataType::DT_FLOAT);
+
+    auto pipeline = createDummyPipeline(managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_BATCH_SIZE);
+}
+
+TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorInvalidShape) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    request.Clear();
+    auto& proto1 = (*request.mutable_inputs())[customPipelineInputName];
+    proto1.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto1.mutable_tensor_shape()->add_dim()->set_size(11);
+    proto1.set_dtype(tensorflow::DataType::DT_FLOAT);
+
+    auto pipeline = createDummyPipeline(managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorInvalidTensorContentSize) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    request.Clear();
+    auto& proto1 = (*request.mutable_inputs())[customPipelineInputName];
+    proto1.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto1.mutable_tensor_shape()->add_dim()->set_size(10);
+    proto1.set_dtype(tensorflow::DataType::DT_FLOAT);
+    const std::vector<float> data{1.0f};
+    proto1.mutable_tensor_content()->assign((char*)data.data(), data.size() * sizeof(float));
+
+    auto pipeline = createDummyPipeline(managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_CONTENT_SIZE);
+}
+
 TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     ConstructorEnabledModelManager managerWithDummyModel;
     config.setNireq(1);
