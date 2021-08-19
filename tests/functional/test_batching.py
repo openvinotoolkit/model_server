@@ -76,6 +76,8 @@ class TestBatchModelInference:
         logger.info("Output shape: {}".format(output[ResnetBS8.output_name].shape))
         assert output[ResnetBS8.output_name].shape == ResnetBS8.output_shape, ERROR_SHAPE
 
+    @pytest.mark.skipif(target_device == "MYRIAD",
+                        reason="error: Cannot load network into target device")
     def test_run_inference_bs4(self, start_server_batch_model_bs4):
 
         _, ports = start_server_batch_model_bs4
