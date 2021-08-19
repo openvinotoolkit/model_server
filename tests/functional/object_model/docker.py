@@ -21,6 +21,8 @@ from datetime import datetime
 
 import docker
 from utils.files_operation import get_path_friendly_test_name
+
+from config import target_device
 from retry.api import retry_call
 
 import config

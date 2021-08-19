@@ -23,7 +23,7 @@ from tensorflow_serving.apis import get_model_metadata_pb2, \
 import logging
 
 from utils.port_manager import PortManager
-from config import rest_ovms_starting_port, ports_pool_size, target_device
+from config import rest_ovms_starting_port, ports_pool_size
 
 logger = logging.getLogger(__name__)
 
@@ -112,8 +112,7 @@ def process_json_output(result_dict, output_tensors):
 def infer_rest(img, input_tensor, rest_url,
                output_tensors, request_format):
     data_json = prepare_body_format(img, request_format, input_tensor)
-    timeout = 300 if target_device == "GPU" else 10
-    result = requests.post(rest_url, data=data_json, timeout=timeout)
+    result = requests.post(rest_url, data=data_json)
     output_json = json.loads(result.text)
     data = process_json_output(output_json, output_tensors)
     return data

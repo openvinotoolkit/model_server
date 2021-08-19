@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.skipif(target_device == "MYRIAD", reason="CPU_THROUGHPUT_STREAMS key is not supported for VPU;")
 class TestSingleModelInference:
+
     def test_run_inference(self, start_server_single_model):
         """
         <b>Description</b>
@@ -81,6 +82,7 @@ class TestSingleModelInference:
         assert response.model_spec.name == Resnet.name
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
+
 
     def test_get_model_status(self, start_server_single_model):
 

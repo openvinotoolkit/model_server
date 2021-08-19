@@ -91,6 +91,8 @@ class TestBatchModelInference:
         logger.info("Output shape: {}".format(output[ResnetBS8.output_name].shape))
         assert output[ResnetBS8.output_name].shape == (4,) + ResnetBS8.output_shape[1:], ERROR_SHAPE
 
+    @pytest.mark.skipif(target_device == "MYRIAD",
+                        reason="Can not init Myriad device: NC_ERROR;")
     def test_run_inference_auto(self, start_server_batch_model_auto):
 
         _, ports = start_server_batch_model_auto
@@ -126,6 +128,8 @@ class TestBatchModelInference:
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
+    @pytest.mark.skipif(target_device == "MYRIAD",
+                        reason="error: Cannot load network into target device")
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
@@ -202,6 +206,8 @@ class TestBatchModelInference:
             expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[output_names]][1:]
             assert output[output_names].shape == expected_shape, ERROR_SHAPE
 
+    @pytest.mark.skipif(target_device == "MYRIAD",
+                        reason="error: Cannot load network into target device")
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
