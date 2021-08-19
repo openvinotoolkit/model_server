@@ -67,6 +67,7 @@ protected:
     }
 
     void prepareRequest(const std::vector<float>& requestData, PredictRequest& request, const std::string& customPipelineInputName) {
+        request.Clear();
         tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
         proto.set_dtype(tensorflow::DataType::DT_FLOAT);
         proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
@@ -75,6 +76,7 @@ protected:
     }
 
     void prepareRequest(const std::vector<float>& requestData, PredictRequest& request, const std::string& customPipelineInputName, const std::vector<size_t>& shape) {
+        request.Clear();
         tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
         proto.set_dtype(tensorflow::DataType::DT_FLOAT);
         proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
@@ -88,6 +90,7 @@ protected:
         std::unique_ptr<char[]> image_bytes;
         readImage(jpegPath, filesize, image_bytes);
 
+        request.Clear();
         tensorflow::TensorProto& inputProto = (*request.mutable_inputs())[customPipelineInputName];
         inputProto.set_dtype(tensorflow::DataType::DT_STRING);
         for (int i = 0; i < batchSize; i++) {
@@ -97,6 +100,7 @@ protected:
     }
 
     void prepareMisalignedBinaryImageRequest(const std::string& image1, const std::string& image2, PredictRequest& request, const std::string& customPipelineInputName) {
+        request.Clear();
         tensorflow::TensorProto& inputProto = (*request.mutable_inputs())[customPipelineInputName];
         inputProto.set_dtype(tensorflow::DataType::DT_STRING);
 
@@ -768,6 +772,7 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
             requestDataT.begin() + DUMMY_MODEL_INPUT_SIZE * i,
             [i](int x) { return x + i; });
     }
+    request.Clear();
     for (int i = 0; i < N; i++) {
         tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName + std::to_string(i)];
         proto.set_dtype(tensorflow::DataType::DT_FLOAT);
@@ -4183,6 +4188,7 @@ TEST_F(EnsembleFlowTestBinaryInput, InvalidData) {
     ConstructorEnabledModelManager manager;
     std::unique_ptr<Pipeline> pipeline;
 
+    request.Clear();
     tensorflow::TensorProto& inputProto = (*request.mutable_inputs())["pipeline_input"];
     inputProto.set_dtype(tensorflow::DataType::DT_STRING);
     inputProto.add_string_val("INVALID_IMAGE");
@@ -4345,7 +4351,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_Reques
     prepareRequest({1.0, 2.0, 3.0, 4.0}, request, "pipeline_input", {1, 4, 1});  // should be [1, 4, 1, 1]
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
 static const char* pipelineWithOnlyDynamicCustomNodeAndDemultiplexer = R"(
@@ -4437,5 +4443,5 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     prepareRequest({1.0, 2.0, 3.0, 4.0}, request, "pipeline_input", {1, 1, 4, 1});  // should be [1, 1, 4, 1, 1]
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
