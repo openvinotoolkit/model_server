@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -197,52 +198,24 @@ TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldSucceedForPreci
         << "should fail";
 }
 
-class SerializeTFGRPCPredictResponse : public SerializeTFTensorProto {
-public:
-    std::tuple<InferenceEngine::InferRequest, ovms::tensor_map_t>
-    getInputs(Precision testedPrecision) {
-        InferenceEngine::TensorDesc tensorDesc(testedPrecision, shape_t{2}, InferenceEngine::Layout::C);
-        std::shared_ptr<MockIInferRequestProperGetBlob> mInferRequestPtr =
-            std::make_shared<MockIInferRequestProperGetBlob>(tensorDesc);
-        InferenceEngine::InferRequest inferRequest(mInferRequestPtr);
-        ovms::tensor_map_t tenMap;
-        std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
-            std::string("First"),
-            tensorDesc.getPrecision(),
-            tensorDesc.getDims(),
-            tensorDesc.getLayout());
-        tenMap["First"] = tensorInfo;
-        return std::make_tuple(inferRequest, tenMap);
-    }
-};
-
-TEST_P(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
-    Precision testedPrecision = GetParam();
-    auto inputs = getInputs(testedPrecision);
+TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     PredictResponse response;
-    auto status = serializePredictResponse(std::get<0>(inputs), std::get<1>(inputs), &response);
+    InferenceEngine::Core engine;
+    InferenceEngine::CNNNetwork network = engine.ReadNetwork(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
+    InferenceEngine::InferRequest inferRequest = execNetwork.CreateInferRequest();
+    ovms::tensor_map_t tenMap;
+    InferenceEngine::TensorDesc tensorDesc(Precision::FP32, shape_t{1, 10}, InferenceEngine::Layout::NC);
+    std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
+        std::string("b"),
+        tensorDesc.getPrecision(),
+        tensorDesc.getDims(),
+        tensorDesc.getLayout());
+    tenMap["First"] = tensorInfo;
+    std::shared_ptr<NiceMock<MockBlob>> mockBlobPtr = std::make_shared<NiceMock<MockBlob>>(tensorDesc);
+    inferRequest.SetBlob("b", mockBlobPtr);
+    auto status = serializePredictResponse(inferRequest, tenMap, &response);
     EXPECT_TRUE(status.ok());
-}
-
-class SerializeTFGRPCPredictResponseNegative : public SerializeTFGRPCPredictResponse {};
-
-TEST_P(SerializeTFGRPCPredictResponseNegative, DISABLED_ShouldFailForUnsupportedPrecision) {
-    Precision testedPrecision = GetParam();
-    auto inputs = getInputs(testedPrecision);
-    PredictResponse response;
-    auto status = serializePredictResponse(std::get<0>(inputs), std::get<1>(inputs), &response);
-    EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION);
-}
-
-TEST_F(SerializeTFGRPCPredictResponseNegative, DISABLED_OutputNameNotCreatedInInferenceShouldFail) {
-    auto inputs = getInputs(Precision::FP32);
-    std::shared_ptr<MockIInferRequest> mInferRequestPtr =
-        std::make_shared<MockIInferRequest>();
-    InferenceEngine::InferRequest inferRequest(mInferRequestPtr);
-    EXPECT_CALL(*mInferRequestPtr, GetBlob(_, _, _));
-    PredictResponse response;
-    auto status = serializePredictResponse(inferRequest, std::get<1>(inputs), &response);
-    EXPECT_EQ(status, ovms::StatusCode::OV_INTERNAL_SERIALIZATION_ERROR);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -257,15 +230,4 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::ValuesIn(UNSUPPORTED_OUTPUT_PRECISIONS),
     ::testing::PrintToStringParamName());
 
-INSTANTIATE_TEST_SUITE_P(
-    Test,
-    SerializeTFGRPCPredictResponse,
-    ::testing::ValuesIn(SUPPORTED_OUTPUT_PRECISIONS),
-    ::testing::PrintToStringParamName());
-
-INSTANTIATE_TEST_SUITE_P(
-    Test,
-    SerializeTFGRPCPredictResponseNegative,
-    ::testing::ValuesIn(UNSUPPORTED_OUTPUT_PRECISIONS),
-    ::testing::PrintToStringParamName());
 #pragma GCC diagnostic pop
