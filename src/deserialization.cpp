@@ -43,10 +43,9 @@ InferenceEngine::TensorDesc getFinalTensorDesc(const ovms::TensorInfo& servableI
     if (!isPipeline) {
         return InferenceEngine::TensorDesc(precision, servableInfo.getShape(), servableInfo.getLayout());
     }
-    InferenceEngine::SizeVector shape;
-    shape.reserve(requestInput.tensor_shape().dim_size());
+    InferenceEngine::SizeVector shape(requestInput.tensor_shape().dim_size());
     for (size_t i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
-        shape.push_back(requestInput.tensor_shape().dim(i).size());
+        shape[i] = requestInput.tensor_shape().dim(i).size();
     }
     return InferenceEngine::TensorDesc(precision, shape, InferenceEngine::Layout::ANY);
 }

@@ -180,14 +180,14 @@ TEST_F(EnsembleFlowTest, DummyModelProtoValidationError) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
-    // Prepare invalid proto: tensor_content of 1 byte, but shape 20x20x20x...x20 (200 dimensions).
+    // Prepare invalid proto: tensor_content of 1 byte, but shape 20x20x20.
     // This is to make sure the service will not try creating such big blob and will reject the request instead.
     request.Clear();
     auto& proto = (*request.mutable_inputs())[customPipelineInputName];
     proto.set_dtype(tensorflow::DataType::DT_FLOAT);
     const std::vector<float> data{1.0f};
     proto.mutable_tensor_content()->assign((char*)data.data(), data.size() * sizeof(float));
-    for (size_t i = 0; i < 2; i++) {
+    for (size_t i = 0; i < 3; i++) {
         proto.mutable_tensor_shape()->add_dim()->set_size(20);
     }
 
