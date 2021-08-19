@@ -176,6 +176,38 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     checkDummyResponse(dummySeriallyConnectedCount);
 }
 
+TEST_F(EnsembleFlowTest, DummyModelProtoValidationError) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    // Prepare invalid proto: tensor_content of 1 byte, but shape 20x20x20x...x20 (200 dimensions).
+    // This is to make sure the service will not try creating such big blob and will reject the request instead.
+    request.Clear();
+    auto& proto = (*request.mutable_inputs())[customPipelineInputName];
+    proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+    const std::vector<float> data{1.0f};
+    proto.mutable_tensor_content()->assign((char*)data.data(), data.size() * sizeof(float));
+    for (size_t i = 0; i < 2; i++) {
+        proto.mutable_tensor_shape()->add_dim()->set_size(20);
+    }
+
+    // Configure pipeline
+    const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
+    const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+    Pipeline pipeline(*input_node, *output_node);
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_CONTENT_SIZE);
+}
+
 TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     ConstructorEnabledModelManager managerWithDummyModel;
     config.setNireq(1);

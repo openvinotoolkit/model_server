@@ -44,9 +44,28 @@ InferenceEngine::TensorDesc getFinalTensorDesc(const ovms::TensorInfo& servableI
         return InferenceEngine::TensorDesc(precision, servableInfo.getShape(), servableInfo.getLayout());
     }
     InferenceEngine::SizeVector shape;
+    shape.reserve(requestInput.tensor_shape().dim_size());
     for (size_t i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
         shape.push_back(requestInput.tensor_shape().dim(i).size());
     }
     return InferenceEngine::TensorDesc(precision, shape, InferenceEngine::Layout::ANY);
 }
+
+const Status validateTensorContentSize(const tensorflow::TensorProto& requestInput) {
+    size_t expectedValueCount = 1;
+    for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
+        expectedValueCount *= requestInput.tensor_shape().dim(i).size();
+    }
+    int precisionSize = tensorflow::DataTypeSize(requestInput.dtype());
+    size_t expectedContentSize = expectedValueCount * precisionSize;
+    if (expectedContentSize != requestInput.tensor_content().size()) {
+        std::stringstream ss;
+        ss << "Expected: " << expectedContentSize << " bytes; Actual: " << requestInput.tensor_content().size() << " bytes";
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("Invalid content size of tensor content proto - {}", details);
+        return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+    }
+    return StatusCode::OK;
+}
+
 }  // namespace ovms

@@ -112,6 +112,8 @@ public:
     Status give(const std::string& name, InferenceEngine::Blob::Ptr blob);
 };
 
+const Status validateTensorContentSize(const tensorflow::TensorProto& requestInput);
+
 template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const tensorflow::serving::PredictRequest& request,
@@ -138,6 +140,12 @@ Status deserializePredictRequest(
                     return status;
                 }
             } else {
+                if (isPipeline) {
+                    auto status = validateTensorContentSize(requestInput);
+                    if (!status.ok()) {
+                        return status;
+                    }
+                }
                 blob = deserializeTensorProto<TensorProtoDeserializator>(
                     requestInput, tensorInfo, isPipeline);
             }
