@@ -146,39 +146,38 @@ def make_tensor_proto(values, dtype=None, shape=None):
     else:
         raise TypeError('shape type should be list or tuple with unsigned integers')
 
-    tensor_values = values
-    # scalars are packed into 1 element list
-    if np.isscalar(tensor_values):
-        tensor_values = [tensor_values]
-
     # create numpy ndarray from values and find its dtype if not provided
-    if _is_array_like(tensor_values):
-        dense_dimensions = _get_dense_dimensions(tensor_values)
-        if isinstance(tensor_values, list):
-            tensor_values = np.array(tensor_values)
-        if(list(tensor_values.shape) != dense_dimensions):
-            raise ValueError(f'argument must be a dense tensor: {values} - got shape '
-                             f'{list(tensor_values.shape)}, but wanted {dense_dimensions}')
-
-        if dtype is None:
-            tensor_type = NP_TO_TENSOR_MAP.get(tensor_values.dtype.type)
-            if tensor_type is not None:
-                dtype = tensor_type.TensorDtype
-            else:
-                raise TypeError("provided values type is not valid")
+    if _is_array_like(values):
+        if isinstance(values, list):
+            dense_dimensions = _get_dense_dimensions(values)
+            tensor_values = np.array(values)
+            if(list(tensor_values.shape) != dense_dimensions):
+                raise ValueError(f'argument must be a dense tensor: {values} - got shape '
+                                 f'{list(tensor_values.shape)}, but wanted {dense_dimensions}')
         else:
-            np_dtype = TENSOR_TO_NP_MAP.get(dtype)
-            if np_dtype is None:
-                raise TypeError(f"{dtype} is not valid dtype value")
-
-            # values are binary, but dtype was not DT_STRING
-            if tensor_values.dtype.type == np.bytes_ and dtype != DataType.DT_STRING:
-                tensor_values = _cast_bytes_to_dtype(tensor_values.tobytes(), dtype=np_dtype)
-            else:
-                tensor_values = _cast_ndarray_to_dtype(tensor_values, np_dtype)
+            tensor_values = values
+    elif np.isscalar(values):
+            tensor_values = np.array([values])
     else:
         raise TypeError("values type should be (list, np.ndarray, scalar), but is "
-                        f"{type(tensor_values).__name__}")
+                        f"{type(values).__name__}")
+
+    if dtype is None:
+        tensor_type = NP_TO_TENSOR_MAP.get(tensor_values.dtype.type)
+        if tensor_type is not None:
+            dtype = tensor_type.TensorDtype
+        else:
+            raise TypeError("provided values type is not valid")
+    else:
+        np_dtype = TENSOR_TO_NP_MAP.get(dtype)
+        if np_dtype is None:
+            raise TypeError(f"{dtype} is not valid dtype value")
+
+        # values are binary, but dtype was not DT_STRING
+        if tensor_values.dtype.type == np.bytes_ and dtype != DataType.DT_STRING:
+            tensor_values = _cast_bytes_to_dtype(tensor_values.tobytes(), dtype=np_dtype)
+        else:
+            tensor_values = _cast_ndarray_to_dtype(tensor_values, np_dtype)
 
     if dtype == DataType.DT_STRING and _is_bytes_shape_valid(inferred_shape, tensor_values):
         raise ValueError("bytes values with dtype DT_STRING must be in shape [N]")
