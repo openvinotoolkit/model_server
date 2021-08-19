@@ -50,8 +50,9 @@ class GrpcClient(ServingClient):
             GrpcPredictResponse object
 
         Raises:
-            TypeError:  if provided argument is of wrong type.
-            Many more for different serving reponses...
+            TypeError:  if request argument is of wrong type.
+            ValueError: if request argument has invalid contents.
+            ConnectionError: if there was an error while sending request to the server.
 
         Examples:
 
@@ -87,8 +88,9 @@ class GrpcClient(ServingClient):
             GrpcModelMetadataResponse object
 
         Raises:
-            TypeError:  if provided argument is of wrong type.
-            Many more for different serving reponses...
+            TypeError:  if request argument is of wrong type.
+            ValueError: if request argument has invalid contents.
+            ConnectionError: if there was an error while sending request to the server.
 
         Examples:
 
@@ -124,14 +126,15 @@ class GrpcClient(ServingClient):
             GrpcModelStatusResponse object
 
         Raises:
-            TypeError:  if provided argument is of wrong type.
-            Many more for different serving reponses...
+            TypeError:  if request argument is of wrong type.
+            ValueError: if request argument has invalid contents.
+            ConnectionError: if there was an error while sending request to the server.
 
         Examples:
 
             >>> config = {
             ...     "address": "localhost",
-            ...     :port": 9000
+            ...     "port": 9000
             ... }
             >>> client = make_grpc_client(config)
             >>> request = make_model_status_request("model")
