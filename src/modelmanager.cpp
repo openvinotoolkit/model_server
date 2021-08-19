@@ -51,6 +51,7 @@
 
 namespace ovms {
 
+static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
 static bool watcherStarted = false;
 
 ModelManager::ModelManager() :
@@ -531,15 +532,10 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
 }
 
 class LoudFileInfoReporter {
-    const std::string filename;
     std::stringstream ss;
 
 public:
-    LoudFileInfoReporter(const std::string& name) :
-        filename(name) {
-        if (filename == "") {
-            return;
-        }
+    LoudFileInfoReporter(const std::string& filename, std::ifstream& file) {
         struct stat statTime;
 
         if (stat(filename.c_str(), &statTime) != 0) {
@@ -549,25 +545,24 @@ public:
         ss << "FileInfoReporter: " << filename
            << " time modification [s]: " << statTime.st_ctim.tv_sec
            << " [ns]: " << statTime.st_ctim.tv_nsec << std::endl;
-        std::ifstream file(filename);
         std::string some;
+        file.clear();
+        file.seekg(0);
         while (file) {
             file >> some;
             ss << some << std::endl;
         }
+        file.clear();
+        file.seekg(0);
     }
-    void log(const std::string com = "") {
+    void log() {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, ss.str());
-    }
-    ~LoudFileInfoReporter() {
     }
 };
 
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     configFilename = jsonFilename;
-    LoudFileInfoReporter loud(jsonFilename);
-
     struct stat statTime;
     stat(configFilename.c_str(), &statTime);
     lastConfigChangeTime = statTime.st_ctim;
@@ -578,10 +573,11 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     do {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading configuration from {} for: {} time", jsonFilename, counter + 1);
         std::ifstream ifs(jsonFilename.c_str());
+        LoudFileInfoReporter loud(jsonFilename, ifs);
         if (!ifs.good()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is invalid {}", jsonFilename);
             intermediateStatus = StatusCode::CONFIG_FILE_INVALID;
-            loud.log(std::to_string(counter));
+            loud.log();
             continue;
         }
         rapidjson::IStreamWrapper isw(ifs);
@@ -590,10 +586,10 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file. Error: {}",
                 rapidjson::GetParseError_En(parseResult.Code()));
             intermediateStatus = StatusCode::JSON_INVALID;
-            loud.log(std::to_string(counter));
+            loud.log();
             continue;
         }
-    } while (++counter < 2 && !intermediateStatus.ok());
+    } while (++counter < MAX_CONFIG_JSON_READ_RETRY_COUNT && !intermediateStatus.ok());
     if (!intermediateStatus.ok()) {
         lastLoadConfigStatus = intermediateStatus;
         return lastLoadConfigStatus;
