@@ -13,18 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
 import time
 from typing import List
 
 from datetime import datetime
 
 import docker
+from utils.files_operation import get_path_friendly_test_name
 from retry.api import retry_call
 
 import config
 from utils.grpc import port_manager_grpc
 from utils.rest import port_manager_rest
-from utils.files_operation import save_container_logs_to_file
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,9 @@ class Docker:
     GETTING_STATUS_RETRY = COMMON_RETRY
 
     def __init__(self, request, container_name, start_container_command,
-                 env_vars_container=None, image=config.image, container_log_line=config.container_log_line):
+                 env_vars_container=None, image=config.image, container_log_line=config.container_log_line,
+                 server=None):
+        self.server = server
         self.client = docker.from_env()
         self.grpc_port = port_manager_grpc.get_port()
         self.rest_port = port_manager_rest.get_port()
@@ -99,13 +102,12 @@ class Docker:
     def stop(self):
         if self.container is not None:
             logger.info(f"Stopping container: {self.container_name}")
+            self.container.stop(timeout=10)
             self.save_container_logs()
-            self.container.stop()
-            self.container.wait()
             self.container.remove(v=True)
+            self.container = None
             port_manager_grpc.release_port(self.grpc_port)
             port_manager_rest.release_port(self.rest_port)
-            self.container = None
             logger.info(f"Container successfully closed and removed: {self.container_name}")
 
     def save_container_logs(self):
@@ -114,7 +116,7 @@ class Docker:
             logger.info(logs)
         if config.artifacts_dir != "":
             location = getattr(self.request.node, "location", None)
-            save_container_logs_to_file(logs=logs, location=location)
+            self.save_container_logs_to_file(logs=logs, location=location)
 
     def get_logs(self):
         self.logs = self.container.logs().decode()
@@ -157,3 +159,14 @@ class Docker:
         time.sleep(1)
         return retry_call(self.ensure_status, fkwargs=container_statuses,
                           exceptions=AssertionError, **Docker.GETTING_STATUS_RETRY)
+
+    def save_container_logs_to_file(self, logs, dir_path: str = config.artifacts_dir, location=None):
+        time_stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        if location:
+            file_name = f"ovms_{get_path_friendly_test_name(location)}_{time_stamp}.log"
+        else:
+            file_name = f"ovms_{self.server.started_by_fixture.lstrip('start_')}_{time_stamp}.log"
+        os.makedirs(dir_path, exist_ok=True)
+        file_path = os.path.join(dir_path, file_name)
+        with open(file_path, "w+") as text_file:
+            text_file.write(logs)
