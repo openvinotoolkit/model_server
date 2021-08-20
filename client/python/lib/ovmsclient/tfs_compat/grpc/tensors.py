@@ -241,7 +241,14 @@ def make_ndarray(tensor_proto):
         return (np.frombuffer(tensor_proto.tensor_content,
                               dtype=np_dtype).copy().reshape(shape))
 
-    if np_dtype == np.float16:
+    if np_dtype == np.bytes_:
+        values = list(tensor_proto.string_val)
+        padding = num_elements - len(values)
+        if padding > 0:
+            last = values[-1] if values else ""
+            values.extend([last] * padding)
+        return np.array(values, dtype=np_dtype).reshape(shape)
+    elif np_dtype == np.float16:
         values = np.fromiter(tensor_proto.half_val, dtype=np.uint16)
         values.dtype = np_dtype
     elif np_dtype == np.float32:
@@ -264,13 +271,6 @@ def make_ndarray(tensor_proto):
         values = np.array([complex(x[0], x[1]) for x in zip(it, it)], dtype=np_dtype)
     elif np_dtype == np.bool:
         values = np.fromiter(tensor_proto.bool_val, dtype=np_dtype)
-    elif np_dtype == np.bytes_:
-        values = list(tensor_proto.string_val)
-        padding = num_elements - len(values)
-        if padding > 0:
-            last = values[-1] if values else ""
-            values.extend([last] * padding)
-        return np.array(values, dtype=np_dtype).reshape(shape)
     else:
         raise TypeError("Unsupported tensor type: %s" % tensor_proto.dtype)
 
