@@ -29,7 +29,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet50-binary:/model -p 9001:9001
 
 Run the client:
 ```bash
-docker run --rm -it --network host -v $(pwd)/../:/workspace:rw cpp_clients_build_image --grpc_port=9001 --images_list="/workspace/cpp/input_images.txt" --iterations=200
+docker run --rm -it --network host -e "no_proxy=localhost" -v $(pwd)/../:/workspace:rw cpp_clients_build_image --grpc_port=9001 --images_list="/workspace/cpp/input_images.txt" --iterations=200
 
 call predict ok
 call predict time: 23ms
