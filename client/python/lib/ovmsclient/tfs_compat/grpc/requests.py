@@ -21,6 +21,8 @@ from ovmsclient.tfs_compat.base.requests import (PredictRequest, ModelMetadataRe
                                                  ModelStatusRequest)
 from ovmsclient.tfs_compat.grpc.tensors import make_tensor_proto
 
+from ovmsclient.util.ovmsclient_export import ovmsclient_export
+
 
 class GrpcPredictRequest(PredictRequest):
     def __init__(self, inputs, model_name, model_version, raw_request):
@@ -41,6 +43,7 @@ class GrpcModelStatusRequest(ModelStatusRequest):
         self.raw_request = raw_request
 
 
+@ovmsclient_export("make_grpc_predict_request", grpcclient="make_predict_request")
 def make_predict_request(inputs, model_name, model_version=0):
     '''
     Create GrpcPredictRequest object.
@@ -128,6 +131,7 @@ def make_predict_request(inputs, model_name, model_version=0):
     return GrpcPredictRequest(inputs, model_name, model_version, request)
 
 
+@ovmsclient_export("make_grpc_metadata_request", grpcclient="make_metadata_request")
 def make_metadata_request(model_name, model_version=0):
     '''
     Create GrpcModelMetadataRequest object.
@@ -163,6 +167,7 @@ def make_metadata_request(model_name, model_version=0):
     return GrpcModelMetadataRequest(model_name, model_version, request)
 
 
+@ovmsclient_export("make_grpc_status_request", grpcclient="make_status_request")
 def make_status_request(model_name, model_version=0):
     '''
     Create GrpcModelStatusRequest object.
