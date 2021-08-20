@@ -7,17 +7,17 @@ from ovmsclient.tfs_compat.grpc.requests import make_predict_request
 parser = argparse.ArgumentParser(description='Make prediction using images in binary format')
 parser.add_argument('--images_list', required=False, default='/utils/resnet_images.txt',
                     help='path to image')
-parser.add_argument('--grpc_address',required=False, default='localhost',
+parser.add_argument('--grpc_address', required=False, default='localhost',
                     help='Specify url to grpc service. default:localhost')
-parser.add_argument('--grpc_port',required=False, default=9000,
+parser.add_argument('--grpc_port', required=False, default=9000,
                     help='Specify port to grpc service. default: 9000')
 parser.add_argument('--model_name', default='resnet', help='Model name to query. default: resnet',
                     dest='model_name')
 parser.add_argument('--model_version', default=0, type=int, help='Model version to query. Lists all versions if omitted',
                     dest='model_version')
-parser.add_argument('--input_name',required=False, default='0',
+parser.add_argument('--input_name', required=False, default='0',
                     help='Specify input tensor name. default: 0')
-parser.add_argument('--output_name',required=False, default='1463',
+parser.add_argument('--output_name', required=False, default='1463',
                     help='Specify output name. default: 1463')
 args = vars(parser.parse_args())
 
@@ -54,11 +54,11 @@ for line in lines:
         input_name: image
     }
     request = make_predict_request(inputs, model_name, model_version)
-    
+
     # sending predict request and receiving response
     response = client.predict(request)
     response_dict = response.to_dict()
-    
+
     # output post-processing
     if output_name not in response_dict.keys():
         print(f"Invalid output name - {output_name}")
