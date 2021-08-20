@@ -17,11 +17,10 @@
 import argparse
 import numpy as np
 import classes
-from ovmsclient.tfs_compat.grpc.serving_client import make_grpc_client
-from ovmsclient.tfs_compat.grpc.requests import make_predict_request
+from ovmsclient import make_grpc_client, make_grpc_predict_request
 
 parser = argparse.ArgumentParser(description='Make prediction using images in binary format')
-parser.add_argument('--images_list', required=False, default='/utils/resnet_images.txt',
+parser.add_argument('--images_list', required=False, default='./utils/resnet_images.txt',
                     help='path to image')
 parser.add_argument('--grpc_address', required=False, default='localhost',
                     help='Specify url to grpc service. default:localhost')
@@ -69,7 +68,7 @@ for line in lines:
     inputs = {
         input_name: image
     }
-    request = make_predict_request(inputs, model_name, model_version)
+    request = make_grpc_predict_request(inputs, model_name, model_version)
 
     # sending predict request and receiving response
     response = client.predict(request)

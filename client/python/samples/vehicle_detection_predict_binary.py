@@ -17,8 +17,7 @@
 import argparse
 import cv2
 import os
-from ovmsclient.tfs_compat.grpc.serving_client import make_grpc_client
-from ovmsclient.tfs_compat.grpc.requests import make_predict_request
+from ovmsclient import make_grpc_client, make_grpc_predict_request
 
 parser = argparse.ArgumentParser(description='Make prediction using images in numpy format')
 parser.add_argument('--grpc_address', required=False, default='localhost',
@@ -80,7 +79,7 @@ for line in lines:
     inputs = {
         input_name: img
     }
-    request = make_predict_request(inputs, pipeline_name)
+    request = make_grpc_predict_request(inputs, pipeline_name)
 
     # sending predict request and receiving response
     response = client.predict(request)

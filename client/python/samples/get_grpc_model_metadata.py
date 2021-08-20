@@ -15,9 +15,7 @@
 #
 
 import argparse
-# from ovmsclient.tfs_compat.grpc.requests import make_metadata_request
-# from ovmsclient.tfs_compat.grpc.serving_client import make_grpc_client
-from ovmsclient import make_metadata_request, make_grpc_client
+from ovmsclient import make_grpc_metadata_request, make_grpc_client
 
 parser = argparse.ArgumentParser(description='Get information about the status of served models over gRPC interace')
 parser.add_argument('--grpc_address', required=False, default='localhost',
@@ -45,7 +43,7 @@ config = {
 client = make_grpc_client(config)
 
 # creating metadata request
-request = make_metadata_request(model_name, model_version)
+request = make_grpc_metadata_request(model_name, model_version)
 
 # getting model metadata from the server
 metadata = client.get_model_metadata(request)

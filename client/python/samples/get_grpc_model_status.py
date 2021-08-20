@@ -15,8 +15,7 @@
 #
 
 import argparse
-from ovmsclient.tfs_compat.grpc.requests import make_status_request
-from ovmsclient.tfs_compat.grpc.serving_client import make_grpc_client
+from ovmsclient import make_grpc_client, make_grpc_status_request
 
 parser = argparse.ArgumentParser(description='Get information about the status of served models over gRPC interace')
 parser.add_argument('--grpc_address', required=False, default='localhost',
@@ -43,7 +42,7 @@ config = {
 client = make_grpc_client(config)
 
 # creating status request
-request = make_status_request(model_name, model_version)
+request = make_grpc_status_request(model_name, model_version)
 
 # getting model status from the server
 status = client.get_model_status(request)
