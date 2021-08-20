@@ -106,8 +106,13 @@ class Docker:
 
     def ensure_logs(self):
         logs = self.get_logs()
-        if self.container_log_line not in logs:
-            assert False, f"Not found required phrase {self.container_log_line}"
+        if type(self.container_log_line) == list:
+            for log_line in self.container_log_line:
+                if log_line not in logs:
+                    assert False, f"Not found required phrase {log_line}"
+        else:
+            if self.container_log_line not in logs:
+                assert False, f"Not found required phrase {self.container_log_line}"    
 
     def ensure_logs_contains(self):
         result = None

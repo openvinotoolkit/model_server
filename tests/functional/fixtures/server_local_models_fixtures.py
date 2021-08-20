@@ -52,7 +52,7 @@ def start_server_single_model_onnx(request):
 
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    env_variables, target_device=config.target_device)
+                    env_variables, target_device=config.target_device, container_log_line=["Server started on port", "Started REST server at"])
     return server.start()
 
 @pytest.fixture(scope="session")
