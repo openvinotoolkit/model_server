@@ -1,6 +1,8 @@
-from ovmsclient.tfs_compat.grpc.tensors import make_tensor_proto, make_ndarray
-from ovmsclient.tfs_compat.grpc.requests import make_predict_request
-# from tensorflow import make_tensor_proto, make_ndarray
+from ovmsclient import make_tensor_proto
+# from ovmsclient import make_ndarray
+from ovmsclient import make_grpc_predict_request
+# from tensorflow import make_tensor_proto
+from tensorflow import make_ndarray
 import datetime
 import numpy as np
 from tensorflow.core.framework.types_pb2 import DataType
@@ -12,8 +14,8 @@ np.random.seed(0)
 iterations = 100_000
 lower_iterations = 10_000
 make_tensor_proto_testing = False
-make_ndarray_testing = False
-make_predict_request_testing = True
+make_ndarray_testing = True
+make_predict_request_testing = False
 fill_predict_with_proto = True
 proto_inputs_dict = {
     "float_shape_dtype_no_reshape": {
@@ -387,8 +389,12 @@ if make_predict_request_testing:
                 inputs = {
                     "proto": make_tensor_proto(**value)
                 }
+            else:
+                inputs = {
+                    "no_proto": value['values']
+                }
             start_time = datetime.datetime.now()
-            request = make_predict_request(inputs, 'name', 0)
+            request = make_grpc_predict_request(inputs, 'name', 0)
             end_time = datetime.datetime.now()
             final_time += (end_time - start_time).total_seconds()
         time_per_request = final_time/iteration * 1000
