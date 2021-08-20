@@ -30,9 +30,9 @@ JOBS ?= $(shell python3 -c 'import multiprocessing as mp; print(mp.cpu_count())'
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
 # Currently supported BASE_OS values are: ubuntu centos clearlinux
-BASE_OS ?= centos
+BASE_OS ?= ubuntu
 
-BASE_IMAGE ?= centos:7
+BASE_IMAGE ?= ubuntu:20.04
 
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest

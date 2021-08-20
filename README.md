@@ -31,7 +31,7 @@ A few key features:
 - [Serving stateful models](docs/stateful_models.md). Serve models that operate on sequences of data and maintain state between inference requests.
 - [Binary format of the input data](binary_input.md). Input data can be sent in JPEG or PNG format to reduce traffic and offload the client applications.
 
-**Note:** OVMS has been tested on RedHat*, CentOS* and Ubuntu*. Publicly released docker images are based on CentOS and UBI.
+**Note:** OVMS has been tested on RedHat*, CentOS* and Ubuntu*. Latest publicly released docker images are based on Ubuntu and UBI.
 They are stored in:
 - [Dockerhub](https://hub.docker.com/r/openvino/model_server)
 - [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de)
