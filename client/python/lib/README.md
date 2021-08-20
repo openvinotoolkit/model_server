@@ -1,6 +1,8 @@
 # OpenVINO&trade; Model Server Client Library
 
-Model server client library is a set of objects and methods designed to simplify user interaction with the instance of the model server. The library contains functions that hide API specific aspects so user doesn't have to know about creating protos, preparing requests, reading responses etc. and can focus on the application itself rather than dealing with API calls to OVMS.
+Model server client library is a set of objects and methods designed to simplify user interaction with the instance of the model server. The library contains functions that hide API specific aspects, so user doesn't have to know about creating protos, preparing requests, parsing responses etc. and can focus on the application itself, rather than dealing with all the aspects of the interaction with OVMS.
+
+
 
 See [API documentation](docs/README.md) for details on what the library provides.
 
@@ -40,3 +42,44 @@ Apart from `make build`, there are also other targets available:
    `make test PACKAGE_PATH=/opt/packages/ovmsclient-0.1-py3-none-any.whl`
 
  - `make clean` - removes all intermediate files generated while building the package
+
+
+## Usage
+
+**Create gRPC client instance:**
+```python
+import ovmsclient
+
+config = {
+   "address": "localhost", 
+   "port": 9000
+   }
+
+client = ovmsclient.make_grpc_client(config="config")
+```
+
+**Create and send model status request:**
+```python
+status_request = ovmsclient.make_grpc_status_request(model_name="model")
+status_response = client.get_model_status(status_request)
+status_response.to_dict()
+{
+    "1": {
+        "state": <model_version_state>, 
+        "error_code": <error_code>, 
+        "error_message": <error_message>
+    }             
+} 
+```
+
+**Create gRPC client instance:**
+```python
+import ovmsclient
+
+config = {
+   "address": "localhost", 
+   "port": 9000
+   }
+
+grpc_client = ovmsclient.make_grpc_client(config)
+```
