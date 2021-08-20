@@ -56,37 +56,7 @@ cc_library(
 )
 """,
 )
-# AWS SDL
-new_local_repository(
-    name = "awssdk",
-    path = "/usr/",
-    build_file_content = """
-package(
-    default_visibility = ["//visibility:public"],
-)
-cc_library(
-    name = "core",
-    hdrs = glob(["local/include/aws/*h"]),
-    srcs = [
-        "local/lib/linux/intel64/Release/libaws-cpp-sdk-s3.a",
-        "local/lib/linux/intel64/Release/libaws-cpp-sdk-core.a",
-        "local/lib/libaws-crt-cpp.a",
-        "local/lib/libaws-c-s3.a",
-        "local/lib/libaws-c-http.a",
-        "local/lib/libaws-c-auth.a",
-        "local/lib/libaws-c-compression.a",
-        "local/lib/libaws-c-event-stream.a",
-        "local/lib/libaws-c-io.a",
-        "local/lib/libaws-c-cal.a",
-        "local/lib/libaws-c-mqtt.a",
-        "local/lib/libaws-checksums.a",
-        "local/lib/libaws-c-common.a",
-        "local/lib/libs2n.a",
-    ],
-)
-""",
-)
-
+# Tensorflow serving
 git_repository(
     name = "tensorflow_serving",
     remote = "https://github.com/tensorflow/serving.git",
@@ -129,6 +99,13 @@ workspace()
 # Initialize bazel package rules' external dependencies.
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 rules_pkg_dependencies()
+
+# AWS S3 SDK
+new_local_repository(
+    name = "awssdk",
+    build_file = "@//third_party/aws:BUILD",
+    path = "/awssdk",
+)
 
 # Azure Storage SDK
 new_local_repository(
