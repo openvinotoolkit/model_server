@@ -25,15 +25,15 @@ def vehicle_postprocess(response, image_path, output_name, output_save_path):
     width = image.shape[1]
     height = image.shape[0]
     for i in range(output.shape[2]):
-        image = draw_vehicle(output[0, 0, i, ...], image, width, height)
+        image = draw_bounding_box(output[0, 0, i, ...], image, width, height, 0.5)
     cv2.imwrite(os.path.join(output_save_path, 'vehicle-detection' + '.jpg'), image)
 
 
-def draw_vehicle(vehicle_output, image, width, height):
-    if vehicle_output[2] > 0.5:   # if confidence level is greater than 50%
-        x_min = int(vehicle_output[3] * width)
-        y_min = int(vehicle_output[4] * height)
-        x_max = int(vehicle_output[5] * width)
-        y_max = int(vehicle_output[6] * height)
+def draw_bounding_box(prediction_result, image, width, height, confidence_thresold):
+    if prediction_result[2] > confidence_thresold:   # if confidence level is greater than confidence_thresold
+        x_min = int(prediction_result[3] * width)
+        y_min = int(prediction_result[4] * height)
+        x_max = int(prediction_result[5] * width)
+        y_max = int(prediction_result[6] * height)
         return cv2.rectangle(cv2.UMat(image), (x_min, y_min), (x_max, y_max), (0, 0, 255), 1)
     return image
