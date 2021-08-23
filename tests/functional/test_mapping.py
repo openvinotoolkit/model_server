@@ -17,6 +17,7 @@
 import numpy as np
 import pytest
 from constants import ERROR_SHAPE
+from config import target_device
 from model.models_information import AgeGender
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response
 import logging
@@ -25,8 +26,9 @@ from utils.rest import get_predict_url, get_metadata_url, infer_rest, get_model_
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.skipif(target_device == "MYRIAD",
+                    reason="error: Cannot load network into target device")
 class TestSingleModelMappingInference:
-
     def test_run_inference(self, start_server_with_mapping):
         """
         <b>Description</b>

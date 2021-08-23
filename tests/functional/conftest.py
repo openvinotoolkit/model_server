@@ -91,6 +91,10 @@ def pytest_configure():
         os.makedirs(artifacts_dir, exist_ok=True)
 
 
+def pytest_keyboard_interrupt (excinfo):
+    clean_hanging_docker_resources()
+    Server.stop_all_instances()
+
 def pytest_unconfigure():
     # Perform cleanup.
     cleanup_logger = logging.getLogger("cleanup")
