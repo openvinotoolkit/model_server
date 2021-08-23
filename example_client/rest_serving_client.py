@@ -149,6 +149,10 @@ while iteration <= iterations:
             version = "/versions/{}".format(args.get('model_version'))
         start_time = datetime.datetime.now()
         result = session.post("{}:{}/v1/models/{}{}:predict".format(args['rest_url'], args['rest_port'], args['model_name'], version), data=data_json, cert=certs, verify=verify_server)
+        if not result.ok or result.status_code != 200:
+            print(f"REST post call failed {result.txt}")
+            exit(1)
+
         end_time = datetime.datetime.now()
         try:
             result_dict = json.loads(result.text)

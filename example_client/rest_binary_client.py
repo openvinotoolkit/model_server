@@ -99,6 +99,10 @@ for line in lines:
     predict_request = create_request(image_data, args['request_format'])
     start_time = datetime.datetime.now()
     result = session.post(address, data=predict_request)
+    if not result.ok or result.status_code != 200:
+        print(f"REST post call failed {result.txt}")
+        exit(1)
+
     end_time = datetime.datetime.now()
     try:
         result_dict = json.loads(result.text)
