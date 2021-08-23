@@ -16,6 +16,8 @@
 import logging
 import socket
 import errno
+from datetime import timedelta, datetime
+from random import choice
 
 from utils.helpers import get_xdist_worker_count, get_xdist_worker_nr
 
@@ -43,7 +45,9 @@ class PortManager():
                      .format(self.name,
                              ", ".join([str(port) for port in self.allowed_ports]),
                              ", ".join([str(port) for port in self.reserved_ports])))
-        for port in self.allowed_ports[:]:
+        reservation_started = datetime.today()
+        while timedelta(seconds=60) > datetime.today() - reservation_started:
+            port = choice(self.allowed_ports)
             generated_port = self.reserve_port(port=port)
             logger.debug("Generated port for Port Manager {}: {}".format(self.name, generated_port))
             if generated_port:
