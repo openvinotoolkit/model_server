@@ -400,8 +400,8 @@ if make_predict_request_testing:
         final_time = 0
         iteration = iterations if key not in lower_iteration_cases else lower_iterations
         inputs = {
-                "proto": ovmsclient.make_tensor_proto(**value)
-            }
+            "proto": ovmsclient.make_tensor_proto(**value)
+        }
         for i in range(iteration):
             start_time = datetime.datetime.now()
             request = ovmsclient.make_grpc_predict_request(inputs, 'name', 0)
@@ -425,7 +425,7 @@ if predict_request_TF_testing:
     for key, value in proto_inputs_dict.items():
         final_time = 0
         iteration = iterations if key not in lower_iteration_cases else lower_iterations
-        proto = tensorflow.make_tensor_proto(**value)
+        proto = ovmsclient.make_tensor_proto(**value)
         for i in range(iteration):
             start_time = datetime.datetime.now()
             request = predict_pb2.PredictRequest()
