@@ -108,27 +108,32 @@ def process_json_output(result_dict, output_tensors):
 
     return output
 
+def _get_output_json(img, input_tensor, rest_url, request_format, method_to_call, prepare_body_format=False):
+    data_json = prepare_body_format(img, request_format, input_tensor) if prepare_body_format else None
+    result = method_to_call(rest_url, data=data_json)
+    if not result.ok or result.status_code != 200:
+        msg = f"REST {method_to_call} failed {result}"
+        logger.error(msg)
+        raise Exception(msg)
+    output_json = json.loads(result.text)
+    return output_json
 
 def infer_rest(img, input_tensor, rest_url,
                output_tensors, request_format):
-    data_json = prepare_body_format(img, request_format, input_tensor)
-    result = requests.post(rest_url, data=data_json)
-    output_json = json.loads(result.text)
+    output_json = _get_output_json(img, input_tensor, rest_url, requests.post, request_format, True)
     data = process_json_output(output_json, output_tensors)
     return data
 
 
 def get_model_metadata_response_rest(rest_url):
-    result = requests.get(rest_url)
-    output_json = result.text
+    output_json = _get_output_json(None, None, rest_url, requests.get, None, True)
     metadata_pb = get_model_metadata_pb2.GetModelMetadataResponse()
     response = Parse(output_json, metadata_pb, ignore_unknown_fields=False)
     return response
 
 
 def get_model_status_response_rest(rest_url):
-    result = requests.get(rest_url)
-    output_json = result.text
+    output_json = _get_output_json(None, None, rest_url, requests.get, None, True)
     status_pb = get_model_status_pb2.GetModelStatusResponse()
     response = Parse(output_json, status_pb, ignore_unknown_fields=False)
     return response
