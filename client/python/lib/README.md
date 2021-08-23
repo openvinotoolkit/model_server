@@ -2,7 +2,9 @@
 
 Model server client library is a set of objects and methods designed to simplify user interaction with the instance of the model server. The library contains functions that hide API specific aspects, so user doesn't have to know about creating protos, preparing requests, parsing responses etc. and can focus on the application itself, rather than dealing with all the aspects of the interaction with OVMS.
 
+OVMS client library contains only the necessary dependencies, so the whole package is light. That makes it more friendly for deployments with restricted resources as well as for the use cases that require applications to scale well.
 
+As OpenVINO Model Server API is compatibile with TensorFlow Serving, it's possible to use `ovmsclient` with TensorFlow Serving instances on: Predict, GetModelMetadata and GetModelStatus endpoints.
 
 See [API documentation](docs/README.md) for details on what the library provides.
 
@@ -63,23 +65,61 @@ client = ovmsclient.make_grpc_client(config="config")
 status_request = ovmsclient.make_grpc_status_request(model_name="model")
 status_response = client.get_model_status(status_request)
 status_response.to_dict()
-{
-    "1": {
-        "state": <model_version_state>, 
-        "error_code": <error_code>, 
-        "error_message": <error_message>
-    }             
-} 
+
+# Examplary status_response.to_dict() output:
+#
+# {
+#    "1": {
+#        "state": "AVAILABLE", 
+#        "error_code": 0, 
+#        "error_message": ""
+#    }             
+# } 
+#
 ```
 
-**Create gRPC client instance:**
+**Create and send model metadata request:**
 ```python
-import ovmsclient
+metadata_request = ovmsclient.make_grpc_metadata_request(model_name="model")
+metadata_response = client.get_model_metadata(metadata_request)
+metadata_response.to_dict()
 
-config = {
-   "address": "localhost", 
-   "port": 9000
-   }
-
-grpc_client = ovmsclient.make_grpc_client(config)
+# Examplary metadata_response.to_dict() output:
+#
+#{
+#   "1": {
+#       "inputs": {
+#           "input": {
+#               "shape": (1, 3, 224, 224),
+#               "dtype": DT_FLOAT32  
+#           }
+#       },
+#       "outputs" {
+#           "output": {
+#               "shape": (1, 1000),
+#               "dtype": DT_FLOAT32  
+#           }
+#       }
+#   }
+#}
+#
 ```
+
+**Create and send predict request with binary input data:**
+```python
+with open(<path_to_img>, 'rb') as f:
+    img = f.read()
+predict_request = ovmsclient.make_grpc_predict_request(
+    { "input": img }, model_name="model")
+predict_response = client.predict(predict_request)
+predict_response.to_dict()
+
+# Examplary predict_response.to_dict() output:
+#
+#{
+#   "output": [[0.01, 0.03, 0.91, ... , 0.00021]]
+#}
+#
+```
+
+For more details on `ovmsclient` see [API reference](docs/README.md)
