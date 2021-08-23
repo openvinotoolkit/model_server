@@ -332,6 +332,14 @@ test_throughput_dummy_model: venv
 test_functional: venv
 	@. $(ACTIVATE); pytest --json=report.json -v -s $(TEST_PATH)
 
+# Client library make style target, by default uses Python 3 env in .venv path
+# This fact is used in test_client_lib, where make build runs in .venv Python 3 environment
+test_client_lib:
+	@cd client/python/lib && \
+		make style && \
+		. .venv/bin/activate; make build && \
+		make test && \
+		make clean
 
 tools_get_deps:
 	cd tools/deps/$(BASE_OS) && docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" -t  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG) .

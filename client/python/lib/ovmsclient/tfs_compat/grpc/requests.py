@@ -93,7 +93,7 @@ def make_predict_request(inputs, model_name, model_version=0):
         ...     inputs={
         ...         "binary_input": bytes([1, 2, 3, 4, 5, 6]),
         ...         "numeric_input": np.array([[1, 2, 3], [4, 5, 6]], np.int32)
-        ...     }, 
+        ...     },
         ...     model_name="model")
         >>> print(predict_request)
 
