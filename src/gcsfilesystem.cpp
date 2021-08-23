@@ -150,9 +150,9 @@ StatusCode GCSFileSystem::isDirectory(const std::string& path,
         }
     } catch (std::exception& ex) {
         SPDLOG_LOGGER_DEBUG(gcs_logger, "GCS list objects exception {}", ex.what());
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Invalid or missing GCS credentials, or directory does not exist - {}", path);
     }
 
-    SPDLOG_LOGGER_ERROR(gcs_logger, "Invalid or missing GCS credentials, or directory does not exist - {}", path);
     return StatusCode::OK;
 }
 
