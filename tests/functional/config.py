@@ -64,10 +64,10 @@ minio_image = os.environ.get("TT_MINIO_IMAGE_NAME", "minio/minio:latest")
 target_device = os.environ.get("TT_TARGET_DEVICE", "CPU")
 
 """IMAGE - docker image name which should be used to run tests"""
-if target_device == "CPU":
-    _default_image = "openvino/model_server"
-else:
+if target_device == "GPU":
     _default_image = "openvino/model_server-gpu"
+else:
+    _default_image = "openvino/model_server"
 image = os.environ.get("IMAGE", _default_image)
 
 start_minio_container_command = 'server --address ":{}" /data'
