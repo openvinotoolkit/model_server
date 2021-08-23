@@ -734,7 +734,7 @@ const Status ModelInstance::checkIfShapeValuesNegative(const tensorflow::TensorP
     for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
         if (requestInput.tensor_shape().dim(i).size() < 0) {
             const std::string details = "Negative dimension size is not acceptable: " + TensorInfo::tensorShapeToString(requestInput.tensor_shape());
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
+            SPDLOG_DEBUG("[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
             return Status(StatusCode::INVALID_SHAPE, details);
         }
     }
