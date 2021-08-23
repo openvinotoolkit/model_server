@@ -1,0 +1,28 @@
+#
+# Copyright (c) 2021 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+import numpy as np
+
+
+def resnet_postprocess(response, output_name):
+    response_dict = response.to_dict()
+    output = response_dict[output_name]
+    offset = 0
+    if output.shape[1] == 1001:
+        offset = 1
+    label = np.argmax(output[0]) - offset
+    confidence_score = output[0][label]
+    return label, confidence_score
