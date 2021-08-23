@@ -1,22 +1,37 @@
-from ovmsclient import make_tensor_proto
-# from ovmsclient import make_ndarray
-from ovmsclient import make_grpc_predict_request
-# from tensorflow import make_tensor_proto
-from tensorflow import make_ndarray
+import ovmsclient
+# import tensorflow
 import datetime
 import numpy as np
+from ovmsclient.tfs_compat.grpc.requests import make_predict_request
+from ovmsclient.tfs_compat.grpc.tensors import make_tensor_proto
+from ovmsclient.tfs_compat.grpc.serving_client import make_grpc_client
 from tensorflow.core.framework.types_pb2 import DataType
+from tensorflow_serving.apis import predict_pb2
 import pandas as pd
 
 np.random.seed(0)
 
 # parameters
+# iterations determine how many times tested method should be called
 iterations = 100_000
+# lower_iterations determine how many times tested method should be called for
+# time-consuming tests
 lower_iterations = 10_000
+# for make_* functions from ovmsclient performance testing enable desired test
+# for TF impementations testing import tensorflow instead of ovmsclient and change
+# function calls from ovmsclient.* to tensorflow.*
 make_tensor_proto_testing = False
-make_ndarray_testing = True
+make_ndarray_testing = False
+# for predict_request creation testing there are 2 different cases
+# for make_predict_request testing import ovmsclient and do not import tensorflow and enable the test below
 make_predict_request_testing = False
-fill_predict_with_proto = True
+# for predict request creation testing via TF import tensorflow instead of ovmsclient
+predict_request_TF_testing = False
+# for predict testing on ovmsclient import ovmsclient and do not import tensorflow and enable the test below
+predict_ovmsclient = False
+# for predict testing via TF import tensorflow instead of ovmsclient
+predict_TF = True
+# testing protos apply to make_tensor_proto, make_ndarray and make_predict_request tests
 proto_inputs_dict = {
     "float_shape_dtype_no_reshape": {
         "values": 5.0,
@@ -337,7 +352,7 @@ if make_tensor_proto_testing:
         iteration = iterations if key not in lower_iteration_cases else lower_iterations
         for i in range(iteration):
             start_time = datetime.datetime.now()
-            proto = make_tensor_proto(**value)
+            proto = ovmsclient.make_tensor_proto(**value)
             end_time = datetime.datetime.now()
             final_time += (end_time - start_time).total_seconds()
         time_per_proto = final_time/iteration * 1000
@@ -359,10 +374,10 @@ if make_ndarray_testing:
     for key, value in proto_inputs_dict.items():
         final_time = 0
         iteration = iterations if key not in lower_iteration_cases else lower_iterations
+        proto = ovmsclient.make_tensor_proto(**value)
         for i in range(iteration):
-            proto = make_tensor_proto(**value)
             start_time = datetime.datetime.now()
-            array = make_ndarray(proto)
+            array = ovmsclient.make_ndarray(proto)
             end_time = datetime.datetime.now()
             final_time += (end_time - start_time).total_seconds()
         time_per_ndarray = final_time/iteration * 1000
@@ -384,17 +399,12 @@ if make_predict_request_testing:
     for key, value in proto_inputs_dict.items():
         final_time = 0
         iteration = iterations if key not in lower_iteration_cases else lower_iterations
+        inputs = {
+                "proto": ovmsclient.make_tensor_proto(**value)
+            }
         for i in range(iteration):
-            if fill_predict_with_proto:
-                inputs = {
-                    "proto": make_tensor_proto(**value)
-                }
-            else:
-                inputs = {
-                    "no_proto": value['values']
-                }
             start_time = datetime.datetime.now()
-            request = make_grpc_predict_request(inputs, 'name', 0)
+            request = ovmsclient.make_grpc_predict_request(inputs, 'name', 0)
             end_time = datetime.datetime.now()
             final_time += (end_time - start_time).total_seconds()
         time_per_request = final_time/iteration * 1000
@@ -408,3 +418,90 @@ if make_predict_request_testing:
     proto_df = proto_df.T
     proto_df.columns = ['time_per_request[ms]']
     proto_df.to_excel('performance.xlsx', sheet_name='make_predict_request_perf')
+
+if predict_request_TF_testing:
+    predict_request_TF_performance = {}
+
+    for key, value in proto_inputs_dict.items():
+        final_time = 0
+        iteration = iterations if key not in lower_iteration_cases else lower_iterations
+        proto = tensorflow.make_tensor_proto(**value)
+        for i in range(iteration):
+            start_time = datetime.datetime.now()
+            request = predict_pb2.PredictRequest()
+            request.model_spec.name = 'name'
+            request.model_spec.version.value = 0
+            request.inputs['proto'].CopyFrom(proto)
+            end_time = datetime.datetime.now()
+            final_time += (end_time - start_time).total_seconds()
+        time_per_request = final_time/iteration * 1000
+        predict_request_TF_performance[key] = time_per_request
+        print(f'{key} finished with time {final_time}s')
+        print(f'Time spend per request: {time_per_request}ms')
+
+    print(predict_request_TF_performance)
+    proto_df = pd.DataFrame(data=predict_request_TF_performance, index=[0])
+    proto_df.astype('float32')
+    proto_df = proto_df.T
+    proto_df.columns = ['time_per_request[ms]']
+    proto_df.to_excel('performance.xlsx', sheet_name='make_predict_request_TF_perf')
+
+
+# predict testing configuration
+predict_proto = make_tensor_proto(np.zeros((1,3,224,224), dtype=np.float32))
+predict_iterations = 10_000
+key = 'resnet'
+inputs = {
+        "0": predict_proto
+}
+request = make_predict_request(inputs, key)
+
+config = {
+    "address": "localhost",
+    "port": 9000
+}
+client = make_grpc_client(config)
+
+if predict_ovmsclient:
+    predict_ovmsclient_performance = {}
+
+    final_time = 0
+    for i in range(predict_iterations):
+        start_time = datetime.datetime.now()
+        client.predict(request)
+        end_time = datetime.datetime.now()
+        final_time += (end_time - start_time).total_seconds()
+    time_per_predict = final_time/predict_iterations * 1000
+    predict_ovmsclient_performance[key] = time_per_predict
+    print(f'{key} finished with time {final_time}s')
+    print(f'Time spend per predict: {time_per_predict}ms')
+
+    # print(predict_ovmsclient_performance)
+    # proto_df = pd.DataFrame(data=predict_ovmsclient_performance, index=[0])
+    # proto_df.astype('float32')
+    # proto_df = proto_df.T
+    # proto_df.columns = ['time_per_predict[ms]']
+    # proto_df.to_excel('performance.xlsx', sheet_name='predict_ovmsclient_perf')
+
+if predict_TF:
+    predict_TF_performance = {}
+
+    final_time = 0
+    stub = client.prediction_service_stub
+    raw_request = request.raw_request
+    for i in range(predict_iterations):
+        start_time = datetime.datetime.now()
+        stub.Predict(raw_request, 10.0)
+        end_time = datetime.datetime.now()
+        final_time += (end_time - start_time).total_seconds()
+    time_per_predict = final_time/predict_iterations * 1000
+    predict_TF_performance[key] = time_per_predict
+    print(f'{key} finished with time {final_time}s')
+    print(f'Time spend per predict: {time_per_predict}ms')
+
+    # print(predict_TF_performance)
+    # proto_df = pd.DataFrame(data=predict_TF_performance, index=[0])
+    # proto_df.astype('float32')
+    # proto_df = proto_df.T
+    # proto_df.columns = ['time_per_predict[ms]']
+    # proto_df.to_excel('performance.xlsx', sheet_name='predict_TF_perf')
