@@ -734,7 +734,7 @@ const Status ModelInstance::checkIfShapeValuesNegative(const tensorflow::TensorP
     for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
         if (requestInput.tensor_shape().dim(i).size() < 0) {
             const std::string details = "Negative dimension size is not acceptable: " + TensorInfo::tensorShapeToString(requestInput.tensor_shape());
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
+            SPDLOG_DEBUG("[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
             return Status(StatusCode::INVALID_SHAPE, details);
         }
     }
@@ -870,8 +870,7 @@ const bool ModelInstance::checkBinaryInputBatchSizeMismatch(const ovms::TensorIn
     return false;
 }
 
-const Status ModelInstance::validateNumberOfBinaryInputShapeDimensions(const ovms::TensorInfo& networkInput,
-    const tensorflow::TensorProto& requestInput) {
+const Status ModelInstance::validateNumberOfBinaryInputShapeDimensions(const tensorflow::TensorProto& requestInput) {
     if (requestInput.tensor_shape().dim_size() != 1) {
         std::stringstream ss;
         ss << "Expected number of binary input shape dimensions: 1; Actual: " << requestInput.tensor_shape().dim_size();
@@ -916,7 +915,7 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
             // binary inputs will be validated during conversion to blob
             SPDLOG_DEBUG("Received request containing binary inputs");
-            status = validateNumberOfBinaryInputShapeDimensions(*networkInput, requestInput);
+            status = validateNumberOfBinaryInputShapeDimensions(requestInput);
             if (!status.ok()) {
                 return status;
             }
