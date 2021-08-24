@@ -81,7 +81,7 @@ Refer to the [REST API example client code](./example_client/README.md#rest-api-
 ### OVMS Python Client Library
 
 For simplified interaction with the model server API, the [Python client library](client/python/lib) has been introduced. It's a set of Python functions and objects that wrap things like:
-- setting gRPC/HTTP connection
+- setting connection with the server
 - creating `TensorProto` from data
 - creating requests for model status, model metadata and prediction
 - sending requests to appropriate endpoints

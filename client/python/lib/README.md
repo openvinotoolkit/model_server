@@ -89,14 +89,14 @@ metadata_response.to_dict()
 #{
 #   "1": {
 #       "inputs": {
-#           "input": {
-#               "shape": (1, 3, 224, 224),
+#           "map/TensorArrayStack/TensorArrayGatherV3": {
+#               "shape": [1, 224, 224, 3],
 #               "dtype": DT_FLOAT32  
 #           }
 #       },
 #       "outputs" {
-#           "output": {
-#               "shape": (1, 1000),
+#           "softmax_tensor": {
+#               "shape": [1, 1001],
 #               "dtype": DT_FLOAT32  
 #           }
 #       }
@@ -110,14 +110,15 @@ metadata_response.to_dict()
 with open(<path_to_img>, 'rb') as f:
     img = f.read()
 predict_request = ovmsclient.make_grpc_predict_request(
-    { "input": img }, model_name="model")
+    { "map/TensorArrayStack/TensorArrayGatherV3": img },
+    model_name="model")
 predict_response = client.predict(predict_request)
 predict_response.to_dict()
 
 # Examplary predict_response.to_dict() output:
 #
 #{
-#   "output": [[0.01, 0.03, 0.91, ... , 0.00021]]
+#   "softmax_tensor": [[0.01, 0.03, 0.91, ... , 0.00021]]
 #}
 #
 ```
