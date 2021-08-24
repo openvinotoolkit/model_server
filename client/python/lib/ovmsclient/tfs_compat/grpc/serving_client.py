@@ -31,6 +31,8 @@ from ovmsclient.tfs_compat.grpc.responses import (GrpcModelStatusResponse,
                                                   GrpcModelMetadataResponse,
                                                   GrpcPredictResponse)
 
+from ovmsclient.util.ovmsclient_export import ovmsclient_export
+
 
 class GrpcClient(ServingClient):
 
@@ -50,8 +52,9 @@ class GrpcClient(ServingClient):
             GrpcPredictResponse object
 
         Raises:
-            TypeError:  if provided argument is of wrong type.
-            Many more for different serving reponses...
+            TypeError:  if request argument is of wrong type.
+            ValueError: if request argument has invalid contents.
+            ConnectionError: if there was an error while sending request to the server.
 
         Examples:
 
@@ -87,8 +90,9 @@ class GrpcClient(ServingClient):
             GrpcModelMetadataResponse object
 
         Raises:
-            TypeError:  if provided argument is of wrong type.
-            Many more for different serving reponses...
+            TypeError:  if request argument is of wrong type.
+            ValueError: if request argument has invalid contents.
+            ConnectionError: if there was an error while sending request to the server.
 
         Examples:
 
@@ -124,14 +128,15 @@ class GrpcClient(ServingClient):
             GrpcModelStatusResponse object
 
         Raises:
-            TypeError:  if provided argument is of wrong type.
-            Many more for different serving reponses...
+            TypeError:  if request argument is of wrong type.
+            ValueError: if request argument has invalid contents.
+            ConnectionError: if there was an error while sending request to the server.
 
         Examples:
 
             >>> config = {
             ...     "address": "localhost",
-            ...     :port": 9000
+            ...     "port": 9000
             ... }
             >>> client = make_grpc_client(config)
             >>> request = make_model_status_request("model")
@@ -309,6 +314,7 @@ def _check_tls_config(tls_config):
             raise ValueError(f'{tls_config[key]} is not valid path to file')
 
 
+@ovmsclient_export("make_grpc_client", grpcclient="make_client")
 def make_grpc_client(config):
     '''
     Create GrpcClient object.

@@ -20,6 +20,8 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow.core.framework.types_pb2 import DataType
 import numpy as np
 
+from ovmsclient.util.ovmsclient_export import ovmsclient_export
+
 
 class TensorType(NamedTuple):
     TensorDtype: str
@@ -92,6 +94,7 @@ def _is_bytes_shape_valid(inferred_shape, tensor_values):
     return (len(inferred_shape) > 1 or (len(tensor_values.shape) > 1 and inferred_shape == []))
 
 
+@ovmsclient_export("make_tensor_proto", grpcclient="make_tensor_proto")
 def make_tensor_proto(values, dtype=None, shape=None):
     '''
     Create TensorProto object from values.
@@ -204,6 +207,7 @@ def make_tensor_proto(values, dtype=None, shape=None):
     return tensor_proto
 
 
+@ovmsclient_export("make_ndarray", grpcclient="make_ndarray")
 def make_ndarray(tensor_proto):
     '''
     Create numpy ndarray from tensor_proto.

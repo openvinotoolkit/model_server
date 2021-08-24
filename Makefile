@@ -30,9 +30,9 @@ JOBS ?= $(shell python3 -c 'import multiprocessing as mp; print(mp.cpu_count())'
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
 # Currently supported BASE_OS values are: ubuntu centos clearlinux
-BASE_OS ?= centos
+BASE_OS ?= ubuntu
 
-BASE_IMAGE ?= centos:7
+BASE_IMAGE ?= ubuntu:20.04
 
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
@@ -71,8 +71,6 @@ DIST_OS_TAG ?= $(BASE_OS_TAG)
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   BASE_IMAGE=ubuntu:$(BASE_OS_TAG_UBUNTU)
-  # Temporarily build from APT
-  DLDT_PACKAGE_URL=""
 endif
 ifeq ($(BASE_OS),centos)
   BASE_OS_TAG=$(BASE_OS_TAG_CENTOS)
@@ -332,6 +330,14 @@ test_throughput_dummy_model: venv
 test_functional: venv
 	@. $(ACTIVATE); pytest --json=report.json -v -s $(TEST_PATH)
 
+# Client library make style target, by default uses Python 3 env in .venv path
+# This fact is used in test_client_lib, where make build runs in .venv Python 3 environment
+test_client_lib:
+	@cd client/python/lib && \
+		make style && \
+		. .venv/bin/activate; make build && \
+		make test && \
+		make clean
 
 tools_get_deps:
 	cd tools/deps/$(BASE_OS) && docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" -t  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG) .

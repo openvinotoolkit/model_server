@@ -26,9 +26,6 @@ try:
 except ImportError:
     pass
 
-"""IMAGE - docker image name which should be used to run tests"""
-image = os.environ.get("IMAGE", "openvino/model_server")
-
 """TEST_DIR -  location where models and test data should be copied from TEST_DIR_CACHE and deleted after tests"""
 test_dir = os.environ.get("TEST_DIR", "/tmp/{}".format(generate_test_object_name(prefix='ovms_models')))
 
@@ -47,7 +44,9 @@ artifacts_dir = os.environ.get("BUILD_LOGS", "")
 start_container_command = os.environ.get("START_CONTAINER_COMMAND", "")
 
 """CONTAINER_LOG_LINE - log line to check in container"""
-container_log_line = os.environ.get("CONTAINER_LOG_LINE", "Server started on port")
+# For multiple log lines, pass them separated with ':'
+container_log_line = os.environ.get("CONTAINER_LOG_LINE", "Server started on port:Started REST server at")
+container_log_line = container_log_line.split(":")
 
 """OVMS_BINARY_PATH - path to ovms binary file; when specified, tests are executed against provided binary."""
 ovms_binary_path = os.environ.get("OVMS_BINARY_PATH", None)
@@ -67,6 +66,13 @@ minio_image = os.environ.get("TT_MINIO_IMAGE_NAME", "minio/minio:latest")
 """ TT_TARGET_DEVICE - one of "CPU", "GPU" """
 target_device = os.environ.get("TT_TARGET_DEVICE", "CPU")
 
+"""IMAGE - docker image name which should be used to run tests"""
+if target_device == "GPU":
+    _default_image = "openvino/model_server-gpu"
+else:
+    _default_image = "openvino/model_server"
+image = os.environ.get("IMAGE", _default_image)
+
 start_minio_container_command = 'server --address ":{}" /data'
 
 container_minio_log_line = "Console endpoint is listening on a dynamic port"
@@ -83,3 +89,14 @@ ports_pool_size = get_int("TT_PORTS_POOL_SIZE", 5000)
 """  """
 using_xdist = ('-n' in sys.argv) or ('-c' in sys.argv)
 
+""" TT_DEFAULT_INFER_TIMEOUT - Timeout for CPU target device"""
+default_infer_timeout = get_int("TT_DEFAULT_INFER_TIMEOUT", 10)
+
+""" TT_DEFAULT_GPU_INFER_TIMEOUT - Timeout for CPU target device"""
+default_gpu_infer_timeout = get_int("TT_DEFAULT_GPU_INFER_TIMEOUT", 10*default_infer_timeout)
+
+""" INFER TIMEOUT """
+if target_device == "GPU":
+    infer_timeout = default_gpu_infer_timeout
+else:
+    infer_timeout = default_infer_timeout

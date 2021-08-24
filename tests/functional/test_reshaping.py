@@ -17,6 +17,7 @@
 import numpy as np
 import pytest
 from constants import ERROR_SHAPE
+from config import target_device
 from model.models_information import FaceDetection
 from utils.grpc import create_channel, infer
 import logging
@@ -36,6 +37,8 @@ auto_shapes = [
 fixed_shape = {'in': (1, 3, 600, 600), 'out': (1, 1, 200, 7)}
 
 
+@pytest.mark.skipif(target_device == "MYRIAD",
+                    reason="error: Cannot load network into target device")
 class TestModelReshaping:
     def test_single_local_model_reshaping_auto(self, start_server_face_detection_model_auto_shape):
 
@@ -163,6 +166,7 @@ class TestModelReshaping:
     @staticmethod
     def run_inference_rest(imgs, out_name, out_shape, is_correct,
                            request_format, rest_url):
+        logger.info("Running rest inference call")
         if is_correct:
             output = infer_rest(imgs, input_tensor='data',
                                 rest_url=rest_url,
@@ -180,6 +184,7 @@ class TestModelReshaping:
 
     @staticmethod
     def run_inference_grpc(imgs, out_name, out_shape, is_correct, model_name, stub):
+        logger.info(f"Running grpc inference call")
         if is_correct:
             output = infer(imgs, input_tensor=FaceDetection.input_name, grpc_stub=stub,
                            model_spec_name=model_name,

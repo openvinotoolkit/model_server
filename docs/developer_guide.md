@@ -287,7 +287,7 @@ Two debugging options are available. Click on the required option :
 
 Use OpenVINO Model Server build image because it installs the necessary tools.
 
-1. Add the ENTRYPOINT line in Dockerfile.centos to :
+1. Add the ENTRYPOINT line in Dockerfile.ubuntu to :
 	```
 	ENTRYPOINT ["/bin/bash", "-c", "sleep 3600; echo 'Server started on port'; sleep 100000"]
 	```

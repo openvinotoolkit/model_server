@@ -35,9 +35,13 @@ class BuildApis(Command):
 
     def build_tfs_api(self):
         subprocess.run(["sh", "./scripts/build_tfs_api.sh"])
+    
+    def build_ovmsclient_api(self):
+        subprocess.run(["sh", "./scripts/build_ovmsclient_api.sh"])
 
     def run(self):
         self.build_tfs_api()
+        self.build_ovmsclient_api()
 
 
 setuptools.setup(
@@ -53,7 +57,7 @@ setuptools.setup(
      cmdclass={
         "build_apis": BuildApis,
     },
-     packages=setuptools.find_namespace_packages(include=["ovmsclient.*", "tensorflow.*", "tensorflow_serving.*"]),
+     packages=setuptools.find_namespace_packages(include=["ovmsclient*", "tensorflow*", "tensorflow_serving*"]),
      install_requires=["grpcio>=1.21", "protobuf>=3.8", "numpy>=1.16.4", "validators>=0.18.2"],
  )
 

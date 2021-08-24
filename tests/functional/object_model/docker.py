@@ -13,18 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
 import time
 from typing import List
 
 from datetime import datetime
 
 import docker
+from utils.files_operation import get_path_friendly_test_name
+
+from config import target_device
 from retry.api import retry_call
 
 import config
 from utils.grpc import port_manager_grpc
 from utils.rest import port_manager_rest
-from utils.files_operation import save_container_logs_to_file
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,7 +42,9 @@ class Docker:
     GETTING_STATUS_RETRY = COMMON_RETRY
 
     def __init__(self, request, container_name, start_container_command,
-                 env_vars_container=None, image=config.image, container_log_line=config.container_log_line):
+                 env_vars_container=None, image=config.image, container_log_line=config.container_log_line,
+                 server=None):
+        self.server = server
         self.client = docker.from_env()
         self.grpc_port = port_manager_grpc.get_port()
         self.rest_port = port_manager_rest.get_port()
@@ -64,18 +69,32 @@ class Docker:
     def _start(self):
         logger.info(f"Starting container: {self.container_name}")
 
+        ### Defaults ###
         volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
                                                             'mode': 'ro'}}
+        network = None
+        privileged = False
+        ports = {'{}/tcp'.format(self.grpc_port): self.grpc_port, '{}/tcp'.format(self.rest_port): self.rest_port}
+        devices = None
+
+        ### Per device custom settings ###
+        if config.target_device == "MYRIAD":
+            volumes_dict["/dev"] = {'bind': "/dev", 'mode': 'ro'}
+            network = "host"
+            privileged = True
+            ports = None
+        elif config.target_device == "GPU":
+            devices = ["/dev/dri:/dev/dri:mrw"]
 
         self.container = self.client.containers.run(image=self.image, detach=True,
                                                     name=self.container_name,
-                                                    ports={'{}/tcp'.format(self.grpc_port):
-                                                               self.grpc_port,
-                                                           '{}/tcp'.format(self.rest_port):
-                                                               self.rest_port},
+                                                    ports=ports,
                                                     volumes=volumes_dict,
+                                                    devices=devices,
+                                                    network=network,
                                                     command=self.start_container_command,
-                                                    environment=self.env_vars_container)
+                                                    environment=self.env_vars_container,
+                                                    privileged=privileged)
         self.ensure_container_status(status=CONTAINER_STATUS_RUNNING, terminal_statuses=TERMINAL_STATUSES)
         self.ensure_logs_contains()
         logger.info(f"Container started grpc_port:{self.grpc_port}\trest_port:{self.rest_port}")
@@ -85,11 +104,12 @@ class Docker:
     def stop(self):
         if self.container is not None:
             logger.info(f"Stopping container: {self.container_name}")
+            self.container.stop(timeout=10)
             self.save_container_logs()
-            self.container.remove(force=True)       # Container will be stopped and cleaned
+            self.container.remove(v=True)
+            self.container = None
             port_manager_grpc.release_port(self.grpc_port)
             port_manager_rest.release_port(self.rest_port)
-            self.container = None
             logger.info(f"Container successfully closed and removed: {self.container_name}")
 
     def save_container_logs(self):
@@ -98,7 +118,7 @@ class Docker:
             logger.info(logs)
         if config.artifacts_dir != "":
             location = getattr(self.request.node, "location", None)
-            save_container_logs_to_file(logs=logs, location=location)
+            self.save_container_logs_to_file(logs=logs, location=location)
 
     def get_logs(self):
         self.logs = self.container.logs().decode()
@@ -106,8 +126,10 @@ class Docker:
 
     def ensure_logs(self):
         logs = self.get_logs()
-        if self.container_log_line not in logs:
-            assert False, f"Not found required phrase {self.container_log_line}"
+        for log_line in self.container_log_line:
+            if log_line not in logs:
+                assert False, f"Not found required phrase {log_line}"
+  
 
     def ensure_logs_contains(self):
         result = None
@@ -141,3 +163,14 @@ class Docker:
         time.sleep(1)
         return retry_call(self.ensure_status, fkwargs=container_statuses,
                           exceptions=AssertionError, **Docker.GETTING_STATUS_RETRY)
+
+    def save_container_logs_to_file(self, logs, dir_path: str = config.artifacts_dir, location=None):
+        time_stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        if location:
+            file_name = f"ovms_{get_path_friendly_test_name(location)}_{time_stamp}.log"
+        else:
+            file_name = f"ovms_{self.server.started_by_fixture.lstrip('start_')}_{time_stamp}.log"
+        os.makedirs(dir_path, exist_ok=True)
+        file_path = os.path.join(dir_path, file_name)
+        with open(file_path, "w+") as text_file:
+            text_file.write(logs)

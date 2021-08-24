@@ -8,7 +8,7 @@ OpenVINO&trade; Model Server is a serving system for machine learning models. Op
 
 ### Hardware 
 * Required:
-    * 6th to 10th generation Intel® Core™ processors and Intel® Xeon® processors.
+    * 6th to 11th generation Intel® Core™ processors and Intel® Xeon® processors.
 * Optional:
     * Intel® Neural Compute Stick 2.
     * Intel® Iris® Pro & Intel® HD Graphics
@@ -78,8 +78,8 @@ as well as a release package (.tar.gz, with ovms binary and necessary libraries)
 
 *Note:* Latest images include OpenVINO 2021.4 release.
 
-*Note:* OVMS docker image could be created with ubi8-minimal base image, beside the default centos7.
-Use command `make docker_build BASE_OS=redhat`. OVMS with ubi base image doesn't support NCS and HDDL accelerators.
+*Note:* OVMS docker image could be created with ubi8-minimal base image, centos7 or the default ubuntu20.
+Use command `make docker_build BASE_OS=redhat` or `make docker_build BASE_OS=centos`. OVMS with ubi base image doesn't support NCS and HDDL accelerators.
 
 Additionally you can set version of GPU driver used by the produced image. Currently following versions are available:
 - 19.41.14441
