@@ -28,8 +28,8 @@ from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_
 
 logger = logging.getLogger(__name__)
 
-@pytest.mark.skipif(target_device=="MYRIAD",
-                    reason="error: Cannot load network into target device")
+@pytest.mark.skipif(target_device == "MYRIAD", reason="error: Cannot load network into target device")
+@pytest.mark.skipif(target_device == "GPU", reason="Unsupported property key by plugin: CPU_THROUGHPUT_STREAMS")
 class TestMultiModelInference:
 
     def test_run_inference(self, start_server_multi_model):

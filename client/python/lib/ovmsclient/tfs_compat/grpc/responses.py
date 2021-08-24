@@ -24,7 +24,7 @@ from ovmsclient.tfs_compat.grpc.tensors import make_ndarray
 
 
 class GrpcPredictResponse(PredictResponse):
-    
+
     def to_dict(self):
         result_dict = {}
 

@@ -62,7 +62,7 @@ def main():
 
     import_template = "from {} import {} as {}"
     imports = ["# Exported API functions\n"]
-    bindings_template = "\t{} = {}"
+    bindings_template = "    {} = {}"
     namespaces = ["# Namespaces bindings\n"]
 
     for namespace_name, functions in NAME_TO_SYMBOL_MAPPING.items():

@@ -22,6 +22,7 @@ from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2
 import logging
 
+from config import infer_timeout
 from utils.port_manager import PortManager
 from config import rest_ovms_starting_port, ports_pool_size
 
@@ -112,7 +113,7 @@ def process_json_output(result_dict, output_tensors):
 def infer_rest(img, input_tensor, rest_url,
                output_tensors, request_format):
     data_json = prepare_body_format(img, request_format, input_tensor)
-    result = requests.post(rest_url, data=data_json)
+    result = requests.post(rest_url, data=data_json, timeout=infer_timeout)
     output_json = json.loads(result.text)
     data = process_json_output(output_json, output_tensors)
     return data
