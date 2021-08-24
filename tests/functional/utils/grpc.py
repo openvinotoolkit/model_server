@@ -19,6 +19,7 @@ from tensorflow import make_tensor_proto, make_ndarray
 from tensorflow_serving.apis import prediction_service_pb2_grpc, model_service_pb2_grpc, predict_pb2, \
     get_model_metadata_pb2, get_model_status_pb2
 
+from config import infer_timeout
 from config import grpc_ovms_starting_port, ports_pool_size
 from utils.port_manager import PortManager
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
@@ -51,7 +52,7 @@ def infer(img, input_tensor, grpc_stub, model_spec_name,
     logger.info("Input shape: {}".format(img.shape))
     request.inputs[input_tensor].CopyFrom(
         make_tensor_proto(img, shape=list(img.shape)))
-    result = grpc_stub.Predict(request, 10.0)
+    result = grpc_stub.Predict(request, infer_timeout)
     data = {}
     for output_tensor in output_tensors:
         data[output_tensor] = make_ndarray(result.outputs[output_tensor])

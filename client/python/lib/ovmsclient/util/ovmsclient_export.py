@@ -20,22 +20,23 @@ from collections import defaultdict
 MAIN_NAMESPACE_NAME = "main"
 NAME_TO_SYMBOL_MAPPING = defaultdict(dict)
 
+
 class api_export(object):
-	"""Provides ways to export symbols to the ovmsclient API."""
+    """Provides ways to export symbols to the ovmsclient API."""
 
-	def __init__(self, name, **kwargs):
-		self.main_name = name
-		self.namespaced_names = kwargs
+    def __init__(self, name, **kwargs):
+        self.main_name = name
+        self.namespaced_names = kwargs
 
-	def __call__(self, func):
-		# Create mapping for main namespace
-		NAME_TO_SYMBOL_MAPPING[MAIN_NAMESPACE_NAME][self.main_name] = (self.main_name, func)
-		
-		# Create mapping for additional namespaces
-		for namespace, namespaced_name in self.namespaced_names.items():
-			NAME_TO_SYMBOL_MAPPING[namespace][namespaced_name] = (self.main_name, func)
+    def __call__(self, func):
+        # Create mapping for main namespace
+        NAME_TO_SYMBOL_MAPPING[MAIN_NAMESPACE_NAME][self.main_name] = (self.main_name, func)
 
-		return func
+        # Create mapping for additional namespaces
+        for namespace, namespaced_name in self.namespaced_names.items():
+            NAME_TO_SYMBOL_MAPPING[namespace][namespaced_name] = (self.main_name, func)
+
+        return func
 
 
 ovmsclient_export = functools.partial(api_export)

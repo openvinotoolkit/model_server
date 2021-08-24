@@ -22,6 +22,7 @@ from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2
 import logging
 
+from config import infer_timeout
 from utils.port_manager import PortManager
 from config import rest_ovms_starting_port, ports_pool_size
 
@@ -108,12 +109,12 @@ def process_json_output(result_dict, output_tensors):
 
     return output
 
-def _get_output_json(img, input_tensor, rest_url, method_to_call, request_format):
+def _get_output_json(img, input_tensor, rest_url, method_to_call, request_format, timeout=None):
     if img and input_tensor and request_format:
         data_json = prepare_body_format(img, request_format, input_tensor)
     else:
         data_json = None
-    result = method_to_call(rest_url, data=data_json)
+    result = method_to_call(rest_url, data=data_json, timeout=timeout)
     if not result.ok or result.status_code != 200:
         msg = f"REST {method_to_call} failed {result}"
         logger.error(msg)
@@ -123,7 +124,7 @@ def _get_output_json(img, input_tensor, rest_url, method_to_call, request_format
 
 def infer_rest(img, input_tensor, rest_url,
                output_tensors, request_format):
-    output_json = _get_output_json(img, input_tensor, rest_url, requests.post, request_format)
+    output_json = _get_output_json(img, input_tensor, rest_url, requests.post, request_format, infer_timeout)
     data = process_json_output(output_json, output_tensors)
     return data
 

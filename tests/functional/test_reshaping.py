@@ -166,6 +166,7 @@ class TestModelReshaping:
     @staticmethod
     def run_inference_rest(imgs, out_name, out_shape, is_correct,
                            request_format, rest_url):
+        logger.info("Running rest inference call")
         if is_correct:
             output = infer_rest(imgs, input_tensor='data',
                                 rest_url=rest_url,
@@ -183,6 +184,7 @@ class TestModelReshaping:
 
     @staticmethod
     def run_inference_grpc(imgs, out_name, out_shape, is_correct, model_name, stub):
+        logger.info(f"Running grpc inference call")
         if is_correct:
             output = infer(imgs, input_tensor=FaceDetection.input_name, grpc_stub=stub,
                            model_spec_name=model_name,
