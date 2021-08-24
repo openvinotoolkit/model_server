@@ -18,7 +18,6 @@ import argparse
 from ovmsclient import make_grpc_client, make_grpc_predict_request
 from utils.common import get_model_io_names, read_imgs_as_ndarray, get_model_input_shape
 from utils.resnet_utils import resnet_postprocess
-from imagenet_classes import imagenet_classes
 
 
 parser = argparse.ArgumentParser(description='Make prediction using images in binary format')
@@ -51,7 +50,7 @@ client = make_grpc_client(config)
 # receiving metadata from model
 input_name, output_name = get_model_io_names(client, model_name, model_version)
 input_shape = get_model_input_shape(client, model_name, model_version)
-input_layout = "NHWC"
+input_layout = "NCHW"
 
 # preparing images
 imgs = read_imgs_as_ndarray(images_dir, input_shape, input_layout)
@@ -67,5 +66,5 @@ for i, img in enumerate(imgs):
     response = client.predict(request)
 
     # response post processing
-    label, confidence_score = resnet_postprocess(response, output_name)
-    print(f"Image {i+1} has been classified as {imagenet_classes[label]} with {confidence_score}% confidence")
+    imagenet_class, confidence_score = resnet_postprocess(response, output_name)
+    print(f"Image {i+1} has been classified as {imagenet_class} with {confidence_score}% confidence")

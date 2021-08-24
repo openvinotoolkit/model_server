@@ -68,5 +68,5 @@ for img_path in img_paths:
     response = client.predict(request)
 
     # response post processing
-    label, confidence_score = resnet_postprocess(response, output_name)
-    print(f"Image {img_path} has been classified as {imagenet_classes[label]} with {confidence_score*100}% confidence")
+    imagenet_class, confidence_score = resnet_postprocess(response, output_name)
+    print(f"Image {img_path} has been classified as {imagenet_class} with {confidence_score*100}% confidence")

@@ -24,13 +24,14 @@ def vehicle_postprocess(response, image_path, output_name, output_save_path):
     image = cv2.imread(image_path)
     width = image.shape[1]
     height = image.shape[0]
+    confidence_threshold = 0.5
     for i in range(output.shape[2]):
-        image = draw_bounding_box(output[0, 0, i, ...], image, width, height, 0.5)
+        image = draw_bounding_box(output[0, 0, i, ...], image, width, height, confidence_threshold)
     cv2.imwrite(os.path.join(output_save_path, 'vehicle-detection' + '.jpg'), image)
 
 
-def draw_bounding_box(prediction_result, image, width, height, confidence_thresold):
-    if prediction_result[2] > confidence_thresold:   # if confidence level is greater than confidence_thresold
+def draw_bounding_box(prediction_result, image, width, height, confidence_threshold):
+    if prediction_result[2] > confidence_threshold:   # if confidence level is greater than confidence_threshold
         x_min = int(prediction_result[3] * width)
         y_min = int(prediction_result[4] * height)
         x_max = int(prediction_result[5] * width)

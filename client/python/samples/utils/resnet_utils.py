@@ -15,6 +15,7 @@
 #
 
 import numpy as np
+from imagenet_classes import imagenet_classes
 
 
 def resnet_postprocess(response, output_name):
@@ -25,4 +26,4 @@ def resnet_postprocess(response, output_name):
         offset = 1
     label = np.argmax(output[0]) - offset
     confidence_score = output[0][label]
-    return label, confidence_score
+    return imagenet_classes[label], confidence_score
