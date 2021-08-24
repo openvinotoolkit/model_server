@@ -16,7 +16,7 @@
 
 import argparse
 from ovmsclient import make_grpc_client, make_grpc_predict_request
-from utils.common import get_model_io_names, read_imgs_as_ndarray, get_model_input_shape
+from utils.common import get_model_io_names, read_image_paths, read_imgs_as_ndarray, get_model_input_shape
 from utils.resnet_utils import resnet_postprocess
 
 
@@ -54,6 +54,7 @@ input_layout = "NCHW"
 
 # preparing images
 imgs = read_imgs_as_ndarray(images_dir, input_shape, input_layout)
+imgs_paths = read_image_paths(images_dir)
 
 for i, img in enumerate(imgs):
     # preparing predict request
@@ -67,4 +68,4 @@ for i, img in enumerate(imgs):
 
     # response post processing
     imagenet_class, confidence_score = resnet_postprocess(response, output_name)
-    print(f"Image {i+1} has been classified as {imagenet_class} with {confidence_score}% confidence")
+    print(f"Image {imgs_paths[i]} has been classified as {imagenet_class} with {confidence_score}% confidence")
