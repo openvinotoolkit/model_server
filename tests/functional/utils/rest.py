@@ -110,14 +110,14 @@ def process_json_output(result_dict, output_tensors):
     return output
 
 
-def _get_output_json(rest_url, method_to_call,
+def _get_output_json(rest_url, method_to_call, raise_error = True,
                      img = None, input_tensor = None, request_format = None, timeout=None):
     if img is not None:
         data_json = prepare_body_format(img, request_format, input_tensor)
     else:
         data_json = None
     result = method_to_call(rest_url, data=data_json, timeout=timeout)
-    if not result.ok or result.status_code != 200:
+    if raise_error and (not result.ok or result.status_code != 200):
         msg = f"REST call: {method_to_call.__name__}() failed {result}"
         txt = getattr(result, "text", "")
         msg += txt
@@ -127,8 +127,8 @@ def _get_output_json(rest_url, method_to_call,
     return result.text, output_json
 
 def infer_rest(img, input_tensor, rest_url,
-               output_tensors, request_format):
-    _, _json = _get_output_json(rest_url, requests.post, img, input_tensor, request_format, infer_timeout)
+               output_tensors, request_format, raise_error=True):
+    _, _json = _get_output_json(rest_url, requests.post, raise_error, img, input_tensor, request_format, infer_timeout)
     data = process_json_output(_json, output_tensors)
     return data
 
