@@ -108,7 +108,7 @@ def process_json_output(result_dict, output_tensors):
 
     return output
 
-def _get_output_json(img, input_tensor, rest_url, request_format, method_to_call):
+def _get_output_json(img, input_tensor, rest_url, method_to_call, request_format):
     if img and input_tensor and request_format:
         data_json = prepare_body_format(img, request_format, input_tensor)
     else:
