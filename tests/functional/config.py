@@ -91,8 +91,17 @@ default_infer_timeout = get_int("TT_DEFAULT_INFER_TIMEOUT", 10)
 """ TT_DEFAULT_GPU_INFER_TIMEOUT - Timeout for CPU target device"""
 default_gpu_infer_timeout = get_int("TT_DEFAULT_GPU_INFER_TIMEOUT", 10*default_infer_timeout)
 
+""" TT_DEFAULT_HDDL_INFER_TIMEOUT - Timeout for CPU target device"""
+default_hddl_infer_timeout = get_int("TT_DEFAULT_HDDL_INFER_TIMEOUT", 5*default_infer_timeout)
+
+""" TT_DEFAULT_MYRIAD_INFER_TIMEOUT - Timeout for CPU target device"""
+default_myriad_infer_timeout = get_int("TT_DEFAULT_MYRIAD_INFER_TIMEOUT", 5*default_infer_timeout)
+
 """ INFER TIMEOUT """
-if target_device == "GPU":
-    infer_timeout = default_gpu_infer_timeout
-else:
-    infer_timeout = default_infer_timeout
+infer_timeouts = {
+    "CPU" : default_infer_timeout,
+    "GPU" : default_gpu_infer_timeout,
+    "HDDL" : default_hddl_infer_timeout,
+    "MYRIAD" : default_myriad_infer_timeout,
+}
+infer_timeout = infer_timeouts[target_device]
