@@ -86,19 +86,84 @@ print("Class is with highest score: {}".format(max))
 print("Detected class name: {}".format(classes.imagenet_classes[max]))
 ```
 
-## Option 2: Adding preprocessing to the server side (building a DAG) <a name="#server-side"></a>
-
-Create configuration file with DAG containing two sequential nodes: one being the _image transformation node_ and one _DL model node_ resnet.  
-The job of image transformation node will be to preprocess the image data to match format required by ONNX model resnet50-caffe2-v1-9.onnx.
-
-
-
-
-
-
 It shows the following output:
 ```bash
 bee.jpeg (1, 3, 224, 224) ; data range: -2.117904 : 2.64
 Class is with highest score: 309
 Detected class name: bee
 ```
+
+
+## Option 2: Adding preprocessing to the server side (building a DAG) <a name="#server-side"></a>
+
+Create configuration file with DAG containing two sequential nodes: one being the _image transformation node_ and one _DL model node_ resnet. The job of image transformation node will be to preprocess the image data to match format required by ONNX model `resnet50-caffe2-v1-9.onnx`.
+
+The example [configuration file](../src/custom_nodes/image_transformation/config_with_preprocessing_node.json) is available in _image transformation_ custom node directory.  
+Image transformation custom node library building steps can be found [here](../src/custom_nodes/image_transformation).
+
+Prepare workspace with the model, preprocessing node library and configuration file.
+```
+$ tree workspace
+
+workspace
+├── config_with_preprocessing_node.json
+├── lib
+│   └── libcustom_node_image_transformation.so
+└── models
+    └── resnet50-caffe2-v1
+        └── 1
+            └── resnet50-caffe2-v1-9.onnx
+```
+
+Start the OVMS container with configuration file option:
+```bash
+docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet:/model -p 9001:9001 openvino/model_server:latest \
+--config_path /workspace/config_with_preprocessing_node.json --port 9001
+```
+
+Use example binary input client to send JPEG images to the server:
+```
+$ cd model_server/example_client
+
+$ python3 grpc_binary_client.py --grpc_port 9001 --input_name 0 --output_name 1463 --model_name resnet --batchsize 1
+```
+You should see 100% overall accurracy:
+```
+Start processing:
+        Model name: resnet
+        Images list file: input_images.txt
+Batch: 0; Processing time: 38.65 ms; speed 25.87 fps
+         1 airliner 404 ; Correct match.
+Batch: 1; Processing time: 42.42 ms; speed 23.57 fps
+         2 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
+Batch: 2; Processing time: 40.85 ms; speed 24.48 fps
+         3 bee 309 ; Correct match.
+Batch: 3; Processing time: 34.50 ms; speed 28.98 fps
+         4 golden retriever 207 ; Correct match.
+Batch: 4; Processing time: 35.81 ms; speed 27.92 fps
+         5 gorilla, Gorilla gorilla 366 ; Correct match.
+Batch: 5; Processing time: 34.98 ms; speed 28.59 fps
+         6 magnetic compass 635 ; Correct match.
+Batch: 6; Processing time: 34.79 ms; speed 28.74 fps
+         7 peacock 84 ; Correct match.
+Batch: 7; Processing time: 36.86 ms; speed 27.13 fps
+         8 pelican 144 ; Correct match.
+Batch: 8; Processing time: 41.93 ms; speed 23.85 fps
+         9 snail 113 ; Correct match.
+Batch: 9; Processing time: 38.24 ms; speed 26.15 fps
+         10 zebra 340 ; Correct match.
+Overall accuracy= 100.0 %
+Average latency= 37.2 ms
+```
+
+## Summary
+Additional preprocessing step allowed us to apply division and substraction to each pixel value in the image. We performed this calculation by passing two parameters to _image transformation_ custom node:
+```
+"params": {
+  ...
+  "mean_values": "[123.675,116.28,103.53]",
+  "scale_values": "[58.395,57.12,57.375]",
+  ...
+}
+```
+For each pixel we substracted `123.675` from blue value, `116.28` from green value and `103.53` from red value. Next, we performed division operation in the same color order using `58.395`, `57.12`, `57.375` values. This way we matched image data to input required by onnx model.
