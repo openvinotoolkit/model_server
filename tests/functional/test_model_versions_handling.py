@@ -30,8 +30,9 @@ from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_
 
 logger = logging.getLogger(__name__)
 
-@pytest.mark.skipif(target_device=="MYRIAD",
-                    reason="error: Cannot load network into target device")
+
+@pytest.mark.skipif(target_device == "GPU", reason="Unsupported property key by plugin: CPU_THROUGHPUT_STREAMS")
+@pytest.mark.skipif(target_device == "MYRIAD", reason="error: Cannot load network into target device")
 class TestModelVersionHandling:
     model_name = "pvb_face_multi_version"
 
