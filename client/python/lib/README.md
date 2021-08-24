@@ -84,7 +84,8 @@ metadata_request = ovmsclient.make_grpc_metadata_request(model_name="model")
 metadata_response = client.get_model_metadata(metadata_request)
 metadata_response.to_dict()
 
-# Examplary metadata_response.to_dict() output:
+# Examplary metadata_response.to_dict() output. Values for model:
+# https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html
 #
 #{
 #   "1": {
@@ -107,6 +108,9 @@ metadata_response.to_dict()
 
 **Create and send predict request with binary input data:**
 ```python
+# Assuming requesting model with inputs and outputs as in:
+# https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html
+
 with open(<path_to_img>, 'rb') as f:
     img = f.read()
 predict_request = ovmsclient.make_grpc_predict_request(
