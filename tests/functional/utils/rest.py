@@ -109,35 +109,39 @@ def process_json_output(result_dict, output_tensors):
 
     return output
 
-def _get_output_json(img, input_tensor, rest_url, method_to_call, request_format, timeout=None):
-    if img and input_tensor and request_format:
+
+def _get_output_json(rest_url, method_to_call,
+                     img = None, input_tensor = None, request_format = None, timeout=None):
+    if img is not None:
         data_json = prepare_body_format(img, request_format, input_tensor)
     else:
         data_json = None
     result = method_to_call(rest_url, data=data_json, timeout=timeout)
     if not result.ok or result.status_code != 200:
-        msg = f"REST {method_to_call} failed {result}"
+        msg = f"REST call: {method_to_call.__name__}() failed {result}"
+        txt = getattr(result, "text", "")
+        msg += txt
         logger.error(msg)
         raise Exception(msg)
     output_json = json.loads(result.text)
-    return output_json
+    return result.text, output_json
 
 def infer_rest(img, input_tensor, rest_url,
                output_tensors, request_format):
-    output_json = _get_output_json(img, input_tensor, rest_url, requests.post, request_format, infer_timeout)
-    data = process_json_output(output_json, output_tensors)
+    _, _json = _get_output_json(rest_url, requests.post, img, input_tensor, request_format, infer_timeout)
+    data = process_json_output(_json, output_tensors)
     return data
 
 
 def get_model_metadata_response_rest(rest_url):
-    output_json = _get_output_json(None, None, rest_url, requests.get, None)
+    _txt, _ = _get_output_json(rest_url, requests.get)
     metadata_pb = get_model_metadata_pb2.GetModelMetadataResponse()
-    response = Parse(output_json, metadata_pb, ignore_unknown_fields=False)
+    response = Parse(_txt, metadata_pb, ignore_unknown_fields=False)
     return response
 
 
 def get_model_status_response_rest(rest_url):
-    output_json = _get_output_json(None, None, rest_url, requests.get, None)
+    _txt, _ = _get_output_json(rest_url, requests.get)
     status_pb = get_model_status_pb2.GetModelStatusResponse()
-    response = Parse(output_json, status_pb, ignore_unknown_fields=False)
+    response = Parse(_txt, status_pb, ignore_unknown_fields=False)
     return response
