@@ -43,7 +43,9 @@ artifacts_dir = os.environ.get("BUILD_LOGS", "")
 start_container_command = os.environ.get("START_CONTAINER_COMMAND", "")
 
 """CONTAINER_LOG_LINE - log line to check in container"""
-container_log_line = os.environ.get("CONTAINER_LOG_LINE", "Server started on port")
+# For multiple log lines, pass them separated with ':'
+container_log_line = os.environ.get("CONTAINER_LOG_LINE", "Server started on port:Started REST server at")
+container_log_line = container_log_line.split(":")
 
 """OVMS_BINARY_PATH - path to ovms binary file; when specified, tests are executed against provided binary."""
 ovms_binary_path = os.environ.get("OVMS_BINARY_PATH", None)
