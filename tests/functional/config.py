@@ -86,9 +86,6 @@ rest_ovms_starting_port = get_int("TT_REST_OVMS_STARTING_PORT", 18001)
 """ TT_PORTS_POOL_SIZE- Ports pool size"""
 ports_pool_size = get_int("TT_PORTS_POOL_SIZE", 5000)
 
-"""  """
-using_xdist = ('-n' in sys.argv) or ('-c' in sys.argv)
-
 """ TT_DEFAULT_INFER_TIMEOUT - Timeout for CPU target device"""
 default_infer_timeout = get_int("TT_DEFAULT_INFER_TIMEOUT", 10)
 
@@ -100,3 +97,6 @@ if target_device == "GPU":
     infer_timeout = default_gpu_infer_timeout
 else:
     infer_timeout = default_infer_timeout
+
+""" USING_XDIST """
+using_xdist = ('-n' in sys.argv) or ('-c' in sys.argv)
