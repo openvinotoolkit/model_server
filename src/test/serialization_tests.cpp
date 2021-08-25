@@ -29,8 +29,6 @@
 #pragma GCC diagnostic pop
 
 #include "../serialization.hpp"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "ovtestutils.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>

@@ -25,8 +25,6 @@
 
 #include "../ov_utils.hpp"
 #include "../sequence.hpp"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "stateful_test_utils.hpp"
 
 TEST(Sequence, SequenceDisabled) {

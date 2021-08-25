@@ -19,8 +19,6 @@
 
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "test_utils.hpp"
 
 using namespace ovms;

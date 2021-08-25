@@ -22,8 +22,6 @@
 
 #include "../sequence_manager.hpp"
 #include "../status.hpp"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "stateful_test_utils.hpp"
 
 TEST(SequenceManager, GetUniqueSequenceIdFirstOK) {
