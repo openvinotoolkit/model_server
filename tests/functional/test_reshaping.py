@@ -167,19 +167,15 @@ class TestModelReshaping:
     def run_inference_rest(imgs, out_name, out_shape, is_correct,
                            request_format, rest_url):
         logger.info("Running rest inference call")
+        output = infer_rest(imgs, input_tensor='data',
+                            rest_url=rest_url,
+                            output_tensors=[out_name],
+                            request_format=request_format,
+                            raise_error=is_correct)
         if is_correct:
-            output = infer_rest(imgs, input_tensor='data',
-                                rest_url=rest_url,
-                                output_tensors=[out_name],
-                                request_format=request_format)
             logger.info("Output shape: {}".format(output[out_name].shape))
-            assert output[out_name].shape == out_shape, \
-                ERROR_SHAPE
+            assert output[out_name].shape == out_shape, ERROR_SHAPE
         else:
-            output = infer_rest(imgs, input_tensor='data',
-                                rest_url=rest_url,
-                                output_tensors=[out_name],
-                                request_format=request_format)
             assert not output
 
     @staticmethod
