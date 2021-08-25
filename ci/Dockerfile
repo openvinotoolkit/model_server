@@ -29,9 +29,13 @@ ADD epel.repo /etc/yum.repos.d/epel.repo
 
 RUN http_proxy=${HTTP_PROXY} yum install -y glibc.i686 libgcc.x86_64 libgcc.i686 numactl redhat-lsb-core.i686
 ADD ./kwbuildtools /tmp/kwbuildtools
-WORKDIR /ovms/src
 
-RUN /tmp/kwbuildtools/bin/kwinject --output ./out.out bazel build //src:static_analysis
+WORKDIR /example_cpp_client/cpp
+RUN /tmp/kwbuildtools/bin/kwinject --output /tmp/out.out bazel build //src:resnet_client
+
+WORKDIR /ovms/src
+RUN /tmp/kwbuildtools/bin/kwinject --output /tmp/out.out bazel build //src:static_analysis
+
 RUN echo $ENV_KLOCWORK_TOKEN > /ovms/ltoken
-RUN /tmp/kwbuildtools/bin/kwbuildproject --force --url ${ENV_KLOCWORK_URL}"${ENV_KLOCWORK_PROJECT}" --tables-directory kwtables out.out ; exit 0
+RUN /tmp/kwbuildtools/bin/kwbuildproject --force --url ${ENV_KLOCWORK_URL}"${ENV_KLOCWORK_PROJECT}" --tables-directory kwtables /tmp/out.out ; exit 0
 RUN /tmp/kwbuildtools/bin/kwadmin --url ${ENV_KLOCWORK_URL} load "${ENV_KLOCWORK_PROJECT}" kwtables

@@ -180,6 +180,9 @@ RUN apt install -y python-is-python3
 RUN TF_SYSTEM_LIBS="curl" bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 RUN TF_SYSTEM_LIBS="curl" bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
+WORKDIR /example_cpp_client
+COPY example_client/cpp/ /example_cpp_client/cpp
+
 WORKDIR /ovms
 
 COPY src/ /ovms/src/
