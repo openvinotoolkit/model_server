@@ -14,20 +14,17 @@
 # limitations under the License.
 #
 
-package(
-    default_visibility = ["//visibility:public"],
-)
+import numpy as np
+from imagenet_classes import imagenet_classes
 
-cc_library(
-    name = "opencv",
-    srcs = glob([
-        "lib/libopencv_core.so",
-        "lib/libopencv_imgcodecs.so",
-        "lib/libopencv_imgproc.so"
-    ]),
-    hdrs = glob([
-        "include/**/*.*"
-    ]),
-    strip_include_prefix = "include",
-    visibility = ["//visibility:public"],
-)
+
+def resnet_postprocess(response, output_name):
+    response_dict = response.to_dict()
+    output = response_dict[output_name]
+    predicted_class = np.argmax(output[0])
+    offset = 0
+    if output.shape[1] == 1001:
+        offset = 1
+    confidence_score = output[0][predicted_class]
+    label = imagenet_classes[predicted_class-offset]
+    return label, confidence_score
