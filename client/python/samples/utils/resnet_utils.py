@@ -21,6 +21,10 @@ from imagenet_classes import imagenet_classes
 def resnet_postprocess(response, output_name):
     response_dict = response.to_dict()
     output = response_dict[output_name]
-    label = np.argmax(output[0])
-    confidence_score = output[0][label]
-    return imagenet_classes[label-1], confidence_score
+    predicted_class = np.argmax(output[0])
+    offset = 0
+    if output.shape[1] == 1001:
+        offset = 1
+    confidence_score = output[0][predicted_class]
+    label = imagenet_classes[predicted_class-offset]
+    return label, confidence_score

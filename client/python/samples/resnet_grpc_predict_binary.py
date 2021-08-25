@@ -18,7 +18,6 @@ import argparse
 from ovmsclient import make_grpc_client, make_grpc_predict_request
 from utils.common import read_image_paths, load_image, get_model_io_names
 from utils.resnet_utils import resnet_postprocess
-from imagenet_classes import imagenet_classes
 
 
 parser = argparse.ArgumentParser(description='Make prediction using images in binary format')
@@ -58,7 +57,7 @@ for img_path in img_paths:
     # reading image and its label
     img = load_image(img_path)
 
-    # preparing predict request
+    # preparing predict request 
     inputs = {
         input_name: img
     }
@@ -68,5 +67,5 @@ for img_path in img_paths:
     response = client.predict(request)
 
     # response post processing
-    imagenet_class, confidence_score = resnet_postprocess(response, output_name)
-    print(f"Image {img_path} has been classified as {imagenet_class} with {confidence_score*100}% confidence")
+    label, confidence_score = resnet_postprocess(response, output_name)
+    print(f"Image {img_path} has been classified as {label} with {confidence_score*100}% confidence")
