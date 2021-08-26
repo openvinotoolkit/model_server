@@ -1,8 +1,6 @@
 # OpenVINO&trade; Model Server Client Library Example Clients
 
-This document contains examples to run *GetModelStatus*, *GetModelMetadata*, *Predict* functions over gRPC API and REST API.
-
-[Stateful model example](stateful) to run *Predict* functions over gRPC and REST API on stateful Kaldi model.
+This document contains examples to run *GetModelStatus*, *GetModelMetadata*, *Predict* functions over gRPC API.
 
 It covers following topics:
 * <a href="#grpc-api">gRPC API Example Clients </a>
@@ -45,18 +43,18 @@ usage: get_grpc_model_status.py [-h] [--grpc_address GRPC_ADDRESS]
                                 [--model_name MODEL_NAME]
                                 [--model_version MODEL_VERSION]
 
+
 optional arguments:
   -h, --help            show this help message and exit
   --grpc_address GRPC_ADDRESS Specify url to grpc service. default:localhost
   --grpc_port GRPC_PORT Specify port to grpc service. default: 9000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. Lists all versions if omitted
-
-
+```
 
 - Usage Example
 
-```bash
+```
 python get_grpc_model_status.py --grpc_port 9000 --model_name resnet
 {1: {'state': 'AVAILABLE', 'error_code': 0, 'error_message': 'OK'}}
 ```
@@ -75,7 +73,6 @@ usage: get_grpc_model_metadata.py [-h] [--grpc_address GRPC_ADDRESS]
                                   [--model_name MODEL_NAME]
                                   [--model_version MODEL_VERSION]
 
-```
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -83,11 +80,10 @@ optional arguments:
   --grpc_port GRPC_PORT Specify port to grpc service. default: 9000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. Lists all versions if omitted
-
-
+```
 - Usage Example
 
-```bash
+```
 python get_grpc_model_metadata.py --grpc_port 9000 --model_name resnet --model_version 1
 {1: {'inputs': {'data': {'shape': [1, 3, 224, 224], 'dtype': 'DT_FLOAT'}}, 'outputs': {'prob': {'shape': [1, 1000], 'dtype': 'DT_FLOAT'}}}}
 ```
@@ -105,7 +101,6 @@ usage: resnet_grpc_predict_binary.py [-h] --images_dir IMAGES_DIR
                               [--model_name MODEL_NAME]
                               [--model_version MODEL_VERSION]
 
-```
 
 optional arguments:
   -h, --help            show this help message and exit --images_dir IMAGES_DIR
@@ -114,10 +109,10 @@ optional arguments:
   --grpc_port GRPC_PORT Specify port to grpc service. default: 9000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. default: latest available
-
+```
 - Usage example
 
-```bash
+```
 python resnet_grpc_predict_binary.py --grpc_port 9000 --images_dir images --model_name resnet
 ```
 
@@ -134,7 +129,6 @@ usage: resnet_grpc_predict.py [-h] --images_dir IMAGES_DIR
                               [--model_name MODEL_NAME]
                               [--model_version MODEL_VERSION]
 
-```
 
 optional arguments:
   -h, --help            show this help message and exit --images_dir IMAGES_DIR
@@ -143,10 +137,10 @@ optional arguments:
   --grpc_port GRPC_PORT Specify port to grpc service. default: 9000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. default: latest available
-
+```
 - Usage example
 
-```bash
+```
 python resnet_grpc_predict.py --grpc_port 9000 --images_dir images --model_name resnet
 ```
 
@@ -165,7 +159,6 @@ usage: vehicle_detection_predict_binary.py [-h] --images_dir IMAGES_DIR
                                            [--model_version MODEL_VERSION]
                                            --output_save_path OUTPUT_SAVE_PATH
 
-```
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -175,7 +168,7 @@ optional arguments:
   --model_name MODEL_NAME Model name to query. default: vehicle-detection
   --model_version MODEL_VERSION Model version to query. default: latest available
   --output_save_path OUTPUT_SAVE_PATH Path to store output.
-
+```
 
 - Usage example
 
