@@ -41,7 +41,6 @@ class BuildApis(Command):
 
     def run(self):
         self.build_tfs_api()
-        self.build_ovmsclient_api()
 
 
 setuptools.setup(
