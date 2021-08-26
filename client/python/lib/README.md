@@ -14,7 +14,8 @@ The client library requires Python in version >= 3.6.
 Prerequisites:
  - Python 3.6 +
  - Python package [setuptools](https://pypi.org/project/setuptools/)
- - [protobuf-compiler](https://grpc.io/docs/protoc-installation/)
+ - Protoc 3.6.1 + [protobuf-compiler](https://grpc.io/docs/protoc-installation/)
+    We recomend to install [pre-compiled binaries](https://grpc.io/docs/protoc-installation/#install-pre-compiled-binaries-any-os) to get newest protoc version
 
 **To build the package run:**
 
