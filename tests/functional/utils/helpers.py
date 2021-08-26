@@ -48,6 +48,19 @@ def get_int(key_name, fallback=None):
     return value
 
 
+def get_bool(key_name, fallback=None):
+    value = os.environ.get(key_name, fallback)
+    if value != fallback:
+        value = value.lower()
+        if value == "true":
+            value = True
+        elif value == "false":
+            value = False
+        else:
+            raise ValueError("Value of {} env variable is '{}'. Should be 'True' or 'False'.".format(key_name, value))
+    return value
+
+
 def get_xdist_worker_count():
     return int(os.environ.get("PYTEST_XDIST_WORKER_COUNT", "1"))
 
