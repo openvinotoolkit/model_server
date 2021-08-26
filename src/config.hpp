@@ -85,7 +85,7 @@ public:
          *
          * @return bool
          */
-    bool check_hostname_or_ip(const std::string& input);
+    static bool check_hostname_or_ip(const std::string& input);
 
     /**
          * @brief Get the config path
