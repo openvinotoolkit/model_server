@@ -19,12 +19,12 @@ from ovmsclient import make_grpc_client, make_grpc_predict_request
 from utils.common import load_image, read_image_paths, get_model_io_names
 from utils.vehicle_utils import vehicle_postprocess
 
-parser = argparse.ArgumentParser(description='Make prediction using images in binary format')
+parser = argparse.ArgumentParser(description='Make vehicle detection prediction using images in binary format')
 parser.add_argument('--images_dir', required=True,
                     help='Path to a directory with images in JPG or PNG format')
 parser.add_argument('--grpc_address', required=False, default='localhost',
                     help='Specify url to grpc service. default:localhost')
-parser.add_argument('--grpc_port', required=False, default=9000,
+parser.add_argument('--grpc_port', required=False, default=9000, type=int,
                     help='Specify port to grpc service. default: 9000')
 parser.add_argument('--model_name', default='vehicle-detection',
                     help='Model name to query. default: vehicle-detection')

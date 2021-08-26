@@ -25,7 +25,7 @@ parser.add_argument('--images_dir', required=True,
                     help='Path to a directory with images in JPG or PNG format')
 parser.add_argument('--grpc_address', required=False, default='localhost',
                     help='Specify url to grpc service. default:localhost')
-parser.add_argument('--grpc_port', required=False, default=9000,
+parser.add_argument('--grpc_port', required=False, default=9000, type=int,
                     help='Specify port to grpc service. default: 9000')
 parser.add_argument('--model_name', default='resnet', help='Model name to query. default: resnet',
                     dest='model_name')
