@@ -17,7 +17,7 @@
 import numpy as np
 import pytest
 from constants import ERROR_SHAPE
-from config import target_device
+from config import target_device, skip_nginx_test
 from model.models_information import FaceDetection
 from utils.grpc import create_channel, infer
 import logging
@@ -37,6 +37,7 @@ auto_shapes = [
 fixed_shape = {'in': (1, 3, 600, 600), 'out': (1, 1, 200, 7)}
 
 
+@pytest.mark.skipif(skip_nginx_test, reason="not implemented yet")
 @pytest.mark.skipif(target_device == "MYRIAD",
                     reason="error: Cannot load network into target device")
 class TestModelReshaping:

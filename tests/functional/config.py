@@ -105,3 +105,10 @@ infer_timeouts = {
     "MYRIAD" : default_myriad_infer_timeout,
 }
 infer_timeout = infer_timeouts[target_device]
+
+""" TT_IS_NGINX_MTLS - Specify if given image is OVSA nginx mtls image. If not specified, detect from image name"""
+is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", "nginx-mtls" in image)
+
+""" TT_SKIP_TEST_IF_IS_NGINX_MTLS """
+skip_nginx_test = get_bool("TT_SKIP_TEST_IF_IS_NGINX_MTLS", "True")
+skip_nginx_test = skip_nginx_test and is_nginx_mtls
