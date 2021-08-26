@@ -29,7 +29,7 @@ The given SavedModel SignatureDef contains the following output(s):
 Generate OpenVINO IR model format using model optimiser in a docker container:
 
 ```bash
-docker run -it -v /tmp/increment/1:/model openvino/ubuntu18_dev python3 /opt/intel/openvino/deployment_tools/model_optimizer/mo.py --saved_model_dir /model/ --batch 1 --output_dir /model/
+docker run -it -v /tmp/increment/1:/model openvino/ubuntu20_dev python3 /opt/intel/openvino/deployment_tools/model_optimizer/mo.py --saved_model_dir /model/ --batch 1 --output_dir /model/
 
 ```
 
@@ -60,6 +60,6 @@ The given SavedModel SignatureDef contains the following output(s):
 Generate OpenVINO IR model format using model optimiser in a docker container:
 
 ```bash
-docker run -it -v /tmp/argmax:/model openvino/ubuntu18_dev python3 /opt/intel/openvino_2020.1.023/deployment_tools/model_optimizer/mo.py --saved_model_dir /model/ --batch 1 --output_dir /model/
+docker run -it -v /tmp/argmax:/model openvino/ubuntu20_dev python3 /opt/intel/openvino_2020.1.023/deployment_tools/model_optimizer/mo.py --saved_model_dir /model/ --batch 1 --output_dir /model/
 
 ```
