@@ -16,7 +16,7 @@
 
 import os
 
-from utils.helpers import get_int
+from utils.helpers import get_int, get_bool
 from utils.parametrization import generate_test_object_name
 
 try:
