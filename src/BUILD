@@ -126,6 +126,8 @@ cc_library(
         "prediction_service.hpp",
         "prediction_service_utils.hpp",
         "prediction_service_utils.cpp",
+        "predict_request_validation_utils.hpp",
+        "predict_request_validation_utils.cpp",
         "sequence_processing_spec.hpp",
         "rest_parser.cpp",
         "rest_parser.hpp",
