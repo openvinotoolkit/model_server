@@ -13,14 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
+import pickle
+import time
 
-from collections import defaultdict
-from itertools import cycle
-
-import pytest
-import _pytest
-
+from config import artifacts_dir
 from xdist.dsession import LoadScheduling
+
 
 
 class OvmsCLoadScheduling(LoadScheduling):
@@ -43,20 +42,29 @@ class OvmsCLoadScheduling(LoadScheduling):
         self.collection = list(self.node2collection.values())[0]
         self.pending[:] = range(len(self.collection))
 
-        all_tests = sorted(list(self.node2collection.values())[0])
-        self.per_test_class_dict = defaultdict(lambda: [])
-        for test in all_tests:
-            file, test_class, test_name = test.split("::")
-            self.per_test_class_dict[test_class].append(test)
-
-        while self.per_test_class_dict:
-            for node in self.nodes:
-                self._assign_tasks_to_node(node)
-                if not self.per_test_class_dict:
-                    break
 
         for node in self.nodes:
-            node.shutdown()
+           # logger.error(f"artifacts_dir")
+            path_to_test_list = os.path.join(artifacts_dir, f"assigned_tests_{node.workerinput['workerid']}.xdist")
+            with open(path_to_test_list, "rb") as file:
+                test_list = pickle.load(file)
+                self._assign_tests_to_node(node, test_list)
+
+        # all_tests = sorted(list(self.node2collection.values())[0])
+        # self.per_test_class_dict = defaultdict(lambda: [])
+        # for tile, test_class, test_name = test.split("::")
+        #         #     self.per_test_class_dict[test_class].append(test)
+        #         #
+        #         # while self.per_test_class_dict:
+        #         #     for node in self.nodes:
+        #         #         self._assign_tasks_to_node(node)
+        #         #         if not self.per_test_class_dict:
+        #         #             breakest in all_tests:
+
+        if not self.pending:
+            # initial distribution sent all tests, start node shutdown
+            for node in self.nodes:
+                node.shutdown()
 
     # def check_schedule(self, node, duration=0):
     #     """Maybe schedule new items on the node
@@ -69,12 +77,8 @@ class OvmsCLoadScheduling(LoadScheduling):
     #     if node.shutting_down:
     #         return
 
-    # def _assign_tasks_to_node(self, node):
-    #     if not self.per_test_class_dict:
-    #         return
-    #     test_class, test_list = sorted(list(self.per_test_class_dict.items()), key=lambda x: len(x[1]))[-1]
-    #     del self.per_test_class_dict[test_class]
-    #     test_indexes = list(map(lambda x: self.collection.index(x), test_list))
-    #     self.node2pending[node].extend(test_indexes)
-    #     node.send_runtest_some(test_indexes)
-    #     return
+    def _assign_tests_to_node(self, node, tests):
+        test_indexes = list(map(lambda x: self.collection.index(x), tests))
+        self.node2pending[node].extend(test_indexes)
+        node.send_runtest_some(test_indexes)
+        return

@@ -15,6 +15,7 @@
 #
 import logging
 import os
+import pickle
 from collections import defaultdict
 from logging import FileHandler
 
@@ -24,7 +25,8 @@ from _pytest._code import ExceptionInfo, filter_traceback  # noqa
 from _pytest.outcomes import OutcomeException
 
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
-from functional.utils.xdist_utils import OvmsCLoadScheduling
+from utils.helpers import get_xdist_worker_nr, get_xdist_worker_count
+from utils.xdist_utils import OvmsCLoadScheduling
 from object_model.server import Server
 from utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
     get_containers_with_tests_suffix, get_docker_client
@@ -159,9 +161,23 @@ def pytest_collection_finish(session):
             current_node = []
             fixtures_working.append(max(server_fixtures_to_item.items(), key=most_cases_lambda)[0])
     session.items = ordered_items
-    session.config._task_for_nodes = tasks_for_nodes
 
-#
+    node_to_test = [[] for i in range(get_xdist_worker_count())]
+    for tasks in tasks_for_nodes:
+        idx_min_tasks = node_to_test.index(min(node_to_test, key=lambda x: len(x)))
+        node_to_test[idx_min_tasks].extend(tasks)
+
+    #assert 0
+    worker = os.environ.get("PYTEST_XDIST_WORKER", None)
+    if worker:
+        assigned_tests_path = os.path.join(artifacts_dir, f"assigned_tests_{worker}.xdist")
+        with open(assigned_tests_path, "wb") as file:
+            test_ids = list(map(lambda x: x.nodeid, node_to_test[get_xdist_worker_nr()]))
+            f = pickle.dump(test_ids, file)
+            ff = 0
+    foo = 0
+
+
 # if not using_xdist:
 #     @pytest.hookimpl(hookwrapper=True)
 #     def pytest_runtestloop(session):
@@ -226,7 +242,8 @@ def pytest_runtest_teardown(item):
     yield
     # Test finished: remove test item for all fixtures that was used
     for fixture in item._server_fixtures:
-        item.session._server_fixtures_to_item[fixture].remove(item)
+        if item in item.session._server_fixtures_to_item[fixture]:
+            item.session._server_fixtures_to_item[fixture].remove(item)
         if len(item.session._server_fixtures_to_item[fixture]) == 0:
             # No other tests will use this docker instance so we can close it.
             Server.stop_by_fixture_name(fixture)
