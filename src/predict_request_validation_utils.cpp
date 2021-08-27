@@ -14,3 +14,23 @@
 // limitations under the License.
 //*****************************************************************************
 #include "predict_request_validation_utils.hpp"
+
+#include <string>
+#include <sstream>
+
+#include <spdlog/spdlog.h>
+
+namespace ovms {
+
+Status validateNumberOfInputs_New(const tensorflow::serving::PredictRequest& request, const size_t expectedNumberOfInputs) {
+    if (request.inputs_size() > 0 && expectedNumberOfInputs == static_cast<size_t>(request.inputs_size())) {
+        return StatusCode::OK;
+    }
+    std::stringstream ss;
+    ss << "Expected: " << expectedNumberOfInputs << "; Actual: " << request.inputs_size();
+    const std::string details = ss.str();
+    SPDLOG_DEBUG("[requested model:{} version:{}] Invalid number of inputs - {}", request.model_spec().name(), request.model_spec().version().value(), details);
+    return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
+}
+
+}  // namespace ovms

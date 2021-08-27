@@ -20,6 +20,13 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "status.hpp"
+#include "tensorinfo.hpp"
+
 namespace ovms {
+
+// TODO: Separate namespace?
+
+Status validateNumberOfInputs_New(const tensorflow::serving::PredictRequest& request, const size_t expectedNumberOfInputs);
 
 }  // namespace ovms

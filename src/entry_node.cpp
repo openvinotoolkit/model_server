@@ -24,6 +24,7 @@
 
 #include "binaryutils.hpp"
 #include "deserialization.hpp"
+#include "predict_request_validation_utils.hpp"
 #include "logging.hpp"
 
 #pragma GCC diagnostic push
@@ -117,16 +118,16 @@ Status EntryNode::createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, con
     return StatusCode::OK;
 }
 
-const Status EntryNode::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
-    if (request->inputs_size() < 0 || expectedNumberOfInputs != static_cast<size_t>(request->inputs_size())) {
-        std::stringstream ss;
-        ss << "Expected: " << expectedNumberOfInputs << "; Actual: " << request->inputs_size();
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("Invalid number of inputs - {}", details);
-        return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
-    }
-    return StatusCode::OK;
-}
+// const Status EntryNode::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
+//     if (request->inputs_size() < 0 || expectedNumberOfInputs != static_cast<size_t>(request->inputs_size())) {
+//         std::stringstream ss;
+//         ss << "Expected: " << expectedNumberOfInputs << "; Actual: " << request->inputs_size();
+//         const std::string details = ss.str();
+//         SPDLOG_DEBUG("Invalid number of inputs - {}", details);
+//         return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
+//     }
+//     return StatusCode::OK;
+// }
 
 const Status EntryNode::checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput) {
     for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
@@ -256,8 +257,7 @@ const Status EntryNode::validate() {
     // Network and request must have the same amount of inputs.
     // This cannot be unified with model instance due to different requirements.
     // Stateful models contain more numbers of inputs due to additional state inputs.
-    auto expectedNumberOfInputs = inputsInfo.size();
-    finalStatus = validateNumberOfInputs(request, expectedNumberOfInputs);
+    finalStatus = validateNumberOfInputs_New(*request, inputsInfo.size());
     if (!finalStatus.ok())
         return finalStatus;
 

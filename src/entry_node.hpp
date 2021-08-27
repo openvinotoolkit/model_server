@@ -59,8 +59,8 @@ public:
 
     Status isInputBinary(const std::string& name, bool& isBinary) const;
 
-    const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
-        const size_t expectedNumberOfInputs);
+    // const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
+    //     const size_t expectedNumberOfInputs);
 
     const Status checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput);
 

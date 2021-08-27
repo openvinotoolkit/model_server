@@ -35,6 +35,7 @@
 #include "logging.hpp"
 #include "ov_utils.hpp"
 #include "prediction_service_utils.hpp"
+#include "predict_request_validation_utils.hpp"
 #include "serialization.hpp"
 #include "stringutils.hpp"
 #include "tensorinfo.hpp"
@@ -741,14 +742,15 @@ const Status ModelInstance::checkIfShapeValuesNegative(const tensorflow::TensorP
     return StatusCode::OK;
 }
 const Status ModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
-    if (request->inputs_size() < 0 || expectedNumberOfInputs != static_cast<size_t>(request->inputs_size())) {
-        std::stringstream ss;
-        ss << "Expected: " << expectedNumberOfInputs << "; Actual: " << request->inputs_size();
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[Model:{} version:{}] Invalid number of inputs - {}", getName(), getVersion(), details);
-        return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
-    }
-    return StatusCode::OK;
+    return validateNumberOfInputs_New(*request, expectedNumberOfInputs);    
+    // if (request->inputs_size() < 0 || expectedNumberOfInputs != static_cast<size_t>(request->inputs_size())) {
+    //     std::stringstream ss;
+    //     ss << "Expected: " << expectedNumberOfInputs << "; Actual: " << request->inputs_size();
+    //     const std::string details = ss.str();
+    //     SPDLOG_DEBUG("[Model:{} version:{}] Invalid number of inputs - {}", getName(), getVersion(), details);
+    //     return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
+    // }
+    // return StatusCode::OK;
 }
 
 const Status ModelInstance::validatePrecision(const ovms::TensorInfo& networkInput,
