@@ -20,7 +20,7 @@ from utils.common import get_model_io_names, read_image_paths, read_imgs_as_ndar
 from utils.resnet_utils import resnet_postprocess
 
 
-parser = argparse.ArgumentParser(description='Make prediction using images in binary format')
+parser = argparse.ArgumentParser(description='Make prediction using images in numerical format')
 parser.add_argument('--images_dir', required=True,
                     help='Path to a directory with images in JPG or PNG format')
 parser.add_argument('--grpc_address', required=False, default='localhost',
@@ -68,4 +68,4 @@ for i, img in enumerate(imgs):
 
     # response post processing
     label, confidence_score = resnet_postprocess(response, output_name)
-    print(f"Image {imgs_paths[i]} has been classified as {label} with {confidence_score}% confidence")
+    print(f"Image {imgs_paths[i]} has been classified as {label} with {confidence_score*100}% confidence")
