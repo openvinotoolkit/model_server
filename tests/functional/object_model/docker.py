@@ -99,6 +99,12 @@ class Docker:
         self.ensure_logs_contains()
         logger.info(f"Container started grpc_port:{self.grpc_port}\trest_port:{self.rest_port}")
         logger.debug(f"Container starting command args: {self.start_container_command}")
+
+        tt = list(map(lambda x: x.name, self.client.containers.list()))
+        tt = list(map(lambda x: "_".join(x.split("_")[2:-3]), tt))
+
+        foo = 0
+
         return self.container, {"grpc_port": self.grpc_port, "rest_port": self.rest_port}
 
     def stop(self):
