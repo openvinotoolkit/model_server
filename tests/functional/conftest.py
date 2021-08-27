@@ -83,6 +83,11 @@ def pytest_configure():
     # Perform initial configuration.
     init_logger()
 
+    # if not os.environ.get("PYTEST_XDIST_WORKER", None):
+    #     copy_cached_models_to_test_dir()
+    #     copy_cached_resnet_models()
+
+
     init_conf_logger = logging.getLogger("init_conf")
 
     container_names = get_containers_with_tests_suffix()
@@ -118,12 +123,19 @@ def _get_server_fixtures(item):
     server_fixtures = list(filter(lambda x: "start_server_" in x, item.fixturenames))
     return server_fixtures
 
-@pytest.hookimpl(hookwrapper=True)
-def pytest_collection_finish(session):
-    yield
-    # Collect all fixtures that starts Docker instance
-    # This map will keep fixture usages in
 
+def pytest_collection_modifyitems(session, config, items):
+    items = reorder_items(session)
+
+
+#
+# @pytest.hookimpl(hookwrapper=True)
+# def pytest_collection_finish(session):
+#     yield
+#     # Collect all fixtures that starts Docker instance
+#     # This map will keep fixture usages in
+#
+def reorder_items(session):
     server_fixtures_to_item = defaultdict(lambda: [])
     for item in session.items:
         item._server_fixtures = _get_server_fixtures(item)
@@ -175,7 +187,7 @@ def pytest_collection_finish(session):
             test_ids = list(map(lambda x: x.nodeid, node_to_test[get_xdist_worker_nr()]))
             f = pickle.dump(test_ids, file)
             ff = 0
-    foo = 0
+    return ordered_items
 
 
 # if not using_xdist:
