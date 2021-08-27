@@ -118,10 +118,10 @@ def test_make_ndarray_invalid_shape_does_not_match():
 
 @pytest.mark.parametrize("params, expected_shape, expected_dtype", [
     ({"values": [1, 2, 3]},
-     TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]), DataType.DT_INT64
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]), DataType.DT_INT32
      ),
     ({"values": [1, 2, 3], "shape": [3]},
-     TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]), DataType.DT_INT64
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]), DataType.DT_INT32
      ),
     ({"values": [1, 2, 3], "dtype": DataType.DT_INT8},
      TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]), DataType.DT_INT8
@@ -156,7 +156,7 @@ def test_make_ndarray_invalid_shape_does_not_match():
 ])
 def test_make_tensor_proto_valid_int(params, expected_shape, expected_dtype):
     tensor_proto = make_tensor_proto(**params)
-    np_dtype = TENSOR_TO_NP_MAP.get(params.get("dtype"))
+    np_dtype = TENSOR_TO_NP_MAP.get(expected_dtype)
     np_values = np.array(params["values"], dtype=np_dtype)
 
     assert tensor_proto.tensor_content == np_values.tobytes()
@@ -166,13 +166,13 @@ def test_make_tensor_proto_valid_int(params, expected_shape, expected_dtype):
 
 @pytest.mark.parametrize("params, expected_shape, expected_dtype", [
     ({"values": []},
-     TensorShapeProto(dim=[TensorShapeProto.Dim(size=0)]), DataType.DT_DOUBLE
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=0)]), DataType.DT_FLOAT
      ),
     ({"values": [], "shape": []},
-     TensorShapeProto(dim=[TensorShapeProto.Dim(size=0)]), DataType.DT_DOUBLE
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=0)]), DataType.DT_FLOAT
      ),
     ({"values": [], "shape": [0]},
-     TensorShapeProto(dim=[TensorShapeProto.Dim(size=0)]), DataType.DT_DOUBLE
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=0)]), DataType.DT_FLOAT
      ),
     ({"values": [], "dtype": DataType.DT_INT8},
      TensorShapeProto(dim=[TensorShapeProto.Dim(size=0)]), DataType.DT_INT8
@@ -189,7 +189,7 @@ def test_make_tensor_proto_valid_int(params, expected_shape, expected_dtype):
 ])
 def test_make_tensor_proto_valid_empty_list(params, expected_shape, expected_dtype):
     tensor_proto = make_tensor_proto(**params)
-    np_dtype = TENSOR_TO_NP_MAP.get(params.get("dtype"))
+    np_dtype = TENSOR_TO_NP_MAP.get(expected_dtype)
     np_values = np.array(params["values"], dtype=np_dtype)
 
     assert tensor_proto.tensor_content == np_values.tobytes()
@@ -200,11 +200,11 @@ def test_make_tensor_proto_valid_empty_list(params, expected_shape, expected_dty
 @pytest.mark.parametrize("params, expected_shape, expected_dtype", [
     ({"values": [[], [], []]},
      TensorShapeProto(dim=[TensorShapeProto.Dim(size=3), TensorShapeProto.Dim(size=0)]),
-     DataType.DT_DOUBLE
+     DataType.DT_FLOAT
      ),
     ({"values": [[], [], []], "shape": [3, 0]},
      TensorShapeProto(dim=[TensorShapeProto.Dim(size=3), TensorShapeProto.Dim(size=0)]),
-     DataType.DT_DOUBLE
+     DataType.DT_FLOAT
      ),
     ({"values": [[], [], []], "dtype": DataType.DT_INT8},
      TensorShapeProto(dim=[TensorShapeProto.Dim(size=3), TensorShapeProto.Dim(size=0)]),
@@ -221,7 +221,7 @@ def test_make_tensor_proto_valid_empty_list(params, expected_shape, expected_dty
 ])
 def test_make_tensor_proto_valid_empty_list_of_empty_lists(params, expected_shape, expected_dtype):
     tensor_proto = make_tensor_proto(**params)
-    np_dtype = TENSOR_TO_NP_MAP.get(params.get("dtype"))
+    np_dtype = TENSOR_TO_NP_MAP.get(expected_dtype)
     np_values = np.array(params["values"], dtype=np_dtype)
 
     assert tensor_proto.tensor_content == np_values.tobytes()
@@ -231,10 +231,10 @@ def test_make_tensor_proto_valid_empty_list_of_empty_lists(params, expected_shap
 
 @pytest.mark.parametrize("params, expected_shape, expected_dtype", [
     ({"values": [1.0, 2.0, 3.0]},
-     TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]), DataType.DT_DOUBLE
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]), DataType.DT_FLOAT
      ),
     ({"values": [1.0, 2.0, 3.0], "shape": [3]},
-     TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]), DataType.DT_DOUBLE
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]), DataType.DT_FLOAT
      ),
     ({"values": [1.0, 2.0, 3.0], "dtype": DataType.DT_INT16},
      TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]), DataType.DT_INT16
@@ -251,7 +251,7 @@ def test_make_tensor_proto_valid_empty_list_of_empty_lists(params, expected_shap
 ])
 def test_make_tensor_proto_valid_float(params, expected_shape, expected_dtype):
     tensor_proto = make_tensor_proto(**params)
-    np_dtype = TENSOR_TO_NP_MAP.get(params.get("dtype"))
+    np_dtype = TENSOR_TO_NP_MAP.get(expected_dtype)
     np_values = np.array(params["values"], dtype=np_dtype)
 
     assert tensor_proto.tensor_content == np_values.tobytes()
@@ -261,12 +261,12 @@ def test_make_tensor_proto_valid_float(params, expected_shape, expected_dtype):
 
 @pytest.mark.parametrize("params, expected_shape, expected_dtype, expected_field", [
     ({"values": 5.0},
-     TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]), DataType.DT_DOUBLE,
-     "double_val"
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]), DataType.DT_FLOAT,
+     "float_val"
      ),
     ({"values": 5.0, "shape": [1]},
-     TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]), DataType.DT_DOUBLE,
-     "double_val"
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]), DataType.DT_FLOAT,
+     "float_val"
      ),
     ({"values": 5.0, "dtype": DataType.DT_INT32},
      TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]), DataType.DT_INT32,
@@ -315,7 +315,7 @@ def test_make_tensor_proto_valid_float(params, expected_shape, expected_dtype):
 ])
 def test_make_tensor_proto_valid_scalar(params, expected_shape, expected_dtype, expected_field):
     tensor_proto = make_tensor_proto(**params)
-    np_dtype = TENSOR_TO_NP_MAP.get(params.get("dtype"))
+    np_dtype = TENSOR_TO_NP_MAP.get(expected_dtype)
     np_values = np.array(params["values"], dtype=np_dtype)
 
     assert tensor_proto.__getattribute__(expected_field) == np_values
@@ -419,14 +419,14 @@ def test_make_tensor_proto_valid_string_batch_size_2(params, expected_shape, exp
 @pytest.mark.parametrize("params, expected_shape, expected_dtype", [
     ({"values": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]},
      TensorShapeProto(dim=[TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)]),
-     DataType.DT_DOUBLE,
+     DataType.DT_FLOAT,
      ),
     ({"values": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]], "shape": [2, 3]},
      TensorShapeProto(dim=[TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)]),
-     DataType.DT_DOUBLE,
+     DataType.DT_FLOAT,
      ),
     ({"values": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]], "shape": [6]},
-     TensorShapeProto(dim=[TensorShapeProto.Dim(size=6)]), DataType.DT_DOUBLE,
+     TensorShapeProto(dim=[TensorShapeProto.Dim(size=6)]), DataType.DT_FLOAT,
      ),
     ({"values": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]], "dtype": DataType.DT_INT32},
      TensorShapeProto(dim=[TensorShapeProto.Dim(size=2), TensorShapeProto.Dim(size=3)]),
@@ -493,7 +493,7 @@ def test_make_tensor_proto_valid_string_batch_size_2(params, expected_shape, exp
 ])
 def test_make_tensor_proto_valid_2_dims_shape(params, expected_shape, expected_dtype):
     tensor_proto = make_tensor_proto(**params)
-    np_dtype = TENSOR_TO_NP_MAP.get(params.get("dtype"))
+    np_dtype = TENSOR_TO_NP_MAP.get(expected_dtype)
     np_values = np.array(params["values"], dtype=np_dtype)
 
     assert tensor_proto.tensor_content == np_values.tobytes()
