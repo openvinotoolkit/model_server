@@ -23,6 +23,7 @@ Build and install [Model Server Client Library](../lib)
 
 Download [Resnet50-tf Model](https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html) and Convert it into Inference Engine Format
 and place the xml and bin files in the /resnet/model/path/1
+
 For numeric format data OVMS can be started using a command:
 ```bash
 docker run -d --rm -v /resnet/model/path:/model -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models --port 9000 --rest_port 8000
