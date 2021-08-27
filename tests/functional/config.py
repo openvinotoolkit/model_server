@@ -17,7 +17,7 @@
 import os
 import sys
 
-from utils.helpers import get_int
+from utils.helpers import get_int, get_bool
 from utils.parametrization import generate_test_object_name
 
 try:
@@ -97,6 +97,13 @@ if target_device == "GPU":
     infer_timeout = default_gpu_infer_timeout
 else:
     infer_timeout = default_infer_timeout
+
+""" TT_IS_NGINX_MTLS - Specify if given image is OVSA nginx mtls image. If not specified, detect from image name"""
+is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", "nginx-mtls" in image)
+
+""" TT_SKIP_TEST_IF_IS_NGINX_MTLS """
+skip_nginx_test = get_bool("TT_SKIP_TEST_IF_IS_NGINX_MTLS", "True")
+skip_nginx_test = skip_nginx_test and is_nginx_mtls
 
 """ USING_XDIST """
 using_xdist = ('-n' in sys.argv) or ('-c' in sys.argv)

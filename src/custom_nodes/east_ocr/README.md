@@ -15,6 +15,11 @@ make
 ```
 It will compile the library inside a docker container and save the results in `lib` folder.
 
+You can also select base OS between RH 8.4 (redhat), CentOS 7 (centos) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable.
+```
+make BASE_OS=redhat
+```
+
 # Custom node inputs
 
 | Input name       | Description           | Shape  | Precision |

@@ -26,8 +26,8 @@ cc_library(
         "lib/libopencv_imgproc.so"
     ]),
     hdrs = glob([
-        "include/opencv4/**/*.*"
+        "include/**/*.*"
     ]),
-    strip_include_prefix = "include/opencv4",
+    strip_include_prefix = "include",
     visibility = ["//visibility:public"],
 )

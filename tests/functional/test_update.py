@@ -36,6 +36,7 @@ from utils.models_utils import ModelVersionState, ErrorCode, \
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.skipif(config.skip_nginx_test, reason="not implemented yet")
 class TestSingleModelInference:
 
     @staticmethod

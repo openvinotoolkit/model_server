@@ -17,7 +17,7 @@
 import pytest
 import numpy as np
 from constants import MODEL_SERVICE, ERROR_SHAPE
-from config import target_device
+from config import target_device, skip_nginx_test
 from model.models_information import Resnet
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status
@@ -26,6 +26,7 @@ from utils.models_utils import ModelVersionState, ErrorCode, ERROR_MESSAGE
 
 logger = logging.getLogger(__name__)
 
+@pytest.mark.skipif(skip_nginx_test, reason="not implemented yet")
 @pytest.mark.skipif(target_device == "MYRIAD",
                     reason="""
                     Expected: CPU_THROUGHPUT_STREAMS key is not supported for VPU;

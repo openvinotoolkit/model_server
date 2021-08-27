@@ -33,6 +33,7 @@ ARG YUM_OV_PACKAGE=intel-openvino-runtime-centos7
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
+ENV TF_SYSTEM_LIBS="curl"
 
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && yum update -d6 -y && yum install -d6 -y \
             boost169-atomic \
@@ -143,11 +144,14 @@ COPY external /ovms/external/
 COPY third_party /ovms/third_party/
 
 RUN alternatives --set python /usr/bin/python3
-RUN TF_SYSTEM_LIBS="curl" bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
-RUN TF_SYSTEM_LIBS="curl" bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
 
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
+
+WORKDIR /example_cpp_client
+COPY example_client/cpp/ /example_cpp_client/cpp
 
 WORKDIR /ovms
 
@@ -162,12 +166,12 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/:/openvino/bin/intel64/Release/lib/:/opt/intel/openvino/opencv/lib/
 
-RUN TF_SYSTEM_LIBS="curl" bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
-RUN TF_SYSTEM_LIBS="curl" bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
+RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/test/cpu_extension/ && make
 
-RUN TF_SYSTEM_LIBS="curl" bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
+RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
 
 COPY ${ovms_metadata_file} metadata.json
 
