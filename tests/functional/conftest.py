@@ -121,6 +121,7 @@ def pytest_unconfigure():
 
 def _get_server_fixtures(item):
     server_fixtures = list(filter(lambda x: "start_server_" in x, item.fixturenames))
+    assert server_fixtures
     return server_fixtures
 
 
@@ -139,8 +140,11 @@ def reorder_items(session):
     server_fixtures_to_item = defaultdict(lambda: [])
     for item in session.items:
         item._server_fixtures = _get_server_fixtures(item)
-        for fixture in item._server_fixtures:
-            server_fixtures_to_item[fixture].append(item)
+        if not item._server_fixtures:
+            server_fixtures_to_item[''].append(item)
+        else:
+            for fixture in item._server_fixtures:
+                server_fixtures_to_item[fixture].append(item)
     session._server_fixtures_to_item = server_fixtures_to_item.copy()
 
     # Try to order test execution minimal 'start_server_*' fixtures working
@@ -168,25 +172,39 @@ def reorder_items(session):
                         del server_fixtures_to_item[item]
         fixtures_working.remove(current_fixture)
         del server_fixtures_to_item[current_fixture]
-        if not fixtures_working and server_fixtures_to_item:
+        if not fixtures_working:
             tasks_for_nodes.append(current_node)
             current_node = []
             fixtures_working.append(max(server_fixtures_to_item.items(), key=most_cases_lambda)[0])
+        if not server_fixtures_to_item:
+            tasks_for_nodes.append(current_node)
+
+
     session.items = ordered_items
+
 
     node_to_test = [[] for i in range(get_xdist_worker_count())]
     for tasks in tasks_for_nodes:
         idx_min_tasks = node_to_test.index(min(node_to_test, key=lambda x: len(x)))
         node_to_test[idx_min_tasks].extend(tasks)
 
+    i = 0
+    foo = []
+    for x in node_to_test:
+        i += len(x)
+        foo.extend(x)
     #assert 0
+
+    for item in ordered_items:
+        if item not in foo:
+            fff = 0
+
     worker = os.environ.get("PYTEST_XDIST_WORKER", None)
     if worker:
         assigned_tests_path = os.path.join(artifacts_dir, f"assigned_tests_{worker}.xdist")
         with open(assigned_tests_path, "wb") as file:
             test_ids = list(map(lambda x: x.nodeid, node_to_test[get_xdist_worker_nr()]))
             f = pickle.dump(test_ids, file)
-            ff = 0
     return ordered_items
 
 

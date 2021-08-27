@@ -55,6 +55,9 @@ class OvmsCLoadScheduling(LoadScheduling):
                 node.assigned_test_list = pickle.load(file)
                 self._assign_tests_to_node(node, node.assigned_test_list)
 
+        for node in self.nodes:
+            node.shutdown()
+
     def _assign_tests_to_node(self, node, tests):
         test_indexes = list(map(lambda x: self.collection.index(x), tests))
         self.node2pending[node].extend(test_indexes)
