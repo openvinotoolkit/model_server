@@ -169,7 +169,7 @@ class Docker:
         if location:
             file_name = f"ovms_{get_path_friendly_test_name(location)}_{time_stamp}.log"
         else:
-            file_name = f"ovms_{self.server.started_by_fixture.lstrip('start_')}_{time_stamp}.log"
+            file_name = f"ovms_{self.server.started_by_fixture}_{time_stamp}.log"
         os.makedirs(dir_path, exist_ok=True)
         file_path = os.path.join(dir_path, file_name)
         with open(file_path, "w+") as text_file:

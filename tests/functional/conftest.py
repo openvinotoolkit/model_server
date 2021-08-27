@@ -23,8 +23,8 @@ import pytest
 from _pytest._code import ExceptionInfo, filter_traceback  # noqa
 from _pytest.outcomes import OutcomeException
 
-from utils.xdist_utils import OvmsCLoadScheduling
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
+from functional.utils.xdist_utils import OvmsCLoadScheduling
 from object_model.server import Server
 from utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
     get_containers_with_tests_suffix, get_docker_client
@@ -112,45 +112,84 @@ def pytest_unconfigure():
     Server.stop_all_instances()
 
 
-def pytest_keyboard_interrupt (excinfo):
-    clean_hanging_docker_resources()
-    Server.stop_all_instances()
+def _get_server_fixtures(item):
+    server_fixtures = list(filter(lambda x: "start_server_" in x, item.fixturenames))
+    return server_fixtures
 
+@pytest.hookimpl(hookwrapper=True)
+def pytest_collection_finish(session):
+    yield
+    # Collect all fixtures that starts Docker instance
+    # This map will keep fixture usages in
 
-if not using_xdist:
-    @pytest.hookimpl(hookwrapper=True)
-    def pytest_runtestloop(session):
-        # Override default runtestloop in order to sort test execution by used fixtures
-        # This operation will ensure that only required containers will run and container will be cleared after all usages.
-        # Collect all fixtures that starts Docker instance
-        # This map will keep fixture usages in tests
-        server_fixtures_to_item = defaultdict(lambda: [])
-        for item in session.items:
-            item._server_fixtures = list(filter(lambda x: "start_server_" in x, item.fixturenames))
-            for fixture in item._server_fixtures:
-                server_fixtures_to_item[fixture].append(item)
+    server_fixtures_to_item = defaultdict(lambda: [])
+    for item in session.items:
+        item._server_fixtures = _get_server_fixtures(item)
+        for fixture in item._server_fixtures:
+            server_fixtures_to_item[fixture].append(item)
+    session._server_fixtures_to_item = server_fixtures_to_item.copy()
 
-        # Sort test items using required fixtures as key (group test by fixture)
-        sorted_items = sorted(session.items, key=lambda x: x._server_fixtures )
+    # Try to order test execution minimal 'start_server_*' fixtures working
+    ordered_items = []
 
-        for i, item in enumerate(sorted_items):
-            nextitem = sorted_items[i + 1] if i + 1 < len(sorted_items) else None
-            item.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
+    # Choose fixture with max tests assigned to be executed first.
+    most_cases_lambda = lambda x: len(x[1])
+    fixture_with_most_cases = max(server_fixtures_to_item.items(), key=most_cases_lambda)[0]
 
-            # Test finished: remove test item for all fixtures that was used
-            for fixture in item._server_fixtures:
-                server_fixtures_to_item[fixture].remove(item)
-                if len(server_fixtures_to_item[fixture]) == 0:
-                    # No other tests will use this docker instance so we can close it.
-                    Server.stop_by_fixture_name(fixture)
-        yield
-# else:
+    fixtures_working = [fixture_with_most_cases] # FIFO queue
+    tasks_for_nodes = []
+    current_node = []
+    while server_fixtures_to_item:
+        current_fixture = fixtures_working[0]
+        for item in server_fixtures_to_item[current_fixture]:
+            if item not in ordered_items:
+                ordered_items.append(item)
+                current_node.append(item)
+                item_fixtures = _get_server_fixtures(item)
+                for it in item_fixtures:
+                    # Test execute multiple fixtures  with servers, add fixture to be processed next (out of order).
+                    if it not in fixtures_working:
+                        fixtures_working.append(it)
+                    if item in server_fixtures_to_item:
+                        del server_fixtures_to_item[item]
+        fixtures_working.remove(current_fixture)
+        del server_fixtures_to_item[current_fixture]
+        if not fixtures_working and server_fixtures_to_item:
+            tasks_for_nodes.append(current_node)
+            current_node = []
+            fixtures_working.append(max(server_fixtures_to_item.items(), key=most_cases_lambda)[0])
+    session.items = ordered_items
+    session.config._task_for_nodes = tasks_for_nodes
+
+#
+# if not using_xdist:
 #     @pytest.hookimpl(hookwrapper=True)
 #     def pytest_runtestloop(session):
-#         if not os.environ.get("PYTEST_XDIST_WORKER"):
-#             yield
-#         x = 0
-      #  r = session.ihook.
+#         # Override default runtestloop in order to sort test execution by used fixtures
+#         # This operation will ensure that only required containers will run and container will be cleared after all usages.
+#
+#         # Collect all fixtures that starts Docker instance
+#         # This map will keep fixture usages in tests
+#         server_fixtures_to_item = defaultdict(lambda: [])
+#         for item in session.items:
+#             item._server_fixtures = list(filter(lambda x: "start_server_" in x, item.fixturenames))
+#             for fixture in item._server_fixtures:
+#                 server_fixtures_to_item[fixture].append(item)
+#
+#         # Sort test items using required fixtures as key (group test by fixture)
+#         sorted_items = sorted(session.items, key=lambda x: x._server_fixtures )
+#
+#         for i, item in enumerate(sorted_items):
+#             nextitem = sorted_items[i + 1] if i + 1 < len(sorted_items) else None
+#             item.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
+#
+#             # Test finished: remove test item for all fixtures that was used
+#             for fixture in item._server_fixtures:
+#                 server_fixtures_to_item[fixture].remove(item)
+#                 if len(server_fixtures_to_item[fixture]) == 0:
+#                     # No other tests will use this docker instance so we can close it.
+#                     Server.stop_by_fixture_name(fixture)
+
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_call():
@@ -182,6 +221,18 @@ def pytest_runtest_teardown():
     exception_catcher("teardown", outcome)
 
 
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_teardown(item):
+    yield
+    # Test finished: remove test item for all fixtures that was used
+    for fixture in item._server_fixtures:
+        item.session._server_fixtures_to_item[fixture].remove(item)
+        if len(item.session._server_fixtures_to_item[fixture]) == 0:
+            # No other tests will use this docker instance so we can close it.
+            Server.stop_by_fixture_name(fixture)
+
+
+
 def exception_catcher(when: str, outcome):
     if isinstance(outcome.excinfo, tuple):
         if len(outcome.excinfo) > 1 and isinstance(outcome.excinfo[1], OutcomeException):
@@ -194,6 +245,7 @@ def exception_catcher(when: str, outcome):
             else exception_info.exconly()
         exception_logger.error('Unhandled Exception during {}: \n{}'
                                .format(when.capitalize(), str(exc_repr)))
+
 
 
 
@@ -222,4 +274,3 @@ def pytest_xdist_make_scheduler(config, log):
     scheduler = OvmsCLoadScheduling(config, log)
     log.debug("Created xdist scheduler")
     return scheduler
-
