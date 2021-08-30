@@ -892,25 +892,17 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
     if (!finalStatus.ok())
         return finalStatus;
 
-    for (const auto& pair : getInputsInfo()) {
-        const auto& name = pair.first;
-        auto networkInput = pair.second;
-        auto it = request->inputs().find(name);
+    for (const auto& [name, networkInput] : getInputsInfo()) {
+        google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator it;
+        auto status = validateAndGetInput_New(*request, name, it);
+        if (!status.ok())
+            return status;
 
-        // Network and request must have the same names of inputs
-        if (it == request->inputs().end()) {
-            std::stringstream ss;
-            ss << "Required input: " << name;
-            const std::string details = ss.str();
-            SPDLOG_DEBUG("[Model: {} version: {}] Missing input with specific name - {}", getName(), getVersion(), details);
-            return Status(StatusCode::INVALID_MISSING_INPUT, details);
-        }
-
-        auto& requestInput = it->second;
+        const auto& requestInput = it->second;
         Mode batchingMode = getModelConfig().getBatchingMode();
         Mode shapeMode = getModelConfig().isShapeAuto(name) ? AUTO : FIXED;
 
-        auto status = checkIfShapeValuesNegative(requestInput);
+        status = checkIfShapeValuesNegative(requestInput);
         if (!status.ok())
             return status;
 

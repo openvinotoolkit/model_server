@@ -20,6 +20,8 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include <google/protobuf/map.h>
+
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -29,9 +31,9 @@ namespace ovms {
 
 Status validateNumberOfInputs_New(const tensorflow::serving::PredictRequest& request, const size_t expectedNumberOfInputs);
 
-Status validateAndGetInput_New(const tensorflow::serving::PredictRequest& request, const std::string& name, tensorflow::TensorProto* proto);
+Status validateAndGetInput_New(const tensorflow::serving::PredictRequest& request, const std::string& name, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it);
 
-Status checkIfShapeValuesNegative_New(const tensorflow::serving::PredictRequest& request);
+Status checkIfShapeValuesNegative_New(const tensorflow::TensorProto& proto);
 
 
 

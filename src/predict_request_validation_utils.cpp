@@ -33,24 +33,27 @@ Status validateNumberOfInputs_New(const tensorflow::serving::PredictRequest& req
     return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
 }
 
-Status validateAndGetInput_New(const tensorflow::serving::PredictRequest& request, const std::string& name, tensorflow::TensorProto& proto) {
-    auto& it = request.inputs().find(name);
-
+Status validateAndGetInput_New(const tensorflow::serving::PredictRequest& request, const std::string& name, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it) {
+    it = request.inputs().find(name);
     if (it != request.inputs().end()) {
-        proto = it->second;
         return StatusCode::OK;
     }
-    {
-        std::stringstream ss;
-        ss << "Required input: " << name;
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[Model: {} version: {}] Missing input with specific name - {}", getName(), getVersion(), details);
-        return Status(StatusCode::INVALID_MISSING_INPUT, details);
-    }
+    std::stringstream ss;
+    ss << "Required input: " << name;
+    const std::string details = ss.str();
+    SPDLOG_DEBUG("[requested endpoint:{} version:{}] Missing input with specific name - {}", request.model_spec().name(), request.model_spec().version().value(), details);
+    return Status(StatusCode::INVALID_MISSING_INPUT, details);
 }
 
-Status checkIfShapeValuesNegative_New(const tensorflow::serving::PredictRequest& request) {
-
+Status checkIfShapeValuesNegative_New(const tensorflow::TensorProto& proto) {
+    for (size_t i = 0; i < proto.tensor_shape().dim_size(); i++) {
+        if (proto.tensor_shape().dim(i).size() <= 0) {
+            const std::string details = "Negative or zero dimension size is not acceptable: " + TensorInfo::tensorShapeToString(proto.tensor_shape());
+            SPDLOG_DEBUG("Invalid shape - {}", details);
+            return Status(StatusCode::INVALID_SHAPE, details);
+        }
+    }
+    return StatusCode::OK;
 }
 
 }  // namespace ovms
