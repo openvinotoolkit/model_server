@@ -9,7 +9,7 @@ It covers following topics:
 
 **Note**: Provided examples and their dependencies are updated and validated for Python 3.6+ version. For older versions of Python, dependencies versions adjustment might be required.
 
-Start Model Server Client Library virtual environment
+If using Python virtual environment, activate it:
 ```
 . ../lib/.venv/bin/activate
 ```
