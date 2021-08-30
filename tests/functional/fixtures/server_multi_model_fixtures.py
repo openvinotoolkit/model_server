@@ -15,6 +15,8 @@
 #
 
 import os
+from pathlib import Path
+
 import pytest
 
 import config
@@ -49,5 +51,6 @@ def start_server_multi_model(request, start_minio_server, get_minio_server_s3):
                                  "rest_workers": 2}
     container_name_infix = "test-multi"
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command, envs)
+                    container_name_infix, config.start_container_command, envs,
+                    path_to_mount=Path(config.path_to_mount, __name__))
     return server.start()

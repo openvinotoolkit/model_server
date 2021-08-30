@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
+from pathlib import Path
+
 import config
 from object_model.ovms_binary import OvmsBinary
 from object_model.ovms_docker import OvmsDocker
@@ -26,7 +29,7 @@ class Server:
 
     def __init__(self, request, command_args, container_name_infix, start_container_command,
                  env_vars=None, image=config.image, container_log_line=config.container_log_line,
-                 server_log_level=config.log_level, target_device=None):
+                 server_log_level=config.log_level, path_to_mount=config.path_to_mount,target_device=None):
         self.request = request
         self.command_args = command_args
         self.container_name_infix = container_name_infix
@@ -37,9 +40,15 @@ class Server:
         self.server_log_level = server_log_level
         self.target_device = target_device
         self.started_by_fixture = request.fixturename
+        self.path_to_mount = path_to_mount
 
     def start(self):
         assert self not in Server.running_instances
+        Path(self.path_to_mount).mkdir(parents=True, exist_ok=True)
+        for root, dirs, files in os.walk(config.path_to_mount):
+            for file in files:
+                Path(root,file).mkdir(parents=True, exist_ok=True)
+               # os.link()
 
         if config.ovms_binary_path is not None:
             self.ovms = OvmsBinary(self.request, self.command_args, self.start_container_command, self.env_vars)

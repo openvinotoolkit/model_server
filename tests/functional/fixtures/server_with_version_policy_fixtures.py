@@ -15,6 +15,8 @@
 #
 
 import os
+from pathlib import Path
+
 import pytest
 import shutil
 from distutils.dir_util import copy_tree
@@ -34,7 +36,8 @@ def start_server_model_ver_policy(request):
     container_name_infix = "test-batch4-2out"
 
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command)
+                    container_name_infix, config.start_container_command,
+                    path_to_mount=Path(config.path_to_mount, __name__))
     return server.start()
 
 

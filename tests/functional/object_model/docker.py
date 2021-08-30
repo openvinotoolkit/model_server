@@ -15,6 +15,7 @@
 #
 import os
 import time
+from pathlib import Path
 from typing import List
 
 from datetime import datetime
@@ -70,8 +71,8 @@ class Docker:
         logger.info(f"Starting container: {self.container_name}")
 
         ### Defaults ###
-        volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
-                                                            'mode': 'ro'}}
+        volumes_dict = {'{}'.format(self.server.path_to_mount): {'bind': '/opt/ml',
+                                                                 'mode': 'ro'}}
         network = None
         privileged = False
         ports = {'{}/tcp'.format(self.grpc_port): self.grpc_port, '{}/tcp'.format(self.rest_port): self.rest_port}
@@ -85,6 +86,20 @@ class Docker:
             ports = None
         elif config.target_device == "GPU":
             devices = ["/dev/dri:/dev/dri:mrw"]
+
+        if "--model_path" in self.start_container_command:
+            foo = self.start_container_command.split(' ').index("--model_path")
+            foo = self.start_container_command.split(' ')[foo+1]
+            foo = foo.replace("/opt/ml", config.path_to_mount) + "/1/"
+
+            xxx = []
+            for p in [foo+"mapping_config.json", foo+"age_gender.xml"]:
+                if os.path.exists(p):
+                    xxx.append(open(p, "r").read())
+    #    aaa = open().read()
+      #  bbb = open().read()
+       # if
+        foo = 0
 
         self.container = self.client.containers.run(image=self.image, detach=True,
                                                     name=self.container_name,

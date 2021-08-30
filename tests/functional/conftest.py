@@ -118,8 +118,9 @@ def pytest_unconfigure():
         logger.warning("Test got unstopped docker instances")
     Server.stop_all_instances()
 
-
+@pytest.hookimpl(hookwrapper=True)
 def pytest_collection_modifyitems(session, config, items):
+    yield
     items = OvmsCLoadScheduling.reorder_items_by_fixtures_used(session)
 
 

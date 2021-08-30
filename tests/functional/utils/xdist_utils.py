@@ -24,25 +24,9 @@ from xdist.dsession import LoadScheduling
 
 
 class OvmsCLoadScheduling(LoadScheduling):
-    #
-    # def mark_test_complete(self, node, item_index, duration=0):
-    #     super().mark_test_complete(node, item_index, duration)
-    #     foo = 0
-    #
-    # def check_schedule(self, node, duration=0):
-    #     foo = 0
-
-
-    # def add_node_collection(self, node, collection):
-    #     path_to_test_list = os.path.join(artifacts_dir, f"assigned_tests_{node.workerinput['workerid']}.xdist")
-    #     with open(path_to_test_list, "rb") as file:
-    #         test_list = pickle.load(file)
-    #     self.node2pending[node] = test_list
-    #     #self.node2collection[node] = test_list
-    #     self.node2collection[node] = list(collection)
-
-    def check_schedule(self, node, duration=0):
-        xxx = 0
+    def mark_test_complete(self, node, item_index, duration=0):
+        super().mark_test_complete(node, item_index, duration)
+        self.pending.remove(item_index)
 
     def schedule(self):
         # Collections are identical, create the index of pending items.

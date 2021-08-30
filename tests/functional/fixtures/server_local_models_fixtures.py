@@ -16,6 +16,8 @@
 
 import shutil
 import os
+from pathlib import Path
+
 import pytest
 
 import config
@@ -36,7 +38,8 @@ def start_server_single_model(request):
 
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    env_variables, target_device=config.target_device)
+                    env_variables, target_device=config.target_device,
+                    path_to_mount=Path(config.path_to_mount, __name__))
     return server.start()
 
 @pytest.fixture(scope="session")
@@ -52,19 +55,16 @@ def start_server_single_model_onnx(request):
 
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    env_variables, target_device=config.target_device)
+                    env_variables, target_device=config.target_device,
+                    path_to_mount=Path(config.path_to_mount, __name__))
     return server.start()
 
 @pytest.fixture(scope="session")
 def start_server_with_mapping(request):
+    path_to_mount = Path(config.path_to_mount, __name__)
 
-    def delete_mapping_file():
-        if os.path.exists(file_dst_path):
-            os.remove(file_dst_path)
-
-    request.addfinalizer(delete_mapping_file)
-
-    file_dst_path = config.path_to_mount + '/age_gender/1/mapping_config.json'
+    file_dst_path = path_to_mount + '/age_gender/1/mapping_config.json'
+    Path(path_to_mount).mkdir(parents=True, exist_ok=True)
     shutil.copyfile('tests/functional/mapping_config.json', file_dst_path)
 
     start_server_command_args = {"model_name": AgeGender.name,
@@ -72,5 +72,5 @@ def start_server_with_mapping(request):
     container_name_infix = "test-2-out"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    target_device=config.target_device)
+                    target_device=config.target_device, path_to_mount=path_to_mount)
     return server.start()

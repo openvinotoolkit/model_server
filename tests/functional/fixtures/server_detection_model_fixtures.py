@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from pathlib import Path
 
 import pytest
 
@@ -32,7 +33,7 @@ def start_server_face_detection_model_auto_shape(request):
     container_name_infix = "test-auto-shape"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    target_device=config.target_device)
+                    target_device=config.target_device, path_to_mount=Path(config.path_to_mount, __name__))
     return server.start()
 
 
@@ -48,7 +49,7 @@ def start_server_face_detection_model_named_shape(request):
     container_name_infix = "test-named-shape"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    target_device=config.target_device)
+                    target_device=config.target_device, path_to_mount=Path(config.path_to_mount, __name__))
     return server.start()
 
 
@@ -63,5 +64,5 @@ def start_server_face_detection_model_nonamed_shape(request):
     container_name_infix = "test-nonamed-shape"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    target_device=config.target_device)
+                    target_device=config.target_device, path_to_mount=Path(config.path_to_mount, __name__))
     return server.start()
