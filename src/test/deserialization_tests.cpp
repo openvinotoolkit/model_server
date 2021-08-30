@@ -28,10 +28,6 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
 #include "../deserialization.hpp"
 #include "ovtestutils.hpp"
 
@@ -143,7 +139,10 @@ class GRPCPredictRequestNegative : public GRPCPredictRequest {};
 TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision) {
     Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
-    InferenceEngine::InferRequest inferRequest;
+    InferenceEngine::Core engine;
+    InferenceEngine::CNNNetwork network = engine.ReadNetwork(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
+    InferenceEngine::InferRequest inferRequest = execNetwork.CreateInferRequest();
     InputSink<InferRequest&> inputSink(inferRequest);
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION)
@@ -157,7 +156,10 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobExc
     tensorMap[tensorName]->setPrecision(testedPrecision);
     std::shared_ptr<MockIInferRequestFailingInSetBlob> mInferRequestPtr =
         std::make_shared<MockIInferRequestFailingInSetBlob>();
-    InferenceEngine::InferRequest inferRequest(mInferRequestPtr);
+    InferenceEngine::Core engine;
+    InferenceEngine::CNNNetwork network = engine.ReadNetwork(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
+    InferenceEngine::InferRequest inferRequest = execNetwork.CreateInferRequest();
     InputSink<InferRequest&> inputSink(inferRequest);
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION) << status.string();
@@ -184,12 +186,22 @@ public:
 
 MockTensorProtoDeserializatorThrowingInferenceEngine* MockTensorProtoDeserializator::mock = nullptr;
 
-TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobException2) {
-    Precision testedPrecision = GetParam();
-    tensorMap[tensorName]->setPrecision(testedPrecision);
+TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobException2) {
+    InferenceEngine::TensorDesc tensorDesc(Precision::FP32, shape_t{1, 10}, InferenceEngine::Layout::NC);
+    std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
+        std::string("b"),
+        tensorDesc.getPrecision(),
+        tensorDesc.getDims(),
+        tensorDesc.getLayout());
+    tensorMap[tensorName] = tensorInfo;
     std::shared_ptr<MockIInferRequestFailingInSetBlob> mInferRequestPtr =
         std::make_shared<MockIInferRequestFailingInSetBlob>();
-    InferenceEngine::InferRequest inferRequest(mInferRequestPtr);
+    InferenceEngine::Core engine;
+    InferenceEngine::CNNNetwork network = engine.ReadNetwork(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
+    InferenceEngine::InferRequest inferRequest = execNetwork.CreateInferRequest();
+    std::shared_ptr<NiceMock<MockBlob>> mockBlobPtr = std::make_shared<NiceMock<MockBlob>>(tensorDesc);
+    inferRequest.SetBlob("b", mockBlobPtr);
     MockTensorProtoDeserializatorThrowingInferenceEngine mockTPobject;
     MockTensorProtoDeserializator::mock = &mockTPobject;
     EXPECT_CALL(mockTPobject, deserializeTensorProto(_, _, _))
@@ -203,15 +215,25 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobExc
     EXPECT_EQ(status, ovms::StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR) << status.string();
 }
 
-TEST_P(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
-    Precision testedPrecision = GetParam();
-    tensorMap[tensorName]->setPrecision(testedPrecision);
-    InferenceEngine::Core engine;
+TEST_F(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
+    InferenceEngine::TensorDesc tensorDesc(Precision::FP32, shape_t{1, 10}, InferenceEngine::Layout::NC);
+    std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
+        std::string("b"),
+        tensorDesc.getPrecision(),
+        tensorDesc.getDims(),
+        tensorDesc.getLayout());
+    tensorMap[tensorName] = tensorInfo;
+    std::shared_ptr<MockIInferRequest> mInferRequestPtr = std::make_shared<MockIInferRequest>();
+        InferenceEngine::Core engine;
     InferenceEngine::CNNNetwork network = engine.ReadNetwork(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
     InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
-    PredictRequest inferRequest = execNetwork.CreatePredictRequest();
+    InferenceEngine::InferRequest inferRequest = execNetwork.CreateInferRequest();
+    std::shared_ptr<NiceMock<MockBlob>> mockBlobPtr = std::make_shared<NiceMock<MockBlob>>(tensorDesc);
+    inferRequest.SetBlob("b", mockBlobPtr);
     InputSink<InferRequest&> inputSink(inferRequest);
-    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(inferRequest, tensorMap, inputSink, isPipeline);
+    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
+    SPDLOG_ERROR(status.getCode());
+    SPDLOG_ERROR(status.string());
     EXPECT_TRUE(status.ok());
 }
 
