@@ -13,6 +13,8 @@ It covers following topics:
 ## Requirement
 
 Start Model Server Client Library virtual environment
+
+If using Python virtual environment, activate it:
 ```
 . ../lib/.venv/bin/activate
 ```
@@ -25,11 +27,11 @@ Build and install [Model Server Client Library](../lib)
 `pip install dist/ovmsclient-0.1-py3-none-any.whl`
 
 Download [Resnet50-tf Model](https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html) and Convert it into Inference Engine Format
-and place the xml and bin files in the /resnet/model/path/1
+and place the xml and bin files in the <PATH_TO_MODELS>/resnet/1
 
-For numeric format data OVMS can be started using a command:
+For numeric data format  OVMS can be started using a command:
 ```bash
-docker run -d --rm -v /resnet/model/path:/model -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models --port 9000 --rest_port 8000
+docker run -d --rm -v <PATH_TO_MODELS>/resnet:/models/resnet -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 8000
 ```
 
 
@@ -132,11 +134,11 @@ Image images/airliner.jpeg has been classified as airliner with 49.2023199796676
 Image images/golden_retriever.jpeg has been classified as golden retriever with 88.68610262870789% confidence
 ```
 
-To run resnet model serving for binary input data we need to kill the preious OVMS docker instance and run
+To serve Resnet with support for binary input data run OVMS with `--layout NHWC` parameter
 new OVMS instance with --layout MHWC parameter.
 For binary format data OVMS can be started using a command:
 ```bash
-docker run -d --rm -v /resnet/model/path:/model -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models --port 9000 --rest_port 8000 --layout MHWC
+docker run -d --rm -v <PATH_TO_MODELS>/resnet:/models/resnet -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 8000 --layout NHWC
 ```
 
 ### Predict binary format<a name="model-binary">
@@ -181,14 +183,14 @@ Image images/golden_retriever.jpeg has been classified as golden retriever with 
 
 ### Vehicle detection model
 ```
-mkdir -p model_server/client/python/samples/models/vehicle-detection/1
-cd model_server/client/python/samples/models/vehicle-detection/1
+mkdir -p <PATH_TO_MODELS>/vehicle-detection/1
+cd <PATH_TO_MODELS>/vehicle-detection/1
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.xml
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.bin
 ```
-For numeric format data OVMS can be started using a command:
+For numeric data format OVMS can be started using a command:
 ```bash
-docker run -d --rm -v model_server/client/python/samples/models/vehicle-detection:/models -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name vehicle-detection --model_path /models --port 9000 --rest_port 8000
+docker run -d --rm -v <PATH_TO_MODELS>/vehicle-detection:/models/vehicle-detection -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name vehicle-detection --model_path /models/vehicle-detection --port 9000 --rest_port 8000
 ```
 
 
