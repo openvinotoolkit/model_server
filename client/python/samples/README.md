@@ -129,7 +129,7 @@ Image images/airliner.jpeg has been classified as airliner with 49.2023199796676
 Image images/golden_retriever.jpeg has been classified as golden retriever with 88.68610262870789% confidence
 ```
 
-To run resnet model serving for binary input data we need to kill the preious OVMS docker instance and run
+To serve Resnet with support for binary input data run OVMS with `--layout NHWC` parameter
 new OVMS instance with --layout MHWC parameter.
 For binary format data OVMS can be started using a command:
 ```bash
