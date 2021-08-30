@@ -22,7 +22,7 @@ Build and install [Model Server Client Library](../lib)
 `pip install dist/ovmsclient-0.1-py3-none-any.whl`
 
 Download [Resnet50-tf Model](https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html) and Convert it into Inference Engine Format
-and place the xml and bin files in the /resnet/model/path/1
+and place the xml and bin files in the <PATH_TO_MODELS>/resnet/1
 
 For numeric format data OVMS can be started using a command:
 ```bash
