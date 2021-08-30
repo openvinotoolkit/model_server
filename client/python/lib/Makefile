@@ -36,8 +36,8 @@ $(ACTIVATE):
 update-packages:
 	@echo "Updating crucial packages"
 	@pip install --upgrade pip
-	@pip install "setuptools==57.4.0"
-	@pip install "wheel==0.37.0"
+	@pip install "setuptools>=40.1.0"
+	@pip install "wheel>=0.23.0"
 
 build-deps: update-packages
 	@echo "Building dependencies"
