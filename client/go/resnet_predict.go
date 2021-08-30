@@ -32,23 +32,30 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Read the image in binary form
 	imageBytes, err := ioutil.ReadFile(imgPath)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
+	// Target model specification
+	const MODEL_NAME string = "resnet"
+	const INPUT_NAME string = "map/TensorArrayStack/TensorArrayGatherV3"
+	const OUTPUT_NAME string = "softmax_tensor"
+
+	// Create Predict Request to OVMS
 	predictRequest := &pb.PredictRequest{
 		ModelSpec: &pb.ModelSpec{
-			Name:          "resnet",
+			Name:          MODEL_NAME,
 			SignatureName: "serving_default",
 			VersionChoice: &pb.ModelSpec_Version{
 				Version: &google_protobuf.Int64Value{
-					Value: int64(1),
+					Value: int64(0),
 				},
 			},
 		},
 		Inputs: map[string]*framework.TensorProto{
-			"map/TensorArrayStack/TensorArrayGatherV3": &framework.TensorProto{
+			INPUT_NAME: &framework.TensorProto{
 				Dtype: framework.DataType_DT_STRING,
 				TensorShape: &framework.TensorShapeProto{
 					Dim: []*framework.TensorShapeProto_Dim{
@@ -62,52 +69,17 @@ func main() {
 		},
 	}
 
-	/*
-			file, err := os.Open(imgPath)
-			if err != nil {
-				log.Fatal(err)
-				os.Exit(1)
-			}
-			defer file.Close()
-
-			decodedImg, _, err := image.Decode(file)
-			if err != nil {
-				log.Fatal(err)
-				os.Exit(1)
-			}
-
-			resizedImg := resize.Resize(224, 224, decodedImg, resize.Lanczos3)
-
-			// convert to NCHW
-			imgSlice := imageToSlice(resizedImg, true, true)
-			flattenImgSlice := flattenSlice(imgSlice, []uint32{1, 3, 224, 224})
-
-			// Get the slice header
-			header := *(*reflect.SliceHeader)(unsafe.Pointer(&flattenImgSlice))
-
-			const SIZEOF_FP32 = 4 // bytes
-			header.Len *= SIZEOF_FP32
-			header.Cap *= SIZEOF_FP32
-
-			// Convert slice header to an []int32
-			byte_data := *(*[]byte)(unsafe.Pointer(&header))
-
-			predictRequest := newPredictRequest("resnet", 1)
-			predictRequest.ModelSpec.SignatureName = "serving_default"
-
-		err = addInput(predictRequest, "map/TensorArrayStack/TensorArrayGatherV3", framework.DataType_DT_FLOAT, byte_data, []int64{1, 3, 224, 224})
-		if err != nil {
-			fmt.Printf("Error adding input tensor: %v:", err)
-		}
-	*/
+	// Setup connection with the model server via gRPC
 	conn, err := grpc.Dial(*servingAddress, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("Cannot connect to the grpc server: %v\n", err)
 	}
 	defer conn.Close()
 
+	// Create client instance to prediction service
 	client := pb.NewPredictionServiceClient(conn)
 
+	// Send predict request and receive response
 	predictResponse, err := client.Predict(context.Background(), predictRequest)
 	if err != nil {
 		log.Fatalln(err)
@@ -115,19 +87,23 @@ func main() {
 
 	log.Println("Request sent successfully")
 
-	tp := predictResponse.Outputs["softmax_tensor"]
-	responseContent := tp.GetTensorContent()
+	// Read prediction results
+	responseProto := predictResponse.Outputs[OUTPUT_NAME]
+	responseContent := responseProto.GetTensorContent()
 
-	outputShape := tp.GetTensorShape()
+	// Get details about output shape
+	outputShape := responseProto.GetTensorShape()
 	dim := outputShape.GetDim()
-
 	classesNum := dim[1].GetSize()
 
+	// Convert bytes to matrix
 	outMat, err := gocv.NewMatFromBytes(1, int(classesNum), gocv.MatTypeCV32FC1, responseContent)
 	outMat = outMat.Reshape(1, 1)
 
+	// Find maximum value along with its index in the output
 	_, maxVal, _, maxLoc := gocv.MinMaxLoc(outMat)
 
+	// Get label of the class with the highest confidence
 	var label string
 	if classesNum == 1000 {
 		label = labels[maxLoc.X]
