@@ -224,7 +224,7 @@ TEST_F(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
         tensorDesc.getLayout());
     tensorMap[tensorName] = tensorInfo;
     std::shared_ptr<MockIInferRequest> mInferRequestPtr = std::make_shared<MockIInferRequest>();
-        InferenceEngine::Core engine;
+    InferenceEngine::Core engine;
     InferenceEngine::CNNNetwork network = engine.ReadNetwork(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
     InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
     InferenceEngine::InferRequest inferRequest = execNetwork.CreateInferRequest();
