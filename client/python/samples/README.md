@@ -178,7 +178,7 @@ Image images/golden_retriever.jpeg has been classified as golden retriever with 
 ### Vehicle detection model
 ```
 mkdir -p <PATH_TO_MODELS>/vehicle-detection/1
-cd model_server/client/python/samples/models/vehicle-detection/1
+cd <PATH_TO_MODELS>/vehicle-detection/1
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.xml
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.bin
 ```
