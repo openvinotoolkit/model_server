@@ -29,4 +29,10 @@ namespace ovms {
 
 Status validateNumberOfInputs_New(const tensorflow::serving::PredictRequest& request, const size_t expectedNumberOfInputs);
 
+Status validateAndGetInput_New(const tensorflow::serving::PredictRequest& request, const std::string& name, tensorflow::TensorProto* proto);
+
+Status checkIfShapeValuesNegative_New(const tensorflow::serving::PredictRequest& request);
+
+
+
 }  // namespace ovms

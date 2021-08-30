@@ -29,8 +29,28 @@ Status validateNumberOfInputs_New(const tensorflow::serving::PredictRequest& req
     std::stringstream ss;
     ss << "Expected: " << expectedNumberOfInputs << "; Actual: " << request.inputs_size();
     const std::string details = ss.str();
-    SPDLOG_DEBUG("[requested model:{} version:{}] Invalid number of inputs - {}", request.model_spec().name(), request.model_spec().version().value(), details);
+    SPDLOG_DEBUG("[requested endpoint:{} version:{}] Invalid number of inputs - {}", request.model_spec().name(), request.model_spec().version().value(), details);
     return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
+}
+
+Status validateAndGetInput_New(const tensorflow::serving::PredictRequest& request, const std::string& name, tensorflow::TensorProto& proto) {
+    auto& it = request.inputs().find(name);
+
+    if (it != request.inputs().end()) {
+        proto = it->second;
+        return StatusCode::OK;
+    }
+    {
+        std::stringstream ss;
+        ss << "Required input: " << name;
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[Model: {} version: {}] Missing input with specific name - {}", getName(), getVersion(), details);
+        return Status(StatusCode::INVALID_MISSING_INPUT, details);
+    }
+}
+
+Status checkIfShapeValuesNegative_New(const tensorflow::serving::PredictRequest& request) {
+
 }
 
 }  // namespace ovms
