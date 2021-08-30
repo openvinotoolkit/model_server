@@ -4,10 +4,13 @@ This document contains examples to run *GetModelStatus*, *GetModelMetadata*, *Pr
 
 It covers following topics:
 * <a href="#grpc-api">gRPC API Example Clients </a>
+* <a href="#model-status">Model status </a>
+* <a href="#model-metadata">Model metadata </a>
+* <a href="#predict-numeric">Predict numeric format </a>
+* <a href="#predict-binary">Predict binary format </a>
+* <a href="#detect-vehicle">Detect vehicle </a>
 
 ## Requirement
-
-**Note**: Provided examples and their dependencies are updated and validated for Python 3.6+ version. For older versions of Python, dependencies versions adjustment might be required.
 
 Start Model Server Client Library virtual environment
 ```
@@ -32,7 +35,7 @@ docker run -d --rm -v /resnet/model/path:/model -e "http_proxy=$http_proxy" -e "
 
 ## gRPC Client Examples <a name="grpc-api"></a>
 
-### Model Status
+### Model Status <a name="model-status">
 
 #### **Get information about the status of served models over gRPC interace:**
 
@@ -62,7 +65,7 @@ python get_grpc_model_status.py --grpc_port 9000 --model_name resnet
 ```
 
 
-### Model Metadata
+### Model Metadata <a name="model-metadata">
 
 #### **Get information about the status of served models over gRPC interace:**
 
@@ -91,7 +94,7 @@ python get_grpc_model_metadata.py --grpc_port 9000 --model_name resnet --model_v
 ```
 
 
-### Predict 
+### Predict numeric format <a name="predict-numeric">
 
 #### **Make prediction using images in numerical format:**
 
@@ -106,8 +109,8 @@ usage: resnet_grpc_predict.py [-h] --images_dir IMAGES_DIR
 
 
 optional arguments:
-  -h, --help            show this help message and exit --images_dir IMAGES_DIR
-                        Path to a directory with images in JPG or PNG format
+  -h, --help            show this help message and exit 
+  --images_dir IMAGES_DIR Path to a directory with images in JPG or PNG format
   --grpc_address GRPC_ADDRESS Specify url to grpc service. default:localhost
   --grpc_port GRPC_PORT Specify port to grpc service. default: 9000
   --model_name MODEL_NAME Model name to query. default: resnet
@@ -136,7 +139,7 @@ For binary format data OVMS can be started using a command:
 docker run -d --rm -v /resnet/model/path:/model -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models --port 9000 --rest_port 8000 --layout MHWC
 ```
 
-### Predict 
+### Predict binary format<a name="model-binary">
 
 #### **Make prediction using images in binary format:**
 
@@ -151,8 +154,8 @@ usage: resnet_grpc_predict_binary.py [-h] --images_dir IMAGES_DIR
 
 
 optional arguments:
-  -h, --help            show this help message and exit --images_dir IMAGES_DIR
-                        Path to a directory with images in JPG or PNG format
+  -h, --help            show this help message and exit 
+  --images_dir IMAGES_DIR Path to a directory with images in JPG or PNG format
   --grpc_address GRPC_ADDRESS Specify url to grpc service. default:localhost
   --grpc_port GRPC_PORT Specify port to grpc service. default: 9000
   --model_name MODEL_NAME Model name to query. default: resnet
@@ -175,6 +178,7 @@ Image images/golden_retriever.jpeg has been classified as golden retriever with 
 ```
 
 ## Prepare the model from OpenVINO Model Zoo
+
 ### Vehicle detection model
 ```
 mkdir -p model_server/client/python/samples/models/vehicle-detection/1
@@ -188,7 +192,8 @@ docker run -d --rm -v model_server/client/python/samples/models/vehicle-detectio
 ```
 
 
-### Predict 
+### Detect vehicle  <a name="detect-vehicle">
+
 
 #### **Make vehicle detection prediction using images in binary format:**
 #### **Required Model Server running with vehicle detection model:**
@@ -219,5 +224,5 @@ optional arguments:
 ```bash
 python vehicle_detection_predict_binary.py --images_dir ./images/cars/ --output_save_path ./output
 Making directory for output: ./output
-Detection results in file:  ./output/vehicle-detection.jpg
+Detection results in file:  ./output/1.jpg
 ```
