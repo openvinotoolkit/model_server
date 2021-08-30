@@ -33,11 +33,17 @@ $(ACTIVATE):
 	@. $(ACTIVATE); pip install -r tests/requirements.txt
 	@touch $(ACTIVATE)
 
-build-deps:
+update-packages:
+	@echo "Updating crucial packages"
+	@pip install --upgrade pip
+	@pip install "setuptools>=40.1.0"
+	@pip install "wheel>=0.23.0"
+
+build-deps: update-packages
 	@echo "Building dependencies"
 	@python setup.py build_apis
 
-build-package:
+build-package: update-packages
 	@echo "Building ovmsclient package"
 	@python setup.py bdist_wheel
 
