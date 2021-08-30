@@ -38,8 +38,7 @@ def start_server_single_model(request):
 
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    env_variables, target_device=config.target_device,
-                    path_to_mount=Path(config.path_to_mount, __name__))
+                    env_variables, target_device=config.target_device, used_models=[Resnet])
     return server.start()
 
 @pytest.fixture(scope="session")
@@ -55,22 +54,20 @@ def start_server_single_model_onnx(request):
 
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    env_variables, target_device=config.target_device,
-                    path_to_mount=Path(config.path_to_mount, __name__))
+                    env_variables, target_device=config.target_device, used_models=[ResnetONNX])
     return server.start()
 
 @pytest.fixture(scope="session")
 def start_server_with_mapping(request):
-    path_to_mount = Path(config.path_to_mount, __name__)
-
-    file_dst_path = path_to_mount + '/age_gender/1/mapping_config.json'
-    Path(path_to_mount).mkdir(parents=True, exist_ok=True)
-    shutil.copyfile('tests/functional/mapping_config.json', file_dst_path)
-
     start_server_command_args = {"model_name": AgeGender.name,
                                  "model_path": AgeGender.model_path}
     container_name_infix = "test-2-out"
+
+    file_dst_path = os.path.join(config.path_to_mount, container_name_infix, 'age_gender/1/mapping_config.json')
+    Path(os.path.dirname(file_dst_path)).mkdir(parents=True)
+    shutil.copyfile('tests/functional/mapping_config.json', file_dst_path)
+
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    target_device=config.target_device, path_to_mount=path_to_mount)
+                    target_device=config.target_device, used_models=[AgeGender])
     return server.start()

@@ -104,6 +104,3 @@ is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", "nginx-mtls" in image)
 """ TT_SKIP_TEST_IF_IS_NGINX_MTLS """
 skip_nginx_test = get_bool("TT_SKIP_TEST_IF_IS_NGINX_MTLS", "True")
 skip_nginx_test = skip_nginx_test and is_nginx_mtls
-
-""" USING_XDIST """
-using_xdist = ('-n' in sys.argv) or ('-c' in sys.argv)

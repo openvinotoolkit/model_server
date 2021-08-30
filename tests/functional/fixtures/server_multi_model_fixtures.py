@@ -15,13 +15,14 @@
 #
 
 import os
-from pathlib import Path
-
 import pytest
 
 import config
 from object_model.minio_docker import MinioDocker
 from object_model.server import Server
+
+from functional.model.models_information import AgeGender, FaceDetection, Resnet, ResnetBS4, ResnetBS8, \
+    PVBFaceDetectionV1
 
 
 @pytest.fixture(scope="session")
@@ -50,7 +51,7 @@ def start_server_multi_model(request, start_minio_server, get_minio_server_s3):
                                  "grpc_workers": 2,
                                  "rest_workers": 2}
     container_name_infix = "test-multi"
+    used_models = [AgeGender, FaceDetection, PVBFaceDetectionV1, Resnet, ResnetBS4, ResnetBS8]
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command, envs,
-                    path_to_mount=Path(config.path_to_mount, __name__))
+                    container_name_infix, config.start_container_command, envs, used_models=used_models)
     return server.start()

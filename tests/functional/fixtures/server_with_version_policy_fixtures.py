@@ -28,22 +28,21 @@ from object_model.server import Server
 
 @pytest.fixture(scope="session")
 def start_server_model_ver_policy(request):
-
-    shutil.copyfile('tests/functional/mapping_config.json',
-                    config.path_to_mount + '/model_ver/3/mapping_config.json')
-
     start_server_command_args = {"config_path": "{}/model_version_policy_config.json".format(config.models_path)}
     container_name_infix = "test-batch4-2out"
 
+    file_dst_path = os.path.join(config.path_to_mount, container_name_infix, 'model_ver/3/mapping_config.json')
+    Path(os.path.dirname(file_dst_path)).mkdir(parents=True, exist_ok=True)
+    shutil.copyfile('tests/functional/mapping_config.json', file_dst_path)
+
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command,
-                    path_to_mount=Path(config.path_to_mount, __name__))
+                    container_name_infix, config.start_container_command)
     return server.start()
 
 
 @pytest.fixture(autouse=True, scope="session")
-def model_version_policy_models(models_downloader):
-    model_ver_dir = os.path.join(config.path_to_mount, 'model_ver')
+def model_version_policy_models(models_downloader, container_name_infix="test-batch4-2out"):
+    model_ver_dir = os.path.join(config.path_to_mount, container_name_infix, 'model_ver')
 
     face_detection = os.path.join(models_downloader[FaceDetection.name], str(FaceDetection.version))
     face_detection_dir = os.path.join(model_ver_dir, '1')

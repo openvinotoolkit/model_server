@@ -15,7 +15,6 @@
 #
 
 import os
-from pathlib import Path
 
 import boto3
 import pytest
@@ -42,7 +41,7 @@ def start_server_single_model_from_gc(request):
     envs = ['https_proxy=' + os.getenv('https_proxy', "")]
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command, envs,
-                    target_device=config.target_device, path_to_mount=Path(config.path_to_mount, __name__))
+                    target_device=config.target_device, used_models=[Resnet])
     return server.start()
 
 
@@ -164,5 +163,5 @@ def start_server_single_model_from_minio(request, get_minio_server_s3):
     container_name_infix = "test-single-minio"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command, envs,
-                    target_device=config.target_device, path_to_mount=Path(config.path_to_mount, __name__))
+                    target_device=config.target_device, used_models=[Resnet])
     return server.start()

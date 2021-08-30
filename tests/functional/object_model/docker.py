@@ -15,7 +15,6 @@
 #
 import os
 import time
-from pathlib import Path
 from typing import List
 
 from datetime import datetime
@@ -23,7 +22,6 @@ from datetime import datetime
 import docker
 from utils.files_operation import get_path_friendly_test_name
 
-from config import target_device
 from retry.api import retry_call
 
 import config
@@ -71,8 +69,9 @@ class Docker:
         logger.info(f"Starting container: {self.container_name}")
 
         ### Defaults ###
-        volumes_dict = {'{}'.format(self.server.path_to_mount): {'bind': '/opt/ml',
-                                                                 'mode': 'ro'}}
+        path_to_mount = self.server.path_to_mount if self.server else config.path_to_mount
+        volumes_dict = {'{}'.format(path_to_mount): {'bind': '/opt/ml',
+                                                                     'mode': 'ro'}}
         network = None
         privileged = False
         ports = {'{}/tcp'.format(self.grpc_port): self.grpc_port, '{}/tcp'.format(self.rest_port): self.rest_port}
@@ -87,20 +86,6 @@ class Docker:
         elif config.target_device == "GPU":
             devices = ["/dev/dri:/dev/dri:mrw"]
 
-        if "--model_path" in self.start_container_command:
-            foo = self.start_container_command.split(' ').index("--model_path")
-            foo = self.start_container_command.split(' ')[foo+1]
-            foo = foo.replace("/opt/ml", config.path_to_mount) + "/1/"
-
-            xxx = []
-            for p in [foo+"mapping_config.json", foo+"age_gender.xml"]:
-                if os.path.exists(p):
-                    xxx.append(open(p, "r").read())
-    #    aaa = open().read()
-      #  bbb = open().read()
-       # if
-        foo = 0
-
         self.container = self.client.containers.run(image=self.image, detach=True,
                                                     name=self.container_name,
                                                     ports=ports,
@@ -114,12 +99,6 @@ class Docker:
         self.ensure_logs_contains()
         logger.info(f"Container started grpc_port:{self.grpc_port}\trest_port:{self.rest_port}")
         logger.debug(f"Container starting command args: {self.start_container_command}")
-
-        tt = list(map(lambda x: x.name, self.client.containers.list()))
-        tt = list(map(lambda x: "_".join(x.split("_")[2:-3]), tt))
-
-        foo = 0
-
         return self.container, {"grpc_port": self.grpc_port, "rest_port": self.rest_port}
 
     def stop(self):

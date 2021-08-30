@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from pathlib import Path
-
 import pytest
 
 import config
@@ -29,7 +27,7 @@ def start_server_batch_model(request):
     container_name_infix = "test-batch"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    target_device=config.target_device, path_to_mount=Path(config.path_to_mount, __name__))
+                    target_device=config.target_device, used_models=[ResnetBS8])
     return server.start()
 
 
@@ -41,7 +39,7 @@ def start_server_batch_model_2out(request):
     container_name_infix = "test-batch-2out"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    target_device=config.target_device, path_to_mount=Path(config.path_to_mount, __name__))
+                    target_device=config.target_device, used_models=[AgeGender])
     return server.start()
 
 
@@ -54,7 +52,7 @@ def start_server_batch_model_auto(request):
     container_name_infix = "test-autobatch"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    target_device=config.target_device, path_to_mount=Path(config.path_to_mount, __name__))
+                    target_device=config.target_device, used_models=[ResnetBS8])
     return server.start()
 
 
@@ -67,7 +65,7 @@ def start_server_batch_model_auto_2out(request):
     container_name_infix = "test-autobatch-2out"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    target_device=config.target_device, path_to_mount=Path(config.path_to_mount, __name__))
+                    target_device=config.target_device, used_models=[AgeGender])
     return server.start()
 
 
@@ -80,7 +78,7 @@ def start_server_batch_model_bs4(request):
     container_name_infix = "test-batch4"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    target_device=config.target_device, path_to_mount=Path(config.path_to_mount, __name__))
+                    target_device=config.target_device, used_models=[ResnetBS8])
     return server.start()
 
 
@@ -93,5 +91,5 @@ def start_server_batch_model_auto_bs4_2out(request):
     container_name_infix = "test-batch4-2out"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    path_to_mount=Path(config.path_to_mount, __name__))
+                    used_models=[AgeGender])
     return server.start()

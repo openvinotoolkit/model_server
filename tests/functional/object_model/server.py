@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 import os
+import shutil
 from pathlib import Path
 
 import config
@@ -29,7 +30,7 @@ class Server:
 
     def __init__(self, request, command_args, container_name_infix, start_container_command,
                  env_vars=None, image=config.image, container_log_line=config.container_log_line,
-                 server_log_level=config.log_level, path_to_mount=config.path_to_mount,target_device=None):
+                 server_log_level=config.log_level, target_device=None, used_models=[]):
         self.request = request
         self.command_args = command_args
         self.container_name_infix = container_name_infix
@@ -40,15 +41,22 @@ class Server:
         self.server_log_level = server_log_level
         self.target_device = target_device
         self.started_by_fixture = request.fixturename
-        self.path_to_mount = path_to_mount
+        self.path_to_mount = os.path.join(config.path_to_mount, container_name_infix)
+        self.used_models = used_models
+
+    def _prepare_directories(self):
+        Path(self.path_to_mount).mkdir(parents=True, exist_ok=True)
+        for f in ["config.json", "model_version_policy_config.json"]:
+            shutil.copyfile(os.path.join(config.path_to_mount, f),
+                            os.path.join(self.path_to_mount, f))
+        for model in self.used_models:
+            src = os.path.join(config.path_to_mount_cache, model.name)
+            dst = os.path.join(self.path_to_mount, model.name)
+            shutil.copytree(src, dst, dirs_exist_ok=True)
 
     def start(self):
         assert self not in Server.running_instances
-        Path(self.path_to_mount).mkdir(parents=True, exist_ok=True)
-        for root, dirs, files in os.walk(config.path_to_mount):
-            for file in files:
-                Path(root,file).mkdir(parents=True, exist_ok=True)
-               # os.link()
+        self._prepare_directories()
 
         if config.ovms_binary_path is not None:
             self.ovms = OvmsBinary(self.request, self.command_args, self.start_container_command, self.env_vars)
