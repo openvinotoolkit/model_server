@@ -133,7 +133,7 @@ To serve Resnet with support for binary input data run OVMS with `--layout NHWC`
 new OVMS instance with --layout MHWC parameter.
 For binary format data OVMS can be started using a command:
 ```bash
-docker run -d --rm -v /resnet/model/path:/model -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models --port 9000 --rest_port 8000 --layout MHWC
+docker run -d --rm -v <PATH_TO_MODELS>/resnet:/models/resnet -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 8000 --layout NHWC
 ```
 
 ### Predict 
