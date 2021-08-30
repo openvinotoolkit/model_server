@@ -182,7 +182,7 @@ cd <PATH_TO_MODELS>/vehicle-detection/1
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.xml
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.bin
 ```
-For numeric format data OVMS can be started using a command:
+For numeric data format OVMS can be started using a command:
 ```bash
 docker run -d --rm -v model_server/client/python/samples/models/vehicle-detection:/models -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name vehicle-detection --model_path /models --port 9000 --rest_port 8000
 ```
