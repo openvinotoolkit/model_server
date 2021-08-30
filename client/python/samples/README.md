@@ -26,7 +26,7 @@ and place the xml and bin files in the <PATH_TO_MODELS>/resnet/1
 
 For numeric format data OVMS can be started using a command:
 ```bash
-docker run -d --rm -v /resnet/model/path:/model -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models --port 9000 --rest_port 8000
+docker run -d --rm -v <PATH_TO_MODELS>/resnet:/models/resnet -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 8000
 ```
 
 
