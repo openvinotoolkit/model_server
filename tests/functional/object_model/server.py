@@ -52,7 +52,8 @@ class Server:
             for f in files:
                 src = os.path.join(root, f)
                 dst = os.path.join(self.path_to_mount, model.name, rpath, f)
-                os.link(src, dst)
+                if not os.path.exists(dst):
+                    os.link(src, dst)
 
     def _prepare_directories(self):
         Path(self.path_to_mount).mkdir(parents=True, exist_ok=True)
