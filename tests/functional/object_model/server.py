@@ -41,8 +41,18 @@ class Server:
         self.server_log_level = server_log_level
         self.target_device = target_device
         self.started_by_fixture = request.fixturename
-        self.path_to_mount = os.path.join(config.path_to_mount, container_name_infix)
+        self.path_to_mount = os.path.join(config.path_to_containers_dir, container_name_infix)
         self.used_models = used_models
+
+    def _symlink_model_files_to_tmp_container_dir(self, model):
+        model_dir = os.path.join(config.path_to_mount_cache, model.name)
+        for root, dirs, files in os.walk(model_dir):
+            rpath = os.path.relpath(root, model_dir)
+            os.makedirs(os.path.join(self.path_to_mount, model.name, rpath), exist_ok=True)
+            for f in files:
+                src = os.path.join(root, f)
+                dst = os.path.join(self.path_to_mount, model.name, rpath, f)
+                os.link(src, dst)
 
     def _prepare_directories(self):
         Path(self.path_to_mount).mkdir(parents=True, exist_ok=True)
@@ -50,9 +60,7 @@ class Server:
             shutil.copyfile(os.path.join(config.path_to_mount, f),
                             os.path.join(self.path_to_mount, f))
         for model in self.used_models:
-            src = os.path.join(config.path_to_mount_cache, model.name)
-            dst = os.path.join(self.path_to_mount, model.name)
-            shutil.copytree(src, dst, dirs_exist_ok=True)
+            self._symlink_model_files_to_tmp_container_dir(model)
 
     def start(self):
         assert self not in Server.running_instances

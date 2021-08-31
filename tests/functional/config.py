@@ -57,6 +57,8 @@ path_to_mount = os.path.join(test_dir, "saved_models")
 
 path_to_mount_cache = os.path.join(test_dir_cache, "saved_models")
 
+path_to_containers_dir = os.path.join(test_dir, "containers")
+
 models_path = path_to_mount if ovms_binary_path else "/opt/ml"
 
 """TT_MINIO_IMAGE_NAME - Docker image for Minio"""

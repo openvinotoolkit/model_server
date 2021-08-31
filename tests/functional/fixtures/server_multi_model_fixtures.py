@@ -20,7 +20,7 @@ import pytest
 import config
 from object_model.minio_docker import MinioDocker
 from object_model.server import Server
-from models_information import AgeGender, FaceDetection, Resnet, ResnetBS4, ResnetBS8, \
+from model.models_information import AgeGender, FaceDetection, Resnet, ResnetBS4, ResnetBS8, \
     PVBFaceDetectionV1
 
 

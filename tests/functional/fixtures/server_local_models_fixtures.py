@@ -64,7 +64,7 @@ def start_server_with_mapping(request):
     container_name_infix = "test-2-out"
 
     file_dst_path = os.path.join(config.path_to_mount, container_name_infix, 'age_gender/1/mapping_config.json')
-    Path(os.path.dirname(file_dst_path)).mkdir(parents=True)
+    Path(os.path.dirname(file_dst_path))(parents=True, exist_ok=True)
     shutil.copyfile('tests/functional/mapping_config.json', file_dst_path)
 
     server = Server(request, start_server_command_args,
