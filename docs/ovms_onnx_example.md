@@ -13,7 +13,7 @@ resnet/
 └── 1
     └── resnet50-caffe2-v1-9.onnx
 ```
-Note that the downloaded model requires additional [preprocessing function](https://github.com/onnx/models/tree/master/vision/classification/resnet#preprocessing). Preprocessing can be performed in the client by manipulating data before sending the request. Preprocessing can be also done on the server side by creating DAG and using custom processing node. Both methods will be explained below.
+Note that the downloaded model requires additional [preprocessing function](https://github.com/onnx/models/tree/master/vision/classification/resnet#preprocessing). Preprocessing can be performed in the client by manipulating data before sending the request. Preprocessing can be also delegated to the server by creating a DAG and using a custom processing node. Both methods will be explained below.
 
 <a href="#client-side">Option 1: Adding preprocessing to the client side</a>  
 <a href="#server-side">Option 2: Adding preprocessing to the server side (building DAG)</a>
@@ -115,19 +115,19 @@ workspace
             └── resnet50-caffe2-v1-9.onnx
 ```
 
-Start the OVMS container with configuration file option:
+Start the OVMS container with a configuration file option:
 ```bash
 docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet:/model -p 9001:9001 openvino/model_server:latest \
 --config_path /workspace/config_with_preprocessing_node.json --port 9001
 ```
 
-Use example binary input client to send JPEG images to the server:
+Use a sample client to send JPEG images to the server:
 ```
 $ cd model_server/example_client
 
 $ python3 grpc_binary_client.py --grpc_port 9001 --input_name 0 --output_name 1463 --model_name resnet --batchsize 1
 ```
-You should see 100% overall accurracy:
+Below is the client output including performance and accuracy results:
 ```
 Start processing:
         Model name: resnet
@@ -156,8 +156,8 @@ Overall accuracy= 100.0 %
 Average latency= 37.2 ms
 ```
 
-## Summary
-Additional preprocessing step allowed us to apply division and substraction to each pixel value in the image. We performed this calculation by passing two parameters to _image transformation_ custom node:
+## Node parameters explanation
+Additional preprocessing step applies a division and an subtraction to each pixel value in the image. This calculation is configured by passing two parameters to _image transformation_ custom node:
 ```
 "params": {
   ...
@@ -166,4 +166,4 @@ Additional preprocessing step allowed us to apply division and substraction to e
   ...
 }
 ```
-For each pixel we substracted `123.675` from blue value, `116.28` from green value and `103.53` from red value. Next, we performed division operation in the same color order using `58.395`, `57.12`, `57.375` values. This way we matched image data to input required by onnx model.
+For each pixel, the custom node subtractes `123.675` from blue value, `116.28` from green value and `103.53` from red value. Next, it divides in the same color order using `58.395`, `57.12`, `57.375` values. This way we match the image data to the input required by onnx model.
