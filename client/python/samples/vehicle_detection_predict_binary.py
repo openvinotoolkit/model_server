@@ -58,7 +58,6 @@ input_name, output_name = get_model_io_names(client, model_name, model_version)
 for img_path in img_paths:
     # reading image and its label
     img_path = img_path.strip()
-    img_name = img_path.split('/')[-1]
 
     img = load_image(img_path)
 
@@ -72,4 +71,4 @@ for img_path in img_paths:
     response = client.predict(request)
 
     # output post-processing
-    vehicle_postprocess(response, img_path, output_name, output_save_path, img_name)
+    vehicle_postprocess(response, img_path, output_name, output_save_path)
