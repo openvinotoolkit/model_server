@@ -119,7 +119,7 @@ Status EntryNode::createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, con
 }
 
 const Status EntryNode::validate() {
-    return validate_New(
+    return validation_utils::validate(
         *request,
         inputsInfo,
         inputsInfo.size());

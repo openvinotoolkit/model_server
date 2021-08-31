@@ -27,62 +27,14 @@
 #include "tensorinfo.hpp"
 
 namespace ovms {
-//namespace validation_utils {
+namespace validation_utils {
 
-Status validateNumberOfInputs_New(
-    const tensorflow::serving::PredictRequest& request,
-    const size_t expectedNumberOfInputs);
-
-Status validateAndGetInput_New(
-    const tensorflow::serving::PredictRequest& request,
-    const std::string& name,
-    google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it);
-
-Status checkIfShapeValuesNegative_New(
-    const tensorflow::TensorProto& proto);
-
-Status validateNumberOfBinaryInputShapeDimensions_New(
-    const tensorflow::TensorProto& proto);
-
-Status checkBatchSizeMismatch_New(
-    const tensorflow::TensorProto& proto,
-    const size_t networkBatchSize,
-    Status& finalStatus,
-    Mode batchingMode = Mode::FIXED,
-    Mode shapeMode = Mode::FIXED);
-
-Status checkBinaryBatchSizeMismatch_New(
-    const tensorflow::TensorProto& proto,
-    const size_t networkBatchSize,
-    Status& finalStatus,
-    Mode batchingMode = Mode::FIXED,
-    Mode shapeMode = Mode::FIXED);
-
-Status checkShapeMismatch_New(
-    const tensorflow::TensorProto& proto,
-    const ovms::TensorInfo& inputInfo,
-    Status& finalStatus,
-    Mode batchingMode = Mode::FIXED,
-    Mode shapeMode = Mode::FIXED);
-
-Status validateTensorContentSize_New(
-    const tensorflow::TensorProto& proto,
-    InferenceEngine::Precision expectedPrecision);
-
-Status validateNumberOfShapeDimensions_New(
-    const ovms::TensorInfo& inputInfo,
-    const tensorflow::TensorProto& proto);
-
-Status validatePrecision_New(
-    const ovms::TensorInfo& inputInfo,
-    const tensorflow::TensorProto& proto);
-
-Status validate_New(
+Status validate(
     const tensorflow::serving::PredictRequest& request,
     const tensor_map_t& inputsInfo,
     const size_t expectedNumberOfInputs,
     Mode batchingMode = Mode::FIXED,
     const shapes_map_t& shapeInfo = shapes_map_t());
 
-//}  // namespace validation_utils
+}  // namespace validation_utils
 }  // namespace ovms

@@ -23,8 +23,9 @@
 #include "modelconfig.hpp"
 
 namespace ovms {
+namespace validation_utils {
 
-Status validateNumberOfInputs_New(const tensorflow::serving::PredictRequest& request, const size_t expectedNumberOfInputs) {
+Status validateNumberOfInputs(const tensorflow::serving::PredictRequest& request, const size_t expectedNumberOfInputs) {
     if (request.inputs_size() > 0 && expectedNumberOfInputs == static_cast<size_t>(request.inputs_size())) {
         return StatusCode::OK;
     }
@@ -35,7 +36,7 @@ Status validateNumberOfInputs_New(const tensorflow::serving::PredictRequest& req
     return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
 }
 
-Status validateAndGetInput_New(const tensorflow::serving::PredictRequest& request, const std::string& name, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it) {
+Status validateAndGetInput(const tensorflow::serving::PredictRequest& request, const std::string& name, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it) {
     it = request.inputs().find(name);
     if (it != request.inputs().end()) {
         return StatusCode::OK;
@@ -47,7 +48,7 @@ Status validateAndGetInput_New(const tensorflow::serving::PredictRequest& reques
     return Status(StatusCode::INVALID_MISSING_INPUT, details);
 }
 
-Status checkIfShapeValuesNegative_New(const tensorflow::TensorProto& proto) {
+Status checkIfShapeValuesNegative(const tensorflow::TensorProto& proto) {
     for (size_t i = 0; i < proto.tensor_shape().dim_size(); i++) {
         if (proto.tensor_shape().dim(i).size() <= 0) {
             const std::string details = "Negative or zero dimension size is not acceptable: " + TensorInfo::tensorShapeToString(proto.tensor_shape());
@@ -58,7 +59,7 @@ Status checkIfShapeValuesNegative_New(const tensorflow::TensorProto& proto) {
     return StatusCode::OK;
 }
 
-Status validateNumberOfBinaryInputShapeDimensions_New(const tensorflow::TensorProto& proto) {
+Status validateNumberOfBinaryInputShapeDimensions(const tensorflow::TensorProto& proto) {
     if (proto.tensor_shape().dim_size() != 1) {
         std::stringstream ss;
         ss << "Expected number of binary input shape dimensions: 1; Actual: " << proto.tensor_shape().dim_size();
@@ -69,7 +70,7 @@ Status validateNumberOfBinaryInputShapeDimensions_New(const tensorflow::TensorPr
     return StatusCode::OK;
 }
 
-Status checkBatchSizeMismatch_New(const tensorflow::TensorProto& proto, const size_t networkBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) {
+Status checkBatchSizeMismatch(const tensorflow::TensorProto& proto, const size_t networkBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) {
     if (networkBatchSize == 0)
         return StatusCode::OK;
     if (networkBatchSize > 0 && static_cast<size_t>(proto.tensor_shape().dim(0).size()) == networkBatchSize)
@@ -88,7 +89,7 @@ Status checkBatchSizeMismatch_New(const tensorflow::TensorProto& proto, const si
     return StatusCode::OK;
 }
 
-Status checkBinaryBatchSizeMismatch_New(const tensorflow::TensorProto& proto, const size_t networkBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) {
+Status checkBinaryBatchSizeMismatch(const tensorflow::TensorProto& proto, const size_t networkBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) {
     if (proto.string_val_size() <= 0) {
         const std::string details = "Batch size must be positive";
         SPDLOG_DEBUG("Invalid batch size - {}", details);
@@ -112,7 +113,7 @@ Status checkBinaryBatchSizeMismatch_New(const tensorflow::TensorProto& proto, co
     return StatusCode::OK;
 }
 
-Status checkShapeMismatch_New(const tensorflow::TensorProto& proto, const ovms::TensorInfo& inputInfo, Status& finalStatus, Mode batchingMode, Mode shapeMode) {
+Status checkShapeMismatch(const tensorflow::TensorProto& proto, const ovms::TensorInfo& inputInfo, Status& finalStatus, Mode batchingMode, Mode shapeMode) {
     const auto& shape = inputInfo.getEffectiveShape();
     int i = (batchingMode == AUTO) ? 1 : 0;  // If batch size is automatic, omit first dimension
     bool mismatch = false;
@@ -139,7 +140,7 @@ Status checkShapeMismatch_New(const tensorflow::TensorProto& proto, const ovms::
     return StatusCode::OK;
 }
 
-Status validateTensorContentSize_New(const tensorflow::TensorProto& proto, InferenceEngine::Precision expectedPrecision) {
+Status validateTensorContentSize(const tensorflow::TensorProto& proto, InferenceEngine::Precision expectedPrecision) {
     /*
     int8        data in request.tensor_content
     uint8       data in request.tensor_content
@@ -194,7 +195,7 @@ Status validateTensorContentSize_New(const tensorflow::TensorProto& proto, Infer
     return StatusCode::OK;
 }
 
-Status validateNumberOfShapeDimensions_New(const ovms::TensorInfo& inputInfo, const tensorflow::TensorProto& proto) {
+Status validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const tensorflow::TensorProto& proto) {
     // Network and request must have the same number of shape dimensions, higher than 0
     const auto& shape = inputInfo.getEffectiveShape();
     if (proto.tensor_shape().dim_size() <= 0 ||
@@ -209,7 +210,7 @@ Status validateNumberOfShapeDimensions_New(const ovms::TensorInfo& inputInfo, co
     return StatusCode::OK;
 }
 
-Status validatePrecision_New(const ovms::TensorInfo& inputInfo, const tensorflow::TensorProto& proto) {
+Status validatePrecision(const ovms::TensorInfo& inputInfo, const tensorflow::TensorProto& proto) {
     if (proto.dtype() != inputInfo.getPrecisionAsDataType()) {
         std::stringstream ss;
         ss << "Expected: " << inputInfo.getPrecisionAsString()
@@ -235,22 +236,22 @@ Mode getShapeMode(const shapes_map_t& shapeInfo, const std::string& name) {
     return it->second.shapeMode;
 }
 
-Status validate_New(const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo, const size_t expectedNumberOfInputs, Mode batchingMode, const shapes_map_t& shapeInfo) {
+Status validate(const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo, const size_t expectedNumberOfInputs, Mode batchingMode, const shapes_map_t& shapeInfo) {
     Status finalStatus = StatusCode::OK;
 
-    auto status = validateNumberOfInputs_New(request, expectedNumberOfInputs);
+    auto status = validateNumberOfInputs(request, expectedNumberOfInputs);
     if (!status.ok())
         return status;
 
     for (const auto& [name, inputInfo] : inputsInfo) {
         google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator it;
-        status = validateAndGetInput_New(request, name, it);
+        status = validateAndGetInput(request, name, it);
         if (!status.ok())
             return status;
 
         const auto& proto = it->second;
 
-        status = checkIfShapeValuesNegative_New(proto);
+        status = checkIfShapeValuesNegative(proto);
         if (!status.ok())
             return status;
 
@@ -262,38 +263,39 @@ Status validate_New(const tensorflow::serving::PredictRequest& request, const te
             SPDLOG_DEBUG("Received request containing binary input: name: {}; batch size: {}; endpoint: {}",
                 name, proto.string_val_size(), request.model_spec().name());
 
-            status = validateNumberOfBinaryInputShapeDimensions_New(proto);
+            status = validateNumberOfBinaryInputShapeDimensions(proto);
             if (!status.ok())
                 return status;
 
-            status = checkBinaryBatchSizeMismatch_New(proto, batchSize, finalStatus, batchingMode, shapeMode);
+            status = checkBinaryBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode);
             if (!status.ok())
                 return status;
 
             continue;
         }
 
-        status = validatePrecision_New(*inputInfo, proto);
+        status = validatePrecision(*inputInfo, proto);
         if (!status.ok())
             return status;
 
-        status = validateNumberOfShapeDimensions_New(*inputInfo, proto);
+        status = validateNumberOfShapeDimensions(*inputInfo, proto);
         if (!status.ok())
             return status;
 
-        status = checkBatchSizeMismatch_New(proto, batchSize, finalStatus, batchingMode, shapeMode);
+        status = checkBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode);
         if (!status.ok())
             return status;
 
-        status = checkShapeMismatch_New(proto, *inputInfo, finalStatus, batchingMode, shapeMode);
+        status = checkShapeMismatch(proto, *inputInfo, finalStatus, batchingMode, shapeMode);
         if (!status.ok())
             return status;
 
-        status = validateTensorContentSize_New(proto, inputInfo->getPrecision());
+        status = validateTensorContentSize(proto, inputInfo->getPrecision());
         if (!status.ok())
             return status;
     }
     return finalStatus;
 }
 
+}  // namespace validation_utils
 }  // namespace ovms
