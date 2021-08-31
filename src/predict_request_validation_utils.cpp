@@ -56,4 +56,33 @@ Status checkIfShapeValuesNegative_New(const tensorflow::TensorProto& proto) {
     return StatusCode::OK;
 }
 
+Status validateNumberOfBinaryInputShapeDimensions_New(const tensorflow::TensorProto& proto) {
+    if (proto.tensor_shape().dim_size() != 1) {
+        std::stringstream ss;
+        ss << "Expected number of binary input shape dimensions: 1; Actual: " << proto.tensor_shape().dim_size();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("Invalid number of shape dimensions - {}", details);
+        return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, details);
+    }
+    return StatusCode::OK;
+}
+
+Status checkBatchSizeMismatch_New(const ovms::TensorInfo& networkInput, const tensorflow::TensorProto& proto, size_t batchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) {
+    // DAG is diff?
+    if (static_cast<size_t>(proto.tensor_shape().dim(0).size()) == batchSize)
+        return StatusCode::OK;
+
+    if (batchingMode == AUTO) {
+        finalStatus = StatusCode::BATCHSIZE_CHANGE_REQUIRED;
+        return StatusCode::OK;
+    } else if (shapeMode != AUTO) {
+        std::stringstream ss;
+        ss << "Expected: " << batchSize << "; Actual: " << proto.tensor_shape().dim(0).size();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("Invalid batch size - {}", details);
+        return Status(StatusCode::INVALID_BATCH_SIZE, details);
+    }
+    return StatusCode::OK;
+}
+
 }  // namespace ovms

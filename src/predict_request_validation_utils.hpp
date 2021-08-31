@@ -23,6 +23,7 @@
 #include <google/protobuf/map.h>
 
 #include "status.hpp"
+#include "shapeinfo.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
@@ -35,6 +36,14 @@ Status validateAndGetInput_New(const tensorflow::serving::PredictRequest& reques
 
 Status checkIfShapeValuesNegative_New(const tensorflow::TensorProto& proto);
 
+Status validateNumberOfBinaryInputShapeDimensions_New(const tensorflow::TensorProto& proto);
 
+Status checkBatchSizeMismatch_New(
+    const ovms::TensorInfo& networkInput,
+    const tensorflow::TensorProto& proto,
+    size_t batchSize,
+    Status& finalStatus,
+    Mode batchingMode = Mode::FIXED,
+    Mode shapeMode = Mode::FIXED);
 
 }  // namespace ovms
