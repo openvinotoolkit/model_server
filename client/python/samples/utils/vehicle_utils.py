@@ -19,6 +19,7 @@ import os
 
 
 def vehicle_postprocess(response, image_path, output_name, output_save_path):
+    img_name = image_path.split('/')[-1]
     response_dict = response.to_dict()
     output = response_dict[output_name]
     image = cv2.imread(image_path)
@@ -27,7 +28,12 @@ def vehicle_postprocess(response, image_path, output_name, output_save_path):
     confidence_threshold = 0.5
     for i in range(output.shape[2]):
         image = draw_bounding_box(output[0, 0, i, ...], image, width, height, confidence_threshold)
-    cv2.imwrite(os.path.join(output_save_path, 'vehicle-detection' + '.jpg'), image)
+    if not os.path.exists(output_save_path):
+        print("Making directory for output: " + output_save_path)
+        os.makedirs(output_save_path)
+    output_file = os.path.join(output_save_path, img_name + '.jpg')
+    cv2.imwrite(output_file, image)
+    print("Detection results in file: ", output_file)
 
 
 def draw_bounding_box(prediction_result, image, width, height, confidence_threshold):
