@@ -132,28 +132,28 @@ Below is the client output including performance and accuracy results:
 Start processing:
         Model name: resnet
         Images list file: input_images.txt
-Batch: 0; Processing time: 38.65 ms; speed 25.87 fps
+Batch: 0; Processing time: 21.52 ms; speed 46.47 fps
          1 airliner 404 ; Correct match.
-Batch: 1; Processing time: 42.42 ms; speed 23.57 fps
+Batch: 1; Processing time: 17.50 ms; speed 57.14 fps
          2 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
-Batch: 2; Processing time: 40.85 ms; speed 24.48 fps
+Batch: 2; Processing time: 14.91 ms; speed 67.05 fps
          3 bee 309 ; Correct match.
-Batch: 3; Processing time: 34.50 ms; speed 28.98 fps
+Batch: 3; Processing time: 11.66 ms; speed 85.76 fps
          4 golden retriever 207 ; Correct match.
-Batch: 4; Processing time: 35.81 ms; speed 27.92 fps
+Batch: 4; Processing time: 12.88 ms; speed 77.66 fps
          5 gorilla, Gorilla gorilla 366 ; Correct match.
-Batch: 5; Processing time: 34.98 ms; speed 28.59 fps
+Batch: 5; Processing time: 14.34 ms; speed 69.74 fps
          6 magnetic compass 635 ; Correct match.
-Batch: 6; Processing time: 34.79 ms; speed 28.74 fps
+Batch: 6; Processing time: 13.14 ms; speed 76.12 fps
          7 peacock 84 ; Correct match.
-Batch: 7; Processing time: 36.86 ms; speed 27.13 fps
+Batch: 7; Processing time: 14.48 ms; speed 69.04 fps
          8 pelican 144 ; Correct match.
-Batch: 8; Processing time: 41.93 ms; speed 23.85 fps
+Batch: 8; Processing time: 12.71 ms; speed 78.71 fps
          9 snail 113 ; Correct match.
-Batch: 9; Processing time: 38.24 ms; speed 26.15 fps
+Batch: 9; Processing time: 17.23 ms; speed 58.03 fps
          10 zebra 340 ; Correct match.
 Overall accuracy= 100.0 %
-Average latency= 37.2 ms
+Average latency= 14.5 ms
 ```
 
 ## Node parameters explanation
