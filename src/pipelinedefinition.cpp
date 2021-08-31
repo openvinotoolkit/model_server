@@ -445,7 +445,7 @@ public:
             if (shape[0] != 0) {
                 // 0 means that node accepts dynamic shape
                 if (shape[0] != demultiplicatorNodeInfo.demultiplyCount.value()) {
-                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of node: {} does not match tensor first dimenson value: {}",
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of node: {} does not match tensor first dimension value: {}",
                         this->pipelineName,
                         demultiplicatorNodeInfo.demultiplyCount.value(),
                         demultiplicatorNodeInfo.nodeName,
