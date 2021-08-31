@@ -30,20 +30,52 @@ namespace ovms {
 
 // TODO: Separate namespace?
 
-Status validateNumberOfInputs_New(const tensorflow::serving::PredictRequest& request, const size_t expectedNumberOfInputs);
+Status validateNumberOfInputs_New(
+    const tensorflow::serving::PredictRequest& request,
+    const size_t expectedNumberOfInputs);
 
-Status validateAndGetInput_New(const tensorflow::serving::PredictRequest& request, const std::string& name, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it);
+Status validateAndGetInput_New(
+    const tensorflow::serving::PredictRequest& request,
+    const std::string& name,
+    google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it);
 
-Status checkIfShapeValuesNegative_New(const tensorflow::TensorProto& proto);
+Status checkIfShapeValuesNegative_New(
+    const tensorflow::TensorProto& proto);
 
-Status validateNumberOfBinaryInputShapeDimensions_New(const tensorflow::TensorProto& proto);
+Status validateNumberOfBinaryInputShapeDimensions_New(
+    const tensorflow::TensorProto& proto);
 
 Status checkBatchSizeMismatch_New(
-    const ovms::TensorInfo& networkInput,
     const tensorflow::TensorProto& proto,
-    size_t batchSize,
+    const size_t networkBatchSize,
     Status& finalStatus,
     Mode batchingMode = Mode::FIXED,
     Mode shapeMode = Mode::FIXED);
+
+Status checkBinaryBatchSizeMismatch_New(
+    const tensorflow::TensorProto& proto,
+    const size_t networkBatchSize,
+    Status& finalStatus,
+    Mode batchingMode = Mode::FIXED,
+    Mode shapeMode = Mode::FIXED);
+
+Status checkShapeMismatch_New(
+    const tensorflow::TensorProto& proto,
+    const ovms::TensorInfo& inputInfo,
+    Status& finalStatus,
+    Mode batchingMode = Mode::FIXED,
+    Mode shapeMode = Mode::FIXED);
+
+Status validateTensorContentSize_New(
+    const tensorflow::TensorProto& proto,
+    InferenceEngine::Precision expectedPrecision);
+
+Status validateNumberOfShapeDimensions_New(
+    const ovms::TensorInfo& inputInfo,
+    const tensorflow::TensorProto& proto);
+
+Status validatePrecision_New(
+    const tensorflow::TensorProto& proto,
+    const ovms::TensorInfo& inputInfo);
 
 }  // namespace ovms

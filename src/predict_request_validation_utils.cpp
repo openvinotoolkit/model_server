@@ -67,9 +67,10 @@ Status validateNumberOfBinaryInputShapeDimensions_New(const tensorflow::TensorPr
     return StatusCode::OK;
 }
 
-Status checkBatchSizeMismatch_New(const ovms::TensorInfo& networkInput, const tensorflow::TensorProto& proto, size_t batchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) {
-    // DAG is diff?
-    if (static_cast<size_t>(proto.tensor_shape().dim(0).size()) == batchSize)
+Status checkBatchSizeMismatch_New(const tensorflow::TensorProto& proto, const size_t networkBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) {
+    if (networkBatchSize == 0)
+        return StatusCode::OK;
+    if (networkBatchSize > 0 && static_cast<size_t>(proto.tensor_shape().dim(0).size()) == networkBatchSize)
         return StatusCode::OK;
 
     if (batchingMode == AUTO) {
@@ -77,10 +78,143 @@ Status checkBatchSizeMismatch_New(const ovms::TensorInfo& networkInput, const te
         return StatusCode::OK;
     } else if (shapeMode != AUTO) {
         std::stringstream ss;
-        ss << "Expected: " << batchSize << "; Actual: " << proto.tensor_shape().dim(0).size();
+        ss << "Expected: " << networkBatchSize << "; Actual: " << proto.tensor_shape().dim(0).size();
         const std::string details = ss.str();
         SPDLOG_DEBUG("Invalid batch size - {}", details);
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
+    }
+    return StatusCode::OK;
+}
+
+Status checkBinaryBatchSizeMismatch_New(const tensorflow::TensorProto& proto, const size_t networkBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) {
+    if (proto.string_val_size() <= 0) {
+        const std::string details = "Batch size must be positive";
+        SPDLOG_DEBUG("Invalid batch size - {}", details);
+        return Status(StatusCode::INVALID_BATCH_SIZE, details);
+    }
+    if (networkBatchSize == 0)
+        return StatusCode::OK;
+    if (networkBatchSize > 0 && static_cast<size_t>(proto.string_val_size()) == networkBatchSize)
+        return StatusCode::OK;
+
+    if (batchingMode == AUTO) {
+        finalStatus = StatusCode::BATCHSIZE_CHANGE_REQUIRED;
+        return StatusCode::OK;
+    } else if (shapeMode != AUTO) {
+        std::stringstream ss;
+        ss << "Expected: " << networkBatchSize << "; Actual: " << proto.string_val_size();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("Invalid batch size - {}", details);
+        return Status(StatusCode::INVALID_BATCH_SIZE, details);
+    }
+    return StatusCode::OK;
+}
+
+Status checkShapeMismatch_New(const tensorflow::TensorProto& proto, const ovms::TensorInfo& inputInfo, Status& finalStatus, Mode batchingMode, Mode shapeMode) {
+    const auto& shape = inputInfo.getEffectiveShape();
+    int i = (batchingMode == AUTO) ? 1 : 0;  // If batch size is automatic, omit first dimension
+    bool mismatch = false;
+    for (; i < proto.tensor_shape().dim_size(); i++) {
+        if (shape[i] > 0 && proto.tensor_shape().dim(i).size() != shape[i]) {
+            mismatch = true;
+            break;
+        }
+    }
+    if (!mismatch) {
+        return StatusCode::OK;
+    }
+    if (shapeMode == AUTO) {
+        finalStatus = StatusCode::RESHAPE_REQUIRED;
+        return StatusCode::OK;
+    } else {
+        std::stringstream ss;
+        ss << "Expected: " << TensorInfo::shapeToString(inputInfo.getEffectiveShape())
+           << "; Actual: " << TensorInfo::tensorShapeToString(proto.tensor_shape());
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("Invalid shape - {}", details);
+        return Status(StatusCode::INVALID_SHAPE, details);
+    }
+    return StatusCode::OK;
+}
+
+Status validateTensorContentSize_New(const tensorflow::TensorProto& proto, InferenceEngine::Precision expectedPrecision) {
+    /*
+    int8        data in request.tensor_content
+    uint8       data in request.tensor_content
+    int16       data in request.tensor_content
+    uint16      request.tensor_content is empty, data located in request.int_val
+    int32       data in request.tensor_content
+    uint32      data in request.tensor_content
+    int64       data in request.tensor_content
+    uint64      data in request.tensor_content
+    float16     request.tensor_content is empty, data located in request.half_val
+    float32     data in request.tensor_content
+    double      data in request.tensor_content
+
+    _TENSOR_CONTENT_TYPES
+    https://github.com/tensorflow/tensorflow/blob/903a6399aab19b549fefd0ead836af644f3d00f8/tensorflow/python/framework/tensor_util.py#L237
+*/
+
+    size_t expectedValueCount = 1;
+    for (int i = 0; i < proto.tensor_shape().dim_size(); i++) {
+        expectedValueCount *= proto.tensor_shape().dim(i).size();
+    }
+
+    // Network expects tensor content size or value count
+    if (proto.dtype() == tensorflow::DataType::DT_UINT16) {
+        if (proto.int_val_size() < 0 ||
+            expectedValueCount != static_cast<size_t>(proto.int_val_size())) {
+            std::stringstream ss;
+            ss << "Expected: " << expectedValueCount << "; Actual: " << proto.int_val_size();
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("Invalid number of values in tensor proto container - {}", details);
+            return Status(StatusCode::INVALID_VALUE_COUNT, details);
+        }
+    } else if (proto.dtype() == tensorflow::DataType::DT_HALF) {
+        if (proto.half_val_size() < 0 ||
+            expectedValueCount != static_cast<size_t>(proto.half_val_size())) {
+            std::stringstream ss;
+            ss << "Expected: " << expectedValueCount << "; Actual: " << proto.half_val_size();
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("Invalid number of values in tensor proto container - {}", details);
+            return Status(StatusCode::INVALID_VALUE_COUNT, details);
+        }
+    } else {
+        size_t expectedContentSize = expectedValueCount * expectedPrecision.size();
+        if (expectedContentSize != proto.tensor_content().size()) {
+            std::stringstream ss;
+            ss << "Expected: " << expectedContentSize << " bytes; Actual: " << proto.tensor_content().size() << " bytes";
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("Invalid content size of tensor proto - {}", details);
+            return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+        }
+    }
+    return StatusCode::OK;
+}
+
+Status validateNumberOfShapeDimensions_New(const ovms::TensorInfo& inputInfo, const tensorflow::TensorProto& proto) {
+    // Network and request must have the same number of shape dimensions, higher than 0
+    const auto& shape = inputInfo.getEffectiveShape();
+    if (proto.tensor_shape().dim_size() <= 0 ||
+        shape.size() != static_cast<size_t>(proto.tensor_shape().dim_size())) {
+        std::stringstream ss;
+        ss << "Expected: " << TensorInfo::shapeToString(shape)
+           << "; Actual: " << TensorInfo::tensorShapeToString(proto.tensor_shape());
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("Invalid number of shape dimensions - {}", details);
+        return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, details);
+    }
+    return StatusCode::OK;
+}
+
+Status validatePrecision_New(const tensorflow::TensorProto& proto, const ovms::TensorInfo& inputInfo) {
+    if (proto.dtype() != inputInfo.getPrecisionAsDataType()) {
+        std::stringstream ss;
+        ss << "Expected: " << inputInfo.getPrecisionAsString()
+           << "; Actual: " << TensorInfo::getDataTypeAsString(proto.dtype());
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("Invalid precision - {}", details);
+        return Status(StatusCode::INVALID_PRECISION, details);
     }
     return StatusCode::OK;
 }
