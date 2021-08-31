@@ -138,14 +138,13 @@ Status StatefulModelInstance::loadOVExecutableNetwork(const ModelConfig& config)
     return ModelInstance::loadOVExecutableNetwork(config);
 }
 
-const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
-    // Begin with number of inputs required by the model and increase it with special inputs for sequence handling
-    auto completeInputsNumber = expectedNumberOfInputs;
+const size_t StatefulModelInstance::getExpectedNumberOfInputs(const tensorflow::serving::PredictRequest& request) const {
+    auto completeInputsNumber = ModelInstance::getExpectedNumberOfInputs(request);
     for (auto specialInputName : SPECIAL_INPUT_NAMES) {
-        if (request->inputs().count(specialInputName))
+        if (request.inputs().count(specialInputName))
             completeInputsNumber++;
     }
-    return ModelInstance::validateNumberOfInputs(request, completeInputsNumber);
+    return completeInputsNumber;
 }
 
 const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec) {

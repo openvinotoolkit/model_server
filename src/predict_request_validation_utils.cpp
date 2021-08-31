@@ -15,10 +15,12 @@
 //*****************************************************************************
 #include "predict_request_validation_utils.hpp"
 
-#include <string>
 #include <sstream>
+#include <string>
 
 #include <spdlog/spdlog.h>
+
+#include "modelconfig.hpp"
 
 namespace ovms {
 
@@ -217,6 +219,81 @@ Status validatePrecision_New(const ovms::TensorInfo& inputInfo, const tensorflow
         return Status(StatusCode::INVALID_PRECISION, details);
     }
     return StatusCode::OK;
+}
+
+Mode getShapeMode(const shapes_map_t& shapeInfo, const std::string& name) {
+    if (shapeInfo.size() == 0) {
+        return Mode::FIXED;
+    }
+    auto it = shapeInfo.find(name);
+    if (it == shapeInfo.end()) {
+        it = shapeInfo.find(ANONYMOUS_INPUT_NAME);
+    }
+    if (it == shapeInfo.end()) {
+        return Mode::FIXED;
+    }
+    return it->second.shapeMode;
+}
+
+Status validate_New(const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo, const size_t expectedNumberOfInputs, Mode batchingMode, const shapes_map_t& shapeInfo) {
+    Status finalStatus = StatusCode::OK;
+
+    auto status = validateNumberOfInputs_New(request, expectedNumberOfInputs);
+    if (!status.ok())
+        return status;
+
+    for (const auto& [name, inputInfo] : inputsInfo) {
+        google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator it;
+        status = validateAndGetInput_New(request, name, it);
+        if (!status.ok())
+            return status;
+
+        const auto& proto = it->second;
+
+        status = checkIfShapeValuesNegative_New(proto);
+        if (!status.ok())
+            return status;
+
+        const size_t batchSize = inputInfo->getBatchSize();
+        Mode shapeMode = getShapeMode(shapeInfo, name);
+
+        // More detailed binary input validation is performed in next step, during conversion to blob.
+        if (proto.dtype() == tensorflow::DataType::DT_STRING) {
+            SPDLOG_DEBUG("Received request containing binary input: name: {}; batch size: {}; endpoint: {}",
+                name, proto.string_val_size(), request.model_spec().name());
+
+            status = validateNumberOfBinaryInputShapeDimensions_New(proto);
+            if (!status.ok())
+                return status;
+
+            status = checkBinaryBatchSizeMismatch_New(proto, batchSize, finalStatus, batchingMode, shapeMode);
+            if (!status.ok())
+                return status;
+
+            continue;
+        }
+
+        status = validatePrecision_New(*inputInfo, proto);
+        if (!status.ok())
+            return status;
+
+        status = validateNumberOfShapeDimensions_New(*inputInfo, proto);
+        if (!status.ok())
+            return status;
+
+        status = checkBatchSizeMismatch_New(proto, batchSize, finalStatus, batchingMode, shapeMode);
+        if (!status.ok())
+            return status;
+
+        status = checkShapeMismatch_New(proto, *inputInfo, finalStatus, batchingMode, shapeMode);
+        if (!status.ok())
+            return status;
+
+        status = validateTensorContentSize_New(proto, inputInfo->getPrecision());
+        if (!status.ok())
+            return status;
+    }
+    return finalStatus;
 }
 
 }  // namespace ovms

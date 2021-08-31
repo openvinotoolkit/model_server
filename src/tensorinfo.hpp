@@ -250,6 +250,8 @@ public:
 
     static std::string tensorDescToString(const InferenceEngine::TensorDesc& desc);
 
+    const size_t getBatchSize() const;
+
 private:
     void updateEffectiveShape();
 };

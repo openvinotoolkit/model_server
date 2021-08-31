@@ -34,8 +34,8 @@
 #include "filesystem.hpp"
 #include "logging.hpp"
 #include "ov_utils.hpp"
-#include "prediction_service_utils.hpp"
 #include "predict_request_validation_utils.hpp"
+#include "prediction_service_utils.hpp"
 #include "serialization.hpp"
 #include "stringutils.hpp"
 #include "tensorinfo.hpp"
@@ -731,68 +731,17 @@ void ModelInstance::unloadModelComponents() {
     }
 }
 
-const Status ModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
-    return validateNumberOfInputs_New(*request, expectedNumberOfInputs);
+const size_t ModelInstance::getExpectedNumberOfInputs(const tensorflow::serving::PredictRequest& request) const {
+    return getInputsInfo().size();
 }
 
 const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
-    Status finalStatus = StatusCode::OK;
-
-    auto status = validateNumberOfInputs(request, getInputsInfo().size());
-    if (!status.ok())
-        return status;
-
-    for (const auto& [name, inputInfo] : getInputsInfo()) {
-        google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator it;
-        status = validateAndGetInput_New(*request, name, it);
-        if (!status.ok())
-            return status;
-
-        const auto& proto = it->second;
-        Mode batchingMode = getModelConfig().getBatchingMode();
-        Mode shapeMode = getModelConfig().isShapeAuto(name) ? AUTO : FIXED;
-
-        status = checkIfShapeValuesNegative_New(proto);
-        if (!status.ok())
-            return status;
-
-        // More detailed binary input validation is performed in next step, during conversion to blob.
-        if (proto.dtype() == tensorflow::DataType::DT_STRING) {
-            SPDLOG_DEBUG("Received request containing binary input: name: {}; batch size: {}; model: {}; version: {}",
-                name, proto.string_val_size(), getName(), getVersion());
-
-            status = validateNumberOfBinaryInputShapeDimensions_New(proto);
-            if (!status.ok())
-                return status;
-
-            status = checkBinaryBatchSizeMismatch_New(proto, getBatchSize(), finalStatus, batchingMode, shapeMode);
-            if (!status.ok())
-                return status;
-
-            continue;
-        }
-
-        status = validatePrecision_New(*inputInfo, proto);
-        if (!status.ok())
-            return status;
-
-        status = validateNumberOfShapeDimensions_New(*inputInfo, proto);
-        if (!status.ok())
-            return status;
-
-        status = checkBatchSizeMismatch_New(proto, getBatchSize(), finalStatus, batchingMode, shapeMode);
-        if (!status.ok())
-            return status;
-        
-        status = checkShapeMismatch_New(proto, *inputInfo, finalStatus, batchingMode, shapeMode);
-        if (!status.ok())
-            return status;
-
-        status = validateTensorContentSize_New(proto, inputInfo->getPrecision());
-        if (!status.ok())
-            return status;
-    }
-    return finalStatus;
+    return validate_New(
+        *request,
+        getInputsInfo(),
+        getExpectedNumberOfInputs(*request),
+        getModelConfig().getBatchingMode(),
+        getModelConfig().getShapes());
 }
 
 Status ModelInstance::performInference(InferenceEngine::InferRequest& inferRequest) {

@@ -216,8 +216,7 @@ protected:
          */
     Status loadOVCNNNetworkUsingCustomLoader();
 
-    virtual const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
-        const size_t expectedNumberOfInputs);
+    virtual const size_t getExpectedNumberOfInputs(const tensorflow::serving::PredictRequest& request) const;
 
     virtual const Status validate(const tensorflow::serving::PredictRequest* request);
 

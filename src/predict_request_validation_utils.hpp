@@ -22,13 +22,12 @@
 
 #include <google/protobuf/map.h>
 
-#include "status.hpp"
 #include "shapeinfo.hpp"
+#include "status.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
-
-// TODO: Separate namespace?
+//namespace validation_utils {
 
 Status validateNumberOfInputs_New(
     const tensorflow::serving::PredictRequest& request,
@@ -78,4 +77,12 @@ Status validatePrecision_New(
     const ovms::TensorInfo& inputInfo,
     const tensorflow::TensorProto& proto);
 
+Status validate_New(
+    const tensorflow::serving::PredictRequest& request,
+    const tensor_map_t& inputsInfo,
+    const size_t expectedNumberOfInputs,
+    Mode batchingMode = Mode::FIXED,
+    const shapes_map_t& shapeInfo = shapes_map_t());
+
+//}  // namespace validation_utils
 }  // namespace ovms

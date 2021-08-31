@@ -88,8 +88,7 @@ protected:
 
     const Status validate(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& processingSpec);
 
-    const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
-        const size_t expectedNumberOfInputs) override;
+    const size_t getExpectedNumberOfInputs(const tensorflow::serving::PredictRequest& request) const override;
 
     Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
 
