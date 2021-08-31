@@ -4,11 +4,11 @@ This document contains examples to run *GetModelStatus*, *GetModelMetadata*, *Pr
 
 It covers following topics:
 * <a href="#grpc-api">gRPC API Example Clients </a>
-* <a href="#model-status">Model status </a>
-* <a href="#model-metadata">Model metadata </a>
-* <a href="#predict-numeric">Predict numeric format </a>
-* <a href="#predict-binary">Predict binary format </a>
-* <a href="#detect-vehicle">Detect vehicle </a>
+* <a href="#model-status">get_grpc_model_status.py</a>
+* <a href="#model-metadata">get_grpc_metadata.py</a>
+* <a href="#predict-numeric">resnet_grpc_predict.py</a>
+* <a href="#predict-binary">resnet_grpc_predict_binary.py</a>
+* <a href="#detect-vehicle">vehicle_detection_predict_binary.py</a>
 
 ## Requirement
 
@@ -141,7 +141,7 @@ For binary format data OVMS can be started using a command:
 docker run -d --rm -v <PATH_TO_MODELS>/resnet:/models/resnet -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 8000 --layout NHWC
 ```
 
-### Predict binary format<a name="model-binary">
+### Predict binary format<a name="predict-binary">
 
 #### **Make prediction using images in binary format:**
 
