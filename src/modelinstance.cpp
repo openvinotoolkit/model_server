@@ -731,237 +731,64 @@ void ModelInstance::unloadModelComponents() {
     }
 }
 
-const Status ModelInstance::checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput) {
-    for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
-        if (requestInput.tensor_shape().dim(i).size() < 0) {
-            const std::string details = "Negative dimension size is not acceptable: " + TensorInfo::tensorShapeToString(requestInput.tensor_shape());
-            SPDLOG_DEBUG("[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
-            return Status(StatusCode::INVALID_SHAPE, details);
-        }
-    }
-    return StatusCode::OK;
-}
 const Status ModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
-    return validateNumberOfInputs_New(*request, expectedNumberOfInputs);    
-    // if (request->inputs_size() < 0 || expectedNumberOfInputs != static_cast<size_t>(request->inputs_size())) {
-    //     std::stringstream ss;
-    //     ss << "Expected: " << expectedNumberOfInputs << "; Actual: " << request->inputs_size();
-    //     const std::string details = ss.str();
-    //     SPDLOG_DEBUG("[Model:{} version:{}] Invalid number of inputs - {}", getName(), getVersion(), details);
-    //     return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
-    // }
-    // return StatusCode::OK;
-}
-
-const Status ModelInstance::validatePrecision(const ovms::TensorInfo& networkInput,
-    const tensorflow::TensorProto& requestInput) {
-    // Network and request must have the same precision
-    if (requestInput.dtype() != networkInput.getPrecisionAsDataType()) {
-        std::stringstream ss;
-        ss << "Expected: " << networkInput.getPrecisionAsString()
-           << "; Actual: " << TensorInfo::getDataTypeAsString(requestInput.dtype());
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[Model: {} version: {}] Invalid precision - {}", getName(), getVersion(), details);
-        return Status(StatusCode::INVALID_PRECISION, details);
-    }
-    return StatusCode::OK;
-}
-
-const Status ModelInstance::validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
-    const tensorflow::TensorProto& requestInput) {
-    // Network and request must have the same number of shape dimensions, higher than 0
-    auto& shape = networkInput.getEffectiveShape();
-    if (requestInput.tensor_shape().dim_size() <= 0 ||
-        shape.size() != static_cast<size_t>(requestInput.tensor_shape().dim_size())) {
-        std::stringstream ss;
-        ss << "Expected: " << TensorInfo::shapeToString(shape)
-           << "; Actual: " << TensorInfo::tensorShapeToString(requestInput.tensor_shape());
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[Model: {} version: {}] Invalid number of shape dimensions - {}", getName(), getVersion(), details);
-        return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, details);
-    }
-    return StatusCode::OK;
-}
-
-const bool ModelInstance::checkBatchSizeMismatch(const ovms::TensorInfo& networkInput,
-    const tensorflow::TensorProto& requestInput) {
-    if (static_cast<size_t>(requestInput.tensor_shape().dim(0).size()) != getBatchSize())
-        return true;
-    return false;
-}
-
-const bool ModelInstance::checkShapeMismatch(const ovms::TensorInfo& networkInput,
-    const tensorflow::TensorProto& requestInput,
-    const Mode& batchingMode) {
-    // Network and request must have the same shape
-    auto& shape = networkInput.getEffectiveShape();
-    int i = (batchingMode == AUTO) ? 1 : 0;  // If batch size is automatic, omit first dimension
-    for (; i < requestInput.tensor_shape().dim_size(); i++) {
-        if (requestInput.tensor_shape().dim(i).size() < 0 ||
-            shape[i] != static_cast<size_t>(requestInput.tensor_shape().dim(i).size())) {
-            return true;
-        }
-    }
-    return false;
-}
-
-const Status ModelInstance::validateTensorContentSize(const ovms::TensorInfo& networkInput,
-    const tensorflow::TensorProto& requestInput) {
-    /*
-    int8        data in request.tensor_content
-    uint8       data in request.tensor_content
-    int16       data in request.tensor_content
-    uint16      request.tensor_content is empty, data located in request.int_val
-    int32       data in request.tensor_content
-    uint32      data in request.tensor_content
-    int64       data in request.tensor_content
-    uint64      data in request.tensor_content
-    float16     request.tensor_content is empty, data located in request.half_val
-    float32     data in request.tensor_content
-    double      data in request.tensor_content
-
-    _TENSOR_CONTENT_TYPES
-    https://github.com/tensorflow/tensorflow/blob/903a6399aab19b549fefd0ead836af644f3d00f8/tensorflow/python/framework/tensor_util.py#L237
-*/
-
-    size_t expectedValueCount = 1;
-    for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
-        expectedValueCount *= requestInput.tensor_shape().dim(i).size();
-    }
-
-    // Network expects tensor content size or value count
-    if (requestInput.dtype() == tensorflow::DataType::DT_UINT16) {
-        if (requestInput.int_val_size() < 0 ||
-            expectedValueCount != static_cast<size_t>(requestInput.int_val_size())) {
-            std::stringstream ss;
-            ss << "Expected: " << expectedValueCount << "; Actual: " << requestInput.int_val_size();
-            const std::string details = ss.str();
-            SPDLOG_DEBUG("[Model: {} version: {}] Invalid number of values in tensor proto container - {}", getName(), getVersion(), details);
-            return Status(StatusCode::INVALID_VALUE_COUNT, details);
-        }
-    } else if (requestInput.dtype() == tensorflow::DataType::DT_HALF) {
-        if (requestInput.half_val_size() < 0 ||
-            expectedValueCount != static_cast<size_t>(requestInput.half_val_size())) {
-            std::stringstream ss;
-            ss << "Expected: " << expectedValueCount << "; Actual: " << requestInput.half_val_size();
-            const std::string details = ss.str();
-            SPDLOG_DEBUG("[Model: {} version: {}] Invalid number of values in tensor proto container - {}", getName(), getVersion(), details);
-            return Status(StatusCode::INVALID_VALUE_COUNT, details);
-        }
-    } else {
-        size_t expectedContentSize = expectedValueCount * networkInput.getPrecision().size();
-        if (expectedContentSize != requestInput.tensor_content().size()) {
-            std::stringstream ss;
-            ss << "Expected: " << expectedContentSize << " bytes; Actual: " << requestInput.tensor_content().size() << " bytes";
-            const std::string details = ss.str();
-            SPDLOG_DEBUG("[Model: {} version: {}] Invalid content size of tensor proto - {}", getName(), getVersion(), details);
-            return Status(StatusCode::INVALID_CONTENT_SIZE, details);
-        }
-    }
-    return StatusCode::OK;
-}
-
-const bool ModelInstance::checkBinaryInputBatchSizeMismatch(const ovms::TensorInfo& networkInput,
-    const tensorflow::TensorProto& requestInput) {
-    if (requestInput.string_val_size() < 0) {
-        return true;
-    }
-    if (getBatchSize() != static_cast<size_t>(requestInput.string_val_size())) {
-        return true;
-    }
-    return false;
-}
-
-const Status ModelInstance::validateNumberOfBinaryInputShapeDimensions(const tensorflow::TensorProto& requestInput) {
-    if (requestInput.tensor_shape().dim_size() != 1) {
-        std::stringstream ss;
-        ss << "Expected number of binary input shape dimensions: 1; Actual: " << requestInput.tensor_shape().dim_size();
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[Model: {} version: {}] Invalid number of shape dimensions - {}", getName(), getVersion(), details);
-        return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, details);
-    }
-    return StatusCode::OK;
+    return validateNumberOfInputs_New(*request, expectedNumberOfInputs);
 }
 
 const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
     Status finalStatus = StatusCode::OK;
 
-    // Network and request must have the same amount of inputs
-    auto expectedNumberOfInputs = getInputsInfo().size();
-    finalStatus = validateNumberOfInputs(request, expectedNumberOfInputs);
-    if (!finalStatus.ok())
-        return finalStatus;
+    auto status = validateNumberOfInputs(request, getInputsInfo().size());
+    if (!status.ok())
+        return status;
 
-    for (const auto& [name, networkInput] : getInputsInfo()) {
+    for (const auto& [name, inputInfo] : getInputsInfo()) {
         google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator it;
-        auto status = validateAndGetInput_New(*request, name, it);
+        status = validateAndGetInput_New(*request, name, it);
         if (!status.ok())
             return status;
 
-        const auto& requestInput = it->second;
+        const auto& proto = it->second;
         Mode batchingMode = getModelConfig().getBatchingMode();
         Mode shapeMode = getModelConfig().isShapeAuto(name) ? AUTO : FIXED;
 
-        status = checkIfShapeValuesNegative(requestInput);
+        status = checkIfShapeValuesNegative_New(proto);
         if (!status.ok())
             return status;
 
-        if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
-            // binary inputs will be validated during conversion to blob
-            SPDLOG_DEBUG("Received request containing binary inputs");
-            status = validateNumberOfBinaryInputShapeDimensions(requestInput);
-            if (!status.ok()) {
-                return status;
-            }
+        // More detailed binary input validation is performed in next step, during conversion to blob.
+        if (proto.dtype() == tensorflow::DataType::DT_STRING) {
+            SPDLOG_DEBUG("Received request containing binary input: name: {}; batch size: {}; model: {}; version: {}",
+                name, proto.string_val_size(), getName(), getVersion());
 
-            if (checkBinaryInputBatchSizeMismatch(*networkInput, requestInput)) {
-                if (batchingMode == AUTO) {
-                    finalStatus = StatusCode::BATCHSIZE_CHANGE_REQUIRED;
-                } else {
-                    std::stringstream ss;
-                    ss << "Expected: " << getBatchSize() << "; Actual: " << requestInput.string_val_size();
-                    const std::string details = ss.str();
-                    SPDLOG_DEBUG("[Model: {} version: {}] Invalid batch size - {}", getName(), getVersion(), details);
-                    return Status(StatusCode::INVALID_BATCH_SIZE, details);
-                }
-            }
+            status = validateNumberOfBinaryInputShapeDimensions_New(proto);
+            if (!status.ok())
+                return status;
+
+            status = checkBinaryBatchSizeMismatch_New(proto, getBatchSize(), finalStatus, batchingMode, shapeMode);
+            if (!status.ok())
+                return status;
+
             continue;
         }
 
-        status = validatePrecision(*networkInput, requestInput);
+        status = validatePrecision_New(*inputInfo, proto);
         if (!status.ok())
             return status;
 
-        status = validateNumberOfShapeDimensions(*networkInput, requestInput);
+        status = validateNumberOfShapeDimensions_New(*inputInfo, proto);
         if (!status.ok())
             return status;
 
-        if (checkBatchSizeMismatch(*networkInput, requestInput)) {
-            if (batchingMode == AUTO) {
-                finalStatus = StatusCode::BATCHSIZE_CHANGE_REQUIRED;
-            } else if (shapeMode != AUTO) {
-                std::stringstream ss;
-                ss << "Expected: " << getBatchSize() << "; Actual: " << requestInput.tensor_shape().dim(0).size();
-                const std::string details = ss.str();
-                SPDLOG_DEBUG("[Model: {} version: {}] Invalid batch size - {}", getName(), getVersion(), details);
-                return Status(StatusCode::INVALID_BATCH_SIZE, details);
-            }
-        }
+        status = checkBatchSizeMismatch_New(proto, getBatchSize(), finalStatus, batchingMode, shapeMode);
+        if (!status.ok())
+            return status;
+        
+        status = checkShapeMismatch_New(proto, *inputInfo, finalStatus, batchingMode, shapeMode);
+        if (!status.ok())
+            return status;
 
-        if (checkShapeMismatch(*networkInput, requestInput, batchingMode)) {
-            if (shapeMode == AUTO) {
-                finalStatus = StatusCode::RESHAPE_REQUIRED;
-            } else {
-                std::stringstream ss;
-                ss << "Expected: " << TensorInfo::shapeToString(networkInput->getEffectiveShape())
-                   << "; Actual: " << TensorInfo::tensorShapeToString(requestInput.tensor_shape());
-                const std::string details = ss.str();
-                SPDLOG_DEBUG("[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
-                return Status(StatusCode::INVALID_SHAPE, details);
-            }
-        }
-
-        status = validateTensorContentSize(*networkInput, requestInput);
+        status = validateTensorContentSize_New(proto, inputInfo->getPrecision());
         if (!status.ok())
             return status;
     }

@@ -216,31 +216,8 @@ protected:
          */
     Status loadOVCNNNetworkUsingCustomLoader();
 
-    const Status checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput);
-
     virtual const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
         const size_t expectedNumberOfInputs);
-
-    const Status validatePrecision(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const Status validateNumberOfBinaryInputShapeDimensions(const tensorflow::TensorProto& requestInput);
-
-    const bool checkBinaryInputBatchSizeMismatch(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const bool checkBatchSizeMismatch(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const bool checkShapeMismatch(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput,
-        const Mode& batchingMode);
-
-    const Status validateTensorContentSize(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
 
     virtual const Status validate(const tensorflow::serving::PredictRequest* request);
 

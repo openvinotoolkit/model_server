@@ -207,7 +207,7 @@ Status validateNumberOfShapeDimensions_New(const ovms::TensorInfo& inputInfo, co
     return StatusCode::OK;
 }
 
-Status validatePrecision_New(const tensorflow::TensorProto& proto, const ovms::TensorInfo& inputInfo) {
+Status validatePrecision_New(const ovms::TensorInfo& inputInfo, const tensorflow::TensorProto& proto) {
     if (proto.dtype() != inputInfo.getPrecisionAsDataType()) {
         std::stringstream ss;
         ss << "Expected: " << inputInfo.getPrecisionAsString()

@@ -75,7 +75,7 @@ Status validateNumberOfShapeDimensions_New(
     const tensorflow::TensorProto& proto);
 
 Status validatePrecision_New(
-    const tensorflow::TensorProto& proto,
-    const ovms::TensorInfo& inputInfo);
+    const ovms::TensorInfo& inputInfo,
+    const tensorflow::TensorProto& proto);
 
 }  // namespace ovms
