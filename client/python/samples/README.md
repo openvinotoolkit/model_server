@@ -24,14 +24,19 @@ Install client dependencies using the command below:
 pip3 install -r requirements.txt
 ```
 Build and install [Model Server Client Library](../lib)
-`pip install dist/ovmsclient-0.1-py3-none-any.whl`
+`pip3 install dist/ovmsclient-0.1-py3-none-any.whl`
 
-Download [Resnet50-tf Model](https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html) and Convert it into Inference Engine Format
-and place the xml and bin files in the <PATH_TO_MODELS>/resnet/1
-
-For numeric data format  OVMS can be started using a command:
+Download [Resnet50-tf Model](https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html) and convert it into Intermediate Representation format:
 ```bash
-docker run -d --rm -v <PATH_TO_MODELS>/resnet:/models/resnet -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 8000
+mkdir models
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/downloader.py --name resnet-50-tf --output_dir /models
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/converter.py --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
+mv ${PWD}/models/public/resnet-50-tf/FP32 ${PWD}/models/public/resnet-50-tf/1
+```
+
+OVMS can be started using a command:
+```bash
+docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 
 ```
 
 
@@ -134,11 +139,10 @@ Image images/airliner.jpeg has been classified as airliner with 49.2023199796676
 Image images/golden_retriever.jpeg has been classified as golden retriever with 88.68610262870789% confidence
 ```
 
-To serve Resnet with support for binary input data run OVMS with `--layout NHWC` parameter
+To serve Resnet with support for binary input data, the model needs to be configured with NHWC layout. That can be acheived by starting the OVMS container with `--layout NHWC` parameter.
 new OVMS instance with --layout MHWC parameter.
-For binary format data OVMS can be started using a command:
 ```bash
-docker run -d --rm -v <PATH_TO_MODELS>/resnet:/models/resnet -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 8000 --layout NHWC
+docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 --layout NHWC
 ```
 
 ### Predict binary format<a name="predict-binary">
@@ -183,14 +187,14 @@ Image images/golden_retriever.jpeg has been classified as golden retriever with 
 
 ### Vehicle detection model
 ```
-mkdir -p <PATH_TO_MODELS>/vehicle-detection/1
-cd <PATH_TO_MODELS>/vehicle-detection/1
-wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.xml
-wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.bin
+mkdir -p models
+curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.xml -o ${PWD}/models/vehicle-detection/1/vehicle-detection-0202.xml
+curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.bin -o ${PWD}/models/vehicle-detection/1/vehicle-detection-0202.bin
+chmod -R 755 ${PWD}/models/vehicle-detection
 ```
-For numeric data format OVMS can be started using a command:
+OVMS container can be started using a command:
 ```bash
-docker run -d --rm -v <PATH_TO_MODELS>/vehicle-detection:/models/vehicle-detection -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name vehicle-detection --model_path /models/vehicle-detection --port 9000 --rest_port 8000
+docker run -d --rm -v ${PWD}/models/vehicle-detection:/models/vehicle-detection -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name vehicle-detection --model_path /models/vehicle-detection --port 9000 --rest_port 8000 --layout NHWC
 ```
 
 
@@ -198,7 +202,6 @@ docker run -d --rm -v <PATH_TO_MODELS>/vehicle-detection:/models/vehicle-detecti
 
 
 #### **Make vehicle detection prediction using images in binary format:**
-#### **Required Model Server running with vehicle detection model:**
 
 - Command
 

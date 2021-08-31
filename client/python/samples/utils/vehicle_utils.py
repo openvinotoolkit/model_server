@@ -31,7 +31,7 @@ def vehicle_postprocess(response, image_path, output_name, output_save_path):
     if not os.path.exists(output_save_path):
         print("Making directory for output: " + output_save_path)
         os.makedirs(output_save_path)
-    output_file = os.path.join(output_save_path, img_name + '.jpg')
+    output_file = os.path.join(output_save_path, img_name)
     cv2.imwrite(output_file, image)
     print("Detection results in file: ", output_file)
 
