@@ -19,7 +19,7 @@ If using Python virtual environment, activate it:
 . ../lib/.venv/bin/activate
 ```
 
-Install client dependencies using the command below in the example_client directory:
+Install client dependencies using the command below:
 ```
 pip3 install -r requirements.txt
 ```
@@ -226,5 +226,5 @@ optional arguments:
 ```bash
 python vehicle_detection_predict_binary.py --images_dir ./images/cars/ --output_save_path ./output
 Making directory for output: ./output
-Detection results in file:  ./output/1.jpg
+Detection results in file:  ./output/road1.jpg
 ```
