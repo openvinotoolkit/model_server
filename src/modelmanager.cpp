@@ -578,6 +578,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is invalid {}", jsonFilename);
             intermediateStatus = StatusCode::CONFIG_FILE_INVALID;
             loud.log();
+            std::this_thread::sleep_for(std::chrono::seconds(1));
             continue;
         }
         rapidjson::IStreamWrapper isw(ifs);
@@ -587,6 +588,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
                 rapidjson::GetParseError_En(parseResult.Code()));
             intermediateStatus = StatusCode::JSON_INVALID;
             loud.log();
+            std::this_thread::sleep_for(std::chrono::seconds(1));
             continue;
         }
     } while (++counter < MAX_CONFIG_JSON_READ_RETRY_COUNT && !intermediateStatus.ok());
