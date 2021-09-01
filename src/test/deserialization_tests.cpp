@@ -221,8 +221,6 @@ TEST_F(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
     inferRequest.SetBlob("b", mockBlobPtr);
     InputSink<InferRequest&> inputSink(inferRequest);
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
-    SPDLOG_ERROR(status.getCode());
-    SPDLOG_ERROR(status.string());
     EXPECT_TRUE(status.ok());
 }
 
