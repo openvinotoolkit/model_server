@@ -611,16 +611,22 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomAndDLNodes) {
 }
 
 struct LibraryFailInExecute {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 1;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -632,18 +638,24 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeExecution) {
 }
 
 struct LibraryCorruptedOutputHandle {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *handle = nullptr;
         *outputsNum = 5;
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -655,18 +667,24 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputsCorru
 }
 
 struct LibraryCorruptedOutputsNumber {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *handle = (struct CustomNodeTensor*)malloc(5 * sizeof(struct CustomNodeTensor));
         *outputsNum = 0;
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -678,7 +696,13 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputsCorru
 }
 
 struct LibraryMissingOutput {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
         (*handle)->name = "random_not_connected_output";
@@ -690,13 +714,13 @@ struct LibraryMissingOutput {
         (*handle)->dataBytes = sizeof(float);
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -708,7 +732,13 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeMissingOutpu
 }
 
 struct LibraryIncorrectOutputPrecision {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
         (*handle)->name = "output_numbers";
@@ -719,13 +749,13 @@ struct LibraryIncorrectOutputPrecision {
         (*handle)->dataBytes = 1;
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -737,7 +767,13 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvali
 }
 
 struct LibraryIncorrectOutputShape {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
         (*handle)->name = "output_numbers";
@@ -748,13 +784,13 @@ struct LibraryIncorrectOutputShape {
         (*handle)->dataBytes = 1;
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -766,7 +802,13 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvali
 }
 
 struct LibraryIncorrectOutputContentSize {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
         (*handle)->name = "output_numbers";
@@ -777,13 +819,13 @@ struct LibraryIncorrectOutputContentSize {
         (*handle)->dataBytes = 0;
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -1947,10 +1989,16 @@ struct LibraryParamControlledMetadata {
         info.precision = precision;
         return info;
     }
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 1;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
         int inputs = 0;
         for (int i = 0; i < paramsCount; i++) {
             if (startsWith(params[i].key, "in_")) {
@@ -1971,7 +2019,7 @@ struct LibraryParamControlledMetadata {
         }
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
         int outputs = 0;
         for (int i = 0; i < paramsCount; i++) {
             if (startsWith(params[i].key, "out_")) {
@@ -1992,7 +2040,7 @@ struct LibraryParamControlledMetadata {
         }
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -2400,16 +2448,22 @@ TEST_F(EnsembleConfigurationValidationWithCustomNode, InvalidSharedLibrary) {
 }
 
 struct LibraryErrorsOnMetadataCall {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 1;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 1;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -4113,7 +4167,13 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, 2
 }
 
 struct LibraryProduceImages5Dimensions {
-    static int execute(const struct CustomNodeTensor* inputs, int, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         const CustomNodeTensor& input = *inputs;
         std::vector<float> inputData((float*)input.data, ((float*)input.data) + (input.dataBytes / sizeof(float)));
 
@@ -4143,13 +4203,13 @@ struct LibraryProduceImages5Dimensions {
         resultTensor.precision = FP32;
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }

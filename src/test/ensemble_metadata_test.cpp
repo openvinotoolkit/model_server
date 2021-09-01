@@ -459,10 +459,16 @@ TEST(EnsembleMetadata, ParallelCustomNodes) {
 }
 
 struct MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager){
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 1;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *infoCount = 2;
         *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
@@ -481,7 +487,7 @@ struct MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode {
         (*info)[1].dims[1] = 400;
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *infoCount = 2;
         *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
@@ -502,17 +508,23 @@ struct MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode {
         (*info)[1].dims[2] = 4;
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
 };
 
 struct MockLibraryDemultiplexer2Inputs1OutputMatchingPreviousNode {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager){
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 1;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *infoCount = 2;
         *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
@@ -531,7 +543,7 @@ struct MockLibraryDemultiplexer2Inputs1OutputMatchingPreviousNode {
         (*info)[1].dims[1] = 4;
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *infoCount = 1;
         *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
@@ -544,7 +556,7 @@ struct MockLibraryDemultiplexer2Inputs1OutputMatchingPreviousNode {
         (*info)[0].dims[2] = 10;
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -556,11 +568,15 @@ TEST(EnsembleMetadata, CustomNodeMultipleDemultiplexers) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
     NodeLibrary libraryMatchingFollowingNode{
+        MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode::initialize,
+        MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode::deinitialize,
         MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode::execute,
         MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode::getInputsInfo,
         MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode::getOutputsInfo,
         MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode::release};
     NodeLibrary libraryMatchingPreviousNode{
+        MockLibraryDemultiplexer2Inputs1OutputMatchingPreviousNode::initialize,
+        MockLibraryDemultiplexer2Inputs1OutputMatchingPreviousNode::deinitialize,
         MockLibraryDemultiplexer2Inputs1OutputMatchingPreviousNode::execute,
         MockLibraryDemultiplexer2Inputs1OutputMatchingPreviousNode::getInputsInfo,
         MockLibraryDemultiplexer2Inputs1OutputMatchingPreviousNode::getOutputsInfo,
