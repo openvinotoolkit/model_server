@@ -76,12 +76,6 @@ inline tensorflow::DataType fromInferenceEnginePrecision(Precision precision) {
     }
 }
 
-class MockIInferRequestFailingInSetBlob : public MockIInferRequest {
-    InferenceEngine::StatusCode SetBlob(const char*, const Blob::Ptr&, ResponseDesc*) noexcept override {
-        return InferenceEngine::StatusCode::UNEXPECTED;
-    }
-};
-
 class MockBlob : public InferenceEngine::MemoryBlob {
 public:
     using Ptr = std::shared_ptr<MockBlob>;

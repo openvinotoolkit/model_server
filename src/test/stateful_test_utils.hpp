@@ -150,4 +150,3 @@ public:
         return ovms::SequenceManager::terminateSequence(sequenceId);
     }
 };
-#pragma GCC diagnostic pop

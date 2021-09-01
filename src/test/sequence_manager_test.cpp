@@ -322,4 +322,3 @@ TEST(SequenceManager, ExceedMaxSequenceNumber) {
         ASSERT_EQ(sequenceManager.mockCreateSequence(spec), ovms::StatusCode::MAX_SEQUENCE_NUMBER_REACHED);
     }
 }
-#pragma GCC diagnostic pop

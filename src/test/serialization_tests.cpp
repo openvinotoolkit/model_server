@@ -227,5 +227,3 @@ INSTANTIATE_TEST_SUITE_P(
     SerializeTFTensorProtoNegative,
     ::testing::ValuesIn(UNSUPPORTED_OUTPUT_PRECISIONS),
     ::testing::PrintToStringParamName());
-
-#pragma GCC diagnostic pop

@@ -1477,5 +1477,4 @@ TEST_F(StatefulModelInstanceTest, extractSequenceControlInput_WrongValField) {
     }
 }
 
-#pragma GCC diagnostic pop
 }  // namespace
