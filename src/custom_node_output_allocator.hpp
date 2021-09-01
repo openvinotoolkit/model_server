@@ -42,7 +42,7 @@ public:
     }
 
     bool free(void* handle) noexcept override {
-        return nodeLibrary.release(tensor.data) == 0;
+        return nodeLibrary.release(tensor.data, nullptr) == 0;
     }
 };
 

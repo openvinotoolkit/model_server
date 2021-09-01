@@ -46,6 +46,22 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN;
     }
 
+    initialize_fn initialize = reinterpret_cast<initialize_fn>(dlsym(handle, "initialize"));
+    error = dlerror();
+    if (error || initialize == nullptr) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
+        dlclose(handle);
+        return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
+    }
+
+    deinitialize_fn deinitialize = reinterpret_cast<deinitialize_fn>(dlsym(handle, "deinitialize"));
+    error = dlerror();
+    if (error || deinitialize == nullptr) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
+        dlclose(handle);
+        return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
+    }
+
     execute_fn execute = reinterpret_cast<execute_fn>(dlsym(handle, "execute"));
     error = dlerror();
     if (error || execute == nullptr) {
@@ -79,6 +95,8 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
     }
 
     libraries[name] = NodeLibrary{
+        initialize,
+        deinitialize,
         execute,
         getInputsInfo,
         getOutputsInfo,
