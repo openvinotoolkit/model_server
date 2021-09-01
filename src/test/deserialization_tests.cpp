@@ -266,4 +266,3 @@ INSTANTIATE_TEST_SUITE_P(
     DeserializeTFTensorProto,
     ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
     ::testing::PrintToStringParamName());
-#pragma GCC diagnostic pop
