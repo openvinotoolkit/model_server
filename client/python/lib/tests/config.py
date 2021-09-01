@@ -15,7 +15,7 @@
 #
 
 from grpc import StatusCode
-from numpy import array, float64, int32, int8, float128
+from numpy import array, float64, int32, int8, float128, float32
 from enum import IntEnum
 from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
@@ -823,8 +823,8 @@ PREDICT_REQUEST_VALID = [
         "input1": {
             "field": "tensor_content",
             "shape": TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]),
-            "dtype": DataType.DT_INT64,
-            'value': array([1, 2, 3]).tobytes()
+            "dtype": DataType.DT_INT32,
+            'value': array([1, 2, 3], dtype=int32).tobytes()
         },
         "input2": {
             "field": "tensor_content",
@@ -850,10 +850,10 @@ PREDICT_REQUEST_VALID = [
         "input3": bytes([1, 2, 3])
     }, {
         "input2": {
-            "field": "double_val",
+            "field": "float_val",
             "shape": TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]),
-            "dtype": DataType.DT_DOUBLE,
-            'value': array([5.0])
+            "dtype": DataType.DT_FLOAT,
+            'value': array([5.0], dtype=float32)
         },
         "input3": {
             "field": "string_val",

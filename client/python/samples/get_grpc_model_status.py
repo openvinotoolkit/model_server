@@ -20,7 +20,7 @@ from ovmsclient import make_grpc_client, make_grpc_status_request
 parser = argparse.ArgumentParser(description='Get information about the status of served models over gRPC interace')
 parser.add_argument('--grpc_address', required=False, default='localhost',
                     help='Specify url to grpc service. default:localhost')
-parser.add_argument('--grpc_port', required=False, default=9000,
+parser.add_argument('--grpc_port', required=False, default=9000, type=int,
                     help='Specify port to grpc service. default: 9000')
 parser.add_argument('--model_name', default='resnet', help='Model name to query. default: resnet',
                     dest='model_name')
