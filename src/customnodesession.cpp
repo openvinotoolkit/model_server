@@ -52,7 +52,8 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         &outputTensors,
         &outputTensorsCount,
         parameters.get(),
-        parametersCount);
+        parametersCount,
+        nullptr);
     this->timer->stop("execution");
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Custom node execution processing time for node {}; session: {} - {} ms",
         this->getName(),
@@ -75,7 +76,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
 
     if (outputTensorsCount <= 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; has corrupted number of outputs", getName(), getSessionKey());
-        library.release(outputTensors);
+        library.release(outputTensors, nullptr);
         notifyEndQueue.push({node, getSessionKey()});
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT;
     }
@@ -102,7 +103,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         this->resultBlobs.emplace(std::string(outputTensors[i].name), std::move(resultBlob));
     }
 
-    library.release(outputTensors);
+    library.release(outputTensors, nullptr);
     notifyEndQueue.push({node, getSessionKey()});
     return status;
 }
@@ -118,10 +119,10 @@ Status CustomNodeSession::fetchResult(const std::string& name, InferenceEngine::
 
 void CustomNodeSession::releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibrary& library) {
     if (tensor->data) {
-        library.release(tensor->data);
+        library.release(tensor->data, nullptr);
     }
     if (tensor->dims) {
-        library.release(tensor->dims);
+        library.release(tensor->dims, nullptr);
     }
 }
 
@@ -136,10 +137,10 @@ public:
         library(library) {}
     ~TensorResourcesGuard() {
         if (tensor->data && !persistData) {
-            library.release(tensor->data);
+            library.release(tensor->data, nullptr);
         }
         if (tensor->dims) {
-            library.release(tensor->dims);
+            library.release(tensor->dims, nullptr);
         }
     }
     void setPersistData() {

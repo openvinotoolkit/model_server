@@ -1228,7 +1228,7 @@ Status PipelineDefinition::getCustomNodeMetadata(const NodeInfo& customNodeInfo,
     int infoCount = 0;
     auto paramArray = createCustomNodeParamArray(customNodeInfo.parameters);
     int paramArrayLength = customNodeInfo.parameters.size();
-    int result = callback(&info, &infoCount, paramArray.get(), paramArrayLength);
+    int result = callback(&info, &infoCount, paramArray.get(), paramArrayLength, nullptr);
     if (result != 0) {
         SPDLOG_ERROR("Metadata call to custom node: {} in pipeline: {} returned error code: {}",
             customNodeInfo.nodeName, pipelineName, result);
