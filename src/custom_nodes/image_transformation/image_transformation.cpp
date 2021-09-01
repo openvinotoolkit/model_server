@@ -23,7 +23,15 @@
 
 static constexpr const char* TENSOR_NAME = "image";
 
-int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
+int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+    return 0;
+}
+
+int deinitialize(void* customNodeLibraryInternalManager) {
+    return 0;
+}
+
+int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     // Parameters reading
 
     // Image size.
@@ -235,7 +243,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     return 0;
 }
 
-int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     *infoCount = 1;
     *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
     NODE_ASSERT((*info) != nullptr, "malloc has failed");
@@ -252,7 +260,7 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     return 0;
 }
 
-int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     // Parameters reading
     int targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
     int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
@@ -296,7 +304,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     return 0;
 }
 
-int release(void* ptr) {
+int release(void* ptr, void* customNodeLibraryInternalManager) {
     free(ptr);
     return 0;
 }

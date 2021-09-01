@@ -236,6 +236,8 @@ void waitForOVMSConfigReload(ovms::ModelManager& manager);
 template <typename T>
 static ovms::NodeLibrary createLibraryMock() {
     return ovms::NodeLibrary{
+        T::initialize,
+        T::deinitialize,
         T::execute,
         T::getInputsInfo,
         T::getOutputsInfo,

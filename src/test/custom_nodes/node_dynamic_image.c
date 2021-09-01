@@ -18,7 +18,15 @@
 
 #include "../../custom_node_interface.h"
 
-int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
+int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+    return 0;
+}
+
+int deinitialize(void* customNodeLibraryInternalManager){
+    return 0;
+}
+
+int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     if (inputsCount != 1) {
         return 1;
     }
@@ -58,7 +66,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     return 0;
 }
 
-int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     *infoCount = 1;
     *info = (struct CustomNodeTensorInfo*) malloc (*infoCount * sizeof(struct CustomNodeTensorInfo));
     (*info)->name = "input_numbers";
@@ -72,7 +80,7 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     return 0;
 }
 
-int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     *infoCount = 1;
     *info = (struct CustomNodeTensorInfo*) malloc (*infoCount * sizeof(struct CustomNodeTensorInfo));
     (*info)->name = "output_numbers";
@@ -86,7 +94,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     return 0;
 }
 
-int release(void* ptr) {
+int release(void* ptr, void* customNodeLibraryInternalManager) {
     free(ptr);
     return 0;
 }
