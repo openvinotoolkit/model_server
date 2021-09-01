@@ -50,7 +50,6 @@ INSTALL_DRIVER_VERSION ?= "20.35.17767"
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= master
 
-DLDT_PACKAGE_URL ?=
 OV_USE_BINARY ?= 1
 YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7
 APT_OV_PACKAGE ?= intel-openvino-runtime-ubuntu20-2021.4.582
@@ -71,12 +70,15 @@ DIST_OS_TAG ?= $(BASE_OS_TAG)
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   BASE_IMAGE=ubuntu:$(BASE_OS_TAG_UBUNTU)
+  DLDT_PACKAGE_URL ?=
 endif
 ifeq ($(BASE_OS),centos)
   BASE_OS_TAG=$(BASE_OS_TAG_CENTOS)
+  DLDT_PACKAGE_URL ?=
 endif
 ifeq ($(BASE_OS),clearlinux)
   BASE_OS_TAG=$(BASE_OS_TAG_CLEARLINUX)
+  DLDT_PACKAGE_URL ?=
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
