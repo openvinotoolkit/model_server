@@ -15,7 +15,7 @@
 #
 
 
-# 
+#
 # THIS FILE HAS BEEN AUTO GENERATED.
 #
 
@@ -39,9 +39,9 @@ from ovmsclient.tfs_compat.grpc.serving_client import make_grpc_client as make_g
 
 class grpcclient(SimpleNamespace):
 
-	make_tensor_proto = make_tensor_proto
-	make_ndarray = make_ndarray
-	make_predict_request = make_grpc_predict_request
-	make_metadata_request = make_grpc_metadata_request
-	make_status_request = make_grpc_status_request
-	make_client = make_grpc_client
+    make_tensor_proto = make_tensor_proto
+    make_ndarray = make_ndarray
+    make_predict_request = make_grpc_predict_request
+    make_metadata_request = make_grpc_metadata_request
+    make_status_request = make_grpc_status_request
+    make_client = make_grpc_client

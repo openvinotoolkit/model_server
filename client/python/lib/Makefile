@@ -41,11 +41,11 @@ update-packages:
 
 build-deps: update-packages
 	@echo "Building dependencies"
-	@python setup.py build_apis
+	@python3 setup.py build_apis
 
 build-package: update-packages
 	@echo "Building ovmsclient package"
-	@python setup.py bdist_wheel
+	@python3 setup.py bdist_wheel
 
 build: build-deps build-package
 	@echo "Build completed successfully. The wheel should be present in dist/ directory"
