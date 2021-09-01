@@ -35,7 +35,15 @@ static const std::string FACTORS_TENSOR_NAME = "op_factors";
 static const char* OUTPUT_TENSOR_NAME = "different_ops_results";
 static const char* OUTPUT_FACTORS_NAME = "different_ops_factors";
 
-int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
+int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+    return 0;
+}
+
+int deinitialize(void* customNodeLibraryInternalManager){
+    return 0;
+}
+
+int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     std::stringstream ss;
     // validate inputs
     float* inputTensor = nullptr;
@@ -135,7 +143,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     return 0;
 }
 
-int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     *infoCount = 2;
     *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
 
@@ -156,7 +164,7 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     return 0;
 }
 
-int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     *infoCount = 2;
     *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
     (*info)[0].name = OUTPUT_TENSOR_NAME;
@@ -177,7 +185,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     return 0;
 }
 
-int release(void* ptr) {
+int release(void* ptr, void* customNodeLibraryInternalManager) {
     std::cout << "DifferentOperationsCustomLibrary release" << std::endl;
     free(ptr);
     return 0;

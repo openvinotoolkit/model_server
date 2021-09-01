@@ -23,11 +23,15 @@
 
 namespace ovms {
 
-typedef int (*execute_fn)(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int);
-typedef int (*metadata_fn)(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int);
-typedef int (*release_fn)(void*);
+typedef int (*initialize_fn)(void**, const struct CustomNodeParam*, int);
+typedef int (*deinitialize_fn)(void*);
+typedef int (*execute_fn)(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int, void*);
+typedef int (*metadata_fn)(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void*);
+typedef int (*release_fn)(void*, void*);
 
 struct NodeLibrary {
+    initialize_fn initialize = nullptr;
+    deinitialize_fn deinitialize= nullptr;
     execute_fn execute = nullptr;
     metadata_fn getInputsInfo = nullptr;
     metadata_fn getOutputsInfo = nullptr;

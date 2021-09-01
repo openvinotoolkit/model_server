@@ -35,14 +35,18 @@ TEST(NodeLibraryManagerTest, SuccessfullLibraryLoadingAndExecution) {
     ASSERT_EQ(status, StatusCode::OK);
     status = manager.getLibrary("random_name", library);
     ASSERT_EQ(status, StatusCode::OK);
+    ASSERT_NE(library.initialize, nullptr);
+    ASSERT_NE(library.deinitialize, nullptr);
     ASSERT_NE(library.execute, nullptr);
     ASSERT_NE(library.getInputsInfo, nullptr);
     ASSERT_NE(library.getOutputsInfo, nullptr);
     ASSERT_NE(library.release, nullptr);
-    EXPECT_EQ(library.execute(nullptr, 0, nullptr, nullptr, nullptr, 0), 1);
-    EXPECT_EQ(library.getInputsInfo(nullptr, nullptr, nullptr, 0), 2);
-    EXPECT_EQ(library.getOutputsInfo(nullptr, nullptr, nullptr, 0), 3);
-    EXPECT_EQ(library.release(nullptr), 4);
+    EXPECT_EQ(library.initialize(nullptr, nullptr, 0), 0);
+    EXPECT_EQ(library.deinitialize(nullptr), 0);
+    EXPECT_EQ(library.execute(nullptr, 0, nullptr, nullptr, nullptr, 0, nullptr), 1);
+    EXPECT_EQ(library.getInputsInfo(nullptr, nullptr, nullptr, 0, nullptr), 2);
+    EXPECT_EQ(library.getOutputsInfo(nullptr, nullptr, nullptr, 0, nullptr), 3);
+    EXPECT_EQ(library.release(nullptr, nullptr), 4);
 }
 
 TEST(NodeLibraryManagerTest, LibraryLoadingDuplicateNameAndBasePath) {
@@ -111,14 +115,18 @@ TEST_F(ModelManagerNodeLibraryTest, LoadCustomNodeLibrary) {
     ASSERT_EQ(status, StatusCode::OK);
     status = manager.getCustomNodeLibraryManager().getLibrary("lib1", library);
     ASSERT_EQ(status, StatusCode::OK);
+    ASSERT_NE(library.initialize, nullptr);
+    ASSERT_NE(library.deinitialize, nullptr);
     ASSERT_NE(library.execute, nullptr);
     ASSERT_NE(library.getInputsInfo, nullptr);
     ASSERT_NE(library.getOutputsInfo, nullptr);
     ASSERT_NE(library.release, nullptr);
-    EXPECT_EQ(library.execute(nullptr, 0, nullptr, nullptr, nullptr, 0), 1);
-    EXPECT_EQ(library.getInputsInfo(nullptr, nullptr, nullptr, 0), 2);
-    EXPECT_EQ(library.getOutputsInfo(nullptr, nullptr, nullptr, 0), 3);
-    EXPECT_EQ(library.release(nullptr), 4);
+    EXPECT_EQ(library.initialize(nullptr, nullptr, 0), 0);
+    EXPECT_EQ(library.deinitialize(nullptr), 0);
+    EXPECT_EQ(library.execute(nullptr, 0, nullptr, nullptr, nullptr, 0, nullptr), 1);
+    EXPECT_EQ(library.getInputsInfo(nullptr, nullptr, nullptr, 0, nullptr), 2);
+    EXPECT_EQ(library.getOutputsInfo(nullptr, nullptr, nullptr, 0, nullptr), 3);
+    EXPECT_EQ(library.release(nullptr, nullptr), 4);
 }
 
 TEST_F(ModelManagerNodeLibraryTest, FailLoadingCorruptedCustomNodeLibrary) {
@@ -135,6 +143,8 @@ TEST_F(ModelManagerNodeLibraryTest, FailLoadingCorruptedCustomNodeLibrary) {
     ASSERT_EQ(status, StatusCode::OK);
     status = manager.getCustomNodeLibraryManager().getLibrary("lib1", library);
     ASSERT_EQ(status, StatusCode::NODE_LIBRARY_MISSING);
+    EXPECT_EQ(library.initialize, nullptr);
+    EXPECT_EQ(library.deinitialize, nullptr);
     EXPECT_EQ(library.execute, nullptr);
     EXPECT_EQ(library.getInputsInfo, nullptr);
     EXPECT_EQ(library.getOutputsInfo, nullptr);
@@ -165,10 +175,14 @@ TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
     ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib2", lib2Before), StatusCode::NODE_LIBRARY_MISSING);
 
     // Expect lib1 to be loaded but lib2 not
+    EXPECT_NE(lib1Before.initialize, nullptr);
+    EXPECT_NE(lib1Before.deinitialize, nullptr);
     EXPECT_NE(lib1Before.execute, nullptr);
     EXPECT_NE(lib1Before.getInputsInfo, nullptr);
     EXPECT_NE(lib1Before.getOutputsInfo, nullptr);
     EXPECT_NE(lib1Before.release, nullptr);
+    EXPECT_EQ(lib2Before.initialize, nullptr);
+    EXPECT_EQ(lib2Before.deinitialize, nullptr);
     EXPECT_EQ(lib2Before.execute, nullptr);
     EXPECT_EQ(lib2Before.getInputsInfo, nullptr);
     EXPECT_EQ(lib2Before.getOutputsInfo, nullptr);
@@ -183,10 +197,14 @@ TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
     ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib2", lib2After), StatusCode::OK);
 
     // Expect lib1 not to change and lib2 to be created after reload.
+    EXPECT_EQ(lib1Before.initialize, lib1After.initialize);
+    EXPECT_EQ(lib1Before.deinitialize, lib1After.deinitialize);
     EXPECT_EQ(lib1Before.execute, lib1After.execute);
     EXPECT_EQ(lib1Before.getInputsInfo, lib1After.getInputsInfo);
     EXPECT_EQ(lib1Before.getOutputsInfo, lib1After.getOutputsInfo);
     EXPECT_EQ(lib1Before.release, lib1After.release);
+    EXPECT_NE(lib2After.initialize, nullptr);
+    EXPECT_NE(lib2After.deinitialize, nullptr);
     EXPECT_NE(lib2After.execute, nullptr);
     EXPECT_NE(lib2After.getInputsInfo, nullptr);
     EXPECT_NE(lib2After.getOutputsInfo, nullptr);
@@ -201,10 +219,14 @@ TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
     ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib1", lib1Entry), StatusCode::OK);
     ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib2", lib2Entry), StatusCode::NODE_LIBRARY_MISSING);
 
+    EXPECT_EQ(lib1After.initialize, lib1Entry.initialize);
+    EXPECT_EQ(lib1After.deinitialize, lib1Entry.deinitialize);
     EXPECT_EQ(lib1After.execute, lib1Entry.execute);
     EXPECT_EQ(lib1After.getInputsInfo, lib1Entry.getInputsInfo);
     EXPECT_EQ(lib1After.getOutputsInfo, lib1Entry.getOutputsInfo);
     EXPECT_EQ(lib1After.release, lib1Entry.release);
+    EXPECT_EQ(lib2Entry.initialize, nullptr);
+    EXPECT_EQ(lib2Entry.deinitialize, nullptr);
     EXPECT_EQ(lib2Entry.execute, nullptr);
     EXPECT_EQ(lib2Entry.getInputsInfo, nullptr);
     EXPECT_EQ(lib2Entry.getOutputsInfo, nullptr);
@@ -247,6 +269,8 @@ TEST_F(ModelManagerNodeLibraryTest, AddRemoveAndAddLibraryInConfigReload) {
     ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib1", lib1Remove), StatusCode::NODE_LIBRARY_MISSING);
 
     // Expect lib1 to be removed
+    EXPECT_EQ(lib1Remove.initialize, nullptr);
+    EXPECT_EQ(lib1Remove.deinitialize, nullptr);
     EXPECT_EQ(lib1Remove.execute, nullptr);
     EXPECT_EQ(lib1Remove.getInputsInfo, nullptr);
     EXPECT_EQ(lib1Remove.getOutputsInfo, nullptr);
@@ -262,6 +286,8 @@ TEST_F(ModelManagerNodeLibraryTest, AddRemoveAndAddLibraryInConfigReload) {
     ASSERT_EQ(manager.getCustomNodeLibraryManager().getLibrary("lib1", lib1After), StatusCode::OK);
 
     EXPECT_TRUE(lib1After.isValid());
+    EXPECT_NE(lib1Before.initialize, lib1After.initialize);
+    EXPECT_NE(lib1Before.deinitialize, lib1After.deinitialize);
     EXPECT_NE(lib1Before.execute, lib1After.execute);
     EXPECT_NE(lib1Before.getInputsInfo, lib1After.getInputsInfo);
     EXPECT_NE(lib1Before.getOutputsInfo, lib1After.getOutputsInfo);
