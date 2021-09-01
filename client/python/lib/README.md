@@ -4,7 +4,7 @@ Model server client library is a set of objects and methods designed to simplify
 
 OVMS client library contains only the necessary dependencies, so the whole package is light. That makes it more friendly for deployments with restricted resources as well as for the use cases that require applications to scale well.
 
-As OpenVINO Model Server API is compatibile with TensorFlow Serving, it's possible to use `ovmsclient` with TensorFlow Serving instances on: Predict, GetModelMetadata and GetModelStatus endpoints.
+As OpenVINO Model Server API is compatible with TensorFlow Serving, it's possible to use `ovmsclient` with TensorFlow Serving instances on: Predict, GetModelMetadata and GetModelStatus endpoints.
 
 See [API documentation](docs/README.md) for details on what the library provides.
 
@@ -58,7 +58,7 @@ config = {
    "port": 9000
    }
 
-client = ovmsclient.make_grpc_client(config="config")
+client = ovmsclient.make_grpc_client(config=config)
 ```
 
 **Create and send model status request:**
@@ -85,7 +85,7 @@ metadata_request = ovmsclient.make_grpc_metadata_request(model_name="model")
 metadata_response = client.get_model_metadata(metadata_request)
 metadata_response.to_dict()
 
-# Examplary metadata_response.to_dict() output. Values for model:
+# Exemplary metadata_response.to_dict() output. Values for model:
 # https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html
 #
 #{
