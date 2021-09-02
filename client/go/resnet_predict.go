@@ -138,13 +138,44 @@ func run_with_conversion(servingAddress string, imgPath string) {
 	// Having right layout and precision, convert Mat to []bytes
 	imgBytes := newMat.ToBytes()
 
-	predictRequest := newPredictRequest("resnet", 1)
-	predictRequest.ModelSpec.SignatureName = "serving_default"
+	// Target model specification
+	const MODEL_NAME string = "resnet"
+	const INPUT_NAME string = "map/TensorArrayStack/TensorArrayGatherV3"
+	const OUTPUT_NAME string = "softmax_tensor"
 
-	// See addInput implementation for packing imgBytes into TensorProto and setting appropriate shape for the input
-	err = addInput(predictRequest, "map/TensorArrayStack/TensorArrayGatherV3", framework.DataType_DT_FLOAT, imgBytes, []int64{1, 224, 224, 3})
-	if err != nil {
-		fmt.Printf("Error adding input tensor: %v:", err)
+	// Create Predict Request to OVMS
+	predictRequest := &pb.PredictRequest{
+		ModelSpec: &pb.ModelSpec{
+			Name:          MODEL_NAME,
+			SignatureName: "serving_default",
+			VersionChoice: &pb.ModelSpec_Version{
+				Version: &google_protobuf.Int64Value{
+					Value: int64(0),
+				},
+			},
+		},
+		Inputs: map[string]*framework.TensorProto{
+			INPUT_NAME: &framework.TensorProto{
+				Dtype: framework.DataType_DT_FLOAT,
+				TensorShape: &framework.TensorShapeProto{
+					Dim: []*framework.TensorShapeProto_Dim{
+						&framework.TensorShapeProto_Dim{
+							Size: int64(1),
+						},
+						&framework.TensorShapeProto_Dim{
+							Size: int64(224),
+						},
+						&framework.TensorShapeProto_Dim{
+							Size: int64(224),
+						},
+						&framework.TensorShapeProto_Dim{
+							Size: int64(3),
+						},
+					},
+				},
+				TensorContent: imgBytes,
+			},
+		},
 	}
 
 	conn, err := grpc.Dial(servingAddress, grpc.WithInsecure())

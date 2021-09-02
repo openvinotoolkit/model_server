@@ -45,6 +45,11 @@ Command explained:
 - `--serving-address` parameter defines the address of the model server gRPC endpoint,
 - the last part in the command is a path to the image that will be send to OVMS for prediction. The image must be accessible from the inside of the container (could be mounted). Single zebra picture - `zebra.jpeg` - has been embedded in the docker image to simplify the example, so above command would work out of the box. If you wish to use other image you need to provide it to the container and change the path.
 
+You can also choose if the image should be sent as binary input (raw JPG or PNG bytes) or should be converted to the format accepted by OV on the client side.
+To send raw bytes just add `--binary-input` flag like this:
+
+`docker run --net=host --rm ovmsclient --serving-address localhost:9000 --binary-input zebra.jpeg`
+
 ### Exemplary output:
 
 If the client successfully prepared and sent the request and then received a valid response, the output of this command should look somewhat like this:
