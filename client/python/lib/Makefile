@@ -29,15 +29,15 @@ venv:$(ACTIVATE)
 $(ACTIVATE):
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
-	@. $(ACTIVATE); pip install --upgrade pip
-	@. $(ACTIVATE); pip install -r tests/requirements.txt
+	@. $(ACTIVATE); pip3 install --upgrade pip
+	@. $(ACTIVATE); pip3 install -r tests/requirements.txt
 	@touch $(ACTIVATE)
 
 update-packages:
 	@echo "Updating crucial packages"
-	@pip install --upgrade pip
-	@pip install "setuptools>=40.1.0"
-	@pip install "wheel>=0.23.0"
+	@pip3 install --upgrade pip
+	@pip3 install "setuptools>=40.1.0"
+	@pip3 install "wheel>=0.23.0"
 
 build-deps: update-packages
 	@echo "Building dependencies"
@@ -52,7 +52,7 @@ build: build-deps build-package
 
 test: venv
 	@echo "Installing ovmsclient package from: $(PACKAGE_PATH)"
-	@. $(ACTIVATE); pip install $(PACKAGE_PATH) --force-reinstall
+	@. $(ACTIVATE); pip3 install $(PACKAGE_PATH) --force-reinstall
 	@echo "Running ovmsclient tests"
 	@. $(ACTIVATE); pytest -v tests/
 
@@ -60,6 +60,6 @@ clean:
 	@rm -rf tensorflow/ tensorflow_serving/ build/ dist/
 
 style: venv
-	@. $(ACTIVATE); pip install flake8
+	@. $(ACTIVATE); pip3 install flake8
 	@echo "Running ovmsclient style checks",
 	@. $(ACTIVATE); flake8 ovmsclient tests/ --max-line-length=100 --count
