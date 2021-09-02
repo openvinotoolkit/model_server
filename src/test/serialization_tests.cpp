@@ -29,9 +29,8 @@
 #pragma GCC diagnostic pop
 
 #include "../serialization.hpp"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "ovtestutils.hpp"
+#include "test_utils.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>
 
@@ -207,7 +206,7 @@ TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     ovms::tensor_map_t tenMap;
     InferenceEngine::TensorDesc tensorDesc(Precision::FP32, shape_t{1, 10}, InferenceEngine::Layout::NC);
     std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
-        std::string("b"),
+        DUMMY_MODEL_INPUT_NAME,
         tensorDesc.getPrecision(),
         tensorDesc.getDims(),
         tensorDesc.getLayout());
@@ -229,5 +228,3 @@ INSTANTIATE_TEST_SUITE_P(
     SerializeTFTensorProtoNegative,
     ::testing::ValuesIn(UNSUPPORTED_OUTPUT_PRECISIONS),
     ::testing::PrintToStringParamName());
-
-#pragma GCC diagnostic pop

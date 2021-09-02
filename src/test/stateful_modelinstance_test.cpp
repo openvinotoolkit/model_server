@@ -34,8 +34,6 @@
 #include "../serialization.hpp"
 #include "../statefulmodelinstance.hpp"
 #include "../timer.hpp"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "stateful_test_utils.hpp"
 #include "test_utils.hpp"
 
@@ -1486,5 +1484,4 @@ TEST_F(StatefulModelInstanceTest, extractSequenceControlInput_WrongValField) {
     }
 }
 
-#pragma GCC diagnostic pop
 }  // namespace
