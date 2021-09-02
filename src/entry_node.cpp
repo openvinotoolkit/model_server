@@ -119,10 +119,12 @@ Status EntryNode::createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, con
 }
 
 const Status EntryNode::validate() {
-    return validation_utils::validate(
+    return request_validation_utils::validate(
         *request,
         inputsInfo,
-        inputsInfo.size());
+        inputsInfo.size(),
+        request->model_spec().name(),
+        1);  // Pipelines are not versioned and always reports version 1
 }
 
 }  // namespace ovms

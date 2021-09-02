@@ -736,10 +736,12 @@ const size_t ModelInstance::getExpectedNumberOfInputs(const tensorflow::serving:
 }
 
 const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
-    return validation_utils::validate(
+    return request_validation_utils::validate(
         *request,
         getInputsInfo(),
         getExpectedNumberOfInputs(*request),
+        getName(),
+        getVersion(),
         getModelConfig().getBatchingMode(),
         getModelConfig().getShapes());
 }

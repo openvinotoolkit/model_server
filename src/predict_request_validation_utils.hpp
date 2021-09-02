@@ -20,21 +20,26 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include <string>
+
 #include <google/protobuf/map.h>
 
+#include "modelversion.hpp"
 #include "shapeinfo.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
-namespace validation_utils {
+namespace request_validation_utils {
 
 Status validate(
     const tensorflow::serving::PredictRequest& request,
     const tensor_map_t& inputsInfo,
     const size_t expectedNumberOfInputs,
-    Mode batchingMode = Mode::FIXED,
+    const std::string& servableName,
+    const model_version_t servableVersion,
+    const Mode batchingMode = Mode::FIXED,
     const shapes_map_t& shapeInfo = shapes_map_t());
 
-}  // namespace validation_utils
+}  // namespace request_validation_utils
 }  // namespace ovms
