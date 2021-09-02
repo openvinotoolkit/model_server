@@ -97,7 +97,7 @@ optional arguments:
 
 ```
 python get_grpc_model_metadata.py --grpc_port 9000 --model_name resnet --model_version 1
-{1: {'inputs': {'data': {'shape': [1, 3, 224, 224], 'dtype': 'DT_FLOAT'}}, 'outputs': {'prob': {'shape': [1, 1000], 'dtype': 'DT_FLOAT'}}}}
+{1: {'inputs': {'map/TensorArrayStack/TensorArrayGatherV3': {'shape': [1, 224, 224, 3], 'dtype': 'DT_FLOAT'}}, 'outputs': {'softmax_tensor': {'shape': [1, 1001], 'dtype': 'DT_FLOAT'}}}}
 ```
 
 
