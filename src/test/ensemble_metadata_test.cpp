@@ -462,7 +462,7 @@ struct MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode {
     static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
         return 0;
     }
-    static int deinitialize(void* customNodeLibraryInternalManager){
+    static int deinitialize(void* customNodeLibraryInternalManager) {
         return 0;
     }
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
@@ -518,7 +518,7 @@ struct MockLibraryDemultiplexer2Inputs1OutputMatchingPreviousNode {
     static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
         return 0;
     }
-    static int deinitialize(void* customNodeLibraryInternalManager){
+    static int deinitialize(void* customNodeLibraryInternalManager) {
         return 0;
     }
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {

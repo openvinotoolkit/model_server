@@ -77,12 +77,76 @@ Status PipelineDefinition::validate(ModelManager& manager) {
     if (!validationResult.ok()) {
         return validationResult;
     }
+    validationResult = initializeNodeResources();
+    if (!validationResult.ok()) {
+        return validationResult;
+    }
     lock.unlock();
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of pipeline: {}", getName());
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Pipeline: {} inputs: {}", getName(), getTensorMapString(inputsInfo));
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Pipeline: {} outputs: {}", getName(), getTensorMapString(outputsInfo));
     return validationResult;
+}
+
+Status PipelineDefinition::initializeNodeResources() {
+    for (auto& nodeInfo : this->nodeInfos) {
+        if (nodeInfo.kind == NodeKind::CUSTOM) {
+            void* customNodeLibraryInternalManager = nullptr;
+            auto params = createCustomNodeParamArray(nodeInfo.parameters).get();
+            auto status = nodeInfo.library.initialize(&customNodeLibraryInternalManager, params, nodeInfo.parameters.size());
+            if (status != 0) {
+                return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;  //change needed
+            }
+            nodeResources.insert({nodeInfo.nodeName, customNodeLibraryInternalManager});
+        }
+    }
+    return StatusCode::OK;
+}
+
+Status PipelineDefinition::reinitializeNodeResources(const std::vector<NodeInfo>& nodeInfos) {
+    std::map<std::string, void*> nodeResourcesReinit;
+    std::vector<NodeInfo> diff;
+    std::set_difference(this->nodeInfos.begin(), this->nodeInfos.end(), nodeInfos.begin(), nodeInfos.end(),
+        std::inserter(diff, diff.begin()), [](auto& first, auto& second) { return first.nodeName != second.nodeName; });
+
+    for (auto& nodeInfo : nodeInfos) {
+        if (nodeInfo.kind == NodeKind::CUSTOM) {
+            void* customNodeLibraryInternalManager = nullptr;
+            auto it = nodeResources.find(nodeInfo.nodeName);
+            if (it != nodeResources.end()) {
+                customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
+            }
+            auto params = createCustomNodeParamArray(nodeInfo.parameters).get();
+            auto status = nodeInfo.library.initialize(&customNodeLibraryInternalManager, params, nodeInfo.parameters.size());
+            if (status != 0) {
+                return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;  //change needed
+            }
+            nodeResourcesReinit.insert({nodeInfo.nodeName, customNodeLibraryInternalManager});
+        }
+    }
+    for (auto& nodeInfo : diff) {
+        void* customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
+        auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
+        if (status != 0) {
+            return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;  //change needed
+        }
+    }
+    nodeResources.clear();
+    nodeResources = nodeResourcesReinit;
+    return StatusCode::OK;
+}
+
+void PipelineDefinition::deinitializeNodeResources() {
+    for (auto& nodeInfo : this->nodeInfos) {
+        void* customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
+        nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
+        // auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
+        // if (status != 0 ) {
+        //     return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER; //change needed
+        // }
+    }
+    nodeResources.clear();
 }
 
 Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections) {
@@ -92,7 +156,10 @@ Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeI
     while (requestsHandlesCounter > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
-
+    auto status = reinitializeNodeResources(nodeInfos);
+    if (!status.ok()) {
+        return status;
+    }
     this->nodeInfos = std::move(nodeInfos);
     this->connections = std::move(connections);
     makeSubscriptions(manager);
@@ -106,6 +173,7 @@ void PipelineDefinition::retire(ModelManager& manager) {
     while (requestsHandlesCounter > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
+    deinitializeNodeResources();
     this->nodeInfos.clear();
     this->connections.clear();
 }
@@ -197,7 +265,8 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                              info.parameters,
                                              info.outputNameAliases,
                                              info.demultiplyCount,
-                                             info.gatherFromNode));
+                                             info.gatherFromNode,
+                                             nodeResources.at(info.nodeName)));
             break;
         case NodeKind::EXIT: {
             auto node = std::make_unique<ExitNode>(response, getOutputsInfo(), info.gatherFromNode);

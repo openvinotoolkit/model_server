@@ -72,6 +72,7 @@ class PipelineDefinition {
 
     const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
+    std::map<std::string, void*> nodeResources;
     pipeline_connections_t connections;
 
 protected:
@@ -98,6 +99,10 @@ private:
 
     const NodeInfo& findNodeByName(const std::string& name) const;
     shape_t getNodeGatherShape(const NodeInfo& info) const;
+
+    Status initializeNodeResources();
+    Status reinitializeNodeResources(const std::vector<NodeInfo>& nodeInfos);
+    void deinitializeNodeResources();
 
 public:
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 10000;
