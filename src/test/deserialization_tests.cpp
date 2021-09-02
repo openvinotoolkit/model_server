@@ -30,6 +30,7 @@
 
 #include "../deserialization.hpp"
 #include "ovtestutils.hpp"
+#include "test_utils.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>
 
@@ -181,7 +182,7 @@ MockTensorProtoDeserializatorThrowingInferenceEngine* MockTensorProtoDeserializa
 TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobException2) {
     InferenceEngine::TensorDesc tensorDesc(Precision::FP32, shape_t{1, 10}, InferenceEngine::Layout::NC);
     std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
-        std::string("b"),
+        DUMMY_MODEL_INPUT_NAME,
         tensorDesc.getPrecision(),
         tensorDesc.getDims(),
         tensorDesc.getLayout());
@@ -208,7 +209,7 @@ TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobExc
 TEST_F(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
     InferenceEngine::TensorDesc tensorDesc(Precision::FP32, shape_t{1, 10}, InferenceEngine::Layout::NC);
     std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
-        std::string("b"),
+        DUMMY_MODEL_INPUT_NAME,
         tensorDesc.getPrecision(),
         tensorDesc.getDims(),
         tensorDesc.getLayout());

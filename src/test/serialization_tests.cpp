@@ -30,6 +30,7 @@
 
 #include "../serialization.hpp"
 #include "ovtestutils.hpp"
+#include "test_utils.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>
 
@@ -205,7 +206,7 @@ TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     ovms::tensor_map_t tenMap;
     InferenceEngine::TensorDesc tensorDesc(Precision::FP32, shape_t{1, 10}, InferenceEngine::Layout::NC);
     std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
-        std::string("b"),
+        DUMMY_MODEL_INPUT_NAME,
         tensorDesc.getPrecision(),
         tensorDesc.getDims(),
         tensorDesc.getLayout());
