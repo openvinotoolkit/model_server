@@ -28,8 +28,6 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "mock_iinferrequest.hpp"
-
 #include <gmock/gmock-generated-function-mockers.h>
 
 using tensorflow::TensorProto;
@@ -76,12 +74,6 @@ inline tensorflow::DataType fromInferenceEnginePrecision(Precision precision) {
     }
 }
 
-class MockIInferRequestFailingInSetBlob : public MockIInferRequest {
-    InferenceEngine::StatusCode SetBlob(const char*, const Blob::Ptr&, ResponseDesc*) noexcept override {
-        return InferenceEngine::StatusCode::UNEXPECTED;
-    }
-};
-
 class MockBlob : public InferenceEngine::MemoryBlob {
 public:
     using Ptr = std::shared_ptr<MockBlob>;
@@ -110,24 +102,4 @@ public:
 private:
     std::shared_ptr<IAllocator> _allocator;
     char* to;
-};
-
-class MockIInferRequestProperGetBlob : public MockIInferRequest {
-public:
-    using Ptr = std::shared_ptr<MockIInferRequest>;
-    MockIInferRequestProperGetBlob(const InferenceEngine::TensorDesc& tensorDesc) :
-        MockIInferRequest() {
-        mockBlobPtr = std::make_shared<NiceMock<MockBlob>>(tensorDesc);
-    }
-    MOCK_METHOD(InferenceEngine::StatusCode, GetBlob_mocked, (const char*, Blob::Ptr&, ResponseDesc*), (noexcept));
-
-    InferenceEngine::StatusCode GetBlob(const char* c, Blob::Ptr& ptr, ResponseDesc* d) noexcept {
-        // this is just to register GetBlob call
-        this->GetBlob_mocked(c, ptr, d);
-        ptr = mockBlobPtr;
-        return InferenceEngine::StatusCode::OK;
-    }
-
-private:
-    std::shared_ptr<NiceMock<MockBlob>> mockBlobPtr;
 };
