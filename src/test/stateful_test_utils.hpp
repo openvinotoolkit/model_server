@@ -31,7 +31,6 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
-#include "mock_iinferrequest.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>
 
