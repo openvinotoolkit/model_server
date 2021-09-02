@@ -96,7 +96,7 @@ Status PipelineDefinition::initializeNodeResources() {
             auto params = createCustomNodeParamArray(nodeInfo.parameters).get();
             auto status = nodeInfo.library.initialize(&customNodeLibraryInternalManager, params, nodeInfo.parameters.size());
             if (status != 0) {
-                return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;  //change needed
+                return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;
             }
             nodeResources.insert({nodeInfo.nodeName, customNodeLibraryInternalManager});
         }
@@ -120,7 +120,7 @@ Status PipelineDefinition::reinitializeNodeResources(const std::vector<NodeInfo>
             auto params = createCustomNodeParamArray(nodeInfo.parameters).get();
             auto status = nodeInfo.library.initialize(&customNodeLibraryInternalManager, params, nodeInfo.parameters.size());
             if (status != 0) {
-                return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;  //change needed
+                return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;
             }
             nodeResourcesReinit.insert({nodeInfo.nodeName, customNodeLibraryInternalManager});
         }
@@ -129,7 +129,7 @@ Status PipelineDefinition::reinitializeNodeResources(const std::vector<NodeInfo>
         void* customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
         auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
         if (status != 0) {
-            return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;  //change needed
+            return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;
         }
     }
     nodeResources.clear();
