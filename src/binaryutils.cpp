@@ -222,6 +222,12 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         return StatusCode::INVALID_BATCH_SIZE;
     }
 
+    for (size_t i = 0; i < src.string_val_size(); i++) {
+        if (src.string_val(i).size() <= 0) {
+            return StatusCode::STRING_VAL_EMPTY;
+        }
+    }
+
     return StatusCode::OK;
 }
 
