@@ -68,7 +68,12 @@ cv::Mat convertStringValToMat(const std::string& stringVal) {
     std::vector<unsigned char> data(stringVal.begin(), stringVal.end());
     cv::Mat dataMat(data, true);
 
-    return cv::imdecode(dataMat, cv::IMREAD_UNCHANGED);
+    try {
+        return cv::imdecode(dataMat, cv::IMREAD_UNCHANGED);
+    } catch (const cv::Exception& e) {
+        SPDLOG_ERROR("Error during string_val to mat conversion: {}", e.what());
+        return cv::Mat{};
+    }
 }
 
 Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const InferenceEngine::Precision requestedPrecision) {
@@ -220,6 +225,12 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     if (checkBatchSizeMismatch(tensorInfo, src.string_val_size())) {
         SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getEffectiveShape()[0], src.string_val_size());
         return StatusCode::INVALID_BATCH_SIZE;
+    }
+
+    for (size_t i = 0; i < src.string_val_size(); i++) {
+        if (src.string_val(i).size() <= 0) {
+            return StatusCode::STRING_VAL_EMPTY;
+        }
     }
 
     return StatusCode::OK;
