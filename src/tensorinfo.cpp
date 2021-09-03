@@ -370,4 +370,9 @@ std::string TensorInfo::tensorDescToString(const InferenceEngine::TensorDesc& de
        << " layout: " << getStringFromLayout(desc.getLayout());
     return ss.str();
 }
+
+const size_t TensorInfo::getBatchSize() const {
+    return getEffectiveShape()[0];
+}
+
 }  // namespace ovms
