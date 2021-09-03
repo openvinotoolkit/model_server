@@ -16,6 +16,7 @@
 #pragma once
 
 #include <memory>
+#include <set>
 #include <string>
 
 #include "global_sequences_viewer.hpp"
@@ -26,7 +27,7 @@
 namespace ovms {
 
 class StatefulModelInstance : public ModelInstance {
-    static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
+    static const std::set<const char*> SPECIAL_INPUT_NAMES;
 
 public:
     /**
@@ -87,9 +88,6 @@ protected:
     GlobalSequencesViewer* globalSequencesViewer;
 
     const Status validate(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& processingSpec);
-
-    const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
-        const size_t expectedNumberOfInputs) override;
 
     Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
 
