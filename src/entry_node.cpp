@@ -17,6 +17,7 @@
 
 #include <functional>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 
@@ -119,11 +120,13 @@ Status EntryNode::createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, con
 }
 
 const Status EntryNode::validate() {
+    static const std::set<const char*> optionalInputNames = {};
     return request_validation_utils::validate(
         *request,
         inputsInfo,
         request->model_spec().name(),
-        1);  // Pipelines are not versioned and always reports version 1
+        1,
+        optionalInputNames);  // Pipelines are not versioned and always reports version 1
 }
 
 }  // namespace ovms

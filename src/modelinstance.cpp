@@ -19,6 +19,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <set>
 #include <string>
 #include <thread>
 #include <utility>
@@ -732,11 +733,13 @@ void ModelInstance::unloadModelComponents() {
 }
 
 const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
+    static const std::set<const char*> optionalInputNames = {};
     return request_validation_utils::validate(
         *request,
         getInputsInfo(),
         getName(),
         getVersion(),
+        optionalInputNames,
         getModelConfig().getBatchingMode(),
         getModelConfig().getShapes());
 }
