@@ -64,4 +64,4 @@ minio_image = os.environ.get("TT_MINIO_IMAGE_NAME", "minio/minio:latest")
 
 start_minio_container_command = 'server --address ":{}" /data'
 
-container_minio_log_line = "Endpoint:"
+container_minio_log_line = "Console endpoint is listening on a dynamic port"
