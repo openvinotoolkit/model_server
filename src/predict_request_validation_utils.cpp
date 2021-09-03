@@ -28,7 +28,6 @@ namespace request_validation_utils {
 class RequestValidator {
     const tensorflow::serving::PredictRequest& request;
     const tensor_map_t& inputsInfo;
-    const size_t expectedNumberOfInputs;
     const std::string& servableName;
     const model_version_t servableVersion;
     const Mode batchingMode;
@@ -45,12 +44,11 @@ class RequestValidator {
 
 public:
     RequestValidator(
-        const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo, const size_t expectedNumberOfInputs,
-        const std::string& servableName, const model_version_t servableVersion, const Mode batchingMode, const shapes_map_t& shapeInfo,
-        const std::set<const char*>& optionalAllowedInputNames) :
+        const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo,
+        const std::string& servableName, const model_version_t servableVersion, const Mode batchingMode,
+        const shapes_map_t& shapeInfo, const std::set<const char*>& optionalAllowedInputNames) :
         request(request),
         inputsInfo(inputsInfo),
-        expectedNumberOfInputs(expectedNumberOfInputs),
         servableName(servableName),
         servableVersion(servableVersion),
         batchingMode(batchingMode),
@@ -301,7 +299,6 @@ Status RequestValidator::validate() {
         return status;
 
     for (const auto& [name, inputInfo] : inputsInfo) {
-        //google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator it;
         status = validateAndGetInput(request, name, it);
         if (!status.ok())
             return status;
@@ -353,8 +350,8 @@ Status RequestValidator::validate() {
     return finalStatus;
 }
 
-Status validate(const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo, const size_t expectedNumberOfInputs, const std::string& servableName, const model_version_t servableVersion, const Mode batchingMode, const shapes_map_t& shapeInfo, const std::set<const char*>& optionalAllowedInputNames) {
-    return RequestValidator(request, inputsInfo, expectedNumberOfInputs, servableName, servableVersion, batchingMode, shapeInfo, optionalAllowedInputNames).validate();
+Status validate(const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const Mode batchingMode, const shapes_map_t& shapeInfo, const std::set<const char*>& optionalAllowedInputNames) {
+    return RequestValidator(request, inputsInfo, servableName, servableVersion, batchingMode, shapeInfo, optionalAllowedInputNames).validate();
 }
 
 }  // namespace request_validation_utils

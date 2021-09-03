@@ -20,8 +20,8 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include <string>
 #include <set>
+#include <string>
 
 #include <google/protobuf/map.h>
 
@@ -36,7 +36,6 @@ namespace request_validation_utils {
 Status validate(
     const tensorflow::serving::PredictRequest& request,
     const tensor_map_t& inputsInfo,
-    const size_t expectedNumberOfInputs,
     const std::string& servableName,
     const model_version_t servableVersion,
     const Mode batchingMode = Mode::FIXED,

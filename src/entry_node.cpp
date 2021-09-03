@@ -122,7 +122,6 @@ const Status EntryNode::validate() {
     return request_validation_utils::validate(
         *request,
         inputsInfo,
-        inputsInfo.size(),
         request->model_spec().name(),
         1);  // Pipelines are not versioned and always reports version 1
 }

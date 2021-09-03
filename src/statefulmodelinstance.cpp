@@ -18,12 +18,15 @@
 #include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
 #include "logging.hpp"
+#include "predict_request_validation_utils.hpp"
 #include "serialization.hpp"
 #include "timer.hpp"
 
 using namespace InferenceEngine;
 
 namespace ovms {
+
+const std::set<const char*> StatefulModelInstance::SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
 
 const Status StatefulModelInstance::extractSequenceId(const tensorflow::TensorProto& proto, uint64_t& sequenceId) {
     if (!proto.tensor_shape().dim_size()) {
@@ -138,15 +141,6 @@ Status StatefulModelInstance::loadOVExecutableNetwork(const ModelConfig& config)
     return ModelInstance::loadOVExecutableNetwork(config);
 }
 
-const size_t StatefulModelInstance::getExpectedNumberOfInputs(const tensorflow::serving::PredictRequest& request) const {
-    auto completeInputsNumber = ModelInstance::getExpectedNumberOfInputs(request);
-    for (auto specialInputName : SPECIAL_INPUT_NAMES) {
-        if (request.inputs().count(specialInputName))
-            completeInputsNumber++;
-    }
-    return completeInputsNumber;
-}
-
 const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec) {
     uint64_t sequenceId = 0;
     uint32_t sequenceControlInput = 0;
@@ -182,7 +176,14 @@ const Status StatefulModelInstance::validate(const tensorflow::serving::PredictR
     if (!status.ok())
         return status;
 
-    return ModelInstance::validate(request);
+    return request_validation_utils::validate(
+        *request,
+        getInputsInfo(),
+        getName(),
+        getVersion(),
+        getModelConfig().getBatchingMode(),
+        getModelConfig().getShapes(),
+        SPECIAL_INPUT_NAMES);
 }
 
 Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,

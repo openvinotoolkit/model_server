@@ -731,15 +731,10 @@ void ModelInstance::unloadModelComponents() {
     }
 }
 
-const size_t ModelInstance::getExpectedNumberOfInputs(const tensorflow::serving::PredictRequest& request) const {
-    return getInputsInfo().size();
-}
-
 const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
     return request_validation_utils::validate(
         *request,
         getInputsInfo(),
-        getExpectedNumberOfInputs(*request),
         getName(),
         getVersion(),
         getModelConfig().getBatchingMode(),
