@@ -68,7 +68,6 @@ TARGET_DEVICE_CONFIGURATION = {
 }
 
 
-
 class Docker:
     
     COMMON_RETRY = {"tries": 360, "delay": 0.5}

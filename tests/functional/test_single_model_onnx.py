@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.skipif(skip_nginx_test, reason="not implemented yet")
 @pytest.mark.skipif(target_device == "GPU", reason="Unsupported property key by plugin: CPU_THROUGHPUT_STREAMS")
-@pytest.mark.skipif(target_device == "MYRIAD",
+@pytest.mark.skipif(target_device in ["MYRIAD", "HDDL"],
                     reason="""
                     Expected: CPU_THROUGHPUT_STREAMS key is not supported for VPU;
                     Received: Invalid or missing S3 credentials, or bucket does not exist - inference. Invalid DNS Label found in URI host
