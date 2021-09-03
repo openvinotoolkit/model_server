@@ -21,6 +21,7 @@
 #pragma GCC diagnostic pop
 
 #include <string>
+#include <set>
 
 #include <google/protobuf/map.h>
 
@@ -39,7 +40,8 @@ Status validate(
     const std::string& servableName,
     const model_version_t servableVersion,
     const Mode batchingMode = Mode::FIXED,
-    const shapes_map_t& shapeInfo = shapes_map_t());
+    const shapes_map_t& shapeInfo = shapes_map_t(),
+    const std::set<const char*>& optionalAllowedInputNames = {});
 
 }  // namespace request_validation_utils
 }  // namespace ovms

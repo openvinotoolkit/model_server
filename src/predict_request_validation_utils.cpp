@@ -33,6 +33,7 @@ class RequestValidator {
     const model_version_t servableVersion;
     const Mode batchingMode;
     const shapes_map_t& shapeInfo;
+    const std::set<const char*>& optionalAllowedInputNames;
 
     google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator it;
 
@@ -45,16 +46,18 @@ class RequestValidator {
 public:
     RequestValidator(
         const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo, const size_t expectedNumberOfInputs,
-        const std::string& servableName, const model_version_t servableVersion, const Mode batchingMode, const shapes_map_t& shapeInfo) :
+        const std::string& servableName, const model_version_t servableVersion, const Mode batchingMode, const shapes_map_t& shapeInfo,
+        const std::set<const char*>& optionalAllowedInputNames) :
         request(request),
         inputsInfo(inputsInfo),
         expectedNumberOfInputs(expectedNumberOfInputs),
         servableName(servableName),
         servableVersion(servableVersion),
         batchingMode(batchingMode),
-        shapeInfo(shapeInfo) {}
+        shapeInfo(shapeInfo),
+        optionalAllowedInputNames(optionalAllowedInputNames) {}
 
-    Status validateNumberOfInputs(const tensorflow::serving::PredictRequest& request, const size_t expectedNumberOfInputs) const;
+    Status validateNumberOfInputs(const tensorflow::serving::PredictRequest& request) const;
     Status validateAndGetInput(const tensorflow::serving::PredictRequest& request, const std::string& name, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it);
     Status checkIfShapeValuesNegative(const tensorflow::TensorProto& proto) const;
     Status validateNumberOfBinaryInputShapeDimensions(const tensorflow::TensorProto& proto) const;
@@ -67,7 +70,12 @@ public:
     Status validate();
 };
 
-Status RequestValidator::validateNumberOfInputs(const tensorflow::serving::PredictRequest& request, const size_t expectedNumberOfInputs) const {
+Status RequestValidator::validateNumberOfInputs(const tensorflow::serving::PredictRequest& request) const {
+    size_t expectedNumberOfInputs = inputsInfo.size();
+    for (auto optionalAllowedInputName : optionalAllowedInputNames) {
+        if (request.inputs().count(optionalAllowedInputName))
+            expectedNumberOfInputs++;
+    }
     if (request.inputs_size() > 0 && expectedNumberOfInputs == static_cast<size_t>(request.inputs_size())) {
         return StatusCode::OK;
     }
@@ -288,7 +296,7 @@ Mode getShapeMode(const shapes_map_t& shapeInfo, const std::string& name) {
 Status RequestValidator::validate() {
     Status finalStatus = StatusCode::OK;
 
-    auto status = validateNumberOfInputs(request, expectedNumberOfInputs);
+    auto status = validateNumberOfInputs(request);
     if (!status.ok())
         return status;
 
@@ -345,8 +353,8 @@ Status RequestValidator::validate() {
     return finalStatus;
 }
 
-Status validate(const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo, const size_t expectedNumberOfInputs, const std::string& servableName, const model_version_t servableVersion, const Mode batchingMode, const shapes_map_t& shapeInfo) {
-    return RequestValidator(request, inputsInfo, expectedNumberOfInputs, servableName, servableVersion, batchingMode, shapeInfo).validate();
+Status validate(const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo, const size_t expectedNumberOfInputs, const std::string& servableName, const model_version_t servableVersion, const Mode batchingMode, const shapes_map_t& shapeInfo, const std::set<const char*>& optionalAllowedInputNames) {
+    return RequestValidator(request, inputsInfo, expectedNumberOfInputs, servableName, servableVersion, batchingMode, shapeInfo, optionalAllowedInputNames).validate();
 }
 
 }  // namespace request_validation_utils
