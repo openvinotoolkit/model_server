@@ -36,7 +36,7 @@ mv ${PWD}/models/public/resnet-50-tf/FP32 ${PWD}/models/public/resnet-50-tf/1
 
 OVMS can be started using a command:
 ```bash
-docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 
+docker run -d --rm --name ovms -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 
 ```
 
 
@@ -126,23 +126,24 @@ optional arguments:
 - Usage example
 
 ```
-python resnet_grpc_predict.py --grpc_port 9000 --images_dir images --model_name resnet
-Image images/magnetic_compass.jpeg has been classified as magnetic compass with 99.99372959136963% confidence
-Image images/pelican.jpeg has been classified as pelican with 99.17410612106323% confidence
-Image images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla with 98.07604551315308% confidence
-Image images/snail.jpeg has been classified as snail with 99.97051358222961% confidence
-Image images/zebra.jpeg has been classified as zebra with 99.4793951511383% confidence
-Image images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus with 93.65214705467224% confidence
-Image images/bee.jpeg has been classified as bee with 96.6326653957367% confidence
-Image images/peacock.jpeg has been classified as peacock with 99.97820258140564% confidence
-Image images/airliner.jpeg has been classified as airliner with 49.202319979667664% confidence
-Image images/golden_retriever.jpeg has been classified as golden retriever with 88.68610262870789% confidence
+python resnet_grpc_predict.py --grpc_port 9000 --images_dir ../../../example_client/images --model_name resnet
+Image ../../../example_client/images/snail.jpeg has been classified as snail with 99.97051358222961% confidence
+Image ../../../example_client/images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla with 98.07604551315308% confidence
+Image ../../../example_client/images/golden_retriever.jpeg has been classified as golden retriever with 88.68610262870789% confidence
+Image ../../../example_client/images/magnetic_compass.jpeg has been classified as magnetic compass with 99.99372959136963% confidence
+Image ../../../example_client/images/zebra.jpeg has been classified as zebra with 99.4793951511383% confidence
+Image ../../../example_client/images/airliner.jpeg has been classified as airliner with 49.202319979667664% confidence
+Image ../../../example_client/images/bee.jpeg has been classified as bee with 96.6326653957367% confidence
+Image ../../../example_client/images/peacock.jpeg has been classified as peacock with 99.97820258140564% confidence
+Image ../../../example_client/images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus with 93.65214705467224% confidence
+Image ../../../example_client/images/pelican.jpeg has been classified as pelican with 99.17410612106323% confidence
 ```
 
-To serve Resnet with support for binary input data, the model needs to be configured with NHWC layout. That can be acheived by starting the OVMS container with `--layout NHWC` parameter.
+To serve Resnet with support for binary input data, the model needs to be configured with NHWC layout. That can be achieved by starting the OVMS container with `--layout NHWC` parameter.
 new OVMS instance with --layout MHWC parameter.
 ```bash
-docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 --layout NHWC
+docker stop ovms 
+docker run -d --rm --name ovms -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 --layout NHWC
 ```
 
 ### Predict binary format<a name="predict-binary">
@@ -170,17 +171,17 @@ optional arguments:
 - Usage example
 
 ```
-python resnet_grpc_predict_binary.py --grpc_port 9000 --images_dir images --model_name resnet
-Image images/magnetic_compass.jpeg has been classified as magnetic compass with 99.99269247055054% confidence
-Image images/pelican.jpeg has been classified as pelican with 97.38033413887024% confidence
-Image images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla with 96.9128966331482% confidence
-Image images/snail.jpeg has been classified as snail with 99.9498724937439% confidence
-Image images/zebra.jpeg has been classified as zebra with 98.35399389266968% confidence
-Image images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus with 87.82028555870056% confidence
-Image images/bee.jpeg has been classified as bee with 97.44628667831421% confidence
-Image images/peacock.jpeg has been classified as peacock with 99.98815059661865% confidence
-Image images/airliner.jpeg has been classified as warplane, military plane with 73.17261695861816% confidence
-Image images/golden_retriever.jpeg has been classified as golden retriever with 87.05007433891296% confidence
+python resnet_grpc_predict_binary.py --grpc_port 9000 --images_dir ../../../example_client/images --model_name resnet
+Image ../../../example_client/images/snail.jpeg has been classified as snail with 99.9498724937439% confidence
+Image ../../../example_client/images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla with 96.9128966331482% confidence
+Image ../../../example_client/images/golden_retriever.jpeg has been classified as golden retriever with 87.05007433891296% confidence
+Image ../../../example_client/images/magnetic_compass.jpeg has been classified as magnetic compass with 99.99269247055054% confidence
+Image ../../../example_client/images/zebra.jpeg has been classified as zebra with 98.35399389266968% confidence
+Image ../../../example_client/images/airliner.jpeg has been classified as warplane, military plane with 73.17261695861816% confidence
+Image ../../../example_client/images/bee.jpeg has been classified as bee with 97.44628667831421% confidence
+Image ../../../example_client/images/peacock.jpeg has been classified as peacock with 99.98815059661865% confidence
+Image ../../../example_client/images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus with 87.82028555870056% confidence
+Image ../../../example_client/images/pelican.jpeg has been classified as pelican with 97.38033413887024% confidence
 ```
 
 ## Prepare the model from OpenVINO Model Zoo
@@ -194,7 +195,8 @@ chmod -R 755 ${PWD}/models/vehicle-detection
 ```
 OVMS container can be started using a command:
 ```bash
-docker run -d --rm -v ${PWD}/models/vehicle-detection:/models/vehicle-detection -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name vehicle-detection --model_path /models/vehicle-detection --port 9000 --rest_port 8000 --layout NHWC
+docker stop ovms
+docker run -d --rm --name ovms -v ${PWD}/models/vehicle-detection:/models/vehicle-detection -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name vehicle-detection --model_path /models/vehicle-detection --port 9000 --rest_port 8000 --layout NHWC
 ```
 
 
@@ -227,7 +229,7 @@ optional arguments:
 - Usage example
 
 ```bash
-python vehicle_detection_predict_binary.py --images_dir ./images/cars/ --output_save_path ./output
+python vehicle_detection_predict_binary.py --images_dir ../../../example_client/images/cars/ --output_save_path ./output
 Making directory for output: ./output
 Detection results in file:  ./output/road1.jpg
 ```
