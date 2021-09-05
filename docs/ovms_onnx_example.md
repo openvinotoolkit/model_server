@@ -41,7 +41,13 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet:/model -p 9001:9001 openvino
 
 Run inference request with a client containing `preprocess` function presented below:
 ```python
-import numpy as nu
+import numpy as np
+import cv2
+import grpc
+from tensorflow_serving.apis import predict_pb2
+from tensorflow_serving.apis import prediction_service_pb2_grpc
+from tensorflow import make_tensor_proto, make_ndarray
+import classes
 
 def preprocess(img_data):
     mean_vec = np.array([0.485, 0.456, 0.406])
