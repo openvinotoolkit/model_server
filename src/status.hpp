@@ -254,6 +254,7 @@ enum class StatusCode {
     UNSUPPORTED_LAYOUT,
     INVALID_NO_OF_CHANNELS,
     BINARY_IMAGES_RESOLUTION_MISMATCH,
+    STRING_VAL_EMPTY,
 
     // Model control API
     OK_NOT_RELOADED, /*!< Operation succeeded but no config reload was needed */

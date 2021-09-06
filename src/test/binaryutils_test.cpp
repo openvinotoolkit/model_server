@@ -62,6 +62,18 @@ TEST_F(BinaryUtilsTest, tensorWithInvalidImage) {
     EXPECT_EQ(convertStringValToBlob(stringValInvalidImage, blob, tensorInfo, false), ovms::StatusCode::IMAGE_PARSING_FAILED);
 }
 
+TEST_F(BinaryUtilsTest, tensorWithEmptyStringVal) {
+    tensorflow::TensorProto stringValEmptyImage;
+    InferenceEngine::Blob::Ptr blob;
+    stringValEmptyImage.set_dtype(tensorflow::DataType::DT_STRING);
+    std::string invalidImage = "";
+    stringValEmptyImage.add_string_val(invalidImage);
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 3, 1, 1}, InferenceEngine::Layout::NHWC);
+
+    EXPECT_EQ(convertStringValToBlob(stringValEmptyImage, blob, tensorInfo, false), ovms::StatusCode::STRING_VAL_EMPTY);
+}
+
 TEST_F(BinaryUtilsTest, tensorWithNonSupportedLayout) {
     InferenceEngine::Blob::Ptr blob;
 
