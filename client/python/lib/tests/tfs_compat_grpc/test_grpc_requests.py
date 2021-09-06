@@ -20,13 +20,15 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
 from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
 
-from ovmsclient.tfs_compat.grpc.requests import (GrpcModelMetadataRequest, GrpcPredictRequest,
-                                                 _check_model_spec, make_metadata_request,
-                                                 make_predict_request, make_status_request,
-                                                 GrpcModelStatusRequest)
+from ovmsclient.tfs_compat.base.requests import _check_model_spec
 
-from config import (MODEL_SPEC_INVALID, MODEL_SPEC_VALID,
-                    PREDICT_REQUEST_INVALID_INPUTS, PREDICT_REQUEST_VALID)
+from ovmsclient.tfs_compat.grpc.requests import (GrpcModelMetadataRequest, GrpcPredictRequest,
+                                                 make_metadata_request, make_predict_request,
+                                                 make_status_request, GrpcModelStatusRequest)
+
+from tfs_compat_grpc.config import (MODEL_SPEC_INVALID, MODEL_SPEC_VALID,
+                                    PREDICT_REQUEST_INVALID_INPUTS, PREDICT_REQUEST_VALID)
+
 from tensorflow_serving.apis.predict_pb2 import PredictRequest
 
 

@@ -19,6 +19,12 @@ from ovmsclient.tfs_compat.base.serving_client import ServingClient
 
 class HttpClient(ServingClient):
 
+    def __init__(self, address, port, client_key=None, server_cert=None):
+        self.address = address
+        self.port = port
+        self.client_key = client_key
+        self.server_cert = server_cert
+
     def predict(self, request):
         '''
         Send HttpPredictRequest to the server and return response.
@@ -105,7 +111,17 @@ class HttpClient(ServingClient):
 
     @classmethod
     def _build(cls, config):
-        raise NotImplementedError
+        ServingClient._check_config(config)
+        address = config.get("address")
+        port = config.get("port")
+        client_cert = None
+        server_cert = None
+        if "tls_config" in config:
+            tls_config = config["tls_config"]
+            if "client_cert_path" in tls_config and "client_key_path" in tls_config:
+                client_cert = (tls_config["client_cert_path"], tls_config["client_key_path"])
+            server_cert = tls_config.get('server_cert_path', None),
+        cls(address, port, client_cert, server_cert)
 
 
 def make_http_client(config):

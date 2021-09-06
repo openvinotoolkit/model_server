@@ -18,7 +18,7 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow_serving.apis import get_model_status_pb2, get_model_metadata_pb2, predict_pb2
 
 from ovmsclient.tfs_compat.base.requests import (PredictRequest, ModelMetadataRequest,
-                                                 ModelStatusRequest)
+                                                 ModelStatusRequest, _check_model_spec)
 from ovmsclient.tfs_compat.grpc.tensors import make_tensor_proto
 
 from ovmsclient.util.ovmsclient_export import ovmsclient_export
@@ -200,15 +200,3 @@ def make_status_request(model_name, model_version=0):
     request.model_spec.name = model_name
     request.model_spec.version.value = model_version
     return GrpcModelStatusRequest(model_name, model_version, request)
-
-
-def _check_model_spec(model_name, model_version):
-
-    if not isinstance(model_name, str):
-        raise TypeError(f'model_name type should be string, but is {type(model_name).__name__}')
-
-    if not isinstance(model_version, int):
-        raise TypeError(f'model_version type should be int, but is {type(model_version).__name__}')
-
-    if model_version.bit_length() > 63 or model_version < 0:
-        raise ValueError(f'model_version should be in range <0, {2**63-1}>')
