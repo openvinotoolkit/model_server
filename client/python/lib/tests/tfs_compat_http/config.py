@@ -15,7 +15,7 @@
 #
 
 import json
-from numpy import array, int32, float128
+from numpy import array, int32, float32, float128
 
 from config import * # noqa
 
@@ -56,7 +56,7 @@ PREDICT_REQUEST_INVALID_INPUTS = [
 ]
 
 # (inputs_dict,
-# expected_proto_dict,
+# expected_parsed_input,
 # model_name, model_version)
 PREDICT_REQUEST_VALID = [
     ({
@@ -86,4 +86,54 @@ PREDICT_REQUEST_VALID = [
     }, json.dumps({
         "inputs": {}
     }), 'model_name', 0)
+]
+
+# (inputs_dict,
+# expected_parsed_input)
+PARSE_INPUT_DATA_VALID = [
+    (array([[[1, 2, 3]]], dtype=float32), [[[1.0, 2.0, 3.0]]]),
+
+    (array([-1.0, -2.0, -3.0]), [-1.0, -2.0, -3.0]),
+
+    ([[int32(3), int32(1)], [int32(4), int32(16)]], [[3, 1], [4, 16]]),
+
+    (array([[0.012, -0.0002, 0.31, 0.0000014, -0.00054]]),
+     [[0.012, -0.0002, 0.31, 0.0000014, -0.00054]]),
+
+    (1, [1]),
+
+    (0, [0]),
+
+    ([1, 2, 3.0], [1.0, 2.0, 3.0]),
+
+    ([bytes([1, 2, 3]), bytes([4, 5, 6]), bytes([7, 8, 9])], {"b64": ["AQID", "BAUG", "BwgJ"]})
+]
+
+# (inputs_dict,
+# expected_exception, expected_message)
+PARSE_INPUT_DATA_INVALID = [
+    ([[1.0, 2.0], [1.0, 2.0, 3.0]], ValueError,
+     ("argument must be a dense tensor: [[1.0, 2.0], [1.0, 2.0, 3.0]] - "
+      "got shape [2], but wanted [2, 2]")),
+
+    ([[(1, 2, 3)], [(1, 2)], [(1, 2, 3)]],
+     TypeError, "provided values type is not valid"),
+
+    ([1, 2, 3, "str"],
+     TypeError, "provided values type is not valid"),
+
+    ([[1, 2], [3, 4], ["five", 6]],
+     TypeError, "provided values type is not valid"),
+
+    (float128(2.5), TypeError, "provided values type is not valid"),
+
+    ((1, 2, 3), TypeError,
+     "values type should be (list, np.ndarray, scalar), but is tuple"),
+
+    ([
+            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
+             bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])],
+            [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
+             bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])]
+     ], ValueError, "bytes values with dtype DT_STRING must be in shape [N]"),
 ]

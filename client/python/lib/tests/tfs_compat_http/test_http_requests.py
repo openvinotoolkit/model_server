@@ -17,11 +17,14 @@
 import pytest
 
 
-from ovmsclient.tfs_compat.http.requests import (HttpPredictRequest, make_predict_request)
+from ovmsclient.tfs_compat.http.requests import (HttpPredictRequest, make_predict_request,
+                                                 _parse_input_data)
 
 from tfs_compat_http.config import (MODEL_SPEC_INVALID,
                                     PREDICT_REQUEST_INVALID_INPUTS,
-                                    PREDICT_REQUEST_VALID)
+                                    PREDICT_REQUEST_VALID,
+                                    PARSE_INPUT_DATA_VALID,
+                                    PARSE_INPUT_DATA_INVALID)
 
 
 @pytest.mark.parametrize("inputs, expected_parsed_inputs, name, version", PREDICT_REQUEST_VALID)
@@ -64,3 +67,18 @@ def test_make_predict_request_invalid_inputs(mocker, inputs, name, version,
 
     assert str(e_info.value) == expected_message
     mock_method.assert_called_once()
+
+
+@pytest.mark.parametrize("input, expected_parsed_input", PARSE_INPUT_DATA_VALID)
+def test_parse_input_data_valid(input, expected_parsed_input):
+    parsed_input = _parse_input_data(input)
+    assert parsed_input == expected_parsed_input
+
+
+@pytest.mark.causes_deprecation_warning
+@pytest.mark.parametrize("""input, expected_exception, expected_message""",
+                         PARSE_INPUT_DATA_INVALID)
+def test_parse_input_data_invalid(input, expected_exception, expected_message):
+    with pytest.raises(expected_exception) as e_info:
+        _parse_input_data(input)(input)
+    assert str(e_info.value) == expected_message
