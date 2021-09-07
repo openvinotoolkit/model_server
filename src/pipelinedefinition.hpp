@@ -101,7 +101,7 @@ private:
     shape_t getNodeGatherShape(const NodeInfo& info) const;
 
     Status initializeNodeResources();
-    Status reinitializeNodeResources(const std::vector<NodeInfo>& nodeInfos);
+    Status deinitializeUnusedNodeResources(const std::vector<NodeInfo>& nodeInfos);
     void deinitializeNodeResources();
 
 public:

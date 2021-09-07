@@ -90,60 +90,55 @@ Status PipelineDefinition::validate(ModelManager& manager) {
 }
 
 Status PipelineDefinition::initializeNodeResources() {
-    for (auto& nodeInfo : this->nodeInfos) {
-        if (nodeInfo.kind == NodeKind::CUSTOM) {
-            void* customNodeLibraryInternalManager = nullptr;
-            auto params = createCustomNodeParamArray(nodeInfo.parameters).get();
-            auto status = nodeInfo.library.initialize(&customNodeLibraryInternalManager, params, nodeInfo.parameters.size());
-            if (status != 0) {
-                return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;
-            }
-            nodeResources.insert({nodeInfo.nodeName, customNodeLibraryInternalManager});
-        }
-    }
-    return StatusCode::OK;
-}
-
-Status PipelineDefinition::reinitializeNodeResources(const std::vector<NodeInfo>& nodeInfos) {
-    std::map<std::string, void*> nodeResourcesReinit;
-    std::vector<NodeInfo> diff;
-    std::set_difference(this->nodeInfos.begin(), this->nodeInfos.end(), nodeInfos.begin(), nodeInfos.end(),
-        std::inserter(diff, diff.begin()), [](auto& first, auto& second) { return first.nodeName != second.nodeName; });
-
-    for (auto& nodeInfo : nodeInfos) {
+    for (const auto& nodeInfo : nodeInfos) {
         if (nodeInfo.kind == NodeKind::CUSTOM) {
             void* customNodeLibraryInternalManager = nullptr;
             auto it = nodeResources.find(nodeInfo.nodeName);
-            if (it != nodeResources.end()) {
+            bool internalManagerExists = (it != nodeResources.end());
+            if (internalManagerExists) {
                 customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
             }
             auto params = createCustomNodeParamArray(nodeInfo.parameters).get();
             auto status = nodeInfo.library.initialize(&customNodeLibraryInternalManager, params, nodeInfo.parameters.size());
             if (status != 0) {
-                return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;
+                return StatusCode::NODE_LIBRARY_INITIALIZATION_FAILED;
             }
-            nodeResourcesReinit.insert({nodeInfo.nodeName, customNodeLibraryInternalManager});
+            if (!internalManagerExists) {
+                nodeResources.insert({nodeInfo.nodeName, customNodeLibraryInternalManager});
+            }
         }
     }
-    for (auto& nodeInfo : diff) {
+    return StatusCode::OK;
+}
+
+Status PipelineDefinition::deinitializeUnusedNodeResources(const std::vector<NodeInfo>& nodeInfos) {
+    std::vector<NodeInfo> diff;
+    for (const auto& nodeInfo : this->nodeInfos) {
+        auto it = std::find_if(nodeInfos.begin(), nodeInfos.end(),
+            [&nodeInfo](const auto& x) { return x.nodeName == nodeInfo.nodeName; });
+        if (it == nodeInfos.end()) {
+            diff.push_back(nodeInfo);
+        }
+    }
+
+    for (const auto& nodeInfo : diff) {
         void* customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
         auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
         if (status != 0) {
-            return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER;
+            return StatusCode::NODE_LIBRARY_DEINITIALIZATION_FAILED;
         }
+        nodeResources.erase(nodeInfo.nodeName);
     }
-    nodeResources.clear();
-    nodeResources = nodeResourcesReinit;
     return StatusCode::OK;
 }
 
 void PipelineDefinition::deinitializeNodeResources() {
-    for (auto& nodeInfo : this->nodeInfos) {
+    for (const auto& nodeInfo : this->nodeInfos) {
         void* customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
         nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
         // auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
         // if (status != 0 ) {
-        //     return StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER; //change needed
+        //     return StatusCode::UNKNOWN_ERROR;
         // }
     }
     nodeResources.clear();
@@ -156,7 +151,7 @@ Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeI
     while (requestsHandlesCounter > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
-    auto status = reinitializeNodeResources(nodeInfos);
+    auto status = deinitializeUnusedNodeResources(nodeInfos);
     if (!status.ok()) {
         return status;
     }
