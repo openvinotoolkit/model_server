@@ -68,6 +68,6 @@ which can map the input and output keys to the appropriate tensors.
 ```
 - This extra mapping can be handy to enable model `user friendly` names on the client when the model has cryptic tensor names.
 
-- OpenVINO&trade; model server enables the versions present in the configured model folder according to the defined [version policy](./ModelVersionPolicy.md).
+- OpenVINO&trade; model server enables the versions present in the configured model folder according to the defined [version policy](./model_version_policy.md).
 
 - If the client does not specify the version number in parameters, by default the latest version is served.

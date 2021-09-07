@@ -197,7 +197,7 @@ Beside numerical values, it is possible to pass binary inputs. They must be Base
   ]
 }
 ```
-Check [how binary data is handled in OpenVINO Model Server](binary_input_ouput.md)
+Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
 
 Read more about *Predict API* usage examples [here](./../example_client/README.md#predict-api-1)
 

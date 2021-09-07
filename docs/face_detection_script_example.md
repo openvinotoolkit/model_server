@@ -91,7 +91,7 @@ Refer to [Preparation of Models](./models_repository.md) to place your downloade
 
 ### Run the OpenVINO&trade; Model Server Docker Container
 
-Run the OpenVINO&trade; Model Server with the downloaded models. Adjust the shape and batch_size parameter according to the requirement of model. Refer [this guide](ShapeAndBatchSize.md) to know more about the parameters.
+Run the OpenVINO&trade; Model Server with the downloaded models. Adjust the shape and batch_size parameter according to the requirement of model. Refer [this guide](./shape_batch_size_and_layout.md) to know more about the parameters.
 
 - Run following command on your terminal
 
@@ -112,7 +112,7 @@ If the container is not running , check out the [troubleshooting guide](./troubl
 
 ### Run the example script
 
-Run the face detection example script - [FaceDetection.py](../example_client/face_detection.py). Make changes to the input shape as required by the model you are running. Refer to the API reference Guide to obtain the input and output shape of the model - [gRPC reference guide](./ModelServerGRPCAPI.md) and [REST API reference guide ](./ModelServerRESTAPI.md).
+Run the face detection example script - [FaceDetection.py](../example_client/face_detection.py). Make changes to the input shape as required by the model you are running. Refer to the API reference Guide to obtain the input and output shape of the model - [gRPC reference guide](./model_server_grpc_api.md) and [REST API reference guide ](./model_server_rest_api.md).
 
 Run the example script in terminal :
 
