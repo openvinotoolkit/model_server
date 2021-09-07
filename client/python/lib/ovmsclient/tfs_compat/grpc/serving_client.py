@@ -15,8 +15,6 @@
 #
 
 from grpc import RpcError, ssl_channel_credentials, secure_channel, insecure_channel
-from validators import ipv4, domain
-import os
 
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from tensorflow_serving.apis import model_service_pb2_grpc
@@ -68,7 +66,7 @@ class GrpcClient(ServingClient):
             >>> type(response)
         '''
 
-        _check_predict_request(request)
+        GrpcClient._check_predict_request(request)
 
         raw_response = None
         try:
@@ -106,7 +104,7 @@ class GrpcClient(ServingClient):
             >>> type(response)
         '''
 
-        _check_model_metadata_request(request)
+        GrpcClient._check_model_metadata_request(request)
 
         raw_response = None
         try:
@@ -144,7 +142,7 @@ class GrpcClient(ServingClient):
             >>> type(response)
         '''
 
-        _check_model_status_request(request)
+        GrpcClient._check_model_status_request(request)
 
         raw_response = None
         try:
@@ -158,12 +156,12 @@ class GrpcClient(ServingClient):
     @classmethod
     def _build(cls, config):
 
-        _check_config(config)
+        ServingClient._check_config(config)
 
         grpc_address = f"{config['address']}:{config['port']}"
 
         if 'tls_config' in config:
-            server_cert, client_cert, client_key = _prepare_certs(
+            server_cert, client_cert, client_key = ServingClient._prepare_certs(
                 config['tls_config'].get('server_cert_path'),
                 config['tls_config'].get('client_cert_path'),
                 config['tls_config'].get('client_key_path')
@@ -181,137 +179,59 @@ class GrpcClient(ServingClient):
 
         return cls(channel, prediction_service_stub, model_service_stub)
 
+    @classmethod
+    def _check_model_status_request(cls, request):
 
-def _check_model_status_request(request):
+        if not isinstance(request, GrpcModelStatusRequest):
+            raise TypeError('request type should be GrpcModelStatusRequest, '
+                            f'but is {type(request).__name__}')
 
-    if not isinstance(request, GrpcModelStatusRequest):
-        raise TypeError('request type should be GrpcModelStatusRequest, '
-                        f'but is {type(request).__name__}')
+        if not isinstance(request.raw_request, GetModelStatusRequest):
+            raise TypeError('request is not valid GrpcModelStatusRequest')
 
-    if not isinstance(request.raw_request, GetModelStatusRequest):
-        raise TypeError('request is not valid GrpcModelStatusRequest')
+        if request.raw_request.model_spec.name != request.model_name:
+            raise ValueError('request is not valid GrpcModelStatusRequest')
 
-    if request.raw_request.model_spec.name != request.model_name:
-        raise ValueError('request is not valid GrpcModelStatusRequest')
+        if request.raw_request.model_spec.version.value != request.model_version:
+            raise ValueError('request is not valid GrpcModelStatusRequest')
 
-    if request.raw_request.model_spec.version.value != request.model_version:
-        raise ValueError('request is not valid GrpcModelStatusRequest')
+    @classmethod
+    def _check_model_metadata_request(cls, request):
 
+        if not isinstance(request, GrpcModelMetadataRequest):
+            raise TypeError('request type should be GrpcModelMetadataRequest, '
+                            f'but is {type(request).__name__}')
 
-def _check_model_metadata_request(request):
+        if not isinstance(request.raw_request, GetModelMetadataRequest):
+            raise TypeError('request is not valid GrpcModelMetadataRequest')
 
-    if not isinstance(request, GrpcModelMetadataRequest):
-        raise TypeError('request type should be GrpcModelMetadataRequest, '
-                        f'but is {type(request).__name__}')
+        if request.raw_request.model_spec.name != request.model_name:
+            raise ValueError('request is not valid GrpcModelMetadataRequest')
 
-    if not isinstance(request.raw_request, GetModelMetadataRequest):
-        raise TypeError('request is not valid GrpcModelMetadataRequest')
+        if request.raw_request.model_spec.version.value != request.model_version:
+            raise ValueError('request is not valid GrpcModelMetadataRequest')
 
-    if request.raw_request.model_spec.name != request.model_name:
-        raise ValueError('request is not valid GrpcModelMetadataRequest')
+        if list(request.raw_request.metadata_field) != ['signature_def']:
+            raise ValueError('request is not valid GrpcModelMetadataRequest')
 
-    if request.raw_request.model_spec.version.value != request.model_version:
-        raise ValueError('request is not valid GrpcModelMetadataRequest')
+    @classmethod
+    def _check_predict_request(cls, request):
 
-    if list(request.raw_request.metadata_field) != ['signature_def']:
-        raise ValueError('request is not valid GrpcModelMetadataRequest')
+        if not isinstance(request, GrpcPredictRequest):
+            raise TypeError('request type should be GrpcPredictRequest, '
+                            f'but is {type(request).__name__}')
 
+        if not isinstance(request.raw_request, PredictRequest):
+            raise TypeError('request is not valid GrpcPredictRequest')
 
-def _check_predict_request(request):
+        if request.raw_request.model_spec.name != request.model_name:
+            raise ValueError('request is not valid GrpcPredictRequest')
 
-    if not isinstance(request, GrpcPredictRequest):
-        raise TypeError('request type should be GrpcPredictRequest, '
-                        f'but is {type(request).__name__}')
+        if request.raw_request.model_spec.version.value != request.model_version:
+            raise ValueError('request is not valid GrpcPredictRequest')
 
-    if not isinstance(request.raw_request, PredictRequest):
-        raise TypeError('request is not valid GrpcPredictRequest')
-
-    if request.raw_request.model_spec.name != request.model_name:
-        raise ValueError('request is not valid GrpcPredictRequest')
-
-    if request.raw_request.model_spec.version.value != request.model_version:
-        raise ValueError('request is not valid GrpcPredictRequest')
-
-    if list(request.inputs.keys()) != list(request.raw_request.inputs.keys()):
-        raise ValueError('request is not valid GrpcPredictRequest')
-
-
-def _prepare_certs(server_cert_path, client_cert_path, client_key_path):
-
-    client_cert, client_key = None, None
-
-    server_cert = _open_certificate(server_cert_path)
-
-    if client_cert_path is not None:
-        client_cert = _open_certificate(client_cert_path)
-
-    if client_key_path is not None:
-        client_key = _open_private_key(client_key_path)
-
-    return server_cert, client_cert, client_key
-
-
-def _open_certificate(certificate_path):
-    with open(certificate_path, 'rb') as f:
-        certificate = f.read()
-        return certificate
-
-
-def _open_private_key(key_path):
-    with open(key_path, 'rb') as f:
-        key = f.read()
-        return key
-
-
-def _check_config(config):
-
-    if 'address' not in config or 'port' not in config:
-        raise ValueError('The minimal config must contain address and port')
-
-    _check_address(config['address'])
-
-    _check_port(config['port'])
-
-    if 'tls_config' in config:
-        _check_tls_config(config['tls_config'])
-
-
-def _check_address(address):
-
-    if not isinstance(address, str):
-        raise TypeError(f'address type should be string, but is {type(address).__name__}')
-
-    if address != "localhost" and not ipv4(address) and not domain(address):
-        raise ValueError('address is not valid')
-
-
-def _check_port(port):
-
-    if not isinstance(port, int):
-        raise TypeError(f'port type should be int, but is type {type(port).__name__}')
-
-    if port.bit_length() > 16 or port < 0:
-        raise ValueError(f'port should be in range <0, {2**16-1}>')
-
-
-def _check_tls_config(tls_config):
-
-    if 'server_cert_path' not in tls_config:
-        raise ValueError('server_cert_path is not defined in tls_config')
-
-    if ('client_key_path' in tls_config) != ('client_cert_path' in tls_config):
-        raise ValueError('none or both client_key_path and client_cert_path '
-                         'are required in tls_config')
-
-    valid_keys = ['server_cert_path', 'client_key_path', 'client_cert_path']
-    for key in tls_config:
-        if key not in valid_keys:
-            raise ValueError(f'{key} is not valid tls_config key')
-        if not isinstance(tls_config[key], str):
-            raise TypeError(f'{key} type should be string but is type '
-                            f'{type(tls_config[key]).__name__}')
-        if not os.path.isfile(tls_config[key]):
-            raise ValueError(f'{tls_config[key]} is not valid path to file')
+        if list(request.inputs.keys()) != list(request.raw_request.inputs.keys()):
+            raise ValueError('request is not valid GrpcPredictRequest')
 
 
 @ovmsclient_export("make_grpc_client", grpcclient="make_client")
