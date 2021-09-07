@@ -21,26 +21,13 @@ from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataReque
 from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
 
 from ovmsclient.tfs_compat.grpc.requests import (GrpcModelMetadataRequest, GrpcPredictRequest,
-                                                 _check_model_spec, make_metadata_request,
-                                                 make_predict_request, make_status_request,
-                                                 GrpcModelStatusRequest)
+                                                 make_metadata_request, make_predict_request,
+                                                 make_status_request, GrpcModelStatusRequest)
 
-from config import (MODEL_SPEC_INVALID, MODEL_SPEC_VALID,
-                    PREDICT_REQUEST_INVALID_INPUTS, PREDICT_REQUEST_VALID)
+from tfs_compat_grpc.config import (MODEL_SPEC_INVALID, MODEL_SPEC_VALID,
+                                    PREDICT_REQUEST_INVALID_INPUTS, PREDICT_REQUEST_VALID)
+
 from tensorflow_serving.apis.predict_pb2 import PredictRequest
-
-
-@pytest.mark.parametrize("name, version", MODEL_SPEC_VALID)
-def test_check_model_spec_valid(name, version):
-    _check_model_spec(name, version)
-
-
-@pytest.mark.parametrize("name, version, expected_exception, expected_message", MODEL_SPEC_INVALID)
-def test_check_model_spec_invalid(name, version, expected_exception, expected_message):
-    with pytest.raises(expected_exception) as e_info:
-        _check_model_spec(name, version)
-
-    assert str(e_info.value) == expected_message
 
 
 @pytest.mark.parametrize("name, version", MODEL_SPEC_VALID)
