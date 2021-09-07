@@ -20,6 +20,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), ".."))
 
 # Import all modules for ovmsclient_export discovery
 from ovmsclient.tfs_compat.grpc import requests, responses, serving_client, tensors
+from ovmsclient.tfs_compat.http import requests, responses, serving_client
 from ovmsclient.custom import management_client
 
 from ovmsclient.util.ovmsclient_export import NAME_TO_SYMBOL_MAPPING, MAIN_NAMESPACE_NAME
