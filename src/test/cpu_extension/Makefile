@@ -16,7 +16,7 @@
 
 all: $(eval SHELL:=/bin/bash)
 	. /opt/intel/openvino/bin/setupvars.sh && /usr/bin/g++ -std=gnu++11 -fPIC -shared minimal_cpu_extension.cpp \
-		-I /opt/intel/openvino/deployment_tools/inference_engine/include \
+		-I /opt/intel/openvino/deployment_tools/inference_engine/include/ie \
 		-I /opt/intel/openvino/deployment_tools/ngraph/include \
 		-o libminimal_cpu_extension.so
 
