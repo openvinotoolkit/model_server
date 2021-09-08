@@ -83,6 +83,7 @@ def main():
 
     contents.extend([*imports, *namespaces])
     contents_str = SEPARATOR.join(contents)
+    contents_str = contents_str[:-1] # exclude last newline sign to avoid double new line at the end of the file
 
     with open("__init__.py", "w") as init_file:
         init_file.write(contents_str)
