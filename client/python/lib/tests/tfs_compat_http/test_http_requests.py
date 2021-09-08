@@ -17,8 +17,10 @@
 import pytest
 
 
-from ovmsclient.tfs_compat.http.requests import (HttpPredictRequest, make_predict_request,
-                                                 _parse_input_data)
+from ovmsclient.tfs_compat.http.requests import (HttpPredictRequest, HttpModelMetadataRequest,
+                                                 HttpModelStatusRequest, make_predict_request,
+                                                 _parse_input_data, make_metadata_request,
+                                                 make_status_request)
 
 from tfs_compat_http.config import (MODEL_SPEC_INVALID,
                                     PREDICT_REQUEST_INVALID_INPUTS,
@@ -82,3 +84,45 @@ def test_parse_input_data_invalid(input, expected_exception, expected_message):
     with pytest.raises(expected_exception) as e_info:
         _parse_input_data(input)(input)
     assert str(e_info.value) == expected_message
+
+
+@pytest.mark.parametrize("name, version, expected_exception, expected_message", MODEL_SPEC_INVALID)
+def test_make_metadata_request_invalid_model_spec(mocker, name, version,
+                                                  expected_exception, expected_message):
+    mock_method = mocker.patch('ovmsclient.tfs_compat.http.requests._check_model_spec',
+                               side_effect=expected_exception(expected_message))
+    with pytest.raises(expected_exception) as e_info:
+        make_metadata_request(name, version)
+
+    assert str(e_info.value) == expected_message
+    mock_method.assert_called_once()
+
+
+def test_make_metadata_request_valid():
+    model_name = "model"
+    model_version = 3
+    model_metadata_request = make_metadata_request(model_name, model_version)
+    assert isinstance(model_metadata_request, HttpModelMetadataRequest)
+    assert model_metadata_request.model_name == model_name
+    assert model_metadata_request.model_version == model_version
+
+
+@pytest.mark.parametrize("name, version, expected_exception, expected_message", MODEL_SPEC_INVALID)
+def test_make_status_request_invalid_model_spec(mocker, name, version,
+                                                expected_exception, expected_message):
+    mock_method = mocker.patch('ovmsclient.tfs_compat.http.requests._check_model_spec',
+                               side_effect=expected_exception(expected_message))
+    with pytest.raises(expected_exception) as e_info:
+        make_status_request(name, version)
+
+    assert str(e_info.value) == expected_message
+    mock_method.assert_called_once()
+
+
+def test_make_status_request_valid():
+    model_name = "model"
+    model_version = 3
+    model_status_request = make_status_request(model_name, model_version)
+    assert isinstance(model_status_request, HttpModelStatusRequest)
+    assert model_status_request.model_name == model_name
+    assert model_status_request.model_version == model_version
