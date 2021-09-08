@@ -121,7 +121,7 @@ public:
     Status validateForCycles();
     Status validateDemultiplexerGatherNodesOrder();
     Status initializeNodeResources();
-    Status deinitializeUnusedNodeResources(const std::vector<NodeInfo>& nodeInfos);
+    void deinitializeUnusedNodeResources(const std::vector<NodeInfo>& nodeInfos);
     void deinitializeNodeResources();
 
     const std::string& getName() const { return pipelineName; }

@@ -97,9 +97,13 @@ Status PipelineDefinition::initializeNodeResources() {
                 customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
             }
             auto params = createCustomNodeParamArray(nodeInfo.parameters).get();
+            if (!nodeInfo.library.isValid()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {} node: {} refers to incorrect library", pipelineName, nodeInfo.nodeName);
+                return StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY;
+            }
             auto status = nodeInfo.library.initialize(&customNodeLibraryInternalManager, params, nodeInfo.parameters.size());
             if (status != 0) {
-                return StatusCode::NODE_LIBRARY_INITIALIZATION_FAILED;
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Initialization of library with base path: {} failed", nodeInfo.library.basePath);
             }
             if (!internalManagerExists) {
                 nodeResources.insert({nodeInfo.nodeName, customNodeLibraryInternalManager});
@@ -109,7 +113,7 @@ Status PipelineDefinition::initializeNodeResources() {
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::deinitializeUnusedNodeResources(const std::vector<NodeInfo>& nodeInfos) {
+void PipelineDefinition::deinitializeUnusedNodeResources(const std::vector<NodeInfo>& nodeInfos) {
     std::vector<NodeInfo> diff;
     for (const auto& nodeInfo : this->nodeInfos) {
         auto it = std::find_if(nodeInfos.begin(), nodeInfos.end(),
@@ -124,23 +128,21 @@ Status PipelineDefinition::deinitializeUnusedNodeResources(const std::vector<Nod
             void* customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
             auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
             if (status != 0) {
-                return StatusCode::NODE_LIBRARY_DEINITIALIZATION_FAILED;
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Deinitialization of library with base path: {} failed", nodeInfo.library.basePath);
             }
             nodeResources.erase(nodeInfo.nodeName);
         }
     }
-    return StatusCode::OK;
 }
 
 void PipelineDefinition::deinitializeNodeResources() {
     for (const auto& nodeInfo : this->nodeInfos) {
         if (nodeInfo.kind == NodeKind::CUSTOM) {
             void* customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
-            nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
-            // auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
-            // if (status != 0 ) {
-            //     return StatusCode::UNKNOWN_ERROR;
-            // }
+            auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
+            if (status != 0 ) {
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Deinitialization of library with base path: {} failed", nodeInfo.library.basePath);
+            }
         }
     }
     nodeResources.clear();
@@ -153,10 +155,7 @@ Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeI
     while (requestsHandlesCounter > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
-    auto status = deinitializeUnusedNodeResources(nodeInfos);
-    if (!status.ok()) {
-        return status;
-    }
+    deinitializeUnusedNodeResources(nodeInfos);
     this->nodeInfos = std::move(nodeInfos);
     this->connections = std::move(connections);
     makeSubscriptions(manager);

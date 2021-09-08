@@ -1121,19 +1121,19 @@ public:
     }
 };
 
-// TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringPredictLoad) {
-//     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
-//     bool performWholeConfigReload = true;
-//     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
-//         StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
-//     std::set<StatusCode> allowedLoadResults = {};
-//     performStressTest(
-//         &StressPipelineConfigChanges::triggerPredictInALoop,
-//         &StressPipelineConfigChanges::removeCustomLibraryUsed,
-//         performWholeConfigReload,
-//         requiredLoadResults,
-//         allowedLoadResults);
-// }
+TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringPredictLoad) {
+    SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::removeCustomLibraryUsed,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
 TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringPredictLoad) {
     // we change used PARAM durign load. This change does not effect results, but is should be enough to verify
     // correctness of this operation - no segfaults etc.
@@ -1148,19 +1148,19 @@ TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringPre
         requiredLoadResults,
         allowedLoadResults);
 }
-// TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringGetMetadataLoad) {
-//     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
-//     bool performWholeConfigReload = true;
-//     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
-//         StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
-//     std::set<StatusCode> allowedLoadResults = {};
-//     performStressTest(
-//         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
-//         &StressPipelineConfigChanges::removeCustomLibraryUsed,
-//         performWholeConfigReload,
-//         requiredLoadResults,
-//         allowedLoadResults);
-// }
+TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringGetMetadataLoad) {
+    SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::removeCustomLibraryUsed,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
 TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
