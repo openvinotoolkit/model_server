@@ -116,15 +116,7 @@ def _get_output_json(rest_url, method_to_call, raise_error = True,
         data_json = prepare_body_format(img, request_format, input_tensor)
     else:
         data_json = None
-
-    logger.debug(f"calling  {method_to_call.__name__}")
-    try:
-        result = method_to_call(rest_url, data=data_json, timeout=timeout)
-    except ReadTimeout as e:
-        logger.error(f"{method_to_call.__name__} timed out {e} ")
-        raise e
-    logger.debug(f"Called  {method_to_call.__name__} with response={result.status_code}; elapsed={result.elapsed}")
-
+    result = method_to_call(rest_url, data=data_json, timeout=timeout)
     if raise_error and (not result.ok or result.status_code != 200):
         msg = f"REST call: {method_to_call.__name__}() failed {result}"
         txt = getattr(result, "text", "")
