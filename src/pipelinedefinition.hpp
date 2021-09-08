@@ -72,7 +72,7 @@ class PipelineDefinition {
 
     const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
-    std::map<std::string, void*> nodeResources;
+    std::map<std::string, void*> nodeResources = {};
     pipeline_connections_t connections;
 
 protected:
@@ -100,10 +100,6 @@ private:
     const NodeInfo& findNodeByName(const std::string& name) const;
     shape_t getNodeGatherShape(const NodeInfo& info) const;
 
-    Status initializeNodeResources();
-    Status deinitializeUnusedNodeResources(const std::vector<NodeInfo>& nodeInfos);
-    void deinitializeNodeResources();
-
 public:
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 10000;
     PipelineDefinition(const std::string& pipelineName,
@@ -124,6 +120,9 @@ public:
     Status validateNodes(ModelManager& manager);
     Status validateForCycles();
     Status validateDemultiplexerGatherNodesOrder();
+    Status initializeNodeResources();
+    Status deinitializeUnusedNodeResources(const std::vector<NodeInfo>& nodeInfos);
+    void deinitializeNodeResources();
 
     const std::string& getName() const { return pipelineName; }
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
@@ -153,7 +152,7 @@ public:
     const tensor_map_t getOutputsInfo() const;
 
 private:
-    static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName);
+    static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName, void* customNodeLibraryInternalManager);
 
     Status populateOutputsInfoWithDLModelOutputs(
         const NodeInfo& dependencyNodeInfo,

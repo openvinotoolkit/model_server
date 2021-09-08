@@ -1049,68 +1049,68 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, AddSubCustomNode) {
     this->checkResponseForCorrectConfiguration();
 }
 
-static const char* pipelineCustomNodeReferenceMissingLibraryConfig = R"(
-{
-    "model_config_list": [],
-    "custom_node_library_config_list": [
-        {
-            "name": "lib_add_sub",
-            "base_path": "/ovms/bazel-bin/src/lib_node_add_sub.so"
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "my_pipeline",
-            "inputs": ["pipeline_input"],
-            "nodes": [
-                {
-                    "name": "custom_node",
-                    "library_name": "non_existing_library",
-                    "params": {
-                        "add_value": "3.2",
-                        "sub_value": "2.7"
-                    },
-                    "type": "custom",
-                    "inputs": [
-                        {"input_numbers": {"node_name": "request",
-                                           "data_item": "pipeline_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "output_numbers",
-                         "alias": "custom_node_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"pipeline_output": {"node_name": "custom_node",
-                                     "data_item": "custom_node_output"}
-                }
-            ]
-        }
-    ]
-})";
+// static const char* pipelineCustomNodeReferenceMissingLibraryConfig = R"(
+// {
+//     "model_config_list": [],
+//     "custom_node_library_config_list": [
+//         {
+//             "name": "lib_add_sub",
+//             "base_path": "/ovms/bazel-bin/src/lib_node_add_sub.so"
+//         }
+//     ],
+//     "pipeline_config_list": [
+//         {
+//             "name": "my_pipeline",
+//             "inputs": ["pipeline_input"],
+//             "nodes": [
+//                 {
+//                     "name": "custom_node",
+//                     "library_name": "non_existing_library",
+//                     "params": {
+//                         "add_value": "3.2",
+//                         "sub_value": "2.7"
+//                     },
+//                     "type": "custom",
+//                     "inputs": [
+//                         {"input_numbers": {"node_name": "request",
+//                                            "data_item": "pipeline_input"}}
+//                     ],
+//                     "outputs": [
+//                         {"data_item": "output_numbers",
+//                          "alias": "custom_node_output"}
+//                     ]
+//                 }
+//             ],
+//             "outputs": [
+//                 {"pipeline_output": {"node_name": "custom_node",
+//                                      "data_item": "custom_node_output"}
+//                 }
+//             ]
+//         }
+//     ]
+// })";
 
-TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceMissingLibraryThenCorrect) {
-    std::unique_ptr<Pipeline> pipeline;
-    this->prepareRequest(inputValues);
+// TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceMissingLibraryThenCorrect) {
+//     std::unique_ptr<Pipeline> pipeline;
+//     this->prepareRequest(inputValues);
 
-    // Loading correct configuration is required for test to pass.
-    // This is due to fact that when OVMS loads pipeline definition for the first time and fails, its status is RETIRED.
-    this->loadCorrectConfiguration();
-    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    this->checkResponseForCorrectConfiguration();
-    response.Clear();
+//     // Loading correct configuration is required for test to pass.
+//     // This is due to fact that when OVMS loads pipeline definition for the first time and fails, its status is RETIRED.
+//     this->loadCorrectConfiguration();
+//     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+//     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+//     this->checkResponseForCorrectConfiguration();
+//     response.Clear();
 
-    this->loadConfiguration(pipelineCustomNodeReferenceMissingLibraryConfig, StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY);
-    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
-    response.Clear();
+//     this->loadConfiguration(pipelineCustomNodeReferenceMissingLibraryConfig, StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY);
+//     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+//     response.Clear();
 
-    this->loadCorrectConfiguration();
-    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    this->checkResponseForCorrectConfiguration();
-}
+//     this->loadCorrectConfiguration();
+//     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+//     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+//     this->checkResponseForCorrectConfiguration();
+// }
 
 static const char* pipelineCustomNodeReferenceLibraryWithExecutionErrorMissingParamsLibraryConfig = R"(
 {
@@ -1237,68 +1237,68 @@ TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, MissingRequiredNodeParam
     this->checkResponseForCorrectConfiguration();
 }
 
-static const char* pipelineCustomNodeLibraryNotEscapedPathConfig = R"(
-{
-    "model_config_list": [],
-    "custom_node_library_config_list": [
-        {
-            "name": "lib_add_sub_new",
-            "base_path": "/ovms/bazel-bin/src/../src/lib_node_add_sub.so"
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "my_pipeline",
-            "inputs": ["pipeline_input"],
-            "nodes": [
-                {
-                    "name": "custom_node",
-                    "library_name": "lib_add_sub_new",
-                    "params": {
-                        "add_value": "3.2",
-                        "sub_value": "2.7"
-                    },
-                    "type": "custom",
-                    "inputs": [
-                        {"input_numbers": {"node_name": "request",
-                                           "data_item": "pipeline_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "output_numbers",
-                         "alias": "custom_node_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"pipeline_output": {"node_name": "custom_node",
-                                     "data_item": "custom_node_output"}
-                }
-            ]
-        }
-    ]
-})";
+// static const char* pipelineCustomNodeLibraryNotEscapedPathConfig = R"(
+// {
+//     "model_config_list": [],
+//     "custom_node_library_config_list": [
+//         {
+//             "name": "lib_add_sub_new",
+//             "base_path": "/ovms/bazel-bin/src/../src/lib_node_add_sub.so"
+//         }
+//     ],
+//     "pipeline_config_list": [
+//         {
+//             "name": "my_pipeline",
+//             "inputs": ["pipeline_input"],
+//             "nodes": [
+//                 {
+//                     "name": "custom_node",
+//                     "library_name": "lib_add_sub_new",
+//                     "params": {
+//                         "add_value": "3.2",
+//                         "sub_value": "2.7"
+//                     },
+//                     "type": "custom",
+//                     "inputs": [
+//                         {"input_numbers": {"node_name": "request",
+//                                            "data_item": "pipeline_input"}}
+//                     ],
+//                     "outputs": [
+//                         {"data_item": "output_numbers",
+//                          "alias": "custom_node_output"}
+//                     ]
+//                 }
+//             ],
+//             "outputs": [
+//                 {"pipeline_output": {"node_name": "custom_node",
+//                                      "data_item": "custom_node_output"}
+//                 }
+//             ]
+//         }
+//     ]
+// })";
 
-TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceLibraryWithRestrictedBasePathThenCorrect) {
-    std::unique_ptr<Pipeline> pipeline;
-    this->prepareRequest(inputValues);
+// TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceLibraryWithRestrictedBasePathThenCorrect) {
+//     std::unique_ptr<Pipeline> pipeline;
+//     this->prepareRequest(inputValues);
 
-    // Loading correct configuration is required for test to pass.
-    // This is due to fact that when OVMS loads pipeline definition for the first time and fails, its status is RETIRED.
-    this->loadCorrectConfiguration();
-    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    this->checkResponseForCorrectConfiguration();
-    response.Clear();
+//     // Loading correct configuration is required for test to pass.
+//     // This is due to fact that when OVMS loads pipeline definition for the first time and fails, its status is RETIRED.
+//     this->loadCorrectConfiguration();
+//     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+//     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+//     this->checkResponseForCorrectConfiguration();
+//     response.Clear();
 
-    this->loadConfiguration(pipelineCustomNodeLibraryNotEscapedPathConfig, StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY);
-    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
-    response.Clear();
+//     this->loadConfiguration(pipelineCustomNodeLibraryNotEscapedPathConfig, StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY);
+//     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+//     response.Clear();
 
-    this->loadCorrectConfiguration();
-    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    this->checkResponseForCorrectConfiguration();
-}
+//     this->loadCorrectConfiguration();
+//     ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+//     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+//     this->checkResponseForCorrectConfiguration();
+// }
 
 static const char* pipelineCustomNodeDifferentOperationsConfig = R"(
 {
@@ -2412,40 +2412,40 @@ TEST_F(EnsembleConfigurationValidationWithCustomNode, CustomNodeMissingOutput) {
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL_OUTPUT);
 }
 
-TEST_F(EnsembleConfigurationValidationWithCustomNode, InvalidSharedLibrary) {
-    NodeLibrary invalidLibrary{};
-    ASSERT_FALSE(invalidLibrary.isValid());
-    std::vector<NodeInfo> info{
-        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
-        {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, std::nullopt, {}, invalidLibrary,
-            parameters_t{
-                {"in_InputNumbers", "1,3,10;FP32"},
-                {"out_OutputNumbers_1", "1,30,7;I32"},
-                {"out_OutputNumbers_2", "1,8;I32"}}},
-        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, invalidLibrary,
-            parameters_t{
-                {"in_InputNumbers_1", "1,30,7;I32"},
-                {"in_InputNumbers_2", "1,8;I32"},
-                {"out_OutputNumbers", "1,2000;FP32"}}},
-        {NodeKind::EXIT, EXIT_NODE_NAME},
-    };
+// TEST_F(EnsembleConfigurationValidationWithCustomNode, InvalidSharedLibrary) {
+//     NodeLibrary invalidLibrary{};
+//     ASSERT_FALSE(invalidLibrary.isValid());
+//     std::vector<NodeInfo> info{
+//         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+//         {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, std::nullopt, {}, invalidLibrary,
+//             parameters_t{
+//                 {"in_InputNumbers", "1,3,10;FP32"},
+//                 {"out_OutputNumbers_1", "1,30,7;I32"},
+//                 {"out_OutputNumbers_2", "1,8;I32"}}},
+//         {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, invalidLibrary,
+//             parameters_t{
+//                 {"in_InputNumbers_1", "1,30,7;I32"},
+//                 {"in_InputNumbers_2", "1,8;I32"},
+//                 {"out_OutputNumbers", "1,2000;FP32"}}},
+//         {NodeKind::EXIT, EXIT_NODE_NAME},
+//     };
 
-    pipeline_connections_t connections;
+//     pipeline_connections_t connections;
 
-    connections["custom_node_1"] = {
-        {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
+//     connections["custom_node_1"] = {
+//         {ENTRY_NODE_NAME, {{pipelineInputName, "in_InputNumbers"}}}};
 
-    connections["custom_node_2"] = {
-        {"custom_node_1", {{"1", "in_InputNumbers_1"},
-                              {"2", "in_InputNumbers_2"}}}};
+//     connections["custom_node_2"] = {
+//         {"custom_node_1", {{"1", "in_InputNumbers_1"},
+//                               {"2", "in_InputNumbers_2"}}}};
 
-    connections[EXIT_NODE_NAME] = {
-        {"custom_node_2", {{"out", pipelineOutputName}}}};
+//     connections[EXIT_NODE_NAME] = {
+//         {"custom_node_2", {{"out", pipelineOutputName}}}};
 
-    ConstructorEnabledModelManager manager;
-    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
-    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY);
-}
+//     ConstructorEnabledModelManager manager;
+//     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+//     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY);
+// }
 
 struct LibraryErrorsOnMetadataCall {
     static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
