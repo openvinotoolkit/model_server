@@ -18,7 +18,7 @@ import numpy as np
 import json
 import os
 from constants import ERROR_SHAPE
-from config import target_device, skip_nginx_test
+from config import target_device, skip_nginx_test, skip_hddl_tests
 from model.models_information import ResnetBS8, AgeGender
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response
 import logging
@@ -46,6 +46,7 @@ class TestBatchModelInference:
         out_names = list(json_dict["outputs"].keys())
         return in_name, out_names, json_dict["outputs"]
 
+    @pytest.mark.skipif(skip_hddl_tests, reason="NOT TO BE REPORTED IF SKIPPED")
     def test_run_inference(self, start_server_batch_model):
         """
         <b>Description</b>
@@ -77,7 +78,6 @@ class TestBatchModelInference:
         logger.info("Output shape: {}".format(output[ResnetBS8.output_name].shape))
         assert output[ResnetBS8.output_name].shape == ResnetBS8.output_shape, ERROR_SHAPE
 
-    # "error: Cannot load network into target device")
     @pytest.mark.skipif(target_device == "MYRIAD",
                         reason="NOT TO BE REPORTED IF SKIPPED")
     def test_run_inference_bs4(self, start_server_batch_model_bs4):
@@ -95,7 +95,7 @@ class TestBatchModelInference:
         logger.info("Output shape: {}".format(output[ResnetBS8.output_name].shape))
         assert output[ResnetBS8.output_name].shape == (4,) + ResnetBS8.output_shape[1:], ERROR_SHAPE
 
-    # "Can not init Myriad device: NC_ERROR;")
+    @pytest.mark.skipif(skip_hddl_tests, reason="NOT TO BE REPORTED IF SKIPPED")
     @pytest.mark.skipif(target_device == "MYRIAD",
                         reason="NOT TO BE REPORTED IF SKIPPED")
     def test_run_inference_auto(self, start_server_batch_model_auto):
@@ -133,7 +133,6 @@ class TestBatchModelInference:
         assert expected_input_metadata == input_metadata
         assert expected_output_metadata == output_metadata
 
-    # "error: Cannot load network into target device"
     @pytest.mark.skipif(target_device == "MYRIAD",
                         reason="NOT TO BE REPORTED IF SKIPPED")
     @pytest.mark.parametrize("request_format",
@@ -212,7 +211,6 @@ class TestBatchModelInference:
             expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[output_names]][1:]
             assert output[output_names].shape == expected_shape, ERROR_SHAPE
 
-    # "error: Cannot load network into target device"
     @pytest.mark.skipif(target_device == "MYRIAD",
                         reason="NOT TO BE REPORTED IF SKIPPED")
     @pytest.mark.parametrize("request_format",
