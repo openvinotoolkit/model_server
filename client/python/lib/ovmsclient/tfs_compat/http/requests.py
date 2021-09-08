@@ -110,6 +110,7 @@ def make_predict_request(inputs, model_name, model_version=0):
     return HttpPredictRequest(inputs, model_name, model_version, parsed_inputs)
 
 
+@ovmsclient_export("make_http_metadata_request", httpclient="make_metadata_request")
 def make_metadata_request(model_name, model_version=0):
     '''
     Create HttpModelMetadataRequest object.
@@ -135,9 +136,11 @@ def make_metadata_request(model_name, model_version=0):
         >>> print(metadata_request)
     '''  # noqa: E501
 
-    raise NotImplementedError
+    _check_model_spec(model_name, model_version)
+    return HttpModelMetadataRequest(model_name, model_version)
 
 
+@ovmsclient_export("make_http_status_request", httpclient="make_status_request")
 def make_status_request(model_name, model_version=0):
     '''
     Create HttpModelStatusRequest object.
@@ -163,8 +166,8 @@ def make_status_request(model_name, model_version=0):
         >>> print(status_request)
 
     '''  # noqa: E501
-
-    raise NotImplementedError
+    _check_model_spec(model_name, model_version)
+    return HttpModelStatusRequest(model_name, model_version)
 
 
 def _parse_input_data(values):
