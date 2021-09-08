@@ -280,7 +280,7 @@ The purpose of this example is to show how to send inputs from multiple sources 
 
 To run this example you will need to run the OpenVINO hddldaemon and OpenVINO model server separately. Below are the steps
 to install and run them (provided for Linux OS):
- 1. Setup [OpenVINO](https://docs.openvinotoolkit.org/2019_R2/_docs_install_guides_installing_openvino_linux.html) & [HDDL](https://docs.openvinotoolkit.org/2019_R2/_docs_install_guides_installing_openvino_linux_ivad_vpu.html):
+ 1. Setup [OpenVINO](https://docs.openvinotoolkit.org/2021.4/openvino_docs_get_started_get_started_linux.html) & [HDDL](https://docs.openvinotoolkit.org/2021.4/openvino_docs_install_guides_installing_openvino_linux_ivad_vpu.html):
 
  2. Setup [OVMS](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/docker_container.md#starting-docker-container-with-hddl)  to use HDDL:
 

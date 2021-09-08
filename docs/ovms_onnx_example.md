@@ -31,7 +31,7 @@ Get the list of imagenet classes:
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/classes.py
 ```
 
-## Option 1: Adding preprocessing to the client side <a name="#client-side"></a>
+## Option 1: Adding preprocessing to the client side <a name="client-side"></a>
 
 Start the OVMS container with single model instance:
 ```bash
@@ -100,7 +100,7 @@ Detected class name: bee
 ```
 
 
-## Option 2: Adding preprocessing to the server side (building a DAG) <a name="#server-side"></a>
+## Option 2: Adding preprocessing to the server side (building a DAG) <a name="server-side"></a>
 
 Create configuration file with DAG containing two sequential nodes: one being the _image transformation node_ and one _DL model node_ resnet. The job of image transformation node will be to preprocess the image data to match format required by ONNX model `resnet50-caffe2-v1-9.onnx`.
 
@@ -123,7 +123,7 @@ workspace
 
 Start the OVMS container with a configuration file option:
 ```bash
-docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet:/model -p 9001:9001 openvino/model_server:latest \
+docker run -d -u $(id -u):$(id -g) -v $(pwd)/workspace:/workspace -p 9001:9001 openvino/model_server:latest \
 --config_path /workspace/config_with_preprocessing_node.json --port 9001
 ```
 
