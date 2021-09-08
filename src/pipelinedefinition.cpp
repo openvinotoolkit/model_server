@@ -140,7 +140,7 @@ void PipelineDefinition::deinitializeNodeResources() {
         if (nodeInfo.kind == NodeKind::CUSTOM) {
             void* customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
             auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
-            if (status != 0 ) {
+            if (status != 0) {
                 SPDLOG_LOGGER_WARN(modelmanager_logger, "Deinitialization of library with base path: {} failed", nodeInfo.library.basePath);
             }
         }
