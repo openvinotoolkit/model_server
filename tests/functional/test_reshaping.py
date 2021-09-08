@@ -37,9 +37,10 @@ auto_shapes = [
 fixed_shape = {'in': (1, 3, 600, 600), 'out': (1, 1, 200, 7)}
 
 
-@pytest.mark.skipif(skip_nginx_test, reason="not implemented yet")
+@pytest.mark.skipif(skip_nginx_test, reason="NOT TO BE REPORTED IF SKIPPED")
+# "error: Cannot load network into target device"
 @pytest.mark.skipif(target_device == "MYRIAD",
-                    reason="error: Cannot load network into target device")
+                    reason="NOT TO BE REPORTED IF SKIPPED")
 class TestModelReshaping:
     def test_single_local_model_reshaping_auto(self, start_server_face_detection_model_auto_shape):
 

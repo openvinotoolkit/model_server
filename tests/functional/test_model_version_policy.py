@@ -32,9 +32,10 @@ from utils.rest import get_metadata_url, get_status_url, get_model_status_respon
 
 logger = logging.getLogger(__name__)
 
-@pytest.mark.skipif(skip_nginx_test, reason="not implemented yet")
+@pytest.mark.skipif(skip_nginx_test, reason="NOT TO BE REPORTED IF SKIPPED")
+# "error: Cannot load network into target device"
 @pytest.mark.skipif(target_device=="MYRIAD",
-                    reason="requires multiple models to be loaded, too much for NCS (MYRIAD) device")
+                    reason="NOT TO BE REPORTED IF SKIPPED")
 class TestModelVerPolicy:
 
     @pytest.mark.parametrize("model_name, throw_error", [

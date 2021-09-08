@@ -31,9 +31,11 @@ from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.skipif(skip_nginx_test, reason="not implemented yet")
-@pytest.mark.skipif(target_device == "GPU", reason="Unsupported property key by plugin: CPU_THROUGHPUT_STREAMS")
-@pytest.mark.skipif(target_device == "MYRIAD", reason="CPU_THROUGHPUT_STREAMS key is not supported for VPU;")
+@pytest.mark.skipif(skip_nginx_test, reason="NOT TO BE REPORTED IF SKIPPED")
+# "Unsupported property key by plugin: CPU_THROUGHPUT_STREAMS"
+@pytest.mark.skipif(target_device == "GPU", reason="NOT TO BE REPORTED IF SKIPPED")
+# "CPU_THROUGHPUT_STREAMS key is not supported for VPU;"
+@pytest.mark.skipif(target_device == "MYRIAD", reason="NOT TO BE REPORTED IF SKIPPED")
 class TestSingleModelInference:
 
     def test_run_inference(self, start_server_single_model):

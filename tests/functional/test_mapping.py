@@ -26,9 +26,10 @@ from utils.rest import get_predict_url, get_metadata_url, infer_rest, get_model_
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.skipif(skip_nginx_test, reason="not implemented yet")
+@pytest.mark.skipif(skip_nginx_test, reason="NOT TO BE REPORTED IF SKIPPED")
+# "error: Cannot load network into target device"
 @pytest.mark.skipif(target_device == "MYRIAD",
-                    reason="error: Cannot load network into target device")
+                    reason="NOT TO BE REPORTED IF SKIPPED")
 class TestSingleModelMappingInference:
     def test_run_inference(self, start_server_with_mapping):
         """

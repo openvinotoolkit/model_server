@@ -31,13 +31,13 @@ from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.skipif(skip_nginx_test, reason="not implemented yet")
-@pytest.mark.skipif(target_device == "GPU", reason="Unsupported property key by plugin: CPU_THROUGHPUT_STREAMS")
+@pytest.mark.skipif(skip_nginx_test, reason="NOT TO BE REPORTED IF SKIPPED")
+#reason="Unsupported property key by plugin: CPU_THROUGHPUT_STREAMS"
+@pytest.mark.skipif(target_device == "GPU", reason="NOT TO BE REPORTED IF SKIPPED")
+# Expected: CPU_THROUGHPUT_STREAMS key is not supported for VPU;
+# Received: Invalid or missing S3 credentials, or bucket does not exist - inference. Invalid DNS Label found in URI host
 @pytest.mark.skipif(target_device == "MYRIAD",
-                    reason="""
-                    Expected: CPU_THROUGHPUT_STREAMS key is not supported for VPU;
-                    Received: Invalid or missing S3 credentials, or bucket does not exist - inference. Invalid DNS Label found in URI host
-                    """)
+                    reason="NOT TO BE REPORTED IF SKIPPED")
 class TestSingleModelInferenceOnnx:
 
     def test_run_inference(self, start_server_single_model_onnx):
