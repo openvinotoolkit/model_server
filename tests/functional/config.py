@@ -91,11 +91,20 @@ default_infer_timeout = get_int("TT_DEFAULT_INFER_TIMEOUT", 10)
 """ TT_DEFAULT_GPU_INFER_TIMEOUT - Timeout for CPU target device"""
 default_gpu_infer_timeout = get_int("TT_DEFAULT_GPU_INFER_TIMEOUT", 10*default_infer_timeout)
 
+""" TT_DEFAULT_HDDL_INFER_TIMEOUT - Timeout for CPU target device"""
+default_hddl_infer_timeout = get_int("TT_DEFAULT_HDDL_INFER_TIMEOUT", 3*default_infer_timeout)
+
+""" TT_DEFAULT_MYRIAD_INFER_TIMEOUT - Timeout for CPU target device"""
+default_myriad_infer_timeout = get_int("TT_DEFAULT_MYRIAD_INFER_TIMEOUT", 5*default_infer_timeout)
+
 """ INFER TIMEOUT """
-if target_device == "GPU":
-    infer_timeout = default_gpu_infer_timeout
-else:
-    infer_timeout = default_infer_timeout
+infer_timeouts = {
+    "CPU" : default_infer_timeout,
+    "GPU" : default_gpu_infer_timeout,
+    "HDDL" : default_hddl_infer_timeout,
+    "MYRIAD" : default_myriad_infer_timeout,
+}
+infer_timeout = infer_timeouts[target_device]
 
 """ TT_IS_NGINX_MTLS - Specify if given image is OVSA nginx mtls image. If not specified, detect from image name"""
 is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", "nginx-mtls" in image)
@@ -103,3 +112,7 @@ is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", "nginx-mtls" in image)
 """ TT_SKIP_TEST_IF_IS_NGINX_MTLS """
 skip_nginx_test = get_bool("TT_SKIP_TEST_IF_IS_NGINX_MTLS", "True")
 skip_nginx_test = skip_nginx_test and is_nginx_mtls
+
+""" TT_SKIP_TEST_IF_HDDL_MTLS """
+skip_hddl_tests = get_bool("TT_SKIP_TEST_IF_HDDL_MTLS", "True")
+skip_hddl_tests = skip_hddl_tests and target_device == "HDDL"

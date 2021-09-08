@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.skipif(skip_nginx_test, reason="not implemented yet")
-@pytest.mark.skipif(target_device == "MYRIAD",
+@pytest.mark.skipif(target_device in ["MYRIAD", "HDDL"],
                     reason="""
                             Cannot load network into target device; error: [ GENERAL_ERROR ] 
                             /home/jenkins/agent/workspace/private-ci/ie/build-linux-centos76/b/repos/openvino/inference-engine/src/vpu/graph_transformer/src/frontend/frontend.cpp:439 Failed to compile layer "610/variance/Fused_Add_": [ GENERAL_ERROR ] 
