@@ -159,7 +159,6 @@ def pytest_runtest_teardown(item):
             Server.stop_by_fixture_name(fixture)
 
 
-
 def exception_catcher(when: str, outcome):
     if isinstance(outcome.excinfo, tuple):
         if len(outcome.excinfo) > 1 and isinstance(outcome.excinfo[1], OutcomeException):
