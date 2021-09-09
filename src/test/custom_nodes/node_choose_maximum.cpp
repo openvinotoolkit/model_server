@@ -203,3 +203,4 @@ int release(void* ptr, void* customNodeLibraryInternalManager) {
     free(ptr);
     return 0;
 }
+}
