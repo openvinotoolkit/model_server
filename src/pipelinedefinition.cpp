@@ -103,7 +103,8 @@ Status PipelineDefinition::initializeNodeResources() {
             }
             auto status = nodeInfo.library.initialize(&customNodeLibraryInternalManager, params, nodeInfo.parameters.size());
             if (status != 0) {
-                SPDLOG_LOGGER_WARN(modelmanager_logger, "Initialization of library with base path: {} failed", nodeInfo.library.basePath);
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Initialization of library with base path: {} failed", nodeInfo.library.basePath);
+                return StatusCode::NODE_LIBRARY_INITIALIZE_FAILED;
             }
             if (!internalManagerExists) {
                 nodeResources.insert({nodeInfo.nodeName, customNodeLibraryInternalManager});
@@ -128,7 +129,7 @@ void PipelineDefinition::deinitializeUnusedNodeResources(const std::vector<NodeI
             void* customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
             auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
             if (status != 0) {
-                SPDLOG_LOGGER_WARN(modelmanager_logger, "Deinitialization of library with base path: {} failed", nodeInfo.library.basePath);
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Deinitialization of library with base path: {} failed", nodeInfo.library.basePath);
             }
             nodeResources.erase(nodeInfo.nodeName);
         }
@@ -141,7 +142,7 @@ void PipelineDefinition::deinitializeNodeResources() {
             void* customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
             auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
             if (status != 0) {
-                SPDLOG_LOGGER_WARN(modelmanager_logger, "Deinitialization of library with base path: {} failed", nodeInfo.library.basePath);
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Deinitialization of library with base path: {} failed", nodeInfo.library.basePath);
             }
         }
     }

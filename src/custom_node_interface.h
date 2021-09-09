@@ -52,7 +52,15 @@ struct CustomNodeParam {
 extern "C" {
 #endif
 
+// custom node library initialize for optimized buffers allocation
+// using initialize is optional and not required for custom node to work
+// customNodeLibraryInternalManager should be created here if initialize is used
+// on initialize failure approperiate status is returned and error log is printed
 int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount);
+// custom node library deinitialize for optimized buffers allocation
+// using deinitialize is optional and not required for custom node to work
+// customNodeLibraryInternalManager should be destroyed here if deinitialize is used
+// on deinitialize failure only log error is printed
 int deinitialize(void* customNodeLibraryInternalManager);
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
 int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
