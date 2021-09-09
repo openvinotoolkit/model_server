@@ -152,9 +152,9 @@ def pytest_runtest_teardown(item):
     yield
     # Test finished: remove test item for all fixtures that was used
     for fixture in item._server_fixtures:
-        if item in item.session._server_fixtures_to_item[fixture]:
-            item.session._server_fixtures_to_item[fixture].remove(item)
-        if len(item.session._server_fixtures_to_item[fixture]) == 0:
+        if item in item.session._server_fixtures_to_tests[fixture]:
+            item.session._server_fixtures_to_tests[fixture].remove(item)
+        if len(item.session._server_fixtures_to_tests[fixture]) == 0:
             # No other tests will use this docker instance so we can close it.
             Server.stop_by_fixture_name(fixture)
 
