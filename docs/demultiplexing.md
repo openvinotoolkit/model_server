@@ -1,7 +1,7 @@
 # Demultiplexing in Directed Acyclic Graph Scheduler
 
 ## Pipeline branching
-Directed Acyclic Graph Scheduler allows creating pipelines with optional parameter `demultiply_count: `N` which adds ability to any node to slice outputs into `N` separate sub outputs and branch pipeline execution into `N` sub pipelines. Following nodes will be executed by event loop `N` times independently from each other and results will be gathered and packed into one output just before sending a response. Additionally `gather_from_node: <node_name>` parameter can be used to specify gathering at any point in Directed Acyclic Graph.`demultiply_count` node parameter value has to match first dimension of all node outputs. All node outputs have to have at least 2 dimensions.
+Directed Acyclic Graph Scheduler allows creating pipelines with optional parameter `demultiply_count: N` which adds ability to any node to slice outputs into `N` separate sub outputs and branch pipeline execution into `N` sub pipelines. Following nodes will be executed by event loop `N` times independently from each other and results will be gathered and packed into one output just before sending a response. Additionally `gather_from_node: <node_name>` parameter can be used to specify gathering at any point in Directed Acyclic Graph.`demultiply_count` node parameter value has to match first dimension of all node outputs. All node outputs have to have at least 2 dimensions.
 
 ## Basic demultiplexer example and metadata explanation
 This example contains 2 consecutive models:
@@ -12,7 +12,7 @@ This example has no `gather_from_node` parameter specified in config.json config
 
 ![diagram](demultiplexer.svg)
 
-Example configuration file with one demultiplexer:
+Example configuration file with one demultiplexer (remove everything after arrows in lines containing those):
 ```
 {
     "model_config_list": [
