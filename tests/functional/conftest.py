@@ -15,7 +15,6 @@
 #
 import logging
 import os
-import pickle
 from collections import defaultdict
 from logging import FileHandler
 
@@ -25,7 +24,6 @@ from _pytest._code import ExceptionInfo, filter_traceback  # noqa
 from _pytest.outcomes import OutcomeException
 
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
-from utils.helpers import get_xdist_worker_nr, get_xdist_worker_count
 from object_model.server import Server
 from utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
     get_containers_with_tests_suffix, get_docker_client
