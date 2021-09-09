@@ -267,7 +267,7 @@ Two debugging options are available. Click on the required option :
 	```
 	docker run -it --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -v ${PWD}:/ovms -p 9178:9178 --entrypoint bash openvino/model_server-build:latest
 	```
-3.	Assuming resnet50 model is repared for OVMS in /models catalog recompile the OpenVINO Model Server with debug symbols using command:
+3.	Assuming resnet50 model is prepared for OVMS in /models catalog recompile the OpenVINO Model Server with debug symbols using command:
     ```
 	[root@72dc3b874772 ovms]# bazel build //src:ovms -c dbg
     [root@72dc3b874772 ovms]# gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /models
