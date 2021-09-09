@@ -41,7 +41,7 @@ def reorder_items_by_fixtures_used(session):
     session._server_fixtures_to_tests = server_fixtures_to_tests.copy()
 
     # Try to order test execution by minimal 'start_server_*' fixtures usage
-    ordered_items = []
+    ordered_tests = []
 
     # Choose fixture with min tests assigned to be executed first.
     number_of_tests_lambda = lambda x: len(x[1])
@@ -53,8 +53,8 @@ def reorder_items_by_fixtures_used(session):
     while server_fixtures_to_tests:
         current_fixture = fixtures_working[0]
         for test in server_fixtures_to_tests[current_fixture]:
-            if test not in ordered_items:
-                ordered_items.append(test)
+            if test not in ordered_tests:
+                ordered_tests.append(test)
                 item_fixtures = get_server_fixtures_from_pytest_item(test)
 
                 # Check all fixtures used by given test.
@@ -72,5 +72,5 @@ def reorder_items_by_fixtures_used(session):
             # If queue is empty add fixture with least tests (left).
             fixtures_working.append(min(server_fixtures_to_tests.items(), key=number_of_tests_lambda)[0])
 
-    session.items = ordered_items
-    return ordered_items
+    session.items = ordered_tests
+    return ordered_tests
