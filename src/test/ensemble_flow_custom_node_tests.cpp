@@ -845,17 +845,17 @@ struct LibraryNotInitilizedExecuteCorrectly {
     }
     // execute function is not using buffer allocation feature, therefore initialize does not do anything apart from returning 0 meaning that initialize worked as intended
     static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
-    *outputs = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
-    *outputsCount = 1;
-    (*outputs)->name = "output_numbers";
-    (*outputs)->precision = CustomNodeTensorPrecision::FP32;
-    (*outputs)->dims = (uint64_t*)malloc(2 * sizeof(uint64_t));
-    (*outputs)->dims[0] = 1;
-    (*outputs)->dims[1] = 10;
-    (*outputs)->dimsCount = 2;
-    (*outputs)->data = (uint8_t*)malloc(sizeof(uint8_t));
-    (*outputs)->dataBytes = 40;
-    return 0;
+        *outputs = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
+        *outputsCount = 1;
+        (*outputs)->name = "output_numbers";
+        (*outputs)->precision = CustomNodeTensorPrecision::FP32;
+        (*outputs)->dims = (uint64_t*)malloc(2 * sizeof(uint64_t));
+        (*outputs)->dims[0] = 1;
+        (*outputs)->dims[1] = 10;
+        (*outputs)->dimsCount = 2;
+        (*outputs)->data = (uint8_t*)malloc(sizeof(uint8_t));
+        (*outputs)->dataBytes = 40;
+        return 0;
     }
     static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
         return 0;
@@ -930,7 +930,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeInitialize) 
 
     // initialize function call from now on will be calling this lambda function, which indicates
     // initialization failure
-    library.initialize = [](void**, const struct CustomNodeParam*, int) { return 1;};
+    library.initialize = [](void**, const struct CustomNodeParam*, int) { return 1; };
     ASSERT_TRUE(library.isValid());
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
@@ -969,7 +969,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeDeinitialize
 
     // deinitialize function call from now on will be calling this lambda function, which indicates
     // deinitialization failure
-    library.deinitialize = [](void*) { return 1;};
+    library.deinitialize = [](void*) { return 1; };
     ASSERT_TRUE(library.isValid());
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
