@@ -26,7 +26,6 @@ from _pytest.outcomes import OutcomeException
 
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
 from utils.helpers import get_xdist_worker_nr, get_xdist_worker_count
-from utils.xdist_utils import OvmsCLoadScheduling
 from object_model.server import Server
 from utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
     get_containers_with_tests_suffix, get_docker_client
@@ -35,7 +34,7 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
 from utils.files_operation import get_path_friendly_test_name
 from utils.parametrization import get_tests_suffix
-from config import test_dir, test_dir_cleanup, artifacts_dir, using_xdist
+from config import test_dir, test_dir_cleanup, artifacts_dir
 
 logger = logging.getLogger(__name__)
 
@@ -82,11 +81,6 @@ def create_grpc_channel():
 def pytest_configure():
     # Perform initial configuration.
     init_logger()
-
-    # if not os.environ.get("PYTEST_XDIST_WORKER", None):
-    #     copy_cached_models_to_test_dir()
-    #     copy_cached_resnet_models()
-
 
     init_conf_logger = logging.getLogger("init_conf")
 
@@ -241,8 +235,3 @@ def pytest_runtest_logfinish(nodeid, location):
         _root_logger.removeHandler(_root_logger._test_log_handler)
     yield
 
-
-def pytest_xdist_make_scheduler(config, log):
-    scheduler = OvmsCLoadScheduling(config, log)
-    log.debug("Created xdist scheduler")
-    return scheduler

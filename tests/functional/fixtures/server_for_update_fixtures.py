@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from pathlib import Path
 
 import pytest
 import shutil
@@ -38,7 +37,7 @@ def start_server_update_flow_latest(request):
     container_name_infix = "test-update-latest"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    target_device=config.target_device, path_to_mount=Path(config.path_to_mount, __name__))
+                    target_device=config.target_device)
     return server.start()
 
 
@@ -55,5 +54,5 @@ def start_server_update_flow_specific(request):
     container_name_infix = "test-update-specific"
     server = Server(request, start_server_command_args,
                     container_name_infix, config.start_container_command,
-                    target_device=config.target_device, path_to_mount=Path(config.path_to_mount, __name__))
+                    target_device=config.target_device)
     return server.start()

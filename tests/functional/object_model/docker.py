@@ -15,7 +15,6 @@
 #
 import os
 import time
-from pathlib import Path
 from typing import List
 
 from datetime import datetime
@@ -23,7 +22,6 @@ from datetime import datetime
 import docker
 from utils.files_operation import get_path_friendly_test_name
 
-from config import target_device
 from retry.api import retry_call
 
 import config
@@ -126,12 +124,6 @@ class Docker:
         self.ensure_logs_contains()
         logger.info(f"Container started grpc_port:{self.grpc_port}\trest_port:{self.rest_port}")
         logger.debug(f"Container starting command args: {self.start_container_command}")
-
-        tt = list(map(lambda x: x.name, self.client.containers.list()))
-        tt = list(map(lambda x: "_".join(x.split("_")[2:-3]), tt))
-
-        foo = 0
-
         return self.container, {"grpc_port": self.grpc_port, "rest_port": self.rest_port}
 
     def stop(self):
@@ -202,7 +194,7 @@ class Docker:
         if location:
             file_name = f"ovms_{get_path_friendly_test_name(location)}_{time_stamp}.log"
         else:
-            file_name = f"ovms_{self.server.started_by_fixture}_{time_stamp}.log"
+            file_name = f"ovms_{self.server.started_by_fixture.lstrip('start_')}_{time_stamp}.log"
         os.makedirs(dir_path, exist_ok=True)
         file_path = os.path.join(dir_path, file_name)
         with open(file_path, "w+") as text_file:
