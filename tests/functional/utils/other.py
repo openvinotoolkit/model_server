@@ -55,13 +55,13 @@ def reorder_items_by_fixtures_used(session):
         for test in server_fixtures_to_tests[current_fixture]:
             if test not in ordered_tests:
                 ordered_tests.append(test)
-                item_fixtures = get_server_fixtures_from_pytest_item(test)
+                fixtures_used_by_test = get_server_fixtures_from_pytest_item(test)
 
                 # Check all fixtures used by given test.
-                for it in item_fixtures:
-                    if it not in fixtures_working:
+                for fixture in fixtures_used_by_test:
+                    if fixture not in fixtures_working:
                         # Test execute multiple fixtures, add it to queue, it to be processed next.
-                        fixtures_working.append(it)
+                        fixtures_working.append(fixture)
                     # Remove test reference
                     if test in server_fixtures_to_tests:
                         del server_fixtures_to_tests[test]
