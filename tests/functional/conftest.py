@@ -25,6 +25,7 @@ from _pytest.outcomes import OutcomeException
 
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
 from object_model.server import Server
+from utils.other import reorder_items_by_fixtures_used
 from utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
     get_containers_with_tests_suffix, get_docker_client
 from utils.logger import init_logger
@@ -113,45 +114,7 @@ def pytest_unconfigure():
 @pytest.hookimpl(hookwrapper=True)
 def pytest_collection_modifyitems(session, config, items):
     yield
-    items = OvmsCLoadScheduling.reorder_items_by_fixtures_used(session)
-
-
-#
-# @pytest.hookimpl(hookwrapper=True)
-# def pytest_collection_finish(session):
-#     yield
-#     # Collect all fixtures that starts Docker instance
-#     # This map will keep fixture usages in
-#
-
-
-# if not using_xdist:
-#     @pytest.hookimpl(hookwrapper=True)
-#     def pytest_runtestloop(session):
-#         # Override default runtestloop in order to sort test execution by used fixtures
-#         # This operation will ensure that only required containers will run and container will be cleared after all usages.
-#
-#         # Collect all fixtures that starts Docker instance
-#         # This map will keep fixture usages in tests
-#         server_fixtures_to_item = defaultdict(lambda: [])
-#         for item in session.items:
-#             item._server_fixtures = list(filter(lambda x: "start_server_" in x, item.fixturenames))
-#             for fixture in item._server_fixtures:
-#                 server_fixtures_to_item[fixture].append(item)
-#
-#         # Sort test items using required fixtures as key (group test by fixture)
-#         sorted_items = sorted(session.items, key=lambda x: x._server_fixtures )
-#
-#         for i, item in enumerate(sorted_items):
-#             nextitem = sorted_items[i + 1] if i + 1 < len(sorted_items) else None
-#             item.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
-#
-#             # Test finished: remove test item for all fixtures that was used
-#             for fixture in item._server_fixtures:
-#                 server_fixtures_to_item[fixture].remove(item)
-#                 if len(server_fixtures_to_item[fixture]) == 0:
-#                     # No other tests will use this docker instance so we can close it.
-#                     Server.stop_by_fixture_name(fixture)
+    items = reorder_items_by_fixtures_used(session)
 
 
 @pytest.hookimpl(hookwrapper=True)
