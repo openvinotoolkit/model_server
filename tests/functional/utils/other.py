@@ -62,9 +62,6 @@ def reorder_items_by_fixtures_used(session):
                     if fixture not in fixtures_working:
                         # Test execute multiple fixtures, add it to queue, it to be processed next.
                         fixtures_working.append(fixture)
-                    # Remove test reference
-                    if test in server_fixtures_to_tests:
-                        del server_fixtures_to_tests[test]
         fixtures_working.remove(current_fixture)
         del server_fixtures_to_tests[current_fixture]
 
