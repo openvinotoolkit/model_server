@@ -35,6 +35,40 @@ logger = logging.getLogger(__name__)
 CONTAINER_STATUS_RUNNING = "running"
 TERMINAL_STATUSES = ["exited"]
 
+TARGET_DEVICE_CONFIGURATION = {
+    "CPU": {
+        "VOLUMES": [],
+        "DEVICES": [],
+        "NETWORK": None,
+        "PRIVILEGED": False,
+        "USER": None,
+    },
+
+    "GPU": {
+        "VOLUMES": [],
+        "DEVICES": ["/dev/dri:/dev/dri:mrw"],
+        "NETWORK": None,
+        "PRIVILEGED": False,
+        "USER": None,
+    },
+
+    "MYRIAD": {
+        "VOLUMES": [{"/dev": {'bind': "/dev", 'mode': 'ro'}}, ],
+        "DEVICES": [],
+        "NETWORK": "host",
+        "PRIVILEGED": True,
+        "USER": None
+    },
+
+    "HDDL": {
+        "VOLUMES": [{"/var/tmp": {"bind": "/var/tmp", "mode": "rw"}}],
+        "DEVICES": ["/dev/ion:/dev/ion:mrw"],
+        "NETWORK": None,
+        "PRIVILEGED": False,
+        "USER": "root"
+    },
+}
+
 
 class Docker:
     
@@ -70,46 +104,24 @@ class Docker:
     def _start(self):
         logger.info(f"Starting container: {self.container_name}")
 
-        ### Defaults ###
-        volumes_dict = {'{}'.format(self.server.path_to_mount): {'bind': '/opt/ml',
-                                                                 'mode': 'ro'}}
-        network = None
-        privileged = False
         ports = {'{}/tcp'.format(self.grpc_port): self.grpc_port, '{}/tcp'.format(self.rest_port): self.rest_port}
-        devices = None
+        device_cfg = TARGET_DEVICE_CONFIGURATION[config.target_device]
 
-        ### Per device custom settings ###
-        if config.target_device == "MYRIAD":
-            volumes_dict["/dev"] = {'bind': "/dev", 'mode': 'ro'}
-            network = "host"
-            privileged = True
-            ports = None
-        elif config.target_device == "GPU":
-            devices = ["/dev/dri:/dev/dri:mrw"]
-
-        if "--model_path" in self.start_container_command:
-            foo = self.start_container_command.split(' ').index("--model_path")
-            foo = self.start_container_command.split(' ')[foo+1]
-            foo = foo.replace("/opt/ml", config.path_to_mount) + "/1/"
-
-            xxx = []
-            for p in [foo+"mapping_config.json", foo+"age_gender.xml"]:
-                if os.path.exists(p):
-                    xxx.append(open(p, "r").read())
-    #    aaa = open().read()
-      #  bbb = open().read()
-       # if
-        foo = 0
+        volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
+                                                            'mode': 'ro'}}
+        for vol in device_cfg["VOLUMES"]:
+            volumes_dict.update(vol)
 
         self.container = self.client.containers.run(image=self.image, detach=True,
                                                     name=self.container_name,
                                                     ports=ports,
                                                     volumes=volumes_dict,
-                                                    devices=devices,
-                                                    network=network,
+                                                    devices=device_cfg["DEVICES"],
+                                                    network=device_cfg["NETWORK"],
                                                     command=self.start_container_command,
                                                     environment=self.env_vars_container,
-                                                    privileged=privileged)
+                                                    privileged=device_cfg["PRIVILEGED"],
+                                                    user=device_cfg["USER"])
         self.ensure_container_status(status=CONTAINER_STATUS_RUNNING, terminal_statuses=TERMINAL_STATUSES)
         self.ensure_logs_contains()
         logger.info(f"Container started grpc_port:{self.grpc_port}\trest_port:{self.rest_port}")

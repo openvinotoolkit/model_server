@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.skipif(skip_nginx_test, reason="not implemented yet")
 @pytest.mark.skipif(target_device == "GPU", reason="Unsupported property key by plugin: CPU_THROUGHPUT_STREAMS")
-@pytest.mark.skipif(target_device == "MYRIAD", reason="CPU_THROUGHPUT_STREAMS key is not supported for VPU;")
+@pytest.mark.skipif(target_device in ["MYRIAD", "HDDL"], reason="CPU_THROUGHPUT_STREAMS key is not supported for VPU;")
 class TestSingleModelInference:
 
     def test_run_inference(self, start_server_single_model):
