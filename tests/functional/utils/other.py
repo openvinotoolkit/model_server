@@ -28,46 +28,49 @@ def reorder_items_by_fixtures_used(session):
     """
 
     # Keep track how many tests use different container fixtures ('start_server_*')
-    server_fixtures_to_tests = defaultdict(lambda: [])
+    server_fixtures_to_item = defaultdict(lambda: [])
 
     # For each item (test case) collect used 'start_server_*' fixtures.
-    for test in session.items:
-        test._server_fixtures = get_server_fixtures_from_pytest_item(test)
-        if not test._server_fixtures:
-            server_fixtures_to_tests[''].append(test)
+    for item in session.items:
+        item._server_fixtures = get_server_fixtures_from_pytest_item(item)
+        if not item._server_fixtures:
+            server_fixtures_to_item[''].append(item)
         else:
-            for fixture in test._server_fixtures:
-                server_fixtures_to_tests[fixture].append(test)
-    session._server_fixtures_to_tests = server_fixtures_to_tests.copy()
+            for fixture in item._server_fixtures:
+                server_fixtures_to_item[fixture].append(item)
+    session._server_fixtures_to_item = server_fixtures_to_item.copy()
 
     # Try to order test execution by minimal 'start_server_*' fixtures usage
-    ordered_tests = []
+    ordered_items = []
 
-    # Choose fixture with min tests assigned to be executed first.
-    number_of_tests_lambda = lambda x: len(x[1])
-    fixture_with_min_number_of_cases = min(server_fixtures_to_tests.items(), key=number_of_tests_lambda)[0]
+    # Choose fixture with max tests assigned to be executed first.
+    most_cases_lambda = lambda x: len(x[1])
+    fixture_with_most_cases = max(server_fixtures_to_item.items(), key=most_cases_lambda)[0]
 
     # FIFO queue with processed fixtures
-    fixtures_working = [fixture_with_min_number_of_cases]
+    fixtures_working = [fixture_with_most_cases]
 
-    while server_fixtures_to_tests:
+    while server_fixtures_to_item:
         current_fixture = fixtures_working[0]
-        for test in server_fixtures_to_tests[current_fixture]:
-            if test not in ordered_tests:
-                ordered_tests.append(test)
-                fixtures_used_by_test = get_server_fixtures_from_pytest_item(test)
+        for item in server_fixtures_to_item[current_fixture]:
+            if item not in ordered_items:
+                ordered_items.append(item)
+                item_fixtures = get_server_fixtures_from_pytest_item(item)
 
                 # Check all fixtures used by given test.
-                for fixture in fixtures_used_by_test:
-                    if fixture not in fixtures_working:
+                for it in item_fixtures:
+                    if it not in fixtures_working:
                         # Test execute multiple fixtures, add it to queue, it to be processed next.
-                        fixtures_working.append(fixture)
+                        fixtures_working.append(it)
+                    # Remove test reference
+                    if item in server_fixtures_to_item:
+                        del server_fixtures_to_item[item]
         fixtures_working.remove(current_fixture)
-        del server_fixtures_to_tests[current_fixture]
+        del server_fixtures_to_item[current_fixture]
 
-        if server_fixtures_to_tests and not fixtures_working:
-            # If queue is empty add fixture with least tests (left).
-            fixtures_working.append(min(server_fixtures_to_tests.items(), key=number_of_tests_lambda)[0])
+        if server_fixtures_to_item and not fixtures_working:
+            # If queue is empty add fixture with most tests (left).
+            fixtures_working.append(max(server_fixtures_to_item.items(), key=most_cases_lambda)[0])
 
-    session.items = ordered_tests
-    return ordered_tests
+    session.items = ordered_items
+    return ordered_items
