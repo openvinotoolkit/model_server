@@ -26,9 +26,9 @@ def reorder_items_by_fixtures_used(session):
     # Try to order test execution by minimal 'start_server_*' fixtures usage
     ordered_items = []
 
-    # Choose fixture with max tests assigned to be executed first.
+    # Choose fixture with min tests assigned to be executed first.
     most_cases_lambda = lambda x: len(x[1])
-    fixture_with_most_cases = max(server_fixtures_to_item.items(), key=most_cases_lambda)[0]
+    fixture_with_most_cases = min(server_fixtures_to_item.items(), key=most_cases_lambda)[0]
 
     # FIFO queue with processed fixtures
     fixtures_working = [fixture_with_most_cases]
@@ -53,7 +53,7 @@ def reorder_items_by_fixtures_used(session):
 
         if server_fixtures_to_item and not fixtures_working:
             # If queue is empty add fixture with most tests (left).
-            fixtures_working.append(max(server_fixtures_to_item.items(), key=most_cases_lambda)[0])
+            fixtures_working.append(min(server_fixtures_to_item.items(), key=most_cases_lambda)[0])
 
     session.items = ordered_items
     return ordered_items
