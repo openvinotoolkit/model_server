@@ -25,7 +25,7 @@ This document presents ensemble models as an example of [DAG Scheduler](dag_sche
 ```
 ~$ virtualenv -p python3 .tf_env
 ~$ source .tf_env/bin/activate
-~$ pip3 install tensorflow==1.15
+~$ pip3 install tensorflow==2.3.1
 ```
 3. Prepare argmax model with `(1, 1001)` input shapes to match output of googlenet and resnet output shapes. Generated model will sum inputs and calculate the index with the highest value. The model output will indicate the most likely predicted class from the ImageNet* dataset. <a name="point-3"></a>
 ```
@@ -39,30 +39,27 @@ This document presents ensemble models as an example of [DAG Scheduler](dag_sche
 ~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/converter.py --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
 
 ~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo_tf.py --input input1,input2 --input_shape [1,1001],[1,1001] --saved_model_dir /models/public/argmax/saved_model/ --output_dir /models/public/argmax/1
-~$ mv ~/models/public/googlenet-v2-tf/FP32 ~/models/public/googlenet-v2-tf/1 && mv ~/models/public/resnet-50-tf/FP32 ~/models/public/resnet-50-tf/1
+~$ mkdir -p ovms_models/googlenet-v2-tf/1
+~$ mkdir -p ovms_models/resnet-50-tf/1
+~$ mkdir -p ovms_models/argmax/1
+~$ cp ~/models/public/googlenet-v2-tf/FP32/googlenet-v2-tf.{bin,xml} ~/ovms_models/googlenet-v2-tf/1/
+~$ cp ~/models/public/resnet-50-tf/FP32/resnet-50-tf.{bin,xml} ~/ovms_models/resnet-50-tf/1/
+~$ cp ~/models/public/argmax/1/saved_model.{bin,xml} ~/ovms_models/argmax/1/
 
 ~$ tree models/public
-models/public
+ovms_models
 ├── argmax
 │   ├── 1
 │   │   ├── saved_model.bin
-│   │   ├── saved_model.mapping
 │   │   └── saved_model.xml
-│   └── saved_model
-│       ├── saved_model.pb
-│       └── variables
 ├── googlenet-v2-tf
 │   ├── 1
 │   │   ├── googlenet-v2-tf.bin
-│   │   ├── googlenet-v2-tf.mapping
 │   │   └── googlenet-v2-tf.xml
-│   └── inception_v2.frozen.pb
 └── resnet-50-tf
     ├── 1
     │   ├── resnet-50-tf.bin
-    │   ├── resnet-50-tf.mapping
     │   └── resnet-50-tf.xml
-    └── resnet_v1-50.pb
 ```
 
 ### Step 2: Define required models and pipeline <a name="define-models"></a>
@@ -70,25 +67,25 @@ Pipelines need to be defined in configuration file to use them. The same configu
 
 Use the config.json as given below
 ```
-~$ cat models/config.json 
+~$ cat ovms_models/config.json
 {
     "model_config_list": [
         {
             "config": {
                 "name": "googlenet",
-                "base_path": "/models/public/googlenet-v2-tf"
+                "base_path": "/models/googlenet-v2-tf"
             }
         },
         {
             "config": {
                 "name": "resnet",
-                "base_path": "/models/public/resnet-50-tf"
+                "base_path": "/models/resnet-50-tf"
             }
         },
         {
             "config": {
                 "name": "argmax",
-                "base_path": "/models/public/argmax"
+                "base_path": "/models/argmax"
             }
         }
     ],
@@ -155,7 +152,7 @@ In `model_config_list` section, three models are defined as usual. We can refer 
 
 1. Run command to start model server
 ```
-~$ docker run --rm -v ~/models/:/models:ro -p 9100:9100 -p 8100:8100 openvino/model_server:latest --config_path /models/config.json --port 9100 --rest_port 8100
+~$ docker run --rm -v ~/ovms_models/:/models:ro -p 9100:9100 -p 8100:8100 openvino/model_server:latest --config_path /models/config.json --port 9100 --rest_port 8100
 ```
 
 ### Step 4: Requesting the service
