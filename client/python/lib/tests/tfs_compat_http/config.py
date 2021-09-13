@@ -17,7 +17,7 @@
 import json
 from numpy import array, int32, float32, float128
 
-from config import * # noqa
+from config import CallCount, PATH_VALID # noqa
 
 # (inputs_dict,
 # model_name, model_version, expected_exception, expected_message)
@@ -136,4 +136,149 @@ PARSE_INPUT_DATA_INVALID = [
             [bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
              bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])]
      ], ValueError, "bytes values with dtype DT_STRING must be in shape [N]"),
+]
+
+# (config_dict,
+# method_call_count_dict= {"method_name": CallCount.NumberOfCalls},
+# expected_client_key, expected_server_cert)
+BUILD_VALID = [
+    ({
+        "address": "localhost",
+        "port": 9000
+    }, {"check_config": CallCount.ONE}, None, None),
+    ({
+        "address": "19.117.63.126",
+        "port": 1
+    }, {"check_config": CallCount.ONE}, None, None),
+    ({
+        "address": "cluster.cloud.iotg.intel.com",
+        "port": 2**16-1
+    }, {"check_config": CallCount.ONE}, None, None),
+    ({
+        "address": "localhost",
+        "port": 9000,
+        "tls_config": {
+            "server_cert_path": PATH_VALID
+        }
+    }, {"check_config": CallCount.ONE}, None, (PATH_VALID,)),
+    ({
+        "address": "localhost",
+        "port": 9000,
+        "tls_config": {
+            "client_key_path": PATH_VALID,
+            "client_cert_path": PATH_VALID,
+            "server_cert_path": PATH_VALID
+        }
+    }, {"check_config": CallCount.ONE}, (PATH_VALID, PATH_VALID), (PATH_VALID, ))
+]
+
+# (config_dict,
+# expected_exception, expected_message,
+# method_call_count_dict= {"method_name": CallCount.NumberOfCalls})
+BUILD_INVALID_CONFIG = [
+    ({
+
+    },
+     ValueError, 'The minimal config must contain address and port',
+     {"check_config": CallCount.ONE}),
+
+    ({
+        "address": "localhost"
+    },
+     ValueError, 'The minimal config must contain address and port',
+     {"check_config": CallCount.ONE}),
+
+    ({
+        "port": 9000
+    },
+     ValueError, 'The minimal config must contain address and port',
+     {"check_config": CallCount.ONE}),
+
+    ({
+        "address": ["localhost"],
+        "port": 9000
+    },
+     TypeError, 'address type should be string, but is list',
+     {"check_config": CallCount.ONE}),
+
+    ({
+        "address": "address",
+        "port": '9000'
+    },
+     ValueError, 'address is not valid',
+     {"check_config": CallCount.ONE}),
+
+    ({
+        "address": "localhost",
+        "port": '9000'
+    },
+     TypeError, 'port type should be int, but is type str',
+     {"check_config": CallCount.ONE}),
+
+    ({
+        "address": "localhost",
+        "port": 2**16
+    },
+     ValueError, f"port should be in range <0, {2**16-1}>",
+     {"check_config": CallCount.ONE}),
+
+
+    ({
+        "address": "localhost",
+        "port": 9000,
+        "tls_config": {
+
+        }
+    },
+     ValueError, 'server_cert_path is not defined in tls_config',
+     {"check_config": CallCount.ONE}),
+
+    ({
+        "address": "localhost",
+        "port": 9000,
+        "tls_config": {
+            "server_cert_path": PATH_VALID,
+            "client_key_path": PATH_VALID
+        }
+    },
+     ValueError, 'none or both client_key_path and client_cert_path are required in tls_config',
+     {"check_config": CallCount.ONE}),
+
+    ({
+        "address": "localhost",
+        "port": 9000,
+        "tls_config": {
+            "server_cert_path": PATH_VALID,
+            "client_key_path": PATH_VALID,
+            "client_cert_path": PATH_VALID,
+            "invalid_key_name": PATH_VALID
+        }
+    },
+     ValueError,  'invalid_key_name is not valid tls_config key',
+     {"check_config": CallCount.ONE}),
+
+    ({
+        "address": "localhost",
+        "port": 9000,
+        "tls_config": {
+            "server_cert_path": PATH_VALID,
+            "client_key_path": PATH_VALID,
+            "client_cert_path": 123,
+        }
+    },
+     TypeError,  'client_cert_path type should be string but is type int',
+     {"check_config": CallCount.ONE}),
+
+    ({
+        "address": "localhost",
+        "port": 9000,
+        "tls_config": {
+            "server_cert_path": PATH_VALID,
+            "client_key_path": "invalid_path",
+            "client_cert_path": PATH_VALID,
+        }
+    },
+     ValueError,  'invalid_path is not valid path to file',
+     {"check_config": CallCount.ONE}),
+
 ]
