@@ -82,7 +82,7 @@ Status PipelineDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of pipeline: {}", getName());
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Pipeline: {} inputs: {}", getName(), getTensorMapString(inputsInfo));
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Pipeline: {} outputs: {}", getName(), getTensorMapString(outputsInfo));
-    return std::move(validationResult);
+    return validationResult;
 }
 
 Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections) {
@@ -200,7 +200,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                              info.gatherFromNode));
             break;
         case NodeKind::EXIT: {
-            auto node = std::make_unique<ExitNode>(response, info.gatherFromNode);
+            auto node = std::make_unique<ExitNode>(response, getOutputsInfo(), info.gatherFromNode);
             exit = node.get();
             nodes.emplace(info.nodeName, std::move(node));
             break;
@@ -445,7 +445,7 @@ public:
             if (shape[0] != 0) {
                 // 0 means that node accepts dynamic shape
                 if (shape[0] != demultiplicatorNodeInfo.demultiplyCount.value()) {
-                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of node: {} does not match tensor first dimenson value: {}",
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of node: {} does not match tensor first dimension value: {}",
                         this->pipelineName,
                         demultiplicatorNodeInfo.demultiplyCount.value(),
                         demultiplicatorNodeInfo.nodeName,
@@ -531,10 +531,10 @@ public:
                 pipelineName,
                 dependantNodeInfo.nodeName,
                 modelInputName,
-                TensorInfo::shapeToString(tensorInput->getEffectiveShape()),
+                TensorInfo::shapeToString(tensorInputShape),
                 dependencyNodeInfo.nodeName,
                 modelOutputName,
-                TensorInfo::shapeToString(tensorOutput->getEffectiveShape()));
+                TensorInfo::shapeToString(tensorOutputShape));
             return StatusCode::INVALID_SHAPE;
         }
         if (tensorInput->getPrecision() != tensorOutput->getPrecision()) {
@@ -904,7 +904,7 @@ Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
                 newDemultiplyStack.emplace_back(connectedNodeInfo.gatherFromNode);
             }
             if (connectedNodeInfo.kind == NodeKind::ENTRY && !newDemultiplyStack.empty()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} exists path that gathers from demultiplexer nodes that are not in path: {}.",
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} exists path that gathers from nodes that are not in path: {}. Consider changing inputs of the node that gathers from mentioned demultiplexer nodes",
                     getName(),
                     std::accumulate(newDemultiplyStack.back().begin(), newDemultiplyStack.back().end(), std::string{}, [](const std::string& lhs, const std::string& rhs) {
                         if (lhs.empty()) {
@@ -917,7 +917,7 @@ Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
                 [&connectedNodeName](const auto& visitedNode) { return visitedNode.first == connectedNodeName; });
             if (visitedNode != visitedNodes.end()) {
                 if (visitedNode->second != newDemultiplyStack) {
-                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} after node: {} exist paths that have different demultiply levels", getName(), connectedNodeName);
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "In pipeline: {} after node: {} exist paths that have different demultiply levels. Consider changing output connections of node: {}", getName(), connectedNodeName, connectedNodeName);
                     return StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER;
                 }
             } else {
@@ -999,29 +999,34 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
 const tensor_map_t PipelineDefinition::getInputsInfo() const {
     std::shared_lock lock(metadataMtx);
     tensor_map_t copy = inputsInfo;
-    return std::move(copy);
+    return copy;
 }
 
 const tensor_map_t PipelineDefinition::getOutputsInfo() const {
     std::shared_lock lock(metadataMtx);
     tensor_map_t copy = outputsInfo;
-    return std::move(copy);
+    return copy;
 }
 
 std::shared_ptr<TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, uint32_t demultiplyCount) {
     return tensorInfo->createCopyWithEffectiveDimensionPrefix(demultiplyCount);
 }
 
-std::shared_ptr<TensorInfo> applyGatherShapeForTensorIfNeeded(const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape, bool isConnectionFromDemultiplexer) {
+std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string& mappedName, const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape, bool isConnectionFromDemultiplexer) {
+    std::shared_ptr<TensorInfo> newOwnedTensorInfo;
     if (gatherShape.size() == 0) {
-        return std::make_shared<TensorInfo>(*tensorInfo);
+        newOwnedTensorInfo = std::make_shared<TensorInfo>(*tensorInfo);
+        newOwnedTensorInfo->setMappedName(mappedName);
+        return newOwnedTensorInfo;
     }
     shape_t newShape = tensorInfo->getEffectiveShape();
     if (isConnectionFromDemultiplexer) {
         newShape.erase(newShape.begin());
     }
     newShape.insert(newShape.begin(), gatherShape.begin(), gatherShape.end());
-    return tensorInfo->createCopyWithNewShape(newShape);
+    newOwnedTensorInfo = tensorInfo->createCopyWithNewShape(newShape);
+    newOwnedTensorInfo->setMappedName(mappedName);
+    return newOwnedTensorInfo;
 }
 
 Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
@@ -1143,7 +1148,7 @@ Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo&
     }
     for (const auto& [alias, realName] : specificDependencyMapping) {
         const auto& finalName = dependencyNodeInfo.outputNameAliases.count(alias) > 0 ? dependencyNodeInfo.outputNameAliases.at(alias) : alias;
-        outputsInfo[realName] = applyGatherShapeForTensorIfNeeded(instance->getOutputsInfo().at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
+        outputsInfo[realName] = createOutputTensorInfoForPipeline(realName, instance->getOutputsInfo().at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
     }
     return StatusCode::OK;
 }
@@ -1159,7 +1164,7 @@ Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeIn
     }
     for (const auto& [alias, realName] : specificDependencyMapping) {
         const auto& finalName = dependencyNodeInfo.outputNameAliases.count(alias) > 0 ? dependencyNodeInfo.outputNameAliases.at(alias) : alias;
-        outputsInfo[realName] = applyGatherShapeForTensorIfNeeded(info.at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
+        outputsInfo[realName] = createOutputTensorInfoForPipeline(realName, info.at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
     }
     return StatusCode::OK;
 }
@@ -1293,7 +1298,7 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
     }
 
     std::reverse(shape.begin(), shape.end());
-    return std::move(shape);
+    return shape;
 }
 
 }  // namespace ovms

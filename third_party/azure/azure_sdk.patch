@@ -2,27 +2,12 @@ diff --git a/Microsoft.WindowsAzure.Storage/CMakeLists.txt b/Microsoft.WindowsAz
 index ac9e65d..fd2aca4 100644
 --- a/Microsoft.WindowsAzure.Storage/CMakeLists.txt
 +++ b/Microsoft.WindowsAzure.Storage/CMakeLists.txt
-@@ -43,8 +43,13 @@ if(UNIX)
-   endif()
- 
-   set(_OPENSSL_VERSION "")
--  find_package(OpenSSL 1.0.0 REQUIRED)
-+  #find_package(OpenSSL 1.0.0 REQUIRED)
- 
-+set(OPENSSL_INCLUDE_DIR "/usr/local/ssl/include" CACHE INTERNAL "")
-+    set(OPENSSL_LIBRARIES
-+    "/usr/local/ssl/lib/libssl.a"
-+    "/usr/local/ssl/lib/libcrypto.a"
-+    )
- 
-   find_package(UUID REQUIRED)
-   find_package(Casablanca REQUIRED)
 @@ -83,15 +88,12 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
    set(LINUX_SUPPRESSIONS "-Wno-deprecated -Wno-unknown-pragmas -Wno-reorder -Wno-unused-function -Wno-char-subscripts -Wno-switch -Wno-unused-but-set-parameter -Wno-unused-value -Wno-unused-local-typedefs -Wno-unused-parameter")
    set(WARNINGS "${WARNINGS} ${LINUX_SUPPRESSIONS}")
  
 -  set(LD_FLAGS "${LD_FLAGS} -Wl,-z,defs")
-+  set(LD_FLAGS "${LD_FLAGS} -Bstatic,-lcrypto,-lssl,-Bdynamic,-Wl,-z,defs,--exclude-libs,ALL")
++  set(LD_FLAGS "${LD_FLAGS} -Wl,-z,defs,--exclude-libs,ALL")
  
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-strict-aliasing")
  

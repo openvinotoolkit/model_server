@@ -18,19 +18,27 @@ import numpy as np
 import pytest
 
 from constants import MODEL_SERVICE, ERROR_SHAPE
+from config import target_device, skip_nginx_test
 from model.models_information import ResnetONNX
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status
-from utils.logger import get_logger
+import logging
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
 from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_rest, \
     get_model_metadata_response_rest, get_model_status_response_rest
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
-class TestSingleModelInference:
+@pytest.mark.skipif(skip_nginx_test, reason="not implemented yet")
+@pytest.mark.skipif(target_device == "GPU", reason="Unsupported property key by plugin: CPU_THROUGHPUT_STREAMS")
+@pytest.mark.skipif(target_device in ["MYRIAD", "HDDL"],
+                    reason="""
+                    Expected: CPU_THROUGHPUT_STREAMS key is not supported for VPU;
+                    Received: Invalid or missing S3 credentials, or bucket does not exist - inference. Invalid DNS Label found in URI host
+                    """)
+class TestSingleModelInferenceOnnx:
 
     def test_run_inference(self, start_server_single_model_onnx):
         """

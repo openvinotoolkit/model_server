@@ -613,7 +613,7 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     modelInstanceUnloadGuard.reset();
     status = manager.getModelInstance(modelDirectory.name, 3, modelInstance3, modelInstanceUnloadGuard);
     modelInstanceUnloadGuard.reset();
-    ASSERT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
+    ASSERT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 
     // dropped versions 2 and 3
     // expected version 1 as available, 2 as ended
@@ -627,11 +627,12 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
 
     // added invalid version 2
-    // expected no changes: 1 as available, 2 as ended
+    // expected no changes: 1 as available, 2 as loading with error
     modelDirectory.addVersion(2, !validVersion);
     manager.reloadModelWithVersions(config);
     ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
-    ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::END);
+    ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::LOADING);
+    ASSERT_EQ(modelInstance2->getStatus().getErrorCode(), ovms::ModelVersionStatusErrorCode::UNKNOWN);
 
     // fixed version 2
     // expected 2 as available and 1 as ended
@@ -640,6 +641,41 @@ TEST(ModelManager, HandlingInvalidLastVersion) {
     manager.reloadModelWithVersions(config);
     ASSERT_EQ(modelInstance1->getStatus().getState(), ovms::ModelVersionState::END);
     ASSERT_EQ(modelInstance2->getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
+    ASSERT_EQ(modelInstance2->getStatus().getErrorCode(), ovms::ModelVersionStatusErrorCode::OK);
+}
+
+TEST(ModelManager, InitialFailedLoadingVersionSavesModelVersionWithProperStatus) {
+    DummyModelDirectoryStructure modelDirectory("InitialFailedLoadingVersionSavesModelVersionWithProperStatus");
+    bool validVersion = true;
+    modelDirectory.addVersion(1, !validVersion);
+    ovms::ModelConfig config;
+    config.setBasePath("/tmp/" + modelDirectory.name);
+    config.setName(modelDirectory.name);
+    config.setNireq(1);
+    ConstructorEnabledModelManager manager;
+    manager.reloadModelWithVersions(config);
+    auto model = manager.findModelByName(modelDirectory.name);
+    ASSERT_NE(model, nullptr);
+    auto versions = model->getModelVersionsMapCopy();
+    EXPECT_EQ(versions.size(), 1);
+    auto versionIt = versions.find(1);
+    ASSERT_NE(versionIt, versions.end());
+    ASSERT_EQ(versionIt->second.getStatus().getState(), ovms::ModelVersionState::LOADING);
+}
+
+TEST(ModelManager, ModelVersionFailedReloadReportsFailedStatus) {
+    DummyModelDirectoryStructure modelDirectory("ModelVersionFailedReloadReportsFailedStatus");
+    bool validVersion = true;
+    modelDirectory.addVersion(1, validVersion);
+    ovms::ModelConfig config;
+    config.setBasePath("/tmp/" + modelDirectory.name);
+    config.setName(modelDirectory.name);
+    config.setNireq(1);
+    ConstructorEnabledModelManager manager;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    // force reload with wrong shape
+    config.setTargetDevice("invalid");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE);
 }
 
 TEST(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {

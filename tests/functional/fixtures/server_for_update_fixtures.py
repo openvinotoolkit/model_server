@@ -23,7 +23,7 @@ from utils.parametrization import get_tests_suffix
 from object_model.server import Server
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def start_server_update_flow_latest(request):
 
     update_test_dir = config.path_to_mount + '/update-{}/'.format(get_tests_suffix())
@@ -36,11 +36,12 @@ def start_server_update_flow_latest(request):
                                  "nireq": 1}
     container_name_infix = "test-update-latest"
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command)
+                    container_name_infix, config.start_container_command,
+                    target_device=config.target_device)
     return server.start()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def start_server_update_flow_specific(request):
 
     update_test_dir = config.path_to_mount + '/update-{}/'.format(get_tests_suffix())
@@ -52,5 +53,6 @@ def start_server_update_flow_specific(request):
                                  "model_version_policy": '\'{"specific": { "versions":[1, 3, 4] }}\''}
     container_name_infix = "test-update-specific"
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command)
+                    container_name_infix, config.start_container_command,
+                    target_device=config.target_device)
     return server.start()

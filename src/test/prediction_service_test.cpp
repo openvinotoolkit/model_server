@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
@@ -25,16 +26,27 @@
 #include <inference_engine.hpp>
 #include <stdlib.h>
 
+#include "../deserialization.hpp"
 #include "../executingstreamidguard.hpp"
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../sequence_processing_spec.hpp"
+#include "../serialization.hpp"
 #include "test_utils.hpp"
 
 using testing::Each;
 using testing::Eq;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnarrowing"
+void serializeAndCheck(int outputSize, InferenceEngine::InferRequest& inferRequest, const std::string& outputName, const ovms::tensor_map_t& outputsInfo) {
+    std::vector<float> output(10);
+    tensorflow::serving::PredictResponse response;
+    auto status = serializePredictResponse(inferRequest, outputsInfo, &response);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
+    std::memcpy(output.data(), (float*)response.outputs().at(outputName).tensor_content().data(), DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
+    EXPECT_THAT(output, Each(Eq(1.)));
+}
 class TestPredict : public ::testing::Test {
 public:
     void SetUp() {
@@ -42,9 +54,6 @@ public:
         const int initialBatchSize = 1;
         config.setBatchSize(initialBatchSize);
         config.setNireq(2);
-    }
-    void TearDown() {
-        spdlog::error("TEAR_DOWN");
     }
     /**
      * @brief This function should mimic most closely predict request to check for thread safety
@@ -54,22 +63,6 @@ public:
         const tensorflow::serving::PredictRequest& request,
         std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance = nullptr,
         std::unique_ptr<std::future<void>> waitBeforePerformInference = nullptr);
-
-    void deserialize(const std::vector<float>& input, InferenceEngine::InferRequest& inferRequest, std::shared_ptr<ovms::ModelInstance> modelInstance) {
-        auto blob = InferenceEngine::make_shared_blob<float>(
-            modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getTensorDesc(),
-            const_cast<float*>(reinterpret_cast<const float*>(input.data())));
-        inferRequest.SetBlob(DUMMY_MODEL_INPUT_NAME, blob);
-    }
-
-    void serializeAndCheck(int outputSize, InferenceEngine::InferRequest& inferRequest) {
-        std::vector<float> output(outputSize);
-        ASSERT_THAT(output, Each(Eq(0.)));
-        auto blobOutput = inferRequest.GetBlob(DUMMY_MODEL_OUTPUT_NAME);
-        ASSERT_EQ(blobOutput->byteSize(), outputSize * sizeof(float));
-        std::memcpy(output.data(), blobOutput->cbuffer(), outputSize * sizeof(float));
-        EXPECT_THAT(output, Each(Eq(2.)));
-    }
 
     void testConcurrentPredicts(const int initialBatchSize, const uint waitingBeforePerformInferenceCount, const uint waitingBeforeGettingModelCount) {
         ASSERT_GE(20, waitingBeforePerformInferenceCount);
@@ -221,16 +214,19 @@ public:
     }
 };
 
-void TestPredict::performPredict(const std::string modelName,
+void performPrediction(const std::string modelName,
     const ovms::model_version_t modelVersion,
     const tensorflow::serving::PredictRequest& request,
     std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance,
-    std::unique_ptr<std::future<void>> waitBeforePerformInference) {
+    std::unique_ptr<std::future<void>> waitBeforePerformInference,
+    ovms::ModelManager& manager,
+    const std::string& inputName,
+    const std::string& outputName) {
     // only validation is skipped
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
 
-    auto& tensorProto = request.inputs().find("b")->second;
+    auto& tensorProto = request.inputs().at(inputName);
     size_t batchSize = tensorProto.tensor_shape().dim(0).size();
     size_t inputSize = 1;
     for (int i = 0; i < tensorProto.tensor_shape().dim_size(); i++) {
@@ -255,14 +251,28 @@ void TestPredict::performPredict(const std::string modelName,
 
     ovms::ExecutingStreamIdGuard executingStreamIdGuard(modelInstance->getInferRequestsQueue());
     InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
-    std::vector<float> input(inputSize);
-    std::generate(input.begin(), input.end(), []() { return 1.; });
-    ASSERT_THAT(input, Each(Eq(1.)));
-    deserialize(input, inferRequest, modelInstance);
-    auto status = modelInstance->performInference(inferRequest);
+    ovms::InputSink<InferenceEngine::InferRequest&> inputSink(inferRequest);
+    bool isPipeline = false;
+
+    auto status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(request, modelInstance->getInputsInfo(), inputSink, isPipeline);
+    status = modelInstance->performInference(inferRequest);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     size_t outputSize = batchSize * DUMMY_MODEL_OUTPUT_SIZE;
-    serializeAndCheck(outputSize, inferRequest);
+    serializeAndCheck(outputSize, inferRequest, outputName, modelInstance->getOutputsInfo());
+}
+void TestPredict::performPredict(const std::string modelName,
+    const ovms::model_version_t modelVersion,
+    const tensorflow::serving::PredictRequest& request,
+    std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance,
+    std::unique_ptr<std::future<void>> waitBeforePerformInference) {
+    performPrediction(modelName,
+        modelVersion,
+        request,
+        std::move(waitBeforeGettingModelInstance),
+        std::move(waitBeforePerformInference),
+        this->manager,
+        DUMMY_MODEL_INPUT_NAME,
+        DUMMY_MODEL_OUTPUT_NAME);
 }
 
 TEST_F(TestPredict, SuccesfullOnDummyModel) {
@@ -273,6 +283,68 @@ TEST_F(TestPredict, SuccesfullOnDummyModel) {
     config.setBatchSize(1);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     performPredict(config.getName(), config.getVersion(), request);
+}
+
+static const char* oneDummyConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ]
+})";
+
+class TestPredictWithMapping : public TestWithTempDir {
+protected:
+    std::string ovmsConfig;
+    std::string modelPath;
+    std::string configFilePath;
+    std::string mappingConfigPath;
+    const std::string dummyModelInputMapping = "input_tensor";
+    const std::string dummyModelOutputMapping = "output_tensor";
+    const ovms::mapping_config_t mapping{{dummyModelInputMapping, DUMMY_MODEL_INPUT_NAME}};
+
+public:
+    void SetUpConfig(const std::string& configContent) {
+        ovmsConfig = configContent;
+        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
+        auto it = ovmsConfig.find(modelPathToReplace);
+        if (it != std::string::npos) {
+            ovmsConfig.replace(ovmsConfig.find(modelPathToReplace), modelPathToReplace.size(), modelPath);
+        }
+        configFilePath = directoryPath + "/ovms_config.json";
+    }
+    void SetUp() {
+        TestWithTempDir::SetUp();
+        modelPath = directoryPath + "/dummy/";
+        mappingConfigPath = modelPath + "1/mapping_config.json";
+        SetUpConfig(oneDummyConfig);
+        std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        createConfigFileWithContent(R"({
+            "inputs": {"b":"input_tensor"},
+            "outputs": {"a": "output_tensor"}
+        })",
+            mappingConfigPath);
+    }
+};
+
+TEST_F(TestPredictWithMapping, SuccesfullOnDummyModelWithMapping) {
+    tensorflow::serving::PredictRequest request = preparePredictRequest(
+        {{dummyModelInputMapping,
+            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}});
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    ConstructorEnabledModelManager manager;
+    auto status = manager.loadConfig(configFilePath);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    performPrediction(config.getName(), config.getVersion(), request, nullptr, nullptr, manager, dummyModelInputMapping, dummyModelOutputMapping);
 }
 
 TEST_F(TestPredict, SuccesfullReloadFromAlreadyLoadedWithNewBatchSize) {

@@ -57,12 +57,34 @@ public:
         throw std::logic_error("This node cannot have dependency");
     }
 
-    // Deserialize proto to blob
-    Status deserialize(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo);
-    Status deserializeBinaryInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo);
-    Status deserializeNumericalInput(const tensorflow::TensorProto& proto, InferenceEngine::Blob::Ptr& blob);
-
     Status isInputBinary(const std::string& name, bool& isBinary) const;
+
+    const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
+        const size_t expectedNumberOfInputs);
+
+    const Status checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput);
+
+    const Status validateNumberOfBinaryInputShapeDimensions(const tensorflow::TensorProto& requestInput);
+
+    const bool checkBinaryInputBatchSizeMismatch(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const Status validatePrecision(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const bool checkBatchSizeMismatch(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const bool checkShapeMismatch(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const Status validateTensorContentSize(const ovms::TensorInfo& networkInput,
+        const tensorflow::TensorProto& requestInput);
+
+    const Status validate();
 };
 
 }  // namespace ovms

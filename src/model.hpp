@@ -17,6 +17,7 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <shared_mutex>
 #include <string>
 #include <utility>
@@ -179,16 +180,30 @@ public:
     /**
          * @brief Retires versions of Model
          *
-         * @param config model configuration
+         * @param versions versions to retire
          *
          * @return status
          */
     Status retireVersions(std::shared_ptr<model_versions_t> versions);
 
     /**
+         * @brief Cleans up versions of Model
+         *
+         * @param versions versions to clean up
+         *
+         * @return status
+         */
+    Status cleanupFailedLoad(std::shared_ptr<model_versions_t> versions);
+
+    /**
          * @brief Retires all versions of Model
          */
-    void retireAllVersions(bool isError = false);
+    void retireAllVersions();
+
+    /**
+         * @brief Cleans up all versions of Model
+         */
+    void cleanupAllVersions();
 
     /**
          * @brief Reloads versions of Model

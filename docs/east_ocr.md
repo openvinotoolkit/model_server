@@ -12,14 +12,14 @@ Below is depicted the graph implementing a complete OCR pipelines.
 
 ![OCR graph](east_ocr.png)
 
-It includes the following Nodes:
+It includes the following nodes:
 - Model east-resnet50 - inference execution which takes the user image as input. It returns two outputs including information about all detected boxes, their location and scores.
 - Custom node east_ocr - it includes C++ implementation of east-resnet50 model results processing. It analyses the detected boxes coordinates, filters the results
 based on the configurable score level threshold and and applies non-max suppression algorithm to remove overlaping boxes. Finally the custom node east-ocr crops all detected boxes
 from the original image, resize them to the target resolution and combines into a single output of a dynamic batch size. The output batch size is determined by the number of detected
 boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [east_ocr custom node](../src/custom_nodes/east_ocr)
 - demultiplexer - output from the Custom node east_ocr have variable batch size. In order to match it with the sequential text detection model, the data is split into individuial images with batch size 1 each.
-Such smaller requests can be submitted for inference in parallel to the next Model Node. Learn more about the [demultiplexing](./demultiplexer.md)
+Such smaller requests can be submitted for inference in parallel to the next Model Node. Learn more about the [demultiplexing](./demultiplexing.md)
 - Model crnn - this model recognizes characters included in the input image. 
 - Response - the output of the whole pipeline combines the recognized `image_texts` with their metadata. 
 The metadata are the `text_coordinates` and the `confidence_level` outputs.
@@ -35,7 +35,7 @@ Clone github repository:
 git clone https://github.com/argman/EAST 
 cd EAST 
 ```
-Download and unzip the file east_icdar2015_resnet_v1_50_rbox.zip to EAST folder with the github repository.
+Download and unzip the file east_icdar2015_resnet_v1_50_rbox.zip as instructed in readme.md file to EAST folder with the github repository.
 ```bash
 unzip ./east_icdar2015_resnet_v1_50_rbox.zip
 ```

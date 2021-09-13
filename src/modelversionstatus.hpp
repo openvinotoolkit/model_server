@@ -118,6 +118,10 @@ public:
         return ovms::ModelVersionState::UNLOADING <= this->state;
     }
 
+    bool isFailedLoading() const {
+        return this->state == ovms::ModelVersionState::LOADING && this->errorCode == ovms::ModelVersionStatusErrorCode::UNKNOWN;
+    }
+
     void setLoading(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK) {
         SPDLOG_DEBUG("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
         state = ModelVersionState::LOADING;

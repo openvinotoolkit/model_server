@@ -104,12 +104,18 @@ Status StatefulModelInstance::reloadModel(const ModelConfig& config, const Dynam
     return StatusCode::OK;
 }
 
-void StatefulModelInstance::unloadModel(bool isPermanent, bool isError) {
+void StatefulModelInstance::retireModel(bool isPermanent) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     if (isPermanent && autoCleanupEnabled) {
         globalSequencesViewer->unregisterFromCleanup(getName(), getVersion());
     }
-    ModelInstance::unloadModel(isPermanent, isError);
+    ModelInstance::retireModel(isPermanent);
+    sequenceManager.reset();
+}
+
+void StatefulModelInstance::cleanupFailedLoad() {
+    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
+    ModelInstance::cleanupFailedLoad();
     sequenceManager.reset();
 }
 
@@ -219,7 +225,9 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("preprocess") / 1000);
 
     timer.start("deserialize");
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inferRequest);
+    InputSink<InferRequest&> inputSink(inferRequest);
+    bool isPipeline = false;
+    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
     timer.stop("deserialize");
     if (!status.ok())
         return status;

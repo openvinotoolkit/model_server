@@ -14,13 +14,16 @@
 # limitations under the License.
 #
 
+HEADER_FILE_PATH ?= ../../custom_node_interface.h
+BASE_OS ?= ubuntu
+
 .PHONY: default build
 
 default: docker_build
 
 docker_build:
-	@cp ../../custom_node_interface.h .
-	@docker build -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} .
+	@cp $(HEADER_FILE_PATH) ./custom_node_interface.h
+	@docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} .
 	@rm -Rf lib
 	@docker cp $$(docker create --rm custom_node_build_image:latest):/custom_nodes/lib/ ./lib/
 	@rm custom_node_interface.h

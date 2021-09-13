@@ -21,10 +21,10 @@ import shutil
 import config
 from fixtures.model_download_fixtures import download_file
 from model.models_information import Resnet, ResnetBS4, ResnetBS8
-from utils.logger import get_logger
+import logging
 from utils.model_management import convert_model
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(autouse=True, scope="session")

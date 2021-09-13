@@ -17,18 +17,23 @@
 import json
 import numpy as np
 import requests
-from utils.parametrization import get_ports_prefixes
 from google.protobuf.json_format import Parse
 from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2
-from utils.logger import get_logger
+import logging
 
-logger = get_logger(__name__)
+from config import infer_timeout
+from utils.port_manager import PortManager
+from config import rest_ovms_starting_port, ports_pool_size
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_ADDRESS = 'localhost'
-DEFAULT_REST_PORT = "{}00".format(get_ports_prefixes()["rest_ports_prefix"])
+DEFAULT_REST_PORT = "{}".format(rest_ovms_starting_port)
 PREDICT = ':predict'
 METADATA = '/metadata'
+
+port_manager_rest = PortManager("rest", starting_port=rest_ovms_starting_port, pool_size=ports_pool_size)
 
 
 def get_url(model: str, address: str = DEFAULT_ADDRESS, port: str = DEFAULT_REST_PORT,
@@ -105,26 +110,38 @@ def process_json_output(result_dict, output_tensors):
     return output
 
 
-def infer_rest(img, input_tensor, rest_url,
-               output_tensors, request_format):
-    data_json = prepare_body_format(img, request_format, input_tensor)
-    result = requests.post(rest_url, data=data_json)
+def _get_output_json(rest_url, method_to_call, raise_error = True,
+                     img = None, input_tensor = None, request_format = None, timeout=None):
+    if img is not None:
+        data_json = prepare_body_format(img, request_format, input_tensor)
+    else:
+        data_json = None
+    result = method_to_call(rest_url, data=data_json, timeout=timeout)
+    if raise_error and (not result.ok or result.status_code != 200):
+        msg = f"REST call: {method_to_call.__name__}() failed {result}"
+        txt = getattr(result, "text", "")
+        msg += txt
+        logger.error(msg)
+        raise Exception(msg)
     output_json = json.loads(result.text)
-    data = process_json_output(output_json, output_tensors)
+    return result.text, output_json
+
+def infer_rest(img, input_tensor, rest_url,
+               output_tensors, request_format, raise_error=True):
+    _, _json = _get_output_json(rest_url, requests.post, raise_error, img, input_tensor, request_format, infer_timeout)
+    data = process_json_output(_json, output_tensors)
     return data
 
 
 def get_model_metadata_response_rest(rest_url):
-    result = requests.get(rest_url)
-    output_json = result.text
+    _txt, _ = _get_output_json(rest_url, requests.get)
     metadata_pb = get_model_metadata_pb2.GetModelMetadataResponse()
-    response = Parse(output_json, metadata_pb, ignore_unknown_fields=False)
+    response = Parse(_txt, metadata_pb, ignore_unknown_fields=False)
     return response
 
 
 def get_model_status_response_rest(rest_url):
-    result = requests.get(rest_url)
-    output_json = result.text
+    _txt, _ = _get_output_json(rest_url, requests.get)
     status_pb = get_model_status_pb2.GetModelStatusResponse()
-    response = Parse(output_json, status_pb, ignore_unknown_fields=False)
+    response = Parse(_txt, status_pb, ignore_unknown_fields=False)
     return response

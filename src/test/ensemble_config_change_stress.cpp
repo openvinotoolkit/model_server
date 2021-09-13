@@ -853,7 +853,7 @@ public:
         tensorflow::serving::PredictRequest request = preparePredictRequest(getExpectedInputsInfo());
         auto& input = (*request.mutable_inputs())[pipelineInputName];
         input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
-        return std::move(request);
+        return request;
     }
     virtual void checkPipelineResponse(const std::string& pipelineOutputName,
         tensorflow::serving::PredictRequest& request,
@@ -1103,7 +1103,7 @@ public:
         input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
         auto& factors = (*request.mutable_inputs())[pipelineFactorsInputName];
         factors.mutable_tensor_content()->assign((char*)factorsData.data(), factorsData.size() * sizeof(float));
-        return std::move(request);
+        return request;
     }
     inputs_info_t getExpectedInputsInfo() override {
         return {{pipelineInputName,

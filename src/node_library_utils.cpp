@@ -75,7 +75,7 @@ std::unique_ptr<struct CustomNodeParam[]> createCustomNodeParamArray(const std::
         libraryParameters[i].value = value.c_str();
         i++;
     }
-    return std::move(libraryParameters);
+    return libraryParameters;
 }
 
 std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const std::unordered_map<std::string, InferenceEngine::Blob::Ptr>& blobMap) {
@@ -87,14 +87,14 @@ std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const std
     for (const auto& [name, blob] : blobMap) {
         const auto& dims = getEffectiveBlobShape(blob);
         inputTensors[i].name = static_cast<const char*>(name.c_str());
-        inputTensors[i].data = static_cast<uint8_t*>(blob->buffer());
+        inputTensors[i].data = static_cast<uint8_t*>(InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rwmap());
         inputTensors[i].dataBytes = static_cast<uint64_t>(blob->byteSize());
         inputTensors[i].dims = const_cast<uint64_t*>(dims.data());
         inputTensors[i].dimsCount = static_cast<uint64_t>(dims.size());
         inputTensors[i].precision = toCustomNodeTensorPrecision(blob->getTensorDesc().getPrecision());
         i++;
     }
-    return std::move(inputTensors);
+    return inputTensors;
 }
 
 Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std::map<std::string, std::shared_ptr<TensorInfo>>& out, release_fn freeCallback) {
@@ -124,7 +124,6 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std
         shape_t shape(info[i].dims, info[i].dims + info[i].dimsCount);
 
         freeCallback(info[i].dims);
-
         out.emplace(name, std::make_shared<TensorInfo>(name, precision, std::move(shape)));
     }
     freeCallback(info);

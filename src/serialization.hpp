@@ -32,6 +32,17 @@
 
 namespace ovms {
 
+template <typename T>
+class OutputGetter {
+public:
+    OutputGetter(T t) :
+        outputSource(t) {}
+    Status get(const std::string& name, InferenceEngine::Blob::Ptr& blob);
+
+private:
+    T outputSource;
+};
+
 Status serializeBlobToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& networkOutput,
@@ -42,4 +53,24 @@ Status serializePredictResponse(
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response);
 
+template <typename T>
+Status serializePredictResponse(
+    OutputGetter<T>& outputGetter,
+    const tensor_map_t& outputMap,
+    tensorflow::serving::PredictResponse* response) {
+    Status status;
+    for (const auto& [outputName, outputInfo] : outputMap) {
+        InferenceEngine::Blob::Ptr blob;
+        status = outputGetter.get(outputName, blob);
+        if (!status.ok()) {
+            return status;
+        }
+        auto& tensorProto = (*response->mutable_outputs())[outputInfo->getMappedName()];
+        status = serializeBlobToTensorProto(tensorProto, outputInfo, blob);
+        if (!status.ok()) {
+            return status;
+        }
+    }
+    return status;
+}
 }  // namespace ovms

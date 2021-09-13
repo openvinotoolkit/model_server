@@ -8,7 +8,7 @@ OpenVINO&trade; Model Server is a serving system for machine learning models. Op
 
 ### Hardware 
 * Required:
-    * 6th to 10th generation Intel® Core™ processors and Intel® Xeon® processors.
+    * 6th to 11th generation Intel® Core™ processors and Intel® Xeon® processors.
 * Optional:
     * Intel® Neural Compute Stick 2.
     * Intel® Iris® Pro & Intel® HD Graphics
@@ -78,8 +78,8 @@ as well as a release package (.tar.gz, with ovms binary and necessary libraries)
 
 *Note:* Latest images include OpenVINO 2021.4 release.
 
-*Note:* OVMS docker image could be created with ubi8-minimal base image, beside the default centos7.
-Use command `make docker_build BASE_OS=redhat`. OVMS with ubi base image doesn't support NCS and HDDL accelerators.
+*Note:* OVMS docker image could be created with ubi8-minimal base image, centos7 or the default ubuntu20.
+Use command `make docker_build BASE_OS=redhat` or `make docker_build BASE_OS=centos`. OVMS with ubi base image doesn't support NCS and HDDL accelerators.
 
 Additionally you can set version of GPU driver used by the produced image. Currently following versions are available:
 - 19.41.14441
@@ -106,7 +106,7 @@ docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 9001:9001 open
 - -d - Run the container in the background.
 - -v - Defines how to mount the models folder in the Docker container.
 - -p - Exposes the model serving port outside the Docker container.
-- openvino/model_server:latest - Represents the image name. This varies by tag and build process. The ovms binary is the Docker entry point. See the full list of [ovms tags](https://hub.docker.com/repository/docker/openvino/model_server).
+- openvino/model_server:latest - Represents the image name. This varies by tag and build process. The ovms binary is the Docker entry point. See the full list of [ovms tags](https://hub.docker.com/r/openvino/model_server/tags).
 - --model_path - Model location. This can be a Docker container path that is mounted during start-up or a Google* Cloud Storage path in format gs://<bucket>/<model_path> or AWS S3 path s3://<bucket>/<model_path> or az://<container>/<model_path> for Azure blob. See the requirements below for using a cloud storage.
 - --model_name - The name of the model in the model_path.
 - --port - gRPC server port.
@@ -213,17 +213,17 @@ Here the numerical values depict the version number of the model.
 |---|---|---|---|
 | `"model_name"/"name"` | `string` | model name exposed over gRPC and REST API.(use `model_name` in command line, `name` in json config)   | &check;|
 | `"model_path"/"base_path"` | `"/opt/ml/models/model"`<br>"gs://bucket/models/model"<br>"s3://bucket/models/model"<br>"azure://bucket/models/model" | If using a Google Cloud Storage, Azure Storage or S3 path, see the requirements below.(use `model_path` in command line, `base_path` in json config)  | &check;|
-| `"shape"` | `tuple, json or "auto"` | `shape` is optional and takes precedence over `batch_size`. The `shape` argument changes the model that is enabled in the model server to fit the parameters. <br><br>`shape` accepts three forms of the values:<br>* `auto` - The model server reloads the model with the shape that matches the input data matrix.<br>* a tuple, such as `(1,3,224,224)` - The tuple defines the shape to use for all incoming requests for models with a single input.<br>* A dictionary of shapes, such as `{"input1":"(1,3,224,224)","input2":"(1,3,50,50)", "input3":"auto"}` - This option defines the shape of every included input in the model.<br><br>Some models don't support the reshape operation.<br><br>If the model can't be reshaped, it remains in the original parameters and all requests with incompatible input format result in an error. See the logs for more information about specific errors.<br><br>Learn more about supported model graph layers including all limitations at [Shape Inference Document](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_ShapeInference.html). ||
+| `"shape"` | `tuple, json or "auto"` | `shape` is optional and takes precedence over `batch_size`. The `shape` argument changes the model that is enabled in the model server to fit the parameters. <br><br>`shape` accepts three forms of the values:<br>* `auto` - The model server reloads the model with the shape that matches the input data matrix.<br>* a tuple, such as `(1,3,224,224)` - The tuple defines the shape to use for all incoming requests for models with a single input.<br>* A dictionary of shapes, such as `{"input1":"(1,3,224,224)","input2":"(1,3,50,50)", "input3":"auto"}` - This option defines the shape of every included input in the model.<br><br>Some models don't support the reshape operation.<br><br>If the model can't be reshaped, it remains in the original parameters and all requests with incompatible input format result in an error. See the logs for more information about specific errors.<br><br>Learn more about supported model graph layers including all limitations at [Shape Inference Document](https://docs.openvinotoolkit.org/2021.4/_docs_IE_DG_ShapeInference.html). ||
 | `"batch_size"` | `integer / "auto"` | Optional. By default, the batch size is derived from the model, defined through the OpenVINO Model Optimizer. `batch_size` is useful for sequential inference requests of the same batch size.<br><br>Some models, such as object detection, don't work correctly with the `batch_size` parameter. With these models, the output's first dimension doesn't represent the batch size. You can set the batch size for these models by using network reshaping and setting the `shape` parameter appropriately.<br><br>The default option of using the Model Optimizer to determine the batch size uses the size of the first dimension in the first input for the size. For example, if the input shape is `(1, 3, 225, 225)`, the batch size is set to `1`. If you set `batch_size` to a numerical value, the model batch size is changed when the service starts.<br><br>`batch_size` also accepts a value of `auto`. If you use `auto`, then the served model batch size is set according to the incoming data at run time. The model is reloaded each time the input data changes the batch size. You might see a delayed response upon the first request.<br>  ||
 | `"layout" `| `json / string` | `layout` is optional argument which allows to change the layout of model input and output tensors. Only `NCHW` and `NHWC` layouts are supported.<br><br>When specified with single string value - layout change is only applied to single model input. To change multiple model inputs or outputs, you can specify json object with mapping, such as: `{"input1":"NHWC","input2":"NHWC","output1":"NHWC"}`.<br><br>If not specified, layout is inherited from model. ||
 | `"model_version_policy"` | `{ "all": {} }`<br>`{ "latest": { "num_versions":2 } }`<br>`{ "specific": { "versions":[1, 3] } }`</code> | Optional.<br><br>The model version policy lets you decide which versions of a model that the OpenVINO Model Server is to serve. By default, the server serves the latest version. One reason to use this argument is to control the server memory consumption.<br><br>The accepted format is in json.<br><br>Examples:<br><code>{"latest": { "num_versions":2 } # server will serve only two latest versions of model<br><br>{"specific": { "versions":[1, 3] } } # server will serve only versions 1 and 3 of given model<br><br>{"all": {} } # server will serve all available versions of given model ||
-| `"plugin_config"` | json with plugin config mappings like`{"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}` |  List of device plugin parameters. For full list refer to [OpenVINO documentation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html) and [performance tuning guide](./performance_tuning.md)  ||
+| `"plugin_config"` | json with plugin config mappings like`{"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}` |  List of device plugin parameters. For full list refer to [OpenVINO documentation](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html) and [performance tuning guide](./performance_tuning.md)  ||
 | `"nireq"` | `integer` | The size of internal request queue. When set to 0 or no value is set value is calculated automatically based on available resources.||
 | `"target_device"` | `"CPU"/"HDDL"/"GPU"/"NCS"/"MULTI"/"HETERO"` | Device name to be used to execute inference operations. Refer to AI accelerators support below. ||
 | `stateful` | `bool` | If set to true, model is loaded as stateful. ||
 | `idle_sequence_cleanup` | `bool` | If set to true, model will be subject to periodic sequence cleaner scans. <br> See [idle sequence cleanup](stateful_models.md#stateful_cleanup). ||
 | `max_sequence_number` | `uint32` | Determines how many sequences can be handled concurrently by a model instance. ||
-| `low_latency_transformation` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_network_state_intro.html#lowlatency_transformation) on model load. ||
+| `low_latency_transformation` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_network_state_intro.html#lowlatency_transformation) on model load. ||
 
 #### To know more about batch size, shape and layout parameters refer [Batch Size, Shape and Layout document](shape_batch_size_and_layout.md)
 
@@ -244,7 +244,7 @@ Configuration options for server are defined only via command line options and d
 | `rest_workers` | `integer` | Number of HTTP server threads. Effective when `rest_port` > 0. Default value is set based on the number of CPUs. ||
 | `file_system_poll_wait_seconds` | `integer` | Time interval between config and model versions changes detection in seconds. Default value is 1. Zero value disables changes monitoring. ||
 | `sequence_cleaner_poll_wait_minutes` | `integer` | Time interval (in minutes) between next sequence cleaner scans. Sequences of the models that are subjects to idle sequence cleanup that have been inactive since the last scan are removed. Zero value disables sequence cleaner.<br> See [idle sequence cleanup](stateful_models.md#stateful_cleanup). ||
-| `cpu_extension` | `string` | Optional path to a library with [custom layers implementation](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_Extensibility_DG_Intro.html) (preview feature in OVMS).
+| `cpu_extension` | `string` | Optional path to a library with [custom layers implementation](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_Extensibility_DG_Intro.html) (preview feature in OVMS).
 | `log_level` | `"DEBUG"/"INFO"/"ERROR"` | Serving logging level ||
 | `log_path` | `string` | Optional path to the log file. ||
 
@@ -384,7 +384,7 @@ OVMS behavior in case of errors during config reloading:
 #### Prepare to use an Intel® Movidius™ Neural Compute Stick
 
 [Intel® Movidius™ Neural Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick) can be employed by OVMS via a [MYRIAD
-plugin](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_MYRIAD.html). 
+plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_MYRIAD.html). 
 
 The Intel® Movidius™ Neural Compute Stick must be visible and accessible on host machine. 
 
@@ -434,7 +434,7 @@ chooses to which one the model is loaded.
 In order to run container that is using HDDL accelerator, _hddldaemon_ must
  run on host machine. It's required to set up environment 
  (the OpenVINO package must be pre-installed) and start _hddldaemon_ on the
- host before starting a container. Refer to the steps from [OpenVINO documentation](https://docs.openvinotoolkit.org/latest/_docs_install_guides_installing_openvino_docker_linux.html#build_docker_image_for_intel_vision_accelerator_design_with_intel_movidius_vpus).
+ host before starting a container. Refer to the steps from [OpenVINO documentation](https://docs.openvinotoolkit.org/2021.4/_docs_install_guides_installing_openvino_docker_linux.html#build_docker_image_for_intel_vision_accelerator_design_with_intel_movidius_vpus).
 
 To start server with HDDL you can use command similar to:
 
@@ -459,10 +459,10 @@ the `docker run` command.
 
 <details><summary>Starting docker container with GPU</summary>
 
-The [GPU plugin](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_CL_DNN.html) uses the Intel® Compute Library for Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. 
+The [GPU plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_GPU.html) uses the Intel® Compute Library for Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. 
 It employs for inference execution Intel® Processor Graphics including Intel® HD Graphics and Intel® Iris® Graphics.
 
-Before using GPU as OVMS target device, you need to install the required drivers. Refer to [OpenVINO installation steps](https://docs.openvinotoolkit.org/latest/openvino_docs_install_guides_installing_openvino_linux.html).
+Before using GPU as OVMS target device, you need to install the required drivers. Refer to [OpenVINO installation steps](https://docs.openvinotoolkit.org/2021.4/openvino_docs_install_guides_installing_openvino_linux.html).
 Next, start the docker container with additional parameter --device /dev/dri to pass the device context and set OVMS parameter --target_device GPU. 
 The command example is listed below:
 
@@ -493,7 +493,7 @@ via building the image with a parameter INSTALL_DRIVER_VERSION:
 
 If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
 With Multi-Device Plugin enabled, inference requests will be load balanced between multiple devices. 
-For more detailed information read [OpenVino's Multi-Device plugin documentation](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_MULTI.html}.
+For more detailed information read [OpenVino's Multi-Device plugin documentation](https://docs.openvinotoolkit.org/2021.4/_docs_IE_DG_supported_plugins_MULTI.html).
 
 In order to use this feature in OpenVino™ Model Server, following steps are required:
 
@@ -528,7 +528,7 @@ Total throughput will be roughly equal to sum of CPU and Intel® Movidius™ Neu
 
 <details><summary>Using Heterogeneous Plugin</summary>
 
-[HETERO plugin](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_HETERO.html) makes it possible to distribute a single inference processing and model between several AI accelerators.
+[HETERO plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_HETERO.html) makes it possible to distribute a single inference processing and model between several AI accelerators.
 That way different parts of the DL network can split and executed on optimized devices.
 OpenVINO automatically divides the network to optimize the execution.
 

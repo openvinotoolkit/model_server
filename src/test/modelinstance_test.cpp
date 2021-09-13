@@ -61,7 +61,7 @@ TEST_F(TestUnloadModel, SuccessfulUnload) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     ASSERT_EQ(modelInstance.loadModel(DUMMY_MODEL_CONFIG), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
-    modelInstance.unloadModel();
+    modelInstance.retireModel();
     EXPECT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
 }
 
@@ -95,7 +95,7 @@ TEST_F(TestUnloadModel, UnloadWaitsUntilMetadataResponseIsBuilt) {
         // This is to trigger model unloading in separate thread during GetModelMetadataImpl::buildResponse call.
         const ovms::tensor_map_t& getInputsInfo() const override {
             thread = std::thread([]() {
-                instance->unloadModel();
+                instance->retireModel();
             });
             // We need to wait for thread to start and trigger model unloading
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -130,7 +130,7 @@ TEST_F(TestUnloadModel, CheckIfCanUnload) {
     EXPECT_CALL(mockModelInstance, canUnloadInstance())
         .WillOnce(Return(false))
         .WillOnce(Return(true));
-    mockModelInstance.unloadModel();
+    mockModelInstance.retireModel();
     EXPECT_EQ(ovms::ModelVersionState::END, mockModelInstance.getStatus().getState());
 }
 
@@ -148,7 +148,7 @@ TEST_F(TestUnloadModel, CheckIfStateIsUnloadingDuringUnloading) {
     MockModelInstanceCheckingUnloadingState mockModelInstance;
     mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, mockModelInstance.getStatus().getState());
-    mockModelInstance.unloadModel();
+    mockModelInstance.retireModel();
     EXPECT_EQ(ovms::ModelVersionState::END, mockModelInstance.getStatus().getState());
 }
 
@@ -216,8 +216,8 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
         "1",        // batchsize
         1,          // NIREQ
         false,      // is stateful
+        false,      // idle sequence cleanup enabled
         false,      // low latency transformation enabled
-        60,         // stateful sequence timeout
         500,        // steteful sequence max number
         version,    // version
         modelPath,  // local path
@@ -251,8 +251,8 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
         "1",        // batchsize
         1,          // NIREQ
         false,      // is stateful
+        false,      // idle sequence cleanup enabled
         false,      // low latency transformation enabled
-        60,         // stateful sequence timeout
         500,        // steteful sequence max number
         version,    // version
         modelPath,  // local path
@@ -311,7 +311,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithChangedModelMapping
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloaded) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION);
     ASSERT_TRUE(modelInstance.loadModel(DUMMY_MODEL_CONFIG).ok());
-    modelInstance.unloadModel();
+    modelInstance.retireModel();
     ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
     EXPECT_TRUE(modelInstance.reloadModel(DUMMY_MODEL_CONFIG).ok());
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
@@ -347,7 +347,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewBatchSize) {
     config.setBatchSize(1);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
-    modelInstance.unloadModel();
+    modelInstance.retireModel();
     ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
     auto newBatchSize = config.getBatchSize() + 1;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unloadGuard;
@@ -362,7 +362,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewShape) {
     std::map<std::string, ovms::shape_t> requestShapes = {{"b", {2, 10}}};
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
-    modelInstance.unloadModel();
+    modelInstance.retireModel();
     ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unloadGuard;
     EXPECT_EQ(modelInstance.reloadModel(0, requestShapes, unloadGuard), ovms::StatusCode::OK);

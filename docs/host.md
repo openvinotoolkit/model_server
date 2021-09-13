@@ -41,7 +41,7 @@ Look at VPU Plugins to see if your model is supported and use [OpenVINO Model Op
 
 5. Navigate to the folder containing binary package and unpack the included tar.gz file using the command :
    ```Bash
-   cd dist/centos && tar -xzvf ovms.tar.gz
+   cd dist/ubuntu && tar -xzvf ovms.tar.gz
    ```
 
 ## Running the Serving

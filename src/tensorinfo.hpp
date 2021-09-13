@@ -143,6 +143,7 @@ public:
          * @return const std::string& 
          */
     const std::string& getMappedName() const;
+    void setMappedName(const std::string& mappedName);
 
     /**
          * @brief Get the Precision object

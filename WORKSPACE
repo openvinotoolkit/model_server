@@ -19,101 +19,86 @@ workspace(name = "ovms")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+# overriding tensorflow serving bazel dependency
+# alternative would be to use cmake build of grpc and flag
+# to use system ssl instead
+new_local_repository(
+    name = "boringssl",
+    path = "/usr/",
+    build_file_content = """
+cc_library(
+    name = "ssl",
+    hdrs = glob(["include/openssl/*"]),
+    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
+    copts = ["-lcrypto", "-lssl"],
+    visibility = ["//visibility:public"],
+)
+cc_library(
+    name = "crypto",
+    hdrs = glob(["include/openssl/*"]),
+    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
+    copts = ["-lcrypto", "-lssl"],
+    visibility = ["//visibility:public"],
+)
+""",
+)
+# overriding GCS curl dependency to force using system provided openssl
+new_local_repository(
+    name = "libcurl",
+    path = "/usr/",
+    build_file_content = """
+cc_library(
+    name = "curl",
+    hdrs = glob(["include/x86_64/curl/*"]),
+    srcs = glob(["lib/x86_64-linux-gnu/libcurl.so"]),
+    copts = ["-lcrypto", "-lssl"],
+    visibility = ["//visibility:public"],
+)
+""",
+)
 # Tensorflow serving
 git_repository(
     name = "tensorflow_serving",
     remote = "https://github.com/tensorflow/serving.git",
-    tag = "2.2.2",
+    tag = "2.5.1",
     patch_args = ["-p1"],
     patches = ["net_http.patch", "listen.patch"]
     #                             ^^^^^^^^^^^^
     #                       make bind address configurable
 )
 
-# Tensorflow core
-git_repository(
+load("@tensorflow_serving//tensorflow_serving:repo.bzl", "tensorflow_http_archive")
+tensorflow_http_archive(
     name = "org_tensorflow",
-    remote = "https://github.com/tensorflow/tensorflow.git",
-    tag = "v2.2.2",
-    patch_args = ["-p1"],
-    patches = ["tf.patch"]
+    sha256 = "cb99f136dc5c89143669888a44bfdd134c086e1e2d9e36278c1eb0f03fe62d76",
+    git_commit = "a4dfb8d1a71385bd6d122e4f27f86dcebb96712d",
+    patch = "tf.patch",
+    repo_mapping = {"@curl" : "@curl"}
 )
-
-http_archive(
-    name = "rules_pkg",
-    sha256 = "5bdc04987af79bd27bc5b00fe30f59a858f77ffa0bd2d8143d5b31ad8b1bd71c",
-    url = "https://github.com/bazelbuild/rules_pkg/releases/download/0.2.0/rules_pkg-0.2.0.tar.gz",
-)
-
-load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
-rules_pkg_dependencies()
-
-load(
-    "@org_tensorflow//third_party/toolchains/preconfig/generate:archives.bzl",
-    "bazel_toolchains_archive",
-)
-bazel_toolchains_archive()
-
-load(
-    "@bazel_toolchains//repositories:repositories.bzl",
-    bazel_toolchains_repositories = "repositories",
-)
-bazel_toolchains_repositories()
-
-
-# START: Upstream TensorFlow dependencies
-# TensorFlow build depends on these dependencies.
-# Needs to be in-sync with TensorFlow sources.
-http_archive(
-    name = "io_bazel_rules_closure",
-    sha256 = "5b00383d08dd71f28503736db0500b6fb4dda47489ff5fc6bed42557c07c6ba9",
-    strip_prefix = "rules_closure-308b05b2419edb5c8ee0471b67a40403df940149",
-    urls = [
-        "https://storage.googleapis.com/mirror.tensorflow.org/github.com/bazelbuild/rules_closure/archive/308b05b2419edb5c8ee0471b67a40403df940149.tar.gz",
-        "https://github.com/bazelbuild/rules_closure/archive/308b05b2419edb5c8ee0471b67a40403df940149.tar.gz",  # 2019-06-13
-    ],
-)
-http_archive(
-    name = "bazel_skylib",
-    sha256 = "1dde365491125a3db70731e25658dfdd3bc5dbdfd11b840b3e987ecf043c7ca0",
-    urls = [
-        "https://storage.googleapis.com/mirror.tensorflow.org/github.com/bazelbuild/bazel-skylib/releases/download/0.9.0/bazel_skylib-0.9.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-skylib/releases/download/0.9.0/bazel_skylib-0.9.0.tar.gz",
-    ],
-)  # https://github.com/bazelbuild/bazel-skylib/releases
-
-
-# END: Upstream TensorFlow dependencies
 
 load("@tensorflow_serving//tensorflow_serving:workspace.bzl", "tf_serving_workspace")
 tf_serving_workspace()
 
-# Specify the minimum required bazel version.
-load("@org_tensorflow//tensorflow:version_check.bzl", "check_bazel_version_at_least")
-
-check_bazel_version_at_least("2.0.0")
-
-# GPRC deps, required to match TF's.  Only after calling tf_serving_workspace()
-load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
-
-grpc_deps()
-
-load("@upb//bazel:repository_defs.bzl", "bazel_version_repository")
-
-bazel_version_repository(name = "bazel_version")
-
-# LIBCRYPTO
-new_local_repository(
-    name = "crypto_lib",
-    path = "/usr/local/ssl/lib",
-    build_file_content = """
-cc_library(
-    name = "libcrypto",
-    srcs = ["libcrypto.so","libcrypto.so.1.1"],
-    visibility = ["//visibility:public"],
+# Check bazel version requirement, which is stricter than TensorFlow's.
+load(
+    "@org_tensorflow//tensorflow:version_check.bzl",
+    "check_bazel_version_at_least"
 )
-""",
-)
+check_bazel_version_at_least("3.7.2")
+
+# Initialize TensorFlow's external dependencies.
+load("@org_tensorflow//tensorflow:workspace3.bzl", "workspace")
+workspace()
+load("@org_tensorflow//tensorflow:workspace2.bzl", "workspace")
+workspace()
+load("@org_tensorflow//tensorflow:workspace1.bzl", "workspace")
+workspace()
+load("@org_tensorflow//tensorflow:workspace0.bzl", "workspace")
+workspace()
+
+# Initialize bazel package rules' external dependencies.
+load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
+rules_pkg_dependencies()
 
 # AWS S3 SDK
 new_local_repository(
@@ -150,6 +135,7 @@ http_archive(
     sha256 = "a370bcf2913717c674a7250c4a310250448ffeb751b930be559a6f1887155f3b",
     strip_prefix = "google-cloud-cpp-0.21.0",
     url = "https://github.com/googleapis/google-cloud-cpp/archive/v0.21.0.tar.gz",
+    repo_mapping = {"@com_github_curl_curl" : "@curl"}
 )
 
 load("@com_github_googleapis_google_cloud_cpp//bazel:google_cloud_cpp_deps.bzl", "google_cloud_cpp_deps")

@@ -40,6 +40,8 @@ def prepare_json(request):
             with open(new_file_path, "w+") as config_file:
                 for line in template:
                     if "{path}" in line:
-                        config_file.write(line.replace("{path}", config.models_path))
-                    else:
-                        config_file.write(line)
+                        line = line.replace("{path}", config.models_path)
+                    elif "{target_device}" in line:
+                        line = line.replace("{target_device}", config.target_device)
+
+                    config_file.write(line)
