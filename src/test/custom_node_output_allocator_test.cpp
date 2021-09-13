@@ -133,5 +133,5 @@ TEST(CustomNodeOutputAllocator, BlobReturnsCorrectPointer) {
     std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocator>(tensor, library);
     InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<float>(desc, customNodeOutputAllocator);
     blob->allocate();
-    EXPECT_EQ(static_cast<unsigned char*>(blob->buffer()), tensor.data);
+    EXPECT_EQ(static_cast<unsigned char*>(InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rwmap()), tensor.data);
 }

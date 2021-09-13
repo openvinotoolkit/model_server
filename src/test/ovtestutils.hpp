@@ -82,12 +82,12 @@ class MockIInferRequestFailingInSetBlob : public MockIInferRequest {
     }
 };
 
-class MockBlob : public InferenceEngine::Blob {
+class MockBlob : public InferenceEngine::MemoryBlob {
 public:
     using Ptr = std::shared_ptr<MockBlob>;
     MOCK_METHOD(size_t, element_size, (), (const, noexcept));
     MockBlob(const InferenceEngine::TensorDesc& tensorDesc) :
-        Blob(tensorDesc) {
+        MemoryBlob(tensorDesc) {
         to = const_cast<char*>("12345678");
         _allocator = details::make_pre_allocator(to, 8);
     }
@@ -96,7 +96,14 @@ public:
     InferenceEngine::LockedMemory<void> buffer() noexcept {
         return LockedMemory<void>(_allocator.get(), to, 0);
     }
+    InferenceEngine::LockedMemory<void> rwmap() noexcept {
+        return LockedMemory<void>(_allocator.get(), to, 0);
+    }
+    InferenceEngine::LockedMemory<const void> rmap() const noexcept {
+        return LockedMemory<const void>(_allocator.get(), to, 0);
+    }
     MOCK_METHOD(InferenceEngine::LockedMemory<const void>, cbuffer, (), (const, noexcept));
+    MOCK_METHOD(InferenceEngine::LockedMemory<void>, wmap, (), (noexcept));
     MOCK_METHOD(const std::shared_ptr<InferenceEngine::IAllocator>&, getAllocator, (), (const, noexcept));
     MOCK_METHOD(void*, getHandle, (), (const, noexcept));
 

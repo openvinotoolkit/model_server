@@ -91,6 +91,7 @@ constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
 constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
 constexpr const int DUMMY_MODEL_OUTPUT_SIZE = 10;
 constexpr const float DUMMY_ADDITION_VALUE = 1.0;
+const std::vector<size_t> DUMMY_MODEL_SHAPE{1, 10};
 
 constexpr const char* SUM_MODEL_INPUT_NAME_1 = "input1";
 constexpr const char* SUM_MODEL_INPUT_NAME_2 = "input2";
@@ -244,3 +245,4 @@ static ovms::NodeLibrary createLibraryMock() {
 extern bool isShapeTheSame(const tensorflow::TensorShapeProto&, const std::vector<int64_t>&&);
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);
+void readImage(const std::string& path, size_t& filesize, std::unique_ptr<char[]>& image_bytes);

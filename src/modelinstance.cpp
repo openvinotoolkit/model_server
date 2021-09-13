@@ -346,7 +346,7 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
         if (res == CustomLoaderStatus::MODEL_TYPE_IR) {
             Blob::Ptr blobWts = make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C});
             blobWts->allocate();
-            std::memcpy(blobWts->buffer(), weights.data(), weights.size());
+            std::memcpy(InferenceEngine::as<InferenceEngine::MemoryBlob>(blobWts)->wmap(), weights.data(), weights.size());
             network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel, blobWts));
         } else if (res == CustomLoaderStatus::MODEL_TYPE_ONNX) {
             network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel, InferenceEngine::Blob::CPtr()));
@@ -545,7 +545,7 @@ Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelP
     if ((this->config.isCustomLoaderRequiredToLoadModel()) && (isCustomLoaderConfigChanged)) {
         // unloading and the loading back the model
         isCustomLoaderConfigChanged = false;
-        unloadModel(isCustomLoaderConfigChanged);
+        retireModel(isCustomLoaderConfigChanged);
     }
     return loadModelImpl(config, parameter);
 }
@@ -554,7 +554,7 @@ Status ModelInstance::recoverFromReloadingError(const Status& status) {
     SPDLOG_WARN("Failed to perform complete reload with requested dynamic parameter. Model: {} version: {} with error: {}. Reloading to previous configuration",
         getName(), getVersion(), status.string());
     bool changeStatus{false};
-    unloadModel(changeStatus);
+    retireModel(changeStatus);
 
     auto recoveryStatus = reloadModel(config);
     if (!recoveryStatus.ok()) {
@@ -568,7 +568,7 @@ Status ModelInstance::reshapeWithFullReload(const Status& status, const DynamicM
     SPDLOG_WARN("Failed to reload model: {} version: {} with error: {}. Trying to perform complete reload with requested dynamic parameter",
         getName(), getVersion(), status.string());
     bool changeStatus{false};
-    unloadModel(changeStatus);
+    retireModel(changeStatus);
 
     auto recoveryStatus = reloadModel(config, parameter);
     if (!recoveryStatus.ok()) {
@@ -681,14 +681,26 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
     }
 }
 
-void ModelInstance::unloadModel(bool isPermanent, bool isError) {
+void ModelInstance::retireModel(bool isPermanent) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
-    ModelVersionStatusErrorCode errorStatus = isError ? ModelVersionStatusErrorCode::UNKNOWN : ModelVersionStatusErrorCode::OK;
     if (isPermanent) {
-        this->status.setUnloading(errorStatus);
+        this->status.setUnloading();
     } else {
-        this->status.setLoading(errorStatus);
+        this->status.setLoading();
     }
+    unloadModelComponents();
+    if (isPermanent) {
+        status.setEnd();
+    }
+}
+
+void ModelInstance::cleanupFailedLoad() {
+    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
+    this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
+    unloadModelComponents();
+}
+
+void ModelInstance::unloadModelComponents() {
     subscriptionManager.notifySubscribers();
     while (!canUnloadInstance()) {
         SPDLOG_DEBUG("Waiting to unload model: {} version: {}. Blocked by: {} inferences in progres.",
@@ -702,9 +714,6 @@ void ModelInstance::unloadModel(bool isPermanent, bool isError) {
     outputsInfo.clear();
     inputsInfo.clear();
     modelFiles.clear();
-    if (isPermanent) {
-        status.setEnd();
-    }
 
     if (this->config.isCustomLoaderRequiredToLoadModel()) {
         custom_loader_options_config_t customLoaderOptionsConfig = this->config.getCustomLoaderOptionsConfigMap();
@@ -725,7 +734,7 @@ const Status ModelInstance::checkIfShapeValuesNegative(const tensorflow::TensorP
     for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
         if (requestInput.tensor_shape().dim(i).size() < 0) {
             const std::string details = "Negative dimension size is not acceptable: " + TensorInfo::tensorShapeToString(requestInput.tensor_shape());
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
+            SPDLOG_DEBUG("[Model: {} version: {}] Invalid shape - {}", getName(), getVersion(), details);
             return Status(StatusCode::INVALID_SHAPE, details);
         }
     }
@@ -861,8 +870,7 @@ const bool ModelInstance::checkBinaryInputBatchSizeMismatch(const ovms::TensorIn
     return false;
 }
 
-const Status ModelInstance::validateNumberOfBinaryInputShapeDimensions(const ovms::TensorInfo& networkInput,
-    const tensorflow::TensorProto& requestInput) {
+const Status ModelInstance::validateNumberOfBinaryInputShapeDimensions(const tensorflow::TensorProto& requestInput) {
     if (requestInput.tensor_shape().dim_size() != 1) {
         std::stringstream ss;
         ss << "Expected number of binary input shape dimensions: 1; Actual: " << requestInput.tensor_shape().dim_size();
@@ -907,7 +915,7 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
             // binary inputs will be validated during conversion to blob
             SPDLOG_DEBUG("Received request containing binary inputs");
-            status = validateNumberOfBinaryInputShapeDimensions(*networkInput, requestInput);
+            status = validateNumberOfBinaryInputShapeDimensions(requestInput);
             if (!status.ok()) {
                 return status;
             }
@@ -1002,7 +1010,9 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
 
     timer.start("deserialize");
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inferRequest);
+    InputSink<InferRequest&> inputSink(inferRequest);
+    bool isPipeline = false;
+    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
     timer.stop("deserialize");
     if (!status.ok())
         return status;

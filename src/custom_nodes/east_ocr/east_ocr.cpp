@@ -456,7 +456,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     NODE_ASSERT(((*info)[1].dims) != nullptr, "malloc has failed");
     (*info)[1].dims[0] = 0;
     (*info)[1].dims[1] = 1;
-    (*info)[1].dims[2] = 5;
+    (*info)[1].dims[2] = 4;
     (*info)[1].precision = I32;
 
     (*info)[2].name = CONFIDENCE_TENSOR_NAME;

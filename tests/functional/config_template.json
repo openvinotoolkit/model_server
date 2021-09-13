@@ -5,28 +5,32 @@
         "name":"resnet",
         "base_path":"{path}/resnet",
         "batch_size":"auto",
-        "nireq": 4
+        "nireq": 4,
+        "target_device": "{target_device}"
       }
     },
     {
       "config":{
         "name":"resnet_bs4",
         "base_path":"{path}/resnet_bs4",
-        "nireq": 1
+        "nireq": 1,
+        "target_device": "{target_device}"
       }
     },
     {
       "config":{
         "name":"resnet_bs8",
         "base_path":"{path}/resnet_bs8",
-        "nireq": 1
+        "nireq": 1,
+        "target_device": "{target_device}"
       }
     },
     {
       "config": {
         "name": "pvb_detection",
         "base_path": "{path}/pvb_detection",
-        "batch_size":"4"
+        "batch_size":"4",
+        "target_device": "{target_device}"
       }
     },
     {
@@ -34,34 +38,39 @@
         "name": "pvb_face_multi_version",
         "base_path": "{path}/pvb_face_multi_version",
         "model_version_policy": {"all": {}},
-        "plugin_config": {"CPU_THROUGHPUT_STREAMS":  "CPU_THROUGHPUT_AUTO"}
+        "plugin_config": {"CPU_THROUGHPUT_STREAMS":  "CPU_THROUGHPUT_AUTO"},
+        "target_device": "{target_device}"
       }
     },
     {
       "config": {
         "name": "resnet_s3",
-        "base_path": "s3://inference/resnet"
+        "base_path": "s3://inference/resnet",
+        "target_device": "{target_device}"
       }
     },
     {
       "config": {
         "name": "face_detection_auto",
         "base_path": "{path}/face_detection",
-        "shape": "auto"
+        "shape": "auto",
+        "target_device": "{target_device}"
       }
     },
     {
       "config": {
         "name": "face_detection_fixed_nonamed",
         "base_path": "{path}/face_detection",
-        "shape": "(1, 3, 600, 600)"
+        "shape": "(1, 3, 600, 600)",
+        "target_device": "{target_device}"
       }
     },
     {
       "config": {
         "name": "face_detection_fixed_named",
         "base_path": "{path}/face_detection",
-        "shape": {"data":  "(1, 3, 600, 600)"}
+        "shape": {"data":  "(1, 3, 600, 600)"},
+        "target_device": "{target_device}"
       }
     }
   ]

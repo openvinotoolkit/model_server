@@ -280,7 +280,7 @@ The purpose of this example is to show how to send inputs from multiple sources 
 
 To run this example you will need to run the OpenVINO hddldaemon and OpenVINO model server separately. Below are the steps
 to install and run them (provided for Linux OS):
- 1. Setup [OpenVINO](https://docs.openvinotoolkit.org/2019_R2/_docs_install_guides_installing_openvino_linux.html) & [HDDL](https://docs.openvinotoolkit.org/2019_R2/_docs_install_guides_installing_openvino_linux_ivad_vpu.html):
+ 1. Setup [OpenVINO](https://docs.openvinotoolkit.org/2021.4/openvino_docs_get_started_get_started_linux.html) & [HDDL](https://docs.openvinotoolkit.org/2021.4/openvino_docs_install_guides_installing_openvino_linux_ivad_vpu.html):
 
  2. Setup [OVMS](https://github.com/IntelAI/OpenVINO-model-server/blob/master/docs/docker_container.md#starting-docker-container-with-hddl)  to use HDDL:
 
@@ -397,9 +397,9 @@ usage: get_serving_meta.py [-h] [--grpc_address GRPC_ADDRESS]
 | Argument      | Description |
 | :---        |    :----   |
 | -h, --help | Show help message and exit|
-| --rest_url REST_URL | Specify url to REST API service. Default:http://localhost|
+| --rest_url REST_URL | Specify url to REST API service. Default: http://localhost|
 | --rest_port REST_PORT | Specify port to REST API service. Default: 9000|
-| --model_name MODEL_NAME| Model name to query, must be same as is in service. Default : resnet|
+| --model_name MODEL_NAME| Model name to query, must be same as is in service. Default: resnet|
 | --model_version MODEL_VERSION | Model version to query - must be numerical. List all version if omitted|
 
 - Usage Example

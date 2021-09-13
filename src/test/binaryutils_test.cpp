@@ -62,6 +62,18 @@ TEST_F(BinaryUtilsTest, tensorWithInvalidImage) {
     EXPECT_EQ(convertStringValToBlob(stringValInvalidImage, blob, tensorInfo, false), ovms::StatusCode::IMAGE_PARSING_FAILED);
 }
 
+TEST_F(BinaryUtilsTest, tensorWithEmptyStringVal) {
+    tensorflow::TensorProto stringValEmptyImage;
+    InferenceEngine::Blob::Ptr blob;
+    stringValEmptyImage.set_dtype(tensorflow::DataType::DT_STRING);
+    std::string invalidImage = "";
+    stringValEmptyImage.add_string_val(invalidImage);
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 3, 1, 1}, InferenceEngine::Layout::NHWC);
+
+    EXPECT_EQ(convertStringValToBlob(stringValEmptyImage, blob, tensorInfo, false), ovms::StatusCode::STRING_VAL_EMPTY);
+}
+
 TEST_F(BinaryUtilsTest, tensorWithNonSupportedLayout) {
     InferenceEngine::Blob::Ptr blob;
 
@@ -103,7 +115,7 @@ TEST_F(BinaryUtilsTest, positive_rgb) {
 
     ASSERT_EQ(convertStringValToBlob(stringVal, blob, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(blob->size(), 3);
-    uint8_t* ptr = blob->buffer();
+    uint8_t* ptr = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<uint8_t*>();
     EXPECT_EQ(std::equal(ptr, ptr + blob->size(), rgb_expected_blob), true);
 }
 
@@ -127,7 +139,7 @@ TEST_F(BinaryUtilsTest, positive_grayscale) {
 
     ASSERT_EQ(convertStringValToBlob(grayscaleStringVal, blob, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(blob->size(), 1);
-    uint8_t* ptr = blob->buffer();
+    uint8_t* ptr = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<uint8_t*>();
     EXPECT_EQ(std::equal(ptr, ptr + blob->size(), grayscale_expected_blob), true);
 }
 
@@ -141,7 +153,7 @@ TEST_F(BinaryUtilsTest, positive_batch_size_2) {
 
     ASSERT_EQ(convertStringValToBlob(stringVal, blob, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(blob->size(), 6);
-    uint8_t* ptr = blob->buffer();
+    uint8_t* ptr = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<uint8_t*>();
     EXPECT_EQ(std::equal(ptr, ptr + blob->size(), rgb_batchsize_2_blob), true);
 }
 
@@ -154,7 +166,7 @@ TEST_F(BinaryUtilsTest, positive_precision_changed) {
 
     ASSERT_EQ(convertStringValToBlob(stringVal, blob, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(blob->size(), 3);
-    uint8_t* ptr = blob->buffer();
+    uint8_t* ptr = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<uint8_t*>();
     int I32_size = 4;
     EXPECT_EQ(std::equal(ptr, ptr + blob->size() * I32_size, rgb_precision_changed_expected_blob), true);
 }
@@ -168,7 +180,7 @@ TEST_F(BinaryUtilsTest, positive_nhwc_layout) {
 
     ASSERT_EQ(convertStringValToBlob(stringVal, blob, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(blob->size(), 3);
-    uint8_t* ptr = blob->buffer();
+    uint8_t* ptr = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<uint8_t*>();
 
     EXPECT_EQ(std::equal(ptr, ptr + blob->size(), rgb_expected_blob), true);
 }
@@ -182,7 +194,7 @@ TEST_F(BinaryUtilsTest, positive_resizing) {
 
     ASSERT_EQ(convertStringValToBlob(stringVal, blob, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(blob->size(), 12);
-    uint8_t* ptr = blob->buffer();
+    uint8_t* ptr = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<uint8_t*>();
     EXPECT_EQ(std::equal(ptr, ptr + blob->size(), rgb_expected_blob), true);
 }
 }  // namespace

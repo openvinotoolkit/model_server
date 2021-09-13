@@ -7,7 +7,7 @@ index 13a3f01d..8f326366 100644
  
    set(WARNINGS -Wall -Wextra -Wunused-parameter -Wcast-align -Wcast-qual -Wconversion -Wformat=2 -Winit-self -Winvalid-pch -Wmissing-format-attribute -Wmissing-include-dirs -Wpacked -Wredundant-decls -Wunreachable-code)
 -  set(LD_FLAGS "${LD_FLAGS} -Wl,-z,defs")
-+  set(LD_FLAGS "${LD_FLAGS} -Bstatic,-lcrypto,-lssl,-Bdynamic,-Wl,-z,defs,--exclude-libs,ALL")
++  set(LD_FLAGS "${LD_FLAGS} -Wl,-z,defs,--exclude-libs,ALL")
  
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-strict-aliasing")
    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
@@ -40,97 +40,4 @@ index 3c857baf..d3f27bcd 100644
      else()
        target_link_libraries(cpprestsdk_boost_internal INTERFACE
          Boost::boost
-diff --git a/Release/cmake/cpprest_find_openssl.cmake b/Release/cmake/cpprest_find_openssl.cmake
-index 93336636..40024f69 100644
---- a/Release/cmake/cpprest_find_openssl.cmake
-+++ b/Release/cmake/cpprest_find_openssl.cmake
-@@ -3,67 +3,23 @@ function(cpprest_find_openssl)
-     return()
-   endif()
- 
--  if(IOS)
--    set(IOS_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../Build_iOS")
- 
--    set(OPENSSL_INCLUDE_DIR "${IOS_SOURCE_DIR}/openssl/include" CACHE INTERNAL "")
-+    set(OPENSSL_INCLUDE_DIR "/usr/local/ssl/include" CACHE INTERNAL "")
-     set(OPENSSL_LIBRARIES
--      "${IOS_SOURCE_DIR}/openssl/lib/libcrypto.a"
--      "${IOS_SOURCE_DIR}/openssl/lib/libssl.a"
--      CACHE INTERNAL ""
--      )
--    set(_SSL_LEAK_SUPPRESS_AVAILABLE ON CACHE INTERNAL "")
--  elseif(ANDROID)
--    if(ARM)
--      set(OPENSSL_INCLUDE_DIR "${CMAKE_BINARY_DIR}/../openssl/armeabi-v7a/include" CACHE INTERNAL "")
--      set(OPENSSL_LIBRARIES
--        "${CMAKE_BINARY_DIR}/../openssl/armeabi-v7a/lib/libssl.a"
--        "${CMAKE_BINARY_DIR}/../openssl/armeabi-v7a/lib/libcrypto.a"
--        CACHE INTERNAL ""
--        )
--    else()
--      set(OPENSSL_INCLUDE_DIR "${CMAKE_BINARY_DIR}/../openssl/x86/include" CACHE INTERNAL "")
--      set(OPENSSL_LIBRARIES
--        "${CMAKE_BINARY_DIR}/../openssl/x86/lib/libssl.a"
--        "${CMAKE_BINARY_DIR}/../openssl/x86/lib/libcrypto.a"
--        CACHE INTERNAL ""
--        )
--    endif()
--    set(_SSL_LEAK_SUPPRESS_AVAILABLE ON CACHE INTERNAL "")
--  else()
--    if(APPLE)
--      if(NOT DEFINED OPENSSL_ROOT_DIR)
--        # Prefer a homebrew version of OpenSSL over the one in /usr/lib
--        file(GLOB OPENSSL_ROOT_DIR /usr/local/Cellar/openssl*/*)
--        # Prefer the latest (make the latest one first)
--        list(REVERSE OPENSSL_ROOT_DIR)
--        list(GET OPENSSL_ROOT_DIR 0 OPENSSL_ROOT_DIR)
--      endif()
--      # This should prevent linking against the system provided 0.9.8y
--      message(STATUS "OPENSSL_ROOT_DIR = ${OPENSSL_ROOT_DIR}")
--      set(_OPENSSL_VERSION "")
--    endif()
--    if(UNIX)
--      find_package(PkgConfig)
--      pkg_search_module(OPENSSL openssl)
--    endif()
--    if(OPENSSL_FOUND)
--      target_link_libraries(cpprest PRIVATE ${OPENSSL_LDFLAGS})
--    else()
--      find_package(OpenSSL 1.0.0 REQUIRED)
--    endif()
-+    "/usr/local/ssl/lib/libssl.a"
-+    "/usr/local/ssl/lib/libcrypto.a"
-+    )
- 
-     INCLUDE(CheckCXXSourceCompiles)
-     set(CMAKE_REQUIRED_INCLUDES "${OPENSSL_INCLUDE_DIR}")
-     set(CMAKE_REQUIRED_LIBRARIES "${OPENSSL_LIBRARIES}")
-     CHECK_CXX_SOURCE_COMPILES("
--      #include <openssl/ssl.h>
--      int main()
--      {
--      ::SSL_COMP_free_compression_methods();
--      }
-+        #include <openssl/ssl.h>
-+        int main()
-+        {
-+        ::SSL_COMP_free_compression_methods();
-+        }
-     " _SSL_LEAK_SUPPRESS_AVAILABLE)
--  endif()
- 
-   add_library(cpprestsdk_openssl_internal INTERFACE)
-   if(TARGET OpenSSL::SSL)
-diff --git a/Release/src/CMakeLists.txt b/Release/src/CMakeLists.txt
-index a2d4d30b..b8b45c55 100644
---- a/Release/src/CMakeLists.txt
-+++ b/Release/src/CMakeLists.txt
-@@ -190,6 +190,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-     target_compile_options(cpprest PRIVATE -Werror)
-   endif()
-   target_compile_options(cpprest PRIVATE -pedantic ${WARNINGS})
-+  target_link_libraries(cpprest PRIVATE "-Wl,--exclude-libs,ALL")
- elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-   if(WERROR)
-     target_compile_options(cpprest PRIVATE /WX ${WARNINGS})
 

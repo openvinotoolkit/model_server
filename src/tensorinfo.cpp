@@ -85,6 +85,10 @@ const std::string& TensorInfo::getMappedName() const {
     return mapping.size() == 0 ? name : mapping;
 }
 
+void TensorInfo::setMappedName(const std::string& mappedName) {
+    mapping = mappedName;
+}
+
 const InferenceEngine::Precision TensorInfo::getPrecision() const {
     return precision;
 }
@@ -305,6 +309,7 @@ std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const shape_t& sh
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithEffectiveDimensionPrefix(size_t dim) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->influencedByDemultiplexer = true;
+    copy->effectiveShape = this->getEffectiveShape();
     copy->effectiveShape.insert(copy->effectiveShape.begin(), dim);
     return copy;
 }

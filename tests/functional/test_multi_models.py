@@ -16,18 +16,22 @@
 import pytest
 import numpy as np
 from constants import MODEL_SERVICE, ERROR_SHAPE
+from config import target_device, skip_nginx_test, skip_hddl_tests
 from model.models_information import Resnet, ResnetBS4, ResnetBS8, ResnetS3
 from utils.grpc import create_channel, infer, get_model_metadata, \
     model_metadata_response, get_model_status
-from utils.logger import get_logger
+import logging
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
 from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_rest, \
     get_model_metadata_response_rest, get_model_status_response_rest
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
-
+@pytest.mark.skipif(skip_hddl_tests, reason="Shapes are not supported by HDDL")
+@pytest.mark.skipif(skip_nginx_test, reason="not implemented yet")
+@pytest.mark.skipif(target_device == "MYRIAD", reason="error: Cannot load network into target device")
+@pytest.mark.skipif(target_device == "GPU", reason="Unsupported property key by plugin: CPU_THROUGHPUT_STREAMS")
 class TestMultiModelInference:
 
     def test_run_inference(self, start_server_multi_model):

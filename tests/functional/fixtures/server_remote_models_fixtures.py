@@ -27,7 +27,7 @@ from object_model.server import Server
 from utils.parametrization import get_tests_suffix
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="session")
 def start_server_single_model_from_gc(request):
 
     start_server_command_args = {"model_name": Resnet.name,
@@ -40,7 +40,8 @@ def start_server_single_model_from_gc(request):
     container_name_infix = "test-single-gs"
     envs = ['https_proxy=' + os.getenv('https_proxy', "")]
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command, envs)
+                    container_name_infix, config.start_container_command, envs,
+                    target_device=config.target_device)
     return server.start()
 
 
@@ -123,20 +124,19 @@ def get_minio_server_s3(start_minio_server):
                         config=Config(signature_version='s3v4'),
                         region_name=aws_region)
 
-    bucket_conf = {'LocationConstraint': aws_region}
+    bucket = s3.Bucket('inference')
+    if not bucket.creation_date:
+        bucket_conf = {'LocationConstraint': aws_region}
+        s3.create_bucket(Bucket='inference',
+                         CreateBucketConfiguration=bucket_conf)
 
-    s3.create_bucket(Bucket='inference',
-                     CreateBucketConfiguration=bucket_conf)
-
-    s3.Bucket('inference').upload_file(input_bin,
-                                       '{name}/{version}/{name}.bin'.format(name=Resnet.name, version=Resnet.version))
-    s3.Bucket('inference').upload_file(input_xml,
-                                       '{name}/{version}/{name}.xml'.format(name=Resnet.name, version=Resnet.version))
+    bucket.upload_file(input_bin, '{name}/{version}/{name}.bin'.format(name=Resnet.name, version=Resnet.version))
+    bucket.upload_file(input_xml, '{name}/{version}/{name}.xml'.format(name=Resnet.name, version=Resnet.version))
 
     return s3, ports, minio_container
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="session")
 def start_server_single_model_from_minio(request, get_minio_server_s3):
 
     aws_access_key_id = os.getenv('MINIO_ACCESS_KEY')
@@ -162,5 +162,6 @@ def start_server_single_model_from_minio(request, get_minio_server_s3):
                                  "model_path": ResnetS3.model_path}
     container_name_infix = "test-single-minio"
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command, envs)
+                    container_name_infix, config.start_container_command, envs,
+                    target_device=config.target_device)
     return server.start()

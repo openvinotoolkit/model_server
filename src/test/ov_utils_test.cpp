@@ -52,16 +52,16 @@ TEST(OVUtils, CopyBlob) {
     ASSERT_EQ(copyBlob->byteSize(), totalByteSize);
 
     std::vector<float> originalBlobActualData;
-    originalBlobActualData.assign((float*)originalBlob->buffer(), ((float*)originalBlob->buffer()) + elementsCount);
+    originalBlobActualData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(originalBlob)->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(originalBlob)->rmap().as<float*>() + elementsCount);
 
     std::vector<float> copyBlobActualData;
-    copyBlobActualData.assign((float*)copyBlob->buffer(), ((float*)copyBlob->buffer()) + elementsCount);
+    copyBlobActualData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(copyBlob)->rwmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(copyBlob)->rwmap().as<float*>() + elementsCount);
 
     EXPECT_EQ(originalBlobActualData, data);
     EXPECT_EQ(copyBlobActualData, data);
 
     // Expect memory addresses to differ since cloning should allocate new memory space for the cloned blob
-    EXPECT_NE((float*)copyBlob->buffer(), (float*)originalBlob->buffer());
+    EXPECT_NE(InferenceEngine::as<InferenceEngine::MemoryBlob>(copyBlob)->rwmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(originalBlob)->rwmap().as<float*>());
 }
 
 TEST(OVUtils, ConstCopyBlob) {
@@ -93,15 +93,15 @@ TEST(OVUtils, ConstCopyBlob) {
     ASSERT_EQ(copyBlob->byteSize(), totalByteSize);
 
     std::vector<float> originalBlobActualData;
-    const void* start = (const void*)(originalBlob->cbuffer());
+    const void* start = (const void*)(InferenceEngine::as<InferenceEngine::MemoryBlob>(originalBlob)->rmap());
     originalBlobActualData.assign((float*)start, (float*)start + elementsCount);
 
     std::vector<float> copyBlobActualData;
-    copyBlobActualData.assign((float*)copyBlob->buffer(), ((float*)copyBlob->buffer()) + elementsCount);
+    copyBlobActualData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(copyBlob)->rmap().as<float*>(), (InferenceEngine::as<InferenceEngine::MemoryBlob>(copyBlob)->rmap().as<float*>()) + elementsCount);
 
     EXPECT_EQ(originalBlobActualData, data);
     EXPECT_EQ(copyBlobActualData, data);
 
     // Expect memory addresses to differ since cloning should allocate new memory space for the cloned blob
-    EXPECT_NE((void*)copyBlob->buffer(), (const void*)originalBlob->cbuffer());
+    EXPECT_NE(InferenceEngine::as<InferenceEngine::MemoryBlob>(copyBlob)->rwmap().as<void*>(), (const void*)InferenceEngine::as<InferenceEngine::MemoryBlob>(originalBlob)->rmap());
 }

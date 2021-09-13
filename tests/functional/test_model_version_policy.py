@@ -21,17 +21,20 @@ from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2  # noqa
 
 from constants import MODEL_SERVICE
+from config import target_device, skip_nginx_test
 from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2
 from utils.grpc import create_channel, get_model_metadata, model_metadata_response, \
     get_model_status
-from utils.logger import get_logger
+import logging
 from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
 from utils.rest import get_metadata_url, get_status_url, get_model_status_response_rest
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
-
+@pytest.mark.skipif(skip_nginx_test, reason="not implemented yet")
+@pytest.mark.skipif(target_device=="MYRIAD",
+                    reason="requires multiple models to be loaded, too much for NCS (MYRIAD) device")
 class TestModelVerPolicy:
 
     @pytest.mark.parametrize("model_name, throw_error", [

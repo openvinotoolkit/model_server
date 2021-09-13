@@ -27,8 +27,10 @@ In-case of problems, see <a href="#debug">Debugging</a>.
 ### Step 1: Compile source code
 1. Build the development `openvino/model_server-build` Docker* image
    ```bash
-   make docker_build 
+   make docker_build
+   ```
    or
+   ```
    make docker_build DLDT_PACKAGE_URL=<URL>
    ```
    > **Note**: URL to OpenVINO Toolkit package can be received after registration on [OpenVINO&trade; Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download)
@@ -63,8 +65,8 @@ In-case of problems, see <a href="#debug">Debugging</a>.
 	* With a Docker cache :
 	
 	```bash
-	OVMS_CPP_DOCKER_IMAGE=<unique_image_name> make docker_build
-    OVMS_CPP_DOCKER_IMAGE=<unique_image_name> make test_functional
+	OVMS_CPP_DOCKER_IMAGE=<replace_with_unique_image_name> make docker_build
+    OVMS_CPP_DOCKER_IMAGE=<replace_with_unique_image_name> make test_functional
     OVMS_CPP_CONTAINTER_PORT=<unique_network_port> make test_perf
 	```
 
@@ -265,10 +267,10 @@ Two debugging options are available. Click on the required option :
 	```
 	docker run -it --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -v ${PWD}:/ovms -p 9178:9178 --entrypoint bash openvino/model_server-build:latest
 	```
-3.	Recompile the OpenVINO Model Server with debug symbols using command. 	
+3.	Assuming resnet50 model is prepared for OVMS in /models catalog recompile the OpenVINO Model Server with debug symbols using command:
     ```
 	[root@72dc3b874772 ovms]# bazel build //src:ovms -c dbg
-    [root@72dc3b874772 ovms]# gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /model
+    [root@72dc3b874772 ovms]# gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /models
 	```
     > **NOTE**: For best results, use the makefile parameter `BAZEL_BUILD_TYPE=dbg` to build the dependencies in debug mode as shown above
 
@@ -287,7 +289,7 @@ Two debugging options are available. Click on the required option :
 
 Use OpenVINO Model Server build image because it installs the necessary tools.
 
-1. Add the ENTRYPOINT line in Dockerfile.centos to :
+1. Add the ENTRYPOINT line in Dockerfile.ubuntu to :
 	```
 	ENTRYPOINT ["/bin/bash", "-c", "sleep 3600; echo 'Server started on port'; sleep 100000"]
 	```

@@ -48,7 +48,7 @@ Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const T sourceBlob
         destinationBlob = nullptr;
         return StatusCode::OV_CLONE_BLOB_ERROR;
     }
-    std::memcpy((void*)destinationBlob->buffer(), (const void*)sourceBlob->cbuffer(), sourceBlob->byteSize());
+    std::memcpy(InferenceEngine::as<InferenceEngine::MemoryBlob>(destinationBlob)->wmap().as<void*>(), (const void*)InferenceEngine::as<InferenceEngine::MemoryBlob>(sourceBlob)->rmap(), sourceBlob->byteSize());
     return StatusCode::OK;
 }
 }  // namespace ovms

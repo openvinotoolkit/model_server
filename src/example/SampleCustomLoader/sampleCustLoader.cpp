@@ -345,7 +345,7 @@ CustomLoaderStatus custSampleLoader::loadModel(const std::string& modelName, con
         return st;
     }
 
-    // Before loading the modelm, first check if it is disabled in the "enable" file to start with
+    // Before loading the model, first check if it is disabled in the "enable" file to start with
     if (!(enableFile.empty())) {
         std::cout << "Reading Enable File:: " << enableFile << std::endl;
         std::ifstream fileToRead(enableFile);

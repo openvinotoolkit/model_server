@@ -22,22 +22,22 @@ STYLE_CHECK_OPTS := --extensions=hpp,cc,cpp,h \
 	--recursive \
 	--linelength=120 \
 	--filter=-build/c++11,-runtime/references,-whitespace/braces,-whitespace/indent,-build/include_order,-runtime/indentation_namespace,-build/namespaces,-whitespace/line_length,-runtime/string,-readability/casting,-runtime/explicit,-readability/todo
-STYLE_CHECK_DIRS := src
+STYLE_CHECK_DIRS := src example_client/cpp
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
-JOBS ?= $(shell nproc --all)
+JOBS ?= $(shell python3 -c 'import multiprocessing as mp; print(mp.cpu_count())')
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
 # Currently supported BASE_OS values are: ubuntu centos clearlinux
-BASE_OS ?= centos
+BASE_OS ?= ubuntu
 
-BASE_IMAGE ?= centos:7
+BASE_IMAGE ?= ubuntu:20.04
 
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
 
-BASE_OS_TAG_UBUNTU ?= 18.04
+BASE_OS_TAG_UBUNTU ?= 20.04
 BASE_OS_TAG_CENTOS ?= 7
 BASE_OS_TAG_CLEARLINUX ?= latest
 BASE_OS_TAG_REDHAT ?= 8.4
@@ -50,10 +50,9 @@ INSTALL_DRIVER_VERSION ?= "20.35.17767"
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= master
 
-DLDT_PACKAGE_URL ?=
 OV_USE_BINARY ?= 1
 YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7
-
+APT_OV_PACKAGE ?= intel-openvino-runtime-ubuntu20-2021.4.582
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
 
@@ -70,19 +69,23 @@ DIST_OS_TAG ?= $(BASE_OS_TAG)
 
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
+  BASE_IMAGE=ubuntu:$(BASE_OS_TAG_UBUNTU)
+  DLDT_PACKAGE_URL ?=
 endif
 ifeq ($(BASE_OS),centos)
   BASE_OS_TAG=$(BASE_OS_TAG_CENTOS)
+  DLDT_PACKAGE_URL ?=
 endif
 ifeq ($(BASE_OS),clearlinux)
   BASE_OS_TAG=$(BASE_OS_TAG_CLEARLINUX)
+  DLDT_PACKAGE_URL ?=
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.4
   DIST_OS=redhat
   DIST_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino/packages/2021.4/l_openvino_toolkit_runtime_rhel8_p_2021.4.582.tgz
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2021.4/l_openvino_toolkit_runtime_rhel8_p_2021.4.582.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -120,26 +123,26 @@ style: venv clang-format
 
 sdl-check: venv
 	@echo "Checking SDL requirements..."
-	@echo "Checking docker files..."        
-ifneq ($(shell find . -type f -name 'Dockerfile.*' | xargs grep ADD | wc -l), 0)
-	$(error Replace COPY with ADD in dockerfiles)
-endif
-ifneq ($(shell grep -rl "docker run" . | xargs grep "docker run" | grep ":shared" | wc -l), 1)
-	$(error Do not use shared mount in docker files.)
-endif
-ifneq ($(shell grep -rl "bind-propagation=shared" | wc -l), 1)
-	$(error Do not use shared mount in docker files.)
-endif
+	@echo "Checking docker files..."
+	@bash -c "if [ $$(find . -type f -name 'Dockerfile.*' -exec grep ADD {} \; | wc -l | xargs ) -eq 0 ]; then echo 'ok'; else echo 'replace ADD with COPY in dockerfiles'; exit 1 ; fi"
+
 	@echo "Checking python files..."
 	@. $(ACTIVATE); bash -c "bandit example_client/*.py > bandit.txt"
 	@if ! grep -FRq "No issues identified." bandit.txt; then\
 		error Run bandit on src/*.py and example_client/*.py to fix issues.;\
 	fi
 	@rm bandit.txt
+	@. $(ACTIVATE); bash -c "bandit -r client/python/lib/ovmsclient/ > bandit2.txt"
+	@if ! grep -FRq "No issues identified." bandit2.txt; then\
+		error Run bandit on  client/python/lib/ovmsclient/ to fix issues.;\
+	fi
+	@rm bandit2.txt
 	@echo "Checking license headers in files..."
 	@. $(ACTIVATE); bash -c "python3 lib_search.py . > missing_headers.txt"
 	@if ! grep -FRq "All files have headers" missing_headers.txt; then\
-		error Run python3 lib_search.py . to see missing headers file list.;\
+        echo "Files with missing headers";\
+        cat missing_headers.txt;\
+		exit 1;\
 	fi
 	@rm missing_headers.txt
 
@@ -176,6 +179,7 @@ endif
 		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
 		--build-arg YUM_OV_PACKAGE=$(YUM_OV_PACKAGE) \
+		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) \
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
@@ -183,7 +187,7 @@ endif
 		--build-arg JOBS=$(JOBS)
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
-		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) --build-arg BASE_OS=$(BASE_OS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)
 	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && cd dist/$(DIST_OS) && \
@@ -328,6 +332,14 @@ test_throughput_dummy_model: venv
 test_functional: venv
 	@. $(ACTIVATE); pytest --json=report.json -v -s $(TEST_PATH)
 
+# Client library make style target, by default uses Python 3 env in .venv path
+# This fact is used in test_client_lib, where make build runs in .venv Python 3 environment
+test_client_lib:
+	@cd client/python/lib && \
+		make style && \
+		. .venv/bin/activate; make build && \
+		make test && \
+		make clean
 
 tools_get_deps:
 	cd tools/deps/$(BASE_OS) && docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" -t  $(OVMS_CPP_DOCKER_IMAGE)-deps:$(OVMS_CPP_IMAGE_TAG) .

@@ -100,18 +100,17 @@ echo "${new_args[@]}"
 
 echo "Requested ports: GRPC: $GRPC_ORIGINAL_PORT ; REST: $REST_ORIGINAL_PORT "
 
-# select random non-allocated port:
-SELECTED_PORTS=$(python -c '
-import sys
-import random
-not_allowed = [int(x) if x else 0 for x in sys.argv[1:] ]
-first_port = random.choice([x for x in range(7000, 7999) if x not in not_allowed])
-not_allowed.append(first_port)
-second_port = random.choice([x for x in range(7000, 7999) if x not in not_allowed])
-print(str(first_port) + "," + str(second_port))
-' "${GRPC_ORIGINAL_PORT}" "${REST_ORIGINAL_PORT}" )
-GRPC_OVMS_NEW_PORT=$(echo "${SELECTED_PORTS}" | cut -d',' -f1)
-REST_OVMS_NEW_PORT=$(echo "${SELECTED_PORTS}" | cut -d',' -f2)
+# select ports other than specified original:
+GRPC_OVMS_NEW_PORT=7000
+while [ $GRPC_OVMS_NEW_PORT -eq $GRPC_ORIGINAL_PORT ] || [ $GRPC_OVMS_NEW_PORT -eq $REST_ORIGINAL_PORT ]
+do
+    GRPC_OVMS_NEW_PORT=$((GRPC_OVMS_NEW_PORT + 1))
+done
+REST_OVMS_NEW_PORT=$((GRPC_OVMS_NEW_PORT + 1))
+while [ $REST_OVMS_NEW_PORT -eq $GRPC_ORIGINAL_PORT ] || [ $REST_OVMS_NEW_PORT -eq $REST_ORIGINAL_PORT ]
+do
+    REST_OVMS_NEW_PORT=$((REST_OVMS_NEW_PORT + 1))
+done
 
 if [ "$GRPC_ORIGINAL_PORT" != "" ] ; then
     new_args+=("--port=$GRPC_OVMS_NEW_PORT")

@@ -16,6 +16,7 @@
 
 import os
 
+from utils.helpers import get_int, get_bool
 from utils.parametrization import generate_test_object_name
 
 try:
@@ -23,9 +24,6 @@ try:
     import user_config
 except ImportError:
     pass
-
-"""IMAGE - docker image name which should be used to run tests"""
-image = os.environ.get("IMAGE", "openvino/model_server")
 
 """TEST_DIR -  location where models and test data should be copied from TEST_DIR_CACHE and deleted after tests"""
 test_dir = os.environ.get("TEST_DIR", "/tmp/{}".format(generate_test_object_name(prefix='ovms_models')))
@@ -45,7 +43,9 @@ artifacts_dir = os.environ.get("BUILD_LOGS", "")
 start_container_command = os.environ.get("START_CONTAINER_COMMAND", "")
 
 """CONTAINER_LOG_LINE - log line to check in container"""
-container_log_line = os.environ.get("CONTAINER_LOG_LINE", "Server started on port")
+# For multiple log lines, pass them separated with ':'
+container_log_line = os.environ.get("CONTAINER_LOG_LINE", "Server started on port:Started REST server at")
+container_log_line = container_log_line.split(":")
 
 """OVMS_BINARY_PATH - path to ovms binary file; when specified, tests are executed against provided binary."""
 ovms_binary_path = os.environ.get("OVMS_BINARY_PATH", None)
@@ -62,6 +62,57 @@ models_path = path_to_mount if ovms_binary_path else "/opt/ml"
 """TT_MINIO_IMAGE_NAME - Docker image for Minio"""
 minio_image = os.environ.get("TT_MINIO_IMAGE_NAME", "minio/minio:latest")
 
+""" TT_TARGET_DEVICE - one of "CPU", "GPU" """
+target_device = os.environ.get("TT_TARGET_DEVICE", "CPU")
+
+"""IMAGE - docker image name which should be used to run tests"""
+if target_device == "GPU":
+    _default_image = "openvino/model_server-gpu"
+else:
+    _default_image = "openvino/model_server"
+image = os.environ.get("IMAGE", _default_image)
+
 start_minio_container_command = 'server --address ":{}" /data'
 
-container_minio_log_line = "Endpoint:"
+container_minio_log_line = "Console endpoint is listening on a dynamic port"
+
+""" TT_GRPC_OVMS_STARTING_PORT - Grpc port where ovms should be exposed"""
+grpc_ovms_starting_port = get_int("TT_GRPC_OVMS_STARTING_PORT", 9001)
+
+""" TT_REST_OVMS_STARTING_PORT - Rest port where ovms should be exposed"""
+rest_ovms_starting_port = get_int("TT_REST_OVMS_STARTING_PORT", 18001)
+
+""" TT_PORTS_POOL_SIZE- Ports pool size"""
+ports_pool_size = get_int("TT_PORTS_POOL_SIZE", 5000)
+
+""" TT_DEFAULT_INFER_TIMEOUT - Timeout for CPU target device"""
+default_infer_timeout = get_int("TT_DEFAULT_INFER_TIMEOUT", 10)
+
+""" TT_DEFAULT_GPU_INFER_TIMEOUT - Timeout for CPU target device"""
+default_gpu_infer_timeout = get_int("TT_DEFAULT_GPU_INFER_TIMEOUT", 10*default_infer_timeout)
+
+""" TT_DEFAULT_HDDL_INFER_TIMEOUT - Timeout for CPU target device"""
+default_hddl_infer_timeout = get_int("TT_DEFAULT_HDDL_INFER_TIMEOUT", 3*default_infer_timeout)
+
+""" TT_DEFAULT_MYRIAD_INFER_TIMEOUT - Timeout for CPU target device"""
+default_myriad_infer_timeout = get_int("TT_DEFAULT_MYRIAD_INFER_TIMEOUT", 5*default_infer_timeout)
+
+""" INFER TIMEOUT """
+infer_timeouts = {
+    "CPU" : default_infer_timeout,
+    "GPU" : default_gpu_infer_timeout,
+    "HDDL" : default_hddl_infer_timeout,
+    "MYRIAD" : default_myriad_infer_timeout,
+}
+infer_timeout = infer_timeouts[target_device]
+
+""" TT_IS_NGINX_MTLS - Specify if given image is OVSA nginx mtls image. If not specified, detect from image name"""
+is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", "nginx-mtls" in image)
+
+""" TT_SKIP_TEST_IF_IS_NGINX_MTLS """
+skip_nginx_test = get_bool("TT_SKIP_TEST_IF_IS_NGINX_MTLS", "True")
+skip_nginx_test = skip_nginx_test and is_nginx_mtls
+
+""" TT_SKIP_TEST_IF_HDDL_MTLS """
+skip_hddl_tests = get_bool("TT_SKIP_TEST_IF_HDDL_MTLS", "True")
+skip_hddl_tests = skip_hddl_tests and target_device == "HDDL"

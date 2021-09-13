@@ -97,8 +97,8 @@ TEST(DemultiplexerTest, CheckDemultipliedBlobsMultipleOutputs) {
                                       Eq(mockerDemutliplexerNodeOutputName2)));
             ASSERT_EQ(blobsData[shardId].size(), blob->size());
             ASSERT_THAT(blob->getTensorDesc().getDims(), ElementsAre(1, blobsData[shardId].size()));
-            EXPECT_EQ(std::memcmp((char*)((const void*)blob->cbuffer()), blobsData[shardId].data(), blob->byteSize()), 0) << "Failed comparison for shard: " << shardId << " blobName: " << blobName;
-            EXPECT_THAT(std::vector<float>((const float*)(const void*)(blob->cbuffer()), (const float*)(const void*)blob->cbuffer() + blob->size()),
+            EXPECT_EQ(std::memcmp((char*)((const void*)InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap()), blobsData[shardId].data(), blob->byteSize()), 0) << "Failed comparison for shard: " << shardId << " blobName: " << blobName;
+            EXPECT_THAT(std::vector<float>((const float*)(const void*)(InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap()), (const float*)(const void*)InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap() + blob->size()),
                 ::testing::ElementsAreArray(blobsData[shardId]));
         }
     }

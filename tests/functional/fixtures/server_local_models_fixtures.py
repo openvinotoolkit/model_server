@@ -23,7 +23,7 @@ from model.models_information import Resnet, ResnetONNX, AgeGender
 from object_model.server import Server
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="session")
 def start_server_single_model(request):
 
     start_server_command_args = {"model_name": Resnet.name,
@@ -35,10 +35,11 @@ def start_server_single_model(request):
     env_variables = ['SERIALIZATON=_prepare_output_as_AppendArrayToTensorProto']
 
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command, env_variables)
+                    container_name_infix, config.start_container_command,
+                    env_variables, target_device=config.target_device)
     return server.start()
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="session")
 def start_server_single_model_onnx(request):
 
     start_server_command_args = {"model_name": ResnetONNX.name,
@@ -50,10 +51,11 @@ def start_server_single_model_onnx(request):
     env_variables = ['SERIALIZATON=_prepare_output_as_AppendArrayToTensorProto']
 
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command, env_variables)
+                    container_name_infix, config.start_container_command,
+                    env_variables, target_device=config.target_device)
     return server.start()
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="session")
 def start_server_with_mapping(request):
 
     def delete_mapping_file():
@@ -69,5 +71,6 @@ def start_server_with_mapping(request):
                                  "model_path": AgeGender.model_path}
     container_name_infix = "test-2-out"
     server = Server(request, start_server_command_args,
-                    container_name_infix, config.start_container_command)
+                    container_name_infix, config.start_container_command,
+                    target_device=config.target_device)
     return server.start()

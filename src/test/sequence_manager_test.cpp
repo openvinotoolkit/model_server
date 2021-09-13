@@ -235,11 +235,13 @@ TEST(SequenceManager, ProcessSpecSequenceEnd) {
 
 TEST(SequenceManager, RemoveOneIdleSequence) {
     ovms::model_memory_state_t newState;
-    std::vector<size_t> shape1{1, 10};
-    size_t elementsCount1 = std::accumulate(shape1.begin(), shape1.end(), 1, std::multiplies<size_t>());
-    std::vector<float> state1(elementsCount1);
-    std::iota(state1.begin(), state1.end(), 0);
-    addState(newState, "state1", shape1, state1);
+    DummyStatefulModel realModel;
+    std::vector<float> state{10};
+
+    InferenceEngine::InferRequest auxInferRequest = realModel.createInferRequest();
+    realModel.setVariableState(auxInferRequest, state);
+    InferenceEngine::VariableState memoryState = realModel.getVariableState(auxInferRequest);
+    newState.push_back(memoryState);
 
     MockedSequenceManager sequenceManager(24, "dummy", 1);
     uint64_t sequenceId1 = 42;

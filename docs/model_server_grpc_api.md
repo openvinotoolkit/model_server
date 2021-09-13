@@ -51,7 +51,7 @@ To send images in binary format data should be placed in dt_string field of tens
 
 Read more about *Predict API* usage [here](./../example_client/README.md#predict-api)
 
-Check [how binary data is handled in OpenVINO Model Server](binary_input_ouput.md)
+Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
 
 ## See Also
 

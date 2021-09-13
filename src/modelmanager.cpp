@@ -27,6 +27,7 @@
 
 #include <dlfcn.h>
 #include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 #include <sys/stat.h>
@@ -50,6 +51,7 @@
 
 namespace ovms {
 
+static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
 static bool watcherStarted = false;
 
 ModelManager::ModelManager() :
@@ -529,26 +531,71 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
     return firstErrorStatus;
 }
 
+class LoudFileInfoReporter {
+    std::stringstream ss;
+
+public:
+    LoudFileInfoReporter(const std::string& filename, std::ifstream& file) {
+        struct stat statTime;
+
+        if (stat(filename.c_str(), &statTime) != 0) {
+            SPDLOG_ERROR("Failed to debug-read fileconfig");
+            return;
+        }
+        ss << "FileInfoReporter: " << filename
+           << " time modification [s]: " << statTime.st_ctim.tv_sec
+           << " [ns]: " << statTime.st_ctim.tv_nsec << std::endl;
+        std::string some;
+        file.clear();
+        file.seekg(0);
+        while (file) {
+            file >> some;
+            ss << some << std::endl;
+        }
+        file.clear();
+        file.seekg(0);
+    }
+    void log() {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, ss.str());
+    }
+};
+
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     configFilename = jsonFilename;
-
     struct stat statTime;
     stat(configFilename.c_str(), &statTime);
     lastConfigChangeTime = statTime.st_ctim;
-
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading configuration from {}", jsonFilename);
-    std::ifstream ifs(jsonFilename.c_str());
-    if (!ifs.good()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is invalid {}", jsonFilename);
-        lastLoadConfigStatus = StatusCode::CONFIG_FILE_INVALID;
-        return lastLoadConfigStatus;
-    }
     rapidjson::Document configJson;
-    rapidjson::IStreamWrapper isw(ifs);
-    if (configJson.ParseStream(isw).HasParseError()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file.");
-        lastLoadConfigStatus = StatusCode::JSON_INVALID;
+
+    uint16_t counter = 0;
+    Status intermediateStatus;
+    do {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading configuration from {} for: {} time", jsonFilename, counter + 1);
+        std::ifstream ifs(jsonFilename.c_str());
+        LoudFileInfoReporter loud(jsonFilename, ifs);
+        if (!ifs.good()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is invalid {}", jsonFilename);
+            intermediateStatus = StatusCode::CONFIG_FILE_INVALID;
+            loud.log();
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            continue;
+        }
+        rapidjson::IStreamWrapper isw(ifs);
+        rapidjson::ParseResult parseResult = configJson.ParseStream(isw);
+        if (!parseResult) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file. Error: {}",
+                rapidjson::GetParseError_En(parseResult.Code()));
+            intermediateStatus = StatusCode::JSON_INVALID;
+            loud.log();
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            continue;
+        }
+        intermediateStatus = StatusCode::OK;
+        break;
+    } while (++counter < MAX_CONFIG_JSON_READ_RETRY_COUNT && !intermediateStatus.ok());
+    if (!intermediateStatus.ok()) {
+        lastLoadConfigStatus = intermediateStatus;
         return lastLoadConfigStatus;
     }
 
@@ -598,11 +645,20 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
         modelsToUnloadAllVersions.begin());
     modelsToUnloadAllVersions.resize(it - modelsToUnloadAllVersions.begin());
     for (auto& modelName : modelsToUnloadAllVersions) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Retiring all versions of model: {}", modelName);
-        try {
-            models.at(modelName)->retireAllVersions(modelsWithInvalidConfig.find(modelName) != modelsWithInvalidConfig.end());
-        } catch (const std::out_of_range& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to retire all versions of model: {}", modelName);
+        if (modelsWithInvalidConfig.find(modelName) == modelsWithInvalidConfig.end()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Retiring all versions of model: {}", modelName);
+            try {
+                models.at(modelName)->retireAllVersions();
+            } catch (const std::out_of_range& e) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to retire all versions of model: {}", modelName);
+            }
+        } else {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleaning up all versions of model: {}", modelName);
+            try {
+                models.at(modelName)->cleanupAllVersions();
+            } catch (const std::out_of_range& e) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to clean up all versions of model: {}", modelName);
+            }
         }
     }
 }
@@ -736,6 +792,7 @@ void ModelManager::getVersionsToChange(
     for (const auto& version : alreadyRegisteredVersionsWhichAreRequested) {
         try {
             if (modelVersionsInstances.at(version)->getStatus().willEndUnloaded() ||
+                modelVersionsInstances.at(version)->getStatus().isFailedLoading() ||
                 modelVersionsInstances.at(version)->getModelConfig().isReloadRequired(newModelConfig)) {
                 if (modelVersionsInstances.at(version)->getModelConfig().isCustomLoaderConfigChanged(newModelConfig)) {
                     modelVersionsInstances.at(version)->setCustomLoaderConfigChangeFlag();
@@ -966,7 +1023,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     if (versionsToStart->size() > 0 || versionsToReload->size() > 0 || versionsToRetire->size() > 0) {
         reloadNeeded = true;
     }
-
+    std::set<ovms::model_version_t> allFailedVersions;
     while (versionsToStart->size() > 0) {
         blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Adding new versions. Status: {};", blocking_status.string());
@@ -976,6 +1033,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
                 if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
                     availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
                 }
+                allFailedVersions.insert(version);
             }
             requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
             getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
@@ -990,20 +1048,33 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             blocking_status = status;
         }
     }
+
     for (const auto version : *versionsFailed) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Removing available version {} due to load failure.", version);
         if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
             availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
         }
+        allFailedVersions.insert(version);
     }
     // refresh versions to retire based on failed reloads
     requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
-
+    std::shared_ptr<model_versions_t> versionsToCleanup = std::make_shared<model_versions_t>();
+    std::copy_if(versionsToRetire->begin(), versionsToRetire->end(), std::back_inserter(*versionsToCleanup), [&](auto& version) { return allFailedVersions.find(version) != allFailedVersions.end(); });
+    versionsToRetire->erase(std::remove_if(versionsToRetire->begin(), versionsToRetire->end(), [&](auto& version) { return allFailedVersions.find(version) != allFailedVersions.end(); }), versionsToRetire->end());
     if (versionsToRetire->size() > 0) {
         auto status = model->retireVersions(versionsToRetire);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
+                config.getName(),
+                status.string());
+            return status;
+        }
+    }
+    if (versionsToCleanup->size() > 0) {
+        auto status = model->cleanupFailedLoad(versionsToCleanup);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while cleaning up model that failed to load: {}; versions; error: {}",
                 config.getName(),
                 status.string());
             return status;
