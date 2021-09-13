@@ -114,7 +114,7 @@ Status PipelineDefinition::initializeNodeResources() {
     return StatusCode::OK;
 }
 
-void PipelineDefinition::deinitializeUnusedNodeResources(const std::vector<NodeInfo>& nodeInfos) {
+std::vector<NodeInfo> PipelineDefinition::calculateNodeInfosDiff(const std::vector<NodeInfo>& nodeInfos) {
     std::vector<NodeInfo> diff;
     for (const auto& nodeInfo : this->nodeInfos) {
         auto it = std::find_if(nodeInfos.begin(), nodeInfos.end(),
@@ -123,8 +123,11 @@ void PipelineDefinition::deinitializeUnusedNodeResources(const std::vector<NodeI
             diff.push_back(nodeInfo);
         }
     }
+    return diff;
+}
 
-    for (const auto& nodeInfo : diff) {
+void PipelineDefinition::deinitializeNodeResources(const std::vector<NodeInfo>& nodeInfosDiff) {
+    for (const auto& nodeInfo : nodeInfosDiff) {
         if (nodeInfo.kind == NodeKind::CUSTOM) {
             void* customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
             auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
@@ -136,19 +139,6 @@ void PipelineDefinition::deinitializeUnusedNodeResources(const std::vector<NodeI
     }
 }
 
-void PipelineDefinition::deinitializeNodeResources() {
-    for (const auto& nodeInfo : this->nodeInfos) {
-        if (nodeInfo.kind == NodeKind::CUSTOM) {
-            void* customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
-            auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
-            if (status != 0) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Deinitialization of library with base path: {} failed", nodeInfo.library.basePath);
-            }
-        }
-    }
-    nodeResources.clear();
-}
-
 Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections) {
     // block creating new unloadGuards
     this->status.handle(ReloadEvent());
@@ -156,7 +146,7 @@ Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeI
     while (requestsHandlesCounter > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
-    deinitializeUnusedNodeResources(nodeInfos);
+    deinitializeNodeResources(calculateNodeInfosDiff(nodeInfos));
     this->nodeInfos = std::move(nodeInfos);
     this->connections = std::move(connections);
     makeSubscriptions(manager);
@@ -170,7 +160,8 @@ void PipelineDefinition::retire(ModelManager& manager) {
     while (requestsHandlesCounter > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
-    deinitializeNodeResources();
+    deinitializeNodeResources({});
+    this->nodeResources.clear();
     this->nodeInfos.clear();
     this->connections.clear();
 }

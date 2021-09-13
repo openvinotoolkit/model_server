@@ -52,12 +52,13 @@ struct CustomNodeParam {
 extern "C" {
 #endif
 
-// custom node library initialize for optimized buffers allocation
+// custom node library initialize enables creation of resources to be reused between predictions
+// potential use cases include optimized temporary buffers allocation
 // using initialize is optional and not required for custom node to work
 // customNodeLibraryInternalManager should be created here if initialize is used
-// on initialize failure approperiate status is returned and error log is printed
+// on initialize failure status not equal to zero is returned and error log is printed
 int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount);
-// custom node library deinitialize for optimized buffers allocation
+// custom node library deinitialize enables destruction of resources that were used between predictions
 // using deinitialize is optional and not required for custom node to work
 // customNodeLibraryInternalManager should be destroyed here if deinitialize is used
 // on deinitialize failure only error log is printed
