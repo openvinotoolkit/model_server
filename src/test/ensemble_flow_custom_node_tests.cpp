@@ -4460,34 +4460,29 @@ struct LibraryCountDeinitialize {
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnRetire) {
     // Nodes
-    // request   custom    response
-    //  O--------->O---------->O
-    //          add-sub
+    // request   custom    custom_2   custom_3    response
+    //  O--------->O--------->O--------->O---------->O
+    //          add-sub    add-sub    add-sub
     ConstructorEnabledModelManager manager;
     PipelineFactory factory;
 
-    const std::vector<float> inputValues{7.8, -2.4, 1.9, 8.7, -2.4, 3.5};
-    this->prepareRequest(inputValues);
-
-    const float addValue = 0.9;
-    const float subValue = 7.3;
-
+    // mocking custom node library and copying crucial functions from add_sub_lib in order to 
+    // create pipeline definition
     auto mockedLibrary = createLibraryMock<LibraryCountDeinitialize>();
-    mockedLibrary.execute = library.execute;
     mockedLibrary.getInputsInfo = library.getInputsInfo;
     mockedLibrary.getOutputsInfo = library.getOutputsInfo;
-    mockedLibrary.release = library.release;
 
+    // setting global deinitialize call counter to 0
     LibraryCountDeinitialize::deinitializeCounter = 0;
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
         {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, {}, mockedLibrary, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
         {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, {}, mockedLibrary, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
         {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, {}, mockedLibrary, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
@@ -4512,39 +4507,36 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnR
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
 
     factory.retireOtherThan({}, manager);
+    // Each custom node has effectively 1 internalManager initialized, because they use same library instance
+    // in order to count whether deinitialize has been called expected number of times
     ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 3);
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SingleDeinitializeCallOnReload) {
     // Nodes
-    // request   custom    response
-    //  O--------->O---------->O
-    //          add-sub
+    // request   custom    custom_2   custom_3    response
+    //  O--------->O--------->O--------->O---------->O
+    //          add-sub    add-sub    add-sub
     ConstructorEnabledModelManager manager;
     PipelineFactory factory;
 
-    const std::vector<float> inputValues{7.8, -2.4, 1.9, 8.7, -2.4, 3.5};
-    this->prepareRequest(inputValues);
-
-    const float addValue = 0.9;
-    const float subValue = 7.3;
-
+    // mocking custom node library and copying crucial functions from add_sub_lib in order to 
+    // create pipeline definition
     auto mockedLibrary = createLibraryMock<LibraryCountDeinitialize>();
-    mockedLibrary.execute = library.execute;
     mockedLibrary.getInputsInfo = library.getInputsInfo;
     mockedLibrary.getOutputsInfo = library.getOutputsInfo;
-    mockedLibrary.release = library.release;
 
+    // setting global deinitialize call counter to 0
     LibraryCountDeinitialize::deinitializeCounter = 0;
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
         {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, {}, mockedLibrary, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
         {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, {}, mockedLibrary, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
         {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, {}, mockedLibrary, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
@@ -4568,10 +4560,16 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SingleDeinitializeCallOnRelo
 
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
 
+    // Nodes
+    // request   custom    custom_2    response
+    //  O--------->O--------->O---------->O
+    //          add-sub    add-sub
     info.erase(info.begin() + 3);
     connections.erase("custom_node_3");
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{customNodeOutputName, pipelineOutputName}}}};
     ASSERT_EQ(factory.reloadDefinition("my_new_pipeline", std::move(info), std::move(connections), manager), StatusCode::OK);
+    // Each custom node has effectively 1 internalManager initialized, because they use same library instance
+    // in order to count whether deinitialize has been called expected number of times
     ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 1);
 }
