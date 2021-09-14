@@ -4436,7 +4436,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
 struct LibraryCountDeinitialize {
 
     inline static int deinitializeCounter;
-    
+
     static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
         return 0;
     }
@@ -4478,7 +4478,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnR
     mockedLibrary.getInputsInfo = library.getInputsInfo;
     mockedLibrary.getOutputsInfo = library.getOutputsInfo;
     mockedLibrary.release = library.release;
-    
+
     LibraryCountDeinitialize::deinitializeCounter = 0;
 
     std::vector<NodeInfo> info{
@@ -4535,7 +4535,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SingleDeinitializeCallOnRelo
     mockedLibrary.getInputsInfo = library.getInputsInfo;
     mockedLibrary.getOutputsInfo = library.getOutputsInfo;
     mockedLibrary.release = library.release;
-    
+
     LibraryCountDeinitialize::deinitializeCounter = 0;
 
     std::vector<NodeInfo> info{
