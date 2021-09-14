@@ -4432,3 +4432,147 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
     checkIncrement4DimResponse(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
 }
+
+struct LibraryCountDeinitialize {
+
+    inline static int deinitializeCounter;
+    
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        deinitializeCounter += 1;
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnRetire) {
+    // Nodes
+    // request   custom    response
+    //  O--------->O---------->O
+    //          add-sub
+    ConstructorEnabledModelManager manager;
+    PipelineFactory factory;
+
+    const std::vector<float> inputValues{7.8, -2.4, 1.9, 8.7, -2.4, 3.5};
+    this->prepareRequest(inputValues);
+
+    const float addValue = 0.9;
+    const float subValue = 7.3;
+
+    auto mockedLibrary = createLibraryMock<LibraryCountDeinitialize>();
+    mockedLibrary.execute = library.execute;
+    mockedLibrary.getInputsInfo = library.getInputsInfo;
+    mockedLibrary.getOutputsInfo = library.getOutputsInfo;
+    mockedLibrary.release = library.release;
+    
+    LibraryCountDeinitialize::deinitializeCounter = 0;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    // request (pipelineInputName) O--------->O custom node (customNodeInputName)
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O custom node 2 (customNodeInputName)
+    connections["custom_node_2"] = {
+        {"custom_node", {{customNodeOutputName, customNodeInputName}}}};
+
+    // custom node 2 (customNodeOutputName) O--------->O custom node 3 (customNodeInputName)
+    connections["custom_node_3"] = {
+        {"custom_node_2", {{customNodeOutputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O response (pipelineOutputName)
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_3", {{customNodeOutputName, pipelineOutputName}}}};
+
+    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
+
+    factory.retireOtherThan({}, manager);
+    ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 3);
+}
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SingleDeinitializeCallOnReload) {
+    // Nodes
+    // request   custom    response
+    //  O--------->O---------->O
+    //          add-sub
+    ConstructorEnabledModelManager manager;
+    PipelineFactory factory;
+
+    const std::vector<float> inputValues{7.8, -2.4, 1.9, 8.7, -2.4, 3.5};
+    this->prepareRequest(inputValues);
+
+    const float addValue = 0.9;
+    const float subValue = 7.3;
+
+    auto mockedLibrary = createLibraryMock<LibraryCountDeinitialize>();
+    mockedLibrary.execute = library.execute;
+    mockedLibrary.getInputsInfo = library.getInputsInfo;
+    mockedLibrary.getOutputsInfo = library.getOutputsInfo;
+    mockedLibrary.release = library.release;
+    
+    LibraryCountDeinitialize::deinitializeCounter = 0;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    // request (pipelineInputName) O--------->O custom node (customNodeInputName)
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O custom node 2 (customNodeInputName)
+    connections["custom_node_2"] = {
+        {"custom_node", {{customNodeOutputName, customNodeInputName}}}};
+
+    // custom node 2 (customNodeOutputName) O--------->O custom node 3 (customNodeInputName)
+    connections["custom_node_3"] = {
+        {"custom_node_2", {{customNodeOutputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O response (pipelineOutputName)
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_3", {{customNodeOutputName, pipelineOutputName}}}};
+
+    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
+
+    info.erase(info.begin() + 3);
+    connections.erase("custom_node_3");
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{customNodeOutputName, pipelineOutputName}}}};
+    ASSERT_EQ(factory.reloadDefinition("my_new_pipeline", std::move(info), std::move(connections), manager), StatusCode::OK);
+    ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 1);
+}

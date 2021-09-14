@@ -94,11 +94,11 @@ Status PipelineDefinition::initializeNodeResources() {
             auto it = nodeResources.find(nodeInfo.nodeName);
             bool internalManagerExists = (it != nodeResources.end());
             if (internalManagerExists) {
-                customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
+                customNodeLibraryInternalManager = it->second;
             }
             auto params = createCustomNodeParamArray(nodeInfo.parameters).get();
             if (!nodeInfo.library.isValid()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {} node: {} refers to incorrect library", pipelineName, nodeInfo.nodeName);
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {} node: {} refers to invalid library", pipelineName, nodeInfo.nodeName);
                 return StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY;
             }
             auto status = nodeInfo.library.initialize(&customNodeLibraryInternalManager, params, nodeInfo.parameters.size());
@@ -129,7 +129,11 @@ std::vector<NodeInfo> PipelineDefinition::calculateNodeInfosDiff(const std::vect
 void PipelineDefinition::deinitializeNodeResources(const std::vector<NodeInfo>& nodeInfosDiff) {
     for (const auto& nodeInfo : nodeInfosDiff) {
         if (nodeInfo.kind == NodeKind::CUSTOM) {
-            void* customNodeLibraryInternalManager = nodeResources.at(nodeInfo.nodeName);
+            auto it = nodeResources.find(nodeInfo.nodeName);
+            if (it == nodeResources.end()) {
+                continue;
+            }
+            void* customNodeLibraryInternalManager = it->second;
             auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
             if (status != 0) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Deinitialization of library with base path: {} failed", nodeInfo.library.basePath);
@@ -160,7 +164,7 @@ void PipelineDefinition::retire(ModelManager& manager) {
     while (requestsHandlesCounter > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
-    deinitializeNodeResources({});
+    deinitializeNodeResources(this->nodeInfos);
     this->nodeResources.clear();
     this->nodeInfos.clear();
     this->connections.clear();
