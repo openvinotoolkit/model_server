@@ -4434,7 +4434,6 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
 }
 
 struct LibraryCountDeinitialize {
-
     inline static int deinitializeCounter;
 
     static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
