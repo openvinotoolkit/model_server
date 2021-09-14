@@ -118,8 +118,9 @@ class HttpClient(ServingClient):
         try:
             raw_response = requests.get(f"http://{self.address}:{self.port}/v1/models/{request.model_name}/versions/{request.model_version}",
                          cert=self.client_key, verify=self.server_cert)
-        except requests.exceptions.ConnectionError as e_info:
-            raise Exception('exception')
+        except requests.exceptions.RequestException as e_info:
+            raise ConnectionError('There was an error during sending ModelStatusRequest. '
+                                  f'Http exited with: \n{e_info}')
 
         return HttpModelStatusResponse(raw_response)
 
