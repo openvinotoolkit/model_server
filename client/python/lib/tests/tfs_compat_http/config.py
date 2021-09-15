@@ -141,7 +141,7 @@ PARSE_INPUT_DATA_INVALID = [
 
 MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE = [
     (requests.Request(), TypeError, 'request type should be HttpModelStatusRequest, '
-     f'but is Request'),
+     'but is Request'),
     ("request", TypeError, 'request type should be HttpModelStatusRequest, '
-     f'but is str')
+     'but is str')
 ]

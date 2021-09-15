@@ -116,8 +116,10 @@ class HttpClient(ServingClient):
 
         raw_response = None
         try:
-            raw_response = requests.get(f"http://{self.address}:{self.port}/v1/models/{request.model_name}/versions/{request.model_version}",
-                         cert=self.client_key, verify=self.server_cert)
+            raw_response = self.session.get(f"http://{self.address}:{self.port}"
+                                            f"/v1/models/{request.model_name}"
+                                            f"/versions/{request.model_version}",
+                                            cert=self.client_key, verify=self.server_cert)
         except requests.exceptions.RequestException as e_info:
             raise ConnectionError('There was an error during sending ModelStatusRequest. '
                                   f'Http exited with:\n{e_info}')
@@ -135,8 +137,9 @@ class HttpClient(ServingClient):
             tls_config = config["tls_config"]
             if "client_cert_path" in tls_config and "client_key_path" in tls_config:
                 client_cert = (tls_config["client_cert_path"], tls_config["client_key_path"])
-            server_cert = tls_config.get('server_cert_path', None),
-        return cls(address, port, client_cert, server_cert)
+            server_cert = tls_config.get('server_cert_path', None)
+        session = requests.Session()
+        return cls(address, port, session, client_cert, server_cert)
 
     @classmethod
     def _check_model_status_request(cls, request):
