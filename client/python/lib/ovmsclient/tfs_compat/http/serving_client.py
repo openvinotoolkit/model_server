@@ -137,7 +137,7 @@ class HttpClient(ServingClient):
             tls_config = config["tls_config"]
             if "client_cert_path" in tls_config and "client_key_path" in tls_config:
                 client_cert = (tls_config["client_cert_path"], tls_config["client_key_path"])
-            server_cert = tls_config.get('server_cert_path', None)
+            server_cert = tls_config.get('server_cert_path', None),
         session = requests.Session()
         return cls(address, port, session, client_cert, server_cert)
 
