@@ -120,7 +120,7 @@ class HttpClient(ServingClient):
                          cert=self.client_key, verify=self.server_cert)
         except requests.exceptions.RequestException as e_info:
             raise ConnectionError('There was an error during sending ModelStatusRequest. '
-                                  f'Http exited with: \n{e_info}')
+                                  f'Http exited with:\n{e_info}')
 
         return HttpModelStatusResponse(raw_response)
 
