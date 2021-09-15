@@ -4466,7 +4466,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnR
     ConstructorEnabledModelManager manager;
     PipelineFactory factory;
 
-    // mocking custom node library and copying crucial functions from add_sub_lib in order to 
+    // mocking custom node library and copying crucial functions from add_sub_lib in order to
     // create pipeline definition
     auto mockedLibrary = createLibraryMock<LibraryCountDeinitialize>();
     mockedLibrary.getInputsInfo = library.getInputsInfo;
@@ -4520,7 +4520,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SingleDeinitializeCallOnRelo
     ConstructorEnabledModelManager manager;
     PipelineFactory factory;
 
-    // mocking custom node library and copying crucial functions from add_sub_lib in order to 
+    // mocking custom node library and copying crucial functions from add_sub_lib in order to
     // create pipeline definition
     auto mockedLibrary = createLibraryMock<LibraryCountDeinitialize>();
     mockedLibrary.getInputsInfo = library.getInputsInfo;
