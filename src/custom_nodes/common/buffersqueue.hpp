@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,22 +24,21 @@
 #include <thread>
 #include <vector>
 
-#include <inference_engine.hpp>
-#include <spdlog/spdlog.h>
-
-#include "queue.hpp"
+#include "../../queue.hpp"
 
 namespace ovms {
+namespace custom_nodes_common {
 
-class OVInferRequestsQueue : public Queue<InferenceEngine::InferRequest> {
+class BuffersQueue : protected Queue<char*> {
+    size_t singleBufferSize;
+    size_t size;
+    char* memoryPool;
+
 public:
-    OVInferRequestsQueue(InferenceEngine::ExecutableNetwork& network, int streamsLength) :
-        Queue(streamsLength) {
-        for (int i = 0; i < streamsLength; ++i) {
-            streams[i] = i;
-            inferRequests.push_back(network.CreateInferRequest());
-        }
-    }
+    BuffersQueue(size_t singleBufferSize, int streamsLength);
+    ~BuffersQueue();
+    void* getBuffer();
+    bool returnBuffer(void* buffer);
 };
-
+}  // namespace custom_nodes_common
 }  // namespace ovms
