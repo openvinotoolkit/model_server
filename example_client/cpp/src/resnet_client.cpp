@@ -145,7 +145,14 @@ bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>
         CvMatData entryOut;
         entryOut.layout = layout;
         entryOut.expectedLabel = entryIn.expectedLabel;
-        entryOut.image = cv::imread(entryIn.imagePath);
+        try {
+            entryOut.image = cv::imread(entryIn.imagePath);
+            if (entryOut.image.data == nullptr) {
+                return false;
+            }
+        } catch (cv::Exception& ex) {
+            return false;
+        }
         entryOut.image.convertTo(entryOut.image, CV_32F);
         cv::resize(entryOut.image, entryOut.image, cv::Size(224, 224));
         if (layout == "nchw") {
@@ -164,17 +171,28 @@ public:
     ServingClient(std::shared_ptr<Channel> channel) :
         stub_(PredictionService::NewStub(channel)) {}
 
-    static tensorflow::int64 argmax(const tensorflow::Tensor& tensor) {
-        float topConfidence = 0;
-        tensorflow::int64 topLabel = -1;
-        for (tensorflow::int64 i = 0; i < tensor.NumElements(); i++) {
-            float confidence = ((float*)tensor.data())[i];
-            if (topLabel == -1 || topConfidence < confidence) {
-                topLabel = i;
-                topConfidence = confidence;
+    static std::vector<tensorflow::int64> argmax(const tensorflow::Tensor& tensor) {
+        const auto& shape = tensor.shape();
+        assert(shape.dims() == 2);
+
+        size_t batchSize = shape.dim_size(0);
+        size_t elements = shape.dim_size(1);
+
+        std::vector<tensorflow::int64> labels;
+
+        for (size_t j = 0 ; j < batchSize; j++) {
+            float topConfidence = 0;
+            tensorflow::int64 topLabel = -1;
+            for (tensorflow::int64 i = 0; i < elements; i++) {
+                float confidence = ((float*)tensor.data())[j * elements + i];
+                if (topLabel == -1 || topConfidence < confidence) {
+                    topLabel = i;
+                    topConfidence = confidence;
+                }
             }
+            labels.push_back(topLabel);
         }
-        return topLabel;
+        return labels;
     }
 
     // Pre-processing function for binary images.
@@ -184,6 +202,16 @@ public:
         proto.set_dtype(tensorflow::DataType::DT_STRING);
         proto.add_string_val(entry.imageData.get(), entry.fileSize);
         proto.mutable_tensor_shape()->add_dim()->set_size(1);
+        inputs[inputName] = proto;
+        return true;
+    }
+
+    bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<BinaryData>& entries, const tensorflow::string& inputName) {
+        tensorflow::TensorProto proto;
+        proto.set_dtype(tensorflow::DataType::DT_STRING);
+        for (const auto& entry : entries)
+            proto.add_string_val(entry.imageData.get(), entry.fileSize);
+        proto.mutable_tensor_shape()->add_dim()->set_size(entries.size());
         inputs[inputName] = proto;
         return true;
     }
@@ -209,9 +237,39 @@ public:
         return true;
     }
 
+    bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<CvMatData>& entries, const tensorflow::string& inputName) {
+        assert(entries.size() > 0);
+
+        tensorflow::TensorProto proto;
+        proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+
+        std::string* content = proto.mutable_tensor_content();
+
+        // We are already ensured that each cv::Mat contains 224x224 data.
+        size_t byteSize = entries[0].image.total() * entries[0].image.elemSize();
+
+        content->resize(byteSize * entries.size());
+        for (size_t i = 0; i < entries.size(); i++) {
+            std::memcpy(content->data() + i * byteSize, entries[i].image.data, byteSize); 
+        }
+
+        proto.mutable_tensor_shape()->add_dim()->set_size(entries.size());
+        if (entries[0].layout == "nchw") {
+            proto.mutable_tensor_shape()->add_dim()->set_size(entries[0].image.channels());
+            proto.mutable_tensor_shape()->add_dim()->set_size(entries[0].image.cols);
+            proto.mutable_tensor_shape()->add_dim()->set_size(entries[0].image.rows);
+        } else {
+            proto.mutable_tensor_shape()->add_dim()->set_size(entries[0].image.cols);
+            proto.mutable_tensor_shape()->add_dim()->set_size(entries[0].image.rows);
+            proto.mutable_tensor_shape()->add_dim()->set_size(entries[0].image.channels());
+        }
+        inputs[inputName] = proto;
+        return true;
+    }
+
     // Post-processing function for resnet classification.
     // Most probable label is selected from the output.
-    bool interpretOutputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& outputs, const tensorflow::string& outputName, tensorflow::int64& predictedLabel) {
+    bool interpretOutputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& outputs, const tensorflow::string& outputName, std::vector<tensorflow::int64>& predictedLabels) {
         auto it = outputs.find(outputName);
         if (it == outputs.end()) {
             std::cout << "cannot find output " << outputName << std::endl;
@@ -224,7 +282,7 @@ public:
             std::cout << "the result tensor[" << it->first << "] convert failed." << std::endl;
             return false;
         }
-        predictedLabel = this->argmax(tensor);
+        predictedLabels = this->argmax(tensor);
         return true;
     }
 
@@ -233,8 +291,8 @@ public:
         const tensorflow::string& modelName,
         const tensorflow::string& inputName,
         const tensorflow::string& outputName,
-        const T& entry,
-        bool& isLabelCorrect) {
+        const std::vector<T>& entries,
+        int& numberOfCorrectLabels) {
         PredictRequest predictRequest;
         PredictResponse response;
         ClientContext context;
@@ -246,7 +304,8 @@ public:
 
         // Pre-processing step.
         // Packing image into gRPC message.
-        this->prepareInputs(inputs, entry, inputName);
+        //this->prepareInputs(inputs, entry, inputName);
+        this->prepareBatchedInputs(inputs, entries, inputName);
 
         // Actual predict request.
         auto start = std::chrono::high_resolution_clock::now();
@@ -267,11 +326,13 @@ public:
 
         // Post-processing step.
         // Extracting most probable label from resnet output.
-        tensorflow::int64 predictedLabel = -1;
-        if (!this->interpretOutputs(*response.mutable_outputs(), outputName, predictedLabel)) {
+        std::vector<tensorflow::int64> predictedLabels;
+        if (!this->interpretOutputs(*response.mutable_outputs(), outputName, predictedLabels)) {
             return false;
         }
-        isLabelCorrect = predictedLabel == entry.expectedLabel;
+        for (size_t i = 0; i < predictedLabels.size(); i++) {
+            numberOfCorrectLabels = predictedLabels[i] == entries[i].expectedLabel ? numberOfCorrectLabels + 1 : numberOfCorrectLabels;
+        }
 
         return true;
     }
@@ -286,19 +347,18 @@ public:
         tensorflow::int64 iterations) {
         auto begin = std::chrono::high_resolution_clock::now();
         tensorflow::int64 correctLabels = 0;
+        ServingClient client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()));
         for (tensorflow::int64 i = 0; i < iterations; i++) {
-            ServingClient client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()));
-            bool isLabelCorrect = false;
-            if (!client.predict(modelName, inputName, outputName, entries[i % entries.size()], isLabelCorrect)) {
+            int numberOfCorrectLabels = 0;
+            //if (!client.predict(modelName, inputName, outputName, entries[i % entries.size()], numberOfCorrectLabels)) {
+            if (!client.predict(modelName, inputName, outputName, entries, numberOfCorrectLabels)) {
                 return;
             }
-            if (isLabelCorrect) {
-                correctLabels++;
-            }
+            correctLabels += numberOfCorrectLabels;
         }
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - begin);
-        std::cout << "Overall accuracy: " << (correctLabels * 100) / iterations << "%" << std::endl;
+        std::cout << "Overall accuracy: " << (correctLabels * 100) / (iterations * entries.size()) << "%" << std::endl;
         std::cout << "Total time divided by number of requests: " << (duration.count() / 1000) / iterations << "ms" << std::endl;
     }
 };
