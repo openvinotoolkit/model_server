@@ -33,6 +33,7 @@ limitations under the License.
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <thread>
 
 #include "google/protobuf/map.h"
 #include "tensorflow/core/framework/tensor.h"
@@ -45,7 +46,9 @@ limitations under the License.
 #include "opencv2/opencv.hpp"
 
 using grpc::Channel;
+using grpc::ClientAsyncResponseReader;
 using grpc::ClientContext;
+using grpc::CompletionQueue;
 using grpc::Status;
 
 using tensorflow::serving::PredictionService;
@@ -53,6 +56,13 @@ using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
 
 typedef google::protobuf::Map<tensorflow::string, tensorflow::TensorProto> OutMap;
+
+struct AsyncClientCall {
+    PredictResponse reply;
+    ClientContext context;
+    Status status;
+    std::unique_ptr<ClientAsyncResponseReader<PredictResponse>> response_reader;
+};
 
 struct Entry {
     tensorflow::string imagePath;
@@ -164,12 +174,21 @@ bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>
     return true;
 }
 
+template <typename T>
 class ServingClient {
     std::unique_ptr<PredictionService::Stub> stub_;
+    CompletionQueue cq_;
 
 public:
-    ServingClient(std::shared_ptr<Channel> channel) :
-        stub_(PredictionService::NewStub(channel)) {}
+    ServingClient(std::shared_ptr<Channel> channel, const tensorflow::string& modelName, const tensorflow::string& inputName, const tensorflow::string& outputName, const std::vector<T>& entries, tensorflow::int64 iterations, tensorflow::int64 batchSize) :
+        stub_(PredictionService::NewStub(channel)) {
+        this->modelName = modelName;
+        this->inputName = inputName;
+        this->outputName = outputName;
+        this->entries = selectEntries(entries, batchSize);
+        this->iterations = iterations;
+        this->batchSize = batchSize;
+    }
 
     static std::vector<tensorflow::int64> argmax(const tensorflow::Tensor& tensor) {
         const auto& shape = tensor.shape();
@@ -197,7 +216,7 @@ public:
 
     // Pre-processing function for binary images.
     // Images loaded from disk are packed into gRPC request proto.
-    bool prepareInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const BinaryData& entry, const tensorflow::string& inputName) {
+    static bool prepareInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const BinaryData& entry, const tensorflow::string& inputName) {
         tensorflow::TensorProto proto;
         proto.set_dtype(tensorflow::DataType::DT_STRING);
         proto.add_string_val(entry.imageData.get(), entry.fileSize);
@@ -206,7 +225,7 @@ public:
         return true;
     }
 
-    bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<BinaryData>& entries, const tensorflow::string& inputName) {
+    static bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<BinaryData>& entries, const tensorflow::string& inputName) {
         tensorflow::TensorProto proto;
         proto.set_dtype(tensorflow::DataType::DT_STRING);
         for (const auto& entry : entries)
@@ -218,7 +237,7 @@ public:
 
     // Pre-processing function for images in array format.
     // Images loaded from disk are packed into tensor_content in plain array format (using OpenCV) either in NCHW or NHWC layout.
-    bool prepareInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const CvMatData& entry, const tensorflow::string& inputName) {
+    static bool prepareInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const CvMatData& entry, const tensorflow::string& inputName) {
         tensorflow::TensorProto proto;
         proto.set_dtype(tensorflow::DataType::DT_FLOAT);
         size_t byteSize = entry.image.total() * entry.image.elemSize();
@@ -237,7 +256,7 @@ public:
         return true;
     }
 
-    bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<CvMatData>& entries, const tensorflow::string& inputName) {
+    static bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<CvMatData>& entries, const tensorflow::string& inputName) {
         assert(entries.size() > 0);
 
         tensorflow::TensorProto proto;
@@ -269,7 +288,7 @@ public:
 
     // Post-processing function for resnet classification.
     // Most probable label is selected from the output.
-    bool interpretOutputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& outputs, const tensorflow::string& outputName, std::vector<tensorflow::int64>& predictedLabels) {
+    static bool interpretOutputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& outputs, const tensorflow::string& outputName, std::vector<tensorflow::int64>& predictedLabels) {
         auto it = outputs.find(outputName);
         if (it == outputs.end()) {
             std::cout << "cannot find output " << outputName << std::endl;
@@ -282,22 +301,16 @@ public:
             std::cout << "the result tensor[" << it->first << "] convert failed." << std::endl;
             return false;
         }
-        predictedLabels = this->argmax(tensor);
+        predictedLabels = argmax(tensor);
         return true;
     }
 
-    template <class T>
-    bool predict(
-        const tensorflow::string& modelName,
-        const tensorflow::string& inputName,
-        const tensorflow::string& outputName,
-        const std::vector<T>& entries,
-        int& numberOfCorrectLabels) {
+    bool predict() {
         PredictRequest predictRequest;
         PredictResponse response;
         ClientContext context;
 
-        predictRequest.mutable_model_spec()->set_name(modelName);
+        predictRequest.mutable_model_spec()->set_name(this->modelName);
         predictRequest.mutable_model_spec()->set_signature_name("serving_default");
 
         google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs = *predictRequest.mutable_inputs();
@@ -305,39 +318,56 @@ public:
         // Pre-processing step.
         // Packing image into gRPC message.
         //this->prepareInputs(inputs, entry, inputName);
-        this->prepareBatchedInputs(inputs, entries, inputName);
+        prepareBatchedInputs(inputs, this->entries, this->inputName);
 
         // Actual predict request.
         auto start = std::chrono::high_resolution_clock::now();
-        Status status = stub_->Predict(&context, predictRequest, &response);
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::high_resolution_clock::now() - start);
+        
+        //Status status = stub_->Predict(&context, predictRequest, &response);
+        AsyncClientCall* call = new AsyncClientCall;
+        call->response_reader = stub_->PrepareAsyncPredict(&(call->context), predictRequest, &this->cq_);
+        call->response_reader->StartCall();
 
-        // gRPC error handling.
-        if (!status.ok()) {
-            std::cout << "gRPC call return code: " << status.error_code() << ": "
-                      << status.error_message() << std::endl;
-            return false;
-        }
-
-        std::cout << "call predict ok" << std::endl;
-        std::cout << "call predict time: " << duration.count() / 1000 << "ms" << std::endl;
-        std::cout << "outputs size is " << response.outputs_size() << std::endl;
-
-        // Post-processing step.
-        // Extracting most probable label from resnet output.
-        std::vector<tensorflow::int64> predictedLabels;
-        if (!this->interpretOutputs(*response.mutable_outputs(), outputName, predictedLabels)) {
-            return false;
-        }
-        for (size_t i = 0; i < predictedLabels.size(); i++) {
-            numberOfCorrectLabels = predictedLabels[i] == entries[i].expectedLabel ? numberOfCorrectLabels + 1 : numberOfCorrectLabels;
-        }
+        // TODO: Try finishing the call in other thread
+        call->response_reader->Finish(&(call->reply), &(call->status), (void*)call);
 
         return true;
+        // void* got_tag;
+        // bool ok = false;
+        // while (this->cq_.Next(&got_tag, &ok)) {
+        //     AsyncClientCall* call = static_cast<AsyncClientCall*>(got_tag);
+        //     auto& response = call->reply;
+        //     std::cout << "Got reply" << std::endl;
+
+        
+        //     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+        //         std::chrono::high_resolution_clock::now() - start);
+
+        //     // gRPC error handling.
+        //     if (!call->status.ok()) {
+        //         std::cout << "gRPC call return code: " << call->status.error_code() << ": "
+        //                   << call->status.error_message() << std::endl;
+        //         return false;
+        //     }
+
+        //     std::cout << "call predict ok" << std::endl;
+        //     std::cout << "call predict time: " << duration.count() / 1000 << "ms" << std::endl;
+        //     std::cout << "outputs size is " << response.outputs_size() << std::endl;
+
+        //     // Post-processing step.
+        //     // Extracting most probable label from resnet output.
+        //     std::vector<tensorflow::int64> predictedLabels;
+        //     if (!interpretOutputs(*response.mutable_outputs(), outputName, predictedLabels)) {
+        //         return false;
+        //     }
+        //     for (size_t i = 0; i < predictedLabels.size(); i++) {
+        //         numberOfCorrectLabels = predictedLabels[i] == entries[i].expectedLabel ? numberOfCorrectLabels + 1 : numberOfCorrectLabels;
+        //     }
+
+        //     return true;
+        // }
     }
 
-    template <class T>
     static std::vector<T> selectEntries(const std::vector<T>& entries, tensorflow::int64 batchSize) {
         if (batchSize > entries.size()) {
             std::vector<T> selected;
@@ -354,31 +384,110 @@ public:
         }
     }
 
-    template <class T>
-    static void start(
-        const tensorflow::string& address,
-        const tensorflow::string& modelName,
-        const tensorflow::string& inputName,
-        const tensorflow::string& outputName,
-        const std::vector<T>& entries,
-        tensorflow::int64 iterations,
-        tensorflow::int64 batchSize) {
+    static void start(const tensorflow::string& address, const tensorflow::string& modelName, const tensorflow::string& inputName, const tensorflow::string& outputName, const std::vector<T>& entries, tensorflow::int64 iterations, tensorflow::int64 batchSize) {
         auto begin = std::chrono::high_resolution_clock::now();
         tensorflow::int64 correctLabels = 0;
-        ServingClient client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()));
+        ServingClient<T> client(
+            grpc::CreateChannel(address, grpc::InsecureChannelCredentials()),
+            modelName, inputName, outputName, entries, iterations, batchSize);
+        std::thread thread_ = std::thread(&ServingClient<T>::AsyncCompleteRpc, &client);
+        //auto newEntries = selectEntries(entries, batchSize);
         for (tensorflow::int64 i = 0; i < iterations; i++) {
-            auto newEntries = selectEntries(entries, batchSize);
             int numberOfCorrectLabels = 0;
-            if (!client.predict(modelName, inputName, outputName, newEntries, numberOfCorrectLabels)) {
+            if (!client.predict()) {
                 return;
             }
             correctLabels += numberOfCorrectLabels;
         }
+        thread_.join();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - begin);
         std::cout << "Overall accuracy: " << (correctLabels * 100) / (iterations * batchSize) << "%" << std::endl;
         std::cout << "Total time divided by number of requests: " << (duration.count() / 1000) / iterations << "ms" << std::endl;
     }
+
+    void AsyncCompleteRpc() {
+        std::cout << "AsyncCompleteRpc start" << std::endl;
+
+        void* got_tag;
+        bool ok = false;
+
+
+        int finishedIterations = 0;
+        while (cq_.Next(&got_tag, &ok)) {
+            std::cout << "Received iteration " << finishedIterations + 1 << std::endl;
+            
+            std::cout << "Got reply" << std::endl;
+            AsyncClientCall* call = static_cast<AsyncClientCall*>(got_tag);
+            auto& response = call->reply;
+            // The tag in this example is the memory location of the call object
+
+            // Verify that the request was completed successfully. Note that "ok"
+            // corresponds solely to the request for updates introduced by Finish().
+            //GPR_ASSERT(ok);
+            if (!ok) {
+                std::cerr << "Request is not ok" << std::endl;
+                finishedIterations++;
+                delete call;
+                if (finishedIterations == this->iterations) {
+                    break;
+                } else {
+                    continue;
+                }
+            }
+
+            if (!call->status.ok()) {
+                std::cout << "gRPC call return code: " << call->status.error_code() << ": "
+                          << call->status.error_message() << std::endl;
+                finishedIterations++;
+                delete call;
+                if (finishedIterations == this->iterations) {
+                    break;
+                } else {
+                    continue;
+                }
+            }
+
+            std::cout << "call predict ok" << std::endl;
+            //std::cout << "call predict time: " << duration.count() / 1000 << "ms" << std::endl;
+            std::cout << "outputs size is " << response.outputs_size() << std::endl;
+
+            // Post-processing step.
+            // Extracting most probable label from resnet output.
+            std::vector<tensorflow::int64> predictedLabels;
+            if (!interpretOutputs(*response.mutable_outputs(), this->outputName, predictedLabels)) {
+                std::cout << "error interpreting outputs" << std::endl;
+                finishedIterations++;
+                delete call;
+                if (finishedIterations == this->iterations) {
+                    break;
+                } else {
+                    continue;
+                }
+            }
+            // int numberOfCorrectLabels = 0;  // TODO: save
+            // for (size_t i = 0; i < predictedLabels.size(); i++) {
+            //     numberOfCorrectLabels = predictedLabels[i] == entries[i].expectedLabel ? numberOfCorrectLabels + 1 : numberOfCorrectLabels;
+            // }
+
+            // Once we're complete, deallocate the call object.
+            finishedIterations++;
+            delete call;
+            if (finishedIterations == this->iterations) {
+                break;
+            } else {
+                continue;
+            }
+        }
+    }
+
+private:
+    tensorflow::string modelName;
+    tensorflow::string inputName;
+    tensorflow::string outputName;
+    std::vector<T> entries;
+    tensorflow::int64 iterations;
+    tensorflow::int64 batchSize;
 };
 
 int main(int argc, char** argv) {
@@ -438,14 +547,14 @@ int main(int argc, char** argv) {
             std::cout << "Error reading binary images" << std::endl;
             return -1;
         }
-        ServingClient::start(host, modelName, inputName, outputName, images, iterations, batchSize);
+        ServingClient<BinaryData>::start(host, modelName, inputName, outputName, images, iterations, batchSize);
     } else {
         std::vector<CvMatData> images;
         if (!readImagesCvMat(entries, images, layout)) {
             std::cout << "Error reading binary images" << std::endl;
             return -1;
         }
-        ServingClient::start(host, modelName, inputName, outputName, images, iterations, batchSize);
+        ServingClient<CvMatData>::start(host, modelName, inputName, outputName, images, iterations, batchSize);
     }
 
     return 0;
