@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -23,6 +24,7 @@
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
+#include <inference_engine.hpp>
 #include <netinet/in.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -42,7 +44,9 @@ using grpc::Server;
 using grpc::ServerBuilder;
 
 using namespace ovms;
-
+namespace ovms {
+std::unique_ptr<InferenceEngine::Core> globalEngine;
+}
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
 }
@@ -180,6 +184,8 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
     }
 
     logConfig(config);
+
+    globalEngine = std::make_unique<InferenceEngine::Core>();
     auto& manager = ModelManager::getInstance();
     status = manager.start();
     if (!status.ok()) {

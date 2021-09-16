@@ -45,6 +45,7 @@
 namespace ovms {
 
 using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
+extern std::unique_ptr<InferenceEngine::Core> globalEngine;
 
 class DynamicModelParameter {
 public:
@@ -86,7 +87,7 @@ protected:
     /**
          * @brief Inference Engine core object
          */
-    std::unique_ptr<InferenceEngine::Core> engine;
+    std::unique_ptr<InferenceEngine::Core>& engine;
 
     /**
          * @brief Inference Engine CNNNetwork object
@@ -297,6 +298,7 @@ public:
          * @brief A default constructor
          */
     ModelInstance(const std::string& name, model_version_t version) :
+        engine(globalEngine),
         name(name),
         version(version),
         subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)) { isCustomLoaderConfigChanged = false; }
