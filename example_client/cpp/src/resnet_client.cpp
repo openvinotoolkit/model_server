@@ -81,6 +81,30 @@ struct CvMatData {
     tensorflow::string layout;
 };
 
+struct Configuration  {
+    tensorflow::string address = "localhost";
+    tensorflow::string port = "9000";
+    tensorflow::string modelName = "resnet";
+    tensorflow::string inputName = "0";
+    tensorflow::string outputName = "1463";
+    tensorflow::int64 iterations = 1;
+    tensorflow::int64 batchSize = 1;
+    tensorflow::string imagesListPath = "";
+    tensorflow::string layout = "binary";
+
+    bool validate() const {
+        if (imagesListPath.empty())
+            return false;
+        if (batchSize < 0)
+            return false;
+        if (iterations < 0)
+            return false;
+        if (layout != "binary" && layout != "nchw" && layout != "nhwc")
+            return false;
+        return true;
+    }
+};
+
 template <typename T>
 std::vector<T> reorderToNchw(const T* nhwcVector, int rows, int cols, int channels) {
     std::vector<T> nchwVector(rows * cols * channels);
@@ -359,11 +383,10 @@ public:
         // TODO: Remove the thread, we can use one thread.
         std::thread thread_ = std::thread(&ServingClient<T>::AsyncCompleteRpc, &client);
         for (tensorflow::int64 i = 0; i < iterations; i++) {
-            int numberOfCorrectLabels = 0;
             if (!client.predict()) {
                 return;
             }
-            correctLabels += numberOfCorrectLabels;
+            std::cout << "Finished scheduling " << i << " request" << std::endl;
         }
         thread_.join();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -465,36 +488,28 @@ private:
 };
 
 int main(int argc, char** argv) {
-    tensorflow::string address = "localhost";
-    tensorflow::string port = "9000";
-    tensorflow::string modelName = "resnet";
-    tensorflow::string inputName = "0";
-    tensorflow::string outputName = "1463";
-    tensorflow::int64 iterations = 0;
-    tensorflow::int64 batchSize = 1;
-    tensorflow::string imagesListPath = "";
-    tensorflow::string layout = "binary";
+    Configuration config;
     std::vector<tensorflow::Flag> flagList = {
-        tensorflow::Flag("grpc_address", &address, "url to grpc service"),
-        tensorflow::Flag("grpc_port", &port, "port to grpc service"),
-        tensorflow::Flag("model_name", &modelName, "model name to request"),
-        tensorflow::Flag("input_name", &inputName, "input tensor name with image"),
-        tensorflow::Flag("output_name", &outputName, "output tensor name with classification result"),
-        tensorflow::Flag("iterations", &iterations, "number of images per thread, by default each thread will use all images from list"),
-        tensorflow::Flag("batch_size", &batchSize, "batch size of each iteration"),
-        tensorflow::Flag("images_list", &imagesListPath, "path to a file with a list of labeled images"),
-        tensorflow::Flag("layout", &layout, "binary, nhwc or nchw")};
+        tensorflow::Flag("grpc_address", &config.address, "url to grpc service"),
+        tensorflow::Flag("grpc_port", &config.port, "port to grpc service"),
+        tensorflow::Flag("model_name", &config.modelName, "model name to request"),
+        tensorflow::Flag("input_name", &config.inputName, "input tensor name with image"),
+        tensorflow::Flag("output_name", &config.outputName, "output tensor name with classification result"),
+        tensorflow::Flag("iterations", &config.iterations, "number of images per thread, by default each thread will use all images from list"),
+        tensorflow::Flag("batch_size", &config.batchSize, "batch size of each iteration"),
+        tensorflow::Flag("images_list", &config.imagesListPath, "path to a file with a list of labeled images"),
+        tensorflow::Flag("layout", &config.layout, "binary, nhwc or nchw")};
 
     tensorflow::string usage = tensorflow::Flags::Usage(argv[0], flagList);
     const bool result = tensorflow::Flags::Parse(&argc, argv, flagList);
 
-    if (!result || imagesListPath.empty() || batchSize < 0 || iterations < 0 || (layout != "binary" && layout != "nchw" && layout != "nhwc")) {
+    if (!result || !config.validate()) {
         std::cout << usage;
         return -1;
     }
 
     std::vector<Entry> entries;
-    if (!readImagesList(imagesListPath, entries)) {
+    if (!readImagesList(config.imagesListPath, entries)) {
         std::cout << "Error parsing images_list" << std::endl;
         return -1;
     }
@@ -505,30 +520,30 @@ int main(int argc, char** argv) {
     }
 
     std::cout
-        << "Address: " << address << std::endl
-        << "Port: " << port << std::endl
-        << "Images list path: " << imagesListPath << std::endl
-        << "Layout: " << layout << std::endl;
+        << "Address: " << config.address << std::endl
+        << "Port: " << config.port << std::endl
+        << "Images list path: " << config.imagesListPath << std::endl
+        << "Layout: " << config.layout << std::endl;
 
-    const tensorflow::string host = address + ":" + port;
-    if (iterations == 0) {
-        iterations = entries.size();
+    const tensorflow::string host = config.address + ":" + config.port;
+    if (config.iterations == 0) {
+        config.iterations = entries.size();
     }
 
-    if (layout == "binary") {
+    if (config.layout == "binary") {
         std::vector<BinaryData> images;
         if (!readImagesBinary(entries, images)) {
             std::cout << "Error reading binary images" << std::endl;
             return -1;
         }
-        ServingClient<BinaryData>::start(host, modelName, inputName, outputName, images, iterations, batchSize);
+        ServingClient<BinaryData>::start(host, config.modelName, config.inputName, config.outputName, images, config.iterations, config.batchSize);
     } else {
         std::vector<CvMatData> images;
-        if (!readImagesCvMat(entries, images, layout)) {
+        if (!readImagesCvMat(entries, images, config.layout)) {
             std::cout << "Error reading binary images" << std::endl;
             return -1;
         }
-        ServingClient<CvMatData>::start(host, modelName, inputName, outputName, images, iterations, batchSize);
+        ServingClient<CvMatData>::start(host, config.modelName, config.inputName, config.outputName, images, config.iterations, config.batchSize);
     }
 
     return 0;
