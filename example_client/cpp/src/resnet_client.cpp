@@ -332,40 +332,6 @@ public:
         call->response_reader->Finish(&(call->reply), &(call->status), (void*)call);
 
         return true;
-        // void* got_tag;
-        // bool ok = false;
-        // while (this->cq_.Next(&got_tag, &ok)) {
-        //     AsyncClientCall* call = static_cast<AsyncClientCall*>(got_tag);
-        //     auto& response = call->reply;
-        //     std::cout << "Got reply" << std::endl;
-
-        
-        //     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
-        //         std::chrono::high_resolution_clock::now() - start);
-
-        //     // gRPC error handling.
-        //     if (!call->status.ok()) {
-        //         std::cout << "gRPC call return code: " << call->status.error_code() << ": "
-        //                   << call->status.error_message() << std::endl;
-        //         return false;
-        //     }
-
-        //     std::cout << "call predict ok" << std::endl;
-        //     std::cout << "call predict time: " << duration.count() / 1000 << "ms" << std::endl;
-        //     std::cout << "outputs size is " << response.outputs_size() << std::endl;
-
-        //     // Post-processing step.
-        //     // Extracting most probable label from resnet output.
-        //     std::vector<tensorflow::int64> predictedLabels;
-        //     if (!interpretOutputs(*response.mutable_outputs(), outputName, predictedLabels)) {
-        //         return false;
-        //     }
-        //     for (size_t i = 0; i < predictedLabels.size(); i++) {
-        //         numberOfCorrectLabels = predictedLabels[i] == entries[i].expectedLabel ? numberOfCorrectLabels + 1 : numberOfCorrectLabels;
-        //     }
-
-        //     return true;
-        // }
     }
 
     static std::vector<T> selectEntries(const std::vector<T>& entries, tensorflow::int64 batchSize) {
@@ -390,8 +356,8 @@ public:
         ServingClient<T> client(
             grpc::CreateChannel(address, grpc::InsecureChannelCredentials()),
             modelName, inputName, outputName, entries, iterations, batchSize);
+        // TODO: Remove the thread, we can use one thread.
         std::thread thread_ = std::thread(&ServingClient<T>::AsyncCompleteRpc, &client);
-        //auto newEntries = selectEntries(entries, batchSize);
         for (tensorflow::int64 i = 0; i < iterations; i++) {
             int numberOfCorrectLabels = 0;
             if (!client.predict()) {
@@ -402,7 +368,7 @@ public:
         thread_.join();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - begin);
-        std::cout << "Overall accuracy: " << (correctLabels * 100) / (iterations * batchSize) << "%" << std::endl;
+        std::cout << "Overall accuracy: " << (client.getNumberOfCorrectLabels() * 100) / (iterations * batchSize) << "%" << std::endl;
         std::cout << "Total time divided by number of requests: " << (duration.count() / 1000) / iterations << "ms" << std::endl;
     }
 
@@ -466,9 +432,12 @@ public:
                 }
             }
             // int numberOfCorrectLabels = 0;  // TODO: save
-            // for (size_t i = 0; i < predictedLabels.size(); i++) {
-            //     numberOfCorrectLabels = predictedLabels[i] == entries[i].expectedLabel ? numberOfCorrectLabels + 1 : numberOfCorrectLabels;
-            // }
+            assert(predictedLabels.size() == this->entries.size());
+            for (size_t i = 0; i < predictedLabels.size(); i++) {
+                if (predictedLabels[i] == this->entries[i].expectedLabel) {
+                    this->numberOfCorrectLabels++;
+                }
+            }
 
             // Once we're complete, deallocate the call object.
             finishedIterations++;
@@ -481,6 +450,10 @@ public:
         }
     }
 
+    size_t getNumberOfCorrectLabels() const {
+        return this->numberOfCorrectLabels;
+    }
+
 private:
     tensorflow::string modelName;
     tensorflow::string inputName;
@@ -488,6 +461,7 @@ private:
     std::vector<T> entries;
     tensorflow::int64 iterations;
     tensorflow::int64 batchSize;
+    size_t numberOfCorrectLabels = 0;
 };
 
 int main(int argc, char** argv) {
