@@ -60,7 +60,7 @@ struct Entry {
 };
 
 struct BinaryData {
-    std::unique_ptr<char[]> imageData;
+    std::shared_ptr<char[]> imageData;
     std::streampos fileSize;
     tensorflow::int64 expectedLabel;
 };
@@ -338,27 +338,45 @@ public:
     }
 
     template <class T>
+    static std::vector<T> selectEntries(const std::vector<T>& entries, tensorflow::int64 batchSize) {
+        if (batchSize > entries.size()) {
+            std::vector<T> selected;
+            while (batchSize > entries.size()) {
+                selected.insert(selected.end(), entries.begin(), entries.end());
+                batchSize -= entries.size();
+            }
+            if (batchSize > 0) {
+                selected.insert(selected.end(), entries.begin(), entries.begin() + batchSize);
+            }
+            return selected;
+        } else {
+            return std::vector<T>(entries.begin(), entries.begin() + batchSize);
+        }
+    }
+
+    template <class T>
     static void start(
         const tensorflow::string& address,
         const tensorflow::string& modelName,
         const tensorflow::string& inputName,
         const tensorflow::string& outputName,
         const std::vector<T>& entries,
-        tensorflow::int64 iterations) {
+        tensorflow::int64 iterations,
+        tensorflow::int64 batchSize) {
         auto begin = std::chrono::high_resolution_clock::now();
         tensorflow::int64 correctLabels = 0;
         ServingClient client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()));
         for (tensorflow::int64 i = 0; i < iterations; i++) {
+            auto newEntries = selectEntries(entries, batchSize);
             int numberOfCorrectLabels = 0;
-            //if (!client.predict(modelName, inputName, outputName, entries[i % entries.size()], numberOfCorrectLabels)) {
-            if (!client.predict(modelName, inputName, outputName, entries, numberOfCorrectLabels)) {
+            if (!client.predict(modelName, inputName, outputName, newEntries, numberOfCorrectLabels)) {
                 return;
             }
             correctLabels += numberOfCorrectLabels;
         }
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - begin);
-        std::cout << "Overall accuracy: " << (correctLabels * 100) / (iterations * entries.size()) << "%" << std::endl;
+        std::cout << "Overall accuracy: " << (correctLabels * 100) / (iterations * batchSize) << "%" << std::endl;
         std::cout << "Total time divided by number of requests: " << (duration.count() / 1000) / iterations << "ms" << std::endl;
     }
 };
@@ -370,6 +388,7 @@ int main(int argc, char** argv) {
     tensorflow::string inputName = "0";
     tensorflow::string outputName = "1463";
     tensorflow::int64 iterations = 0;
+    tensorflow::int64 batchSize = 1;
     tensorflow::string imagesListPath = "";
     tensorflow::string layout = "binary";
     std::vector<tensorflow::Flag> flagList = {
@@ -379,13 +398,14 @@ int main(int argc, char** argv) {
         tensorflow::Flag("input_name", &inputName, "input tensor name with image"),
         tensorflow::Flag("output_name", &outputName, "output tensor name with classification result"),
         tensorflow::Flag("iterations", &iterations, "number of images per thread, by default each thread will use all images from list"),
+        tensorflow::Flag("batch_size", &batchSize, "batch size of each iteration"),
         tensorflow::Flag("images_list", &imagesListPath, "path to a file with a list of labeled images"),
         tensorflow::Flag("layout", &layout, "binary, nhwc or nchw")};
 
     tensorflow::string usage = tensorflow::Flags::Usage(argv[0], flagList);
     const bool result = tensorflow::Flags::Parse(&argc, argv, flagList);
 
-    if (!result || imagesListPath.empty() || iterations < 0 || (layout != "binary" && layout != "nchw" && layout != "nhwc")) {
+    if (!result || imagesListPath.empty() || batchSize < 0 || iterations < 0 || (layout != "binary" && layout != "nchw" && layout != "nhwc")) {
         std::cout << usage;
         return -1;
     }
@@ -418,14 +438,14 @@ int main(int argc, char** argv) {
             std::cout << "Error reading binary images" << std::endl;
             return -1;
         }
-        ServingClient::start(host, modelName, inputName, outputName, images, iterations);
+        ServingClient::start(host, modelName, inputName, outputName, images, iterations, batchSize);
     } else {
         std::vector<CvMatData> images;
         if (!readImagesCvMat(entries, images, layout)) {
             std::cout << "Error reading binary images" << std::endl;
             return -1;
         }
-        ServingClient::start(host, modelName, inputName, outputName, images, iterations);
+        ServingClient::start(host, modelName, inputName, outputName, images, iterations, batchSize);
     }
 
     return 0;
