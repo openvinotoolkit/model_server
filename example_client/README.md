@@ -397,9 +397,9 @@ usage: get_serving_meta.py [-h] [--grpc_address GRPC_ADDRESS]
 | Argument      | Description |
 | :---        |    :----   |
 | -h, --help | Show help message and exit|
-| --rest_url REST_URL | Specify url to REST API service. Default:http://localhost|
+| --rest_url REST_URL | Specify url to REST API service. Default: http://localhost|
 | --rest_port REST_PORT | Specify port to REST API service. Default: 9000|
-| --model_name MODEL_NAME| Model name to query, must be same as is in service. Default : resnet|
+| --model_name MODEL_NAME| Model name to query, must be same as is in service. Default: resnet|
 | --model_version MODEL_VERSION | Model version to query - must be numerical. List all version if omitted|
 
 - Usage Example

@@ -12,7 +12,7 @@ Below is depicted the graph implementing a complete OCR pipelines.
 
 ![OCR graph](east_ocr.png)
 
-It includes the following Nodes:
+It includes the following nodes:
 - Model east-resnet50 - inference execution which takes the user image as input. It returns two outputs including information about all detected boxes, their location and scores.
 - Custom node east_ocr - it includes C++ implementation of east-resnet50 model results processing. It analyses the detected boxes coordinates, filters the results
 based on the configurable score level threshold and and applies non-max suppression algorithm to remove overlaping boxes. Finally the custom node east-ocr crops all detected boxes
@@ -35,7 +35,7 @@ Clone github repository:
 git clone https://github.com/argman/EAST 
 cd EAST 
 ```
-Download and unzip the file east_icdar2015_resnet_v1_50_rbox.zip to EAST folder with the github repository.
+Download and unzip the file east_icdar2015_resnet_v1_50_rbox.zip as instructed in readme.md file to EAST folder with the github repository.
 ```bash
 unzip ./east_icdar2015_resnet_v1_50_rbox.zip
 ```
