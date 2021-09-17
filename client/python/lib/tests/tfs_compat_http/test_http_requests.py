@@ -22,11 +22,12 @@ from ovmsclient.tfs_compat.http.requests import (HttpPredictRequest, HttpModelMe
                                                  _parse_input_data, make_metadata_request,
                                                  make_status_request)
 
-from tfs_compat_http.config import (MODEL_SPEC_INVALID,
-                                    PREDICT_REQUEST_INVALID_INPUTS,
+from tfs_compat_http.config import (PREDICT_REQUEST_INVALID_INPUTS,
                                     PREDICT_REQUEST_VALID,
                                     PARSE_INPUT_DATA_VALID,
                                     PARSE_INPUT_DATA_INVALID)
+
+from config import (MODEL_SPEC_INVALID)
 
 
 @pytest.mark.parametrize("inputs, expected_parsed_inputs, name, version", PREDICT_REQUEST_VALID)
