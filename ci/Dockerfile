@@ -22,12 +22,18 @@ ARG ENV_KLOCWORK_URL
 ARG ENV_KLOCWORK_TOKEN
 ARG KLOCWORK_LTOKEN=/ovms/ltoken
 
-RUN rm /etc/yum.repos.d/CentOS-Base.repo
-RUN rm /etc/yum.repos.d/epel.repo
-ADD CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo
-ADD epel.repo /etc/yum.repos.d/epel.repo
+RUN http_proxy=${HTTP_PROXY} DEBIAN_FRONTEND=noninteractive \
+    dpkg --add-architecture i386 && \
+    apt-get update && \
+    apt-get install -y \
+        libc6:i386 \
+        libgcc1:i386 \
+        libncurses5:i386 \
+        libncursesw5:i386 \
+        libaio1 \
+        numactl \
+        lsb-core
 
-RUN http_proxy=${HTTP_PROXY} yum install -y glibc.i686 libgcc.x86_64 libgcc.i686 numactl redhat-lsb-core.i686
 ADD ./kwbuildtools /tmp/kwbuildtools
 
 WORKDIR /example_cpp_client/cpp
