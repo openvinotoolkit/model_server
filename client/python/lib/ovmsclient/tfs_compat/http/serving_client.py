@@ -14,14 +14,18 @@
 # limitations under the License.
 #
 
+import requests
+
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
+from ovmsclient.util.ovmsclient_export import ovmsclient_export
 
 
 class HttpClient(ServingClient):
 
-    def __init__(self, address, port, client_key=None, server_cert=None):
+    def __init__(self, address, port, session, client_key=None, server_cert=None):
         self.address = address
         self.port = port
+        self.session = session
         self.client_key = client_key
         self.server_cert = server_cert
 
@@ -121,9 +125,11 @@ class HttpClient(ServingClient):
             if "client_cert_path" in tls_config and "client_key_path" in tls_config:
                 client_cert = (tls_config["client_cert_path"], tls_config["client_key_path"])
             server_cert = tls_config.get('server_cert_path', None),
-        cls(address, port, client_cert, server_cert)
+        session = requests.Session()
+        return cls(address, port, session, client_cert, server_cert)
 
 
+@ovmsclient_export("make_http_client", httpclient="make_client")
 def make_http_client(config):
     '''
     Create HttpClient object.
