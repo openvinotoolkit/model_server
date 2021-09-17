@@ -18,8 +18,10 @@ import requests
 
 from ovmsclient.util.ovmsclient_export import ovmsclient_export
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
-from ovmsclient.tfs_compat.http.requests import HttpModelStatusRequest
-from ovmsclient.tfs_compat.http.responses import HttpModelStatusResponse
+from ovmsclient.tfs_compat.http.requests import (HttpModelStatusRequest, 
+                                                 HttpModelMetadataRequest)
+from ovmsclient.tfs_compat.http.responses import (HttpModelStatusResponse, 
+                                                  HttpModelMetadataResponse)
 
 
 class HttpClient(ServingClient):
@@ -85,7 +87,21 @@ class HttpClient(ServingClient):
             >>> type(response)
         '''
 
-        raise NotImplementedError
+        HttpClient._check_model_metadata_request(request)
+
+        raw_response = None
+        try:
+            raw_response = self.session.get(f"http://{self.address}:{self.port}"
+                                            f"/v1/models/{request.model_name}"
+                                            f"/versions/{request.model_version}"
+                                            f"/metadata",
+                                            cert=self.client_key, verify=self.server_cert)
+        except requests.exceptions.RequestException as e_info:
+            raise ConnectionError('There was an error during sending ModelMetadataRequest. '
+                                  f'Http exited with:\n{e_info}')
+
+        return HttpModelMetadataResponse(raw_response)
+
 
     def get_model_status(self, request):
         '''
@@ -147,6 +163,14 @@ class HttpClient(ServingClient):
 
         if not isinstance(request, HttpModelStatusRequest):
             raise TypeError('request type should be HttpModelStatusRequest, '
+                            f'but is {type(request).__name__}')
+
+
+    @classmethod
+    def _check_model_metadata_request(cls, request):
+
+        if not isinstance(request, HttpModelMetadataRequest):
+            raise TypeError('request type should be HttpModelMetadataRequest, '
                             f'but is {type(request).__name__}')
 
 
