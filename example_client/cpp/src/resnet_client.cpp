@@ -106,7 +106,7 @@ struct Configuration  {
 };
 
 template <typename T>
-std::vector<T> reorderToNchw(const T* nhwcVector, int rows, int cols, int channels) {
+std::vector<T> reorderVectorToNchw(const T* nhwcVector, int rows, int cols, int channels) {
     std::vector<T> nchwVector(rows * cols * channels);
     for (int y = 0; y < rows; ++y) {
         for (int x = 0; x < cols; ++x) {
@@ -122,7 +122,7 @@ const cv::Mat reorderMatToNchw(cv::Mat* mat) {
     uint64_t channels = mat->channels();
     uint64_t rows = mat->rows;
     uint64_t cols = mat->cols;
-    auto nchwVector = reorderToNchw<float>((float*)mat->data, rows, cols, channels);
+    auto nchwVector = reorderVectorToNchw<float>((float*)mat->data, rows, cols, channels);
 
     cv::Mat image(rows, cols, CV_32FC3);
     std::memcpy(image.data, nchwVector.data(), nchwVector.size() * sizeof(float));
@@ -199,6 +199,44 @@ bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>
 }
 
 template <typename T>
+std::vector<T> selectEntries(const std::vector<T>& entries, tensorflow::int64 batchSize) {
+        if (batchSize > entries.size()) {
+            std::vector<T> selected;
+            while (batchSize > entries.size()) {
+                selected.insert(selected.end(), entries.begin(), entries.end());
+                batchSize -= entries.size();
+            }
+            if (batchSize > 0) {
+                selected.insert(selected.end(), entries.begin(), entries.begin() + batchSize);
+            }
+            return selected;
+        } else {
+            return std::vector<T>(entries.begin(), entries.begin() + batchSize);
+        }
+    }
+
+std::vector<tensorflow::int64> argmax(const tensorflow::Tensor& tensor) {
+    const auto& shape = tensor.shape();
+    assert(shape.dims() == 2);
+    size_t batchSize = shape.dim_size(0);
+    size_t elements = shape.dim_size(1);
+    std::vector<tensorflow::int64> labels;
+    for (size_t j = 0 ; j < batchSize; j++) {
+        float topConfidence = 0;
+        tensorflow::int64 topLabel = -1;
+        for (tensorflow::int64 i = 0; i < elements; i++) {
+            float confidence = ((float*)tensor.data())[j * elements + i];
+            if (topLabel == -1 || topConfidence < confidence) {
+                topLabel = i;
+                topConfidence = confidence;
+            }
+        }
+        labels.push_back(topLabel);
+    }
+    return labels;
+}
+
+template <typename T>
 class ServingClient {
     std::unique_ptr<PredictionService::Stub> stub_;
     CompletionQueue cq_;
@@ -209,33 +247,9 @@ public:
         this->modelName = modelName;
         this->inputName = inputName;
         this->outputName = outputName;
-        this->entries = selectEntries(entries, batchSize);
+        this->entries = selectEntries(entries, batchSize);  // TODO: Use other images than 0th for bs=1.
         this->iterations = iterations;
         this->batchSize = batchSize;
-    }
-
-    static std::vector<tensorflow::int64> argmax(const tensorflow::Tensor& tensor) {
-        const auto& shape = tensor.shape();
-        assert(shape.dims() == 2);
-
-        size_t batchSize = shape.dim_size(0);
-        size_t elements = shape.dim_size(1);
-
-        std::vector<tensorflow::int64> labels;
-
-        for (size_t j = 0 ; j < batchSize; j++) {
-            float topConfidence = 0;
-            tensorflow::int64 topLabel = -1;
-            for (tensorflow::int64 i = 0; i < elements; i++) {
-                float confidence = ((float*)tensor.data())[j * elements + i];
-                if (topLabel == -1 || topConfidence < confidence) {
-                    topLabel = i;
-                    topConfidence = confidence;
-                }
-            }
-            labels.push_back(topLabel);
-        }
-        return labels;
     }
 
     // Pre-processing function for binary images.
@@ -252,8 +266,9 @@ public:
     static bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<BinaryData>& entries, const tensorflow::string& inputName) {
         tensorflow::TensorProto proto;
         proto.set_dtype(tensorflow::DataType::DT_STRING);
-        for (const auto& entry : entries)
+        for (const auto& entry : entries) {
             proto.add_string_val(entry.imageData.get(), entry.fileSize);
+        }
         proto.mutable_tensor_shape()->add_dim()->set_size(entries.size());
         inputs[inputName] = proto;
         return true;
@@ -281,8 +296,6 @@ public:
     }
 
     static bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<CvMatData>& entries, const tensorflow::string& inputName) {
-        assert(entries.size() > 0);
-
         tensorflow::TensorProto proto;
         proto.set_dtype(tensorflow::DataType::DT_FLOAT);
 
@@ -329,7 +342,7 @@ public:
         return true;
     }
 
-    bool predict() {
+    bool schedulePredict() {
         PredictRequest predictRequest;
         PredictResponse response;
         ClientContext context;
@@ -352,26 +365,9 @@ public:
         call->response_reader = stub_->PrepareAsyncPredict(&(call->context), predictRequest, &this->cq_);
         call->response_reader->StartCall();
 
-        // TODO: Try finishing the call in other thread
         call->response_reader->Finish(&(call->reply), &(call->status), (void*)call);
 
         return true;
-    }
-
-    static std::vector<T> selectEntries(const std::vector<T>& entries, tensorflow::int64 batchSize) {
-        if (batchSize > entries.size()) {
-            std::vector<T> selected;
-            while (batchSize > entries.size()) {
-                selected.insert(selected.end(), entries.begin(), entries.end());
-                batchSize -= entries.size();
-            }
-            if (batchSize > 0) {
-                selected.insert(selected.end(), entries.begin(), entries.begin() + batchSize);
-            }
-            return selected;
-        } else {
-            return std::vector<T>(entries.begin(), entries.begin() + batchSize);
-        }
     }
 
     static void start(const tensorflow::string& address, const tensorflow::string& modelName, const tensorflow::string& inputName, const tensorflow::string& outputName, const std::vector<T>& entries, tensorflow::int64 iterations, tensorflow::int64 batchSize) {
@@ -383,7 +379,7 @@ public:
         // TODO: Remove the thread, we can use one thread.
         std::thread thread_ = std::thread(&ServingClient<T>::AsyncCompleteRpc, &client);
         for (tensorflow::int64 i = 0; i < iterations; i++) {
-            if (!client.predict()) {
+            if (!client.schedulePredict()) {
                 return;
             }
             std::cout << "Finished scheduling " << i << " request" << std::endl;
@@ -392,7 +388,7 @@ public:
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - begin);
         std::cout << "Overall accuracy: " << (client.getNumberOfCorrectLabels() * 100) / (iterations * batchSize) << "%" << std::endl;
-        std::cout << "Total time divided by number of requests: " << (duration.count() / 1000) / iterations << "ms" << std::endl;
+        std::cout << "Total time: " << (duration.count() / 1000) << "ms" << std::endl;
     }
 
     void AsyncCompleteRpc() {
@@ -401,11 +397,10 @@ public:
         void* got_tag;
         bool ok = false;
 
-
         int finishedIterations = 0;
         while (cq_.Next(&got_tag, &ok)) {
             std::cout << "Received iteration " << finishedIterations + 1 << std::endl;
-            
+
             std::cout << "Got reply" << std::endl;
             AsyncClientCall* call = static_cast<AsyncClientCall*>(got_tag);
             auto& response = call->reply;
