@@ -18,12 +18,15 @@
 #include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
 #include "logging.hpp"
+#include "predict_request_validation_utils.hpp"
 #include "serialization.hpp"
 #include "timer.hpp"
 
 using namespace InferenceEngine;
 
 namespace ovms {
+
+const std::set<const char*> StatefulModelInstance::SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
 
 const Status StatefulModelInstance::extractSequenceId(const tensorflow::TensorProto& proto, uint64_t& sequenceId) {
     if (!proto.tensor_shape().dim_size()) {
@@ -138,16 +141,6 @@ Status StatefulModelInstance::loadOVExecutableNetwork(const ModelConfig& config)
     return ModelInstance::loadOVExecutableNetwork(config);
 }
 
-const Status StatefulModelInstance::validateNumberOfInputs(const tensorflow::serving::PredictRequest* request, const size_t expectedNumberOfInputs) {
-    // Begin with number of inputs required by the model and increase it with special inputs for sequence handling
-    auto completeInputsNumber = expectedNumberOfInputs;
-    for (auto specialInputName : SPECIAL_INPUT_NAMES) {
-        if (request->inputs().count(specialInputName))
-            completeInputsNumber++;
-    }
-    return ModelInstance::validateNumberOfInputs(request, completeInputsNumber);
-}
-
 const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec) {
     uint64_t sequenceId = 0;
     uint32_t sequenceControlInput = 0;
@@ -183,7 +176,14 @@ const Status StatefulModelInstance::validate(const tensorflow::serving::PredictR
     if (!status.ok())
         return status;
 
-    return ModelInstance::validate(request);
+    return request_validation_utils::validate(
+        *request,
+        getInputsInfo(),
+        getName(),
+        getVersion(),
+        SPECIAL_INPUT_NAMES,
+        getModelConfig().getBatchingMode(),
+        getModelConfig().getShapes());
 }
 
 Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,
