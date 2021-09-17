@@ -17,8 +17,9 @@
 import numpy as np
 import pytest
 
-from constants import MODEL_SERVICE, ERROR_SHAPE
-from config import target_device, skip_nginx_test, skip_hddl_tests
+from constants import MODEL_SERVICE, ERROR_SHAPE, NOT_TO_BE_REPORTED_IF_SKIPPED, TARGET_DEVICE_MYRIAD, \
+    TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU
+from config import skip_nginx_test
 from model.models_information import ResnetONNX
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status
@@ -27,18 +28,13 @@ from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
 from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_rest, \
     get_model_metadata_response_rest, get_model_status_response_rest
+from utils.helpers import devices_not_supported_for_test
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.skipif(skip_hddl_tests, reason="NOT TO BE REPORTED IF SKIPPED")
-@pytest.mark.skipif(skip_nginx_test, reason="NOT TO BE REPORTED IF SKIPPED")
-#reason="Unsupported property key by plugin: CPU_THROUGHPUT_STREAMS"
-@pytest.mark.skipif(target_device == "GPU", reason="NOT TO BE REPORTED IF SKIPPED")
-# Expected: CPU_THROUGHPUT_STREAMS key is not supported for VPU;
-# Received: Invalid or missing S3 credentials, or bucket does not exist - inference. Invalid DNS Label found in URI host
-@pytest.mark.skipif(target_device == "MYRIAD",
-                    reason="NOT TO BE REPORTED IF SKIPPED")
+@pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
+@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU])
 class TestSingleModelInferenceOnnx:
 
     def test_run_inference(self, start_server_single_model_onnx):

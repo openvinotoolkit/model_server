@@ -16,8 +16,9 @@
 
 import numpy as np
 import pytest
-from constants import ERROR_SHAPE
-from config import target_device, skip_nginx_test
+from constants import ERROR_SHAPE, TARGET_DEVICE_MYRIAD, NOT_TO_BE_REPORTED_IF_SKIPPED
+from config import skip_nginx_test
+from functional.utils.helpers import devices_not_supported_for_test
 from model.models_information import AgeGender
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response
 import logging
@@ -25,11 +26,8 @@ from utils.rest import get_predict_url, get_metadata_url, infer_rest, get_model_
 
 logger = logging.getLogger(__name__)
 
-
-@pytest.mark.skipif(skip_nginx_test, reason="NOT TO BE REPORTED IF SKIPPED")
-# "error: Cannot load network into target device"
-@pytest.mark.skipif(target_device == "MYRIAD",
-                    reason="NOT TO BE REPORTED IF SKIPPED")
+@pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
+@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD])
 class TestSingleModelMappingInference:
     def test_run_inference(self, start_server_with_mapping):
         """

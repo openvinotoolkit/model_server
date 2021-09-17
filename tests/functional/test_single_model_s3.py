@@ -16,8 +16,9 @@
 
 import pytest
 import numpy as np
-from constants import MODEL_SERVICE, ERROR_SHAPE
+from constants import MODEL_SERVICE, ERROR_SHAPE, TARGET_DEVICE_MYRIAD, NOT_TO_BE_REPORTED_IF_SKIPPED
 from config import target_device, skip_nginx_test
+from utils.helpers import devices_not_supported_for_test
 from model.models_information import Resnet
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status
@@ -26,11 +27,8 @@ from utils.models_utils import ModelVersionState, ErrorCode, ERROR_MESSAGE
 
 logger = logging.getLogger(__name__)
 
-@pytest.mark.skipif(skip_nginx_test, reason="NOT TO BE REPORTED IF SKIPPED")
-# Expected: CPU_THROUGHPUT_STREAMS key is not supported for VPU;
-# Received: Invalid or missing S3 credentials, or bucket does not exist - inference. Invalid DNS Label found in URI host
-@pytest.mark.skipif(target_device == "MYRIAD",
-                    reason="NOT TO BE REPORTED IF SKIPPED")
+@pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
+@devices_not_supported_for_test(TARGET_DEVICE_MYRIAD)
 class TestSingleModelInferenceS3:
 
     def test_run_inference(self, start_server_single_model_from_minio):

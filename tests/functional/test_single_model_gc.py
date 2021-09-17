@@ -17,8 +17,10 @@
 import pytest
 import numpy as np
 
-from constants import MODEL_SERVICE, ERROR_SHAPE
-from config import target_device, skip_nginx_test, skip_hddl_tests
+from constants import MODEL_SERVICE, ERROR_SHAPE, NOT_TO_BE_REPORTED_IF_SKIPPED, TARGET_DEVICE_MYRIAD, \
+    TARGET_DEVICE_HDDL
+from config import skip_nginx_test
+from utils.helpers import devices_not_supported_for_test
 from model.models_information import Resnet, ResnetGS
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status
@@ -28,12 +30,8 @@ from utils.models_utils import ModelVersionState, ErrorCode, ERROR_MESSAGE
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.skipif(skip_hddl_tests, reason="NOT TO BE REPORTED IF SKIPPED")
-@pytest.mark.skipif(skip_nginx_test, reason="NOT TO BE REPORTED IF SKIPPED")
-# Cannot load network into target device; error: [ GENERAL_ERROR ]
-# /home/jenkins/agent/workspace/private-ci/ie/build-linux-centos76/b/repos/openvino/inference-engine/src/vpu/graph_transformer/src/frontend/frontend.cpp:439 Failed to compile layer "610/variance/Fused_Add_": [ GENERAL_ERROR ]
-@pytest.mark.skipif(target_device == "MYRIAD",
-                    reason="NOT TO BE REPORTED IF SKIPPED")
+@pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
+@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL])
 class TestSingleModelInferenceGc:
 
     def test_run_inference(self, start_server_single_model_from_gc):

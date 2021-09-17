@@ -19,7 +19,7 @@ import time
 import pytest
 
 import config
-from constants import MODEL_SERVICE
+from constants import MODEL_SERVICE, NOT_TO_BE_REPORTED_IF_SKIPPED
 from model.models_information import Resnet, ResnetBS8, ResnetBS4
 from utils.grpc import create_channel, get_model_metadata, model_metadata_response, \
     get_model_status
@@ -36,14 +36,13 @@ from utils.models_utils import ModelVersionState, ErrorCode, \
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.skipif(config.skip_nginx_test, reason="NOT TO BE REPORTED IF SKIPPED")
+@pytest.mark.skipif(config.skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
 class TestSingleModelInference:
 
     @staticmethod
     def get_update_directory():
         return os.path.join(config.path_to_mount, "update-{}".format(get_tests_suffix()))
 
-    @pytest.mark.skip(reason="NOT TO BE REPORTED IF SKIPPED")
     def test_specific_version(self, resnet_multiple_batch_sizes, start_server_update_flow_specific):
         _, ports = start_server_update_flow_specific
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
@@ -205,7 +204,6 @@ class TestSingleModelInference:
         shutil.rmtree(resnet_bs8_copy_dir)
         time.sleep(10)
 
-    @pytest.mark.skip(reason="NOT TO BE REPORTED IF SKIPPED")
     def test_latest_version(self, resnet_multiple_batch_sizes,
                             start_server_update_flow_latest):
 
@@ -284,7 +282,6 @@ class TestSingleModelInference:
         shutil.rmtree(resnet_v2_copy_dir)
         time.sleep(10)
 
-    @pytest.mark.skip(reason="NOT TO BE REPORTED IF SKIPPED")
     def test_specific_version_rest(self, resnet_multiple_batch_sizes, start_server_update_flow_specific):
         _, ports = start_server_update_flow_specific
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
@@ -442,7 +439,6 @@ class TestSingleModelInference:
         shutil.rmtree(resnet_bs8_copy_dir)
         time.sleep(10)
 
-    @pytest.mark.skip(reason="NOT TO BE REPORTED IF SKIPPED")
     def test_latest_version_rest(self, resnet_multiple_batch_sizes, start_server_update_flow_latest):
         _, ports = start_server_update_flow_latest
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes
@@ -518,7 +514,6 @@ class TestSingleModelInference:
         shutil.rmtree(resnet_bs4_copy_dir)
         time.sleep(10)
 
-    @pytest.mark.skip(reason="NOT TO BE REPORTED IF SKIPPED")
     def test_update_rest_grpc(self, resnet_multiple_batch_sizes, start_server_update_flow_specific):
         _, ports = start_server_update_flow_specific
         resnet, resnet_bs4, resnet_bs8 = resnet_multiple_batch_sizes

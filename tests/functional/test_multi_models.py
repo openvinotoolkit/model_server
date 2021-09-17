@@ -15,8 +15,10 @@
 #
 import pytest
 import numpy as np
-from constants import MODEL_SERVICE, ERROR_SHAPE
-from config import target_device, skip_nginx_test, skip_hddl_tests
+from constants import MODEL_SERVICE, ERROR_SHAPE, TARGET_DEVICE_GPU, TARGET_DEVICE_HDDL, NOT_TO_BE_REPORTED_IF_SKIPPED, \
+    TARGET_DEVICE_MYRIAD
+from config import  skip_nginx_test
+from functional.utils.helpers import devices_not_supported_for_test
 from model.models_information import Resnet, ResnetBS4, ResnetBS8, ResnetS3
 from utils.grpc import create_channel, infer, get_model_metadata, \
     model_metadata_response, get_model_status
@@ -28,12 +30,8 @@ from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_
 
 logger = logging.getLogger(__name__)
 
-@pytest.mark.skipif(skip_hddl_tests, reason="NOT TO BE REPORTED IF SKIPPED")
-@pytest.mark.skipif(skip_nginx_test, reason="NOT TO BE REPORTED IF SKIPPED")
-#"error: Cannot load network into target device"
-@pytest.mark.skipif(target_device == "MYRIAD", reason="NOT TO BE REPORTED IF SKIPPED")
-# "Unsupported property key by plugin: CPU_THROUGHPUT_STREAMS"
-@pytest.mark.skipif(target_device == "GPU", reason="NOT TO BE REPORTED IF SKIPPED")
+@pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
+@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU])
 class TestMultiModelInference:
 
     def test_run_inference(self, start_server_multi_model):

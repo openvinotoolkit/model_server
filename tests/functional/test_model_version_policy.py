@@ -20,8 +20,9 @@ from google.protobuf.json_format import Parse
 from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2  # noqa
 
-from constants import MODEL_SERVICE
+from constants import MODEL_SERVICE, TARGET_DEVICE_MYRIAD, NOT_TO_BE_REPORTED_IF_SKIPPED
 from config import target_device, skip_nginx_test
+from functional.utils.helpers import devices_not_supported_for_test
 from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2
 from utils.grpc import create_channel, get_model_metadata, model_metadata_response, \
     get_model_status
@@ -32,10 +33,8 @@ from utils.rest import get_metadata_url, get_status_url, get_model_status_respon
 
 logger = logging.getLogger(__name__)
 
-@pytest.mark.skipif(skip_nginx_test, reason="NOT TO BE REPORTED IF SKIPPED")
-# "error: Cannot load network into target device"
-@pytest.mark.skipif(target_device=="MYRIAD",
-                    reason="NOT TO BE REPORTED IF SKIPPED")
+@pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
+@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD])
 class TestModelVerPolicy:
 
     @pytest.mark.parametrize("model_name, throw_error", [
