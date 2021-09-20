@@ -116,3 +116,5 @@ skip_nginx_test = skip_nginx_test and is_nginx_mtls
 """ TT_SKIP_TEST_IF_HDDL_MTLS """
 skip_hddl_tests = get_bool("TT_SKIP_TEST_IF_HDDL_MTLS", "True")
 skip_hddl_tests = skip_hddl_tests and target_device == "HDDL"
+
+os.environ["TT_INFO_MODULE"] = "ovms.ovms_info.OvmsInfo"
