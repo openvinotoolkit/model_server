@@ -94,6 +94,8 @@ struct Configuration  {
     tensorflow::int64 batchSize = 1;
     tensorflow::string imagesListPath = "";
     tensorflow::string layout = "binary";
+    tensorflow::int64 producers = 1;
+    tensorflow::int64 consumers = 1;
 
     bool validate() const {
         if (imagesListPath.empty())
@@ -101,6 +103,8 @@ struct Configuration  {
         if (batchSize < 0)
             return false;
         if (iterations < 0)
+            return false;
+        if (producers <= 0 || consumers <= 0)
             return false;
         if (layout != "binary" && layout != "nchw" && layout != "nhwc")
             return false;
@@ -314,10 +318,10 @@ public:
 
     // Post-processing function for resnet classification.
     // Most probable label is selected from the output.
-    static bool interpretOutputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& outputs, const tensorflow::string& outputName, std::vector<tensorflow::int64>& predictedLabels) {
-        auto it = outputs.find(outputName);
+    bool interpretOutputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& outputs, std::vector<tensorflow::int64>& predictedLabels) {
+        auto it = outputs.find(this->config.outputName);
         if (it == outputs.end()) {
-            std::cout << "cannot find output " << outputName << std::endl;
+            std::cout << "cannot find output " << this->config.outputName << std::endl;
             return false;
         }
         tensorflow::TensorProto& resultTensorProto = it->second;
@@ -343,23 +347,22 @@ public:
 
         // Pre-processing step.
         // Packing image into gRPC message.
-        //this->prepareInputs(inputs, entry, inputName);
         auto* call = new AsyncClientCall<T>;
         call->id = iteration + 1;
         call->selectedEntries = selectEntries(this->entries, this->config.batchSize, iteration);
-        prepareBatchedInputs(inputs, call->selectedEntries);
+        this->prepareBatchedInputs(inputs, call->selectedEntries);
 
         //Status status = stub_->Predict(&context, predictRequest, &response);
-        call->response_reader = stub_->PrepareAsyncPredict(&(call->context), predictRequest, &this->cq_);
+        call->response_reader = stub_->PrepareAsyncPredict(&call->context, predictRequest, &this->cq_);
         call->response_reader->StartCall();
 
-        call->response_reader->Finish(&(call->reply), &(call->status), (void*)call);
+        call->response_reader->Finish(&call->reply, &call->status, (void*)call);
 
         std::cout << "Scheduled request no. " << call->id << std::endl;
         return true;
     }
 
-    void AsyncCompleteRpc() {
+    void asyncCompleteRpc() {
         void* got_tag;
         bool ok = false;
 
@@ -385,7 +388,7 @@ public:
             }
 
             std::vector<tensorflow::int64> predictedLabels;
-            if (!interpretOutputs(*response.mutable_outputs(), this->config.outputName, predictedLabels)) {
+            if (!this->interpretOutputs(*response.mutable_outputs(), predictedLabels)) {
                 std::cout << "error interpreting outputs" << std::endl;
                 continue;
             }
@@ -404,16 +407,31 @@ public:
         return this->numberOfCorrectLabels;
     }
 
-    static void start(const tensorflow::string& address, const std::vector<T>& entries, const Configuration& config) {
-        auto begin = std::chrono::high_resolution_clock::now();  // avg, median, max time per predict
-        ServingClient<T> client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()), entries, config);
-        std::thread consumer = std::thread(&ServingClient<T>::AsyncCompleteRpc, &client);
+    void scheduler() {
         for (tensorflow::int64 i = 0; i < config.iterations; i++) {
-            if (!client.schedulePredict(i)) {
+            if (!this->schedulePredict(i)) {
                 return;
             }
         }
-        consumer.join();
+    }
+
+    static void start(const tensorflow::string& address, const std::vector<T>& entries, const Configuration& config) {
+        auto begin = std::chrono::high_resolution_clock::now();
+        ServingClient<T> client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()), entries, config);
+        std::vector<std::thread> consumers;
+        std::vector<std::thread> producers;
+        for (int i = 0; i < config.consumers; i++) {
+            consumers.emplace_back(std::thread(&ServingClient<T>::asyncCompleteRpc, &client));
+        }
+        for (int i = 0; i < config.producers; i++) {
+            producers.emplace_back(std::thread(&ServingClient<T>::scheduler, &client));
+        }
+        for (auto& consumer : consumers) {
+            consumer.join();
+        }
+        for (auto& producer : producers) {
+            producer.join();
+        }
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - begin);
         std::cout << "Accuracy: " << (client.getNumberOfCorrectLabels() * 100) / (config.iterations * config.batchSize) << "%" << std::endl;
@@ -438,7 +456,9 @@ int main(int argc, char** argv) {
         tensorflow::Flag("iterations", &config.iterations, "number of images per thread, by default each thread will use all images from list"),
         tensorflow::Flag("batch_size", &config.batchSize, "batch size of each iteration"),
         tensorflow::Flag("images_list", &config.imagesListPath, "path to a file with a list of labeled images"),
-        tensorflow::Flag("layout", &config.layout, "binary, nhwc or nchw")};
+        tensorflow::Flag("layout", &config.layout, "binary, nhwc or nchw"),
+        tensorflow::Flag("producers", &config.producers, "number of clients asynchronously scheduling prediction"),
+        tensorflow::Flag("consumers", &config.consumers, "number of consumer threads interpreting resnet results")};
 
     tensorflow::string usage = tensorflow::Flags::Usage(argv[0], flagList);
     const bool result = tensorflow::Flags::Parse(&argc, argv, flagList);
