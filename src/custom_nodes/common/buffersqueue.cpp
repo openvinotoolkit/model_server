@@ -15,6 +15,7 @@
 //*****************************************************************************
 
 #include "buffersqueue.hpp"
+
 #include <iostream>
 
 namespace ovms {
@@ -23,30 +24,31 @@ BuffersQueue::BuffersQueue(size_t singleBufferSize, int streamsLength) :
     Queue(streamsLength),
     singleBufferSize(singleBufferSize),
     size(singleBufferSize * streamsLength),
-    memoryPool(new char[size]) {
-    if (nullptr == memoryPool) {
-        throw std::bad_alloc();
-    }
+    memoryPool(std::make_unique<char[]>(size)) {
     for (int i = 0; i < streamsLength; ++i) {
-        inferRequests.push_back(memoryPool + i * singleBufferSize);
+        inferRequests.push_back(memoryPool.get() + i * singleBufferSize);
     }
-}
-BuffersQueue::~BuffersQueue() {
-    delete[] memoryPool;
 }
 void* BuffersQueue::getBuffer() {
     // can be easily switched to async version if need arise
-    return getInferRequest(getIdleStream().get());
+    auto idleId = getIdleStream();
+    if (idleId.wait_for(std::chrono::nanoseconds(0)) == std::future_status::timeout) {
+        return nullptr;
+    }
+    return getInferRequest(idleId.get());
 }
 
 bool BuffersQueue::returnBuffer(void* buffer) {
-    if ((static_cast<char*>(buffer) < memoryPool) ||
-        ((memoryPool + size - 1) < buffer) ||
-        ((static_cast<char*>(buffer) - memoryPool) % singleBufferSize != 0)) {
+    if ((static_cast<char*>(buffer) < memoryPool.get()) ||
+        ((memoryPool.get() + size - 1) < buffer) ||
+        ((static_cast<char*>(buffer) - memoryPool.get()) % singleBufferSize != 0)) {
         return false;
     }
-    returnStream((static_cast<char*>(buffer) - memoryPool) / singleBufferSize);
+    returnStream(getBufferId(buffer));
     return true;
+}
+int BuffersQueue::getBufferId(void* buffer) {
+    return (static_cast<char*>(buffer) - memoryPool.get()) / singleBufferSize;
 }
 }  // namespace custom_nodes_common
 }  // namespace ovms

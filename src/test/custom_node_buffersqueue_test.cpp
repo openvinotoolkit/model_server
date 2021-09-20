@@ -56,7 +56,7 @@ void getBufferAndReturn(BuffersQueue& buffersQueue) {
     ASSERT_NE(nullptr, buffer) << "Failed to get buffer";
 }
 
-TEST(CustomNodeBuffersQueue, GetAllBuffersThenHaveToWaitUntilReleased) {
+TEST(CustomNodeBuffersQueue, GetAllBuffersThenNullptrForNextRequest) {
     const std::string content{"abc"};
     size_t buffersCount = 1;
     BuffersQueue buffersQueue(content.size(), buffersCount);
@@ -65,21 +65,15 @@ TEST(CustomNodeBuffersQueue, GetAllBuffersThenHaveToWaitUntilReleased) {
         buffers[i] = buffersQueue.getBuffer();
         ASSERT_NE(nullptr, buffers[i]) << "Failed to get: " << i;
     }
-    std::promise<void> gotStarted;
-    std::thread t([&buffersQueue, &gotStarted]() {
-        gotStarted.set_value();
-        getBufferAndReturn(buffersQueue);
-    });
-        gotStarted.get_future().get();
+    void* buffer = buffersQueue.getBuffer();
+    EXPECT_EQ(nullptr, buffer) << "Failed to get buffer";
     // just to make sure that getBufferAndReturn function had
     // time to call getBuffer
-    std::this_thread::sleep_for(std::chrono::nanoseconds(10));
     for (size_t i = 0; i < buffersCount; ++i) {
         EXPECT_TRUE(buffersQueue.returnBuffer(buffers[i])) << "failed to release buffer: " << i;
     }
-    t.join();
 }
-TEST(CustomNodeBuddersQueue, ForbidReturningNonConformingAddressesSizeGreaterThan1) {
+TEST(CustomNodeBuffersQueue, ForbidReturningNonConformingAddressesSizeGreaterThan1) {
     const std::string content{"abc"};
     size_t buffersCount = 4;
     BuffersQueue buffersQueue(content.size(), buffersCount);
@@ -100,7 +94,7 @@ TEST(CustomNodeBuddersQueue, ForbidReturningNonConformingAddressesSizeGreaterTha
     EXPECT_FALSE(buffersQueue.returnBuffer(end + 1));
     EXPECT_FALSE(buffersQueue.returnBuffer(end - misalignedOffset));
 }
-TEST(CustomNodeBuddersQueue, ForbidReturningNonConformingAddressesSizeEqual1) {
+TEST(CustomNodeBuffersQueue, ForbidReturningNonConformingAddressesSizeEqual1) {
     const std::string content{"a"};
     size_t buffersCount = 4;
     BuffersQueue buffersQueue(content.size(), buffersCount);
@@ -139,4 +133,3 @@ TEST(CustomNodeBuffersQueue, GetAndReturnBuffersSeveralTimes) {
         }
     }
 }
-

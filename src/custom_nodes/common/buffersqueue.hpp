@@ -32,13 +32,15 @@ namespace custom_nodes_common {
 class BuffersQueue : protected Queue<char*> {
     size_t singleBufferSize;
     size_t size;
-    char* memoryPool;
+    std::unique_ptr<char[]> memoryPool;
 
 public:
     BuffersQueue(size_t singleBufferSize, int streamsLength);
-    ~BuffersQueue();
     void* getBuffer();
     bool returnBuffer(void* buffer);
+
+private:
+    int getBufferId(void* buffer);
 };
 }  // namespace custom_nodes_common
 }  // namespace ovms
