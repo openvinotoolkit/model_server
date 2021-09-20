@@ -64,6 +64,7 @@ struct AsyncClientCall {
     Status status;
     std::unique_ptr<ClientAsyncResponseReader<PredictResponse>> response_reader;
     std::vector<T> selectedEntries;
+    tensorflow::int64 id;
 };
 
 struct Entry {
@@ -249,6 +250,13 @@ std::vector<tensorflow::int64> argmax(const tensorflow::Tensor& tensor) {
     return labels;
 }
 
+class ResourceGuard {
+    void* ptr;
+public:
+    ResourceGuard(void* ptr) : ptr(ptr) {}
+    ~ResourceGuard() { delete ptr; }
+};
+
 template <typename T>
 class ServingClient {
     std::unique_ptr<PredictionService::Stub> stub_;
@@ -337,97 +345,58 @@ public:
         // Packing image into gRPC message.
         //this->prepareInputs(inputs, entry, inputName);
         auto* call = new AsyncClientCall<T>;
+        call->id = iteration + 1;
         call->selectedEntries = selectEntries(this->entries, this->config.batchSize, iteration);
         prepareBatchedInputs(inputs, call->selectedEntries);
 
-        // Actual predict request.
-        //auto start = std::chrono::high_resolution_clock::now();
-        
         //Status status = stub_->Predict(&context, predictRequest, &response);
         call->response_reader = stub_->PrepareAsyncPredict(&(call->context), predictRequest, &this->cq_);
         call->response_reader->StartCall();
 
         call->response_reader->Finish(&(call->reply), &(call->status), (void*)call);
 
+        std::cout << "Scheduled request no. " << call->id << std::endl;
         return true;
     }
 
     void AsyncCompleteRpc() {
-        std::cout << "AsyncCompleteRpc start" << std::endl;
-
         void* got_tag;
         bool ok = false;
 
-        int finishedIterations = 0;
         while (cq_.Next(&got_tag, &ok)) {
-            std::cout << "Received iteration " << finishedIterations + 1 << std::endl;
-
-            std::cout << "Got reply" << std::endl;
+            if (++this->finishedIterations >= this->config.iterations) {
+                cq_.Shutdown();
+            }
             auto* call = static_cast<AsyncClientCall<T>*>(got_tag);
-            auto& response = call->reply;
-            // The tag in this example is the memory location of the call object
+            ResourceGuard guard(call);
 
-            // Verify that the request was completed successfully. Note that "ok"
-            // corresponds solely to the request for updates introduced by Finish().
-            //GPR_ASSERT(ok);
+            std::cout << "Received response no. " << call->id << std::endl;
+            auto& response = call->reply;
+
             if (!ok) {
                 std::cerr << "Request is not ok" << std::endl;
-                finishedIterations++;
-                delete call;
-                if (finishedIterations == this->config.iterations) {
-                    break;
-                } else {
-                    continue;
-                }
+                continue;
             }
 
             if (!call->status.ok()) {
                 std::cout << "gRPC call return code: " << call->status.error_code() << ": "
                           << call->status.error_message() << std::endl;
-                finishedIterations++;
-                delete call;
-                if (finishedIterations == this->config.iterations) {
-                    break;
-                } else {
-                    continue;
-                }
+                continue;
             }
 
-            std::cout << "call predict ok" << std::endl;
-            //std::cout << "call predict time: " << duration.count() / 1000 << "ms" << std::endl;
-            std::cout << "outputs size is " << response.outputs_size() << std::endl;
-
-            // Post-processing step.
-            // Extracting most probable label from resnet output.
             std::vector<tensorflow::int64> predictedLabels;
             if (!interpretOutputs(*response.mutable_outputs(), this->config.outputName, predictedLabels)) {
                 std::cout << "error interpreting outputs" << std::endl;
-                finishedIterations++;
-                delete call;
-                if (finishedIterations == this->config.iterations) {
-                    break;
-                } else {
-                    continue;
-                }
-            }
-            // int numberOfCorrectLabels = 0;  // TODO: save
-            //assert(predictedLabels.size() == this->entries.size());
-            assert(predictedLabels.size() == call->selectedEntries.size());
-            for (size_t i = 0; i < predictedLabels.size(); i++) {
-                //std::cout << "Expected label: " << call->selectedEntries[i].expectedLabel << std::endl;
-                if (predictedLabels[i] == call->selectedEntries[i].expectedLabel) {
-                    this->numberOfCorrectLabels++;
-                }
-            }
-
-            // Once we're complete, deallocate the call object.
-            finishedIterations++;
-            delete call; // add to other
-            if (finishedIterations == this->config.iterations) {
-                break;
-            } else {
                 continue;
             }
+    
+            size_t numberOfCorrectLabels = 0;
+            for (size_t i = 0; i < predictedLabels.size(); i++) {
+                if (predictedLabels[i] == call->selectedEntries[i].expectedLabel) {
+                    numberOfCorrectLabels++;
+                }
+            }
+            this->numberOfCorrectLabels += numberOfCorrectLabels;
         }
     }
 
@@ -438,24 +407,24 @@ public:
     static void start(const tensorflow::string& address, const std::vector<T>& entries, const Configuration& config) {
         auto begin = std::chrono::high_resolution_clock::now();  // avg, median, max time per predict
         ServingClient<T> client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()), entries, config);
-        std::thread thread_ = std::thread(&ServingClient<T>::AsyncCompleteRpc, &client);
+        std::thread consumer = std::thread(&ServingClient<T>::AsyncCompleteRpc, &client);
         for (tensorflow::int64 i = 0; i < config.iterations; i++) {
             if (!client.schedulePredict(i)) {
                 return;
             }
-            std::cout << "Finished scheduling " << i << " request" << std::endl;
         }
-        thread_.join();
+        consumer.join();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - begin);
-        std::cout << "Overall accuracy: " << (client.getNumberOfCorrectLabels() * 100) / (config.iterations * config.batchSize) << "%" << std::endl;
+        std::cout << "Accuracy: " << (client.getNumberOfCorrectLabels() * 100) / (config.iterations * config.batchSize) << "%" << std::endl;
         std::cout << "Total time: " << (duration.count() / 1000) << "ms" << std::endl;
     }
 
 private:
     Configuration config;
     std::vector<T> entries;
-    size_t numberOfCorrectLabels = 0;
+    std::atomic<size_t> numberOfCorrectLabels = 0;
+    std::atomic<tensorflow::int64> finishedIterations = 0;
 };
 
 int main(int argc, char** argv) {
