@@ -200,20 +200,20 @@ bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>
 
 template <typename T>
 std::vector<T> selectEntries(const std::vector<T>& entries, tensorflow::int64 batchSize) {
-        if (batchSize > entries.size()) {
-            std::vector<T> selected;
-            while (batchSize > entries.size()) {
-                selected.insert(selected.end(), entries.begin(), entries.end());
-                batchSize -= entries.size();
-            }
-            if (batchSize > 0) {
-                selected.insert(selected.end(), entries.begin(), entries.begin() + batchSize);
-            }
-            return selected;
-        } else {
-            return std::vector<T>(entries.begin(), entries.begin() + batchSize);
+    if (batchSize > entries.size()) {
+        std::vector<T> selected;
+        while (batchSize > entries.size()) {
+            selected.insert(selected.end(), entries.begin(), entries.end());
+            batchSize -= entries.size();
         }
+        if (batchSize > 0) {
+            selected.insert(selected.end(), entries.begin(), entries.begin() + batchSize);
+        }
+        return selected;
+    } else {
+        return std::vector<T>(entries.begin(), entries.begin() + batchSize);
     }
+}
 
 std::vector<tensorflow::int64> argmax(const tensorflow::Tensor& tensor) {
     const auto& shape = tensor.shape();
@@ -242,18 +242,15 @@ class ServingClient {
     CompletionQueue cq_;
 
 public:
-    ServingClient(std::shared_ptr<Channel> channel, const tensorflow::string& modelName, const tensorflow::string& inputName, const tensorflow::string& outputName, const std::vector<T>& entries, tensorflow::int64 iterations, tensorflow::int64 batchSize) :
+    ServingClient(std::shared_ptr<Channel> channel, const std::vector<T>& entries, const Configuration& config) :
         stub_(PredictionService::NewStub(channel)) {
-        this->modelName = modelName;
-        this->inputName = inputName;
-        this->outputName = outputName;
-        this->entries = selectEntries(entries, batchSize);  // TODO: Use other images than 0th for bs=1.
-        this->iterations = iterations;
-        this->batchSize = batchSize;
+        this->config = config;
+        this->entries = selectEntries(entries, this->config.batchSize);  // TODO: Use other images than 0th for bs=1.
     }
 
     // Pre-processing function for binary images.
     // Images loaded from disk are packed into gRPC request proto.
+    // TODO: To remove
     static bool prepareInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const BinaryData& entry, const tensorflow::string& inputName) {
         tensorflow::TensorProto proto;
         proto.set_dtype(tensorflow::DataType::DT_STRING);
@@ -276,6 +273,7 @@ public:
 
     // Pre-processing function for images in array format.
     // Images loaded from disk are packed into tensor_content in plain array format (using OpenCV) either in NCHW or NHWC layout.
+    // TODO: To remove
     static bool prepareInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const CvMatData& entry, const tensorflow::string& inputName) {
         tensorflow::TensorProto proto;
         proto.set_dtype(tensorflow::DataType::DT_FLOAT);
@@ -347,7 +345,7 @@ public:
         PredictResponse response;
         ClientContext context;
 
-        predictRequest.mutable_model_spec()->set_name(this->modelName);
+        predictRequest.mutable_model_spec()->set_name(this->config.modelName);
         predictRequest.mutable_model_spec()->set_signature_name("serving_default");
 
         google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs = *predictRequest.mutable_inputs();
@@ -355,10 +353,10 @@ public:
         // Pre-processing step.
         // Packing image into gRPC message.
         //this->prepareInputs(inputs, entry, inputName);
-        prepareBatchedInputs(inputs, this->entries, this->inputName);
+        prepareBatchedInputs(inputs, this->entries, this->config.inputName);
 
         // Actual predict request.
-        auto start = std::chrono::high_resolution_clock::now();
+        //auto start = std::chrono::high_resolution_clock::now();
         
         //Status status = stub_->Predict(&context, predictRequest, &response);
         AsyncClientCall* call = new AsyncClientCall;
@@ -368,27 +366,6 @@ public:
         call->response_reader->Finish(&(call->reply), &(call->status), (void*)call);
 
         return true;
-    }
-
-    static void start(const tensorflow::string& address, const tensorflow::string& modelName, const tensorflow::string& inputName, const tensorflow::string& outputName, const std::vector<T>& entries, tensorflow::int64 iterations, tensorflow::int64 batchSize) {
-        auto begin = std::chrono::high_resolution_clock::now();
-        tensorflow::int64 correctLabels = 0;
-        ServingClient<T> client(
-            grpc::CreateChannel(address, grpc::InsecureChannelCredentials()),
-            modelName, inputName, outputName, entries, iterations, batchSize);
-        // TODO: Remove the thread, we can use one thread.
-        std::thread thread_ = std::thread(&ServingClient<T>::AsyncCompleteRpc, &client);
-        for (tensorflow::int64 i = 0; i < iterations; i++) {
-            if (!client.schedulePredict()) {
-                return;
-            }
-            std::cout << "Finished scheduling " << i << " request" << std::endl;
-        }
-        thread_.join();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::high_resolution_clock::now() - begin);
-        std::cout << "Overall accuracy: " << (client.getNumberOfCorrectLabels() * 100) / (iterations * batchSize) << "%" << std::endl;
-        std::cout << "Total time: " << (duration.count() / 1000) << "ms" << std::endl;
     }
 
     void AsyncCompleteRpc() {
@@ -413,7 +390,7 @@ public:
                 std::cerr << "Request is not ok" << std::endl;
                 finishedIterations++;
                 delete call;
-                if (finishedIterations == this->iterations) {
+                if (finishedIterations == this->config.iterations) {
                     break;
                 } else {
                     continue;
@@ -425,7 +402,7 @@ public:
                           << call->status.error_message() << std::endl;
                 finishedIterations++;
                 delete call;
-                if (finishedIterations == this->iterations) {
+                if (finishedIterations == this->config.iterations) {
                     break;
                 } else {
                     continue;
@@ -439,11 +416,11 @@ public:
             // Post-processing step.
             // Extracting most probable label from resnet output.
             std::vector<tensorflow::int64> predictedLabels;
-            if (!interpretOutputs(*response.mutable_outputs(), this->outputName, predictedLabels)) {
+            if (!interpretOutputs(*response.mutable_outputs(), this->config.outputName, predictedLabels)) {
                 std::cout << "error interpreting outputs" << std::endl;
                 finishedIterations++;
                 delete call;
-                if (finishedIterations == this->iterations) {
+                if (finishedIterations == this->config.iterations) {
                     break;
                 } else {
                     continue;
@@ -459,8 +436,8 @@ public:
 
             // Once we're complete, deallocate the call object.
             finishedIterations++;
-            delete call;
-            if (finishedIterations == this->iterations) {
+            delete call; // add to other
+            if (finishedIterations == this->config.iterations) {
                 break;
             } else {
                 continue;
@@ -472,13 +449,26 @@ public:
         return this->numberOfCorrectLabels;
     }
 
+    static void start(const tensorflow::string& address, const std::vector<T>& entries, const Configuration& config) {
+        auto begin = std::chrono::high_resolution_clock::now();  // avg, median, max time per predict
+        ServingClient<T> client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()), entries, config);
+        std::thread thread_ = std::thread(&ServingClient<T>::AsyncCompleteRpc, &client);
+        for (tensorflow::int64 i = 0; i < config.iterations; i++) {
+            if (!client.schedulePredict()) {
+                return;
+            }
+            std::cout << "Finished scheduling " << i << " request" << std::endl;
+        }
+        thread_.join();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::high_resolution_clock::now() - begin);
+        std::cout << "Overall accuracy: " << (client.getNumberOfCorrectLabels() * 100) / (config.iterations * config.batchSize) << "%" << std::endl;
+        std::cout << "Total time: " << (duration.count() / 1000) << "ms" << std::endl;
+    }
+
 private:
-    tensorflow::string modelName;
-    tensorflow::string inputName;
-    tensorflow::string outputName;
+    Configuration config;
     std::vector<T> entries;
-    tensorflow::int64 iterations;
-    tensorflow::int64 batchSize;
     size_t numberOfCorrectLabels = 0;
 };
 
@@ -531,14 +521,14 @@ int main(int argc, char** argv) {
             std::cout << "Error reading binary images" << std::endl;
             return -1;
         }
-        ServingClient<BinaryData>::start(host, config.modelName, config.inputName, config.outputName, images, config.iterations, config.batchSize);
+        ServingClient<BinaryData>::start(host, images, config);
     } else {
         std::vector<CvMatData> images;
         if (!readImagesCvMat(entries, images, config.layout)) {
             std::cout << "Error reading binary images" << std::endl;
             return -1;
         }
-        ServingClient<CvMatData>::start(host, config.modelName, config.inputName, config.outputName, images, config.iterations, config.batchSize);
+        ServingClient<CvMatData>::start(host, images, config);
     }
 
     return 0;
