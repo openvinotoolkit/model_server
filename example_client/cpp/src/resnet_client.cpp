@@ -57,11 +57,13 @@ using tensorflow::serving::PredictResponse;
 
 typedef google::protobuf::Map<tensorflow::string, tensorflow::TensorProto> OutMap;
 
+template <typename T>
 struct AsyncClientCall {
     PredictResponse reply;
     ClientContext context;
     Status status;
     std::unique_ptr<ClientAsyncResponseReader<PredictResponse>> response_reader;
+    std::vector<T> selectedEntries;
 };
 
 struct Entry {
@@ -198,20 +200,31 @@ bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>
     return true;
 }
 
+// TODO: Implement wrap-around
 template <typename T>
-std::vector<T> selectEntries(const std::vector<T>& entries, tensorflow::int64 batchSize) {
+std::vector<T> selectEntries(const std::vector<T>& entries, tensorflow::int64 batchSize, tensorflow::int64 iteration) {
+    size_t startPoint = (iteration * batchSize) % entries.size();
     if (batchSize > entries.size()) {
         std::vector<T> selected;
-        while (batchSize > entries.size()) {
-            selected.insert(selected.end(), entries.begin(), entries.end());
-            batchSize -= entries.size();
-        }
-        if (batchSize > 0) {
-            selected.insert(selected.end(), entries.begin(), entries.begin() + batchSize);
+        while (selected.size() < batchSize) {
+            auto remainingBatches = batchSize - selected.size();
+            if (entries.size() - startPoint >= remainingBatches) {
+                selected.insert(selected.end(), entries.begin() + startPoint, entries.begin() + startPoint + remainingBatches);
+                break;
+            }
+            selected.insert(selected.end(), entries.begin() + startPoint, entries.end());
+            startPoint = 0;
         }
         return selected;
     } else {
-        return std::vector<T>(entries.begin(), entries.begin() + batchSize);
+        if (startPoint + batchSize > entries.size()) {
+            std::vector<T> selected;
+            selected.insert(selected.end(), entries.begin() + startPoint, entries.end());
+            selected.insert(selected.end(), entries.begin(), entries.begin() + (batchSize - (entries.size() - startPoint)));
+            return selected;
+        } else {
+            return std::vector<T>(entries.begin() + startPoint, entries.begin() + startPoint + batchSize);
+        }
     }
 }
 
@@ -224,7 +237,7 @@ std::vector<tensorflow::int64> argmax(const tensorflow::Tensor& tensor) {
     for (size_t j = 0 ; j < batchSize; j++) {
         float topConfidence = 0;
         tensorflow::int64 topLabel = -1;
-        for (tensorflow::int64 i = 0; i < elements; i++) {
+        for (size_t i = 0; i < elements; i++) {
             float confidence = ((float*)tensor.data())[j * elements + i];
             if (topLabel == -1 || topConfidence < confidence) {
                 topLabel = i;
@@ -245,55 +258,25 @@ public:
     ServingClient(std::shared_ptr<Channel> channel, const std::vector<T>& entries, const Configuration& config) :
         stub_(PredictionService::NewStub(channel)) {
         this->config = config;
-        this->entries = selectEntries(entries, this->config.batchSize);  // TODO: Use other images than 0th for bs=1.
+        this->entries = entries; //selectEntries(entries, this->config.batchSize, 0);  // TODO: Use other images than 0th for bs=1.
     }
 
     // Pre-processing function for binary images.
     // Images loaded from disk are packed into gRPC request proto.
-    // TODO: To remove
-    static bool prepareInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const BinaryData& entry, const tensorflow::string& inputName) {
-        tensorflow::TensorProto proto;
-        proto.set_dtype(tensorflow::DataType::DT_STRING);
-        proto.add_string_val(entry.imageData.get(), entry.fileSize);
-        proto.mutable_tensor_shape()->add_dim()->set_size(1);
-        inputs[inputName] = proto;
-        return true;
-    }
-
-    static bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<BinaryData>& entries, const tensorflow::string& inputName) {
+    bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<BinaryData>& entries) {
         tensorflow::TensorProto proto;
         proto.set_dtype(tensorflow::DataType::DT_STRING);
         for (const auto& entry : entries) {
             proto.add_string_val(entry.imageData.get(), entry.fileSize);
         }
         proto.mutable_tensor_shape()->add_dim()->set_size(entries.size());
-        inputs[inputName] = proto;
+        inputs[this->config.inputName] = proto;
         return true;
     }
 
     // Pre-processing function for images in array format.
     // Images loaded from disk are packed into tensor_content in plain array format (using OpenCV) either in NCHW or NHWC layout.
-    // TODO: To remove
-    static bool prepareInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const CvMatData& entry, const tensorflow::string& inputName) {
-        tensorflow::TensorProto proto;
-        proto.set_dtype(tensorflow::DataType::DT_FLOAT);
-        size_t byteSize = entry.image.total() * entry.image.elemSize();
-        proto.mutable_tensor_content()->assign((char*)entry.image.data, byteSize);
-        proto.mutable_tensor_shape()->add_dim()->set_size(1);
-        if (entry.layout == "nchw") {
-            proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.channels());
-            proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.cols);
-            proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.rows);
-        } else {
-            proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.cols);
-            proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.rows);
-            proto.mutable_tensor_shape()->add_dim()->set_size(entry.image.channels());
-        }
-        inputs[inputName] = proto;
-        return true;
-    }
-
-    static bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<CvMatData>& entries, const tensorflow::string& inputName) {
+    bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<CvMatData>& entries) {
         tensorflow::TensorProto proto;
         proto.set_dtype(tensorflow::DataType::DT_FLOAT);
 
@@ -317,7 +300,7 @@ public:
             proto.mutable_tensor_shape()->add_dim()->set_size(entries[0].image.rows);
             proto.mutable_tensor_shape()->add_dim()->set_size(entries[0].image.channels());
         }
-        inputs[inputName] = proto;
+        inputs[this->config.inputName] = proto;
         return true;
     }
 
@@ -340,7 +323,7 @@ public:
         return true;
     }
 
-    bool schedulePredict() {
+    bool schedulePredict(tensorflow::int64 iteration) {
         PredictRequest predictRequest;
         PredictResponse response;
         ClientContext context;
@@ -353,13 +336,14 @@ public:
         // Pre-processing step.
         // Packing image into gRPC message.
         //this->prepareInputs(inputs, entry, inputName);
-        prepareBatchedInputs(inputs, this->entries, this->config.inputName);
+        auto* call = new AsyncClientCall<T>;
+        call->selectedEntries = selectEntries(this->entries, this->config.batchSize, iteration);
+        prepareBatchedInputs(inputs, call->selectedEntries);
 
         // Actual predict request.
         //auto start = std::chrono::high_resolution_clock::now();
         
         //Status status = stub_->Predict(&context, predictRequest, &response);
-        AsyncClientCall* call = new AsyncClientCall;
         call->response_reader = stub_->PrepareAsyncPredict(&(call->context), predictRequest, &this->cq_);
         call->response_reader->StartCall();
 
@@ -379,7 +363,7 @@ public:
             std::cout << "Received iteration " << finishedIterations + 1 << std::endl;
 
             std::cout << "Got reply" << std::endl;
-            AsyncClientCall* call = static_cast<AsyncClientCall*>(got_tag);
+            auto* call = static_cast<AsyncClientCall<T>*>(got_tag);
             auto& response = call->reply;
             // The tag in this example is the memory location of the call object
 
@@ -427,9 +411,11 @@ public:
                 }
             }
             // int numberOfCorrectLabels = 0;  // TODO: save
-            assert(predictedLabels.size() == this->entries.size());
+            //assert(predictedLabels.size() == this->entries.size());
+            assert(predictedLabels.size() == call->selectedEntries.size());
             for (size_t i = 0; i < predictedLabels.size(); i++) {
-                if (predictedLabels[i] == this->entries[i].expectedLabel) {
+                //std::cout << "Expected label: " << call->selectedEntries[i].expectedLabel << std::endl;
+                if (predictedLabels[i] == call->selectedEntries[i].expectedLabel) {
                     this->numberOfCorrectLabels++;
                 }
             }
@@ -454,7 +440,7 @@ public:
         ServingClient<T> client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()), entries, config);
         std::thread thread_ = std::thread(&ServingClient<T>::AsyncCompleteRpc, &client);
         for (tensorflow::int64 i = 0; i < config.iterations; i++) {
-            if (!client.schedulePredict()) {
+            if (!client.schedulePredict(i)) {
                 return;
             }
             std::cout << "Finished scheduling " << i << " request" << std::endl;
