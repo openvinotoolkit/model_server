@@ -133,7 +133,6 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
     ln -s /opt/intel/l_openvino_toolkit_runtime* /opt/intel/openvino
 
-
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/

@@ -70,7 +70,7 @@ DIST_OS_TAG ?= $(BASE_OS_TAG)
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   BASE_IMAGE=ubuntu:$(BASE_OS_TAG_UBUNTU)
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.4.648.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_ubuntu20_p_2022.1.0_250.tgz
 endif
 ifeq ($(BASE_OS),centos)
   BASE_OS_TAG=$(BASE_OS_TAG_CENTOS)
@@ -85,7 +85,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.4
   DIST_OS=redhat
   DIST_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2021.4.648.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2022.1.0_250.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
