@@ -23,7 +23,7 @@ import pytest
 from _pytest._code import ExceptionInfo, filter_traceback  # noqa
 from _pytest.outcomes import OutcomeException
 
-from constants import MODEL_SERVICE, PREDICTION_SERVICE
+from constants import MODEL_SERVICE, PREDICTION_SERVICE, NOT_TO_BE_REPORTED_IF_SKIPPED
 from object_model.server import Server
 from utils.other import reorder_items_by_fixtures_used
 from utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
@@ -33,7 +33,7 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
 from utils.files_operation import get_path_friendly_test_name
 from utils.parametrization import get_tests_suffix
-from config import test_dir, test_dir_cleanup, artifacts_dir
+from config import test_dir, test_dir_cleanup, artifacts_dir, target_device
 
 logger = logging.getLogger(__name__)
 
@@ -173,6 +173,17 @@ def exception_catcher(when: str, outcome):
                                .format(when.capitalize(), str(exc_repr)))
 
 
+def devices_not_supported_for_test(*not_supported_devices_list):
+    """
+    Comma separated list of devices not supported for test.
+    Use as a test decorator.
+    Example use:
+    @devices_not_supported_for_test("CPU", "GPU")
+    def test_example():
+        # test implementation
+    """
+    return pytest.mark.skipif(target_device in not_supported_devices_list,
+                              reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
 
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)

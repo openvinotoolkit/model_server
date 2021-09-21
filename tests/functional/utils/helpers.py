@@ -14,12 +14,7 @@
 # limitations under the License.
 #
 import os
-import pytest
 from typing import Any
-from config import target_device
-
-from functional.constants import NOT_TO_BE_REPORTED_IF_SKIPPED
-
 
 class SingletonMeta(type):
     """
@@ -76,15 +71,3 @@ def get_xdist_worker_nr():
     else:
         xdist_current_worker = int(xdist_current_worker.lstrip("gw"))
     return xdist_current_worker
-
-def devices_not_supported_for_test(*not_supported_devices_list):
-    """
-    Comma separated list of devices not supported for test.
-    Use as a test decorator.
-    Example use:
-    @devices_not_supported_for_test("CPU", "GPU")
-    def test_example():
-        # test implementation
-    """
-    return pytest.mark.skipif(target_device in not_supported_devices_list,
-                              reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
