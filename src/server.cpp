@@ -15,7 +15,6 @@
 //*****************************************************************************
 #include <cstdlib>
 #include <iostream>
-#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -44,6 +43,7 @@ using grpc::Server;
 using grpc::ServerBuilder;
 
 using namespace ovms;
+
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
 }
@@ -181,7 +181,6 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
     }
 
     logConfig(config);
-
     auto& manager = ModelManager::getInstance();
     status = manager.start();
     if (!status.ok()) {
