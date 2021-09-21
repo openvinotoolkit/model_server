@@ -34,6 +34,8 @@ limitations under the License.
 #include <iostream>
 #include <memory>
 #include <thread>
+#include <atomic>
+#include <condition_variable>
 
 #include "google/protobuf/map.h"
 #include "tensorflow/core/framework/tensor.h"
@@ -96,6 +98,7 @@ struct Configuration  {
     tensorflow::string layout = "binary";
     tensorflow::int64 producers = 1;
     tensorflow::int64 consumers = 1;
+    tensorflow::int64 max_parallel_requests = 128;
 
     bool validate() const {
         if (imagesListPath.empty())
@@ -105,6 +108,8 @@ struct Configuration  {
         if (iterations < 0)
             return false;
         if (producers <= 0 || consumers <= 0)
+            return false;
+        if (max_parallel_requests < 0)
             return false;
         if (layout != "binary" && layout != "nchw" && layout != "nhwc")
             return false;
@@ -367,9 +372,10 @@ public:
         bool ok = false;
 
         while (cq_.Next(&got_tag, &ok)) {
-            if (++this->finishedIterations >= this->config.iterations) {
+            if (++this->finishedIterations >= this->config.iterations * this->config.producers) {
                 cq_.Shutdown();
             }
+            cv.notify_one();
             auto* call = static_cast<AsyncClientCall<T>*>(got_tag);
             ResourceGuard guard(call);
 
@@ -409,6 +415,10 @@ public:
 
     void scheduler() {
         for (tensorflow::int64 i = 0; i < config.iterations; i++) {
+            if (config.max_parallel_requests > 0 && i - finishedIterations + 1 > config.max_parallel_requests) {
+                std::unique_lock<std::mutex> lck(cv_m);
+                cv.wait(lck);
+            }
             if (!this->schedulePredict(i)) {
                 return;
             }
@@ -418,24 +428,30 @@ public:
     static void start(const tensorflow::string& address, const std::vector<T>& entries, const Configuration& config) {
         auto begin = std::chrono::high_resolution_clock::now();
         ServingClient<T> client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()), entries, config);
-        std::vector<std::thread> consumers;
-        std::vector<std::thread> producers;
+        std::vector<std::thread> threads;
         for (int i = 0; i < config.consumers; i++) {
-            consumers.emplace_back(std::thread(&ServingClient<T>::asyncCompleteRpc, &client));
+            threads.emplace_back(std::thread(&ServingClient<T>::asyncCompleteRpc, &client));
         }
         for (int i = 0; i < config.producers; i++) {
-            producers.emplace_back(std::thread(&ServingClient<T>::scheduler, &client));
+            threads.emplace_back(std::thread(&ServingClient<T>::scheduler, &client));
         }
-        for (auto& consumer : consumers) {
-            consumer.join();
-        }
-        for (auto& producer : producers) {
-            producer.join();
+        for (auto& t : threads) {
+            t.join();
         }
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - begin);
-        std::cout << "Accuracy: " << (client.getNumberOfCorrectLabels() * 100) / (config.iterations * config.batchSize) << "%" << std::endl;
-        std::cout << "Total time: " << (duration.count() / 1000) << "ms" << std::endl;
+        auto totalTime = (duration.count() / 1000);
+        float accurracy = (client.getNumberOfCorrectLabels() * 100) / (config.iterations * config.producers * config.batchSize);
+        float avgFps = (1000 / ((float)totalTime / (float)(config.iterations * config.producers * config.batchSize)));
+        std::cout << "========================\n        Summary\n========================" << std::endl;
+        std::cout << "Accuracy: " << accurracy << "%" << std::endl;
+        std::cout << "Total time: " << totalTime << "ms" << std::endl;
+        std::cout << "Total iterations: " << config.iterations * config.producers << std::endl;
+        std::cout << "Batch size: " << config.batchSize << std::endl;
+        std::cout << "Producer threads: " << config.producers << std::endl;
+        std::cout << "Consumer threads: " << config.consumers << std::endl;
+        std::cout << "Max parallel requests: " << config.max_parallel_requests << std::endl;
+        std::cout << "Avg FPS: " << avgFps << std::endl;
     }
 
 private:
@@ -443,6 +459,8 @@ private:
     std::vector<T> entries;
     std::atomic<size_t> numberOfCorrectLabels = 0;
     std::atomic<tensorflow::int64> finishedIterations = 0;
+    std::condition_variable cv;
+    std::mutex cv_m;
 };
 
 int main(int argc, char** argv) {
@@ -458,7 +476,8 @@ int main(int argc, char** argv) {
         tensorflow::Flag("images_list", &config.imagesListPath, "path to a file with a list of labeled images"),
         tensorflow::Flag("layout", &config.layout, "binary, nhwc or nchw"),
         tensorflow::Flag("producers", &config.producers, "number of clients asynchronously scheduling prediction"),
-        tensorflow::Flag("consumers", &config.consumers, "number of consumer threads interpreting resnet results")};
+        tensorflow::Flag("consumers", &config.consumers, "number of consumer threads interpreting resnet results"),
+        tensorflow::Flag("max_parallel_requests", &config.max_parallel_requests, "maximum number of parallel inference requests; 0=no limit")};
 
     tensorflow::string usage = tensorflow::Flags::Usage(argv[0], flagList);
     const bool result = tensorflow::Flags::Parse(&argc, argv, flagList);
