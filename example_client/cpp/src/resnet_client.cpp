@@ -29,13 +29,13 @@ limitations under the License.
 // limitations under the License.
 //*****************************************************************************
 
+#include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <thread>
-#include <atomic>
-#include <condition_variable>
 
 #include "google/protobuf/map.h"
 #include "tensorflow/core/framework/tensor.h"
@@ -86,7 +86,7 @@ struct CvMatData {
     tensorflow::string layout;
 };
 
-struct Configuration  {
+struct Configuration {
     tensorflow::string address = "localhost";
     tensorflow::string port = "9000";
     tensorflow::string modelName = "resnet";
@@ -98,7 +98,8 @@ struct Configuration  {
     tensorflow::string layout = "binary";
     tensorflow::int64 producers = 1;
     tensorflow::int64 consumers = 1;
-    tensorflow::int64 max_parallel_requests = 128;
+    tensorflow::int64 max_parallel_requests = 100;
+    tensorflow::int64 benchmark_mode = 0;
 
     bool validate() const {
         if (imagesListPath.empty())
@@ -110,6 +111,8 @@ struct Configuration  {
         if (producers <= 0 || consumers <= 0)
             return false;
         if (max_parallel_requests < 0)
+            return false;
+        if (benchmark_mode < 0 || benchmark_mode > 1)
             return false;
         if (layout != "binary" && layout != "nchw" && layout != "nhwc")
             return false;
@@ -244,7 +247,7 @@ std::vector<tensorflow::int64> argmax(const tensorflow::Tensor& tensor) {
     size_t batchSize = shape.dim_size(0);
     size_t elements = shape.dim_size(1);
     std::vector<tensorflow::int64> labels;
-    for (size_t j = 0 ; j < batchSize; j++) {
+    for (size_t j = 0; j < batchSize; j++) {
         float topConfidence = 0;
         tensorflow::int64 topLabel = -1;
         for (size_t i = 0; i < elements; i++) {
@@ -261,8 +264,10 @@ std::vector<tensorflow::int64> argmax(const tensorflow::Tensor& tensor) {
 
 class ResourceGuard {
     void* ptr;
+
 public:
-    ResourceGuard(void* ptr) : ptr(ptr) {}
+    ResourceGuard(void* ptr) :
+        ptr(ptr) {}
     ~ResourceGuard() { delete ptr; }
 };
 
@@ -275,7 +280,15 @@ public:
     ServingClient(std::shared_ptr<Channel> channel, const std::vector<T>& entries, const Configuration& config) :
         stub_(PredictionService::NewStub(channel)) {
         this->config = config;
-        this->entries = entries; //selectEntries(entries, this->config.batchSize, 0);  // TODO: Use other images than 0th for bs=1.
+        this->entries = entries;
+
+        if (this->config.benchmark_mode == 1) {
+            google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs = *this->predictRequest.mutable_inputs();
+            this->entries = selectEntries(this->entries, this->config.batchSize, 1);
+            this->prepareBatchedInputs(inputs, this->entries);
+            this->predictRequest.mutable_model_spec()->set_name(this->config.modelName);
+            this->predictRequest.mutable_model_spec()->set_signature_name("serving_default");
+        }
     }
 
     // Pre-processing function for binary images.
@@ -304,7 +317,7 @@ public:
 
         content->resize(byteSize * entries.size());
         for (size_t i = 0; i < entries.size(); i++) {
-            std::memcpy(content->data() + i * byteSize, entries[i].image.data, byteSize); 
+            std::memcpy(content->data() + i * byteSize, entries[i].image.data, byteSize);
         }
 
         proto.mutable_tensor_shape()->add_dim()->set_size(entries.size());
@@ -341,29 +354,35 @@ public:
     }
 
     bool schedulePredict(tensorflow::int64 iteration) {
-        PredictRequest predictRequest;
         PredictResponse response;
         ClientContext context;
 
-        predictRequest.mutable_model_spec()->set_name(this->config.modelName);
-        predictRequest.mutable_model_spec()->set_signature_name("serving_default");
-
-        google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs = *predictRequest.mutable_inputs();
-
-        // Pre-processing step.
-        // Packing image into gRPC message.
         auto* call = new AsyncClientCall<T>;
         call->id = iteration + 1;
-        call->selectedEntries = selectEntries(this->entries, this->config.batchSize, iteration);
-        this->prepareBatchedInputs(inputs, call->selectedEntries);
 
-        //Status status = stub_->Predict(&context, predictRequest, &response);
-        call->response_reader = stub_->PrepareAsyncPredict(&call->context, predictRequest, &this->cq_);
-        call->response_reader->StartCall();
+        if (this->config.benchmark_mode == 0) {
+            // Pre-processing step.
+            // Packing image into gRPC message.
+            PredictRequest request;
+            request.mutable_model_spec()->set_name(this->config.modelName);
+            request.mutable_model_spec()->set_signature_name("serving_default");
+            google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs = *request.mutable_inputs();
+            call->selectedEntries = selectEntries(this->entries, this->config.batchSize, iteration);
+            this->prepareBatchedInputs(inputs, call->selectedEntries);
+            call->response_reader = stub_->PrepareAsyncPredict(&call->context, request, &this->cq_);
+            call->response_reader->StartCall();
+            call->response_reader->Finish(&call->reply, &call->status, (void*)call);
+        } else {
+            // No pre-processing step.
+            // Re-use previously prepared gRPC message.
+            call->response_reader = stub_->PrepareAsyncPredict(&call->context, this->predictRequest, &this->cq_);
+            call->response_reader->StartCall();
+            call->response_reader->Finish(&call->reply, &call->status, (void*)call);
+        }
 
-        call->response_reader->Finish(&call->reply, &call->status, (void*)call);
-
-        std::cout << "Scheduled request no. " << call->id << std::endl;
+        if (config.benchmark_mode == 0) {
+            std::cout << "Scheduled request no. " << call->id << std::endl;
+        }
         return true;
     }
 
@@ -379,7 +398,9 @@ public:
             auto* call = static_cast<AsyncClientCall<T>*>(got_tag);
             ResourceGuard guard(call);
 
-            std::cout << "Received response no. " << call->id << std::endl;
+            if (config.benchmark_mode == 0) {
+                std::cout << "Received response no. " << call->id << std::endl;
+            }
             auto& response = call->reply;
 
             if (!ok) {
@@ -393,19 +414,22 @@ public:
                 continue;
             }
 
-            std::vector<tensorflow::int64> predictedLabels;
-            if (!this->interpretOutputs(*response.mutable_outputs(), predictedLabels)) {
-                std::cout << "error interpreting outputs" << std::endl;
-                continue;
-            }
-    
-            size_t numberOfCorrectLabels = 0;
-            for (size_t i = 0; i < predictedLabels.size(); i++) {
-                if (predictedLabels[i] == call->selectedEntries[i].expectedLabel) {
-                    numberOfCorrectLabels++;
+            // Postprocessing
+            if (this->config.benchmark_mode == 0) {
+                std::vector<tensorflow::int64> predictedLabels;
+                if (!this->interpretOutputs(*response.mutable_outputs(), predictedLabels)) {
+                    std::cout << "error interpreting outputs" << std::endl;
+                    continue;
                 }
+
+                size_t numberOfCorrectLabels = 0;
+                for (size_t i = 0; i < predictedLabels.size(); i++) {
+                    if (predictedLabels[i] == call->selectedEntries[i].expectedLabel) {
+                        numberOfCorrectLabels++;
+                    }
+                }
+                this->numberOfCorrectLabels += numberOfCorrectLabels;
             }
-            this->numberOfCorrectLabels += numberOfCorrectLabels;
         }
     }
 
@@ -426,9 +450,9 @@ public:
     }
 
     static void start(const tensorflow::string& address, const std::vector<T>& entries, const Configuration& config) {
-        auto begin = std::chrono::high_resolution_clock::now();
         ServingClient<T> client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()), entries, config);
         std::vector<std::thread> threads;
+        auto begin = std::chrono::high_resolution_clock::now();
         for (int i = 0; i < config.consumers; i++) {
             threads.emplace_back(std::thread(&ServingClient<T>::asyncCompleteRpc, &client));
         }
@@ -444,9 +468,14 @@ public:
         float accurracy = (client.getNumberOfCorrectLabels() * 100) / (config.iterations * config.producers * config.batchSize);
         float avgFps = (1000 / ((float)totalTime / (float)(config.iterations * config.producers * config.batchSize)));
         std::cout << "========================\n        Summary\n========================" << std::endl;
-        std::cout << "Accuracy: " << accurracy << "%" << std::endl;
+        if (config.benchmark_mode == 0) {
+            std::cout << "Benchmark mode: False\nAccuracy: " << accurracy << "%" << std::endl;
+        } else {
+            std::cout << "Benchmark mode: True\nAccuracy: N/A" << std::endl;
+        }
         std::cout << "Total time: " << totalTime << "ms" << std::endl;
         std::cout << "Total iterations: " << config.iterations * config.producers << std::endl;
+        std::cout << "Layout: " << config.layout << std::endl;
         std::cout << "Batch size: " << config.batchSize << std::endl;
         std::cout << "Producer threads: " << config.producers << std::endl;
         std::cout << "Consumer threads: " << config.consumers << std::endl;
@@ -461,6 +490,8 @@ private:
     std::atomic<tensorflow::int64> finishedIterations = 0;
     std::condition_variable cv;
     std::mutex cv_m;
+
+    PredictRequest predictRequest;
 };
 
 int main(int argc, char** argv) {
@@ -477,7 +508,8 @@ int main(int argc, char** argv) {
         tensorflow::Flag("layout", &config.layout, "binary, nhwc or nchw"),
         tensorflow::Flag("producers", &config.producers, "number of clients asynchronously scheduling prediction"),
         tensorflow::Flag("consumers", &config.consumers, "number of consumer threads interpreting resnet results"),
-        tensorflow::Flag("max_parallel_requests", &config.max_parallel_requests, "maximum number of parallel inference requests; 0=no limit")};
+        tensorflow::Flag("max_parallel_requests", &config.max_parallel_requests, "maximum number of parallel inference requests; 0=no limit"),
+        tensorflow::Flag("benchmark_mode", &config.benchmark_mode, "when enabled, there is no pre/post-processing step")};
 
     tensorflow::string usage = tensorflow::Flags::Usage(argv[0], flagList);
     const bool result = tensorflow::Flags::Parse(&argc, argv, flagList);
