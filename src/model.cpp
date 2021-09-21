@@ -110,20 +110,20 @@ const std::shared_ptr<ModelInstance> Model::getDefaultModelInstance() const {
     return modelInstanceIt->second;
 }
 
-std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion) {
+std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion, InferenceEngine::Core& ovCore) {
     if (isStateful()) {
         SPDLOG_DEBUG("Creating new stateful model instance - model name: {}; model version: {};", modelName, modelVersion);
         return std::move(std::static_pointer_cast<ModelInstance>(
-            std::make_shared<StatefulModelInstance>(modelName, modelVersion, this->globalSequencesViewer)));
+            std::make_shared<StatefulModelInstance>(modelName, modelVersion, ovCore, this->globalSequencesViewer)));
     } else {
         SPDLOG_DEBUG("Creating new model instance - model name: {}; model version: {};", modelName, modelVersion);
-        return std::move(std::make_shared<ModelInstance>(modelName, modelVersion));
+        return std::move(std::make_shared<ModelInstance>(modelName, modelVersion, ovCore));
     }
 }
 
-Status Model::addVersion(const ModelConfig& config) {
+Status Model::addVersion(const ModelConfig& config, InferenceEngine::Core& ovCore) {
     const auto& version = config.getVersion();
-    std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory(config.getName(), version);
+    std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory(config.getName(), version, ovCore);
 
     std::unique_lock lock(modelVersionsMtx);
     modelVersions.emplace(version, modelInstance);
@@ -137,7 +137,7 @@ Status Model::addVersion(const ModelConfig& config) {
     return StatusCode::OK;
 }
 
-Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, std::shared_ptr<model_versions_t> versionsFailed) {
+Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, InferenceEngine::Core& ovCore, std::shared_ptr<model_versions_t> versionsFailed) {
     Status result = StatusCode::OK;
     downloadModels(fs, config, versionsToStart);
     versionsFailed->clear();
@@ -145,7 +145,7 @@ Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovm
         SPDLOG_INFO("Will add model: {}; version: {} ...", getName(), version);
         config.setVersion(version);
         config.parseModelMapping();
-        auto status = addVersion(config);
+        auto status = addVersion(config, ovCore);
         if (!status.ok()) {
             SPDLOG_ERROR("Error occurred while loading model: {}; version: {}; error: {}",
                 getName(),
@@ -243,7 +243,7 @@ void Model::cleanupAllVersions() {
     subscriptionManager.notifySubscribers();
 }
 
-Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, std::shared_ptr<model_versions_t> versionsFailed) {
+Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, InferenceEngine::Core& ovCore, std::shared_ptr<model_versions_t> versionsFailed) {
     Status result = StatusCode::OK;
     for (const auto version : *versionsToReload) {
         SPDLOG_INFO("Will reload model: {}; version: {} ...", getName(), version);

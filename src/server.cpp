@@ -44,9 +44,6 @@ using grpc::Server;
 using grpc::ServerBuilder;
 
 using namespace ovms;
-namespace ovms {
-std::unique_ptr<InferenceEngine::Core> globalEngine;
-}
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
 }
@@ -185,7 +182,6 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
 
     logConfig(config);
 
-    globalEngine = std::make_unique<InferenceEngine::Core>();
     auto& manager = ModelManager::getInstance();
     status = manager.start();
     if (!status.ok()) {

@@ -2874,8 +2874,8 @@ class DummyModelWithMockedMetadata : public ovms::ModelInstance {
     ovms::tensor_map_t mockedInputsInfo, mockedOutputsInfo;
 
 public:
-    DummyModelWithMockedMetadata(const ovms::tensor_map_t& inputsInfo, const ovms::tensor_map_t& outputsInfo) :
-        ovms::ModelInstance("dummy", 1),
+    DummyModelWithMockedMetadata(InferenceEngine::Core& ovCore, const ovms::tensor_map_t& inputsInfo, const ovms::tensor_map_t& outputsInfo) :
+        ovms::ModelInstance("dummy", 1, ovCore),
         mockedInputsInfo(inputsInfo),
         mockedOutputsInfo(outputsInfo) {}
 
@@ -2903,7 +2903,7 @@ public:
     ModelWithDummyModelWithMockedMetadata(const std::string& name, std::shared_ptr<DummyModelWithMockedMetadata> modelInstance) :
         Model(name, false, nullptr),
         modelInstance(modelInstance) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, InferenceEngine::Core& ovCore) override {
         return modelInstance;
     }
 };
@@ -2943,8 +2943,9 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenDL
 
     connections[EXIT_NODE_NAME] = {
         {"custom_node", {{"out", pipelineOutputName}}}};
-
+    auto ovCore = std::make_unique<InferenceEngine::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+        *ovCore,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
@@ -3166,7 +3167,9 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{"out", pipelineOutputName}}}};
 
+    auto ovCore = std::make_unique<InferenceEngine::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+        *ovCore,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
@@ -3217,7 +3220,9 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
 
+    auto ovCore = std::make_unique<InferenceEngine::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+        *ovCore,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
@@ -3311,7 +3316,9 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenDLModelAn
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{"out", pipelineOutputName}}}};
 
+    auto ovCore = std::make_unique<InferenceEngine::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+        *ovCore,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
@@ -3362,7 +3369,9 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenCustomNod
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
 
+    auto ovCore = std::make_unique<InferenceEngine::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+        *ovCore,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
