@@ -37,3 +37,15 @@ class ModelStatusRequest(ABC):
     def __init__(self, model_name, model_version):
         self.model_name = model_name
         self.model_version = model_version
+
+
+def _check_model_spec(model_name, model_version):
+
+    if not isinstance(model_name, str):
+        raise TypeError(f'model_name type should be string, but is {type(model_name).__name__}')
+
+    if not isinstance(model_version, int):
+        raise TypeError(f'model_version type should be int, but is {type(model_version).__name__}')
+
+    if model_version.bit_length() > 63 or model_version < 0:
+        raise ValueError(f'model_version should be in range <0, {2**63-1}>')

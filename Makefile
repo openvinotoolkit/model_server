@@ -52,7 +52,7 @@ OV_SOURCE_BRANCH ?= master
 
 OV_USE_BINARY ?= 1
 YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7
-APT_OV_PACKAGE ?= intel-openvino-runtime-ubuntu20-2021.4.582
+APT_OV_PACKAGE ?= intel-openvino-runtime-ubuntu20-2021.4.689
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
 
@@ -70,11 +70,11 @@ DIST_OS_TAG ?= $(BASE_OS_TAG)
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   BASE_IMAGE=ubuntu:$(BASE_OS_TAG_UBUNTU)
-  DLDT_PACKAGE_URL ?=
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.4.648.tgz
 endif
 ifeq ($(BASE_OS),centos)
   BASE_OS_TAG=$(BASE_OS_TAG_CENTOS)
-  DLDT_PACKAGE_URL ?=
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.4.648.tgz
 endif
 ifeq ($(BASE_OS),clearlinux)
   BASE_OS_TAG=$(BASE_OS_TAG_CLEARLINUX)
@@ -85,14 +85,14 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.4
   DIST_OS=redhat
   DIST_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2021.4/l_openvino_toolkit_runtime_rhel8_p_2021.4.582.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2021.4.648.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2021.4"
+PRODUCT_VERSION ?= "2021.4.1"
 
 OVMS_CPP_CONTAINTER_NAME ?= server-test
 OVMS_CPP_CONTAINTER_PORT ?= 9178
