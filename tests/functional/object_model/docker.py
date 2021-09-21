@@ -29,7 +29,7 @@ from utils.grpc import port_manager_grpc
 from utils.rest import port_manager_rest
 import logging
 
-from functional.constants import TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_CPU, TARGET_DEVICE_MYRIAD
+from constants import TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_CPU, TARGET_DEVICE_MYRIAD
 
 logger = logging.getLogger(__name__)
 CONTAINER_STATUS_RUNNING = "running"
