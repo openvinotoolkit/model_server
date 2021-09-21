@@ -100,7 +100,8 @@ RUN bazel build \
 
 COPY src/ /build/src/
 
-RUN bazel build //src:resnet_client
+RUN bazel build //src:resnet_client_simple
+RUN bazel build //src:resnet_client_benchmark
 
 ENV LD_LIBRARY_PATH=/usr/local/lib
-ENTRYPOINT ["/build/bazel-bin/src/resnet_client"]
+ENTRYPOINT ["/build/bazel-bin/src/resnet_client_benchmark"]
