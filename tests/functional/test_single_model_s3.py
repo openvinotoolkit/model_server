@@ -18,7 +18,7 @@ import pytest
 import numpy as np
 from constants import MODEL_SERVICE, ERROR_SHAPE, TARGET_DEVICE_MYRIAD, NOT_TO_BE_REPORTED_IF_SKIPPED
 from config import target_device, skip_nginx_test
-from utils.helpers import devices_not_supported_for_test
+from conftest import devices_not_supported_for_test
 from model.models_information import Resnet
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status

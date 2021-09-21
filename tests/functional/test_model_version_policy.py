@@ -22,7 +22,7 @@ from tensorflow_serving.apis import get_model_metadata_pb2, \
 
 from constants import MODEL_SERVICE, TARGET_DEVICE_MYRIAD, NOT_TO_BE_REPORTED_IF_SKIPPED
 from config import target_device, skip_nginx_test
-from functional.utils.helpers import devices_not_supported_for_test
+from conftest import devices_not_supported_for_test
 from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2
 from utils.grpc import create_channel, get_model_metadata, model_metadata_response, \
     get_model_status

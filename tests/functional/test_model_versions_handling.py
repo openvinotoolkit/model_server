@@ -20,7 +20,7 @@ import numpy as np
 from config import  skip_nginx_test
 from constants import MODEL_SERVICE, TARGET_DEVICE_GPU, TARGET_DEVICE_HDDL, TARGET_DEVICE_MYRIAD, \
     NOT_TO_BE_REPORTED_IF_SKIPPED
-from functional.utils.helpers import devices_not_supported_for_test
+from conftest import devices_not_supported_for_test
 from model.models_information import PVBFaceDetectionV2, PVBFaceDetection
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
     get_model_status

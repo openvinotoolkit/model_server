@@ -18,7 +18,7 @@ import numpy as np
 from constants import MODEL_SERVICE, ERROR_SHAPE, TARGET_DEVICE_GPU, TARGET_DEVICE_HDDL, NOT_TO_BE_REPORTED_IF_SKIPPED, \
     TARGET_DEVICE_MYRIAD
 from config import  skip_nginx_test
-from functional.utils.helpers import devices_not_supported_for_test
+from conftest import devices_not_supported_for_test
 from model.models_information import Resnet, ResnetBS4, ResnetBS8, ResnetS3
 from utils.grpc import create_channel, infer, get_model_metadata, \
     model_metadata_response, get_model_status

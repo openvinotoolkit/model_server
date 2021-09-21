@@ -28,7 +28,7 @@ from utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
 from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_rest, \
     get_model_metadata_response_rest, get_model_status_response_rest
-from utils.helpers import devices_not_supported_for_test
+from conftest import devices_not_supported_for_test
 
 logger = logging.getLogger(__name__)
 
