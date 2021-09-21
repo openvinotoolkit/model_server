@@ -55,7 +55,7 @@ static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
 static bool watcherStarted = false;
 
 ModelManager::ModelManager() :
-    ovCore(std::make_unique<InferenceEngine::Core>()),
+    ieCore(std::make_unique<InferenceEngine::Core>()),
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS) {
     this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManager>();
     if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
@@ -63,7 +63,7 @@ ModelManager::ModelManager() :
         try {
             auto extension_ptr = std::make_shared<InferenceEngine::Extension>(ovms::Config::instance().cpuExtensionLibraryPath());
             SPDLOG_INFO("Custom CPU extention loaded. Adding it.");
-            ovCore->AddExtension(extension_ptr, "CPU");
+            ieCore->AddExtension(extension_ptr, "CPU");
             SPDLOG_INFO("Extention added.");
         } catch (std::exception& ex) {
             SPDLOG_CRITICAL("Custom CPU extention loading has failed! Reason: {}", ex.what());
@@ -940,7 +940,7 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
 Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed) {
     Status status = StatusCode::OK;
     try {
-        status = model->addVersions(versionsToStart, config, fs, *ovCore, versionsFailed);
+        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
@@ -957,7 +957,7 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
     Status status = StatusCode::OK;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading model versions");
     try {
-        auto status = model->reloadVersions(versionsToReload, config, fs, *ovCore, versionsFailed);
+        auto status = model->reloadVersions(versionsToReload, config, fs, *ieCore, versionsFailed);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading model: {}; versions; error: {}",
                 config.getName(),

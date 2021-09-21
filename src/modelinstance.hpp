@@ -86,7 +86,7 @@ protected:
     /**
          * @brief Inference Engine core object
          */
-    InferenceEngine::Core& engine;
+    InferenceEngine::Core& ieCore;
 
     /**
          * @brief Inference Engine CNNNetwork object
@@ -296,8 +296,8 @@ public:
     /**
          * @brief A default constructor
          */
-    ModelInstance(const std::string& name, model_version_t version, InferenceEngine::Core& ovCore) :
-        engine(ovCore),
+    ModelInstance(const std::string& name, model_version_t version, InferenceEngine::Core& ieCore) :
+        engine(ieCore),
         name(name),
         version(version),
         subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)) { isCustomLoaderConfigChanged = false; }

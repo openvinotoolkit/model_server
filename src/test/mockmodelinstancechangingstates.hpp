@@ -26,8 +26,8 @@
 
 class MockModelInstanceChangingStates : public ovms::ModelInstance {
 public:
-    MockModelInstanceChangingStates(const std::string& modelName, const ovms::model_version_t modelVersion, InferenceEngine::Core& ovCore) :
-        ModelInstance(modelName, modelVersion, ovCore) {
+    MockModelInstanceChangingStates(const std::string& modelName, const ovms::model_version_t modelVersion, InferenceEngine::Core& ieCore) :
+        ModelInstance(modelName, modelVersion, ieCore) {
         status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_MODEL_VERSION, ovms::ModelVersionState::START);
     }
     virtual ~MockModelInstanceChangingStates() {}
@@ -62,8 +62,8 @@ public:
     virtual ~MockModelWithInstancesJustChangingStates() {}
 
 protected:
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(InferenceEngine::Core& ovCore) { return modelInstanceFactory("UNUSED_NAME", UNUSED_MODEL_VERSION, ovCore); }
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t version, InferenceEngine::Core& ovCore) override {
-        return std::move(std::make_shared<MockModelInstanceChangingStates>(modelName, version, ovCore));
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(InferenceEngine::Core& ieCore) { return modelInstanceFactory("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore); }
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t version, InferenceEngine::Core& ieCore) override {
+        return std::move(std::make_shared<MockModelInstanceChangingStates>(modelName, version, ieCore));
     }
 };

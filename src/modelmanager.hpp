@@ -63,7 +63,7 @@ protected:
      * 
      */
     std::map<std::string, std::shared_ptr<Model>> models;
-    std::unique_ptr<InferenceEngine::Core> ovCore;
+    std::unique_ptr<InferenceEngine::Core> ieCore;
 
     PipelineFactory pipelineFactory;
 
