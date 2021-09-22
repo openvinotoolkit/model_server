@@ -134,7 +134,8 @@ std::vector<tensorflow::int64> argmax(const tensorflow::Tensor& tensor) {
     assert(shape.dims() == 2);
     size_t batchSize = shape.dim_size(0);
     size_t elements = shape.dim_size(1);
-    std::vector<tensorflow::int64> labels(batchSize);
+    std::vector<tensorflow::int64> labels;
+    labels.reserve(batchSize);
     for (size_t j = 0; j < batchSize; j++) {
         float topConfidence = 0;
         tensorflow::int64 topLabel = -1;
