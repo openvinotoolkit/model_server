@@ -16,8 +16,10 @@
 
 import requests
 
-from ovmsclient.tfs_compat.base.serving_client import ServingClient
 from ovmsclient.util.ovmsclient_export import ovmsclient_export
+from ovmsclient.tfs_compat.base.serving_client import ServingClient
+from ovmsclient.tfs_compat.http.requests import HttpModelStatusRequest
+from ovmsclient.tfs_compat.http.responses import HttpModelStatusResponse
 
 
 class HttpClient(ServingClient):
@@ -111,7 +113,19 @@ class HttpClient(ServingClient):
             >>> type(response)
         '''
 
-        raise NotImplementedError
+        HttpClient._check_model_status_request(request)
+
+        raw_response = None
+        try:
+            raw_response = self.session.get(f"http://{self.address}:{self.port}"
+                                            f"/v1/models/{request.model_name}"
+                                            f"/versions/{request.model_version}",
+                                            cert=self.client_key, verify=self.server_cert)
+        except requests.exceptions.RequestException as e_info:
+            raise ConnectionError('There was an error during sending ModelStatusRequest. '
+                                  f'Http exited with:\n{e_info}')
+
+        return HttpModelStatusResponse(raw_response)
 
     @classmethod
     def _build(cls, config):
@@ -127,6 +141,13 @@ class HttpClient(ServingClient):
             server_cert = tls_config.get('server_cert_path', None),
         session = requests.Session()
         return cls(address, port, session, client_cert, server_cert)
+
+    @classmethod
+    def _check_model_status_request(cls, request):
+
+        if not isinstance(request, HttpModelStatusRequest):
+            raise TypeError('request type should be HttpModelStatusRequest, '
+                            f'but is {type(request).__name__}')
 
 
 @ovmsclient_export("make_http_client", httpclient="make_client")
