@@ -114,6 +114,7 @@ Status PipelineDefinition::initializeNodeResources() {
     return StatusCode::OK;
 }
 
+// returns NodeInfos that are in PipelineDefinition, but are not in nodeInfos(std::vector argument)
 std::vector<NodeInfo> PipelineDefinition::calculateNodeInfosDiff(const std::vector<NodeInfo>& nodeInfos) {
     std::vector<NodeInfo> diff;
     for (const auto& nodeInfo : this->nodeInfos) {
@@ -131,7 +132,7 @@ void PipelineDefinition::deinitializeNodeResources(const std::vector<NodeInfo>& 
         if (nodeInfo.kind == NodeKind::CUSTOM) {
             auto it = nodeResources.find(nodeInfo.nodeName);
             if (it == nodeResources.end()) {
-                continue;
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Library deinitialization of Node: {} failed. Couldn't find any initialized resources", nodeInfo.nodeName);
             }
             void* customNodeLibraryInternalManager = it->second;
             auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
@@ -150,6 +151,7 @@ Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeI
     while (requestsHandlesCounter > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
+    // deinitialize all resources that are associated with nodes that are currently in PipelineDefinition, but not in nodeInfos
     deinitializeNodeResources(calculateNodeInfosDiff(nodeInfos));
     this->nodeInfos = std::move(nodeInfos);
     this->connections = std::move(connections);
@@ -164,6 +166,7 @@ void PipelineDefinition::retire(ModelManager& manager) {
     while (requestsHandlesCounter > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
+    // deinitalize all resources
     deinitializeNodeResources(this->nodeInfos);
     this->nodeResources.clear();
     this->nodeInfos.clear();
