@@ -133,6 +133,7 @@ void PipelineDefinition::deinitializeNodeResources(const std::vector<NodeInfo>& 
             auto it = nodeResources.find(nodeInfo.nodeName);
             if (it == nodeResources.end()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Library deinitialization of Node: {} failed. Couldn't find any initialized resources", nodeInfo.nodeName);
+                continue;
             }
             void* customNodeLibraryInternalManager = it->second;
             auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
