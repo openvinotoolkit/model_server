@@ -92,12 +92,12 @@ struct Configuration {
     tensorflow::string modelName = "resnet";
     tensorflow::string inputName = "0";
     tensorflow::string outputName = "1463";
-    tensorflow::int64 iterations = 1;
+    tensorflow::int64 iterations = 10;
     tensorflow::int64 batchSize = 1;
-    tensorflow::string imagesListPath = "";
-    tensorflow::string layout = "binary";
+    tensorflow::string imagesListPath = "input_images.txt";
+    tensorflow::string layout = "nchw";
     tensorflow::int64 producers = 1;
-    tensorflow::int64 consumers = 1;
+    tensorflow::int64 consumers = 8;
     tensorflow::int64 max_parallel_requests = 100;
     tensorflow::int64 benchmark_mode = 0;
 
@@ -452,6 +452,7 @@ public:
     static void start(const tensorflow::string& address, const std::vector<T>& entries, const Configuration& config) {
         ServingClient<T> client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()), entries, config);
         std::vector<std::thread> threads;
+        std::cout << "Starting the workload" << std::endl;
         auto begin = std::chrono::high_resolution_clock::now();
         for (int i = 0; i < config.consumers; i++) {
             threads.emplace_back(std::thread(&ServingClient<T>::asyncCompleteRpc, &client));
@@ -502,12 +503,12 @@ int main(int argc, char** argv) {
         tensorflow::Flag("model_name", &config.modelName, "model name to request"),
         tensorflow::Flag("input_name", &config.inputName, "input tensor name with image"),
         tensorflow::Flag("output_name", &config.outputName, "output tensor name with classification result"),
-        tensorflow::Flag("iterations", &config.iterations, "number of images per thread, by default each thread will use all images from list"),
+        tensorflow::Flag("iterations", &config.iterations, "number of requests to be send by each producer thread"),
         tensorflow::Flag("batch_size", &config.batchSize, "batch size of each iteration"),
         tensorflow::Flag("images_list", &config.imagesListPath, "path to a file with a list of labeled images"),
         tensorflow::Flag("layout", &config.layout, "binary, nhwc or nchw"),
-        tensorflow::Flag("producers", &config.producers, "number of clients asynchronously scheduling prediction"),
-        tensorflow::Flag("consumers", &config.consumers, "number of consumer threads interpreting resnet results"),
+        tensorflow::Flag("producers", &config.producers, "number of threads asynchronously scheduling prediction"),
+        tensorflow::Flag("consumers", &config.consumers, "number of threads receiving responses"),
         tensorflow::Flag("max_parallel_requests", &config.max_parallel_requests, "maximum number of parallel inference requests; 0=no limit"),
         tensorflow::Flag("benchmark_mode", &config.benchmark_mode, "when enabled, there is no pre/post-processing step")};
 

@@ -310,7 +310,7 @@ int main(int argc, char** argv) {
     tensorflow::string inputName = "0";
     tensorflow::string outputName = "1463";
     tensorflow::int64 iterations = 0;
-    tensorflow::string imagesListPath = "";
+    tensorflow::string imagesListPath = "input_images.txt";
     tensorflow::string layout = "binary";
     std::vector<tensorflow::Flag> flagList = {
         tensorflow::Flag("grpc_address", &address, "url to grpc service"),

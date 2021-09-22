@@ -19,4 +19,8 @@
 default: docker_build
 
 docker_build:
-	@docker build -t cpp_clients_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} .
+	cp -r ../images .
+	cp -r ../input_images.txt .
+	@docker build -t ovms_cpp_clients:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} .
+	rm -rf ./images
+	rm -rf ./input_images.txt

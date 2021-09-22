@@ -15,9 +15,9 @@
 #
 
 cc_binary(
-    name = "resnet_client_simple",
+    name = "resnet_client_sync",
     srcs = [
-        "resnet_client_simple.cpp",
+        "resnet_client_sync.cpp",
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
