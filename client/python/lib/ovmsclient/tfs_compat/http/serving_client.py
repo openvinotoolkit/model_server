@@ -16,6 +16,7 @@
 
 import requests
 
+from ovmsclient.util.ovmsclient_export import ovmsclient_export
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
 from ovmsclient.tfs_compat.http.requests import HttpModelStatusRequest
 from ovmsclient.tfs_compat.http.responses import HttpModelStatusResponse
