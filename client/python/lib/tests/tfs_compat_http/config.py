@@ -15,6 +15,7 @@
 #
 
 import json
+import requests
 from numpy import array, int32, float32, float128
 
 from config import CallCount, PATH_VALID # noqa
@@ -280,5 +281,11 @@ BUILD_INVALID_CONFIG = [
     },
      ValueError,  'invalid_path is not valid path to file',
      {"check_config": CallCount.ONE}),
+]
 
+MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE = [
+    (requests.Request(), TypeError, 'request type should be HttpModelStatusRequest, '
+     'but is Request'),
+    ("request", TypeError, 'request type should be HttpModelStatusRequest, '
+     'but is str')
 ]
