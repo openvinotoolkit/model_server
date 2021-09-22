@@ -18,9 +18,9 @@ import requests
 
 from ovmsclient.util.ovmsclient_export import ovmsclient_export
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
-from ovmsclient.tfs_compat.http.requests import (HttpModelStatusRequest, 
+from ovmsclient.tfs_compat.http.requests import (HttpModelStatusRequest,
                                                  HttpModelMetadataRequest)
-from ovmsclient.tfs_compat.http.responses import (HttpModelStatusResponse, 
+from ovmsclient.tfs_compat.http.responses import (HttpModelStatusResponse,
                                                   HttpModelMetadataResponse)
 
 
@@ -102,7 +102,6 @@ class HttpClient(ServingClient):
 
         return HttpModelMetadataResponse(raw_response)
 
-
     def get_model_status(self, request):
         '''
         Send HttpModelStatusRequest to the server and return response..
@@ -160,15 +159,12 @@ class HttpClient(ServingClient):
 
     @classmethod
     def _check_model_status_request(cls, request):
-
         if not isinstance(request, HttpModelStatusRequest):
             raise TypeError('request type should be HttpModelStatusRequest, '
                             f'but is {type(request).__name__}')
 
-
     @classmethod
     def _check_model_metadata_request(cls, request):
-
         if not isinstance(request, HttpModelMetadataRequest):
             raise TypeError('request type should be HttpModelMetadataRequest, '
                             f'but is {type(request).__name__}')
