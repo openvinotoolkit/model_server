@@ -14,15 +14,20 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <vector>
+#pragma once
+
 #include <fstream>
 #include <iostream>
+#include <memory>
+#include <utility>
+#include <vector>
 
 #include "google/protobuf/map.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/platform/types.h"
 #include "tensorflow/core/util/command_line_flags.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+
 #include "opencv2/opencv.hpp"
 
 typedef google::protobuf::Map<tensorflow::string, tensorflow::TensorProto> OutMap;

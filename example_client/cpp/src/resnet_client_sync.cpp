@@ -40,11 +40,10 @@ limitations under the License.
 #include "tensorflow/core/util/command_line_flags.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
+#include "common.hpp"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
 #include "opencv2/opencv.hpp"
-
-#include "common.hpp"
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -53,7 +52,6 @@ using grpc::Status;
 using tensorflow::serving::PredictionService;
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
-
 
 class ServingClient {
     std::unique_ptr<PredictionService::Stub> stub_;

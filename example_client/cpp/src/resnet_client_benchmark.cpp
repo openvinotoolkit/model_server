@@ -43,11 +43,10 @@ limitations under the License.
 #include "tensorflow/core/util/command_line_flags.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
+#include "common.hpp"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
 #include "opencv2/opencv.hpp"
-
-#include "common.hpp"
 
 using grpc::Channel;
 using grpc::ClientAsyncResponseReader;
@@ -58,7 +57,6 @@ using grpc::Status;
 using tensorflow::serving::PredictionService;
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
-
 
 template <typename T>
 struct AsyncClientCall {
@@ -104,7 +102,6 @@ struct Configuration {
     }
 };
 
-// TODO: Implement wrap-around
 template <typename T>
 std::vector<T> selectEntries(const std::vector<T>& entries, tensorflow::int64 batchSize, tensorflow::int64 iteration) {
     size_t startPoint = (iteration * batchSize) % entries.size();
@@ -137,7 +134,7 @@ std::vector<tensorflow::int64> argmax(const tensorflow::Tensor& tensor) {
     assert(shape.dims() == 2);
     size_t batchSize = shape.dim_size(0);
     size_t elements = shape.dim_size(1);
-    std::vector<tensorflow::int64> labels;
+    std::vector<tensorflow::int64> labels(batchSize);
     for (size_t j = 0; j < batchSize; j++) {
         float topConfidence = 0;
         tensorflow::int64 topLabel = -1;
@@ -153,11 +150,12 @@ std::vector<tensorflow::int64> argmax(const tensorflow::Tensor& tensor) {
     return labels;
 }
 
+template <typename T>
 class ResourceGuard {
-    void* ptr;
+    T* ptr;
 
 public:
-    ResourceGuard(void* ptr) :
+    ResourceGuard(T* ptr) :
         ptr(ptr) {}
     ~ResourceGuard() { delete ptr; }
 };
