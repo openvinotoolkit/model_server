@@ -19,8 +19,6 @@ FROM $BASE_IMAGE as base_build
 
 LABEL version="1.0.0"
 
-
-
 ARG ov_source_branch=releases/2021/2
 ARG ovms_metadata_file
 
@@ -131,7 +129,7 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
     wget $DLDT_PACKAGE_URL && \
     mkdir /opt/intel && \
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
-    ln -s /opt/intel/l_openvino_toolkit_runtime* /opt/intel/openvino
+    ln -s /opt/intel/openvino_* /opt/intel/openvino
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
@@ -156,14 +154,14 @@ WORKDIR /ovms
 
 COPY src/ /ovms/src/
 
-ARG PROJECT_NAME="OpenVINO Model Server 2021.4"
+ARG PROJECT_NAME="OpenVINO Model Server 2021.4.1"
 LABEL description=${PROJECT_NAME}
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | cut -d'_' -f7`#g" /ovms/src/version.hpp
 
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/:/openvino/bin/intel64/Release/lib/:/opt/intel/openvino/opencv/lib/
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/deployment_tools/inference_engine/external/tbb/lib/:/opt/intel/openvino/opencv/lib/
 
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so

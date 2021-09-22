@@ -19,7 +19,7 @@ FROM $BASE_IMAGE as base_build
 
 LABEL version="1.0.0"
 
-ARG PROJECT_NAME="OpenVINO Model Server 2021.4"
+ARG PROJECT_NAME="OpenVINO Model Server 2021.4.1"
 
 LABEL description=${PROJECT_NAME}
 
@@ -113,11 +113,9 @@ WORKDIR /
 # OV toolkit package
 RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
     wget $DLDT_PACKAGE_URL && \
-    tar -zxf l_openvino_toolkit*.tgz && \
-    cd l_openvino_toolkit* && \
-    sed -i 's/decline/accept/g' silent.cfg && \
-    ./install.sh -s silent.cfg --ignore-signature && \
-    rm -Rf $TEMP_DIR $INSTALL_DIR/uninstall* /tmp/* $DL_INSTALL_DIR/documentation $DL_INSTALL_DIR/inference_engine/samples
+    mkdir /opt/intel && \
+    tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
+    ln -s /opt/intel/openvino_* /opt/intel/openvino
 
 # yum package
 RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" == "" ] ; then true ; else exit 0 ; fi ; \
@@ -125,9 +123,7 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" == "" ] ; then true 
     rpm --import https://yum.repos.intel.com/openvino/2021/setup/RPM-GPG-KEY-INTEL-OPENVINO-2021 && \
     yum install -y $YUM_OV_PACKAGE
 
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; \
-    ln -s /opt/intel/openvino_2021 /opt/intel/openvino
-
+# WORKS ???
 # install sample apps including benchmark_app
 RUN if [ -f /opt/intel/openvino/deployment_tools/inference_engine/samples/cpp/build_samples.sh ];  then ln -s /usr/bin/cmake3 /usr/bin/cmake && /opt/intel/openvino/deployment_tools/inference_engine/samples/cpp/build_samples.sh ; fi
 #################### END OF OPENVINO BINARY INSTALL
@@ -196,16 +192,16 @@ COPY release_files/ /ovms/release_files/
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -type d | grep openvino | cut -d'_' -f2`#g" /ovms/src/version.hpp
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/inference_engine/external/tbb/lib/:/openvino/bin/intel64/Release/lib/:/opt/intel/openvino/opencv/lib/
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/:/opt/intel/openvino/deployment_tools/ngraph/lib/:/opt/intel/openvino/deployment_tools/inference_engine/external/tbb/lib/:/opt/intel/openvino/opencv/lib/
 
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
-
-RUN if [ -f /opt/intel/openvino/bin/setupvars.sh ];  then cd /ovms/src/test/cpu_extension/ && make ; fi
-
-RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
-
-COPY ${ovms_metadata_file} metadata.json
-
-RUN ./bazel-bin/src/./ovms --version
-RUN ./bazel-bin/src/./ovms
+#RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
+#RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
+#
+#RUN if [ -f /opt/intel/openvino/bin/setupvars.sh ];  then cd /ovms/src/test/cpu_extension/ && make ; fi
+#
+#RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
+#
+#COPY ${ovms_metadata_file} metadata.json
+#
+#RUN ./bazel-bin/src/./ovms --version
+#RUN ./bazel-bin/src/./ovms
