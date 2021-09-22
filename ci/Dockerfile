@@ -26,7 +26,7 @@ RUN http_proxy=${HTTP_PROXY} yum install -y glibc.i686 libgcc.x86_64 libgcc.i686
 ADD ./kwbuildtools /tmp/kwbuildtools
 
 WORKDIR /example_cpp_client/cpp
-RUN /tmp/kwbuildtools/bin/kwinject --output /tmp/out.out bazel build //src:resnet_client_simple //src:resnet_client_benchmark
+RUN /tmp/kwbuildtools/bin/kwinject --output /tmp/out.out bazel build //src:resnet_client_sync //src:resnet_client_benchmark
 
 WORKDIR /ovms/src
 RUN /tmp/kwbuildtools/bin/kwinject --output /tmp/out.out bazel build //src:static_analysis

@@ -18,6 +18,7 @@ cc_binary(
     name = "resnet_client_sync",
     srcs = [
         "resnet_client_sync.cpp",
+        "common.hpp",
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
@@ -33,6 +34,7 @@ cc_binary(
     name = "resnet_client_benchmark",
     srcs = [
         "resnet_client_benchmark.cpp",
+        "common.hpp",
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
