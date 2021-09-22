@@ -297,7 +297,7 @@ public:
          * @brief A default constructor
          */
     ModelInstance(const std::string& name, model_version_t version, InferenceEngine::Core& ieCore) :
-        engine(ieCore),
+        ieCore(ieCore),
         name(name),
         version(version),
         subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)) { isCustomLoaderConfigChanged = false; }
