@@ -154,7 +154,7 @@ WORKDIR /ovms
 
 COPY src/ /ovms/src/
 
-ARG PROJECT_NAME="OpenVINO Model Server 2021.4.1"
+ARG PROJECT_NAME="OpenVINO Model Server 2022.1"
 LABEL description=${PROJECT_NAME}
 
 # Set OVMS version strings
