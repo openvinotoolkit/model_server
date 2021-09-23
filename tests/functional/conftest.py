@@ -173,12 +173,12 @@ def exception_catcher(when: str, outcome):
                                .format(when.capitalize(), str(exc_repr)))
 
 
-def devices_not_supported_for_test(*not_supported_devices_list):
+def devices_not_supported_for_test(not_supported_devices_list):
     """
     Comma separated list of devices not supported for test.
     Use as a test decorator.
     Example use:
-    @devices_not_supported_for_test("CPU", "GPU")
+    @devices_not_supported_for_test(["CPU", "GPU"])
     def test_example():
         # test implementation
     """

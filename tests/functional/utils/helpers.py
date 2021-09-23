@@ -16,6 +16,7 @@
 import os
 from typing import Any
 
+
 class SingletonMeta(type):
     """
     Metaclass for defining Singleton Classes
