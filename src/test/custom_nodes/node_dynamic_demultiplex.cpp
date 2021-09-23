@@ -28,7 +28,7 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
     return 0;
 }
 
-int deinitialize(void* customNodeLibraryInternalManager){
+int deinitialize(void* customNodeLibraryInternalManager) {
     return 0;
 }
 

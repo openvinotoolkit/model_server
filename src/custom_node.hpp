@@ -36,6 +36,8 @@ class CustomNode : public Node {
 
     std::unique_ptr<struct CustomNodeParam[]> libraryParameters = nullptr;
 
+    void* customNodeLibraryInternalManager;
+
 public:
     CustomNode(
         const std::string& nodeName,
@@ -43,7 +45,8 @@ public:
         const parameters_t& parameters,
         const std::unordered_map<std::string, std::string>& nodeOutputNameAlias = {},
         std::optional<uint32_t> demultiplyCount = std::nullopt,
-        std::set<std::string> gatherFromNode = {});
+        std::set<std::string> gatherFromNode = {},
+        void* customNodeLibraryInternalManager = nullptr);
 
     Status execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) override;
 
