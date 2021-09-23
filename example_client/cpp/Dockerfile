@@ -82,6 +82,12 @@ RUN mkdir /bazel && \
     cd / && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
+WORKDIR /input/images
+RUN cd /input/ && wget https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.1/example_client/input_images.txt && \
+    cd /input/images && curl -sS https://github.com/openvinotoolkit/model_server/tree/v2021.4.1/example_client/images | \
+    grep -oh "\/images.*jpeg" | cut -c 9- | cut -f1 -d"\"" | \
+    xargs -I %s wget https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.1/example_client/images/%s
+
 WORKDIR /build
 COPY .bazelrc WORKSPACE /build/
 COPY external /build/external/
@@ -102,12 +108,6 @@ COPY src/ /build/src/
 
 RUN bazel build //src:resnet_client_sync
 RUN bazel build //src:resnet_client_benchmark
-
-WORKDIR /input/images
-RUN cd /input/ && wget https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.1/example_client/input_images.txt && \
-    cd /input/images && curl -sS https://github.com/openvinotoolkit/model_server/tree/v2021.4.1/example_client/images | \
-    grep -oh "\/images.*jpeg" | cut -c 9- | cut -f1 -d"\"" | \
-    xargs -I %s wget https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.1/example_client/images/%s
 
 FROM ubuntu:20.04 as release
 

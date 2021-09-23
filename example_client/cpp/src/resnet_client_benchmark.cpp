@@ -296,12 +296,14 @@ public:
 
             if (!ok) {
                 std::cerr << "Request is not ok" << std::endl;
+                failedIterations++;
                 continue;
             }
 
             if (!call->status.ok()) {
                 std::cout << "gRPC call return code: " << call->status.error_code() << ": "
                           << call->status.error_message() << std::endl;
+                failedIterations++;
                 continue;
             }
 
@@ -310,6 +312,7 @@ public:
                 std::vector<tensorflow::int64> predictedLabels;
                 if (!this->interpretOutputs(*response.mutable_outputs(), predictedLabels)) {
                     std::cout << "error interpreting outputs" << std::endl;
+                    failedIterations++;
                     continue;
                 }
 
@@ -326,6 +329,10 @@ public:
 
     size_t getNumberOfCorrectLabels() const {
         return this->numberOfCorrectLabels;
+    }
+
+    tensorflow::int64 getFailedIterations() const {
+        return this->failedIterations;
     }
 
     void scheduler() {
@@ -373,6 +380,9 @@ public:
         std::cout << "Consumer threads: " << config.consumers << std::endl;
         std::cout << "Max parallel requests: " << config.max_parallel_requests << std::endl;
         std::cout << "Avg FPS: " << avgFps << std::endl;
+        if (client.getFailedIterations() <= 0) {
+            std::cout << "\n[WARNING] " << client.getFailedIterations() << " requests have failed." << std::endl;
+        }
     }
 
 private:
@@ -380,6 +390,7 @@ private:
     std::vector<T> entries;
     std::atomic<size_t> numberOfCorrectLabels = 0;
     std::atomic<tensorflow::int64> finishedIterations = 0;
+    std::atomic<tensorflow::int64> failedIterations = 0;
     std::condition_variable cv;
     std::mutex cv_m;
 
