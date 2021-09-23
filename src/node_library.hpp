@@ -31,7 +31,7 @@ typedef int (*release_fn)(void*, void*);
 
 struct NodeLibrary {
     initialize_fn initialize = nullptr;
-    deinitialize_fn deinitialize= nullptr;
+    deinitialize_fn deinitialize = nullptr;
     execute_fn execute = nullptr;
     metadata_fn getInputsInfo = nullptr;
     metadata_fn getOutputsInfo = nullptr;

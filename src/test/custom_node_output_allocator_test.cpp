@@ -62,8 +62,8 @@ class CustomNodeOutputAllocatorCheckingFreeCalled : public CustomNodeOutputAlloc
     bool freeCalled = false;
 
 public:
-    CustomNodeOutputAllocatorCheckingFreeCalled(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary) :
-        CustomNodeOutputAllocator(tensor, nodeLibrary) {
+    CustomNodeOutputAllocatorCheckingFreeCalled(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, void* customNodeLibraryInternalManager) :
+        CustomNodeOutputAllocator(tensor, nodeLibrary, customNodeLibraryInternalManager) {
     }
 
     ~CustomNodeOutputAllocatorCheckingFreeCalled() {
@@ -98,7 +98,8 @@ TEST(CustomNodeOutputAllocator, BlobDeallocationCallsReleaseBuffer) {
         NodeLibraryCheckingReleaseCalled::getInputsInfo,
         NodeLibraryCheckingReleaseCalled::getOutputsInfo,
         NodeLibraryCheckingReleaseCalled::release};
-    std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocatorCheckingFreeCalled>(tensor, library);
+    void* customNodeLibraryInternalManager = nullptr;
+    std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocatorCheckingFreeCalled>(tensor, library, customNodeLibraryInternalManager);
     EXPECT_FALSE(NodeLibraryCheckingReleaseCalled::releaseBufferCalled);
     {
         InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<float>(desc, customNodeOutputAllocator);
@@ -152,7 +153,8 @@ TEST(CustomNodeOutputAllocator, BlobReturnsCorrectPointer) {
         getInputsInfo,
         getOutputsInfo,
         release};
-    std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocator>(tensor, library);
+    void* customNodeLibraryInternalManager = nullptr;
+    std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocator>(tensor, library, customNodeLibraryInternalManager);
     InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<float>(desc, customNodeOutputAllocator);
     blob->allocate();
     EXPECT_EQ(static_cast<unsigned char*>(InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rwmap()), tensor.data);

@@ -836,6 +836,174 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvali
     ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE);
 }
 
+struct LibraryNotInitilizedExecuteCorrectly {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    // execute function is not using buffer allocation feature, therefore initialize does not do anything apart from returning 0 meaning that initialize worked as intended
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        *outputs = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
+        *outputsCount = 1;
+        (*outputs)->name = "output_numbers";
+        (*outputs)->precision = CustomNodeTensorPrecision::FP32;
+        (*outputs)->dims = (uint64_t*)malloc(2 * sizeof(uint64_t));
+        (*outputs)->dims[0] = 1;
+        (*outputs)->dims[1] = 10;
+        (*outputs)->dimsCount = 2;
+        (*outputs)->data = (uint8_t*)malloc(sizeof(uint8_t));
+        (*outputs)->dataBytes = 40;
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SuccessInCustomNodeExecutionNotInitialized) {
+    auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryNotInitilizedExecuteCorrectly>();
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+}
+
+struct LibraryNotInitializedFailInExecute {
+    // execute is using buffer allocation, therefore initialize should be modified to work properly
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    // execute function is using customNodeLibraryInternalManager, that was supposed to be created in initialize function
+    // execute fails due to incorrect initialization
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        if (customNodeLibraryInternalManager == nullptr) {
+            return 1;
+        }
+        *outputs = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
+        *outputsCount = 1;
+        (*outputs)->name = "output_numbers";
+        (*outputs)->precision = CustomNodeTensorPrecision::FP32;
+        (*outputs)->dims = (uint64_t*)malloc(2 * sizeof(uint64_t));
+        (*outputs)->dims[0] = 1;
+        (*outputs)->dims[1] = 10;
+        (*outputs)->dimsCount = 2;
+        (*outputs)->data = (uint8_t*)malloc(sizeof(uint8_t));
+        (*outputs)->dataBytes = 40;
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeExecutionNotInitialized) {
+    auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryNotInitializedFailInExecute>();
+    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
+}
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeInitialize) {
+    // Nodes
+    // request   custom    response
+    //  O--------->O---------->O
+    //          add-sub
+    ConstructorEnabledModelManager manager;
+    PipelineFactory factory;
+
+    const float addValue = 0.9;
+    const float subValue = 7.3;
+
+    // initialize function call from now on will be calling this lambda function, which indicates
+    // initialization failure
+    library.initialize = [](void**, const struct CustomNodeParam*, int) { return 1; };
+    ASSERT_TRUE(library.isValid());
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, library, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    // request (pipelineInputName) O--------->O custom node (customNodeInputName)
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O response (pipelineOutputName)
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node", {{customNodeOutputName, pipelineOutputName}}}};
+
+    // createDefinition fails due to initialization failure
+    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::NODE_LIBRARY_INITIALIZE_FAILED);
+}
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeDeinitialize) {
+    // Nodes
+    // request   custom    response
+    //  O--------->O---------->O
+    //          add-sub
+    ConstructorEnabledModelManager manager;
+    PipelineFactory factory;
+
+    const std::vector<float> inputValues{7.8, -2.4, 1.9, 8.7, -2.4, 3.5};
+    this->prepareRequest(inputValues);
+
+    const float addValue = 0.9;
+    const float subValue = 7.3;
+
+    // deinitialize function call from now on will be calling this lambda function, which indicates
+    // deinitialization failure
+    library.deinitialize = [](void*) { return 1; };
+    ASSERT_TRUE(library.isValid());
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, library, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    // request (pipelineInputName) O--------->O custom node (customNodeInputName)
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O response (pipelineOutputName)
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node", {{customNodeOutputName, pipelineOutputName}}}};
+
+    std::unique_ptr<Pipeline> pipeline;
+    // creating definition, pipeline and then executing works propely due to correct initialization
+    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
+    ASSERT_EQ(factory.create(pipeline, "my_new_pipeline", &request, &response, manager), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    this->checkResponse<float>(inputValues, [addValue, subValue](float value) -> float {
+        return value + addValue - subValue;
+    });
+
+    // after execute we are retiring pipeline definition and making sure that its state is retired after the operation
+    // even tho deinitialize is failing there is no direct indication of that apart from errors in logs
+    factory.retireOtherThan({}, manager);
+    ASSERT_EQ(factory.findDefinitionByName("my_new_pipeline")->getStateCode(), PipelineDefinitionStateCode::RETIRED);
+}
+
 class EnsembleFlowCustomNodeFactoryCreateThenExecuteTest : public EnsembleFlowCustomNodePipelineExecutionTest {};
 
 TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, SimplePipelineFactoryCreationWithCustomNode) {
@@ -4263,4 +4431,145 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     // Execute
     ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
     checkIncrement4DimResponse(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
+}
+
+struct LibraryCountDeinitialize {
+    inline static int deinitializeCounter;
+
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        deinitializeCounter += 1;
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnRetire) {
+    // Nodes
+    // request   custom    custom_2   custom_3    response
+    //  O--------->O--------->O--------->O---------->O
+    //          add-sub    add-sub    add-sub
+    ConstructorEnabledModelManager manager;
+    PipelineFactory factory;
+
+    // mocking custom node library and copying crucial functions from add_sub_lib in order to
+    // create pipeline definition
+    auto mockedLibrary = createLibraryMock<LibraryCountDeinitialize>();
+    mockedLibrary.getInputsInfo = library.getInputsInfo;
+    mockedLibrary.getOutputsInfo = library.getOutputsInfo;
+
+    // setting global deinitialize call counter to 0
+    LibraryCountDeinitialize::deinitializeCounter = 0;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    // request (pipelineInputName) O--------->O custom node (customNodeInputName)
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O custom node 2 (customNodeInputName)
+    connections["custom_node_2"] = {
+        {"custom_node", {{customNodeOutputName, customNodeInputName}}}};
+
+    // custom node 2 (customNodeOutputName) O--------->O custom node 3 (customNodeInputName)
+    connections["custom_node_3"] = {
+        {"custom_node_2", {{customNodeOutputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O response (pipelineOutputName)
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_3", {{customNodeOutputName, pipelineOutputName}}}};
+
+    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
+
+    factory.retireOtherThan({}, manager);
+    // Each custom node has effectively 1 internalManager initialized, because they use same library instance
+    // in order to count whether deinitialize has been called expected number of times
+    ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 3);
+}
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SingleDeinitializeCallOnReload) {
+    // Nodes
+    // request   custom    custom_2   custom_3    response
+    //  O--------->O--------->O--------->O---------->O
+    //          add-sub    add-sub    add-sub
+    ConstructorEnabledModelManager manager;
+    PipelineFactory factory;
+
+    // mocking custom node library and copying crucial functions from add_sub_lib in order to
+    // create pipeline definition
+    auto mockedLibrary = createLibraryMock<LibraryCountDeinitialize>();
+    mockedLibrary.getInputsInfo = library.getInputsInfo;
+    mockedLibrary.getOutputsInfo = library.getOutputsInfo;
+
+    // setting global deinitialize call counter to 0
+    LibraryCountDeinitialize::deinitializeCounter = 0;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    // request (pipelineInputName) O--------->O custom node (customNodeInputName)
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O custom node 2 (customNodeInputName)
+    connections["custom_node_2"] = {
+        {"custom_node", {{customNodeOutputName, customNodeInputName}}}};
+
+    // custom node 2 (customNodeOutputName) O--------->O custom node 3 (customNodeInputName)
+    connections["custom_node_3"] = {
+        {"custom_node_2", {{customNodeOutputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O response (pipelineOutputName)
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_3", {{customNodeOutputName, pipelineOutputName}}}};
+
+    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
+
+    // Nodes
+    // request   custom    custom_2    response
+    //  O--------->O--------->O---------->O
+    //          add-sub    add-sub
+    info.erase(info.begin() + 3);
+    connections.erase("custom_node_3");
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{customNodeOutputName, pipelineOutputName}}}};
+    ASSERT_EQ(factory.reloadDefinition("my_new_pipeline", std::move(info), std::move(connections), manager), StatusCode::OK);
+    // Each custom node has effectively 1 internalManager initialized, because they use same library instance
+    // in order to count whether deinitialize has been called expected number of times
+    ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 1);
 }

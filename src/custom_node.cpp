@@ -31,18 +31,20 @@ CustomNode::CustomNode(
     const parameters_t& parameters,
     const std::unordered_map<std::string, std::string>& nodeOutputNameAlias,
     std::optional<uint32_t> demultiplyCount,
-    std::set<std::string> gatherFromNode) :
+    std::set<std::string> gatherFromNode,
+    void* customNodeLibraryInternalManager) :
     Node(nodeName, demultiplyCount, gatherFromNode),
     library(library),
     parameters(parameters),
     nodeOutputNameAlias(nodeOutputNameAlias),
-    libraryParameters(createCustomNodeParamArray(this->parameters)) {
+    libraryParameters(createCustomNodeParamArray(this->parameters)),
+    customNodeLibraryInternalManager(customNodeLibraryInternalManager) {
 }
 
 Status CustomNode::execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) {
     auto& nodeSession = getNodeSession(sessionKey);
     auto& customNodeSession = static_cast<CustomNodeSession&>(nodeSession);
-    return customNodeSession.execute(notifyEndQueue, *this, this->library, this->libraryParameters, this->parameters.size());
+    return customNodeSession.execute(notifyEndQueue, *this, this->library, this->libraryParameters, this->parameters.size(), customNodeLibraryInternalManager);
 }
 
 Status CustomNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
