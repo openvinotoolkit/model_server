@@ -86,9 +86,9 @@ struct Configuration {
     bool validate() const {
         if (imagesListPath.empty())
             return false;
-        if (batchSize < 0)
+        if (batchSize <= 0)
             return false;
-        if (iterations < 0)
+        if (iterations <= 0)
             return false;
         if (producers <= 0 || consumers <= 0)
             return false;
@@ -174,7 +174,8 @@ public:
 
         if (this->config.benchmark_mode == 1) {
             google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs = *this->predictRequest.mutable_inputs();
-            this->entries = selectEntries(this->entries, this->config.batchSize, 1);
+            tensorflow::int64 iteration = 1;
+            this->entries = selectEntries(this->entries, this->config.batchSize, iteration);
             this->prepareBatchedInputs(inputs, this->entries);
             this->predictRequest.mutable_model_spec()->set_name(this->config.modelName);
             this->predictRequest.mutable_model_spec()->set_signature_name("serving_default");
@@ -428,9 +429,6 @@ int main(int argc, char** argv) {
         << "Layout: " << config.layout << std::endl;
 
     const tensorflow::string host = config.address + ":" + config.port;
-    if (config.iterations == 0) {
-        config.iterations = entries.size();
-    }
 
     if (config.layout == "binary") {
         std::vector<BinaryData> images;
@@ -442,7 +440,7 @@ int main(int argc, char** argv) {
     } else {
         std::vector<CvMatData> images;
         if (!readImagesCvMat(entries, images, config.layout)) {
-            std::cout << "Error reading binary images" << std::endl;
+            std::cout << "Error reading opencv images" << std::endl;
             return -1;
         }
         ServingClient<CvMatData>::start(host, images, config);
