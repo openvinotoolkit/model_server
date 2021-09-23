@@ -43,7 +43,8 @@ public:
         Node& node,
         const NodeLibrary& library,
         std::unique_ptr<struct CustomNodeParam[]>& parameters,
-        int parametersCount);
+        int parametersCount,
+        void* customNodeLibraryInternalManager);
 
     Status fetchResult(const std::string& name, InferenceEngine::Blob::Ptr& resultBlob);
 
@@ -51,7 +52,7 @@ public:
     void release() override;
 
 private:
-    static void releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibrary& library);
-    Status createBlob(const struct CustomNodeTensor* tensor, InferenceEngine::Blob::Ptr& resultBlob, const NodeLibrary& library);
+    static void releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibrary& library, void* customNodeLibraryInternalManager);
+    Status createBlob(const struct CustomNodeTensor* tensor, InferenceEngine::Blob::Ptr& resultBlob, const NodeLibrary& library, void* customNodeLibraryInternalManager);
 };
 }  // namespace ovms
