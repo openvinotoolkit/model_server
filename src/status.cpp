@@ -202,6 +202,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_NO_OF_CHANNELS, "Invalid number of channels in binary input"},
     {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, "Binary input images for this pipeline are required to have the same resolution"},
     {StatusCode::STRING_VAL_EMPTY, "String val is empty"},
+    {StatusCode::NODE_LIBRARY_INITIALIZE_FAILED, "Failure during custom node library initialization"},
 };
 
 const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {

@@ -72,6 +72,7 @@ class PipelineDefinition {
 
     const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
+    std::map<std::string, void*> nodeResources = {};
     pipeline_connections_t connections;
 
 protected:
@@ -119,6 +120,9 @@ public:
     Status validateNodes(ModelManager& manager);
     Status validateForCycles();
     Status validateDemultiplexerGatherNodesOrder();
+    Status initializeNodeResources();
+    std::vector<NodeInfo> calculateNodeInfosDiff(const std::vector<NodeInfo>& nodeInfos);
+    void deinitializeNodeResources(const std::vector<NodeInfo>& nodeInfosDiff);
 
     const std::string& getName() const { return pipelineName; }
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
@@ -148,7 +152,7 @@ public:
     const tensor_map_t getOutputsInfo() const;
 
 private:
-    static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName);
+    static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName, void* customNodeLibraryInternalManager);
 
     Status populateOutputsInfoWithDLModelOutputs(
         const NodeInfo& dependencyNodeInfo,

@@ -377,6 +377,7 @@ TEST(EnsembleMetadata, OneCustomNode) {
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
+    ASSERT_EQ(def->initializeNodeResources(), StatusCode::OK);
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
     ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
     ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
@@ -432,6 +433,7 @@ TEST(EnsembleMetadata, ParallelCustomNodes) {
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
+    ASSERT_EQ(def->initializeNodeResources(), StatusCode::OK);
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
     ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
     ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
@@ -462,7 +464,7 @@ struct MockLibraryDemultiplexer2Inputs2OutputsMatchingFollowingNode {
     static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
         return 0;
     }
-    static int deinitialize(void* customNodeLibraryInternalManager){
+    static int deinitialize(void* customNodeLibraryInternalManager) {
         return 0;
     }
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
@@ -518,7 +520,7 @@ struct MockLibraryDemultiplexer2Inputs1OutputMatchingPreviousNode {
     static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
         return 0;
     }
-    static int deinitialize(void* customNodeLibraryInternalManager){
+    static int deinitialize(void* customNodeLibraryInternalManager) {
         return 0;
     }
     static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
@@ -609,6 +611,7 @@ TEST(EnsembleMetadata, CustomNodeMultipleDemultiplexers) {
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
+    ASSERT_EQ(def->initializeNodeResources(), StatusCode::OK);
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
     ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
     ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
