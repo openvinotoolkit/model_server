@@ -26,10 +26,31 @@ constraint_value(constraint_setting = "linux_distribution_family", name = "fedor
 constraint_value(constraint_setting = "linux_distribution_family", name = "debian") # like Ubuntu
 
 cc_library(
+    name = "custom_nodes_common_lib",
+    linkstatic = 1,
+    hdrs = ["custom_nodes/common/buffersqueue.hpp"],
+    srcs = [
+        "queue.hpp",
+        "custom_nodes/common/buffersqueue.hpp",
+        "custom_nodes/common/buffersqueue.cpp",
+    ],
+    copts = [
+        "-Wall",
+        "-Wno-unknown-pragmas",
+        "-Werror",
+        "-Wno-sign-compare",
+    ],
+)
+
+cc_library(
     name = "ovms_lib",
     linkstatic = 1,
     srcs = [
         "aliases.hpp",
+        "azurestorage.hpp",
+        "azurestorage.cpp",
+        "azurefilesystem.cpp",
+        "azurefilesystem.hpp",
         "blobmap.hpp",
         "config.cpp",
         "config.hpp",
@@ -108,7 +129,6 @@ cc_library(
         "nodesessionmetadata.hpp",
         "nodesessionmetadata.cpp",
         "nodestreamidguard.hpp",
-        "ovinferrequestsqueue.cpp",
         "ovinferrequestsqueue.hpp",
         "ov_utils.cpp",
         "ov_utils.hpp",
@@ -139,10 +159,6 @@ cc_library(
         "shapeinfo.hpp",
         "statefulmodelinstance.cpp",
         "statefulmodelinstance.hpp",
-        "azurestorage.hpp",
-        "azurestorage.cpp",
-        "azurefilesystem.cpp",
-        "azurefilesystem.hpp",
         "serialization.cpp",
         "schema.hpp",
         "schema.cpp",
@@ -155,6 +171,7 @@ cc_library(
         "status.cpp",
         "status.hpp",
         "stringutils.hpp",
+        "queue.hpp",
         "tensorinfo.cpp",
         "tensorinfo.hpp",
         "threadsafequeue.hpp",
@@ -351,6 +368,8 @@ cc_test(
     name = "ovms_test",
     linkstatic = 1,
     srcs = [
+        "test/custom_node_output_allocator_test.cpp",
+        "test/custom_node_buffersqueue_test.cpp",
         "test/deserialization_tests.cpp",
         "test/ensemble_tests.cpp",
         "test/ensemble_flow_custom_node_tests.cpp",
@@ -370,7 +389,6 @@ cc_test(
         "test/modelinstance_test.cpp",
         "test/modelconfig_test.cpp",
         "test/node_library_manager_test.cpp",
-        "test/custom_node_output_allocator_test.cpp",
         "test/modelmanager_test.cpp",
         "test/ovmsconfig_test.cpp",
         "test/modelversionstatus_test.cpp",
@@ -425,6 +443,7 @@ cc_test(
     ],
     deps = [
         "//src:ovms_lib",
+        "//src:custom_nodes_common_lib",
         "//src:libsampleloader.so",
         "//src:lib_node_mock.so",
         "//src:lib_node_missing_implementation.so",
