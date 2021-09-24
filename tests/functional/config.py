@@ -16,6 +16,7 @@
 
 import os
 
+from constants import TARGET_DEVICE_CPU, TARGET_DEVICE_GPU, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL
 from utils.helpers import get_int, get_bool
 from utils.parametrization import generate_test_object_name
 
@@ -63,10 +64,10 @@ models_path = path_to_mount if ovms_binary_path else "/opt/ml"
 minio_image = os.environ.get("TT_MINIO_IMAGE_NAME", "minio/minio:latest")
 
 """ TT_TARGET_DEVICE - one of "CPU", "GPU" """
-target_device = os.environ.get("TT_TARGET_DEVICE", "CPU")
+target_device = os.environ.get("TT_TARGET_DEVICE", TARGET_DEVICE_CPU)
 
 """IMAGE - docker image name which should be used to run tests"""
-if target_device == "GPU":
+if target_device == TARGET_DEVICE_GPU:
     _default_image = "openvino/model_server-gpu"
 else:
     _default_image = "openvino/model_server"
@@ -99,10 +100,10 @@ default_myriad_infer_timeout = get_int("TT_DEFAULT_MYRIAD_INFER_TIMEOUT", 5*defa
 
 """ INFER TIMEOUT """
 infer_timeouts = {
-    "CPU" : default_infer_timeout,
-    "GPU" : default_gpu_infer_timeout,
-    "HDDL" : default_hddl_infer_timeout,
-    "MYRIAD" : default_myriad_infer_timeout,
+    TARGET_DEVICE_CPU : default_infer_timeout,
+    TARGET_DEVICE_GPU : default_gpu_infer_timeout,
+    TARGET_DEVICE_HDDL : default_hddl_infer_timeout,
+    TARGET_DEVICE_MYRIAD : default_myriad_infer_timeout,
 }
 infer_timeout = infer_timeouts[target_device]
 
@@ -112,7 +113,3 @@ is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", "nginx-mtls" in image)
 """ TT_SKIP_TEST_IF_IS_NGINX_MTLS """
 skip_nginx_test = get_bool("TT_SKIP_TEST_IF_IS_NGINX_MTLS", "True")
 skip_nginx_test = skip_nginx_test and is_nginx_mtls
-
-""" TT_SKIP_TEST_IF_HDDL_MTLS """
-skip_hddl_tests = get_bool("TT_SKIP_TEST_IF_HDDL_MTLS", "True")
-skip_hddl_tests = skip_hddl_tests and target_device == "HDDL"
