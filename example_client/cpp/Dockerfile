@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-FROM ubuntu:20.04
+FROM ubuntu:20.04 as base_build
 
 ENV DEBIAN_FRONTEND=noninteractive 
 
@@ -82,6 +82,12 @@ RUN mkdir /bazel && \
     cd / && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
+WORKDIR /input/images
+RUN cd /input/ && wget https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.1/example_client/input_images.txt && \
+    cd /input/images && curl -sS https://github.com/openvinotoolkit/model_server/tree/v2021.4.1/example_client/images | \
+    grep -oh "\/images.*jpeg" | cut -c 9- | cut -f1 -d"\"" | \
+    xargs -I %s wget https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.1/example_client/images/%s
+
 WORKDIR /build
 COPY .bazelrc WORKSPACE /build/
 COPY external /build/external/
@@ -100,7 +106,25 @@ RUN bazel build \
 
 COPY src/ /build/src/
 
-RUN bazel build //src:resnet_client
+RUN bazel build //src:resnet_client_sync
+RUN bazel build //src:resnet_client_benchmark
 
-ENV LD_LIBRARY_PATH=/usr/local/lib
-ENTRYPOINT ["/build/bazel-bin/src/resnet_client"]
+FROM ubuntu:20.04 as release
+
+WORKDIR /clients/
+RUN mkdir -p /clients/libs/ && mkdir -p /clients/images
+COPY --from=base_build \
+    /build/bazel-bin/src/resnet_client_sync \
+    /build/bazel-bin/src/resnet_client_benchmark \
+    /clients/
+COPY --from=base_build \
+    /usr/local/lib/libopencv_core.so* \
+    /usr/local/lib/libopencv_imgcodecs.so* \
+    /usr/local/lib/libopencv_imgproc.so* \
+    /usr/lib/x86_64-linux-gnu/libpng16.so* \
+    /clients/libs/
+
+COPY --from=base_build /input/images/*.jpeg /clients/images/
+COPY --from=base_build /input/input_images.txt /clients/
+
+ENV LD_LIBRARY_PATH=/usr/local/lib:/clients/libs
