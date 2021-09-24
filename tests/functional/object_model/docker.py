@@ -29,12 +29,14 @@ from utils.grpc import port_manager_grpc
 from utils.rest import port_manager_rest
 import logging
 
+from constants import TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_CPU, TARGET_DEVICE_MYRIAD
+
 logger = logging.getLogger(__name__)
 CONTAINER_STATUS_RUNNING = "running"
 TERMINAL_STATUSES = ["exited"]
 
 TARGET_DEVICE_CONFIGURATION = {
-    "CPU": {
+    TARGET_DEVICE_CPU: {
         "VOLUMES": [],
         "DEVICES": [],
         "NETWORK": None,
@@ -42,7 +44,7 @@ TARGET_DEVICE_CONFIGURATION = {
         "USER": None,
     },
 
-    "GPU": {
+    TARGET_DEVICE_GPU: {
         "VOLUMES": [],
         "DEVICES": ["/dev/dri:/dev/dri:mrw"],
         "NETWORK": None,
@@ -50,7 +52,7 @@ TARGET_DEVICE_CONFIGURATION = {
         "USER": None,
     },
 
-    "MYRIAD": {
+    TARGET_DEVICE_MYRIAD: {
         "VOLUMES": [{"/dev": {'bind': "/dev", 'mode': 'ro'}}, ],
         "DEVICES": [],
         "NETWORK": "host",
@@ -58,7 +60,7 @@ TARGET_DEVICE_CONFIGURATION = {
         "USER": None
     },
 
-    "HDDL": {
+    TARGET_DEVICE_HDDL: {
         "VOLUMES": [{"/var/tmp": {"bind": "/var/tmp", "mode": "rw"}}],
         "DEVICES": ["/dev/ion:/dev/ion:mrw"],
         "NETWORK": None,
