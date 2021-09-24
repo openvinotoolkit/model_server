@@ -16,8 +16,9 @@
 
 import numpy as np
 import pytest
-from constants import ERROR_SHAPE
-from config import target_device, skip_nginx_test, skip_hddl_tests
+from constants import ERROR_SHAPE, NOT_TO_BE_REPORTED_IF_SKIPPED, TARGET_DEVICE_HDDL, TARGET_DEVICE_MYRIAD
+from config import skip_nginx_test
+from conftest import devices_not_supported_for_test
 from model.models_information import FaceDetection
 from utils.grpc import create_channel, infer
 import logging
@@ -36,11 +37,8 @@ auto_shapes = [
 
 fixed_shape = {'in': (1, 3, 600, 600), 'out': (1, 1, 200, 7)}
 
-
-@pytest.mark.skipif(skip_hddl_tests, reason="Shape is not supported by HDDL")
-@pytest.mark.skipif(skip_nginx_test, reason="not implemented yet")
-@pytest.mark.skipif(target_device == "MYRIAD",
-                    reason="error: Cannot load network into target device")
+@pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
+@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL])
 class TestModelReshaping:
     def test_single_local_model_reshaping_auto(self, start_server_face_detection_model_auto_shape):
 
