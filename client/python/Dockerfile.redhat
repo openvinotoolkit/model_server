@@ -20,16 +20,12 @@ ARG FINAL_IMAGE=registry.access.redhat.com/ubi8/ubi-minimal:8.4
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 FROM $BASE_IMAGE as base_build
 
-RUN groupadd --gid 5000 ovms && \
-    useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --shell /bin/bash --skel /dev/null ovms
-
-RUN dnf install -y unzip && \
+RUN dnf install -y unzip git && \
     curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.18.0/protoc-3.18.0-linux-x86_64.zip && \
     unzip protoc-3.18.0-linux-x86_64.zip -d /opt/protoc
 
-ENV PATH=$PATH:/opt/protoc
+ENV PATH=$PATH:/opt/protoc/bin
 
-RUN mkdir /ovmsclient
 COPY lib /ovmsclient/lib
 
 RUN dnf install -y python38 make && \
@@ -38,23 +34,22 @@ RUN dnf install -y python38 make && \
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 FROM $FINAL_IMAGE as final_build
 
-ENV OVMSCLIENT_DIR="/home/ovmsclient"
+ENV OVMSCLIENT_DIR="/ovmsclient"
 
 RUN microdnf install shadow-utils && \
     groupadd --gid 5001 ovmsclient && \
-    useradd --home-dir ${OVMSCLIENT_DIR} --create-home --uid 5001 --gid 5001 --shell /bin/bash --skel /dev/null ovmsclient && \
+    useradd --home-dir /home/ovmsclient --create-home --uid 5001 --gid 5001 --shell /bin/bash --skel /dev/null ovmsclient && \
     microdnf remove shadow-utils && microdnf clean all
 
 COPY --from=base_build /ovmsclient/lib/dist/ovmsclient-0.1-py3-none-any.whl ${OVMSCLIENT_DIR}/ovmsclient-0.1-py3-none-any.whl
 COPY samples ${OVMSCLIENT_DIR}/samples
+# Remove samples that require heavy dependencies
+RUN rm ${OVMSCLIENT_DIR}/samples/vehicle_detection_predict_binary.py ${OVMSCLIENT_DIR}/samples/requirements.txt
 
 RUN microdnf install -y python38 && microdnf clean all
 
-USER ovmsclient
-
-ENV PATH=${PATH}:${OVMSCLIENT_DIR}/.local/bin
-RUN pip3 install --user ${OVMSCLIENT_DIR}/ovmsclient-0.1-py3-none-any.whl && \
+RUN pip3 install ${OVMSCLIENT_DIR}/ovmsclient-0.1-py3-none-any.whl && \
     rm  ${OVMSCLIENT_DIR}/ovmsclient-0.1-py3-none-any.whl
 
-ENV PS1="$(whoami)@$(cat /etc/hostname):$(pwd)\$ "
+USER ovmsclient
 WORKDIR ${OVMSCLIENT_DIR}
