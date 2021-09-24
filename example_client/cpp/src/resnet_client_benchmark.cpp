@@ -380,7 +380,7 @@ public:
         std::cout << "Consumer threads: " << config.consumers << std::endl;
         std::cout << "Max parallel requests: " << config.max_parallel_requests << std::endl;
         std::cout << "Avg FPS: " << avgFps << std::endl;
-        if (client.getFailedIterations() <= 0) {
+        if (client.getFailedIterations() > 0) {
             std::cout << "\n[WARNING] " << client.getFailedIterations() << " requests have failed." << std::endl;
         }
     }
