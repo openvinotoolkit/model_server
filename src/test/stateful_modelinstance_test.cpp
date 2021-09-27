@@ -97,6 +97,7 @@ public:
     inputs_info_t modelInput;
     std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
     std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
+    std::unique_ptr<InferenceEngine::Core> ieCore;
 
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
@@ -107,6 +108,7 @@ public:
     }
     void SetUp() override {
         TestWithTempDir::SetUp();
+        ieCore = std::make_unique<InferenceEngine::Core>();
         modelVersion = 1;
         // Prepare manager
         modelPath = directoryPath + "/dummy/";
@@ -127,21 +129,24 @@ public:
     inputs_info_t modelInput;
     std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
     std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
+    std::unique_ptr<InferenceEngine::Core> ieCore;
 
     void SetUp() override {
         modelInput = {};
+        ieCore = std::make_unique<InferenceEngine::Core>();
     }
 
     void TearDown() override {
         modelInput.clear();
+        ieCore.reset();
     }
 };
 
 class MockedValidateStatefulModelInstance : public ovms::StatefulModelInstance {
 public:
     ovms::GlobalSequencesViewer sequencesViewer;
-    MockedValidateStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
-        StatefulModelInstance(name, version, &sequencesViewer) {}
+    MockedValidateStatefulModelInstance(const std::string& name, ovms::model_version_t version, InferenceEngine::Core& ieCore) :
+        StatefulModelInstance(name, version, ieCore, &sequencesViewer) {}
 
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request, ovms::SequenceProcessingSpec& processingSpec) {
         return validate(request, processingSpec);
@@ -160,8 +165,8 @@ public:
     ovms::GlobalSequencesViewer sequencesViewer;
     std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(60, "dummy", 1);
 
-    MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version) :
-        StatefulModelInstance(name, version, &sequencesViewer) {}
+    MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version, InferenceEngine::Core& ieCore) :
+        StatefulModelInstance(name, version, ieCore, &sequencesViewer) {}
 
     const std::unique_ptr<MockedSequenceManager>& getMockedSequenceManager() const {
         return this->mockedSequenceManager;
@@ -279,6 +284,7 @@ public:
     Blob::Ptr defaultBlob;
     Blob::Ptr currentBlob;
     Blob::Ptr newBlob;
+    std::unique_ptr<InferenceEngine::Core> ieCore;
 
     std::vector<float> defaultState{0};
     std::vector<float> currentState{10};
@@ -287,7 +293,8 @@ public:
     size_t elementsCount;
 
     void SetUp() override {
-        modelInstance = std::make_shared<MockedStatefulModelInstance>("model", 1);
+        ieCore = std::make_unique<InferenceEngine::Core>();
+        modelInstance = std::make_shared<MockedStatefulModelInstance>("model", 1, *ieCore);
         // Prepare states blob desc
         shape = std::vector<size_t>{1, 1};
         elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
@@ -1041,7 +1048,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferStandardFlow) {
 
 TEST_F(StatefulModelInstanceTempDir, loadModel) {
     ovms::GlobalSequencesViewer sequencesViewer;
-    ovms::StatefulModelInstance modelInstance(dummyModelName, modelVersion, &sequencesViewer);
+    ovms::StatefulModelInstance modelInstance(dummyModelName, modelVersion, *ieCore, &sequencesViewer);
 
     const ovms::ModelConfig config1{
         dummyModelName,
@@ -1083,7 +1090,7 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
 }
 
 TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
-    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore);
     uint64_t seqId = 1;
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, seqId);
 
@@ -1110,7 +1117,7 @@ TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
 }
 
 TEST_F(StatefulModelInstanceInputValidation, missingSeqId) {
-    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceControl(&request, ovms::SEQUENCE_END);
@@ -1120,7 +1127,7 @@ TEST_F(StatefulModelInstanceInputValidation, missingSeqId) {
 }
 
 TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdEnd) {
-    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceControl(&request, ovms::SEQUENCE_END);
@@ -1132,7 +1139,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdEnd) {
 }
 
 TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdNoControl) {
-    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceControl(&request, ovms::NO_CONTROL_INPUT);
@@ -1144,7 +1151,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdNoControl) {
 }
 
 TEST_F(StatefulModelInstanceInputValidation, wrongProtoKeywords) {
-    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequenceid"];
@@ -1156,7 +1163,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongProtoKeywords) {
 }
 
 TEST_F(StatefulModelInstanceInputValidation, badControlInput) {
-    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     request = preparePredictRequest(modelInput);
@@ -1169,7 +1176,7 @@ TEST_F(StatefulModelInstanceInputValidation, badControlInput) {
 }
 
 TEST_F(StatefulModelInstanceInputValidation, invalidProtoTypes) {
-    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1);
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     {
         tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);

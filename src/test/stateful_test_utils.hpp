@@ -89,9 +89,9 @@ private:
 
 public:
     DummyStatefulModel() {
-        InferenceEngine::Core engine;
-        cnnNetworkPtr = std::make_shared<InferenceEngine::CNNNetwork>(engine.ReadNetwork(MODEL_PATH));
-        execNetworkPtr = std::make_shared<InferenceEngine::ExecutableNetwork>(engine.LoadNetwork(*cnnNetworkPtr, "CPU"));
+        InferenceEngine::Core ieCore;
+        cnnNetworkPtr = std::make_shared<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(MODEL_PATH));
+        execNetworkPtr = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*cnnNetworkPtr, "CPU"));
     }
 
     InferenceEngine::InferRequest createInferRequest() {

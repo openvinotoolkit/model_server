@@ -275,27 +275,8 @@ uint ModelInstance::getNumOfParallelInferRequests(const ModelConfig& modelConfig
     return nireq;
 }
 
-void ModelInstance::loadOVEngine() {
-    engine = std::make_unique<InferenceEngine::Core>();
-    if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
-        SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
-        try {
-            auto extension_ptr = std::make_shared<InferenceEngine::Extension>(ovms::Config::instance().cpuExtensionLibraryPath());
-            SPDLOG_INFO("Custom CPU extention loaded. Adding it.");
-            engine->AddExtension(extension_ptr, "CPU");
-            SPDLOG_INFO("Extention added.");
-        } catch (std::exception& ex) {
-            SPDLOG_CRITICAL("Custom CPU extention loading has failed! Reason: {}", ex.what());
-            throw;
-        } catch (...) {
-            SPDLOG_CRITICAL("Custom CPU extention loading has failed with an unknown error!");
-            throw;
-        }
-    }
-}
-
 std::unique_ptr<InferenceEngine::CNNNetwork> ModelInstance::loadOVCNNNetworkPtr(const std::string& modelFile) {
-    return std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(modelFile));
+    return std::make_unique<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(modelFile));
 }
 
 Status ModelInstance::loadOVCNNNetwork() {
@@ -347,9 +328,9 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
             Blob::Ptr blobWts = make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C});
             blobWts->allocate();
             std::memcpy(InferenceEngine::as<InferenceEngine::MemoryBlob>(blobWts)->wmap(), weights.data(), weights.size());
-            network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel, blobWts));
+            network = std::make_unique<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(strModel, blobWts));
         } else if (res == CustomLoaderStatus::MODEL_TYPE_ONNX) {
-            network = std::make_unique<InferenceEngine::CNNNetwork>(engine->ReadNetwork(strModel, InferenceEngine::Blob::CPtr()));
+            network = std::make_unique<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(strModel, InferenceEngine::Blob::CPtr()));
         } else if (res == CustomLoaderStatus::MODEL_TYPE_BLOB) {
             return StatusCode::INTERNAL_ERROR;
         }
@@ -361,7 +342,7 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 }
 
 void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
-    execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(engine->LoadNetwork(*network, targetDevice, pluginConfig));
+    execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*network, targetDevice, pluginConfig));
 }
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
@@ -477,8 +458,6 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
         return status;
     }
     try {
-        if (!this->engine)
-            loadOVEngine();
         if (!this->network) {
             if (this->config.isCustomLoaderRequiredToLoadModel()) {
                 // loading the model using the custom loader
@@ -710,7 +689,6 @@ void ModelInstance::unloadModelComponents() {
     inferRequestsQueue.reset();
     execNetwork.reset();
     network.reset();
-    engine.reset();
     outputsInfo.clear();
     inputsInfo.clear();
     modelFiles.clear();

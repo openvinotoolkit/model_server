@@ -200,9 +200,9 @@ TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldSucceedForPreci
 
 TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     PredictResponse response;
-    InferenceEngine::Core engine;
-    InferenceEngine::CNNNetwork network = engine.ReadNetwork(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
-    InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
+    InferenceEngine::Core ieCore;
+    InferenceEngine::CNNNetwork network = ieCore.ReadNetwork(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    InferenceEngine::ExecutableNetwork execNetwork = ieCore.LoadNetwork(network, "CPU");
     InferenceEngine::InferRequest inferRequest = execNetwork.CreateInferRequest();
     ovms::tensor_map_t tenMap;
     InferenceEngine::TensorDesc tensorDesc(Precision::FP32, shape_t{1, 10}, InferenceEngine::Layout::NC);
