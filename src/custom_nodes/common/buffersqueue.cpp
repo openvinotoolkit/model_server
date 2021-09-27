@@ -29,6 +29,7 @@ BuffersQueue::BuffersQueue(size_t singleBufferSize, int streamsLength) :
         inferRequests.push_back(memoryPool.get() + i * singleBufferSize);
     }
 }
+
 void* BuffersQueue::getBuffer() {
     // can be easily switched to async version if need arise
     auto idleId = getIdleStream();
@@ -47,8 +48,17 @@ bool BuffersQueue::returnBuffer(void* buffer) {
     returnStream(getBufferId(buffer));
     return true;
 }
+
 int BuffersQueue::getBufferId(void* buffer) {
     return (static_cast<char*>(buffer) - memoryPool.get()) / singleBufferSize;
+}
+
+size_t BuffersQueue::getSize() {
+    return this->size;
+}
+
+size_t BuffersQueue::getSingleBufferSize() {
+    return this->singleBufferSize;
 }
 }  // namespace custom_nodes_common
 }  // namespace ovms

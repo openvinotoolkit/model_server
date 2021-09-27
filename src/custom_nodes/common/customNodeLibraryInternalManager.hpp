@@ -27,36 +27,10 @@ class CustomNodeLibraryInternalManager {
 
 public:
     CustomNodeLibraryInternalManager() = default;
-    void createBuffersQueue(std::string name, size_t singleBufferSize, int streamsLength) {
-        auto it = outputBuffers.find(name);
-        if (it != outputBuffers.end()) {
-            delete it->second;
-            outputBuffers.erase(it);
-        }
-        outputBuffers.insert({name, new BuffersQueue(singleBufferSize, streamsLength)});
-    }
-
-    BuffersQueue* getBuffersQueue(std::string name) {
-        return outputBuffers.find(name)->second;
-    }
-
-    int releaseBuffer(void* ptr) {
-        for (auto it = outputBuffers.begin(); it != outputBuffers.end();) {
-            if(it->second->returnBuffer(ptr)) {
-                return 0;
-            }
-            ++it;
-        }
-        return 1;
-    }
-
-    void clear() {
-        for (auto it = outputBuffers.begin(); it != outputBuffers.end();) {
-            delete it->second;
-            outputBuffers.erase(it);
-            ++it;
-        }
-    }
+    void createBuffersQueue(std::string name, size_t singleBufferSize, int streamsLength);
+    BuffersQueue* getBuffersQueue(std::string name);
+    int releaseBuffer(void* ptr);
+    void clear();
 };
 }  // namespace custom_nodes_common
 }  // namespace ovms

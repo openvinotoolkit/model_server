@@ -35,47 +35,14 @@ class BuffersQueue : protected Queue<char*> {
     std::unique_ptr<char[]> memoryPool;
 
 public:
-    BuffersQueue(size_t singleBufferSize, int streamsLength) :
-        Queue(streamsLength),
-        singleBufferSize(singleBufferSize),
-        size(singleBufferSize * streamsLength),
-        memoryPool(std::make_unique<char[]>(size)) {
-        for (int i = 0; i < streamsLength; ++i) {
-            inferRequests.push_back(memoryPool.get() + i * singleBufferSize);
-        }
-    }
-
-    void* getBuffer() {
-        // can be easily switched to async version if need arise
-        auto idleId = getIdleStream();
-        if (idleId.wait_for(std::chrono::nanoseconds(0)) == std::future_status::timeout) {
-            return nullptr;
-        }
-        return getInferRequest(idleId.get());
-    }
-    
-    bool returnBuffer(void* buffer) {
-        if ((static_cast<char*>(buffer) < memoryPool.get()) ||
-            ((memoryPool.get() + size - 1) < buffer) ||
-            ((static_cast<char*>(buffer) - memoryPool.get()) % singleBufferSize != 0)) {
-            return false;
-        }
-        returnStream(getBufferId(buffer));
-        return true;
-    }
-
-    size_t getSize() {
-        return this->size;
-    }
-
-    size_t getSingleBufferSize() {
-        return this->singleBufferSize;
-    }
+    BuffersQueue(size_t singleBufferSize, int streamsLength);
+    void* getBuffer();
+    bool returnBuffer(void* buffer);
+    size_t getSize();
+    size_t getSingleBufferSize();
 
 private:
-    int getBufferId(void* buffer) {
-        return (static_cast<char*>(buffer) - memoryPool.get()) / singleBufferSize;
-    }
+    int getBufferId(void* buffer);
 };
 }  // namespace custom_nodes_common
 }  // namespace ovms
