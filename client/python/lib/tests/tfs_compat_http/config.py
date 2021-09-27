@@ -289,3 +289,10 @@ MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE = [
     ("request", TypeError, 'request type should be HttpModelStatusRequest, '
      'but is str')
 ]
+
+MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE = [
+    (requests.Request(), TypeError, 'request type should be HttpModelMetadataRequest, '
+     'but is Request'),
+    ("request", TypeError, 'request type should be HttpModelMetadataRequest, '
+     'but is str')
+]
