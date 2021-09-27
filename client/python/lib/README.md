@@ -47,6 +47,13 @@ Apart from `make build`, there are also other targets available:
  - `make clean` - removes all intermediate files generated while building the package
 
 
+## Use in Docker container
+
+There are also Dockerfiles available that prepare Docker image with `ovmsclient` installed and ready to use.
+Simply run `docker build` with the Dockerfile of your choice to get the minimal image:
+- [Ubuntu 20.04 based image](../Dockerfile.ubuntu)
+- [RHEL 8.4 based image](../Dockerfile.redhat)
+
 ## Usage
 
 **Create gRPC client instance:**
