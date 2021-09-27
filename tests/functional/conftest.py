@@ -33,7 +33,7 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
 from utils.files_operation import get_path_friendly_test_name
 from utils.parametrization import get_tests_suffix
-from config import test_dir, test_dir_cleanup, artifacts_dir
+from config import test_dir, test_dir_cleanup, artifacts_dir, image
 
 logger = logging.getLogger(__name__)
 
@@ -195,3 +195,6 @@ def pytest_runtest_logfinish(nodeid, location):
         _root_logger.removeHandler(_root_logger._test_log_handler)
     yield
 
+
+def pytest_json_runtest_metadata(item, call):
+    return {'image' : image}
