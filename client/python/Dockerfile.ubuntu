@@ -39,14 +39,15 @@ ENV OVMSCLIENT_DIR="/ovmsclient"
 RUN groupadd --gid 5001 ovmsclient && \
     useradd --home-dir /home/ovmsclient --create-home --uid 5001 --gid 5001 --shell /bin/bash --skel /dev/null ovmsclient
 
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y wget python3-pip && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+
 COPY --from=base_build /ovmsclient/lib/dist/ovmsclient-0.1-py3-none-any.whl ${OVMSCLIENT_DIR}/ovmsclient-0.1-py3-none-any.whl
 COPY samples ${OVMSCLIENT_DIR}/samples
 # Remove samples that require heavy dependencies
-RUN rm ${OVMSCLIENT_DIR}/samples/vehicle_detection_predict_binary.py ${OVMSCLIENT_DIR}/samples/requirements.txt
-
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y python3-pip && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+RUN rm ${OVMSCLIENT_DIR}/samples/vehicle_detection_predict_binary.py ${OVMSCLIENT_DIR}/samples/requirements.txt && \
+    wget https://github.com/openvinotoolkit/model_server/raw/v2021.4.1/example_client/imgs.npy -O ${OVMSCLIENT_DIR}/samples/imgs.npy
 
 RUN pip3 install ${OVMSCLIENT_DIR}/ovmsclient-0.1-py3-none-any.whl && \
     rm  ${OVMSCLIENT_DIR}/ovmsclient-0.1-py3-none-any.whl
