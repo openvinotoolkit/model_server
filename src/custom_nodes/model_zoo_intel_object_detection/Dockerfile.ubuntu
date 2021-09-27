@@ -20,6 +20,8 @@ RUN curl -s https://download.01.org/opencv/master/openvinotoolkit/thirdparty/lin
 
 ARG NODE_NAME=model_zoo_intel_object_detection
 
+COPY ./queue.hpp ./queue.hpp
+COPY ./common /custom_nodes/common
 COPY . /custom_nodes/${NODE_NAME}/
 COPY custom_node_interface.h /
 WORKDIR /custom_nodes/${NODE_NAME}/
