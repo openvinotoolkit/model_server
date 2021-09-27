@@ -37,6 +37,7 @@ from ovmsclient.tfs_compat.grpc.serving_client import make_grpc_client as make_g
 from ovmsclient.tfs_compat.http.requests import make_predict_request as make_http_predict_request
 from ovmsclient.tfs_compat.http.requests import make_metadata_request as make_http_metadata_request
 from ovmsclient.tfs_compat.http.requests import make_status_request as make_http_status_request
+from ovmsclient.tfs_compat.http.serving_client import make_http_client as make_http_client
 
 
 # Namespaces bindings
@@ -56,3 +57,4 @@ class httpclient(SimpleNamespace):
     make_predict_request = make_http_predict_request
     make_metadata_request = make_http_metadata_request
     make_status_request = make_http_status_request
+    make_client = make_http_client
