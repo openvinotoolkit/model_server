@@ -15,9 +15,11 @@
 #
 import logging
 import os
+import re
 from collections import defaultdict
 from logging import FileHandler
 
+import docker
 import grpc  # noqa
 import pytest
 from _pytest._code import ExceptionInfo, filter_traceback  # noqa
@@ -173,6 +175,18 @@ def exception_catcher(when: str, outcome):
                                .format(when.capitalize(), str(exc_repr)))
 
 
+def get_docker_image_os_version_from_container():
+    client = docker.from_env()
+
+    output = client.containers.run(image=image,
+                                   entrypoint=["/bin/bash", "-c"],
+                                   command="'cat /etc/*-release'")
+    output = output.decode("utf-8")
+    os_distname = re.search('^PRETTY_NAME="(.+)"\n', output, re.MULTILINE).group(1)
+
+    return os_distname
+
+
 def devices_not_supported_for_test(not_supported_devices_list):
     """
     Comma separated list of devices not supported for test.
@@ -210,3 +224,4 @@ def pytest_runtest_logfinish(nodeid, location):
 @pytest.fixture(scope='session', autouse=True)
 def extra_json_environment(request):
     request.config._json_environment.append(('image', image))
+    request.config._json_environment.append(('system', get_docker_image_os_version_from_container()))
