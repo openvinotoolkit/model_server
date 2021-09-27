@@ -87,14 +87,14 @@ protected:
          *
          * @return status
          */
-    virtual Status addVersion(const ModelConfig& config);
+    virtual Status addVersion(const ModelConfig& config, InferenceEngine::Core& ieCore);
 
     /**
          * @brief ModelInstances factory
          *
          * @return modelInstance
          */
-    virtual std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion);
+    virtual std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion, InferenceEngine::Core& ieCore);
 
     ModelChangeSubscription subscriptionManager;
 
@@ -175,7 +175,7 @@ public:
          *
          * @return status
          */
-    Status addVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, std::shared_ptr<model_versions_t> versionsFailed);
+    Status addVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, InferenceEngine::Core& ieCore, std::shared_ptr<model_versions_t> versionsFailed);
 
     /**
          * @brief Retires versions of Model
@@ -212,7 +212,7 @@ public:
          *
          * @return status
          */
-    Status reloadVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, std::shared_ptr<model_versions_t> versionsFailed);
+    Status reloadVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, InferenceEngine::Core& ieCore, std::shared_ptr<model_versions_t> versionsFailed);
 
     void subscribe(PipelineDefinition& pd);
     void unsubscribe(PipelineDefinition& pd);
