@@ -187,9 +187,9 @@ TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobExc
         tensorDesc.getDims(),
         tensorDesc.getLayout());
     tensorMap[tensorName] = tensorInfo;
-    InferenceEngine::Core engine;
-    InferenceEngine::CNNNetwork network = engine.ReadNetwork(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
-    InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
+    InferenceEngine::Core ieCore;
+    InferenceEngine::CNNNetwork network = ieCore.ReadNetwork(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    InferenceEngine::ExecutableNetwork execNetwork = ieCore.LoadNetwork(network, "CPU");
     InferenceEngine::InferRequest inferRequest = execNetwork.CreateInferRequest();
     std::shared_ptr<NiceMock<MockBlob>> mockBlobPtr = std::make_shared<NiceMock<MockBlob>>(tensorDesc);
     inferRequest.SetBlob("b", mockBlobPtr);
@@ -214,9 +214,9 @@ TEST_F(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
         tensorDesc.getDims(),
         tensorDesc.getLayout());
     tensorMap[tensorName] = tensorInfo;
-    InferenceEngine::Core engine;
-    InferenceEngine::CNNNetwork network = engine.ReadNetwork(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
-    InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
+    InferenceEngine::Core ieCore;
+    InferenceEngine::CNNNetwork network = ieCore.ReadNetwork(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    InferenceEngine::ExecutableNetwork execNetwork = ieCore.LoadNetwork(network, "CPU");
     InferenceEngine::InferRequest inferRequest = execNetwork.CreateInferRequest();
     std::shared_ptr<NiceMock<MockBlob>> mockBlobPtr = std::make_shared<NiceMock<MockBlob>>(tensorDesc);
     inferRequest.SetBlob("b", mockBlobPtr);

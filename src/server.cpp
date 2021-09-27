@@ -23,6 +23,7 @@
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
+#include <inference_engine.hpp>
 #include <netinet/in.h>
 #include <signal.h>
 #include <stdlib.h>
