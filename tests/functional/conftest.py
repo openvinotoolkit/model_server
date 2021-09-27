@@ -207,5 +207,6 @@ def pytest_runtest_logfinish(nodeid, location):
     yield
 
 
-def pytest_json_runtest_metadata(item, call):
-    return {'image' : image}
+@pytest.fixture(scope='session', autouse=True)
+def extra_json_environment(request):
+    request.config._json_environment.append(('image', image))
