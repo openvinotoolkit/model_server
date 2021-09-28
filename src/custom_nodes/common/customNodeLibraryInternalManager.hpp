@@ -16,8 +16,8 @@
 #pragma once
 
 #include <map>
-#include "../common/buffersqueue.hpp"
 
+#include "../common/buffersqueue.hpp"
 
 namespace ovms {
 namespace custom_nodes_common {

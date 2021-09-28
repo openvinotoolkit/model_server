@@ -20,36 +20,35 @@
 
 namespace ovms {
 namespace custom_nodes_common {
-    void CustomNodeLibraryInternalManager::createBuffersQueue(std::string name, size_t singleBufferSize, int streamsLength) {
-        auto it = outputBuffers.find(name);
-        if (it != outputBuffers.end()) {
-            delete it->second;
-            outputBuffers.erase(it);
-        }
-        outputBuffers.insert({name, new BuffersQueue(singleBufferSize, streamsLength)});
+void CustomNodeLibraryInternalManager::createBuffersQueue(std::string name, size_t singleBufferSize, int streamsLength) {
+    auto it = outputBuffers.find(name);
+    if (it != outputBuffers.end()) {
+        delete it->second;
+        outputBuffers.erase(it);
     }
+    outputBuffers.insert({name, new BuffersQueue(singleBufferSize, streamsLength)});
+}
 
-    BuffersQueue* CustomNodeLibraryInternalManager::getBuffersQueue(std::string name) {
-        return outputBuffers.find(name)->second;
-    }
+BuffersQueue* CustomNodeLibraryInternalManager::getBuffersQueue(std::string name) {
+    return outputBuffers.find(name)->second;
+}
 
-    int CustomNodeLibraryInternalManager::releaseBuffer(void* ptr) {
-        for (auto it = outputBuffers.begin(); it != outputBuffers.end();) {
-            if(it->second->returnBuffer(ptr)) {
-                return 0;
-            }
-            ++it;
+int CustomNodeLibraryInternalManager::releaseBuffer(void* ptr) {
+    for (auto it = outputBuffers.begin(); it != outputBuffers.end();) {
+        if (it->second->returnBuffer(ptr)) {
+            return 0;
         }
-        return 1;
+        ++it;
     }
+    return 1;
+}
 
-    void CustomNodeLibraryInternalManager::clear() {
-        for (auto it = outputBuffers.begin(); it != outputBuffers.end();) {
-            delete it->second;
-            outputBuffers.erase(it);
-            ++it;
-        }
+void CustomNodeLibraryInternalManager::clear() {
+    for (auto it = outputBuffers.begin(); it != outputBuffers.end();) {
+        delete it->second;
+        outputBuffers.erase(it);
+        ++it;
     }
+}
 }  // namespace custom_nodes_common
 }  // namespace ovms
-
