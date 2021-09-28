@@ -16,6 +16,7 @@
 #pragma once
 
 #include <map>
+#include <string>
 
 #include "../common/buffersqueue.hpp"
 

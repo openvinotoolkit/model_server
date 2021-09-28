@@ -17,6 +17,7 @@
 #include "customNodeLibraryInternalManager.hpp"
 
 #include <iostream>
+#include <string>
 
 namespace ovms {
 namespace custom_nodes_common {
