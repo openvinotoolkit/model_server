@@ -34,6 +34,8 @@ void* BuffersQueue::getBuffer() {
     // can be easily switched to async version if need arise
     auto idleId = getIdleStream();
     if (idleId.wait_for(std::chrono::nanoseconds(0)) == std::future_status::timeout) {
+        auto id = idleId.get();  // temporary solution to test whether
+        returnBuffer(getInferRequest(id));
         return nullptr;
     }
     return getInferRequest(idleId.get());

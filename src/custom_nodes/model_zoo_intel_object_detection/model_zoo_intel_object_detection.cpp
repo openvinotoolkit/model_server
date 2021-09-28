@@ -42,16 +42,31 @@ static constexpr const char* OUTPUT_CONFIDENCES_DIMS_NAME = "confidences_dims";
 static constexpr const char* INPUT_IMAGE_DIMS_NAME = "image_dims";
 static constexpr const char* INPUT_DETECTION_DIMS_NAME = "detection_dims";
 
+static constexpr const char* COORDINATES_INFO_DIMS_NAME = "coordinates_info_dims";
+static constexpr const char* IMAGES_INFO_DIMS_NAME = "images_info_dims";
+static constexpr const char* CONFIDENCES_INFO_DIMS_NAME = "confidences_info_dims";
+
 static constexpr const int STREAMS_LENGTH = 1;
 
 std::shared_mutex internalManagerLock;
 
+void cleanup(CustomNodeTensor& tensor, CustomNodeLibraryInternalManager* internalManager) {
+    release(tensor.data, internalManager);
+    release(tensor.dims, internalManager);
+}
+
 template <typename T>
-bool get_preallocated_buffer(CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName) {
-    std::cout << "get_preallocated_buffer called" << std::endl;
+bool get_preallocated_buffer(CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size) {
     *buffer = static_cast<T*>(internalManager->getBuffersQueue(buffersQueueName)->getBuffer());
-    if (*buffer == nullptr)
-        return false;
+    if (*buffer == nullptr) {
+        std::cout << "[CUSTOM_NODE]none available buffer in " << buffersQueueName << std::endl;
+        std::cout << "[CUSTOM_NODE]allocating memory for buffer: " << buffersQueueName << std::endl;
+        *buffer = (T*)malloc(byte_size);
+        if (*buffer == nullptr) {
+            std::cout << "[CUSTOM_NODE]malloc for buffer: " << buffersQueueName << "FAILED" << std::endl;
+            return false;
+        }
+    }
     return true;
 }
 
@@ -61,10 +76,10 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * outputBatch;
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
 
-    std::cout << "getting buffer for images data" << std::endl;
     float* buffer = nullptr;
-    if (!get_preallocated_buffer<float>(internalManager, &buffer, OUTPUT_IMAGES_TENSOR_NAME))
+    if (!get_preallocated_buffer<float>(internalManager, &buffer, OUTPUT_IMAGES_TENSOR_NAME, byteSize))
         return false;
+    std::cout << "[CUSTOM_NODE]images buffer allocated: " << buffer << std::endl;
     cv::Size targetShape(targetImageWidth, targetImageHeight);
     for (uint64_t i = 0; i < outputBatch; i++) {
         cv::Mat image;
@@ -86,10 +101,13 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     output->data = reinterpret_cast<uint8_t*>(buffer);
     output->dataBytes = byteSize;
 
-    std::cout << "getting dims for images data" << std::endl;
     u_int64_t* dims = nullptr;
-    if (!get_preallocated_buffer<u_int64_t>(internalManager, &dims, OUTPUT_IMAGES_DIMS_NAME))
+    if (!get_preallocated_buffer<u_int64_t>(internalManager, &dims, OUTPUT_IMAGES_DIMS_NAME, 5 * sizeof(uint64_t))) {
+        std::cout << "[CUSTOM_NODE]releasing images buffer: " << buffer << std::endl;
+        release(buffer, internalManager);
         return false;
+    }
+    std::cout << "[CUSTOM_NODE]images dims allocated: " << dims << std::endl;
     output->dimsCount = 5;
     output->dims = dims;
     output->dims[0] = outputBatch;
@@ -112,10 +130,10 @@ bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::ve
     uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
 
-    std::cout << "getting buffer for coordinates data" << std::endl;
     int32_t* buffer = nullptr;
-    if (!get_preallocated_buffer<int32_t>(internalManager, &buffer, OUTPUT_COORDINATES_TENSOR_NAME))
+    if (!get_preallocated_buffer<int32_t>(internalManager, &buffer, OUTPUT_COORDINATES_TENSOR_NAME, byteSize))
         return false;
+    std::cout << "[CUSTOM_NODE]coordinates buffer allocated: " << buffer << std::endl;
     for (size_t i = 0; i < outputBatch; i++) {
         float entry[] = {
             detections[i][0], detections[i][1], detections[i][2], detections[i][3]};
@@ -124,10 +142,13 @@ bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::ve
     output->data = reinterpret_cast<uint8_t*>(buffer);
     output->dataBytes = byteSize;
 
-    std::cout << "getting dims for coordinates data" << std::endl;
     u_int64_t* dims = nullptr;
-    if (!get_preallocated_buffer<u_int64_t>(internalManager, &dims, OUTPUT_COORDINATES_DIMS_NAME))
+    if (!get_preallocated_buffer<u_int64_t>(internalManager, &dims, OUTPUT_COORDINATES_DIMS_NAME, 3 * sizeof(uint64_t))) {
+        std::cout << "[CUSTOM_NODE]releasing coordinates buffer: " << buffer << std::endl;
+        release(buffer, internalManager);
         return false;
+    }
+    std::cout << "[CUSTOM_NODE]coordinates dims allocated: " << dims << std::endl;
     output->dimsCount = 3;
     output->dims = dims;
     output->dims[0] = outputBatch;
@@ -142,18 +163,21 @@ bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::ve
     uint64_t byteSize = sizeof(float) * outputBatch;
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
 
-    std::cout << "getting buffer for confidences data" << std::endl;
     float* buffer = nullptr;
-    if (!get_preallocated_buffer<float>(internalManager, &buffer, OUTPUT_CONFIDENCES_TENSOR_NAME))
+    if (!get_preallocated_buffer<float>(internalManager, &buffer, OUTPUT_CONFIDENCES_TENSOR_NAME, byteSize))
         return false;
+    std::cout << "[CUSTOM_NODE]confidences buffer allocated: " << buffer << std::endl;
     std::memcpy(buffer, confidences.data(), byteSize);
     output->data = reinterpret_cast<uint8_t*>(buffer);
     output->dataBytes = byteSize;
 
-    std::cout << "getting dims for confidences data" << std::endl;
     u_int64_t* dims = nullptr;
-    if (!get_preallocated_buffer<u_int64_t>(internalManager, &dims, OUTPUT_CONFIDENCES_DIMS_NAME))
+    if (!get_preallocated_buffer<u_int64_t>(internalManager, &dims, OUTPUT_CONFIDENCES_DIMS_NAME, 3 * sizeof(uint64_t))) {
+        std::cout << "[CUSTOM_NODE]releasing confidences buffer: " << buffer << std::endl;
+        release(buffer, internalManager);
         return false;
+    }
+    std::cout << "[CUSTOM_NODE]confidences dims allocated: " << dims << std::endl;
     output->dimsCount = 3;
     output->dims = dims;
     output->dims[0] = outputBatch;
@@ -164,7 +188,6 @@ bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::ve
 }
 
 int initializeInternalManager(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
-    std::cout << "initializeInternalManager called" << std::endl;
     // creating InternalManager instance
     CustomNodeLibraryInternalManager* internalManager = new CustomNodeLibraryInternalManager();
     if (internalManager == nullptr)
@@ -209,12 +232,16 @@ int initializeInternalManager(void** customNodeLibraryInternalManager, const str
     internalManager->createBuffersQueue(INPUT_TENSOR_INFO_NAME, 2 * sizeof(CustomNodeTensorInfo), STREAMS_LENGTH);
     internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo), STREAMS_LENGTH);
 
+    // creating BuffersQueues for outputs dims in getOutputsInfo
+    internalManager->createBuffersQueue(IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t), STREAMS_LENGTH);
+    internalManager->createBuffersQueue(COORDINATES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), STREAMS_LENGTH);
+    internalManager->createBuffersQueue(CONFIDENCES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), STREAMS_LENGTH);
+
     *customNodeLibraryInternalManager = internalManager;
     return 0;
 }
 
 int checkInternalManager(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
-    std::cout << "checkInternalManager called" << std::endl;
     // reading parameters to determine new sizes of pre-allocated buffers
     uint64_t maxOutputBatch = get_int_parameter("max_output_batch", params, paramsCount, 100);
     NODE_ASSERT(maxOutputBatch > 0, "max output batch must be larger than 0");
@@ -235,14 +262,12 @@ int checkInternalManager(void** customNodeLibraryInternalManager, const struct C
         internalManager->createBuffersQueue(OUTPUT_IMAGES_TENSOR_NAME, imagesByteSize, STREAMS_LENGTH);
     }
 
-    std::cout << "checking coordinates data BuffersQueue" << std::endl;
     uint64_t coordinatesByteSize = sizeof(int32_t) * 4 * maxOutputBatch;
     if (!(internalManager->getBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME)->getSize() == coordinatesByteSize &&
             internalManager->getBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME)->getSingleBufferSize() == STREAMS_LENGTH * coordinatesByteSize)) {
         internalManager->createBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME, coordinatesByteSize, STREAMS_LENGTH);
     }
 
-    std::cout << "checking confidences data BuffersQueue" << std::endl;
     uint64_t confidenceByteSize = sizeof(float) * maxOutputBatch;
     if (!(internalManager->getBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME)->getSize() == confidenceByteSize &&
             internalManager->getBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME)->getSingleBufferSize() == STREAMS_LENGTH * confidenceByteSize)) {
@@ -252,7 +277,6 @@ int checkInternalManager(void** customNodeLibraryInternalManager, const struct C
 }
 
 int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
-    std::cout << "init called" << std::endl;
     auto status = 0;
     if (*customNodeLibraryInternalManager == nullptr) {
         status = initializeInternalManager(customNodeLibraryInternalManager, params, paramsCount);
@@ -265,7 +289,6 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
 }
 
 int deinitialize(void* customNodeLibraryInternalManager) {
-    std::cout << "deinit called" << std::endl;
     // deallocate InternalManager and its contents
     if (customNodeLibraryInternalManager != nullptr) {
         CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
@@ -276,7 +299,6 @@ int deinitialize(void* customNodeLibraryInternalManager) {
 }
 
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
-    std::cout << "execute called" << std::endl;
     // Parameters reading
     int originalImageHeight = get_int_parameter("original_image_height", params, paramsCount, -1);
     int originalImageWidth = get_int_parameter("original_image_width", params, paramsCount, -1);
@@ -395,29 +417,39 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     *outputsCount = 3;
     struct CustomNodeTensor* out = nullptr;
-    if (!get_preallocated_buffer<struct CustomNodeTensor>(internalManager, &out, OUTPUT_TENSOR_NAME)) {
+    if (!get_preallocated_buffer<struct CustomNodeTensor>(internalManager, &out, OUTPUT_TENSOR_NAME, 3 * sizeof(CustomNodeTensor))) {
         return 1;
     }
+    std::cout << "[CUSTOM_NODE]outputs tensor allocated: " << out << std::endl;
     *outputs = out;
 
     CustomNodeTensor& imagesTensor = (*outputs)[0];
     imagesTensor.name = OUTPUT_IMAGES_TENSOR_NAME;
     if (!copy_images_into_output(&imagesTensor, boxes, image, targetImageHeight, targetImageWidth, targetImageLayout, convertToGrayScale, customNodeLibraryInternalManager)) {
-        free(*outputs);
+        std::cout << "[CUSTOM_NODE]releasing outputs tensor: " << *outputs << std::endl;
+        release(*outputs, internalManager);
         return 1;
     }
 
     CustomNodeTensor& coordinatesTensor = (*outputs)[1];
     coordinatesTensor.name = OUTPUT_COORDINATES_TENSOR_NAME;
     if (!copy_coordinates_into_output(&coordinatesTensor, detections, customNodeLibraryInternalManager)) {
-        free(*outputs);
+        std::cout << "[CUSTOM_NODE]releasing images buffer late" << std::endl;
+        cleanup(imagesTensor, internalManager);
+        std::cout << "[CUSTOM_NODE]releasing outputs tensor: " << *outputs << std::endl;
+        release(*outputs, internalManager);
         return 1;
     }
 
     CustomNodeTensor& confidencesTensor = (*outputs)[2];
     confidencesTensor.name = OUTPUT_CONFIDENCES_TENSOR_NAME;
     if (!copy_confidences_into_output(&confidencesTensor, confidences, customNodeLibraryInternalManager)) {
-        free(*outputs);
+        std::cout << "[CUSTOM_NODE]releasing coordinates late" << std::endl;
+        cleanup(coordinatesTensor, internalManager);
+        std::cout << "[CUSTOM_NODE]releasing images late" << std::endl;
+        cleanup(imagesTensor, internalManager);
+        std::cout << "[CUSTOM_NODE]releasing outputs tensor: " << *outputs << std::endl;
+        release(*outputs, internalManager);
         return 1;
     }
 
@@ -425,7 +457,6 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 }
 
 int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
-    std::cout << "getInputsInfo called" << std::endl;
     int originalImageHeight = get_int_parameter("original_image_height", params, paramsCount, -1);
     int originalImageWidth = get_int_parameter("original_image_width", params, paramsCount, -1);
     NODE_ASSERT(originalImageHeight > 0, "original image height must be larger than 0");
@@ -438,17 +469,20 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
 
     *infoCount = 2;
     struct CustomNodeTensorInfo* customNodeTensorInfo = nullptr;
-    if (!get_preallocated_buffer<struct CustomNodeTensorInfo>(internalManager, &customNodeTensorInfo, INPUT_TENSOR_INFO_NAME)) {
+    if (!get_preallocated_buffer<struct CustomNodeTensorInfo>(internalManager, &customNodeTensorInfo, INPUT_TENSOR_INFO_NAME, 2 * sizeof(CustomNodeTensorInfo))) {
         return 1;
     }
+    std::cout << "[CUSTOM_NODE]inputs info allocated: " << customNodeTensorInfo << std::endl;
     *info = customNodeTensorInfo;
 
     (*info)[0].name = INPUT_IMAGE_TENSOR_NAME;
     u_int64_t* image_dims = nullptr;
-    if (!get_preallocated_buffer<u_int64_t>(internalManager, &image_dims, INPUT_IMAGE_DIMS_NAME)) {
-        free(info);
+    if (!get_preallocated_buffer<u_int64_t>(internalManager, &image_dims, INPUT_IMAGE_DIMS_NAME, 4 * sizeof(uint64_t))) {
+        std::cout << "[CUSTOM_NODE]releasing inputs info: " << info << std::endl;
+        release(info, internalManager);
         return 1;
     }
+    std::cout << "[CUSTOM_NODE]image dims allocated: " << image_dims << std::endl;
     (*info)[0].dimsCount = 4;
     (*info)[0].dims = image_dims;
     (*info)[0].dims[0] = 1;
@@ -465,10 +499,14 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
 
     (*info)[1].name = INPUT_DETECTION_TENSOR_NAME;
     u_int64_t* detection_dims = nullptr;
-    if (!get_preallocated_buffer<u_int64_t>(internalManager, &detection_dims, INPUT_DETECTION_DIMS_NAME)) {
-        free(info);
+    if (!get_preallocated_buffer<u_int64_t>(internalManager, &detection_dims, INPUT_DETECTION_DIMS_NAME, 4 * sizeof(uint64_t))) {
+        std::cout << "[CUSTOM_NODE]releasing image_dims in inputs info: " << image_dims << std::endl;
+        release(image_dims, internalManager);
+        std::cout << "[CUSTOM_NODE]releasing inputs info: " << info << std::endl;
+        release(info, internalManager);
         return 1;
     }
+    std::cout << "[CUSTOM_NODE]detection dims allocated: " << detection_dims << std::endl;
     (*info)[1].dimsCount = 4;
     (*info)[1].dims = detection_dims;
     (*info)[1].dims[0] = 1;
@@ -480,7 +518,6 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
 }
 
 int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
-    std::cout << "getOutputsInfo called" << std::endl;
     int targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
     int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
     NODE_ASSERT(targetImageHeight > 0, "target image height must be larger than 0");
@@ -494,17 +531,20 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
 
     *infoCount = 3;
     struct CustomNodeTensorInfo* customNodeTensorInfo = nullptr;
-    if (!get_preallocated_buffer<struct CustomNodeTensorInfo>(internalManager, &customNodeTensorInfo, OUTPUT_TENSOR_INFO_NAME)) {
+    if (!get_preallocated_buffer<struct CustomNodeTensorInfo>(internalManager, &customNodeTensorInfo, OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo))) {
         return 1;
     }
+    std::cout << "[CUSTOM_NODE]outputs info allocated: " << customNodeTensorInfo << std::endl;
     *info = customNodeTensorInfo;
 
     (*info)[0].name = OUTPUT_IMAGES_TENSOR_NAME;
     u_int64_t* images_dims = nullptr;
-    if (!get_preallocated_buffer<u_int64_t>(internalManager, &images_dims, OUTPUT_IMAGES_DIMS_NAME)) {
-        free(info);
+    if (!get_preallocated_buffer<u_int64_t>(internalManager, &images_dims, IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t))) {
+        std::cout << "[CUSTOM_NODE]releasing outputs info: " << info << std::endl;
+        release(info, internalManager);
         return 1;
     }
+    std::cout << "[CUSTOM_NODE]images dims allocated in info: " << images_dims << std::endl;
     (*info)[0].dimsCount = 5;
     (*info)[0].dims = images_dims;
     (*info)[0].dims[0] = 0;
@@ -522,10 +562,14 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
 
     (*info)[1].name = OUTPUT_COORDINATES_TENSOR_NAME;
     u_int64_t* coordinates_dims = nullptr;
-    if (!get_preallocated_buffer<u_int64_t>(internalManager, &coordinates_dims, OUTPUT_COORDINATES_DIMS_NAME)) {
-        free(info);
+    if (!get_preallocated_buffer<u_int64_t>(internalManager, &coordinates_dims, COORDINATES_INFO_DIMS_NAME, 3 * sizeof(uint64_t))) {
+        std::cout << "[CUSTOM_NODE]releasing images_dims in outputs info: " << images_dims << std::endl;
+        release(images_dims, internalManager);
+        std::cout << "[CUSTOM_NODE]releasing outputs info: " << info << std::endl;
+        release(info, internalManager);
         return 1;
     }
+    std::cout << "[CUSTOM_NODE]coordinates dims allocated in info: " << coordinates_dims << std::endl;
     (*info)[1].dimsCount = 3;
     (*info)[1].dims = coordinates_dims;
     (*info)[1].dims[0] = 0;
@@ -535,10 +579,16 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
 
     (*info)[2].name = OUTPUT_CONFIDENCES_TENSOR_NAME;
     u_int64_t* confidences_dims = nullptr;
-    if (!get_preallocated_buffer<u_int64_t>(internalManager, &confidences_dims, OUTPUT_CONFIDENCES_DIMS_NAME)) {
-        free(info);
+    if (!get_preallocated_buffer<u_int64_t>(internalManager, &confidences_dims, CONFIDENCES_INFO_DIMS_NAME, 3 * sizeof(uint64_t))) {
+        std::cout << "[CUSTOM_NODE]releasing confidences_dims in outputs info: " << confidences_dims << std::endl;
+        release(confidences_dims, internalManager);
+        std::cout << "[CUSTOM_NODE]releasing images_dims in outputs info: " << images_dims << std::endl;
+        release(images_dims, internalManager);
+        std::cout << "[CUSTOM_NODE]releasing outputs info: " << info << std::endl;
+        release(info, internalManager);
         return 1;
     }
+    std::cout << "[CUSTOM_NODE]confidences dims allocated in info: " << confidences_dims << std::endl;
     (*info)[2].dimsCount = 3;
     (*info)[2].dims = confidences_dims;
     (*info)[2].dims[0] = 0;
@@ -549,13 +599,12 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
 }
 
 int release(void* ptr, void* customNodeLibraryInternalManager) {
-    std::cout << "release called" << std::endl;
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
     if (internalManager->releaseBuffer(ptr) != 0) {
-        std::cout << "releasing ptr" << std::endl;
+        std::cout << "[CUSTOM_NODE]release of ptr: " << ptr << std::endl;
         free(ptr);
         return 0;
     }
-    std::cout << "buffer returned" << std::endl;
+    std::cout << "[CUSTOM_NODE]buffer returned: " << ptr << std::endl;
     return 0;
 }
