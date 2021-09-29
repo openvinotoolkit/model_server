@@ -207,7 +207,7 @@ http_archive(
 new_local_repository(
     name = "openvino",
     build_file = "@//third_party/openvino:BUILD",
-    path = "/opt/intel/openvino/deployment_tools",
+    path = "/opt/intel/openvino/runtime",
 )
 ################## END OF OPENVINO DEPENDENCY ##########
 
@@ -216,6 +216,6 @@ new_local_repository(
 new_local_repository(
     name = "opencv",
     build_file = "@//third_party/opencv:BUILD",
-    path = "/opt/intel/openvino/opencv",
+    path = "/opt/intel/openvino/extras/opencv",
 )
 ################## END OF OPENCV DEPENDENCY ##########

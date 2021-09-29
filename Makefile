@@ -32,8 +32,6 @@ JOBS ?= $(shell python3 -c 'import multiprocessing as mp; print(mp.cpu_count())'
 # Currently supported BASE_OS values are: ubuntu centos clearlinux
 BASE_OS ?= ubuntu
 
-BASE_IMAGE ?= ubuntu:20.04
-
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
 
@@ -69,12 +67,13 @@ DIST_OS_TAG ?= $(BASE_OS_TAG)
 
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
-  BASE_IMAGE=ubuntu:$(BASE_OS_TAG_UBUNTU)
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.4.648.tgz
+  BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2022.1.0.260_offline.sh
 endif
 ifeq ($(BASE_OS),centos)
   BASE_OS_TAG=$(BASE_OS_TAG_CENTOS)
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2021.4.648.tgz
+  BASE_IMAGE ?= centos:$(BASE_OS_TAG_CENTOS)
+  DLDT_PACKAGE_URL ?=
 endif
 ifeq ($(BASE_OS),clearlinux)
   BASE_OS_TAG=$(BASE_OS_TAG_CLEARLINUX)
@@ -82,10 +81,10 @@ ifeq ($(BASE_OS),clearlinux)
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.4
+  BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   DIST_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2021.4.648.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2022.1.0_260.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
