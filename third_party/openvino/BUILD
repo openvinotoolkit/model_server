@@ -19,26 +19,39 @@ package(
 )
 
 cc_library(
+    name = "openvino_deprecated",
+    hdrs = glob([
+        "include/openvino/**/*.*"
+    ]),
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "ngraph",
     hdrs = glob([
-        "ngraph/include/**/*.*"
+        "include/ngraph/**/*.*"
     ]),
-    strip_include_prefix = "ngraph/include",
+    strip_include_prefix = "include",
     visibility = ["//visibility:public"],
+    deps = [
+        "@openvino//:openvino_deprecated",
+    ],
 )
 
 cc_library(
     name = "openvino",
     srcs = glob([
-        "inference_engine/lib/intel64/libinference_engine_legacy.so",
-        "inference_engine/lib/intel64/libinference_engine.so",
-        "inference_engine/lib/intel64/libinference_engine_c_api.so",
+        "lib/intel64/libinference_engine_legacy.so",
+        "lib/intel64/libinference_engine.so",
+        "lib/intel64/libinference_engine_c_api.so",
+        "lib/intel64/libngraph.so",
     ]),
     hdrs = glob([
-        "inference_engine/include/ie/**/*.*"
+        "include/ie/**/*.*"
     ]),
-    data = [ "inference_engine/lib/intel64/plugins.xml" ],
-    strip_include_prefix = "inference_engine/include/ie",
+    data = [ "lib/intel64/plugins.xml" ],
+    strip_include_prefix = "include/ie",
     visibility = ["//visibility:public"],
     deps = [
         "@openvino//:ngraph",
