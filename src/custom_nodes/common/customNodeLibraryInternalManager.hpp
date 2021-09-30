@@ -24,11 +24,12 @@ namespace ovms {
 namespace custom_nodes_common {
 
 class CustomNodeLibraryInternalManager {
-    std::map<std::string, BuffersQueue*> outputBuffers;
+    std::map<std::string, std::unique_ptr<BuffersQueue>> outputBuffers;
 
 public:
     CustomNodeLibraryInternalManager() = default;
     void createBuffersQueue(std::string name, size_t singleBufferSize, int streamsLength);
+    bool recreateBuffersQueue(std::string name, size_t singleBufferSize, int streamsLength);
     BuffersQueue* getBuffersQueue(std::string name);
     int releaseBuffer(void* ptr);
     void clear();

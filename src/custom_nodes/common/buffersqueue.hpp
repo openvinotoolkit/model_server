@@ -38,8 +38,8 @@ public:
     BuffersQueue(size_t singleBufferSize, int streamsLength);
     void* getBuffer();
     bool returnBuffer(void* buffer);
-    size_t getSize();
-    size_t getSingleBufferSize();
+    const size_t getSize();
+    const size_t getSingleBufferSize();
 
 private:
     int getBufferId(void* buffer);

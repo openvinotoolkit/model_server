@@ -21,35 +21,34 @@
 
 namespace ovms {
 namespace custom_nodes_common {
-void CustomNodeLibraryInternalManager::createBuffersQueue(std::string name, size_t singleBufferSize, int streamsLength) {
-    auto it = outputBuffers.find(name);
-    if (it != outputBuffers.end()) {
-        delete it->second;
-        outputBuffers.erase(it);
-    }
-    outputBuffers.insert({name, new BuffersQueue(singleBufferSize, streamsLength)});
+void CustomNodeLibraryInternalManager::createBuffersQueue(const std::string name, size_t singleBufferSize, int streamsLength) {
+    outputBuffers.insert({name, std::make_unique<BuffersQueue>(singleBufferSize, streamsLength)});
 }
 
-BuffersQueue* CustomNodeLibraryInternalManager::getBuffersQueue(std::string name) {
-    return outputBuffers.find(name)->second;
+bool CustomNodeLibraryInternalManager::recreateBuffersQueue(const std::string name, size_t singleBufferSize, int streamsLength) {
+    auto it = outputBuffers.find(name);
+    if (it != outputBuffers.end()) {
+        it->second.reset(new BuffersQueue(singleBufferSize, streamsLength));
+        return true;
+    }
+    return false;
+}
+
+BuffersQueue* CustomNodeLibraryInternalManager::getBuffersQueue(const std::string name) {
+    return outputBuffers.find(name)->second.get();
 }
 
 int CustomNodeLibraryInternalManager::releaseBuffer(void* ptr) {
-    for (auto it = outputBuffers.begin(); it != outputBuffers.end();) {
+    for (auto it = outputBuffers.begin(); it != outputBuffers.end(); ++it) {
         if (it->second->returnBuffer(ptr)) {
             return 0;
         }
-        ++it;
     }
     return 1;
 }
 
 void CustomNodeLibraryInternalManager::clear() {
-    for (auto it = outputBuffers.begin(); it != outputBuffers.end();) {
-        delete it->second;
-        outputBuffers.erase(it);
-        ++it;
-    }
+    outputBuffers.clear();
 }
 }  // namespace custom_nodes_common
 }  // namespace ovms
