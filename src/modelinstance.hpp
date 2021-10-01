@@ -124,11 +124,6 @@ protected:
     ModelVersionStatus status;
 
     /**
-         * @brief Target device to run model
-         */
-    std::string targetDevice;
-
-    /**
          * @brief Model batch size
          */
     size_t batchSize = 0;
@@ -170,6 +165,7 @@ protected:
          * @brief Load OV Engine
          */
     void loadOVEngine();
+    void setInferenceEngineConfig(std::unique_ptr<InferenceEngine::Core>& ieCore, const plugin_config_t& pluginConfig);
 
     /**
          * @brief Loads OV CNNNetwork
@@ -395,7 +391,7 @@ public:
          * @return target device name
          */
     const std::string& getTargetDevice() {
-        return targetDevice;
+        return config.getTargetDevice();
     }
 
     /**

@@ -275,6 +275,55 @@ uint ModelInstance::getNumOfParallelInferRequests(const ModelConfig& modelConfig
     return nireq;
 }
 
+std::vector<std::string> getDevicesList(const std::string deviceName) {
+    if (deviceName.find(":") == std::string::npos) {
+        return {deviceName};
+    }
+    auto mainDevice = deviceName;
+    auto otherDevices = deviceName;
+    mainDevice = mainDevice.substr(0, mainDevice.find(':'));
+    otherDevices = otherDevices.substr(otherDevices.find(':') + 1);
+    auto devices = tokenize(otherDevices, ',');
+    devices.push_back(mainDevice);
+    return devices;
+}
+
+void ModelInstance::setInferenceEngineConfig(std::unique_ptr<InferenceEngine::Core>& ieCore, const plugin_config_t& pluginConfig) {
+    auto& ovmsConfig = ovms::Config::instance();
+    const auto deviceName = ovmsConfig.targetDevice();
+
+    auto devices = getDevicesList(deviceName);
+    const std::string metricKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
+
+    std::map<std::string, std::map<std::string, std::string>> pluginDevicesConfig;
+    if ((std::find(devices.begin(), devices.end(), "AUTO") != devices.end()) ||
+        (std::find(devices.begin(), devices.end(), "MULTI") != devices.end())) {
+        devices.emplace_back("CPU");
+    }
+    for (auto device : devices) {
+        std::map<std::string, std::string> deviceConfig;
+        std::vector<std::string> supportedConfigKeys = ieCore->GetMetric(device, metricKey);
+        for (auto& [key, value] : pluginConfig) {
+            if (std::find(supportedConfigKeys.begin(),
+                    supportedConfigKeys.end(),
+                    key) == supportedConfigKeys.end()) {
+                SPDLOG_WARN("Failed to support key:{}, value:{}, for device:{}", key, value, device);  // TODO
+            } else {
+                SPDLOG_INFO("Will set plugin config key:{}, value:{}, for device:{}", key, value, device);  // TODO
+                deviceConfig[key] = value;
+            }
+        }
+        pluginDevicesConfig[device] = deviceConfig;
+    }
+    for (auto& [device, deviceConfig] : pluginDevicesConfig) {
+        SPDLOG_INFO("Will print config for device:{}, entries:{}", device, deviceConfig.size());
+        for (auto& [key, value] : deviceConfig) {
+            SPDLOG_INFO("Setting plugin key:{}, value:{}, for device:{}", key, value, device);
+        }
+        ieCore->SetConfig(deviceConfig, device);
+    }
+}
+
 void ModelInstance::loadOVEngine() {
     engine = std::make_unique<InferenceEngine::Core>();
     if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
@@ -361,7 +410,13 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 }
 
 void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
-    execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(engine->LoadNetwork(*network, targetDevice, pluginConfig));
+    if (config.getTargetDevice().find("AUTO") == std::string::npos) {
+        engine->SetConfig({}, config.getTargetDevice());
+        execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(engine->LoadNetwork(*network, config.getTargetDevice(), pluginConfig));
+    } else {
+        setInferenceEngineConfig(engine, pluginConfig);
+        execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(engine->LoadNetwork(*network, config.getTargetDevice()));
+    }
 }
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
@@ -394,7 +449,7 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
             config.getTargetDevice());
         return status;
     }
-    SPDLOG_INFO("Plugin config for device {}:", targetDevice);
+    SPDLOG_INFO("Plugin config for device {}:", config.getTargetDevice());
     for (const auto pair : pluginConfig) {
         const auto key = pair.first;
         const auto value = pair.second;
@@ -468,7 +523,6 @@ void ModelInstance::configureBatchSize(const ModelConfig& config, const DynamicM
 Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
     subscriptionManager.notifySubscribers();
     this->path = config.getPath();
-    this->targetDevice = config.getTargetDevice();
     this->config = config;
     auto status = fetchModelFilepaths();
 

@@ -219,7 +219,7 @@ Status ModelConfig::parseModelVersionPolicy(std::string command) {
     return StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY;
 }
 
-Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
+Status ModelConfig::parsePluginConfig(const rapidjson::Value& node, plugin_config_t& pluginConfig) {
     if (!node.IsObject()) {
         return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
     }
@@ -232,6 +232,9 @@ Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
     }
 
     return StatusCode::OK;
+}
+Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
+    return parsePluginConfig(node, this->pluginConfig);
 }
 
 Status ModelConfig::parseShapeParameter(const rapidjson::Value& node) {

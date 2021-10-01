@@ -549,6 +549,7 @@ public:
          * @return status
          */
     Status parsePluginConfig(const rapidjson::Value& node);
+    static Status parsePluginConfig(const rapidjson::Value& node, plugin_config_t& pluginConfig);
 
     /**
          * @brief Parses string for plugin config keys and values
@@ -558,15 +559,18 @@ public:
          * @return status
          */
     Status parsePluginConfig(std::string command) {
-        rapidjson::Document node;
+        return parsePluginConfig(command, this->pluginConfig);
+    }
+    static Status parsePluginConfig(std::string command, plugin_config_t& pluginConfig) {
         if (command.empty()) {
             return StatusCode::OK;
         }
+        rapidjson::Document node;
         if (node.Parse(command.c_str()).HasParseError()) {
             return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
         }
 
-        return parsePluginConfig(node);
+        return parsePluginConfig(node, pluginConfig);
     }
 
     /**
