@@ -116,8 +116,13 @@ void ModelManager::setInferenceEngineConfig() {
                 deviceConfig[key] = value;
             }
         }
+        pluginDevicesConfig[device] = deviceConfig;
     }
     for (auto& [device, deviceConfig] : pluginDevicesConfig) {
+        SPDLOG_INFO("Will print config for device:{}, entries:{}", device, deviceConfig.size());
+        for (auto& [key, value] : deviceConfig) {
+            SPDLOG_INFO("Setting plugin key:{}, value:{}, for device:{}", key, value, device);
+        }
         ieCore->SetConfig(deviceConfig, device);
     }
 }
