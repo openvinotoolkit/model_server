@@ -76,28 +76,43 @@ ModelManager::ModelManager() :
     setInferenceEngineConfig();
 }
 
+std::vector<std::string> getDevicesList(const std::string deviceName) {
+    if (deviceName.find(":") == std::string::npos) {
+        return {deviceName};
+    }
+    auto mainDevice = deviceName;
+    auto otherDevices = deviceName;
+    mainDevice = mainDevice.substr(0, mainDevice.find(':'));
+    otherDevices = otherDevices.substr(otherDevices.find(':') + 1);
+    auto devices = tokenize(otherDevices, ',');
+    devices.push_back(mainDevice);
+    return devices;
+}
+
 void ModelManager::setInferenceEngineConfig() {
-        auto& ovmsConfig = ovms::Config::instance();
-        plugin_config_t pluginConfig;
-        auto status = ModelConfig::parsePluginConfig(ovmsConfig.pluginConfig(), pluginConfig);
-        auto device = ovmsConfig.targetDevice();
-        std::string metricKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
-       std::vector<std::string>  supportedConfigKeys = ieCore->GetMetric(device, metricKey);
-        std::vector<std::string> supportedConfigKeys{metrics};
-        for(auto& [key, value] : pluginConfig) {
+    auto& ovmsConfig = ovms::Config::instance();
+    plugin_config_t pluginConfig;
+    auto status = ModelConfig::parsePluginConfig(ovmsConfig.pluginConfig(), pluginConfig);
+    const auto deviceName = ovmsConfig.targetDevice();
+
+    auto devices = getDevicesList(deviceName);
+    const std::string metricKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
+
+    for (auto device : devices) {
+        std::map<std::string, std::string> deviceConfig;
+        std::vector<std::string> supportedConfigKeys = ieCore->GetMetric(device, metricKey);
+        for (auto& [key, value] : pluginConfig) {
             if (std::find(supportedConfigKeys.begin(),
-                          supportedConfigKeys.end(),
-                          key) == supportedConfigKeys.end()) {
-                SPDLOG_WARN("Failed to support key:{}, value:{}, for device:{}", key, value, device); // TODO
+                    supportedConfigKeys.end(),
+                    key) == supportedConfigKeys.end()) {
+                SPDLOG_WARN("Failed to support key:{}, value:{}, for device:{}", key, value, device);  // TODO
+            } else {
+                SPDLOG_INFO("Will set plugin config key:{}, value:{}, for device:{}", key, value, device);  // TODO
+                deviceConfig[key] = value;
             }
         }
-        std::map<std::string, std::map<std::string, std::string>> config;
-        // handle MULTI, AUTO TODO;
-        if (device.find("AUTO") != std::string::npos) {
-            device = "CPU";
-        }
-        config[device] = pluginConfig;
-        ieCore->SetConfig(config[device], device);
+        ieCore->SetConfig(deviceConfig, device);
+    }
 }
 
 ModelManager::~ModelManager() = default;
