@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+HEADER_FILE_PATH ?= ../../customloaderinterface.hpp
 OUT_LIB = libsampleloader.so
-
+BASE_OS ?= ubuntu
 LIB_INC = -Iinclude -I../../ -Irapidjson-1.1.0/include
 CFLAGS = -fPIC -Wl,-rpath,. -fpic 
 LDFLAGS = -ldl -lpthread
@@ -23,8 +23,7 @@ LDFLAGS = -ldl -lpthread
 all:
 	wget https://github.com/Tencent/rapidjson/archive/v1.1.0.zip
 	unzip v1.1.0.zip
-
-	g++ -c -g -fPIC $(LIB_INC) *.cpp 
+	g++ -c -g -fPIC $(LIB_INC) *.cpp
 	g++ *.o -g $(CFLAGS) $(LDFLAGS) $(LIB_INC) -shared -o $(OUT_LIB) 
 	$(RM) *.o
 	$(RM) v1.1.0.zip
@@ -34,3 +33,10 @@ clean:
 	$(RM) $(OUT_LIB) *.o
 	$(RM) v1.1.0.zip
 	$(RM) rapidjson-1.1.0 -r
+
+docker_build:
+	cp $(HEADER_FILE_PATH) ./customloaderinterface.hpp
+	docker build -f Dockerfile.$(BASE_OS) -t custom_loader_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} .
+	rm -Rf lib && mkdir ./lib
+	docker cp $$(docker create --rm custom_loader_build_image:latest):/src/example/SampleCustomLoader/libsampleloader.so ./lib/
+	rm customloaderinterface.hpp

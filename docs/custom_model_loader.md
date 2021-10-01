@@ -61,14 +61,16 @@ mkdir test_custom_loader
 cd test_custom_loader
 ```
 
-Step-2: Copy the shared library from build docker openvino/model_server-build:latest.
+Step-2: Prepare the example of the custom loader library
 
 ```
-mkdir loader_lib
-docker run -v ${PWD}/loader_lib:/customloader_lib/ -it openvino/model_server-build:latest bash
-cp /ovms/bazel-bin/src/libsampleloader.so /customloader_lib
-exit
+cd model_server/src/example/SampleCustomLoader
+make docker_build
 ```
+It will generate the library in the `lib/libsampleloader.so` path.
+
+Copy `lib` folder to the previously created directory `test_custom_loader`.
+
 
 Step-3:  Download a Model
 
@@ -100,7 +102,7 @@ Example configuration file: Copy the following contents into a file and name it 
 	        {
 	                "config":{
 	                "loader_name":"sampleloader",
-	                "library_path": "/sampleloader/loader_lib/libsampleloader.so",
+	                "library_path": "/sampleloader/lib/libsampleloader.so",
 	                "loader_config_file": "config.json"
 	                }
 	        }

@@ -1,0 +1,7 @@
+FROM ubuntu:20.04
+RUN apt update && apt install -y build-essential wget unzip make
+COPY Makefile /src/example/SampleCustomLoader/
+COPY sampleCustLoader.cpp /src/example/SampleCustomLoader/
+COPY customloaderinterface.hpp /src/
+WORKDIR /src/example/SampleCustomLoader
+RUN make all
