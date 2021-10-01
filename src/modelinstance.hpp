@@ -124,11 +124,6 @@ protected:
     ModelVersionStatus status;
 
     /**
-         * @brief Target device to run model
-         */
-    std::string targetDevice;
-
-    /**
          * @brief Model batch size
          */
     size_t batchSize = 0;
@@ -396,7 +391,7 @@ public:
          * @return target device name
          */
     const std::string& getTargetDevice() {
-        return targetDevice;
+        return config.getTargetDevice();
     }
 
     /**

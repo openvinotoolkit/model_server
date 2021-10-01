@@ -342,7 +342,7 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 }
 
 void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
-    execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*network, targetDevice, pluginConfig));
+    execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*network, config.getTargetDevice(), pluginConfig));
 }
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
@@ -375,7 +375,7 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
             config.getTargetDevice());
         return status;
     }
-    SPDLOG_INFO("Plugin config for device {}:", targetDevice);
+    SPDLOG_INFO("Plugin config for device {}:", config.getTargetDevice());
     for (const auto pair : pluginConfig) {
         const auto key = pair.first;
         const auto value = pair.second;
@@ -449,7 +449,6 @@ void ModelInstance::configureBatchSize(const ModelConfig& config, const DynamicM
 Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
     subscriptionManager.notifySubscribers();
     this->path = config.getPath();
-    this->targetDevice = config.getTargetDevice();
     this->config = config;
     auto status = fetchModelFilepaths();
 

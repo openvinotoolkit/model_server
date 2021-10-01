@@ -53,6 +53,7 @@ protected:
      * @brief A default constructor is private
      */
     ModelManager();
+    void setInferenceEngineConfig();
 
     Status checkStatefulFlagChange(const std::string& modelName, bool configStatefulFlag);
 

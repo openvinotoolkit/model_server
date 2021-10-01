@@ -73,6 +73,31 @@ ModelManager::ModelManager() :
             throw;
         }
     }
+    setInferenceEngineConfig();
+}
+
+void ModelManager::setInferenceEngineConfig() {
+        auto& ovmsConfig = ovms::Config::instance();
+        plugin_config_t pluginConfig;
+        auto status = ModelConfig::parsePluginConfig(ovmsConfig.pluginConfig(), pluginConfig);
+        auto device = ovmsConfig.targetDevice();
+        std::string metricKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
+       std::vector<std::string>  supportedConfigKeys = ieCore->GetMetric(device, metricKey);
+        std::vector<std::string> supportedConfigKeys{metrics};
+        for(auto& [key, value] : pluginConfig) {
+            if (std::find(supportedConfigKeys.begin(),
+                          supportedConfigKeys.end(),
+                          key) == supportedConfigKeys.end()) {
+                SPDLOG_WARN("Failed to support key:{}, value:{}, for device:{}", key, value, device); // TODO
+            }
+        }
+        std::map<std::string, std::map<std::string, std::string>> config;
+        // handle MULTI, AUTO TODO;
+        if (device.find("AUTO") != std::string::npos) {
+            device = "CPU";
+        }
+        config[device] = pluginConfig;
+        ieCore->SetConfig(config[device], device);
 }
 
 ModelManager::~ModelManager() = default;
@@ -131,7 +156,6 @@ Status ModelManager::startFromConfig() {
     }
 
     ModelConfig& modelConfig = it->second;
-
     auto status = modelConfig.parsePluginConfig(config.pluginConfig());
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse plugin config");
