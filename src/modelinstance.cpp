@@ -343,11 +343,12 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 
 void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
     // TODO
-    execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*network, config.getTargetDevice(), pluginConfig));
+    // execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*network, config.getTargetDevice(), pluginConfig));
+    execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*network, config.getTargetDevice()));
 }
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
-    plugin_config_t pluginConfig = config.getPluginConfig();
+    plugin_config_t pluginConfig;  // = config.getPluginConfig();
     // For CPU and GPU, if user did not specify, calculate CPU_THROUGHPUT_STREAMS automatically
     if (config.isDeviceUsed("CPU")) {
         if (pluginConfig.count("CPU_THROUGHPUT_STREAMS") == 0) {

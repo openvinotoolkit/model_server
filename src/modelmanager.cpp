@@ -98,6 +98,11 @@ void ModelManager::setInferenceEngineConfig() {
     auto devices = getDevicesList(deviceName);
     const std::string metricKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
 
+    std::map<std::string, std::map<std::string, std::string>> pluginDevicesConfig;
+    if ((std::find(devices.begin(), devices.end(), "AUTO") != devices.end()) ||
+        (std::find(devices.begin(), devices.end(), "MULTI") != devices.end())) {
+        devices.emplace_back("CPU");
+    }
     for (auto device : devices) {
         std::map<std::string, std::string> deviceConfig;
         std::vector<std::string> supportedConfigKeys = ieCore->GetMetric(device, metricKey);
@@ -111,6 +116,8 @@ void ModelManager::setInferenceEngineConfig() {
                 deviceConfig[key] = value;
             }
         }
+    }
+    for (auto& [device, deviceConfig] : pluginDevicesConfig) {
         ieCore->SetConfig(deviceConfig, device);
     }
 }
