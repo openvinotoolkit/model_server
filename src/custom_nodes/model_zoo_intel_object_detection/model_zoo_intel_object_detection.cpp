@@ -16,6 +16,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <chrono>
 
 #include "../../custom_node_interface.h"
 #include "opencv2/opencv.hpp"
@@ -26,6 +27,8 @@ static constexpr const char* INPUT_DETECTION_TENSOR_NAME = "detection";
 static constexpr const char* OUTPUT_IMAGES_TENSOR_NAME = "images";
 static constexpr const char* OUTPUT_COORDINATES_TENSOR_NAME = "coordinates";
 static constexpr const char* OUTPUT_CONFIDENCES_TENSOR_NAME = "confidences";
+
+double full_time = 0;
 
 bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale) {
     const uint64_t outputBatch = boxes.size();
@@ -133,6 +136,7 @@ void cleanup(CustomNodeTensor& tensor) {
 }
 
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
+    auto start = std::chrono::high_resolution_clock::now();
     // Parameters reading
     int originalImageHeight = get_int_parameter("original_image_height", params, paramsCount, -1);
     int originalImageWidth = get_int_parameter("original_image_width", params, paramsCount, -1);
@@ -274,6 +278,10 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         return 1;
     }
 
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> ms_double = end - start;
+    full_time += ms_double.count();
+    std::cout << "Execution time: " << full_time << "ms" << std::endl;
     return 0;
 }
 
