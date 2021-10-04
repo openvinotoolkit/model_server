@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -71,6 +71,7 @@ ENV HDDL_INSTALL_DIR=/ovms/lib/hddl
 ARG INSTALL_DRIVER_VERSION="20.35.17767"
 ENV INSTALL_DRIVER_VERSION=$INSTALL_DRIVER_VERSION
 ARG GPU=1
+ARG CUDA=0
 ENV GPU=$GPU
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-c"]
@@ -80,6 +81,13 @@ RUN	set -e ; \
 	set -x ; \
         apt update -y ; \
         apt install -y curl; \
+
+RUN if [ "$CUDA" = "1" ] ; then true ; else exit 0 ; fi ; \
+    echo "installing cuda apt package" && \
+    apt update && apt install -y --no-install-recommends libcudnn8 libcutensor1 curl libxml2 && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* \
+    sed -i '/<\/plugins>/i <plugin name="CUDA" location="libCUDAPlugin.so">\n</plugin>' /ovms/lib/plugins.xml
+
+
 	if [ "$GPU" == "1" ] ; then \
                 apt install -y libnuma1 ocl-icd-libopencl1; \
 	        case $INSTALL_DRIVER_VERSION in \
