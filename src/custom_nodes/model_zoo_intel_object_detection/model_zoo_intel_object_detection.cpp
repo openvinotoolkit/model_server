@@ -183,40 +183,55 @@ int initializeInternalManager(void** customNodeLibraryInternalManager, const str
     NODE_ASSERT(targetImageHeight > 0, "target image height must be larger than 0");
     NODE_ASSERT(targetImageWidth > 0, "target image width must be larger than 0");
 
+    bool status = true;
     // creating BuffersQueues for output: images
     int channels = convertToGrayScale ? 1 : 3;
     uint64_t imagesByteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * maxOutputBatch;
     imagesByteSize = imagesByteSize;
-    internalManager->createBuffersQueue(OUTPUT_IMAGES_TENSOR_NAME, imagesByteSize, QUEUE_SIZE);
-    internalManager->createBuffersQueue(OUTPUT_IMAGES_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE);
+    status = internalManager->createBuffersQueue(OUTPUT_IMAGES_TENSOR_NAME, imagesByteSize, QUEUE_SIZE);
+    if(!status) return 1;
+    status = internalManager->createBuffersQueue(OUTPUT_IMAGES_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE);
+    if(!status) return 1;
 
     // creating BuffersQueues for output: coordinates
     uint64_t coordinatesByteSize = sizeof(int32_t) * 4 * maxOutputBatch;
     coordinatesByteSize = coordinatesByteSize;
-    internalManager->createBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME, coordinatesByteSize, QUEUE_SIZE);
-    internalManager->createBuffersQueue(OUTPUT_COORDINATES_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE);
+    status = internalManager->createBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME, coordinatesByteSize, QUEUE_SIZE);
+    if(!status) return 1;
+    status = internalManager->createBuffersQueue(OUTPUT_COORDINATES_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE);
+    if(!status) return 1;
 
     // creating BuffersQueues for output: confidences
     uint64_t confidenceByteSize = sizeof(float) * maxOutputBatch;
     confidenceByteSize = confidenceByteSize;
-    internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE);
-    internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE);
+    status = internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE);
+    if(!status) return 1;
+    status = internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE);
+    if(!status) return 1;
 
     // creating BuffersQueues for inputs
-    internalManager->createBuffersQueue(INPUT_IMAGE_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE);
-    internalManager->createBuffersQueue(INPUT_DETECTION_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE);
+    status = internalManager->createBuffersQueue(INPUT_IMAGE_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE);
+    if(!status) return 1;
+    status = internalManager->createBuffersQueue(INPUT_DETECTION_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE);
+    if(!status) return 1;
 
     // creating BuffersQueues for output tensor
-    internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, 3 * sizeof(CustomNodeTensor), QUEUE_SIZE);
+    status = internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, 3 * sizeof(CustomNodeTensor), QUEUE_SIZE);
+    if(!status) return 1;
 
     // creating BuffersQueues for info tensors
-    internalManager->createBuffersQueue(INPUT_TENSOR_INFO_NAME, 2 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE);
-    internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE);
+    status = internalManager->createBuffersQueue(INPUT_TENSOR_INFO_NAME, 2 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE);
+    if(!status) return 1;
+    status = internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE);
+    if(!status) return 1;
 
     // creating BuffersQueues for outputs dims in getOutputsInfo
-    internalManager->createBuffersQueue(OUTPUT_IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE);
-    internalManager->createBuffersQueue(OUTPUT_COORDINATES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE);
-    internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE);
+    status = internalManager->createBuffersQueue(OUTPUT_IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE);
+    if(!status) return 1;
+    status = internalManager->createBuffersQueue(OUTPUT_COORDINATES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE);
+    if(!status) return 1;
+    status = internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE);
+    if(!status) return 1;
 
     *customNodeLibraryInternalManager = internalManager;
     return 0;
@@ -235,31 +250,21 @@ int reinitializeInternalManagerIfNeccessary(void** customNodeLibraryInternalMana
     std::unique_lock lock(internalManagerLock);
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(*customNodeLibraryInternalManager);
 
+    auto status = true;
     // replace buffers if their sizes need to change
     int channels = convertToGrayScale ? 1 : 3;
     uint64_t imagesByteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * maxOutputBatch;
-    if (!(internalManager->getBuffersQueue(OUTPUT_IMAGES_TENSOR_NAME)->getSize() == imagesByteSize &&
-            internalManager->getBuffersQueue(OUTPUT_IMAGES_TENSOR_NAME)->getSingleBufferSize() == QUEUE_SIZE * imagesByteSize)) {
-        if(!internalManager->recreateBuffersQueue(OUTPUT_IMAGES_TENSOR_NAME, imagesByteSize, QUEUE_SIZE)) {
-            return 1;
-        }
-    }
+    status = internalManager->recreateBuffersQueue(OUTPUT_IMAGES_TENSOR_NAME, imagesByteSize, QUEUE_SIZE);
+    if (!status) return 1;
 
     uint64_t coordinatesByteSize = sizeof(int32_t) * 4 * maxOutputBatch;
-    if (!(internalManager->getBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME)->getSize() == coordinatesByteSize &&
-            internalManager->getBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME)->getSingleBufferSize() == QUEUE_SIZE * coordinatesByteSize)) {
-        if(!internalManager->recreateBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME, coordinatesByteSize, QUEUE_SIZE)) {
-            return 1;
-        }
-    }
+    status = internalManager->recreateBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME, coordinatesByteSize, QUEUE_SIZE);
+    if (!status) return 1;
 
     uint64_t confidenceByteSize = sizeof(float) * maxOutputBatch;
-    if (!(internalManager->getBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME)->getSize() == confidenceByteSize &&
-            internalManager->getBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME)->getSingleBufferSize() == QUEUE_SIZE * confidenceByteSize)) {
-        if(!internalManager->recreateBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE)) {
-            return 1;
-        }
-    }
+    status = internalManager->recreateBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE);
+    if (!status) return 1;
+    
     return 0;
 }
 
@@ -280,7 +285,6 @@ int deinitialize(void* customNodeLibraryInternalManager) {
     // deallocate InternalManager and its contents
     if (customNodeLibraryInternalManager != nullptr) {
         CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
-        internalManager->clear();
         delete internalManager;
     }
     return 0;
@@ -404,11 +408,9 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
 
     *outputsCount = 3;
-    struct CustomNodeTensor* out = nullptr;
-    if (!get_preallocated_buffer<struct CustomNodeTensor>(internalManager, &out, OUTPUT_TENSOR_NAME, 3 * sizeof(CustomNodeTensor))) {
+    if (!get_preallocated_buffer<struct CustomNodeTensor>(internalManager, &(*outputs), OUTPUT_TENSOR_NAME, 3 * sizeof(CustomNodeTensor))) {
         return 1;
     }
-    *outputs = out;
 
     CustomNodeTensor& imagesTensor = (*outputs)[0];
     imagesTensor.name = OUTPUT_IMAGES_TENSOR_NAME;
@@ -449,20 +451,16 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
 
     *infoCount = 2;
-    struct CustomNodeTensorInfo* customNodeTensorInfo = nullptr;
-    if (!get_preallocated_buffer<struct CustomNodeTensorInfo>(internalManager, &customNodeTensorInfo, INPUT_TENSOR_INFO_NAME, 2 * sizeof(CustomNodeTensorInfo))) {
+    if (!get_preallocated_buffer<struct CustomNodeTensorInfo>(internalManager, &(*info), INPUT_TENSOR_INFO_NAME, 2 * sizeof(CustomNodeTensorInfo))) {
         return 1;
     }
-    *info = customNodeTensorInfo;
 
     (*info)[0].name = INPUT_IMAGE_TENSOR_NAME;
-    uint64_t* image_dims = nullptr;
-    if (!get_preallocated_buffer<uint64_t>(internalManager, &image_dims, INPUT_IMAGE_DIMS_NAME, 4 * sizeof(uint64_t))) {
-        release(info, internalManager);
+    if (!get_preallocated_buffer<uint64_t>(internalManager, &((*info)[0].dims), INPUT_IMAGE_DIMS_NAME, 4 * sizeof(uint64_t))) {
+        release(*info, internalManager);
         return 1;
     }
     (*info)[0].dimsCount = 4;
-    (*info)[0].dims = image_dims;
     (*info)[0].dims[0] = 1;
     if (originalImageLayout == "NCHW") {
         (*info)[0].dims[1] = 3;
@@ -476,14 +474,12 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     (*info)[0].precision = FP32;
 
     (*info)[1].name = INPUT_DETECTION_TENSOR_NAME;
-    uint64_t* detection_dims = nullptr;
-    if (!get_preallocated_buffer<uint64_t>(internalManager, &detection_dims, INPUT_DETECTION_DIMS_NAME, 4 * sizeof(uint64_t))) {
-        release(image_dims, internalManager);
-        release(info, internalManager);
+    if (!get_preallocated_buffer<uint64_t>(internalManager, &((*info)[1].dims), INPUT_DETECTION_DIMS_NAME, 4 * sizeof(uint64_t))) {
+        release((*info)[0].dims, internalManager);
+        release(*info, internalManager);
         return 1;
     }
     (*info)[1].dimsCount = 4;
-    (*info)[1].dims = detection_dims;
     (*info)[1].dims[0] = 1;
     (*info)[1].dims[1] = 1;
     (*info)[1].dims[2] = 200;
@@ -505,20 +501,16 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
 
     *infoCount = 3;
-    struct CustomNodeTensorInfo* customNodeTensorInfo = nullptr;
-    if (!get_preallocated_buffer<struct CustomNodeTensorInfo>(internalManager, &customNodeTensorInfo, OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo))) {
+    if (!get_preallocated_buffer<struct CustomNodeTensorInfo>(internalManager, &(*info), OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo))) {
         return 1;
     }
-    *info = customNodeTensorInfo;
 
     (*info)[0].name = OUTPUT_IMAGES_TENSOR_NAME;
-    uint64_t* images_dims = nullptr;
-    if (!get_preallocated_buffer<uint64_t>(internalManager, &images_dims, OUTPUT_IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t))) {
-        release(info, internalManager);
+    if (!get_preallocated_buffer<uint64_t>(internalManager, &((*info)[0].dims), OUTPUT_IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t))) {
+        release(*info, internalManager);
         return 1;
     }
     (*info)[0].dimsCount = 5;
-    (*info)[0].dims = images_dims;
     (*info)[0].dims[0] = 0;
     (*info)[0].dims[1] = 1;
     if (targetImageLayout == "NCHW") {
@@ -533,29 +525,25 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     (*info)[0].precision = FP32;
 
     (*info)[1].name = OUTPUT_COORDINATES_TENSOR_NAME;
-    uint64_t* coordinates_dims = nullptr;
-    if (!get_preallocated_buffer<uint64_t>(internalManager, &coordinates_dims, OUTPUT_COORDINATES_INFO_DIMS_NAME, 3 * sizeof(uint64_t))) {
-        release(images_dims, internalManager);
-        release(info, internalManager);
+    if (!get_preallocated_buffer<uint64_t>(internalManager, &((*info)[1].dims), OUTPUT_COORDINATES_INFO_DIMS_NAME, 3 * sizeof(uint64_t))) {
+        release((*info)[0].dims, internalManager);
+        release(*info, internalManager);
         return 1;
     }
     (*info)[1].dimsCount = 3;
-    (*info)[1].dims = coordinates_dims;
     (*info)[1].dims[0] = 0;
     (*info)[1].dims[1] = 1;
     (*info)[1].dims[2] = 4;
     (*info)[1].precision = FP32;
 
     (*info)[2].name = OUTPUT_CONFIDENCES_TENSOR_NAME;
-    uint64_t* confidences_dims = nullptr;
-    if (!get_preallocated_buffer<uint64_t>(internalManager, &confidences_dims, OUTPUT_CONFIDENCES_INFO_DIMS_NAME, 3 * sizeof(uint64_t))) {
-        release(confidences_dims, internalManager);
-        release(images_dims, internalManager);
-        release(info, internalManager);
+    if (!get_preallocated_buffer<uint64_t>(internalManager, &((*info)[2].dims), OUTPUT_CONFIDENCES_INFO_DIMS_NAME, 3 * sizeof(uint64_t))) {
+        release((*info)[1].dims, internalManager);
+        release((*info)[0].dims, internalManager);
+        release(*info, internalManager);
         return 1;
     }
     (*info)[2].dimsCount = 3;
-    (*info)[2].dims = confidences_dims;
     (*info)[2].dims[0] = 0;
     (*info)[2].dims[1] = 1;
     (*info)[2].dims[2] = 1;
@@ -565,7 +553,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
 
 int release(void* ptr, void* customNodeLibraryInternalManager) {
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
-    if (internalManager->releaseBuffer(ptr) != 0) {
+    if (!internalManager->releaseBuffer(ptr)) {
         free(ptr);
         return 0;
     }

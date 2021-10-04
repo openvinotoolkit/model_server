@@ -65,7 +65,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
     if (result != 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; has failed custom node execution with return code: {}", getName(), getSessionKey(), result);
         notifyEndQueue.push({node, getSessionKey()});
-        return StatusCode::NODE_LIBRARY_EXECUTION_FAILED;  // todo <- map to status.cpp
+        return StatusCode::NODE_LIBRARY_EXECUTION_FAILED;
     }
     // In other cases we are responsible of cleaning whatever is possible.
     if (outputTensors == nullptr) {
