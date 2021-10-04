@@ -296,8 +296,8 @@ void ModelInstance::setInferenceEngineConfig(std::unique_ptr<InferenceEngine::Co
     const std::string metricKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
 
     std::map<std::string, std::map<std::string, std::string>> pluginDevicesConfig;
-    if ((std::find(devices.begin(), devices.end(), "AUTO") != devices.end()) ||
-        (std::find(devices.begin(), devices.end(), "MULTI") != devices.end())) {
+    if (std::find(devices.begin(), devices.end(), "AUTO") != devices.end() &&
+        std::find(devices.begin(), devices.end(), "CPU") == devices.end()) {
         devices.emplace_back("CPU");
     }
     for (auto device : devices) {
@@ -307,18 +307,18 @@ void ModelInstance::setInferenceEngineConfig(std::unique_ptr<InferenceEngine::Co
             if (std::find(supportedConfigKeys.begin(),
                     supportedConfigKeys.end(),
                     key) == supportedConfigKeys.end()) {
-                SPDLOG_WARN("Failed to support key:{}, value:{}, for device:{}", key, value, device);  // TODO
+                SPDLOG_INFO("Cannot support key:{}, value:{}, for device:{}", key, value, device);
             } else {
-                SPDLOG_INFO("Will set plugin config key:{}, value:{}, for device:{}", key, value, device);  // TODO
+                SPDLOG_INFO("Can support key:{}, value:{}, for device:{}", key, value, device);
                 deviceConfig[key] = value;
             }
         }
         pluginDevicesConfig[device] = deviceConfig;
     }
     for (auto& [device, deviceConfig] : pluginDevicesConfig) {
-        SPDLOG_INFO("Will print config for device:{}, entries:{}", device, deviceConfig.size());
+        SPDLOG_INFO("Printing config for device:{}, entries:{}", device, deviceConfig.size());
         for (auto& [key, value] : deviceConfig) {
-            SPDLOG_INFO("Setting plugin key:{}, value:{}, for device:{}", key, value, device);
+            SPDLOG_INFO("plugin key:{}, value:{}, for device:{}", key, value, device);
         }
         ieCore->SetConfig(deviceConfig, device);
     }
