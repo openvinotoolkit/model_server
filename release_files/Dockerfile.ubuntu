@@ -141,4 +141,5 @@ RUN if [ "$CUDA" = "1" ] ; then true ; else exit 0 ; fi ; \
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
+ENV LD_LIBRARY_PATH=/ovms/lib
 ENTRYPOINT ["/ovms/bin/ovms"]

@@ -210,6 +210,8 @@ RUN ./bazel-bin/src/./ovms --version
 RUN ./bazel-bin/src/./ovms
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE
-COPY release_files/*libCUDAPlugin.so /ovms/release_files/libCUDAPlugin.so
-COPY release_files/*libAutoPlugin.so /ovms/release_files/libAutoPlugin.so
+COPY release_files/*libCUDAPlugin.so /ovms/release_files/
+COPY release_files/*libAutoPlugin.so /ovms/release_files/
+COPY release_files/*libngraph_backend.so /ovms/release_files/
+COPY release_files/*libinterpreter_backend.so /ovms/release_files/
 
