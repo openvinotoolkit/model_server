@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -71,10 +71,16 @@ ENV HDDL_INSTALL_DIR=/ovms/lib/hddl
 ARG INSTALL_DRIVER_VERSION="20.35.17767"
 ENV INSTALL_DRIVER_VERSION=$INSTALL_DRIVER_VERSION
 ARG GPU=1
+ARG CUDA=0
 ENV GPU=$GPU
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-c"]
 WORKDIR /
+
+RUN if [ "$CUDA" = "1" ] ; then true ; else exit 0 ; fi ; \
+    echo "installing cuda apt package" && \
+    apt update && apt install -y --no-install-recommends libcudnn8 libcutensor1 &&  \
+    apt clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 RUN	set -e ; \
 	set -x ; \
@@ -113,6 +119,7 @@ RUN	set -e ; \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 COPY --from=base_build /usr/local/lib/ /ovms/lib/
+
 RUN apt-get update && apt-get install -y --no-install-recommends libxml2 && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 # for HDDL
 RUN apt-get update && \
@@ -128,6 +135,11 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 COPY --from=base_build /ovms /ovms
+RUN if [ "$CUDA" = "1" ] ; then true ; else exit 0 ; fi ; \
+    echo "adding cuda plugin to plugins.xml" && \
+    sed -i '/<\/plugins>/i <plugin name="CUDA" location="libCUDAPlugin.so">\n</plugin>' /ovms/lib/plugins.xml
+
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
+ENV LD_LIBRARY_PATH=/ovms/lib
 ENTRYPOINT ["/ovms/bin/ovms"]

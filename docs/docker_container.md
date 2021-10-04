@@ -89,6 +89,11 @@ Provide version from the list above as INSTALL_DRIVER_VERSION argument in make c
 `make docker_build INSTALL_DRIVER_VERSION=19.41.14441`. 
 If not provided, version 20.35.17767 is used.
 
+Docker image can be built also with experimental support for CUDA GPU cards.
+It requires placing manually built plugins libCUDAPlugin.so, libAutoPlugin.so, libinterpreter_backend.so and libngraph_backend.so
+in the folder release_files before initiating the command: 
+```make docker_build CUDA=1```
+
 ### Running the OpenVINO&trade; Model Server Image for **Single** Model <a name="singlemodel"></a>
 
 Follow the [Preparation of Model guide](models_repository.md) before running the docker image 
