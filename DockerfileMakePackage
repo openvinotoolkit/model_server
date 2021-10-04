@@ -66,6 +66,9 @@ RUN patchelf --remove-rpath ./ovms && patchelf --set-rpath '$ORIGIN/../lib/' ./o
 RUN find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --remove-rpath  {}  \;
 RUN find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} \;
 
+RUN if [ "$CUDA" == "1" ] ; then true ; else exit 0 ; fi ; cp /ovms/release_files/lib*Plugin.so /ovms_release/lib/;
+
+
 WORKDIR /ovms
 RUN cp -v /ovms/release_files/LICENSE /ovms_release/
 RUN cp -rv /ovms/release_files/thirdparty-licenses /ovms_release/

@@ -53,6 +53,8 @@ OV_SOURCE_BRANCH ?= master
 OV_USE_BINARY ?= 1
 YUM_OV_PACKAGE ?= intel-openvino-runtime-centos7
 APT_OV_PACKAGE ?= intel-openvino-runtime-ubuntu20-2021.4.689
+
+CUDA ?= 0
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
 
@@ -197,6 +199,15 @@ endif
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.gz.sha256
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.xz.sha256
 	cp -vR release_files/* dist/$(DIST_OS)/
+	if [ "$CUDA" = "1" ] ; then true ; else exit 0 ; fi ; \
+	    cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg no_proxy=$(NO_PROXY) \
+		--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
+		--build-arg GPU=0 \
+		--build-arg CUDA=1 \
+		--build-arg BASE_IMAGE=docker.io/nvidia/cuda:11.4.2-runtime-ubuntu20.04 \
+		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-cuda
 	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg no_proxy=$(NO_PROXY) \
