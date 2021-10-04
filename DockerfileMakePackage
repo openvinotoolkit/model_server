@@ -20,6 +20,7 @@ ARG BASE_OS=centos
 FROM $BUILD_IMAGE
 
 ARG ov_use_binary=1
+ARG CUDA=0
 SHELL ["/bin/bash", "-c"]
 
 RUN mkdir /patchelf && cd /patchelf && \
