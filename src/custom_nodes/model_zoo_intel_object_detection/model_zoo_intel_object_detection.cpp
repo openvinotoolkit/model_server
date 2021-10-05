@@ -17,6 +17,7 @@
 #include <shared_mutex>
 #include <string>
 #include <vector>
+#include <chrono>
 
 #include "../../custom_node_interface.h"
 #include "../common/buffersqueue.hpp"
@@ -49,6 +50,8 @@ static constexpr const int QUEUE_SIZE = 1;
 
 std::shared_mutex internalManagerLock;
 
+double full_time = 0;
+
 void cleanup(CustomNodeTensor& tensor, CustomNodeLibraryInternalManager* internalManager) {
     release(tensor.data, internalManager);
     release(tensor.dims, internalManager);
@@ -73,8 +76,13 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * outputBatch;
 
     float* buffer = nullptr;
+    auto start = std::chrono::high_resolution_clock::now();
     if (!get_preallocated_buffer<float>(internalManager, &buffer, OUTPUT_IMAGES_TENSOR_NAME, byteSize))
         return false;
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> ms_double = end - start;
+    full_time += ms_double.count();
+    std::cout << "get_preallocated_buffer for images data duration: " << full_time << "ms" << std::endl;
     cv::Size targetShape(targetImageWidth, targetImageHeight);
     for (uint64_t i = 0; i < outputBatch; i++) {
         cv::Mat image;
@@ -291,6 +299,7 @@ int deinitialize(void* customNodeLibraryInternalManager) {
 }
 
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+    // auto start = std::chrono::high_resolution_clock::now();
     // Parameters reading
     int originalImageHeight = get_int_parameter("original_image_height", params, paramsCount, -1);
     int originalImageWidth = get_int_parameter("original_image_width", params, paramsCount, -1);
@@ -436,6 +445,10 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         return 1;
     }
 
+    // auto end = std::chrono::high_resolution_clock::now();
+    // std::chrono::duration<double, std::milli> ms_double = end - start;
+    // full_time += ms_double.count();
+    // std::cout << "Execute duration: " << full_time << "ms" << std::endl;
     return 0;
 }
 
