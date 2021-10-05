@@ -53,6 +53,7 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/in
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; find /opt/intel/openvino/extras/opencv/lib/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \; && rm /ovms_release/lib/libopencv_highgui*
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp /opt/intel/openvino/extras/opencv/etc/licenses/* /ovms/release_files/thirdparty-licenses/;
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp /opt/intel/openvino/licensing/EULA.txt /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt;
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cp /openvino/LICENSE /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt;
 
 RUN if [ -f /ovms_release/lib/libbsl.so.0 ] ; then cd /ovms_release/lib/ ; rm -f libbsl.so.0 ; ln -s libbsl.so libbsl.so.0 ; fi
 RUN if [ -f /ovms_release/lib/libmvnc-hddl.so.0 ] ; then cd /ovms_release/lib/ ; rm -f libmvnc-hddl.so.0 ; ln -s libmvnc-hddl.so libmvnc-hddl.so.0 ; fi
