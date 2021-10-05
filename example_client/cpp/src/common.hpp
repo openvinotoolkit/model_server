@@ -49,6 +49,10 @@ struct CvMatData {
     tensorflow::string layout;
 };
 
+struct SyntheticData {
+    tensorflow::int64 expectedLabel;  // TODO: Remove?
+};
+
 template <typename T>
 std::vector<T> reorderVectorToNchw(const T* nhwcVector, int rows, int cols, int channels) {
     std::vector<T> nchwVector(rows * cols * channels);

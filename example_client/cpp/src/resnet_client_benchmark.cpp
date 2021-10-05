@@ -180,7 +180,7 @@ class ServingClient {
     CompletionQueue cq_;
 
 public:
-    ServingClient(std::shared_ptr<Channel> channel, const std::vector<T>& entries, const Configuration& config) :
+    ServingClient(std::shared_ptr<Channel> channel, const Configuration& config, const std::vector<T>& entries = {}) :
         stub_(PredictionService::NewStub(channel)) {
         this->config = config;
         this->entries = entries;
@@ -194,17 +194,15 @@ public:
         if (this->config.synthetic == 0) {
             tensorflow::int64 iteration = 1;
             this->entries = selectEntries(this->entries, this->config.batchSize, iteration);
-            this->prepareBatchedInputs(inputs, this->entries);
+            return this->prepareBatchedInputs(inputs, this->entries);
         } else {
-            if (!this->prepareSyntheticData(config, inputs))
-                return false;
+            return this->prepareBatchedInputs(inputs, this->entries);
         }
-        return true;
     }
 
     // Pre-processing function for binary images.
     // Images loaded from disk are packed into gRPC request proto.
-    bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<BinaryData>& entries) {
+    bool prepareBatchedInputs(proto_tensor_map_t& inputs, const std::vector<BinaryData>& entries) {
         tensorflow::TensorProto proto;
         proto.set_dtype(tensorflow::DataType::DT_STRING);
         for (const auto& entry : entries) {
@@ -217,7 +215,7 @@ public:
 
     // Pre-processing function for images in array format.
     // Images loaded from disk are packed into tensor_content in plain array format (using OpenCV) either in NCHW or NHWC layout.
-    bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<CvMatData>& entries) {
+    bool prepareBatchedInputs(proto_tensor_map_t& inputs, const std::vector<CvMatData>& entries) {
         tensorflow::TensorProto proto;
         proto.set_dtype(tensorflow::DataType::DT_FLOAT);
 
@@ -245,9 +243,15 @@ public:
         return true;
     }
 
+    // Pre-processing function for binary images.
+    // gRPC request proto is generated with synthetic data with shape/precision matching endpoint metadata.
+    bool prepareBatchedInputs(proto_tensor_map_t& inputs, const std::vector<SyntheticData>& entries) {
+        return this->prepareSyntheticData(this->config, inputs);
+    }
+
     // Post-processing function for resnet classification.
     // Most probable label is selected from the output.
-    bool interpretOutputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& outputs, std::vector<tensorflow::int64>& predictedLabels) {
+    bool interpretOutputs(proto_tensor_map_t& outputs, std::vector<tensorflow::int64>& predictedLabels) {
         auto it = outputs.find(this->config.outputName);
         if (it == outputs.end()) {
             std::cout << "cannot find output " << this->config.outputName << std::endl;
@@ -262,6 +266,23 @@ public:
         }
         predictedLabels = argmax(tensor);
         return true;
+    }
+
+    void reportPredictionCorrectness(tensorflow::serving::PredictResponse& response, const std::vector<T>& selectedEntries) {
+        std::vector<tensorflow::int64> predictedLabels;
+        if (!this->interpretOutputs(*response.mutable_outputs(), predictedLabels)) {
+            std::cout << "error interpreting outputs" << std::endl;
+            this->failedIterations++;
+            return;
+        }
+
+        size_t numberOfCorrectLabels = 0;
+        for (size_t i = 0; i < predictedLabels.size(); i++) {
+            if (predictedLabels[i] == selectedEntries[i].expectedLabel) {
+                numberOfCorrectLabels++;
+            }
+        }
+        this->numberOfCorrectLabels += numberOfCorrectLabels;
     }
 
     bool schedulePredict(tensorflow::int64 iteration) {
@@ -329,20 +350,7 @@ public:
 
             // Postprocessing
             if (this->config.benchmark_mode == 0) {
-                std::vector<tensorflow::int64> predictedLabels;
-                if (!this->interpretOutputs(*response.mutable_outputs(), predictedLabels)) {
-                    std::cout << "error interpreting outputs" << std::endl;
-                    failedIterations++;
-                    continue;
-                }
-
-                size_t numberOfCorrectLabels = 0;
-                for (size_t i = 0; i < predictedLabels.size(); i++) {
-                    if (predictedLabels[i] == call->selectedEntries[i].expectedLabel) {
-                        numberOfCorrectLabels++;
-                    }
-                }
-                this->numberOfCorrectLabels += numberOfCorrectLabels;
+                this->reportPredictionCorrectness(response, call->selectedEntries);
             }
         }
     }
@@ -353,6 +361,10 @@ public:
 
     tensorflow::int64 getFailedIterations() const {
         return this->failedIterations;
+    }
+
+    size_t getRequestBatchSize() {
+        return this->predictRequest.mutable_inputs()->begin()->second.mutable_tensor_shape()->dim(0).size();
     }
 
     void scheduler() {
@@ -368,7 +380,6 @@ public:
     }
 
     bool prepareSyntheticData(const Configuration& config, proto_tensor_map_t& inputs) {
-        std::cout << "prepareSyntheticData" << std::endl;
         proto_signature_map_t inputsMetadata;
         if (!getEndpointInputsMetadata(config, inputsMetadata)) {
             return false;
@@ -394,7 +405,7 @@ public:
             }
             expectedValueCount *= tensorflow::DataTypeSize(input.dtype());
 
-            *inputTensor.mutable_tensor_content() = std::string(expectedValueCount, '1');
+            *inputTensor.mutable_tensor_content() = std::string(expectedValueCount, '\0');
         }
         return true;
     }
@@ -425,8 +436,10 @@ public:
         return true;
     }
 
-    static void start(const tensorflow::string& address, const std::vector<T>& entries, const Configuration& config) {
-        ServingClient<T> client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()), entries, config);
+    static void start(const tensorflow::string& address, const Configuration& config, const std::vector<T>& entries = {}) {
+        grpc::ChannelArguments args;
+        args.SetMaxReceiveMessageSize(-1);
+        ServingClient<T> client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args), config, entries);
         if (config.benchmark_mode == 1) {
             if (!client.prepareRequest()) {
                 return;
@@ -448,7 +461,8 @@ public:
             std::chrono::high_resolution_clock::now() - begin);
         auto totalTime = (duration.count() / 1000);
         float accurracy = (client.getNumberOfCorrectLabels() * 100) / (config.iterations * config.producers * config.batchSize);
-        float avgFps = (1000 / ((float)totalTime / (float)(config.iterations * config.producers * config.batchSize)));
+        size_t batchSize = config.synthetic == 1 ? client.getRequestBatchSize() : config.batchSize;
+        float avgFps = (1000 / ((float)totalTime / (float)(config.iterations * config.producers * batchSize)));
         std::cout << "========================\n        Summary\n========================" << std::endl;
         if (config.benchmark_mode == 0) {
             std::cout << "Benchmark mode: False\nAccuracy: " << accurracy << "%" << std::endl;
@@ -457,7 +471,7 @@ public:
         }
         std::cout << "Total time: " << totalTime << "ms" << std::endl;
         std::cout << "Total iterations: " << config.iterations * config.producers << std::endl;
-        std::cout << "Layout: " << config.layout << std::endl;
+        std::cout << "Layout: " << config.layout << std::endl; // Incorrect for synthetic
         std::cout << "Batch size: " << config.batchSize << std::endl;
         std::cout << "Producer threads: " << config.producers << std::endl;
         std::cout << "Consumer threads: " << config.consumers << std::endl;
@@ -528,20 +542,22 @@ int main(int argc, char** argv) {
 
     const tensorflow::string host = config.address + ":" + config.port;
 
-    if (config.layout == "binary") {
+    if (config.synthetic == 1) {
+        ServingClient<SyntheticData>::start(host, config);
+    } else if (config.layout == "binary") {
         std::vector<BinaryData> images;
-        if (config.synthetic == 0 && !readImagesBinary(entries, images)) {
+        if (!readImagesBinary(entries, images)) {
             std::cout << "Error reading binary images" << std::endl;
             return -1;
         }
-        ServingClient<BinaryData>::start(host, images, config);
+        ServingClient<BinaryData>::start(host, config, images);
     } else {
         std::vector<CvMatData> images;
-        if (config.synthetic == 0 && !readImagesCvMat(entries, images, config.layout)) {
+        if (!readImagesCvMat(entries, images, config.layout)) {
             std::cout << "Error reading opencv images" << std::endl;
             return -1;
         }
-        ServingClient<CvMatData>::start(host, images, config);
+        ServingClient<CvMatData>::start(host, config, images);
     }
 
     return 0;
