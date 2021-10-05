@@ -28,9 +28,9 @@ class CustomNodeLibraryInternalManager {
 
 public:
     CustomNodeLibraryInternalManager() = default;
-    bool createBuffersQueue(std::string name, size_t singleBufferSize, int streamsLength);
-    bool recreateBuffersQueue(std::string name, size_t singleBufferSize, int streamsLength);
-    BuffersQueue* getBuffersQueue(std::string name);
+    bool createBuffersQueue(const std::string& name, size_t singleBufferSize, int streamsLength);
+    bool recreateBuffersQueue(const std::string& name, size_t singleBufferSize, int streamsLength);
+    BuffersQueue* getBuffersQueue(const std::string& name);
     bool releaseBuffer(void* ptr);
 };
 }  // namespace custom_nodes_common

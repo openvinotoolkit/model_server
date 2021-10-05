@@ -21,7 +21,7 @@
 
 namespace ovms {
 namespace custom_nodes_common {
-bool CustomNodeLibraryInternalManager::createBuffersQueue(const std::string name, size_t singleBufferSize, int streamsLength) {
+bool CustomNodeLibraryInternalManager::createBuffersQueue(const std::string& name, size_t singleBufferSize, int streamsLength) {
     auto it = outputBuffers.find(name);
     if (it != outputBuffers.end()) {
         return false;
@@ -30,11 +30,11 @@ bool CustomNodeLibraryInternalManager::createBuffersQueue(const std::string name
     return true;
 }
 
-bool CustomNodeLibraryInternalManager::recreateBuffersQueue(const std::string name, size_t singleBufferSize, int streamsLength) {
+bool CustomNodeLibraryInternalManager::recreateBuffersQueue(const std::string& name, size_t singleBufferSize, int streamsLength) {
     auto it = outputBuffers.find(name);
     if (it != outputBuffers.end()) {
         if (!(this->getBuffersQueue(name)->getSize() == singleBufferSize &&
-            this->getBuffersQueue(name)->getSingleBufferSize() == streamsLength * singleBufferSize)) {
+                this->getBuffersQueue(name)->getSingleBufferSize() == streamsLength * singleBufferSize)) {
             it->second.reset(new BuffersQueue(singleBufferSize, streamsLength));
         }
         return true;
@@ -42,7 +42,7 @@ bool CustomNodeLibraryInternalManager::recreateBuffersQueue(const std::string na
     return false;
 }
 
-BuffersQueue* CustomNodeLibraryInternalManager::getBuffersQueue(const std::string name) {
+BuffersQueue* CustomNodeLibraryInternalManager::getBuffersQueue(const std::string& name) {
     return outputBuffers.find(name)->second.get();
 }
 

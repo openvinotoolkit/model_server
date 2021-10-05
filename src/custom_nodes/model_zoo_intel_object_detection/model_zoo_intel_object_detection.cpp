@@ -13,11 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <chrono>
 #include <iostream>
 #include <shared_mutex>
 #include <string>
 #include <vector>
-#include <chrono>
 
 #include "../../custom_node_interface.h"
 #include "../common/buffersqueue.hpp"
@@ -51,6 +51,9 @@ static constexpr const int QUEUE_SIZE = 1;
 std::shared_mutex internalManagerLock;
 
 double full_time = 0;
+double dims_full_time = 0;
+double buffer_full_time = 0;
+double release_full_time = 0;
 
 void cleanup(CustomNodeTensor& tensor, CustomNodeLibraryInternalManager* internalManager) {
     release(tensor.data, internalManager);
@@ -76,13 +79,13 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * outputBatch;
 
     float* buffer = nullptr;
-    // auto start = std::chrono::high_resolution_clock::now();
+    auto start = std::chrono::high_resolution_clock::now();
     if (!get_preallocated_buffer<float>(internalManager, &buffer, OUTPUT_IMAGES_TENSOR_NAME, byteSize))
         return false;
-    // auto end = std::chrono::high_resolution_clock::now();
-    // std::chrono::duration<double, std::milli> ms_double = end - start;
-    // full_time += ms_double.count();
-    // std::cout << "buffer time: " << full_time << "ms" << std::endl;
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> ms_double = end - start;
+    buffer_full_time += ms_double.count();
+    std::cout << "buffer time: " << buffer_full_time << "ms" << std::endl;
     cv::Size targetShape(targetImageWidth, targetImageHeight);
     for (uint64_t i = 0; i < outputBatch; i++) {
         cv::Mat image;
@@ -170,8 +173,8 @@ bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::ve
     }
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> ms_double = end - start;
-    full_time += ms_double.count();
-    std::cout << "dims time: " << full_time << "ms" << std::endl;
+    dims_full_time += ms_double.count();
+    std::cout << "dims time: " << dims_full_time << "ms" << std::endl;
     output->dimsCount = 3;
     output->dims[0] = outputBatch;
     output->dims[1] = 1;
@@ -196,55 +199,68 @@ int initializeInternalManager(void** customNodeLibraryInternalManager, const str
     NODE_ASSERT(targetImageHeight > 0, "target image height must be larger than 0");
     NODE_ASSERT(targetImageWidth > 0, "target image width must be larger than 0");
 
-    bool status = true;
     // creating BuffersQueues for output: images
     int channels = convertToGrayScale ? 1 : 3;
     uint64_t imagesByteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * maxOutputBatch;
     imagesByteSize = imagesByteSize;
-    status = internalManager->createBuffersQueue(OUTPUT_IMAGES_TENSOR_NAME, imagesByteSize, QUEUE_SIZE);
-    if(!status) return 1;
-    status = internalManager->createBuffersQueue(OUTPUT_IMAGES_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE);
-    if(!status) return 1;
+    if (!internalManager->createBuffersQueue(OUTPUT_IMAGES_TENSOR_NAME, imagesByteSize, QUEUE_SIZE)) {
+        return 1;
+    }
+    if (!internalManager->createBuffersQueue(OUTPUT_IMAGES_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE)) {
+        return 1;
+    }
 
     // creating BuffersQueues for output: coordinates
     uint64_t coordinatesByteSize = sizeof(int32_t) * 4 * maxOutputBatch;
     coordinatesByteSize = coordinatesByteSize;
-    status = internalManager->createBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME, coordinatesByteSize, QUEUE_SIZE);
-    if(!status) return 1;
-    status = internalManager->createBuffersQueue(OUTPUT_COORDINATES_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE);
-    if(!status) return 1;
+    if (!internalManager->createBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME, coordinatesByteSize, QUEUE_SIZE)) {
+        return 1;
+    }
+    if (!internalManager->createBuffersQueue(OUTPUT_COORDINATES_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE)) {
+        return 1;
+    }
 
     // creating BuffersQueues for output: confidences
     uint64_t confidenceByteSize = sizeof(float) * maxOutputBatch;
     confidenceByteSize = confidenceByteSize;
-    status = internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE);
-    if(!status) return 1;
-    status = internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE);
-    if(!status) return 1;
+    if (!internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE)) {
+        return 1;
+    }
+    if (!internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE)) {
+        return 1;
+    }
 
     // creating BuffersQueues for inputs
-    status = internalManager->createBuffersQueue(INPUT_IMAGE_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE);
-    if(!status) return 1;
-    status = internalManager->createBuffersQueue(INPUT_DETECTION_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE);
-    if(!status) return 1;
+    if (!internalManager->createBuffersQueue(INPUT_IMAGE_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE)) {
+        return 1;
+    }
+    if (!internalManager->createBuffersQueue(INPUT_DETECTION_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE)) {
+        return 1;
+    }
 
     // creating BuffersQueues for output tensor
-    status = internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, 3 * sizeof(CustomNodeTensor), QUEUE_SIZE);
-    if(!status) return 1;
+    if (!internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, 3 * sizeof(CustomNodeTensor), QUEUE_SIZE)) {
+        return 1;
+    }
 
     // creating BuffersQueues for info tensors
-    status = internalManager->createBuffersQueue(INPUT_TENSOR_INFO_NAME, 2 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE);
-    if(!status) return 1;
-    status = internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE);
-    if(!status) return 1;
+    if (!internalManager->createBuffersQueue(INPUT_TENSOR_INFO_NAME, 2 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE)) {
+        return 1;
+    }
+    if (!internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE)) {
+        return 1;
+    }
 
     // creating BuffersQueues for outputs dims in getOutputsInfo
-    status = internalManager->createBuffersQueue(OUTPUT_IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE);
-    if(!status) return 1;
-    status = internalManager->createBuffersQueue(OUTPUT_COORDINATES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE);
-    if(!status) return 1;
-    status = internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE);
-    if(!status) return 1;
+    if (!internalManager->createBuffersQueue(OUTPUT_IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE)) {
+        return 1;
+    }
+    if (!internalManager->createBuffersQueue(OUTPUT_COORDINATES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE)) {
+        return 1;
+    }
+    if (!internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE)) {
+        return 1;
+    }
 
     *customNodeLibraryInternalManager = internalManager;
     return 0;
@@ -263,21 +279,23 @@ int reinitializeInternalManagerIfNeccessary(void** customNodeLibraryInternalMana
     std::unique_lock lock(internalManagerLock);
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(*customNodeLibraryInternalManager);
 
-    auto status = true;
     // replace buffers if their sizes need to change
     int channels = convertToGrayScale ? 1 : 3;
     uint64_t imagesByteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * maxOutputBatch;
-    status = internalManager->recreateBuffersQueue(OUTPUT_IMAGES_TENSOR_NAME, imagesByteSize, QUEUE_SIZE);
-    if (!status) return 1;
+    if (!internalManager->recreateBuffersQueue(OUTPUT_IMAGES_TENSOR_NAME, imagesByteSize, QUEUE_SIZE)) {
+        return 1;
+    }
 
     uint64_t coordinatesByteSize = sizeof(int32_t) * 4 * maxOutputBatch;
-    status = internalManager->recreateBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME, coordinatesByteSize, QUEUE_SIZE);
-    if (!status) return 1;
+    if (!internalManager->recreateBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME, coordinatesByteSize, QUEUE_SIZE)) {
+        return 1;
+    }
 
     uint64_t confidenceByteSize = sizeof(float) * maxOutputBatch;
-    status = internalManager->recreateBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE);
-    if (!status) return 1;
-    
+    if (!internalManager->recreateBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE)) {
+        return 1;
+    }
+
     return 0;
 }
 
@@ -304,7 +322,7 @@ int deinitialize(void* customNodeLibraryInternalManager) {
 }
 
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
-    // auto start = std::chrono::high_resolution_clock::now();
+    auto start = std::chrono::high_resolution_clock::now();
     // Parameters reading
     int originalImageHeight = get_int_parameter("original_image_height", params, paramsCount, -1);
     int originalImageWidth = get_int_parameter("original_image_width", params, paramsCount, -1);
@@ -422,7 +440,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
 
     *outputsCount = 3;
-    if (!get_preallocated_buffer<struct CustomNodeTensor>(internalManager, &(*outputs), OUTPUT_TENSOR_NAME, 3 * sizeof(CustomNodeTensor))) {
+    if (!get_preallocated_buffer<struct CustomNodeTensor>(internalManager, outputs, OUTPUT_TENSOR_NAME, 3 * sizeof(CustomNodeTensor))) {
         return 1;
     }
 
@@ -450,10 +468,10 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         return 1;
     }
 
-    // auto end = std::chrono::high_resolution_clock::now();
-    // std::chrono::duration<double, std::milli> ms_double = end - start;
-    // full_time += ms_double.count();
-    // std::cout << "Execute duration: " << full_time << "ms" << std::endl;
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> ms_double = end - start;
+    full_time += ms_double.count();
+    std::cout << "Execute duration: " << full_time << "ms" << std::endl;
     return 0;
 }
 
@@ -469,7 +487,7 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
 
     *infoCount = 2;
-    if (!get_preallocated_buffer<struct CustomNodeTensorInfo>(internalManager, &(*info), INPUT_TENSOR_INFO_NAME, 2 * sizeof(CustomNodeTensorInfo))) {
+    if (!get_preallocated_buffer<struct CustomNodeTensorInfo>(internalManager, info, INPUT_TENSOR_INFO_NAME, 2 * sizeof(CustomNodeTensorInfo))) {
         return 1;
     }
 
@@ -519,7 +537,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
 
     *infoCount = 3;
-    if (!get_preallocated_buffer<struct CustomNodeTensorInfo>(internalManager, &(*info), OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo))) {
+    if (!get_preallocated_buffer<struct CustomNodeTensorInfo>(internalManager, info, OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo))) {
         return 1;
     }
 
@@ -570,10 +588,19 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
 }
 
 int release(void* ptr, void* customNodeLibraryInternalManager) {
+    auto start = std::chrono::high_resolution_clock::now();
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
     if (!internalManager->releaseBuffer(ptr)) {
         free(ptr);
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> ms_double = end - start;
+        release_full_time += ms_double.count();
+        std::cout << "release time: " << release_full_time << "ms" << std::endl;
         return 0;
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> ms_double = end - start;
+    release_full_time += ms_double.count();
+    std::cout << "release time: " << release_full_time << "ms" << std::endl;
     return 0;
 }
