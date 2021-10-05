@@ -29,6 +29,8 @@ static constexpr const char* OUTPUT_COORDINATES_TENSOR_NAME = "coordinates";
 static constexpr const char* OUTPUT_CONFIDENCES_TENSOR_NAME = "confidences";
 
 double full_time = 0;
+double dims_full_time = 0;
+double buffer_full_time = 0;
 
 bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale) {
     const uint64_t outputBatch = boxes.size();
@@ -44,8 +46,8 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     }
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> ms_double = end - start;
-    full_time += ms_double.count();
-    std::cout << "buffer time: " << full_time << "ms" << std::endl;
+    buffer_full_time += ms_double.count();
+    std::cout << "buffer time: " << buffer_full_time << "ms" << std::endl;
 
     cv::Size targetShape(targetImageWidth, targetImageHeight);
     for (uint64_t i = 0; i < outputBatch; i++) {
@@ -126,8 +128,13 @@ bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::ve
     output->data = reinterpret_cast<uint8_t*>(buffer);
     output->dataBytes = byteSize;
     output->dimsCount = 3;
+    auto start = std::chrono::high_resolution_clock::now();
     output->dims = (uint64_t*)malloc(output->dimsCount * sizeof(uint64_t));
     NODE_ASSERT(output->dims != nullptr, "malloc has failed");
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> ms_double = end - start;
+    dims_full_time += ms_double.count();
+    std::cout << "dims time: " << dims_full_time << "ms" << std::endl;
     output->dims[0] = outputBatch;
     output->dims[1] = 1;
     output->dims[2] = 1;
@@ -141,7 +148,7 @@ void cleanup(CustomNodeTensor& tensor) {
 }
 
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
-    // auto start = std::chrono::high_resolution_clock::now();
+    auto start = std::chrono::high_resolution_clock::now();
     // Parameters reading
     int originalImageHeight = get_int_parameter("original_image_height", params, paramsCount, -1);
     int originalImageWidth = get_int_parameter("original_image_width", params, paramsCount, -1);
@@ -283,10 +290,10 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         return 1;
     }
 
-    // auto end = std::chrono::high_resolution_clock::now();
-    // std::chrono::duration<double, std::milli> ms_double = end - start;
-    // full_time += ms_double.count();
-    // std::cout << "Execution time: " << full_time << "ms" << std::endl;
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> ms_double = end - start;
+    full_time += ms_double.count();
+    std::cout << "Execution time: " << full_time << "ms" << std::endl;
     return 0;
 }
 
