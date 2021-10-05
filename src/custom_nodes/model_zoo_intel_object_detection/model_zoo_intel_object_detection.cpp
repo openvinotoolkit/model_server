@@ -76,13 +76,13 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * outputBatch;
 
     float* buffer = nullptr;
-    auto start = std::chrono::high_resolution_clock::now();
+    // auto start = std::chrono::high_resolution_clock::now();
     if (!get_preallocated_buffer<float>(internalManager, &buffer, OUTPUT_IMAGES_TENSOR_NAME, byteSize))
         return false;
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> ms_double = end - start;
-    full_time += ms_double.count();
-    std::cout << "get_preallocated_buffer for images data duration: " << full_time << "ms" << std::endl;
+    // auto end = std::chrono::high_resolution_clock::now();
+    // std::chrono::duration<double, std::milli> ms_double = end - start;
+    // full_time += ms_double.count();
+    // std::cout << "buffer time: " << full_time << "ms" << std::endl;
     cv::Size targetShape(targetImageWidth, targetImageHeight);
     for (uint64_t i = 0; i < outputBatch; i++) {
         cv::Mat image;
@@ -163,10 +163,15 @@ bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::ve
     output->data = reinterpret_cast<uint8_t*>(buffer);
     output->dataBytes = byteSize;
 
+    auto start = std::chrono::high_resolution_clock::now();
     if (!get_preallocated_buffer<uint64_t>(internalManager, &(output->dims), OUTPUT_CONFIDENCES_DIMS_NAME, 3 * sizeof(uint64_t))) {
         release(buffer, internalManager);
         return false;
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> ms_double = end - start;
+    full_time += ms_double.count();
+    std::cout << "dims time: " << full_time << "ms" << std::endl;
     output->dimsCount = 3;
     output->dims[0] = outputBatch;
     output->dims[1] = 1;
