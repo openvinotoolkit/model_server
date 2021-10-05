@@ -45,7 +45,7 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> ms_double = end - start;
     full_time += ms_double.count();
-    std::cout << "Malloc of images data buffer time: " << full_time << "ms" << std::endl;
+    std::cout << "buffer time: " << full_time << "ms" << std::endl;
 
     cv::Size targetShape(targetImageWidth, targetImageHeight);
     for (uint64_t i = 0; i < outputBatch; i++) {
