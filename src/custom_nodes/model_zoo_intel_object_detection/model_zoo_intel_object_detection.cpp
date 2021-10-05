@@ -82,6 +82,7 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     auto start = std::chrono::high_resolution_clock::now();
     if (!get_preallocated_buffer<float>(internalManager, &buffer, OUTPUT_IMAGES_TENSOR_NAME, byteSize))
         return false;
+    buffer[0] = 0;
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> ms_double = end - start;
     buffer_full_time += ms_double.count();
@@ -171,6 +172,7 @@ bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::ve
         release(buffer, internalManager);
         return false;
     }
+    output->dims[0] = outputBatch;
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> ms_double = end - start;
     dims_full_time += ms_double.count();
