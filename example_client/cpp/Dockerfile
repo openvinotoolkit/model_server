@@ -109,22 +109,24 @@ COPY src/ /build/src/
 RUN bazel build //src:resnet_client_sync
 RUN bazel build //src:resnet_client_benchmark
 
-FROM ubuntu:20.04 as release
+ENV LD_LIBRARY_PATH=/opt/intel/openvino/opencv/lib
 
-WORKDIR /clients/
-RUN mkdir -p /clients/libs/ && mkdir -p /clients/images
-COPY --from=base_build \
-    /build/bazel-bin/src/resnet_client_sync \
-    /build/bazel-bin/src/resnet_client_benchmark \
-    /clients/
-COPY --from=base_build \
-    /usr/local/lib/libopencv_core.so* \
-    /usr/local/lib/libopencv_imgcodecs.so* \
-    /usr/local/lib/libopencv_imgproc.so* \
-    /usr/lib/x86_64-linux-gnu/libpng16.so* \
-    /clients/libs/
-
-COPY --from=base_build /input/images/*.jpeg /clients/images/
-COPY --from=base_build /input/input_images.txt /clients/
-
-ENV LD_LIBRARY_PATH=/usr/local/lib:/clients/libs
+#FROM ubuntu:20.04 as release
+#
+#WORKDIR /clients/
+#RUN mkdir -p /clients/libs/ && mkdir -p /clients/images
+#COPY --from=base_build \
+#    /build/bazel-bin/src/resnet_client_sync \
+#    /build/bazel-bin/src/resnet_client_benchmark \
+#    /clients/
+#COPY --from=base_build \
+#    /usr/local/lib/libopencv_core.so* \
+#    /usr/local/lib/libopencv_imgcodecs.so* \
+#    /usr/local/lib/libopencv_imgproc.so* \
+#    /usr/lib/x86_64-linux-gnu/libpng16.so* \
+#    /clients/libs/
+#
+#COPY --from=base_build /input/images/*.jpeg /clients/images/
+#COPY --from=base_build /input/input_images.txt /clients/
+#
+#ENV LD_LIBRARY_PATH=/usr/local/lib:/clients/libs

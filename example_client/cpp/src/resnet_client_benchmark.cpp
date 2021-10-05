@@ -42,6 +42,7 @@ limitations under the License.
 #include "tensorflow/core/platform/types.h"
 #include "tensorflow/core/util/command_line_flags.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#include "tensorflow_serving/apis/get_model_metadata.pb.h"
 
 #include "common.hpp"
 #include "grpcpp/create_channel.h"
@@ -57,6 +58,13 @@ using grpc::Status;
 using tensorflow::serving::PredictionService;
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
+
+using tensorflow::serving::GetModelMetadataRequest;
+using tensorflow::serving::GetModelMetadataResponse;
+using tensorflow::serving::SignatureDefMap;
+
+using proto_signature_map_t = google::protobuf::Map<std::string, tensorflow::TensorInfo>;
+using proto_tensor_map_t = google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>;
 
 template <typename T>
 struct AsyncClientCall {
@@ -82,6 +90,7 @@ struct Configuration {
     tensorflow::int64 consumers = 8;
     tensorflow::int64 max_parallel_requests = 100;
     tensorflow::int64 benchmark_mode = 0;
+    tensorflow::int64 synthetic = 0;
 
     bool validate() const {
         if (imagesListPath.empty())
@@ -95,6 +104,10 @@ struct Configuration {
         if (max_parallel_requests < 0)
             return false;
         if (benchmark_mode < 0 || benchmark_mode > 1)
+            return false;
+        if (synthetic < 0 || synthetic > 1)
+            return false;
+        if (benchmark_mode == 0 && synthetic == 1)
             return false;
         if (layout != "binary" && layout != "nchw" && layout != "nhwc")
             return false;
@@ -171,15 +184,22 @@ public:
         stub_(PredictionService::NewStub(channel)) {
         this->config = config;
         this->entries = entries;
+    }
 
-        if (this->config.benchmark_mode == 1) {
-            google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs = *this->predictRequest.mutable_inputs();
+    bool prepareRequest() {
+        this->predictRequest.mutable_model_spec()->set_name(this->config.modelName);
+        this->predictRequest.mutable_model_spec()->set_signature_name("serving_default");
+        proto_tensor_map_t& inputs = *this->predictRequest.mutable_inputs();
+
+        if (this->config.synthetic == 0) {
             tensorflow::int64 iteration = 1;
             this->entries = selectEntries(this->entries, this->config.batchSize, iteration);
             this->prepareBatchedInputs(inputs, this->entries);
-            this->predictRequest.mutable_model_spec()->set_name(this->config.modelName);
-            this->predictRequest.mutable_model_spec()->set_signature_name("serving_default");
+        } else {
+            if (!this->prepareSyntheticData(config, inputs))
+                return false;
         }
+        return true;
     }
 
     // Pre-processing function for binary images.
@@ -347,8 +367,71 @@ public:
         }
     }
 
+    bool prepareSyntheticData(const Configuration& config, proto_tensor_map_t& inputs) {
+        std::cout << "prepareSyntheticData" << std::endl;
+        proto_signature_map_t inputsMetadata;
+        if (!getEndpointInputsMetadata(config, inputsMetadata)) {
+            return false;
+        }
+
+        for (auto& [name, input] : inputsMetadata) {
+            std::cout << "Name: " << input.name() << std::endl;
+            std::cout << "Shape: ";
+            for (size_t i = 0; i < input.tensor_shape().dim_size(); i++) {
+                std::cout << input.tensor_shape().dim(i).size() << ",";
+            }
+            std::cout << std::endl;
+            std::cout << "Precision: " << tensorflow::DataType_Name(input.dtype()) << std::endl;
+
+            auto& inputTensor = inputs[input.name()];
+            inputTensor.set_dtype(input.dtype());
+
+            *inputTensor.mutable_tensor_shape() = input.tensor_shape();
+
+            size_t expectedValueCount = 1;
+            for (int i = 0; i < input.tensor_shape().dim_size(); i++) {
+                expectedValueCount *= input.tensor_shape().dim(i).size();
+            }
+            expectedValueCount *= tensorflow::DataTypeSize(input.dtype());
+
+            *inputTensor.mutable_tensor_content() = std::string(expectedValueCount, '1');
+        }
+        return true;
+    }
+
+    bool getEndpointInputsMetadata(const Configuration& config, proto_signature_map_t& inputsMetadata) {
+        GetModelMetadataRequest request;
+        GetModelMetadataResponse response;
+        ClientContext context;
+        request.mutable_metadata_field()->Add("signature_def");
+        *request.mutable_model_spec()->mutable_name() = config.modelName;
+        auto status = stub_->GetModelMetadata(&context, request, &response);
+
+        if (!status.ok()) {
+            std::cout << "gRPC call return code: " << status.error_code() << ": "
+                      << status.error_message() << std::endl;
+            return false;
+        }
+
+        auto it = response.mutable_metadata()->find("signature_def");
+        if (it == response.metadata().end()) {
+            std::cout << "error reading metadata response" << std::endl;;
+            return false;
+        }
+        SignatureDefMap def;
+        def.ParseFromString(*it->second.mutable_value());
+        std::cout << "call metadata ok" << std::endl;
+        inputsMetadata = *(*def.mutable_signature_def())["serving_default"].mutable_inputs();
+        return true;
+    }
+
     static void start(const tensorflow::string& address, const std::vector<T>& entries, const Configuration& config) {
         ServingClient<T> client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()), entries, config);
+        if (config.benchmark_mode == 1) {
+            if (!client.prepareRequest()) {
+                return;
+            }
+        }
         std::vector<std::thread> threads;
         std::cout << "Starting the workload" << std::endl;
         auto begin = std::chrono::high_resolution_clock::now();
@@ -412,7 +495,8 @@ int main(int argc, char** argv) {
         tensorflow::Flag("producers", &config.producers, "number of threads asynchronously scheduling prediction"),
         tensorflow::Flag("consumers", &config.consumers, "number of threads receiving responses"),
         tensorflow::Flag("max_parallel_requests", &config.max_parallel_requests, "maximum number of parallel inference requests; 0=no limit"),
-        tensorflow::Flag("benchmark_mode", &config.benchmark_mode, "when enabled, there is no pre/post-processing step")};
+        tensorflow::Flag("benchmark_mode", &config.benchmark_mode, "when enabled, there is no pre/post-processing step"),
+        tensorflow::Flag("synthetic", &config.synthetic, "when enabled, random data will be prepared with the shape of input gathered with GetModelMetadata endpoint")};
 
     tensorflow::string usage = tensorflow::Flags::Usage(argv[0], flagList);
     const bool result = tensorflow::Flags::Parse(&argc, argv, flagList);
@@ -423,34 +507,37 @@ int main(int argc, char** argv) {
     }
 
     std::vector<Entry> entries;
-    if (!readImagesList(config.imagesListPath, entries)) {
-        std::cout << "Error parsing images_list" << std::endl;
-        return -1;
-    }
+    if (config.synthetic == 0) {
+        if (!readImagesList(config.imagesListPath, entries)) {
+            std::cout << "Error parsing images_list" << std::endl;
+            return -1;
+        }
 
-    if (entries.empty()) {
-        std::cout << "Empty images_list" << std::endl;
-        return -1;
+        if (entries.empty()) {
+            std::cout << "Empty images_list" << std::endl;
+            return -1;
+        }
     }
 
     std::cout
         << "Address: " << config.address << std::endl
         << "Port: " << config.port << std::endl
         << "Images list path: " << config.imagesListPath << std::endl
-        << "Layout: " << config.layout << std::endl;
+        << "Layout: " << config.layout << std::endl
+        << "Synthetic: " << config.synthetic << std::endl;
 
     const tensorflow::string host = config.address + ":" + config.port;
 
     if (config.layout == "binary") {
         std::vector<BinaryData> images;
-        if (!readImagesBinary(entries, images)) {
+        if (config.synthetic == 0 && !readImagesBinary(entries, images)) {
             std::cout << "Error reading binary images" << std::endl;
             return -1;
         }
         ServingClient<BinaryData>::start(host, images, config);
     } else {
         std::vector<CvMatData> images;
-        if (!readImagesCvMat(entries, images, config.layout)) {
+        if (config.synthetic == 0 && !readImagesCvMat(entries, images, config.layout)) {
             std::cout << "Error reading opencv images" << std::endl;
             return -1;
         }
