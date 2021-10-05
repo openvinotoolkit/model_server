@@ -504,6 +504,9 @@ In order to use this feature in OpenVino™ Model Server, following steps are re
 
 Set target_device for the model in configuration json file to MULTI:<DEVICE_1>,<DEVICE_2> (e.g. MULTI:MYRIAD,CPU, order of the devices defines their priority, so MYRIAD devices will be used first in this example)
 
+When running the inference load on multiple devices, it might help to increase the default size of inference queue size with a parameter `nireq`.
+It should be higher than the expected amount of parallel requests from all clients.
+
 Below is exemplary config.json setting up Multi-Device Plugin for resnet model, using Intel® Movidius™ Neural Compute Stick and CPU devices:
 
 ```json
@@ -512,11 +515,13 @@ Below is exemplary config.json setting up Multi-Device Plugin for resnet model, 
       "name": "resnet",
       "base_path": "/opt/ml/resnet",
       "batch_size": "1",
+      "nireq": 20
       "target_device": "MULTI:MYRIAD,CPU"}
    }]
 }
+
 ```
-Starting OpenVINO™ Model Server with config.json (placed in ./models/config.json path) defined as above, and with grpc_workers parameter set to match nireq field in config.json:
+Starting OpenVINO™ Model Server with config.json (placed in ./models/config.json path) defined as above config.json:
 ```
 docker run -d --net=host -u root --privileged --rm -v $(pwd)/models/:/opt/ml:ro -v /dev:/dev -p 9001:9001 \
 openvino/model_server:latest --config_path /opt/ml/config.json --port 9001 
@@ -524,10 +529,18 @@ openvino/model_server:latest --config_path /opt/ml/config.json --port 9001
 Or alternatively, when you are using just a single model, start OpenVINO™ Model Server using this command (config.json is not needed in this case):
 ```
 docker run -d --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/models/:/opt/ml:ro -v \
- /dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/ml/resnet --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
+ /dev:/dev -p 9001:9001 openvino/model_server:latest model --nireq 20 --model_path /opt/ml/resnet --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
  ```
 After these steps, deployed model will perform inference on both Intel® Movidius™ Neural Compute Stick and CPU.
 Total throughput will be roughly equal to sum of CPU and Intel® Movidius™ Neural Compute Stick throughput.
+
+While using CUDA and CPU devices, the command starting the container with MULTI plugin_config could look like below:
+
+```
+docker run -it -p 9000:9000 --gpus all -v $(pwd)/models/:/opt/ml:ro openvino/model_server:latest-cuda 
+--model_name renset --model_path /opt/ml/resnet --target_device MULTI:CPU,CUDA --port 9000 
+--plugin_config '{"CPU_THROUGHPUT_STREAMS":"CPU_THROUGHPUT_AUTO"}' --nireq 20
+```
 
 </details>
 
@@ -551,8 +564,64 @@ Below is a config example using heterogeneous plugin with GPU as a primary devic
    }]
 }
 ```
+Starting OpenVINO™ Model Server docker container with CUDA requires Nvidia GPU drivers and NVIDIA Container Toolkit to be installed on the host.
+Docker command requires adding `--gpus` parameter to pass the device to the container like below:
+
+```
+docker run -d --gpus all --rm -v $(pwd)/models/:/opt/ml:ro -p 9001:9001 \
+openvino/model_server:latest-cuda --config_path /opt/ml/config.json --port 9001 
+```
+Alternatively, for serving a single model, the server can be started without the configuration file:
+```
+docker run -d --gpus all --rm -v $(pwd)/models/:/opt/ml:ro -p 9001:9001 \
+openvino/model_server:latest-cuda --model_name resnet --model_path /opt/ml/resnet --port 9001 --target_device CUDA
+```
+
+
 </details>
 
+<details><summary>AUTO Plugin</summary>
+
+[AUTO plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_AUTO.html) makes it possible to assign automatically the target device to the model.
+The plugin detects all available devices on the host and checks if on which the model is supported. Some model layers and data precisions might 
+be not implemented on all accelerators.
+
+Auto plugin can be configured by using `--target_device AUTO` parameter. 
+Alternatively, it is possible to to limit the selection of devices like `AUTO:CPU,CUDA`.
+Optionally, you can also pass tuning device settings in the plugin_config parameter. By default, Auto plugin assigned one execution stream for CPU device 
+to optimize the latency in a single client mode.
+
+```json
+{"model_config_list": [
+   {"config": {
+      "name": "resnet",
+      "base_path": "/opt/ml/resnet",
+      "batch_size": "1",
+      "target_device": "AUTO",
+      "plugin_config": {"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}
+      }
+   }]
+}
+```
+</details>
+
+<details><summary>CUDA Plugin</summary>
+
+CUDA plugin is currently in experimental version. 
+
+```json
+{"model_config_list": [
+   {"config": {
+      "name": "resnet",
+      "base_path": "/opt/ml/resnet",
+      "batch_size": "1",
+      "target_device": "CUDA"}
+   }]
+}
+```
+
+
+</details>
 
 ## Security Considerations <a name="sec"></a>
 
