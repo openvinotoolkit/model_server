@@ -411,7 +411,6 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 
 void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
     if (config.getTargetDevice().find("AUTO") == std::string::npos) {
-        engine->SetConfig({}, config.getTargetDevice());
         execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(engine->LoadNetwork(*network, config.getTargetDevice(), pluginConfig));
     } else {
         setInferenceEngineConfig(engine, pluginConfig);
