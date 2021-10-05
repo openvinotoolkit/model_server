@@ -36,11 +36,16 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
 
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * outputBatch;
 
+    auto start = std::chrono::high_resolution_clock::now();
     float* buffer = (float*)malloc(byteSize);
     NODE_ASSERT(buffer != nullptr, "malloc has failed");
     if (buffer == nullptr) {
         return false;
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> ms_double = end - start;
+    full_time += ms_double.count();
+    std::cout << "Malloc of images data buffer time: " << full_time << "ms" << std::endl;
 
     cv::Size targetShape(targetImageWidth, targetImageHeight);
     for (uint64_t i = 0; i < outputBatch; i++) {
@@ -136,7 +141,7 @@ void cleanup(CustomNodeTensor& tensor) {
 }
 
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
-    auto start = std::chrono::high_resolution_clock::now();
+    // auto start = std::chrono::high_resolution_clock::now();
     // Parameters reading
     int originalImageHeight = get_int_parameter("original_image_height", params, paramsCount, -1);
     int originalImageWidth = get_int_parameter("original_image_width", params, paramsCount, -1);
@@ -278,10 +283,10 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         return 1;
     }
 
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> ms_double = end - start;
-    full_time += ms_double.count();
-    std::cout << "Execution time: " << full_time << "ms" << std::endl;
+    // auto end = std::chrono::high_resolution_clock::now();
+    // std::chrono::duration<double, std::milli> ms_double = end - start;
+    // full_time += ms_double.count();
+    // std::cout << "Execution time: " << full_time << "ms" << std::endl;
     return 0;
 }
 
