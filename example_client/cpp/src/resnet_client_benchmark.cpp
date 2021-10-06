@@ -90,7 +90,6 @@ struct Configuration {
     tensorflow::int64 consumers = 8;
     tensorflow::int64 max_parallel_requests = 100;
     tensorflow::int64 benchmark_mode = 0;
-    tensorflow::int64 synthetic = 0;
 
     bool validate() const {
         if (imagesListPath.empty())
@@ -104,10 +103,6 @@ struct Configuration {
         if (max_parallel_requests < 0)
             return false;
         if (benchmark_mode < 0 || benchmark_mode > 1)
-            return false;
-        if (synthetic < 0 || synthetic > 1)
-            return false;
-        if (benchmark_mode == 0 && synthetic == 1)
             return false;
         if (layout != "binary" && layout != "nchw" && layout != "nhwc")
             return false;
@@ -191,13 +186,9 @@ public:
         this->predictRequest.mutable_model_spec()->set_signature_name("serving_default");
         proto_tensor_map_t& inputs = *this->predictRequest.mutable_inputs();
 
-        if (this->config.synthetic == 0) {
-            tensorflow::int64 iteration = 1;
-            this->entries = selectEntries(this->entries, this->config.batchSize, iteration);
-            return this->prepareBatchedInputs(inputs, this->entries);
-        } else {
-            return this->prepareBatchedInputs(inputs, this->entries);
-        }
+        tensorflow::int64 iteration = 1;
+        this->entries = selectEntries(this->entries, this->config.batchSize, iteration);
+        return this->prepareBatchedInputs(inputs, this->entries);
     }
 
     // Pre-processing function for binary images.
@@ -240,50 +231,6 @@ public:
             proto.mutable_tensor_shape()->add_dim()->set_size(entries[0].image.channels());
         }
         inputs[this->config.inputName] = proto;
-        return true;
-    }
-
-    // Pre-processing function for synthetic data.
-    // gRPC request proto is generated with synthetic data with shape/precision matching endpoint metadata.
-    bool prepareBatchedInputs(proto_tensor_map_t& inputs, const std::vector<SyntheticData>& entries) {
-        proto_signature_map_t inputsMetadata;
-        if (!getEndpointInputsMetadata(config, inputsMetadata)) {
-            return false;
-        }
-
-        bool isMetadataValid = true;
-        std::cout << "Synthetic inputs:" << std::endl;
-        for (auto& [name, input] : inputsMetadata) {
-            std::cout << "\t" << input.name() << ": (";
-            for (size_t i = 0; i < input.tensor_shape().dim_size(); i++) {
-                if (input.tensor_shape().dim(i).size() <= 0) {
-                    isMetadataValid = false;
-                }
-                std::cout << input.tensor_shape().dim(i).size();
-                if (i < input.tensor_shape().dim_size() - 1) {
-                    std::cout << ",";
-                }
-            }
-            std::cout << "); " << tensorflow::DataType_Name(input.dtype()) << std::endl;
-
-            auto& inputTensor = inputs[input.name()];
-            inputTensor.set_dtype(input.dtype());
-
-            *inputTensor.mutable_tensor_shape() = input.tensor_shape();
-
-            size_t expectedValueCount = 1;
-            for (int i = 0; i < input.tensor_shape().dim_size(); i++) {
-                expectedValueCount *= input.tensor_shape().dim(i).size();
-            }
-            expectedValueCount *= tensorflow::DataTypeSize(input.dtype());
-
-            *inputTensor.mutable_tensor_content() = std::string(expectedValueCount, '\0');
-        }
-
-        if (!isMetadataValid) {
-            std::cout << "[ERROR] Input metadata cannot contain negative shape" << std::endl;
-            return false;
-        }
         return true;
     }
 
@@ -467,9 +414,7 @@ public:
             std::chrono::high_resolution_clock::now() - begin);
         auto totalTime = (duration.count() / 1000);
         float accurracy = (client.getNumberOfCorrectLabels() * 100) / (config.iterations * config.producers * config.batchSize);
-        size_t batchSize = config.synthetic == 1 ? client.getRequestBatchSize() : config.batchSize;
-        std::string layout = config.synthetic == 1 ? "auto" : config.layout;
-        float avgFps = (1000 / ((float)totalTime / (float)(config.iterations * config.producers * batchSize)));
+        float avgFps = (1000 / ((float)totalTime / (float)(config.iterations * config.producers * config.batchSize)));
 
         std::cout << "========================\n        Summary\n========================" << std::endl;
         if (config.benchmark_mode == 0) {
@@ -479,8 +424,8 @@ public:
         }
         std::cout << "Total time: " << totalTime << "ms" << std::endl;
         std::cout << "Total iterations: " << config.iterations * config.producers << std::endl;
-        std::cout << "Layout: " << layout << std::endl; // Incorrect for synthetic
-        std::cout << "Batch size: " << batchSize << std::endl;
+        std::cout << "Layout: " << config.layout << std::endl;
+        std::cout << "Batch size: " << config.batchSize << std::endl;
         std::cout << "Producer threads: " << config.producers << std::endl;
         std::cout << "Consumer threads: " << config.consumers << std::endl;
         std::cout << "Max parallel requests: " << config.max_parallel_requests << std::endl;
@@ -509,7 +454,7 @@ int main(int argc, char** argv) {
         tensorflow::Flag("grpc_port", &config.port, "port to grpc service"),
         tensorflow::Flag("model_name", &config.modelName, "model name to request"),
         tensorflow::Flag("input_name", &config.inputName, "input tensor name with image"),
-        tensorflow::Flag("output_name", &config.outputName, "output tensor name with classification result"),
+        tensorflow::Flag("output_name", &config.outputName, "output tensor name with classification resulta"),
         tensorflow::Flag("iterations", &config.iterations, "number of requests to be send by each producer thread"),
         tensorflow::Flag("batch_size", &config.batchSize, "batch size of each iteration"),
         tensorflow::Flag("images_list", &config.imagesListPath, "path to a file with a list of labeled images"),
@@ -517,8 +462,7 @@ int main(int argc, char** argv) {
         tensorflow::Flag("producers", &config.producers, "number of threads asynchronously scheduling prediction"),
         tensorflow::Flag("consumers", &config.consumers, "number of threads receiving responses"),
         tensorflow::Flag("max_parallel_requests", &config.max_parallel_requests, "maximum number of parallel inference requests; 0=no limit"),
-        tensorflow::Flag("benchmark_mode", &config.benchmark_mode, "when enabled, there is no pre/post-processing step"),
-        tensorflow::Flag("synthetic", &config.synthetic, "when enabled, data will be prepared with the shape of input gathered with GetModelMetadata endpoint")};
+        tensorflow::Flag("benchmark_mode", &config.benchmark_mode, "when enabled, there is no pre/post-processing step")};
 
     tensorflow::string usage = tensorflow::Flags::Usage(argv[0], flagList);
     const bool result = tensorflow::Flags::Parse(&argc, argv, flagList);
@@ -529,16 +473,14 @@ int main(int argc, char** argv) {
     }
 
     std::vector<Entry> entries;
-    if (config.synthetic == 0) {
-        if (!readImagesList(config.imagesListPath, entries)) {
-            std::cout << "Error parsing images_list" << std::endl;
-            return -1;
-        }
+    if (!readImagesList(config.imagesListPath, entries)) {
+        std::cout << "Error parsing images_list" << std::endl;
+        return -1;
+    }
 
-        if (entries.empty()) {
-            std::cout << "Empty images_list" << std::endl;
-            return -1;
-        }
+    if (entries.empty()) {
+        std::cout << "Empty images_list" << std::endl;
+        return -1;
     }
 
     const tensorflow::string host = config.address + ":" + config.port;
@@ -546,11 +488,6 @@ int main(int argc, char** argv) {
     std::cout
         << "Address: " << host << std::endl
         << "Model name: " << config.modelName << std::endl;
-
-    if (config.synthetic == 1) {
-        ServingClient<SyntheticData>::start(host, config);
-        return 0;
-    }
 
     std::cout << "Images list path: " << config.imagesListPath << std::endl;
 
@@ -569,6 +506,5 @@ int main(int argc, char** argv) {
         }
         ServingClient<CvMatData>::start(host, config, images);
     }
-
     return 0;
 }

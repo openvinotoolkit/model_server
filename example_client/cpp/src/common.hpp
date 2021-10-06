@@ -49,10 +49,6 @@ struct CvMatData {
     tensorflow::string layout;
 };
 
-struct SyntheticData {
-    tensorflow::int64 expectedLabel;  // TODO: Remove?
-};
-
 template <typename T>
 std::vector<T> reorderVectorToNchw(const T* nhwcVector, int rows, int cols, int channels) {
     std::vector<T> nchwVector(rows * cols * channels);
@@ -136,7 +132,7 @@ bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>
             return false;
         }
         entryOut.image.convertTo(entryOut.image, CV_32F);
-        cv::resize(entryOut.image, entryOut.image, cv::Size(224, 224));
+        cv::resize(entryOut.image, entryOut.image, cv::Size(224, 224)); // TODO: Leave original shape, add optional parameter
         if (layout == "nchw") {
             entryOut.image = reorderMatToNchw(&entryOut.image);
         }
@@ -144,4 +140,15 @@ bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>
     }
 
     return true;
+}
+
+void prepareSyntheticData(tensorflow::TensorInfo& info, tensorflow::TensorProto& tensor) {
+    tensor.set_dtype(info.dtype());
+    *tensor.mutable_tensor_shape() = info.tensor_shape();
+    size_t expectedValueCount = 1;
+    for (int i = 0; i < info.tensor_shape().dim_size(); i++) {
+        expectedValueCount *= info.tensor_shape().dim(i).size();
+    }
+    expectedValueCount *= tensorflow::DataTypeSize(info.dtype());
+    *tensor.mutable_tensor_content() = std::string(expectedValueCount, '1');
 }
