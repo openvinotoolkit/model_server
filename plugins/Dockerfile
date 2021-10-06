@@ -92,17 +92,18 @@ RUN mkdir -p /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ 
 ################## END OF OPENVINO SOURCE BUILD ######################
 
 #RUN git clone https://github.com/openvinotoolkit/openvino_cuda_plugin.git /openvino_contrib/
-COPY ./openvino_contrib/* /openvino_contrib/
 
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
 ENV OPENVINO_HOME=/openvino
 ENV OPENVINO_CONTRIB=/openvino_contrib
 
+RUN mkdir /openvino_contrib/
+COPY ./openvino_contrib/ /openvino_contrib/
 RUN /openvino_contrib/modules/cuda_plugin/build.sh --build
 
 #RUN git clone -b huyuan/2021_4 git@github.com:intel-sandbox/iotg-odt-prc-openvino.git /auto_plugin; cd /auto_plugin; git submodule update --init --recursive
 RUN mkdir /auto_plugin
-COPY ./auto/iotg-odt-prc-openvino/* /auto_plugin/
+COPY ./iotg-odt-prc-openvino/ /auto_plugin/
 RUN cmake "${OPENVINO_HOME}" \  
         -DVERBOSE_BUILD=ON \
         -DENABLE_CUDA=ON \
