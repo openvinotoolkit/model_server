@@ -15,7 +15,9 @@
 #
 
 FROM golang:latest
+ARG http_proxy
 
+RUN echo "Acquire::http::Proxy \"$http_proxy\";" > /etc/apt/apt.conf.d/proxy.conf
 RUN apt-get update && \
     apt-get -y install git unzip build-essential autoconf libtool protobuf-compiler libprotobuf-dev
 RUN go get google.golang.org/grpc
