@@ -243,10 +243,37 @@ public:
         return true;
     }
 
-    // Pre-processing function for binary images.
+    // Pre-processing function for synthetic data.
     // gRPC request proto is generated with synthetic data with shape/precision matching endpoint metadata.
     bool prepareBatchedInputs(proto_tensor_map_t& inputs, const std::vector<SyntheticData>& entries) {
-        return this->prepareSyntheticData(this->config, inputs);
+        proto_signature_map_t inputsMetadata;
+        if (!getEndpointInputsMetadata(config, inputsMetadata)) {
+            return false;
+        }
+
+        for (auto& [name, input] : inputsMetadata) {
+            std::cout << "Name: " << input.name() << std::endl;
+            std::cout << "Shape: ";
+            for (size_t i = 0; i < input.tensor_shape().dim_size(); i++) {
+                std::cout << input.tensor_shape().dim(i).size() << ",";
+            }
+            std::cout << std::endl;
+            std::cout << "Precision: " << tensorflow::DataType_Name(input.dtype()) << std::endl;
+
+            auto& inputTensor = inputs[input.name()];
+            inputTensor.set_dtype(input.dtype());
+
+            *inputTensor.mutable_tensor_shape() = input.tensor_shape();
+
+            size_t expectedValueCount = 1;
+            for (int i = 0; i < input.tensor_shape().dim_size(); i++) {
+                expectedValueCount *= input.tensor_shape().dim(i).size();
+            }
+            expectedValueCount *= tensorflow::DataTypeSize(input.dtype());
+
+            *inputTensor.mutable_tensor_content() = std::string(expectedValueCount, '\0');
+        }
+        return true;
     }
 
     // Post-processing function for resnet classification.
@@ -377,37 +404,6 @@ public:
                 return;
             }
         }
-    }
-
-    bool prepareSyntheticData(const Configuration& config, proto_tensor_map_t& inputs) {
-        proto_signature_map_t inputsMetadata;
-        if (!getEndpointInputsMetadata(config, inputsMetadata)) {
-            return false;
-        }
-
-        for (auto& [name, input] : inputsMetadata) {
-            std::cout << "Name: " << input.name() << std::endl;
-            std::cout << "Shape: ";
-            for (size_t i = 0; i < input.tensor_shape().dim_size(); i++) {
-                std::cout << input.tensor_shape().dim(i).size() << ",";
-            }
-            std::cout << std::endl;
-            std::cout << "Precision: " << tensorflow::DataType_Name(input.dtype()) << std::endl;
-
-            auto& inputTensor = inputs[input.name()];
-            inputTensor.set_dtype(input.dtype());
-
-            *inputTensor.mutable_tensor_shape() = input.tensor_shape();
-
-            size_t expectedValueCount = 1;
-            for (int i = 0; i < input.tensor_shape().dim_size(); i++) {
-                expectedValueCount *= input.tensor_shape().dim(i).size();
-            }
-            expectedValueCount *= tensorflow::DataTypeSize(input.dtype());
-
-            *inputTensor.mutable_tensor_content() = std::string(expectedValueCount, '\0');
-        }
-        return true;
     }
 
     bool getEndpointInputsMetadata(const Configuration& config, proto_signature_map_t& inputsMetadata) {
