@@ -15,7 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include <map>
+#include <unordered_map>
 #include <string>
 
 #include "../common/buffersqueue.hpp"
@@ -24,7 +24,7 @@ namespace ovms {
 namespace custom_nodes_common {
 
 class CustomNodeLibraryInternalManager {
-    std::map<std::string, std::unique_ptr<BuffersQueue>> outputBuffers;
+    std::unordered_map<std::string, std::unique_ptr<BuffersQueue>> outputBuffers;
 
 public:
     CustomNodeLibraryInternalManager() = default;

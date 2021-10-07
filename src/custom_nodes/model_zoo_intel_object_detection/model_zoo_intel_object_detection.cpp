@@ -54,6 +54,8 @@ double full_time = 0;
 double dims_full_time = 0;
 double buffer_full_time = 0;
 double release_full_time = 0;
+double max_buffer_time = 0;
+double malloc_time = 0;
 
 void cleanup(CustomNodeTensor& tensor, CustomNodeLibraryInternalManager* internalManager) {
     release(tensor.data, internalManager);
@@ -85,8 +87,10 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     buffer[0] = 0;
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> ms_double = end - start;
+    if (ms_double.count() > max_buffer_time) max_buffer_time = ms_double.count();
     buffer_full_time += ms_double.count();
     std::cout << "buffer time: " << buffer_full_time << "ms" << std::endl;
+    std::cout << "max buffer time: " << max_buffer_time << "ms" << std::endl;
     cv::Size targetShape(targetImageWidth, targetImageHeight);
     for (uint64_t i = 0; i < outputBatch; i++) {
         cv::Mat image;
@@ -302,7 +306,6 @@ int reinitializeInternalManagerIfNeccessary(void** customNodeLibraryInternalMana
 }
 
 int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
-    std::cout << "[CUSTOM NODE]initialize called" << std::endl;
     auto status = 0;
     if (*customNodeLibraryInternalManager == nullptr) {
         status = initializeInternalManager(customNodeLibraryInternalManager, params, paramsCount);
