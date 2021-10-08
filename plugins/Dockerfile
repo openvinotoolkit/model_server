@@ -72,22 +72,7 @@ RUN	DEBIAN_FRONTEND=noninteractive apt install -y \
 ENV CUDA_PATH=/usr/local/cuda
 ENV PATH=${CUDA_PATH}/bin:$PATH
 
-################## BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
-# Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
 RUN git clone https://github.com/openvinotoolkit/openvino /openvino ; cd /openvino ; git checkout 2021.4.1; git submodule update --init --recursive
-WORKDIR /openvino/build
-#RUN cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
-#RUN make --jobs=48
-#RUN mkdir -p /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ && \
-#    mkdir -p /opt/intel/openvino/deployment_tools/inference_engine && \
-#    mkdir -p /opt/intel/openvino/deployment_tools/ngraph && \
-#    mkdir -p /opt/intel/openvino/bin && \
-#    ln -s /openvino/bin/intel64/Release/lib/* /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/ && \
-#    ln -s /openvino/inference-engine/src/inference_engine/include/ /opt/intel/openvino/deployment_tools/inference_engine/ && \
-#    ln -s /openvino/inference-engine/temp/opencv_*_ubuntu20/opencv /opt/intel/openvino/ && \
-#    ln -s /openvino/ngraph/core/include /opt/intel/openvino/deployment_tools/ngraph/include && \
-#    ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/bin/setupvars.sh
-################## END OF OPENVINO SOURCE BUILD ######################
 
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
 ENV OPENVINO_HOME=/openvino
