@@ -90,7 +90,7 @@ Provide version from the list above as INSTALL_DRIVER_VERSION argument in make c
 If not provided, version 20.35.17767 is used.
 
 Docker image can be built also with experimental support for CUDA GPU cards.
-It requires placing manually built plugins libCUDAPlugin.so, libAutoPlugin.so, libinterpreter_backend.so and libngraph_backend.so
+It requires placing manually built plugins libCUDAPlugin.so, libAutoPlugin.so, libinterpreter_backend.so and libngraph_backend.so ([How to build plugins](./building_plugins.md))
 in the folder release_files before initiating the command: 
 ```make docker_build CUDA=1```
 
