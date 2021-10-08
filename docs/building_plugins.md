@@ -26,3 +26,10 @@
    git submodule update --init --recursive
    cd ..
 ```
+
+5. 
+```bash
+   docker build -t openvino/plugins . 
+```
+
+libCUDAPlugin.so, libAutoPlugin.so, libinterpreter_backend.so and libngraph_backend.so can be found at /plugins inside docker container
