@@ -33,6 +33,7 @@ namespace ovms {
 namespace net_http = tensorflow::serving::net_http;
 
 enum class StatusCode {
+    // OK = first enum
     OK, /*!< Success */
 
     PATH_INVALID,        /*!< The provided path is invalid or doesn't exists */
@@ -262,6 +263,7 @@ enum class StatusCode {
     OK_RELOADED,     /*!< Operation succeeded but no config reload was needed */
 
     STATUS_CODE_END
+    // STATUS_CODE_END = last enum
 };
 
 class Status {
