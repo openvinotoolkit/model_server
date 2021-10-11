@@ -40,7 +40,7 @@ bool CustomNodeLibraryInternalManager::recreateBuffersQueue(const std::string& n
         }
         return true;
     }
-    return createBuffersQueue(name, singleBufferSize, streamsLength);
+    return false;
 }
 
 BuffersQueue* CustomNodeLibraryInternalManager::getBuffersQueue(const std::string& name) {
