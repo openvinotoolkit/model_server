@@ -257,8 +257,7 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
     } else {
         status = reinitializeInternalManagerIfNeccessary(customNodeLibraryInternalManager, params, paramsCount);
     }
-    if (status != 0)
-        return 1;
+    NODE_ASSERT(status == 0, "initialize failed");
     return 0;
 }
 
