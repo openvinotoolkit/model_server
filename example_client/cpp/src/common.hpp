@@ -141,14 +141,3 @@ bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>
 
     return true;
 }
-
-void prepareSyntheticData(tensorflow::TensorInfo& info, tensorflow::TensorProto& tensor) {
-    tensor.set_dtype(info.dtype());
-    *tensor.mutable_tensor_shape() = info.tensor_shape();
-    size_t expectedValueCount = 1;
-    for (int i = 0; i < info.tensor_shape().dim_size(); i++) {
-        expectedValueCount *= info.tensor_shape().dim(i).size();
-    }
-    expectedValueCount *= tensorflow::DataTypeSize(info.dtype());
-    *tensor.mutable_tensor_content() = std::string(expectedValueCount, '1');
-}

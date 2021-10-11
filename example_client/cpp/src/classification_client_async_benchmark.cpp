@@ -44,10 +44,11 @@ limitations under the License.
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #include "tensorflow_serving/apis/get_model_metadata.pb.h"
 
-#include "common.hpp"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
 #include "opencv2/opencv.hpp"
+
+#include "common.hpp"
 
 using grpc::Channel;
 using grpc::ClientAsyncResponseReader;
@@ -234,7 +235,7 @@ public:
         return true;
     }
 
-    // Post-processing function for resnet classification.
+    // Post-processing function for classification.
     // Most probable label is selected from the output.
     bool interpretOutputs(proto_tensor_map_t& outputs, std::vector<tensorflow::int64>& predictedLabels) {
         auto it = outputs.find(this->config.outputName);

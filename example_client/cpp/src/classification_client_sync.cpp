@@ -40,10 +40,11 @@ limitations under the License.
 #include "tensorflow/core/util/command_line_flags.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
-#include "common.hpp"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
 #include "opencv2/opencv.hpp"
+
+#include "common.hpp"
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -105,7 +106,7 @@ public:
         return true;
     }
 
-    // Post-processing function for resnet classification.
+    // Post-processing function for classification.
     // Most probable label is selected from the output.
     bool interpretOutputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& outputs, const tensorflow::string& outputName, tensorflow::int64& predictedLabel) {
         auto it = outputs.find(outputName);
@@ -162,7 +163,7 @@ public:
         std::cout << "outputs size is " << response.outputs_size() << std::endl;
 
         // Post-processing step.
-        // Extracting most probable label from resnet output.
+        // Extracting most probable label from classification model output.
         tensorflow::int64 predictedLabel = -1;
         if (!this->interpretOutputs(*response.mutable_outputs(), outputName, predictedLabel)) {
             return false;
@@ -182,8 +183,8 @@ public:
         tensorflow::int64 iterations) {
         auto begin = std::chrono::high_resolution_clock::now();
         tensorflow::int64 correctLabels = 0;
+        ServingClient client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()));
         for (tensorflow::int64 i = 0; i < iterations; i++) {
-            ServingClient client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()));
             bool isLabelCorrect = false;
             if (!client.predict(modelName, inputName, outputName, entries[i % entries.size()], isLabelCorrect)) {
                 return;
