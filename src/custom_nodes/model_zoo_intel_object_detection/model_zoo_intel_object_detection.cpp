@@ -200,7 +200,7 @@ int initializeInternalManager(void** customNodeLibraryInternalManager, const str
     // creating BuffersQueues for output: confidences
     uint64_t confidenceByteSize = sizeof(float) * maxOutputBatch;
     confidenceByteSize = confidenceByteSize;
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE),"buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE), "buffer creation failed");
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
 
     // creating BuffersQueues for inputs
