@@ -49,13 +49,6 @@ static constexpr const int QUEUE_SIZE = 1;
 
 std::shared_mutex internalManagerLock;
 
-double full_time = 0;
-double dims_full_time = 0;
-double buffer_full_time = 0;
-double release_full_time = 0;
-double max_buffer_time = 0;
-double malloc_time = 0;
-
 void cleanup(CustomNodeTensor& tensor, CustomNodeLibraryInternalManager* internalManager) {
     release(tensor.data, internalManager);
     release(tensor.dims, internalManager);
@@ -63,8 +56,10 @@ void cleanup(CustomNodeTensor& tensor, CustomNodeLibraryInternalManager* interna
 
 template <typename T>
 bool get_buffer(CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size) {
-    *buffer = static_cast<T*>(internalManager->getBuffersQueue(buffersQueueName)->getBuffer());
-    if (*buffer == nullptr) {
+    auto buffersQueue = internalManager->getBuffersQueue(buffersQueueName);
+    if (!(buffersQueue == nullptr))
+        *buffer = static_cast<T*>(buffersQueue->getBuffer());
+    if (*buffer == nullptr || buffersQueue == nullptr) {
         *buffer = (T*)malloc(byte_size);
         if (*buffer == nullptr) {
             std::cout << "allocation for buffer: " << buffersQueueName << "FAILED" << std::endl;
@@ -177,7 +172,7 @@ bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::ve
 
 int initializeInternalManager(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
     // creating InternalManager instance
-    CustomNodeLibraryInternalManager* internalManager = new CustomNodeLibraryInternalManager();
+    std::unique_ptr<CustomNodeLibraryInternalManager> internalManager = std::make_unique<CustomNodeLibraryInternalManager>();
     NODE_ASSERT(internalManager != nullptr, "internalManager allocation failed");
     if (internalManager == nullptr)
         return 1;
@@ -254,7 +249,7 @@ int initializeInternalManager(void** customNodeLibraryInternalManager, const str
         return 1;
     }
 
-    *customNodeLibraryInternalManager = internalManager;
+    *customNodeLibraryInternalManager = internalManager.release();
     return 0;
 }
 

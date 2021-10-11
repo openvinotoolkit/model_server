@@ -27,24 +27,27 @@ bool CustomNodeLibraryInternalManager::createBuffersQueue(const std::string& nam
     if (it != outputBuffers.end()) {
         return false;
     }
-    outputBuffers.insert({name, std::make_unique<BuffersQueue>(singleBufferSize, streamsLength)});
+    outputBuffers.emplace(name, std::make_unique<BuffersQueue>(singleBufferSize, streamsLength));
     return true;
 }
 
 bool CustomNodeLibraryInternalManager::recreateBuffersQueue(const std::string& name, size_t singleBufferSize, int streamsLength) {
     auto it = outputBuffers.find(name);
     if (it != outputBuffers.end()) {
-        if (!(this->getBuffersQueue(name)->getSize() == singleBufferSize &&
-                this->getBuffersQueue(name)->getSingleBufferSize() == streamsLength * singleBufferSize)) {
+        if (!(it->second->getSize() == singleBufferSize &&
+                it->second->getSingleBufferSize() == streamsLength * singleBufferSize)) {
             it->second.reset(new BuffersQueue(singleBufferSize, streamsLength));
         }
         return true;
     }
-    return false;
+    return createBuffersQueue(name, singleBufferSize, streamsLength);
 }
 
 BuffersQueue* CustomNodeLibraryInternalManager::getBuffersQueue(const std::string& name) {
-    return outputBuffers.find(name)->second.get();
+    auto it = outputBuffers.find(name);
+    if (it == outputBuffers.end())
+        return nullptr;
+    return it->second.get();
 }
 
 bool CustomNodeLibraryInternalManager::releaseBuffer(void* ptr) {
