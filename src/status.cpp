@@ -196,6 +196,21 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::CUSTOM_LOADER_INIT_FAILED, "Custom Loader LoadInit failed"},
     {StatusCode::CUSTOM_LOADER_ERROR, "Custom Loader Generic / Unknown Error"},
 
+    // Custom Node
+    {StatusCode::NODE_LIBRARY_ALREADY_LOADED, "Custom node library is alreadt loaded"},
+    {StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN, "Custom node library failed to open"},
+    {StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM, "Custo node library failed to load symbol"},
+    {StatusCode::NODE_LIBRARY_MISSING, "Custom node library not found"},
+    {StatusCode::NODE_LIBRARY_MISSING_OUTPUT, "Custom node output is missing"},
+    {StatusCode::NODE_LIBRARY_EXECUTION_FAILED, "Custom node failed during execution"},
+    {StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED, "Custom node has corrupted outputs handle"},
+    {StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT, "Custom node has corrupted number of outputs"},
+    {StatusCode::NODE_LIBRARY_INVALID_PRECISION, "Custom node has unspecified output precision"},
+    {StatusCode::NODE_LIBRARY_INVALID_SHAPE, "Custom node has invalid shape"},
+    {StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE, "Custom node has invalid content size"},
+    {StatusCode::NODE_LIBRARY_METADATA_FAILED, "Custom node failed on metadata call"},
+    {StatusCode::NODE_LIBRARY_OUTPUT_MISSING_NAME, "Custom node output is missing name"},
+
     // Binary inputs
     {StatusCode::INVALID_NO_OF_CHANNELS, "Invalid number of channels in binary input"},
     {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, "Binary input images for this pipeline are required to have the same resolution"},

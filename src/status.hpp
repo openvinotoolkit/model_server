@@ -294,7 +294,7 @@ public:
         if (it != statusMessageMap.end())
             this->message = std::make_unique<std::string>(it->second);
         else
-            this->message = std::make_unique<std::string>("Unknown error");
+            this->message = std::make_unique<std::string>("Undefined error");
     }
 
     Status(StatusCode code, const std::string& details) :
