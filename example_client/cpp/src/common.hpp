@@ -132,7 +132,7 @@ bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>
             return false;
         }
         entryOut.image.convertTo(entryOut.image, CV_32F);
-        cv::resize(entryOut.image, entryOut.image, cv::Size(224, 224)); // TODO: Leave original shape, add optional parameter
+        cv::resize(entryOut.image, entryOut.image, cv::Size(224, 224));  // TODO: Leave original shape, add optional parameter
         if (layout == "nchw") {
             entryOut.image = reorderMatToNchw(&entryOut.image);
         }

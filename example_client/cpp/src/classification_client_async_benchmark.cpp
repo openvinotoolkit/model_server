@@ -41,14 +41,13 @@ limitations under the License.
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/platform/types.h"
 #include "tensorflow/core/util/command_line_flags.h"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #include "tensorflow_serving/apis/get_model_metadata.pb.h"
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
+#include "common.hpp"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
 #include "opencv2/opencv.hpp"
-
-#include "common.hpp"
 
 using grpc::Channel;
 using grpc::ClientAsyncResponseReader;
@@ -381,7 +380,7 @@ public:
 
         auto it = response.mutable_metadata()->find("signature_def");
         if (it == response.metadata().end()) {
-            std::cout << "error reading metadata response" << std::endl;;
+            std::cout << "error reading metadata response" << std::endl;
             return false;
         }
         SignatureDefMap def;
@@ -485,7 +484,7 @@ int main(int argc, char** argv) {
     }
 
     const tensorflow::string host = config.address + ":" + config.port;
-    
+
     std::cout
         << "Address: " << host << std::endl
         << "Model name: " << config.modelName << std::endl;
