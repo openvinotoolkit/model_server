@@ -90,6 +90,8 @@ struct Configuration {
     tensorflow::int64 consumers = 8;
     tensorflow::int64 max_parallel_requests = 100;
     tensorflow::int64 benchmark_mode = 0;
+    tensorflow::int64 width = 224;
+    tensorflow::int64 height = 224;
 
     bool validate() const {
         if (imagesListPath.empty())
@@ -105,6 +107,8 @@ struct Configuration {
         if (benchmark_mode < 0 || benchmark_mode > 1)
             return false;
         if (layout != "binary" && layout != "nchw" && layout != "nhwc")
+            return false;
+        if (width <= 0 || height <= 0)
             return false;
         return true;
     }
@@ -454,7 +458,7 @@ int main(int argc, char** argv) {
         tensorflow::Flag("grpc_port", &config.port, "port to grpc service"),
         tensorflow::Flag("model_name", &config.modelName, "model name to request"),
         tensorflow::Flag("input_name", &config.inputName, "input tensor name with image"),
-        tensorflow::Flag("output_name", &config.outputName, "output tensor name with classification resulta"),
+        tensorflow::Flag("output_name", &config.outputName, "output tensor name with classification result"),
         tensorflow::Flag("iterations", &config.iterations, "number of requests to be send by each producer thread"),
         tensorflow::Flag("batch_size", &config.batchSize, "batch size of each iteration"),
         tensorflow::Flag("images_list", &config.imagesListPath, "path to a file with a list of labeled images"),
@@ -462,7 +466,9 @@ int main(int argc, char** argv) {
         tensorflow::Flag("producers", &config.producers, "number of threads asynchronously scheduling prediction"),
         tensorflow::Flag("consumers", &config.consumers, "number of threads receiving responses"),
         tensorflow::Flag("max_parallel_requests", &config.max_parallel_requests, "maximum number of parallel inference requests; 0=no limit"),
-        tensorflow::Flag("benchmark_mode", &config.benchmark_mode, "when enabled, there is no pre/post-processing step")};
+        tensorflow::Flag("benchmark_mode", &config.benchmark_mode, "when enabled, there is no pre/post-processing step"),
+        tensorflow::Flag("width", &config.width, "input images width will be resized to this value; not applied to binary input"),
+        tensorflow::Flag("height", &config.height, "input images height will be resized to this value; not applied to binary input")};
 
     tensorflow::string usage = tensorflow::Flags::Usage(argv[0], flagList);
     const bool result = tensorflow::Flags::Parse(&argc, argv, flagList);
@@ -500,7 +506,7 @@ int main(int argc, char** argv) {
         ServingClient<BinaryData>::start(host, config, images);
     } else {
         std::vector<CvMatData> images;
-        if (!readImagesCvMat(entries, images, config.layout)) {
+        if (!readImagesCvMat(entries, images, config.layout, config.width, config.height)) {
             std::cout << "Error reading opencv images" << std::endl;
             return -1;
         }

@@ -208,6 +208,8 @@ int main(int argc, char** argv) {
     tensorflow::int64 iterations = 0;
     tensorflow::string imagesListPath = "input_images.txt";
     tensorflow::string layout = "binary";
+    tensorflow::int64 width = 224;
+    tensorflow::int64 height = 224;
     std::vector<tensorflow::Flag> flagList = {
         tensorflow::Flag("grpc_address", &address, "url to grpc service"),
         tensorflow::Flag("grpc_port", &port, "port to grpc service"),
@@ -216,12 +218,14 @@ int main(int argc, char** argv) {
         tensorflow::Flag("output_name", &outputName, "output tensor name with classification result"),
         tensorflow::Flag("iterations", &iterations, "number of images per thread, by default each thread will use all images from list"),
         tensorflow::Flag("images_list", &imagesListPath, "path to a file with a list of labeled images"),
-        tensorflow::Flag("layout", &layout, "binary, nhwc or nchw")};
+        tensorflow::Flag("layout", &layout, "binary, nhwc or nchw"),
+        tensorflow::Flag("width", &width, "input images width will be resized to this value; not applied to binary input"),
+        tensorflow::Flag("height", &height, "input images height will be resized to this value; not applied to binary input")};
 
     tensorflow::string usage = tensorflow::Flags::Usage(argv[0], flagList);
     const bool result = tensorflow::Flags::Parse(&argc, argv, flagList);
 
-    if (!result || imagesListPath.empty() || iterations < 0 || (layout != "binary" && layout != "nchw" && layout != "nhwc")) {
+    if (!result || imagesListPath.empty() || iterations < 0 || (layout != "binary" && layout != "nchw" && layout != "nhwc") || width <= 0 || height <= 0) {
         std::cout << usage;
         return -1;
     }
@@ -257,7 +261,7 @@ int main(int argc, char** argv) {
         ServingClient::start(host, modelName, inputName, outputName, images, iterations);
     } else {
         std::vector<CvMatData> images;
-        if (!readImagesCvMat(entries, images, layout)) {
+        if (!readImagesCvMat(entries, images, layout, width, height)) {
             std::cout << "Error reading binary images" << std::endl;
             return -1;
         }

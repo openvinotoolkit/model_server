@@ -7,7 +7,7 @@ There are 3 clients:
 - _classification_client_async_benchmark_ - client using asynchronous gRPC API, testing accurracy and performance with real image data
 - _synthetic_client_async_benchmark_ - client using asynchronous gRPC API, testing performance with synthetic data, stripped out of OpenCV dependency
 
-The example clients image also contains test images required for accurracy measurements. It is also possible to custom images.
+The example clients image also contains test images required for accurracy measurements. It is also possible to use custom images.
 
 ## Prepare classification model
 
