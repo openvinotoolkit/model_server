@@ -16,25 +16,21 @@ Returns metadata in dictionary format:
 ``` python
 
 {
-    ...          
-    <version_number>: 
-        {
-            "inputs": {
-                <input_name>: {
-                    "shape": <input_shape>,
-                    "dtype": <input_dtype>,
-                    },                      
-                ...              
-            },           
-            "outputs": {
-                <output_name>: {
-                    "shape": <output_shape>,
-                    "dtype": <output_dtype>,
-                    },
-                ...              
-            }
-        },          
-        ...      
+    "model_version": <version_number>,
+    "inputs": {
+        <input_name>: {
+            "shape": <input_shape>,
+            "dtype": <input_dtype>,
+        },
+        ...
+    },
+    "outputs":
+        <output_name>: {
+            "shape": <output_shape>,
+            "dtype": <output_dtype>,
+        },
+        ...
+    }
 } 
 
 ```
