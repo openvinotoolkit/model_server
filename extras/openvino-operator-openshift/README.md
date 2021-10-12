@@ -71,7 +71,7 @@ NAME          TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
 ovms-sample   ClusterIP   172.25.199.210   <none>        8080/TCP,8081/TCP   8h
 ```
 
-The `ModelServer` service in OpenShift exposes [gRPC](docs/model_server_grpc_api.md) and [REST](../../docs/model_server_rest_api.md) API endpoints for processing AI inference requests.
+The `ModelServer` service in OpenShift exposes [gRPC](../../docs/model_server_grpc_api.md) and [REST](../../docs/model_server_rest_api.md) API endpoints for processing AI inference requests.
 
 The readiness of models for serving can be confirmed by the READY field status in the `oc get pods` output.
 The endpoints can be also tested with a simple `curl` command with a request to REST API endpoints from any pod in the cluster:
