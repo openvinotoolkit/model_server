@@ -260,7 +260,7 @@ enum class StatusCode {
 
     // Model control API
     OK_NOT_RELOADED, /*!< Operation succeeded but no config reload was needed */
-    OK_RELOADED,     /*!< Operation succeeded but no config reload was needed */
+    OK_RELOADED,     /*!< Operation succeeded and config reload was needed */
 
     STATUS_CODE_END
     // STATUS_CODE_END = last enum

@@ -30,27 +30,10 @@ StatusCode& operator++(StatusCode& statusCode) {
 }
 
 const std::unordered_set<StatusCode> standardWhiteList = {
-    // StatusCode::FILESYSTEM_ERROR,  // PRINTED
-    // StatusCode::JSON_SERIALIZATION_ERROR, // PRINTED
     StatusCode::GRPC_CHANNEL_ARG_WRONG_FORMAT, // INDICATOR(returned, but not printed)
-    // StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED, // PRINTED
-    // StatusCode::RESHAPE_REQUIRED, // PREDICT_REQUEST VALIDATION
-    // StatusCode::BATCHSIZE_CHANGE_REQUIRED, // PREDICT_REQUEST VALIDATION
-    // StatusCode::FORBIDDEN_MODEL_DYNAMIC_PARAMETER, // PRINTED
-    // StatusCode::REQUESTED_MODEL_TYPE_CHANGE, // PRINTED
     StatusCode::INVALID_MISSING_OUTPUT, // INDICATOR(returned, but not printed)
-    StatusCode::OV_CLONE_BLOB_ERROR, // USED?? todo
-    StatusCode::REST_NOT_FOUND, // REST
-    StatusCode::REST_COULD_NOT_PARSE_VERSION, // REST
     StatusCode::REST_MALFORMED_REQUEST,  // UNUSED
-    StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE, // REST
-    StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY, // USED??
-    StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT, // USED??
-    StatusCode::PIPELINE_MANUAL_GATHERING_FROM_MULTIPLE_NODES_NOT_SUPPORTED, // USED??
-    StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY, // USED??
-    StatusCode::IMAGE_PARSING_FAILED, // INDICATOR(returned, but not printed)
-    StatusCode::OK_NOT_RELOADED,
-    StatusCode::OK_RELOADED
+    StatusCode::IMAGE_PARSING_FAILED, // INDICATOR(returned, but not printed) - REST and GRPC needed?
 };
 
 TEST(StatusCodeTest, AllStatusCodesMapped) {
