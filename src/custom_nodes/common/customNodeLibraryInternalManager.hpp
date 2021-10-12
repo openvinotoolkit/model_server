@@ -15,34 +15,24 @@
 //*****************************************************************************
 #pragma once
 
-#include <atomic>
-#include <condition_variable>
-#include <future>
 #include <memory>
-#include <mutex>
-#include <queue>
-#include <thread>
-#include <vector>
+#include <string>
+#include <unordered_map>
 
-#include "../../queue.hpp"
+#include "../common/buffersqueue.hpp"
 
 namespace ovms {
 namespace custom_nodes_common {
 
-class BuffersQueue : protected Queue<char*> {
-    size_t singleBufferSize;
-    size_t size;
-    std::unique_ptr<char[]> memoryPool;
+class CustomNodeLibraryInternalManager {
+    std::unordered_map<std::string, std::unique_ptr<BuffersQueue>> outputBuffers;
 
 public:
-    BuffersQueue(size_t singleBufferSize, int streamsLength);
-    void* getBuffer();
-    bool returnBuffer(void* buffer);
-    const size_t getSize();
-    const size_t getSingleBufferSize();
-
-private:
-    int getBufferId(void* buffer);
+    CustomNodeLibraryInternalManager() = default;
+    bool createBuffersQueue(const std::string& name, size_t singleBufferSize, int streamsLength);
+    bool recreateBuffersQueue(const std::string& name, size_t singleBufferSize, int streamsLength);
+    BuffersQueue* getBuffersQueue(const std::string& name);
+    bool releaseBuffer(void* ptr);
 };
 }  // namespace custom_nodes_common
 }  // namespace ovms
