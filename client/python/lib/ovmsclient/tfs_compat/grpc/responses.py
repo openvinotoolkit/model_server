@@ -37,7 +37,6 @@ class GrpcPredictResponse(PredictResponse):
 class GrpcModelMetadataResponse(ModelMetadataResponse):
 
     def to_dict(self):
-        result_dict = {}
 
         signature_def = self.raw_response.metadata['signature_def']
         signature_map = get_model_metadata_pb2.SignatureDefMap()
@@ -61,7 +60,8 @@ class GrpcModelMetadataResponse(ModelMetadataResponse):
             ])
 
         version = self.raw_response.model_spec.version.value
-        result_dict[version] = dict([
+        result_dict = dict([
+            ("model_version", version),
             ("inputs", inputs_metadata),
             ("outputs", outputs_metadata)
         ])
