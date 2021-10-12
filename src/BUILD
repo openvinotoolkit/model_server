@@ -314,6 +314,11 @@ cc_binary(
         "custom_nodes/model_zoo_intel_object_detection/model_zoo_intel_object_detection.cpp",
         "custom_nodes/model_zoo_intel_object_detection/utils.hpp",
         "custom_node_interface.h",
+        "queue.hpp",
+        "custom_nodes/common/buffersqueue.hpp",
+        "custom_nodes/common/buffersqueue.cpp",
+        "custom_nodes/common/customNodeLibraryInternalManager.hpp",
+        "custom_nodes/common/customNodeLibraryInternalManager.cpp"
     ],
     deps = [
         "@opencv//:opencv"
