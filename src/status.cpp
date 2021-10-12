@@ -58,6 +58,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL, "Stateful model cannot be subscribed to pipeline"},
     {StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER, "Stateful model config parameter used for non stateful model"},
     {StatusCode::INVALID_MAX_SEQUENCE_NUMBER, "Sequence max number parameter too high"},
+    {StatusCode::UNKNOWN_ERROR, "Unknown error"},
 
     // Sequence management
     {StatusCode::SEQUENCE_MISSING, "Sequence with provided ID does not exist"},
