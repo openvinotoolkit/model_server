@@ -13,31 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <unordered_set>
 
-#include "test_utils.hpp"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "../status.hpp"
+#include "test_utils.hpp"
 
 namespace ovms {
 StatusCode& operator++(StatusCode& statusCode) {
     if (statusCode == StatusCode::STATUS_CODE_END) {
         throw std::out_of_range("for E& operator ++ (E&)");
     }
-    statusCode = StatusCode(static_cast<std::underlying_type<StatusCode>::type>(statusCode) +1);
+    statusCode = StatusCode(static_cast<std::underlying_type<StatusCode>::type>(statusCode) + 1);
     return statusCode;
 }
 
 const std::unordered_set<StatusCode> standardWhiteList = {
-    StatusCode::GRPC_CHANNEL_ARG_WRONG_FORMAT, // INDICATOR(returned, but not printed)
-    StatusCode::INVALID_MISSING_OUTPUT, // INDICATOR(returned, but not printed)
-    StatusCode::REST_MALFORMED_REQUEST,  // UNUSED
-    StatusCode::IMAGE_PARSING_FAILED, // INDICATOR(returned, but not printed) - REST and GRPC needed?
+    StatusCode::GRPC_CHANNEL_ARG_WRONG_FORMAT,  // INDICATOR(returned, but not printed)
+    StatusCode::INVALID_MISSING_OUTPUT,         // INDICATOR(returned, but not printed)
+    StatusCode::REST_MALFORMED_REQUEST,         // UNUSED
+    StatusCode::IMAGE_PARSING_FAILED,           // INDICATOR(returned, but not printed) - REST and GRPC needed?
 };
 
 TEST(StatusCodeTest, AllStatusCodesMapped) {
-    for(auto statusCode = StatusCode::OK; statusCode != StatusCode::STATUS_CODE_END; ++statusCode) {
+    for (auto statusCode = StatusCode::OK; statusCode != StatusCode::STATUS_CODE_END; ++statusCode) {
         if (standardWhiteList.find(statusCode) == standardWhiteList.end()) {
             spdlog::info("Checking statusCode: {}\n", statusCode);
             Status status = Status(statusCode);
@@ -46,4 +47,4 @@ TEST(StatusCodeTest, AllStatusCodesMapped) {
         }
     }
 }
-}   // namespace ovms
+}  // namespace ovms
