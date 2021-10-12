@@ -108,13 +108,13 @@ def test_ModelMetadataResponse_to_dict_valid(model_raw_metadata_response_dict):
     response_dict = response.to_dict()
 
     assert isinstance(response_dict, dict)
-    assert len(response_dict) == 1
+    assert len(response_dict) == 3
 
     version = model_raw_metadata_response_dict['version']
-    assert version in response_dict
-    assert 'inputs' in response_dict[version] and 'outputs' in response_dict[version]
+    assert all(key in response_dict for key in ["model_version", "inputs", "outputs"])
+    assert response_dict['model_version'] == version
 
-    inputs = response_dict[version]['inputs']
+    inputs = response_dict['inputs']
     assert len(inputs) == len(model_raw_metadata_response_dict['inputs'])
     for input in inputs:
         assert input in model_raw_metadata_response_dict['inputs']
@@ -124,7 +124,7 @@ def test_ModelMetadataResponse_to_dict_valid(model_raw_metadata_response_dict):
         assert (inputs[input]['dtype']
                 == DataType.Name(model_raw_metadata_response_dict['inputs'][input]['dtype']))
 
-    outputs = response_dict[version]['outputs']
+    outputs = response_dict['outputs']
     assert len(outputs) == len(model_raw_metadata_response_dict['outputs'])
     for output in outputs:
         assert output in model_raw_metadata_response_dict['outputs']
