@@ -296,3 +296,10 @@ MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE = [
     ("request", TypeError, 'request type should be HttpModelMetadataRequest, '
      'but is str')
 ]
+
+PREDICT_REQUEST_INVALID_REQUEST_TYPE = [
+    (requests.Request(), TypeError, 'request type should be HttpPredictRequest, '
+     'but is Request'),
+    ("request", TypeError, 'request type should be HttpPredictRequest, '
+     'but is str')
+]

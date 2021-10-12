@@ -19,9 +19,11 @@ import requests
 from ovmsclient.util.ovmsclient_export import ovmsclient_export
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
 from ovmsclient.tfs_compat.http.requests import (HttpModelStatusRequest,
-                                                 HttpModelMetadataRequest)
+                                                 HttpModelMetadataRequest,
+                                                 HttpPredictRequest)
 from ovmsclient.tfs_compat.http.responses import (HttpModelStatusResponse,
-                                                  HttpModelMetadataResponse)
+                                                  HttpModelMetadataResponse,
+                                                  HttpPredictResponse)
 
 
 class HttpClient(ServingClient):
@@ -59,7 +61,20 @@ class HttpClient(ServingClient):
             >>> type(response)
         '''
 
-        raise NotImplementedError
+        HttpClient._check_predict_request(request)
+
+        raw_response = None
+        try:
+            raw_response = self.session.post(f"http://{self.address}:{self.port}"
+                                             f"/v1/models/{request.model_name}"
+                                             f"/versions/{request.model_version}:predict",
+                                             data=request.parsed_inputs,
+                                             cert=self.client_key, verify=self.server_cert)
+        except requests.exceptions.RequestException as e_info:
+            raise ConnectionError('There was an error during sending PredictRequest. '
+                                  f'Http exited with:\n{e_info}')
+
+        return HttpPredictResponse(raw_response)
 
     def get_model_metadata(self, request):
         '''
@@ -167,6 +182,12 @@ class HttpClient(ServingClient):
     def _check_model_metadata_request(cls, request):
         if not isinstance(request, HttpModelMetadataRequest):
             raise TypeError('request type should be HttpModelMetadataRequest, '
+                            f'but is {type(request).__name__}')
+
+    @classmethod
+    def _check_predict_request(cls, request):
+        if not isinstance(request, HttpPredictRequest):
+            raise TypeError('request type should be HttpPredictRequest, '
                             f'but is {type(request).__name__}')
 
 
