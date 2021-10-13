@@ -154,25 +154,22 @@ class GrpcClient(ServingClient):
         return GrpcModelStatusResponse(raw_response)
 
     @classmethod
-    def _build(cls, config):
+    def _build(cls, url, tls_config):
+        
+        ServingClient._check_url(url)
 
-        ServingClient._check_config(config)
-
-        grpc_address = f"{config['address']}:{config['port']}"
-
-        if 'tls_config' in config:
+        if tls_config is not None:
+            ServingClient._check_tls_config(tls_config)
             server_cert, client_cert, client_key = ServingClient._prepare_certs(
-                config['tls_config'].get('server_cert_path'),
-                config['tls_config'].get('client_cert_path'),
-                config['tls_config'].get('client_key_path')
+                tls_config.get('server_cert_path'),
+                tls_config.get('client_cert_path'),
+                tls_config.get('client_key_path')
             )
-
             creds = ssl_channel_credentials(root_certificates=server_cert,
                                             private_key=client_key, certificate_chain=client_cert)
-
-            channel = secure_channel(grpc_address, creds)
+            channel = secure_channel(url, creds)
         else:
-            channel = insecure_channel(grpc_address)
+            channel = insecure_channel(url)
 
         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
         model_service_stub = model_service_pb2_grpc.ModelServiceStub(channel)
@@ -235,7 +232,7 @@ class GrpcClient(ServingClient):
 
 
 @ovmsclient_export("make_grpc_client", grpcclient="make_client")
-def make_grpc_client(config):
+def make_grpc_client(url, tls_config=None):
     '''
     Create GrpcClient object.
 
@@ -297,4 +294,5 @@ def make_grpc_client(config):
         >>> client = make_grpc_client(config)
         >>> print(client)
     '''
-    return GrpcClient._build(config)
+
+    return GrpcClient._build(url, tls_config)
