@@ -15,9 +15,9 @@
 #
 
 cc_binary(
-    name = "resnet_client_sync",
+    name = "classification_client_sync",
     srcs = [
-        "resnet_client_sync.cpp",
+        "classification_client_sync.cpp",
         "common.hpp",
     ],
     deps = [
@@ -31,9 +31,9 @@ cc_binary(
 )
 
 cc_binary(
-    name = "resnet_client_benchmark",
+    name = "classification_client_async_benchmark",
     srcs = [
-        "resnet_client_benchmark.cpp",
+        "classification_client_async_benchmark.cpp",
         "common.hpp",
     ],
     deps = [
@@ -43,5 +43,20 @@ cc_binary(
         "@org_tensorflow//tensorflow/core:framework",
         "@org_tensorflow//tensorflow/core:lib",
         "@opencv//:opencv",
+    ]
+)
+
+cc_binary(
+    name = "synthetic_client_async_benchmark",
+    srcs = [
+        "synthetic_client_async_benchmark.cpp",
+        "common.hpp",
+    ],
+    deps = [
+        "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_protobuf//:protobuf_lite",
+        "@org_tensorflow//tensorflow/core:framework",
+        "@org_tensorflow//tensorflow/core:lib",
     ]
 )
