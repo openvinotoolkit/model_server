@@ -41,6 +41,7 @@ limitations under the License.
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/platform/types.h"
 #include "tensorflow/core/util/command_line_flags.h"
+#include "tensorflow_serving/apis/get_model_metadata.pb.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
 #include "common.hpp"
@@ -57,6 +58,13 @@ using grpc::Status;
 using tensorflow::serving::PredictionService;
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
+
+using tensorflow::serving::GetModelMetadataRequest;
+using tensorflow::serving::GetModelMetadataResponse;
+using tensorflow::serving::SignatureDefMap;
+
+using proto_signature_map_t = google::protobuf::Map<std::string, tensorflow::TensorInfo>;
+using proto_tensor_map_t = google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>;
 
 template <typename T>
 struct AsyncClientCall {
@@ -82,6 +90,8 @@ struct Configuration {
     tensorflow::int64 consumers = 8;
     tensorflow::int64 max_parallel_requests = 100;
     tensorflow::int64 benchmark_mode = 0;
+    tensorflow::int64 width = 224;
+    tensorflow::int64 height = 224;
 
     bool validate() const {
         if (imagesListPath.empty())
@@ -97,6 +107,8 @@ struct Configuration {
         if (benchmark_mode < 0 || benchmark_mode > 1)
             return false;
         if (layout != "binary" && layout != "nchw" && layout != "nhwc")
+            return false;
+        if (width <= 0 || height <= 0)
             return false;
         return true;
     }
@@ -167,24 +179,25 @@ class ServingClient {
     CompletionQueue cq_;
 
 public:
-    ServingClient(std::shared_ptr<Channel> channel, const std::vector<T>& entries, const Configuration& config) :
+    ServingClient(std::shared_ptr<Channel> channel, const Configuration& config, const std::vector<T>& entries = {}) :
         stub_(PredictionService::NewStub(channel)) {
         this->config = config;
         this->entries = entries;
+    }
 
-        if (this->config.benchmark_mode == 1) {
-            google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs = *this->predictRequest.mutable_inputs();
-            tensorflow::int64 iteration = 1;
-            this->entries = selectEntries(this->entries, this->config.batchSize, iteration);
-            this->prepareBatchedInputs(inputs, this->entries);
-            this->predictRequest.mutable_model_spec()->set_name(this->config.modelName);
-            this->predictRequest.mutable_model_spec()->set_signature_name("serving_default");
-        }
+    bool prepareRequest() {
+        this->predictRequest.mutable_model_spec()->set_name(this->config.modelName);
+        this->predictRequest.mutable_model_spec()->set_signature_name("serving_default");
+        proto_tensor_map_t& inputs = *this->predictRequest.mutable_inputs();
+
+        tensorflow::int64 iteration = 1;
+        this->entries = selectEntries(this->entries, this->config.batchSize, iteration);
+        return this->prepareBatchedInputs(inputs, this->entries);
     }
 
     // Pre-processing function for binary images.
     // Images loaded from disk are packed into gRPC request proto.
-    bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<BinaryData>& entries) {
+    bool prepareBatchedInputs(proto_tensor_map_t& inputs, const std::vector<BinaryData>& entries) {
         tensorflow::TensorProto proto;
         proto.set_dtype(tensorflow::DataType::DT_STRING);
         for (const auto& entry : entries) {
@@ -197,7 +210,7 @@ public:
 
     // Pre-processing function for images in array format.
     // Images loaded from disk are packed into tensor_content in plain array format (using OpenCV) either in NCHW or NHWC layout.
-    bool prepareBatchedInputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& inputs, const std::vector<CvMatData>& entries) {
+    bool prepareBatchedInputs(proto_tensor_map_t& inputs, const std::vector<CvMatData>& entries) {
         tensorflow::TensorProto proto;
         proto.set_dtype(tensorflow::DataType::DT_FLOAT);
 
@@ -225,9 +238,9 @@ public:
         return true;
     }
 
-    // Post-processing function for resnet classification.
+    // Post-processing function for classification.
     // Most probable label is selected from the output.
-    bool interpretOutputs(google::protobuf::Map<tensorflow::string, tensorflow::TensorProto>& outputs, std::vector<tensorflow::int64>& predictedLabels) {
+    bool interpretOutputs(proto_tensor_map_t& outputs, std::vector<tensorflow::int64>& predictedLabels) {
         auto it = outputs.find(this->config.outputName);
         if (it == outputs.end()) {
             std::cout << "cannot find output " << this->config.outputName << std::endl;
@@ -242,6 +255,23 @@ public:
         }
         predictedLabels = argmax(tensor);
         return true;
+    }
+
+    void reportPredictionCorrectness(tensorflow::serving::PredictResponse& response, const std::vector<T>& selectedEntries) {
+        std::vector<tensorflow::int64> predictedLabels;
+        if (!this->interpretOutputs(*response.mutable_outputs(), predictedLabels)) {
+            std::cout << "error interpreting outputs" << std::endl;
+            this->failedIterations++;
+            return;
+        }
+
+        size_t numberOfCorrectLabels = 0;
+        for (size_t i = 0; i < predictedLabels.size(); i++) {
+            if (predictedLabels[i] == selectedEntries[i].expectedLabel) {
+                numberOfCorrectLabels++;
+            }
+        }
+        this->numberOfCorrectLabels += numberOfCorrectLabels;
     }
 
     bool schedulePredict(tensorflow::int64 iteration) {
@@ -309,20 +339,7 @@ public:
 
             // Postprocessing
             if (this->config.benchmark_mode == 0) {
-                std::vector<tensorflow::int64> predictedLabels;
-                if (!this->interpretOutputs(*response.mutable_outputs(), predictedLabels)) {
-                    std::cout << "error interpreting outputs" << std::endl;
-                    failedIterations++;
-                    continue;
-                }
-
-                size_t numberOfCorrectLabels = 0;
-                for (size_t i = 0; i < predictedLabels.size(); i++) {
-                    if (predictedLabels[i] == call->selectedEntries[i].expectedLabel) {
-                        numberOfCorrectLabels++;
-                    }
-                }
-                this->numberOfCorrectLabels += numberOfCorrectLabels;
+                this->reportPredictionCorrectness(response, call->selectedEntries);
             }
         }
     }
@@ -333,6 +350,10 @@ public:
 
     tensorflow::int64 getFailedIterations() const {
         return this->failedIterations;
+    }
+
+    size_t getRequestBatchSize() {
+        return this->predictRequest.mutable_inputs()->begin()->second.mutable_tensor_shape()->dim(0).size();
     }
 
     void scheduler() {
@@ -347,10 +368,42 @@ public:
         }
     }
 
-    static void start(const tensorflow::string& address, const std::vector<T>& entries, const Configuration& config) {
-        ServingClient<T> client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()), entries, config);
+    bool getEndpointInputsMetadata(const Configuration& config, proto_signature_map_t& inputsMetadata) {
+        GetModelMetadataRequest request;
+        GetModelMetadataResponse response;
+        ClientContext context;
+        request.mutable_metadata_field()->Add("signature_def");
+        *request.mutable_model_spec()->mutable_name() = config.modelName;
+        auto status = stub_->GetModelMetadata(&context, request, &response);
+
+        if (!status.ok()) {
+            std::cout << "gRPC call return code: " << status.error_code() << ": "
+                      << status.error_message() << std::endl;
+            return false;
+        }
+
+        auto it = response.mutable_metadata()->find("signature_def");
+        if (it == response.metadata().end()) {
+            std::cout << "error reading metadata response" << std::endl;
+            return false;
+        }
+        SignatureDefMap def;
+        def.ParseFromString(*it->second.mutable_value());
+        inputsMetadata = *(*def.mutable_signature_def())["serving_default"].mutable_inputs();
+        return true;
+    }
+
+    static void start(const tensorflow::string& address, const Configuration& config, const std::vector<T>& entries = {}) {
+        grpc::ChannelArguments args;
+        args.SetMaxReceiveMessageSize(-1);
+        ServingClient<T> client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args), config, entries);
+        if (config.benchmark_mode == 1) {
+            if (!client.prepareRequest()) {
+                return;
+            }
+        }
         std::vector<std::thread> threads;
-        std::cout << "Starting the workload" << std::endl;
+        std::cout << "\nRunning the workload..." << std::endl;
         auto begin = std::chrono::high_resolution_clock::now();
         for (int i = 0; i < config.consumers; i++) {
             threads.emplace_back(std::thread(&ServingClient<T>::asyncCompleteRpc, &client));
@@ -366,6 +419,7 @@ public:
         auto totalTime = (duration.count() / 1000);
         float accurracy = (client.getNumberOfCorrectLabels() * 100) / (config.iterations * config.producers * config.batchSize);
         float avgFps = (1000 / ((float)totalTime / (float)(config.iterations * config.producers * config.batchSize)));
+
         std::cout << "========================\n        Summary\n========================" << std::endl;
         if (config.benchmark_mode == 0) {
             std::cout << "Benchmark mode: False\nAccuracy: " << accurracy << "%" << std::endl;
@@ -412,7 +466,9 @@ int main(int argc, char** argv) {
         tensorflow::Flag("producers", &config.producers, "number of threads asynchronously scheduling prediction"),
         tensorflow::Flag("consumers", &config.consumers, "number of threads receiving responses"),
         tensorflow::Flag("max_parallel_requests", &config.max_parallel_requests, "maximum number of parallel inference requests; 0=no limit"),
-        tensorflow::Flag("benchmark_mode", &config.benchmark_mode, "when enabled, there is no pre/post-processing step")};
+        tensorflow::Flag("benchmark_mode", &config.benchmark_mode, "when enabled, there is no pre/post-processing step"),
+        tensorflow::Flag("width", &config.width, "input images width will be resized to this value; not applied to binary input"),
+        tensorflow::Flag("height", &config.height, "input images height will be resized to this value; not applied to binary input")};
 
     tensorflow::string usage = tensorflow::Flags::Usage(argv[0], flagList);
     const bool result = tensorflow::Flags::Parse(&argc, argv, flagList);
@@ -433,13 +489,13 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    std::cout
-        << "Address: " << config.address << std::endl
-        << "Port: " << config.port << std::endl
-        << "Images list path: " << config.imagesListPath << std::endl
-        << "Layout: " << config.layout << std::endl;
-
     const tensorflow::string host = config.address + ":" + config.port;
+
+    std::cout
+        << "Address: " << host << std::endl
+        << "Model name: " << config.modelName << std::endl;
+
+    std::cout << "Images list path: " << config.imagesListPath << std::endl;
 
     if (config.layout == "binary") {
         std::vector<BinaryData> images;
@@ -447,15 +503,14 @@ int main(int argc, char** argv) {
             std::cout << "Error reading binary images" << std::endl;
             return -1;
         }
-        ServingClient<BinaryData>::start(host, images, config);
+        ServingClient<BinaryData>::start(host, config, images);
     } else {
         std::vector<CvMatData> images;
-        if (!readImagesCvMat(entries, images, config.layout)) {
+        if (!readImagesCvMat(entries, images, config.layout, config.width, config.height)) {
             std::cout << "Error reading opencv images" << std::endl;
             return -1;
         }
-        ServingClient<CvMatData>::start(host, images, config);
+        ServingClient<CvMatData>::start(host, config, images);
     }
-
     return 0;
 }

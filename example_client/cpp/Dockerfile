@@ -93,8 +93,8 @@ COPY .bazelrc WORKSPACE /build/
 COPY external /build/external/
 COPY third_party /build/third_party/
 
-RUN mkdir -p /opt/intel/openvino/opencv/ && ln -sf /usr/local/lib /opt/intel/openvino/opencv/
-RUN mkdir -p /opt/intel/openvino/opencv/include && ln -sf /usr/local/include/opencv4/opencv2 /opt/intel/openvino/opencv/include
+RUN mkdir -p /opt/intel/openvino/extras/opencv/ && ln -sf /usr/local/lib /opt/intel/openvino/extras/opencv/
+RUN mkdir -p /opt/intel/openvino/extras/opencv/include && ln -sf /usr/local/include/opencv4/opencv2 /opt/intel/openvino/extras/opencv/include
 
 RUN bazel build \
     @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
@@ -106,16 +106,18 @@ RUN bazel build \
 
 COPY src/ /build/src/
 
-RUN bazel build //src:resnet_client_sync
-RUN bazel build //src:resnet_client_benchmark
+RUN bazel build //src:all
+
+ENV LD_LIBRARY_PATH=/opt/intel/openvino/extras/opencv/lib
 
 FROM ubuntu:20.04 as release
 
 WORKDIR /clients/
 RUN mkdir -p /clients/libs/ && mkdir -p /clients/images
 COPY --from=base_build \
-    /build/bazel-bin/src/resnet_client_sync \
-    /build/bazel-bin/src/resnet_client_benchmark \
+    /build/bazel-bin/src/classification_client_sync \
+    /build/bazel-bin/src/classification_client_async_benchmark \
+    /build/bazel-bin/src/synthetic_client_async_benchmark \
     /clients/
 COPY --from=base_build \
     /usr/local/lib/libopencv_core.so* \

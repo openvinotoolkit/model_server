@@ -116,7 +116,7 @@ bool readImagesBinary(const std::vector<Entry>& entriesIn, std::vector<BinaryDat
     return true;
 }
 
-bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>& entriesOut, const tensorflow::string& layout) {
+bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>& entriesOut, const tensorflow::string& layout, tensorflow::int64 width, tensorflow::int64 height) {
     entriesOut.clear();
 
     for (const auto& entryIn : entriesIn) {
@@ -132,7 +132,7 @@ bool readImagesCvMat(const std::vector<Entry>& entriesIn, std::vector<CvMatData>
             return false;
         }
         entryOut.image.convertTo(entryOut.image, CV_32F);
-        cv::resize(entryOut.image, entryOut.image, cv::Size(224, 224));
+        cv::resize(entryOut.image, entryOut.image, cv::Size(width, height));
         if (layout == "nchw") {
             entryOut.image = reorderMatToNchw(&entryOut.image);
         }
