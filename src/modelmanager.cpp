@@ -50,6 +50,7 @@
 #include "pipelinedefinition.hpp"
 #include "s3filesystem.hpp"
 #include "schema.hpp"
+#include "stringutils.hpp"
 
 namespace ovms {
 
@@ -84,7 +85,6 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory) :
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Model cache is enabled: {}", this->modelCacheDirectory);
         }
     }
-
     this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManager>();
     if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
         SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
@@ -99,6 +99,55 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory) :
         } catch (...) {
             SPDLOG_CRITICAL("Custom CPU extention loading has failed with an unknown error!");
             throw;
+        }
+    }
+    this->details();
+}
+
+static inline std::string joins(const std::vector<std::string>& listOfStrings, const std::string delimiter) {
+    std::stringstream ss;
+    auto it = listOfStrings.cbegin();
+    for (; it != (listOfStrings.end() - 1); ++it) {
+        ss << *it << delimiter;
+    }
+    if (it != listOfStrings.end()) {
+        ss << *it;
+    }
+    return ss.str();
+}
+
+void ModelManager::details() {
+    auto availableDevices = ieCore->GetAvailableDevices();
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Available devices for Open VINO: {}", joins(availableDevices, std::string(", ")));
+    auto availablePlugins = availableDevices;
+    availablePlugins.emplace_back("AUTO");
+    availablePlugins.emplace_back("HETERO");
+    availablePlugins.emplace_back("MULTI");
+    const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
+    for (const auto& plugin : availablePlugins) {
+        std::vector<std::string> supportedConfigKeys;
+        try {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging plugin: {}; configuration", plugin);
+            std::vector<std::string> supportedConfigKeys2 = ieCore->GetMetric(plugin, supportedConfigKey);
+            supportedConfigKeys = std::move(supportedConfigKeys2);
+        } catch (std::exception& e) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}, key: {} value. Error: {}", plugin, supportedConfigKey, e.what());
+        } catch (...) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}, key: {} value.", plugin, supportedConfigKey);
+        }
+        for (auto& key : supportedConfigKeys) {
+            std::string value;
+            try {
+                auto paramValue = ieCore->GetConfig(plugin, key);
+                value = paramValue.as<std::string>();
+            } catch (std::exception& e) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}, config key: {}; Error: {}", plugin, key, e.what());
+                continue;
+            } catch (...) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}, config key: {}", plugin, key);
+                continue;
+            }
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Global plugin: {}, key: {}, value :{}", plugin, key, value);
         }
     }
 }

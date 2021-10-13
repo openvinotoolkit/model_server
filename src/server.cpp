@@ -182,6 +182,7 @@ std::vector<std::unique_ptr<Server>> startGRPCServer(
 
     logConfig(config);
     auto& manager = ModelManager::getInstance();
+    manager.details();
     status = manager.start();
     if (!status.ok()) {
         SPDLOG_ERROR("ovms::ModelManager::Start() Error: {}", status.string());
