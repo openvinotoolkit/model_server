@@ -252,69 +252,104 @@ URL_VALID = [
 # expected_exception, expected_message,
 # side_effect_dict = {"method_name": method_name_side_effect})
 URL_INVALID = [
-    ({
-        "url": "localhost"
-    },
-    {"_check_address": (CallCount.ZERO, None),
-      "_check_port": (CallCount.ZERO, None)},
-     ValueError, 'url must be a string in format <address>:<port>'),
-
-    ({
-        "url": 9000
-    },
-     {"_check_address": (CallCount.ZERO, None),
-      "_check_port": (CallCount.ZERO, None)},
-     TypeError, 'url must be a string in format <address>:<port>',
+    (
+        {
+            "url": "localhost"
+        },
+        {
+            "_check_address": (CallCount.ZERO, None),
+            "_check_port": (CallCount.ZERO, None)
+        },
+        ValueError, 'url must be a string in format <address>:<port>'
     ),
 
-    ({
-        "url": "address:9000",
-    },
-     {"_check_address": (CallCount.ONE, ValueError('address is not valid')),
-      "_check_port": (CallCount.ZERO, None)},
-     ValueError, 'address is not valid'),
+    (
+        {
+            "url": 9000
+        },
+        {
+            "_check_address": (CallCount.ZERO, None),
+            "_check_port": (CallCount.ZERO, None)
+        },
+        TypeError, 'url must be a string in format <address>:<port>',
+    ),
 
-    ({
-        "url": "localhost:string"
-    },
-     {"_check_address": (CallCount.ONE, None),
-      "_check_port": (CallCount.ONE, TypeError('port should be of type int'))},
-     TypeError, 'port should be of type int'),
+    (
+        {
+            "url": "address:9000",
+        },
+        {
+            "_check_address": (CallCount.ONE, ValueError('address is not valid')),
+            "_check_port": (CallCount.ZERO, None)
+        },
+        ValueError, 'address is not valid'
+    ),
 
-    ({
-        "url": "localhost:9000:9001"
-    },
-     {"_check_address": (CallCount.ONE, None),
-      "_check_port": (CallCount.ONE, TypeError('port should be of type int'))},
-     TypeError, 'port should be of type int'),
+    (
+        {
+            "url": "localhost:string"
+        },
+        {
+            "_check_address": (CallCount.ONE, None),
+            "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
+        },
+        TypeError, 'port should be of type int'
+    ),
 
-    ({
-        "url": "localhost:[9000]"
-    },
-     {"_check_address": (CallCount.ONE, None),
-      "_check_port": (CallCount.ONE, TypeError('port should be of type int'))},
-     TypeError, 'port should be of type int'),
+    (
+        {
+            "url": "localhost:9000:9001"
+        },
+        {
+            "_check_address": (CallCount.ONE, None),
+            "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
+        },
+        TypeError, 'port should be of type int'
+    ),
 
-    ({
-        "url": "localhost:9000abc"
-    },
-     {"_check_address": (CallCount.ONE, None),
-      "_check_port": (CallCount.ONE, TypeError('port should be of type int'))},
-     TypeError, 'port should be of type int'),
+    (
+        {
+            "url": "localhost:[9000]"
+        },
+        {
+            "_check_address": (CallCount.ONE, None),
+            "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
+        },
+        TypeError, 'port should be of type int'
+    ),
 
-    ({
-        "url": f"localhost:{2**16}"
-    },
-     {"_check_address": (CallCount.ONE, None),
-      "_check_port": (CallCount.ONE, ValueError(f"port should be in range <0, {2**16-1}>"))},
-     ValueError, f"port should be in range <0, {2**16-1}>"),
-     
-    ({
-        "url": f"localhost:-1"
-    },
-     {"_check_address": (CallCount.ONE, None),
-      "_check_port": (CallCount.ONE, ValueError(f"port should be in range <0, {2**16-1}>"))},
-     ValueError, f"port should be in range <0, {2**16-1}>")
+    (
+        {
+            "url": "localhost:9000abc"
+        },
+        {
+            "_check_address": (CallCount.ONE, None),
+            "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
+        },
+        TypeError, 'port should be of type int'
+    ),
+
+    (
+        {
+            "url": f"localhost:{2**16}"
+        },
+        {
+            "_check_address": (CallCount.ONE, None),
+            "_check_port": (CallCount.ONE, ValueError(f"port should be in range <0, {2**16-1}>"))
+        },
+        ValueError, f"port should be in range <0, {2**16-1}>"
+    ),
+
+    (
+        {
+            "url": "localhost:-1"
+        },
+        {
+            "_check_address": (CallCount.ONE, None),
+            "_check_port": (CallCount.ONE, ValueError(f"port should be in range <0, {2**16-1}>"))
+        },
+        ValueError, f"port should be in range <0, {2**16-1}>"
+    )
 ]
 
 # (server_cert_path, client_cert_path, client_key_path,

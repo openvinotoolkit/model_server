@@ -494,173 +494,233 @@ PREDICT_INVAlID_GRPC = [
 # (config_dict,
 # method_call_count_dict= {"method_name": CallCount.NumberOfCalls})
 BUILD_VALID = [
-    ({
-        "url": "localhost:9000"
-    }, {"_check_url": CallCount.ONE, 
-        "_check_tls_config": CallCount.ZERO, "_prepare_certs": CallCount.ZERO}),
-    ({
-        "url": "19.117.63.126:1"
-    }, {"_check_url": CallCount.ONE, 
-        "_check_tls_config": CallCount.ZERO, "_prepare_certs": CallCount.ZERO}),
-    ({
-        "url": f"cluster.cloud.iotg.intel.com:{2**16-1}"
-    }, {"_check_url": CallCount.ONE, 
-        "_check_tls_config": CallCount.ZERO, "_prepare_certs": CallCount.ZERO}),
-    ({
-        "url": "localhost:9000",
-        "tls_config": {
-            "server_cert_path": "valid_path"
+    (
+        {
+            "url": "localhost:9000"
+        },
+        {
+            "_check_url": CallCount.ONE,
+            "_check_tls_config": CallCount.ZERO,
+            "_prepare_certs": CallCount.ZERO
         }
-    }, {"_check_url": CallCount.ONE, 
-        "_check_tls_config": CallCount.ONE, "_prepare_certs": CallCount.ONE}),
-    ({
-        "url": "localhost:9000",
-        "tls_config": {
-            "client_key_path": PATH_VALID,
-            "client_cert_path": PATH_VALID,
-            "server_cert_path": PATH_VALID
+    ),
+    (
+        {
+            "url": "19.117.63.126:1"
+        },
+        {
+            "_check_url": CallCount.ONE,
+            "_check_tls_config": CallCount.ZERO,
+            "_prepare_certs": CallCount.ZERO
         }
-    }, {"_check_url": CallCount.ONE, 
-        "_check_tls_config": CallCount.ONE, "_prepare_certs": CallCount.ONE})
+    ),
+    (
+        {
+            "url": f"cluster.cloud.iotg.intel.com:{2**16-1}"
+        },
+        {
+            "_check_url": CallCount.ONE,
+            "_check_tls_config": CallCount.ZERO,
+            "_prepare_certs": CallCount.ZERO
+        }
+    ),
+    (
+        {
+            "url": "localhost:9000",
+            "tls_config": {
+                "server_cert_path": "valid_path"
+            }
+        },
+        {
+            "_check_url": CallCount.ONE,
+            "_check_tls_config": CallCount.ONE,
+            "_prepare_certs": CallCount.ONE
+        }
+    ),
+    (
+        {
+            "url": "localhost:9000",
+            "tls_config": {
+                "client_key_path": PATH_VALID,
+                "client_cert_path": PATH_VALID,
+                "server_cert_path": PATH_VALID
+            }
+        },
+        {
+            "_check_url": CallCount.ONE,
+            "_check_tls_config": CallCount.ONE,
+            "_prepare_certs": CallCount.ONE
+        }
+    )
 ]
 
 # (config_dict,
 # method_call_dict= {"method_name": (CallCount.NumberOfCalls, error_raised)},
 # expected_exception, expected_message)
 BUILD_INVALID_CONFIG = [
-    ({
-        "url": "localhost"
-    },
-    {
-        "_check_url": (CallCount.ONE, ValueError("url must be a string in format <address>:<port>")),
-        "_check_tls_config": (CallCount.ZERO, None),
-        "_prepare_certs": (CallCount.ZERO, None)
-    },
-    ValueError, "url must be a string in format <address>:<port>")
-    ,
+    (
+        {
+            "url": "localhost"
+        },
+        {
+            "_check_url": (CallCount.ONE, ValueError("url must be a string "
+                                                     "in format <address>:<port>")),
+            "_check_tls_config": (CallCount.ZERO, None),
+            "_prepare_certs": (CallCount.ZERO, None)
+        },
+        ValueError, "url must be a string in format <address>:<port>"
+    ),
 
-    ({
-        "url": 123
-    },
-    {
-        "_check_url": (CallCount.ONE, TypeError("url must be a string in format <address>:<port>")),
-        "_check_tls_config": (CallCount.ZERO, None),
-        "_prepare_certs": (CallCount.ZERO, None)
-    },
-    TypeError, "url must be a string in format <address>:<port>",),
-    ({
-        "url": "address:9000",
-    },
-    {
-        "_check_url": (CallCount.ONE, ValueError("address is not valid")),
-        "_check_tls_config": (CallCount.ZERO, None),
-        "_prepare_certs": (CallCount.ZERO, None)
-    },
-    ValueError, "address is not valid"),
+    (
+        {
+            "url": 123
+        },
+        {
+            "_check_url": (CallCount.ONE, TypeError("url must be a string "
+                                                    "in format <address>:<port>")),
+            "_check_tls_config": (CallCount.ZERO, None),
+            "_prepare_certs": (CallCount.ZERO, None)
+        },
+        TypeError, "url must be a string in format <address>:<port>"
+    ),
 
-    ({
-        "url": "localhost:port"
-    },
-    {
-        "_check_url": (CallCount.ONE, TypeError("port should be of type int")),
-        "_check_tls_config": (CallCount.ZERO, None),
-        "_prepare_certs": (CallCount.ZERO, None)
-    },
-    TypeError, "port should be of type int"),
+    (
+        {
+            "url": "address:9000",
+        },
+        {
+            "_check_url": (CallCount.ONE, ValueError("address is not valid")),
+            "_check_tls_config": (CallCount.ZERO, None),
+            "_prepare_certs": (CallCount.ZERO, None)
+        },
+        ValueError, "address is not valid"
+    ),
 
-    ({
-        "url": f"localhost:{2**16}"
-    },
-    {
-        "_check_url": (CallCount.ONE, ValueError(f"port should be in range <0, {2**16-1}>")),
-        "_check_tls_config": (CallCount.ZERO, None),
-        "_prepare_certs": (CallCount.ZERO, None)
-    },
-    ValueError, f"port should be in range <0, {2**16-1}>"),
+    (
+        {
+            "url": "localhost:port"
+        },
+        {
+            "_check_url": (CallCount.ONE, TypeError("port should be of type int")),
+            "_check_tls_config": (CallCount.ZERO, None),
+            "_prepare_certs": (CallCount.ZERO, None)
+        },
+        TypeError, "port should be of type int"
+    ),
 
-    ({
-        "url": "localhost:9000",
-        "tls_config": 123
-    },
-    {
-        "_check_url": (CallCount.ONE, None),
-        "_check_tls_config": (CallCount.ONE, TypeError("tls_config should be of type dict")),
-        "_prepare_certs": (CallCount.ZERO, None)
-    },
-    TypeError, "tls_config should be of type dict"),
+    (
+        {
+            "url": f"localhost:{2**16}"
+        },
+        {
+            "_check_url": (CallCount.ONE, ValueError(f"port should be in range <0, {2**16-1}>")),
+            "_check_tls_config": (CallCount.ZERO, None),
+            "_prepare_certs": (CallCount.ZERO, None)
+        },
+        ValueError, f"port should be in range <0, {2**16-1}>"
+    ),
 
-    ({
-        "url": "localhost:9000",
-        "tls_config": {
+    (
+        {
+            "url": "localhost:9000",
+            "tls_config": 123
+        },
+        {
+            "_check_url": (CallCount.ONE, None),
+            "_check_tls_config": (CallCount.ONE, TypeError("tls_config should be of type dict")),
+            "_prepare_certs": (CallCount.ZERO, None)
+        },
+        TypeError, "tls_config should be of type dict"
+    ),
 
-        }
-    },
-    {
-        "_check_url": (CallCount.ONE, None),
-        "_check_tls_config": (CallCount.ONE, ValueError("server_cert_path is not defined in tls_config")),
-        "_prepare_certs": (CallCount.ZERO, None)
-    },
-    ValueError, "server_cert_path is not defined in tls_config"),
+    (
+        {
+            "url": "localhost:9000",
+            "tls_config": {
 
-    ({
-        "url": "10.20.30.40:1000",
-        "tls_config": {
-            "server_cert_path": PATH_VALID,
-            "client_key_path": PATH_VALID
-        }
-    },
-    {
-        "_check_url": (CallCount.ONE, None),
-        "_check_tls_config": (CallCount.ONE, ValueError("none or both client_key_path and client_cert_path are required in tls_config")),
-        "_prepare_certs": (CallCount.ZERO, None)
-    },
-    ValueError, "none or both client_key_path and client_cert_path are required in tls_config"),
+            }
+        },
+        {
+            "_check_url": (CallCount.ONE, None),
+            "_check_tls_config": (CallCount.ONE, ValueError("server_cert_path is not defined "
+                                                            "in tls_config")),
+            "_prepare_certs": (CallCount.ZERO, None)
+        },
+        ValueError, "server_cert_path is not defined in tls_config"
+    ),
 
-    ({
-        "url": "localhost:9000",
-        "tls_config": {
-            "server_cert_path": PATH_VALID,
-            "client_key_path": PATH_VALID,
-            "client_cert_path": PATH_VALID,
-            "invalid_key_name": PATH_VALID
-        }
-    },
-    {
-        "_check_url": (CallCount.ONE, None),
-        "_check_tls_config": (CallCount.ONE, ValueError("invalid_key_name is not valid tls_config key")),
-        "_prepare_certs": (CallCount.ZERO, None)
-    },
-    ValueError, "invalid_key_name is not valid tls_config key"),
+    (
+        {
+            "url": "10.20.30.40:1000",
+            "tls_config": {
+                "server_cert_path": PATH_VALID,
+                "client_key_path": PATH_VALID
+            }
+        },
+        {
+            "_check_url": (CallCount.ONE, None),
+            "_check_tls_config": (CallCount.ONE, ValueError("none or both client_key_path "
+                                                            "and client_cert_path are required "
+                                                            "in tls_config")),
+            "_prepare_certs": (CallCount.ZERO, None)
+        },
+        ValueError, "none or both client_key_path and client_cert_path are required in tls_config"
+    ),
 
-    ({
-        "url": "localhost:9000",
-        "tls_config": {
-            "server_cert_path": PATH_VALID,
-            "client_key_path": PATH_VALID,
-            "client_cert_path": 123,
-        }
-    },
-    {
-        "_check_url": (CallCount.ONE, None),
-        "_check_tls_config": (CallCount.ONE, TypeError("client_cert_path type should be string but is type int")),
-        "_prepare_certs": (CallCount.ZERO, None)
-    },
-    TypeError, "client_cert_path type should be string but is type int"),
+    (
+        {
+            "url": "localhost:9000",
+            "tls_config": {
+                "server_cert_path": PATH_VALID,
+                "client_key_path": PATH_VALID,
+                "client_cert_path": PATH_VALID,
+                "invalid_key_name": PATH_VALID
+            }
+        },
+        {
+            "_check_url": (CallCount.ONE, None),
+            "_check_tls_config": (CallCount.ONE, ValueError("invalid_key_name is "
+                                                            "not valid tls_config key")),
+            "_prepare_certs": (CallCount.ZERO, None)
+        },
+        ValueError, "invalid_key_name is not valid tls_config key"
+    ),
 
-    ({
-        "url": "localhost:9000",
-        "tls_config": {
-            "server_cert_path": PATH_VALID,
-            "client_key_path": "invalid_path",
-            "client_cert_path": PATH_VALID,
-        }
-    },
-    {
-        "_check_url": (CallCount.ONE, None),
-        "_check_tls_config": (CallCount.ONE, ValueError("invalid_path is not valid path to file")),
-        "_prepare_certs": (CallCount.ZERO, None)
-    },
-    ValueError,  "invalid_path is not valid path to file"),
+    (
+        {
+            "url": "localhost:9000",
+            "tls_config": {
+                "server_cert_path": PATH_VALID,
+                "client_key_path": PATH_VALID,
+                "client_cert_path": 123,
+            }
+        },
+        {
+            "_check_url": (CallCount.ONE, None),
+            "_check_tls_config": (CallCount.ONE, TypeError("client_cert_path type should be string "
+                                                           "but is type int")),
+            "_prepare_certs": (CallCount.ZERO, None)
+        },
+        TypeError, "client_cert_path type should be string but is type int"
+    ),
+
+    (
+        {
+            "url": "localhost:9000",
+            "tls_config": {
+                "server_cert_path": PATH_VALID,
+                "client_key_path": "invalid_path",
+                "client_cert_path": PATH_VALID,
+            }
+        },
+        {
+            "_check_url": (CallCount.ONE, None),
+            "_check_tls_config": (CallCount.ONE, ValueError("invalid_path is not valid "
+                                                            "path to file")),
+            "_prepare_certs": (CallCount.ZERO, None)
+        },
+        ValueError,  "invalid_path is not valid path to file"
+    ),
 
 ]
 
@@ -668,48 +728,57 @@ BUILD_INVALID_CONFIG = [
 # method_call_dict= {"method_name": (CallCount.NumberOfCalls, error_raised)},
 # expected_exception, expected_message)
 BUILD_INVALID_CERTS = [
-    ({
-        "url": "localhost:9000",
-        "tls_config": {
-            "server_cert_path": PATH_VALID,
-            "client_key_path": "path_to_invalid_private_key",
-            "client_cert_path": PATH_VALID,
-        }
-    },
-    {
-        "_check_url": (CallCount.ONE, None),
-        "_check_tls_config": (CallCount.ONE, None),
-        "_prepare_certs": (CallCount.ONE, ValueError("path_to_invalid_private_key file is not valid private key"))
-    },
-    ValueError, "path_to_invalid_private_key file is not valid private key"),
+    (
+        {
+            "url": "localhost:9000",
+            "tls_config": {
+                "server_cert_path": PATH_VALID,
+                "client_key_path": "path_to_invalid_private_key",
+                "client_cert_path": PATH_VALID,
+            }
+        },
+        {
+            "_check_url": (CallCount.ONE, None),
+            "_check_tls_config": (CallCount.ONE, None),
+            "_prepare_certs": (CallCount.ONE, ValueError("path_to_invalid_private_key file "
+                                                         "is not valid private key"))
+        },
+        ValueError, "path_to_invalid_private_key file is not valid private key"
+    ),
 
-    ({
-        "url": "localhost:9000",
-        "tls_config": {
-            "server_cert_path": "path_to_invalid_server_certificate",
-            "client_key_path": PATH_VALID,
-            "client_cert_path": PATH_VALID,
-        }
-    },
-    {
-        "_check_url": (CallCount.ONE, None),
-        "_check_tls_config": (CallCount.ONE, None),
-        "_prepare_certs": (CallCount.ONE, ValueError("path_to_invalid_server_certificate is not valid certificate"))
-    },
-    ValueError, "path_to_invalid_server_certificate is not valid certificate"),
+    (
+        {
+            "url": "localhost:9000",
+            "tls_config": {
+                "server_cert_path": "path_to_invalid_server_certificate",
+                "client_key_path": PATH_VALID,
+                "client_cert_path": PATH_VALID,
+            }
+        },
+        {
+            "_check_url": (CallCount.ONE, None),
+            "_check_tls_config": (CallCount.ONE, None),
+            "_prepare_certs": (CallCount.ONE, ValueError("path_to_invalid_server_certificate "
+                                                         "is not valid certificate"))
+        },
+        ValueError, "path_to_invalid_server_certificate is not valid certificate"
+    ),
 
-    ({
-        "url": "localhost:9000",
-        "tls_config": {
-            "server_cert_path": PATH_VALID,
-            "client_key_path": PATH_VALID,
-            "client_cert_path": "path_to_invalid_client_certificate",
-        }
-    },
-    {
-        "_check_url": (CallCount.ONE, None),
-        "_check_tls_config": (CallCount.ONE, None),
-        "_prepare_certs": (CallCount.ONE, ValueError("path_to_invalid_client_certificate is not valid certificate"))
-    },
-    ValueError,  "path_to_invalid_client_certificate is not valid certificate"),
+    (
+        {
+            "url": "localhost:9000",
+            "tls_config": {
+                "server_cert_path": PATH_VALID,
+                "client_key_path": PATH_VALID,
+                "client_cert_path": "path_to_invalid_client_certificate",
+            }
+        },
+        {
+            "_check_url": (CallCount.ONE, None),
+            "_check_tls_config": (CallCount.ONE, None),
+            "_prepare_certs": (CallCount.ONE, ValueError("path_to_invalid_client_certificate "
+                                                         "is not valid certificate"))
+        },
+        ValueError,  "path_to_invalid_client_certificate is not valid certificate"
+    ),
 ]

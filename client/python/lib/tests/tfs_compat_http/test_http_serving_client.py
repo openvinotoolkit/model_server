@@ -69,7 +69,7 @@ def test_make_http_client_invalid_config(mocker, config, method_call_spec, expec
     mocks = []
     for method_name, call_spec in method_call_spec.items():
         call_count, error_raised = call_spec
-        mock = mocker.patch(f"ovmsclient.tfs_compat.base.serving_client." \
+        mock = mocker.patch(f"ovmsclient.tfs_compat.base.serving_client."
                             f"ServingClient.{method_name}", side_effect=error_raised)
         mocks.append((mock, call_count))
 

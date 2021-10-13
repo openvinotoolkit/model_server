@@ -89,11 +89,11 @@ def test_check_url_valid(mocker, config, method_call_count):
 @pytest.mark.parametrize("config, method_call_spec, expected_exception,"
                          "expected_message", URL_INVALID)
 def test_check_url_invalid(mocker, config, method_call_spec,
-                              expected_exception, expected_message):
+                           expected_exception, expected_message):
     mocks = []
     for method_name, call_spec in method_call_spec.items():
         call_count, error_raised = call_spec
-        mock = mocker.patch(f"ovmsclient.tfs_compat.base.serving_client." \
+        mock = mocker.patch(f"ovmsclient.tfs_compat.base.serving_client."
                             f"ServingClient.{method_name}", side_effect=error_raised)
         mocks.append((mock, call_count))
 

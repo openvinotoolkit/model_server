@@ -154,7 +154,7 @@ def create_grpc_error(code, details):
 @pytest.mark.parametrize("config, method_call_count", BUILD_VALID)
 def test_make_grpc_client_valid(mocker, config, method_call_count):
     mock_check_url = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
-                                      '.ServingClient._check_url')
+                                  '.ServingClient._check_url')
     mock_check_tls_config = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
                                          '.ServingClient._check_tls_config')
     mock_prepare_certs = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
@@ -180,7 +180,7 @@ def test_make_grpc_client_invalid_config(mocker, config, method_call_spec, expec
     mocks = []
     for method_name, call_spec in method_call_spec.items():
         call_count, error_raised = call_spec
-        mock = mocker.patch(f"ovmsclient.tfs_compat.base.serving_client." \
+        mock = mocker.patch(f"ovmsclient.tfs_compat.base.serving_client."
                             f"ServingClient.{method_name}", side_effect=error_raised)
         mocks.append((mock, call_count))
 
@@ -193,17 +193,17 @@ def test_make_grpc_client_invalid_config(mocker, config, method_call_spec, expec
         assert mock.call_count == call_count
 
 
-@pytest.mark.parametrize("config, method_call_spec, expected_exception, expected_message", \
+@pytest.mark.parametrize("config, method_call_spec, expected_exception, expected_message",
                          BUILD_INVALID_CERTS)
 def test_make_grpc_client_invalid_certs(mocker, config, method_call_spec, expected_exception,
                                         expected_message):
     mocks = []
     for method_name, call_spec in method_call_spec.items():
         call_count, error_raised = call_spec
-        mock = mocker.patch(f"ovmsclient.tfs_compat.base.serving_client." \
+        mock = mocker.patch(f"ovmsclient.tfs_compat.base.serving_client."
                             f"ServingClient.{method_name}", side_effect=error_raised)
         mocks.append((mock, call_count))
- 
+
     with pytest.raises(expected_exception) as e_info:
         make_grpc_client(**config)
 

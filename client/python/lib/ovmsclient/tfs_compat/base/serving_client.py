@@ -118,7 +118,7 @@ class ServingClient(ABC):
             port = int(port)
         except Exception:
             raise TypeError('port should be of type int')
-        
+
         if port.bit_length() > 16 or port < 0:
             raise ValueError(f'port should be in range <0, {2**16-1}>')
 

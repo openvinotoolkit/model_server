@@ -155,7 +155,7 @@ class GrpcClient(ServingClient):
 
     @classmethod
     def _build(cls, url, tls_config):
-        
+
         ServingClient._check_url(url)
 
         if tls_config is not None:

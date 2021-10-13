@@ -16,10 +16,12 @@
 # limitations under the License.
 #
 
+set -e
+
 git clone --branch v2.5.0 --depth 1 https://github.com/tensorflow/tensorflow.git tf
 git clone --branch 2.5.1 --depth 1 https://github.com/tensorflow/serving.git tfs
 
-protoc --proto_path=$PWD/tfs --proto_path=$PWD/tf --python_out=$PWD \
+protoc1 --proto_path=$PWD/tfs --proto_path=$PWD/tf --python_out=$PWD \
 $PWD/tf/tensorflow/core/framework/*.proto \
 $PWD/tf/tensorflow/core/example/*.proto \
 $PWD/tf/tensorflow/core/protobuf/*.proto \
