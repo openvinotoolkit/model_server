@@ -126,6 +126,8 @@ COPY src/ /build/src/
 RUN bazel build //src:all
 
 FROM ubuntu:20.04 as release
+ENV DEBIAN_FRONTEND=noninteractive 
+RUN apt update && apt install -y --no-install-recommends libopencv-core4.2 libopencv-imgcodecs4.2 libtbb-dev
 
 WORKDIR /clients/
 RUN mkdir -p /clients/libs/ && mkdir -p /clients/images
@@ -134,9 +136,7 @@ COPY --from=base_build \
     /build/bazel-bin/src/classification_client_async_benchmark \
     /build/bazel-bin/src/synthetic_client_async_benchmark \
     /clients/
-COPY --from=base_build \
-    /opt/intel/openvino/extras/opencv/lib/ /clients/libs/
 COPY --from=base_build /input/images/*.jpeg /clients/images/
 COPY --from=base_build /input/input_images.txt /clients/
 
-ENV LD_LIBRARY_PATH=/usr/local/lib:/clients/libs
+ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/clients/libs
