@@ -63,12 +63,16 @@ RUN pip3 --no-cache-dir install \
     --ignore-installed setuptools \
     --ignore-installed six
 
-WORKDIR /opencv
-RUN git clone https://github.com/opencv/opencv --depth 1 --branch 4.5.3 . && \
-    mkdir -p build && \
-    cd build && \
-    cmake .. && \
-    make && make install
+#WORKDIR /opencv
+#RUN git clone https://github.com/opencv/opencv --depth 1 --branch 4.5.3 . && \
+#    mkdir -p build && \
+#    cd build && \
+#    cmake .. && \
+#    make && make install
+
+RUN apt update && apt install -y --no-install-recommends \
+        libopencv-dev \
+        libtbb-dev
 
 # Set up Bazel
 ENV BAZEL_VERSION 3.7.2
@@ -93,8 +97,21 @@ COPY .bazelrc WORKSPACE /build/
 COPY external /build/external/
 COPY third_party /build/third_party/
 
-RUN mkdir -p /opt/intel/openvino/extras/opencv/ && ln -sf /usr/local/lib /opt/intel/openvino/extras/opencv/
-RUN mkdir -p /opt/intel/openvino/extras/opencv/include && ln -sf /usr/local/include/opencv4/opencv2 /opt/intel/openvino/extras/opencv/include
+RUN mkdir -p /opt/intel/openvino/extras/opencv/lib && \
+    cp /usr/lib/x86_64-linux-gnu/libopencv_core.so* \
+    /usr/lib/x86_64-linux-gnu/libopencv_imgcodecs.so* \
+    /usr/lib/x86_64-linux-gnu/libopencv_imgproc.so*  \
+    /usr/lib/x86_64-linux-gnu/libpng16.so* \
+    /usr/lib/x86_64-linux-gnu/libjpeg.so* \
+    /usr/lib/x86_64-linux-gnu/libwebp.so.* \
+    /usr/lib/x86_64-linux-gnu/libgdcmMSFF.so* \
+    /usr/lib/x86_64-linux-gnu/libtiff.so* \
+    /usr/lib/x86_64-linux-gnu/libIlmImf-2_3.so* \
+    /lib/libgdal.so* \
+    /usr/lib/x86_64-linux-gnu/libgdcmDSED.so* \
+    /usr/lib/x86_64-linux-gnu/libtbb.so* \
+    /opt/intel/openvino/extras/opencv/lib/
+RUN mkdir -p /opt/intel/openvino/extras/opencv/include && ln -sf /usr/include/opencv4/opencv2 /opt/intel/openvino/extras/opencv/include
 
 RUN bazel build \
     @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
@@ -108,8 +125,6 @@ COPY src/ /build/src/
 
 RUN bazel build //src:all
 
-ENV LD_LIBRARY_PATH=/opt/intel/openvino/extras/opencv/lib
-
 FROM ubuntu:20.04 as release
 
 WORKDIR /clients/
@@ -120,12 +135,7 @@ COPY --from=base_build \
     /build/bazel-bin/src/synthetic_client_async_benchmark \
     /clients/
 COPY --from=base_build \
-    /usr/local/lib/libopencv_core.so* \
-    /usr/local/lib/libopencv_imgcodecs.so* \
-    /usr/local/lib/libopencv_imgproc.so* \
-    /usr/lib/x86_64-linux-gnu/libpng16.so* \
-    /clients/libs/
-
+    /opt/intel/openvino/extras/opencv/lib/ /clients/libs/
 COPY --from=base_build /input/images/*.jpeg /clients/images/
 COPY --from=base_build /input/input_images.txt /clients/
 
