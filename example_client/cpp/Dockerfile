@@ -127,7 +127,8 @@ RUN bazel build //src:all
 
 FROM ubuntu:20.04 as release
 ENV DEBIAN_FRONTEND=noninteractive 
-RUN apt update && apt install -y --no-install-recommends libopencv-core4.2 libopencv-imgcodecs4.2 libtbb-dev
+RUN apt update && apt install -y --no-install-recommends libopencv-core4.2 libopencv-imgcodecs4.2 libtbb-dev && \
+    apt clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 WORKDIR /clients/
 RUN mkdir -p /clients/libs/ && mkdir -p /clients/images
