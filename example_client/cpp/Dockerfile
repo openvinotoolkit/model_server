@@ -63,13 +63,6 @@ RUN pip3 --no-cache-dir install \
     --ignore-installed setuptools \
     --ignore-installed six
 
-#WORKDIR /opencv
-#RUN git clone https://github.com/opencv/opencv --depth 1 --branch 4.5.3 . && \
-#    mkdir -p build && \
-#    cd build && \
-#    cmake .. && \
-#    make && make install
-
 RUN apt update && apt install -y --no-install-recommends \
         libopencv-dev \
         libtbb-dev
@@ -97,20 +90,7 @@ COPY .bazelrc WORKSPACE /build/
 COPY external /build/external/
 COPY third_party /build/third_party/
 
-RUN mkdir -p /opt/intel/openvino/extras/opencv/lib && \
-    cp /usr/lib/x86_64-linux-gnu/libopencv_core.so* \
-    /usr/lib/x86_64-linux-gnu/libopencv_imgcodecs.so* \
-    /usr/lib/x86_64-linux-gnu/libopencv_imgproc.so*  \
-    /usr/lib/x86_64-linux-gnu/libpng16.so* \
-    /usr/lib/x86_64-linux-gnu/libjpeg.so* \
-    /usr/lib/x86_64-linux-gnu/libwebp.so.* \
-    /usr/lib/x86_64-linux-gnu/libgdcmMSFF.so* \
-    /usr/lib/x86_64-linux-gnu/libtiff.so* \
-    /usr/lib/x86_64-linux-gnu/libIlmImf-2_3.so* \
-    /lib/libgdal.so* \
-    /usr/lib/x86_64-linux-gnu/libgdcmDSED.so* \
-    /usr/lib/x86_64-linux-gnu/libtbb.so* \
-    /opt/intel/openvino/extras/opencv/lib/
+RUN mkdir -p /opt/intel/openvino/extras/opencv/ && ln -sf /usr/lib/x86_64-linux-gnu /opt/intel/openvino/extras/opencv/lib
 RUN mkdir -p /opt/intel/openvino/extras/opencv/include && ln -sf /usr/include/opencv4/opencv2 /opt/intel/openvino/extras/opencv/include
 
 RUN bazel build \
