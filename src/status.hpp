@@ -33,7 +33,6 @@ namespace ovms {
 namespace net_http = tensorflow::serving::net_http;
 
 enum class StatusCode {
-    // OK = first enum
     OK, /*!< Success */
 
     PATH_INVALID,        /*!< The provided path is invalid or doesn't exists */
@@ -163,7 +162,6 @@ enum class StatusCode {
     REST_COULD_NOT_PARSE_VERSION,    /*!< Could not parse model version in request */
     REST_INVALID_URL,                /*!< Malformed REST request url */
     REST_UNSUPPORTED_METHOD,         /*!< Request sent with unsupported method */
-    REST_MALFORMED_REQUEST,          /*!< Malformed REST request */
     UNKNOWN_REQUEST_COMPONENTS_TYPE, /*!< Components type not recognized */
 
     // REST Parse
@@ -263,7 +261,6 @@ enum class StatusCode {
     OK_RELOADED,     /*!< Operation succeeded and config reload was needed */
 
     STATUS_CODE_END
-    // STATUS_CODE_END = last enum
 };
 
 class Status {

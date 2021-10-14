@@ -62,7 +62,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET, "Node is not ready for execution"},
     {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL, "Dynamic shape and dynamic batch size are not supported for stateful models"},
     {StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL, "Stateful model cannot be subscribed to pipeline"},
-    {StatusCode::REQUESTED_MODEL_TYPE_CHANGE, "Model type cannot be changed after it's loaded"},
+    {StatusCode::REQUESTED_MODEL_TYPE_CHANGE, "Model type cannot be changed after it is loaded"},
     {StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER, "Stateful model config parameter used for non stateful model"},
     {StatusCode::INVALID_MAX_SEQUENCE_NUMBER, "Sequence max number parameter too high"},
     {StatusCode::UNKNOWN_ERROR, "Unknown error"},
@@ -213,7 +213,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::CUSTOM_LOADER_ERROR, "Custom Loader Generic / Unknown Error"},
 
     // Custom Node
-    {StatusCode::NODE_LIBRARY_ALREADY_LOADED, "Custom node library is alreadt loaded"},
+    {StatusCode::NODE_LIBRARY_ALREADY_LOADED, "Custom node library is already loaded"},
     {StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN, "Custom node library failed to open"},
     {StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM, "Custo node library failed to load symbol"},
     {StatusCode::NODE_LIBRARY_MISSING, "Custom node library not found"},
