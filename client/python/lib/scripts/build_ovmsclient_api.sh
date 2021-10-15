@@ -16,5 +16,7 @@
 # limitations under the License.
 #
 
+set -e
+
 python scripts/generate_api.py
 mv __init__.py ovmsclient/
