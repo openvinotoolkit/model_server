@@ -30,18 +30,10 @@ StatusCode& operator++(StatusCode& statusCode) {
     return statusCode;
 }
 
-const std::unordered_set<StatusCode> standardWhiteList = {
-    StatusCode::GRPC_CHANNEL_ARG_WRONG_FORMAT,  // INDICATOR(returned, but not printed)
-    StatusCode::INVALID_MISSING_OUTPUT,         // INDICATOR(returned, but not printed)
-    StatusCode::IMAGE_PARSING_FAILED,           // INDICATOR(returned, but not printed) - REST and GRPC needed?
-};
-
 TEST(StatusCodeTest, AllStatusCodesMapped) {
     for (auto statusCode = StatusCode::OK; statusCode != StatusCode::STATUS_CODE_END; ++statusCode) {
-        if (standardWhiteList.find(statusCode) == standardWhiteList.end()) {
-            Status status = Status(statusCode);
-            ASSERT_NE(status.string(), "Undefined error");
-        }
+        Status status = Status(statusCode);
+        ASSERT_NE(status.string(), "Undefined error");
     }
 }
 }  // namespace ovms
