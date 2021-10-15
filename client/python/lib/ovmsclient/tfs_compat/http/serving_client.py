@@ -28,9 +28,8 @@ from ovmsclient.tfs_compat.http.responses import (HttpModelStatusResponse,
 
 class HttpClient(ServingClient):
 
-    def __init__(self, address, port, session, client_key=None, server_cert=None):
-        self.address = address
-        self.port = port
+    def __init__(self, url, session, client_key=None, server_cert=None):
+        self.url = url
         self.session = session
         self.client_key = client_key
         self.server_cert = server_cert
@@ -65,7 +64,7 @@ class HttpClient(ServingClient):
 
         raw_response = None
         try:
-            raw_response = self.session.post(f"http://{self.address}:{self.port}"
+            raw_response = self.session.post(f"http://{self.url}"
                                              f"/v1/models/{request.model_name}"
                                              f"/versions/{request.model_version}:predict",
                                              data=request.parsed_inputs,
@@ -106,7 +105,7 @@ class HttpClient(ServingClient):
 
         raw_response = None
         try:
-            raw_response = self.session.get(f"http://{self.address}:{self.port}"
+            raw_response = self.session.get(f"http://{self.url}"
                                             f"/v1/models/{request.model_name}"
                                             f"/versions/{request.model_version}"
                                             f"/metadata",
@@ -147,7 +146,7 @@ class HttpClient(ServingClient):
 
         raw_response = None
         try:
-            raw_response = self.session.get(f"http://{self.address}:{self.port}"
+            raw_response = self.session.get(f"http://{self.url}"
                                             f"/v1/models/{request.model_name}"
                                             f"/versions/{request.model_version}",
                                             cert=self.client_key, verify=self.server_cert)
@@ -158,19 +157,17 @@ class HttpClient(ServingClient):
         return HttpModelStatusResponse(raw_response)
 
     @classmethod
-    def _build(cls, config):
-        ServingClient._check_config(config)
-        address = config.get("address")
-        port = config.get("port")
+    def _build(cls, url, tls_config):
+        ServingClient._check_url(url)
         client_cert = None
         server_cert = None
-        if "tls_config" in config:
-            tls_config = config["tls_config"]
+        if tls_config is not None:
+            ServingClient._check_tls_config(tls_config)
             if "client_cert_path" in tls_config and "client_key_path" in tls_config:
                 client_cert = (tls_config["client_cert_path"], tls_config["client_key_path"])
             server_cert = tls_config.get('server_cert_path', None),
         session = requests.Session()
-        return cls(address, port, session, client_cert, server_cert)
+        return cls(url, session, client_cert, server_cert)
 
     @classmethod
     def _check_model_status_request(cls, request):
@@ -192,7 +189,7 @@ class HttpClient(ServingClient):
 
 
 @ovmsclient_export("make_http_client", httpclient="make_client")
-def make_http_client(config):
+def make_http_client(url, tls_config=None):
     '''
     Create HttpClient object.
 
@@ -254,4 +251,4 @@ def make_http_client(config):
         >>> client = make_http_client(config)
         >>> print(client)
     '''
-    return HttpClient._build(config)
+    return HttpClient._build(url, tls_config)

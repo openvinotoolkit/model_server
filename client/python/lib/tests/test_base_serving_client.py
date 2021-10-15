@@ -18,13 +18,13 @@
 import pytest
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
 
-from config import ADDRESS_INVALID, ADDRESS_VALID
-from config import PORT_VALID, PORT_INVALID
-from config import TLS_CONFIG_VALID, TLS_CONFIG_INVALID
-from config import CONFIG_INVALID, CONFIG_VALID
-from config import CERTIFICATE_VALID
-from config import PRIVATE_KEY_VALID
-from config import CHANNEL_CERTS_VALID
+from config import (ADDRESS_INVALID, ADDRESS_VALID,
+                    PORT_VALID, PORT_INVALID,
+                    TLS_CONFIG_VALID, TLS_CONFIG_INVALID,
+                    URL_VALID, URL_INVALID,
+                    CERTIFICATE_VALID,
+                    PRIVATE_KEY_VALID,
+                    CHANNEL_CERTS_VALID)
 
 
 @pytest.mark.parametrize("address", ADDRESS_VALID)
@@ -73,45 +73,37 @@ def test_check_tls_config_invalid(mocker, tls_config, expected_exception,
     assert mock_method.call_count == isfile_called_count
 
 
-@pytest.mark.parametrize("config, method_call_count", CONFIG_VALID)
-def test_check_config_valid(mocker, config, method_call_count):
+@pytest.mark.parametrize("url, method_call_count", URL_VALID)
+def test_check_url_valid(mocker, url, method_call_count):
     mock_check_address = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
                                       '.ServingClient._check_address')
     mock_check_port = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
                                    '.ServingClient._check_port')
-    mock_check_tls_config = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
-                                         '.ServingClient._check_tls_config')
 
-    ServingClient._check_config(config)
+    ServingClient._check_url(url)
 
-    assert mock_check_address.call_count == method_call_count['check_address']
-    assert mock_check_port.call_count == method_call_count['check_port']
-    assert mock_check_tls_config.call_count == method_call_count['check_tls_config']
+    assert mock_check_address.call_count == method_call_count['_check_address']
+    assert mock_check_port.call_count == method_call_count['_check_port']
 
 
-@pytest.mark.parametrize("config, method_call_count, expected_exception,"
-                         "expected_message, side_effect", CONFIG_INVALID)
-def test_check_config_invalid(mocker, config, method_call_count,
-                              expected_exception, expected_message, side_effect):
-    mock_check_address = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
-                                      '.ServingClient._check_address')
-    mock_check_address.side_effect = side_effect['check_address']
-
-    mock_check_port = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
-                                   '.ServingClient._check_port')
-    mock_check_port.side_effect = side_effect['check_port']
-
-    mock_check_tls_config = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
-                                         '.ServingClient._check_tls_config')
-    mock_check_tls_config.side_effect = side_effect['check_tls_config']
+@pytest.mark.parametrize("url, method_call_spec, expected_exception,"
+                         "expected_message", URL_INVALID)
+def test_check_url_invalid(mocker, url, method_call_spec,
+                           expected_exception, expected_message):
+    mocks = []
+    for method_name, call_spec in method_call_spec.items():
+        call_count, error_raised = call_spec
+        mock = mocker.patch(f"ovmsclient.tfs_compat.base.serving_client."
+                            f"ServingClient.{method_name}", side_effect=error_raised)
+        mocks.append((mock, call_count))
 
     with pytest.raises(expected_exception) as e_info:
-        ServingClient._check_config(config)
+        ServingClient._check_url(url)
 
     assert str(e_info.value) == expected_message
-    assert mock_check_address.call_count == method_call_count['check_address']
-    assert mock_check_port.call_count == method_call_count['check_port']
-    assert mock_check_tls_config.call_count == method_call_count['check_tls_config']
+    for mock_info in mocks:
+        mock, call_count = mock_info
+        assert mock.call_count == call_count
 
 
 @pytest.mark.parametrize("certificate_path", CERTIFICATE_VALID)

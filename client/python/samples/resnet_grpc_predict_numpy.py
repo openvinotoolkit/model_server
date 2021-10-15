@@ -24,10 +24,8 @@ from utils.resnet_utils import resnet_postprocess
 parser = argparse.ArgumentParser(description='Make prediction using images in numerical format')
 parser.add_argument('--images_numpy', required=True,
                     help='Path to a .npy file with data to infer')
-parser.add_argument('--grpc_address', required=False, default='localhost',
-                    help='Specify url to grpc service. default:localhost')
-parser.add_argument('--grpc_port', required=False, default=9000, type=int,
-                    help='Specify port to grpc service. default: 9000')
+parser.add_argument('--service_url', required=False, default='localhost:9000',
+                    help='Specify url to grpc service. default:localhost', dest='service_url')
 parser.add_argument('--model_name', default='resnet', help='Model name to query. default: resnet',
                     dest='model_name')
 parser.add_argument('--model_version', default=0, type=int, help='Model version to query. default: latest available',
@@ -38,18 +36,13 @@ args = vars(parser.parse_args())
 
 # configuration
 images_numpy_path = args.get('images_numpy')
-address = args.get('grpc_address')
-port = args.get('grpc_port')
+service_url = args.get('service_url')
 model_name = args.get('model_name')
 model_version = args.get('model_version')
 iterations = args.get('iterations')
 
 # creating grpc client
-config = {
-    "address": address,
-    "port": port
-}
-client = make_grpc_client(config)
+client = make_grpc_client(service_url)
 
 # receiving metadata from model
 input_name, output_name = get_model_io_names(client, model_name, model_version)
