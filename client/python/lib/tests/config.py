@@ -232,30 +232,37 @@ TLS_CONFIG_INVALID = [
 
 ]
 
-# (config_dict, method_call_count_dict= {"method_name": CallCount.NumberOfCalls})
+# (url, method_call_count_dict= {"method_name": CallCount.NumberOfCalls})
 URL_VALID = [
-    ({
-        "url": "localhost:9000"
-    }, {"_check_address": CallCount.ONE,
-        "_check_port": CallCount.ONE}),
-    ({
-        "url": "19.117.63.126:1"
-    }, {"_check_address": CallCount.ONE,
-        "_check_port": CallCount.ONE}),
-    ({
-        "url": f"cluster.cloud.iotg.intel.com:{2**16-1}"
-    }, {"_check_address": CallCount.ONE,
-        "_check_port": CallCount.ONE})
+    (
+        "localhost:9000",
+        {
+            "_check_address": CallCount.ONE,
+            "_check_port": CallCount.ONE
+        }
+    ),
+    (
+        "19.117.63.126:1",
+        {
+            "_check_address": CallCount.ONE,
+            "_check_port": CallCount.ONE
+        }
+    ),
+    (
+        f"cluster.cloud.iotg.intel.com:{2**16-1}",
+        {
+            "_check_address": CallCount.ONE,
+            "_check_port": CallCount.ONE
+        }
+    )
 ]
 
-# (config_dict, method_call_count_dict= {"method_name": CallCount.NumberOfCalls},
-# expected_exception, expected_message,
-# side_effect_dict = {"method_name": method_name_side_effect})
+# (url,
+# method_call_count_dict= {"method_name": (CallCount.NumberOfCalls, error_raised)},
+# expected_exception, expected_message
 URL_INVALID = [
     (
-        {
-            "url": "localhost"
-        },
+        "localhost",
         {
             "_check_address": (CallCount.ZERO, None),
             "_check_port": (CallCount.ZERO, None)
@@ -264,9 +271,7 @@ URL_INVALID = [
     ),
 
     (
-        {
-            "url": 9000
-        },
+        9000,
         {
             "_check_address": (CallCount.ZERO, None),
             "_check_port": (CallCount.ZERO, None)
@@ -275,9 +280,7 @@ URL_INVALID = [
     ),
 
     (
-        {
-            "url": "address:9000",
-        },
+        "address:9000",
         {
             "_check_address": (CallCount.ONE, ValueError('address is not valid')),
             "_check_port": (CallCount.ZERO, None)
@@ -286,9 +289,7 @@ URL_INVALID = [
     ),
 
     (
-        {
-            "url": "localhost:string"
-        },
+        "localhost:string",
         {
             "_check_address": (CallCount.ONE, None),
             "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
@@ -297,9 +298,7 @@ URL_INVALID = [
     ),
 
     (
-        {
-            "url": "localhost:9000:9001"
-        },
+        "localhost:9000:9001",
         {
             "_check_address": (CallCount.ONE, None),
             "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
@@ -308,9 +307,7 @@ URL_INVALID = [
     ),
 
     (
-        {
-            "url": "localhost:[9000]"
-        },
+        "localhost:[9000]",
         {
             "_check_address": (CallCount.ONE, None),
             "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
@@ -319,9 +316,7 @@ URL_INVALID = [
     ),
 
     (
-        {
-            "url": "localhost:9000abc"
-        },
+        "localhost:9000abc",
         {
             "_check_address": (CallCount.ONE, None),
             "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
@@ -330,9 +325,7 @@ URL_INVALID = [
     ),
 
     (
-        {
-            "url": f"localhost:{2**16}"
-        },
+        f"localhost:{2**16}",
         {
             "_check_address": (CallCount.ONE, None),
             "_check_port": (CallCount.ONE, ValueError(f"port should be in range <0, {2**16-1}>"))
@@ -341,9 +334,7 @@ URL_INVALID = [
     ),
 
     (
-        {
-            "url": "localhost:-1"
-        },
+        "localhost:-1",
         {
             "_check_address": (CallCount.ONE, None),
             "_check_port": (CallCount.ONE, ValueError(f"port should be in range <0, {2**16-1}>"))
