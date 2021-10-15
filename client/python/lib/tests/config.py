@@ -54,8 +54,6 @@ ADDRESS_VALID = [
 
 # (address, expected_exception, expected_message)
 ADDRESS_INVALID = [
-    (19_117_63_126, TypeError, "address type should be string, but is int"),
-    (['localhost'], TypeError, "address type should be string, but is list"),
     ("127.14", ValueError, "address is not valid"),
     ("intel.-com", ValueError, "address is not valid"),
     ("192.168.abc.4", ValueError, "address is not valid"),
@@ -75,8 +73,8 @@ PORT_VALID = [
 
 # (port, expected_exception, expected_message)
 PORT_INVALID = [
-    ("9000", TypeError, "port type should be int, but is type str"),
-    ([2**16-1], TypeError, "port type should be int, but is type list"),
+    ("port", TypeError, "port should be of type int"),
+    ([2**16-1], TypeError, "port should be of type int"),
     (2**16, ValueError, f"port should be in range <0, {2**16-1}>"),
     (-1, ValueError, f"port should be in range <0, {2**16-1}>")
 ]
@@ -234,240 +232,115 @@ TLS_CONFIG_INVALID = [
 
 ]
 
-# (config_dict, method_call_count_dict= {"method_name": CallCount.NumberOfCalls})
-CONFIG_VALID = [
-    ({
-        "address": "localhost",
-        "port": 9000
-    }, {"check_address": CallCount.ONE,
-        "check_port": CallCount.ONE,
-        "check_tls_config": CallCount.ZERO}),
-    ({
-        "address": "19.117.63.126",
-        "port": 1
-    }, {"check_address": CallCount.ONE,
-        "check_port": CallCount.ONE,
-        "check_tls_config": CallCount.ZERO}),
-    ({
-        "address": "cluster.cloud.iotg.intel.com",
-        "port": 2**16-1
-    }, {"check_address": CallCount.ONE,
-        "check_port": CallCount.ONE,
-        "check_tls_config": CallCount.ZERO}),
-    ({
-        "address": "localhost",
-        "port": 9000,
-        "tls_config": {
-            "server_cert_path": "valid_path"
+# (url, method_call_count_dict= {"method_name": CallCount.NumberOfCalls})
+URL_VALID = [
+    (
+        "localhost:9000",
+        {
+            "_check_address": CallCount.ONE,
+            "_check_port": CallCount.ONE
         }
-    }, {"check_address": CallCount.ONE,
-        "check_port": CallCount.ONE,
-        "check_tls_config": CallCount.ONE}),
-    ({
-        "address": "localhost",
-        "port": 9000,
-        "tls_config": {
-            "client_key_path": PATH_VALID,
-            "client_cert_path": PATH_VALID,
-            "server_cert_path": PATH_VALID
+    ),
+    (
+        "19.117.63.126:1",
+        {
+            "_check_address": CallCount.ONE,
+            "_check_port": CallCount.ONE
         }
-    }, {"check_address": CallCount.ONE,
-        "check_port": CallCount.ONE,
-        "check_tls_config": CallCount.ONE})
+    ),
+    (
+        f"cluster.cloud.iotg.intel.com:{2**16-1}",
+        {
+            "_check_address": CallCount.ONE,
+            "_check_port": CallCount.ONE
+        }
+    )
 ]
 
-# (config_dict, method_call_count_dict= {"method_name": CallCount.NumberOfCalls},
-# expected_exception, expected_message,
-# side_effect_dict = {"method_name": method_name_side_effect})
-CONFIG_INVALID = [
-    ({
+# (url,
+# method_call_count_dict= {"method_name": (CallCount.NumberOfCalls, error_raised)},
+# expected_exception, expected_message
+URL_INVALID = [
+    (
+        "localhost",
+        {
+            "_check_address": (CallCount.ZERO, None),
+            "_check_port": (CallCount.ZERO, None)
+        },
+        ValueError, 'url must be a string in format <address>:<port>'
+    ),
 
-    },
-     {"check_address": CallCount.ZERO,
-      "check_port": CallCount.ZERO,
-      "check_tls_config": CallCount.ZERO},
-     ValueError, 'The minimal config must contain address and port',
-     {
-        "check_address": None,
-        "check_port": None,
-        "check_tls_config": None
-    }),
+    (
+        9000,
+        {
+            "_check_address": (CallCount.ZERO, None),
+            "_check_port": (CallCount.ZERO, None)
+        },
+        TypeError, 'url must be a string in format <address>:<port>',
+    ),
 
-    ({
-        "address": "localhost"
-    },
-     {"check_address": CallCount.ZERO,
-      "check_port": CallCount.ZERO,
-      "check_tls_config": CallCount.ZERO},
-     ValueError, 'The minimal config must contain address and port',
-     {
-        "check_address": None,
-        "check_port": None,
-        "check_tls_config": None
-    }),
+    (
+        "address:9000",
+        {
+            "_check_address": (CallCount.ONE, ValueError('address is not valid')),
+            "_check_port": (CallCount.ZERO, None)
+        },
+        ValueError, 'address is not valid'
+    ),
 
-    ({
-        "port": 9000
-    },
-     {"check_address": CallCount.ZERO,
-      "check_port": CallCount.ZERO,
-      "check_tls_config": CallCount.ZERO},
-     ValueError, 'The minimal config must contain address and port',
-     {
-        "check_address": None,
-        "check_port": None,
-        "check_tls_config": None
-    }),
+    (
+        "localhost:string",
+        {
+            "_check_address": (CallCount.ONE, None),
+            "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
+        },
+        TypeError, 'port should be of type int'
+    ),
 
-    ({
-        "address": ["localhost"],
-        "port": 9000
-    },
-     {"check_address": CallCount.ONE,
-      "check_port": CallCount.ZERO,
-      "check_tls_config": CallCount.ZERO},
-     TypeError, 'address type should be string, but is list',
-     {
-        "check_address": TypeError('address type should be string, but is list'),
-        "check_port": None,
-        "check_tls_config": None
-    }),
+    (
+        "localhost:9000:9001",
+        {
+            "_check_address": (CallCount.ONE, None),
+            "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
+        },
+        TypeError, 'port should be of type int'
+    ),
 
-    ({
-        "address": "address",
-        "port": '9000'
-    },
-     {"check_address": CallCount.ONE,
-      "check_port": CallCount.ZERO,
-      "check_tls_config": CallCount.ZERO},
-     ValueError, 'address is not valid',
-     {
-        "check_address": ValueError('address is not valid'),
-        "check_port": None,
-        "check_tls_config": None
-    }),
+    (
+        "localhost:[9000]",
+        {
+            "_check_address": (CallCount.ONE, None),
+            "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
+        },
+        TypeError, 'port should be of type int'
+    ),
 
-    ({
-        "address": "localhost",
-        "port": '9000'
-    },
-     {"check_address": CallCount.ONE,
-      "check_port": CallCount.ONE,
-      "check_tls_config": CallCount.ZERO},
-     TypeError, 'port type should be int, but is type str',
-     {
-        "check_address": None,
-        "check_port": TypeError('port type should be int, but is type str'),
-        "check_tls_config": None
-    }),
+    (
+        "localhost:9000abc",
+        {
+            "_check_address": (CallCount.ONE, None),
+            "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
+        },
+        TypeError, 'port should be of type int'
+    ),
 
-    ({
-        "address": "localhost",
-        "port": 2**16
-    },
-     {"check_address": CallCount.ONE,
-      "check_port": CallCount.ONE,
-      "check_tls_config": CallCount.ZERO},
-     ValueError, f"port should be in range <0, {2**16-1}>",
-     {
-        "check_address": None,
-        "check_port": ValueError(f"port should be in range <0, {2**16-1}>"),
-        "check_tls_config": None
-    }),
+    (
+        f"localhost:{2**16}",
+        {
+            "_check_address": (CallCount.ONE, None),
+            "_check_port": (CallCount.ONE, ValueError(f"port should be in range <0, {2**16-1}>"))
+        },
+        ValueError, f"port should be in range <0, {2**16-1}>"
+    ),
 
-    ({
-        "address": "localhost",
-        "port": 2**16,
-        "tls_config": {
-
-        }
-    },
-     {"check_address": CallCount.ONE,
-      "check_port": CallCount.ONE,
-      "check_tls_config": CallCount.ONE},
-     ValueError, 'server_cert_path is not defined in tls_config',
-     {
-        "check_address": None,
-        "check_port": None,
-        "check_tls_config": ValueError('server_cert_path is not defined in tls_config')
-    }),
-
-    ({
-        "address": "localhost",
-        "port": 2**16,
-        "tls_config": {
-            "server_cert_path": PATH_VALID,
-            "client_key_path": PATH_VALID
-        }
-    },
-     {"check_address": CallCount.ONE,
-      "check_port": CallCount.ONE,
-      "check_tls_config": CallCount.ONE},
-     ValueError, 'none or both client_key_path and client_cert_path are required in tls_config',
-     {
-        "check_address": None,
-        "check_port": None,
-        "check_tls_config": ValueError('none or both client_key_path and '
-                                       'client_cert_path are required in tls_config')
-    }),
-
-    ({
-        "address": "localhost",
-        "port": 2**16,
-        "tls_config": {
-            "server_cert_path": PATH_VALID,
-            "client_key_path": PATH_VALID,
-            "client_cert_path": PATH_VALID,
-            "invalid_key_name": PATH_VALID
-        }
-    },
-     {"check_address": CallCount.ONE,
-      "check_port": CallCount.ONE,
-      "check_tls_config": CallCount.ONE},
-     ValueError,  'invalid_key_name is not valid tls_config key',
-     {
-        "check_address": None,
-        "check_port": None,
-        "check_tls_config": ValueError('invalid_key_name is not valid tls_config key')
-    }),
-
-    ({
-        "address": "localhost",
-        "port": 2**16,
-        "tls_config": {
-            "server_cert_path": PATH_VALID,
-            "client_key_path": PATH_VALID,
-            "client_cert_path": 123,
-        }
-    },
-     {"check_address": CallCount.ONE,
-      "check_port": CallCount.ONE,
-      "check_tls_config": CallCount.ONE},
-     TypeError,  'client_cert_path type should be string but is type int',
-     {
-        "check_address": None,
-        "check_port": None,
-        "check_tls_config": TypeError('client_cert_path type should be string but is type int')
-    }),
-
-    ({
-        "address": "localhost",
-        "port": 2**16,
-        "tls_config": {
-            "server_cert_path": PATH_VALID,
-            "client_key_path": "invalid_path",
-            "client_cert_path": PATH_VALID,
-        }
-    },
-     {"check_address": CallCount.ONE,
-      "check_port": CallCount.ONE,
-      "check_tls_config": CallCount.ONE},
-     ValueError,  'invalid_path is not valid path to file',
-     {
-        "check_address": None,
-        "check_port": None,
-        "check_tls_config": ValueError('invalid_path is not valid path to file')
-    }),
+    (
+        "localhost:-1",
+        {
+            "_check_address": (CallCount.ONE, None),
+            "_check_port": (CallCount.ONE, ValueError(f"port should be in range <0, {2**16-1}>"))
+        },
+        ValueError, f"port should be in range <0, {2**16-1}>"
+    )
 ]
 
 # (server_cert_path, client_cert_path, client_key_path,

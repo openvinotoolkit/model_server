@@ -59,11 +59,7 @@ from tfs_compat_grpc.utils import (create_model_metadata_response,
 
 @pytest.fixture
 def valid_grpc_serving_client_min():
-    config = {
-        "address": "localhost",
-        "port": 9000
-    }
-    return make_grpc_client(config)
+    return make_grpc_client("localhost:9000")
 
 
 @pytest.fixture
@@ -157,57 +153,64 @@ def create_grpc_error(code, details):
 
 @pytest.mark.parametrize("config, method_call_count", BUILD_VALID)
 def test_make_grpc_client_valid(mocker, config, method_call_count):
-    mock_check_config = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
-                                     '.ServingClient._check_config')
+    mock_check_url = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
+                                  '.ServingClient._check_url')
+    mock_check_tls_config = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
+                                         '.ServingClient._check_tls_config')
     mock_prepare_certs = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
                                       '.ServingClient._prepare_certs',
                                       return_value=(b'server_certificate',
                                                     b'client_certificate',
                                                     b'client_key'))
 
-    client = make_grpc_client(config)
+    client = make_grpc_client(**config)
 
-    assert mock_check_config.call_count == method_call_count['check_config']
-    assert mock_prepare_certs.call_count == method_call_count['prepare_certs']
+    assert mock_check_url.call_count == method_call_count['_check_url']
+    assert mock_check_tls_config.call_count == method_call_count['_check_tls_config']
+    assert mock_prepare_certs.call_count == method_call_count['_prepare_certs']
     assert type(client.channel) == Channel
     assert type(client.model_service_stub) == ModelServiceStub
     assert type(client.prediction_service_stub) == PredictionServiceStub
 
 
-@pytest.mark.parametrize("config, expected_exception, expected_message,"
-                         "method_call_count", BUILD_INVALID_CONFIG)
-def test_make_grpc_client_invalid_config(mocker, config, expected_exception,
-                                         expected_message, method_call_count):
-    mock_check_config = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
-                                     '.ServingClient._check_config',
-                                     side_effect=expected_exception(expected_message))
-    mock_prepare_certs = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
-                                      '.ServingClient._prepare_certs')
+@pytest.mark.parametrize("config, method_call_spec, expected_exception, expected_message",
+                         BUILD_INVALID_CONFIG)
+def test_make_grpc_client_invalid_config(mocker, config, method_call_spec, expected_exception,
+                                         expected_message):
+    mocks = []
+    for method_name, call_spec in method_call_spec.items():
+        call_count, error_raised = call_spec
+        mock = mocker.patch(f"ovmsclient.tfs_compat.base.serving_client."
+                            f"ServingClient.{method_name}", side_effect=error_raised)
+        mocks.append((mock, call_count))
 
     with pytest.raises(expected_exception) as e_info:
-        make_grpc_client(config)
+        make_grpc_client(**config)
 
     assert str(e_info.value) == expected_message
-    assert mock_check_config.call_count == method_call_count['check_config']
-    assert mock_prepare_certs.call_count == method_call_count['prepare_certs']
+    for mock_info in mocks:
+        mock, call_count = mock_info
+        assert mock.call_count == call_count
 
 
-@pytest.mark.parametrize("config, expected_exception, expected_message,"
-                         "method_call_count", BUILD_INVALID_CERTS)
-def test_make_grpc_client_invalid_certs(mocker, config, expected_exception,
-                                        expected_message, method_call_count):
-    mock_check_config = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
-                                     '.ServingClient._check_config')
-    mock_prepare_certs = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
-                                      '.ServingClient._prepare_certs',
-                                      side_effect=expected_exception(expected_message))
+@pytest.mark.parametrize("config, method_call_spec, expected_exception, expected_message",
+                         BUILD_INVALID_CERTS)
+def test_make_grpc_client_invalid_certs(mocker, config, method_call_spec, expected_exception,
+                                        expected_message):
+    mocks = []
+    for method_name, call_spec in method_call_spec.items():
+        call_count, error_raised = call_spec
+        mock = mocker.patch(f"ovmsclient.tfs_compat.base.serving_client."
+                            f"ServingClient.{method_name}", side_effect=error_raised)
+        mocks.append((mock, call_count))
 
     with pytest.raises(expected_exception) as e_info:
-        make_grpc_client(config)
+        make_grpc_client(**config)
 
     assert str(e_info.value) == expected_message
-    assert mock_check_config.call_count == method_call_count['check_config']
-    assert mock_prepare_certs.call_count == method_call_count['prepare_certs']
+    for mock_info in mocks:
+        mock, call_count = mock_info
+        assert mock.call_count == call_count
 
 
 def test_get_model_status_valid(mocker, valid_grpc_serving_client_min,

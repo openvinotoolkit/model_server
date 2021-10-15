@@ -34,10 +34,10 @@ class BuildApis(Command):
         ...
 
     def build_tfs_api(self):
-        subprocess.run(["sh", "./scripts/build_tfs_api.sh"])
+        subprocess.run(["sh", "./scripts/build_tfs_api.sh"], check=True)
     
     def build_ovmsclient_api(self):
-        subprocess.run(["sh", "./scripts/build_ovmsclient_api.sh"])
+        subprocess.run(["sh", "./scripts/build_ovmsclient_api.sh"], check=True)
 
     def run(self):
         self.build_tfs_api()
@@ -45,7 +45,7 @@ class BuildApis(Command):
 
 setuptools.setup(
      name='ovmsclient',  
-     version='0.1',
+     version='0.2',
      scripts=[] ,
      author="Intel",
      author_email="ovms.engineering@intel.com",

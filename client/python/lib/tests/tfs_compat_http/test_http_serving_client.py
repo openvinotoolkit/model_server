@@ -33,11 +33,7 @@ from tfs_compat_http.config import (BUILD_VALID, BUILD_INVALID_CONFIG,
 
 @pytest.fixture
 def valid_http_serving_client_min():
-    config = {
-        "address": "localhost",
-        "port": 9000
-    }
-    return make_http_client(config)
+    return make_http_client("localhost:9000")
 
 
 def mocked_requests_get(*args, **kwargs):
@@ -52,30 +48,38 @@ def mocked_requests_get(*args, **kwargs):
                          BUILD_VALID)
 def test_make_http_client_valid(mocker, config, method_call_count, expected_client_key,
                                 expected_server_cert):
-    mock_check_config = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
-                                     '.ServingClient._check_config')
-    client = make_http_client(config)
+    mock_check_url = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
+                                  '.ServingClient._check_url')
+    mock_check_tls_config = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
+                                         '.ServingClient._check_tls_config')
+    client = make_http_client(**config)
 
-    assert mock_check_config.call_count == method_call_count['check_config']
-    assert client.address == config['address']
-    assert client.port == config['port']
+    assert mock_check_url.call_count == method_call_count['_check_url']
+    assert mock_check_tls_config.call_count == method_call_count['_check_tls_config']
+    assert client.url == config['url']
     assert client.client_key == expected_client_key
     assert client.server_cert == expected_server_cert
     assert isinstance(client.session, requests.Session)
 
 
-@pytest.mark.parametrize("config, expected_exception, expected_message,"
-                         "method_call_count", BUILD_INVALID_CONFIG)
-def test_make_http_client_invalid_config(mocker, config, expected_exception,
-                                         expected_message, method_call_count):
-    mock_check_config = mocker.patch('ovmsclient.tfs_compat.base.serving_client'
-                                     '.ServingClient._check_config',
-                                     side_effect=expected_exception(expected_message))
+@pytest.mark.parametrize("config, method_call_spec, expected_exception, expected_message",
+                         BUILD_INVALID_CONFIG)
+def test_make_http_client_invalid_config(mocker, config, method_call_spec, expected_exception,
+                                         expected_message):
+    mocks = []
+    for method_name, call_spec in method_call_spec.items():
+        call_count, error_raised = call_spec
+        mock = mocker.patch(f"ovmsclient.tfs_compat.base.serving_client."
+                            f"ServingClient.{method_name}", side_effect=error_raised)
+        mocks.append((mock, call_count))
+
     with pytest.raises(expected_exception) as e_info:
-        make_http_client(config)
+        make_http_client(**config)
 
     assert str(e_info.value) == expected_message
-    assert mock_check_config.call_count == method_call_count['check_config']
+    for mock_info in mocks:
+        mock, call_count = mock_info
+        assert mock.call_count == call_count
 
 
 @pytest.mark.parametrize("text", [

@@ -16,6 +16,8 @@
 # limitations under the License.
 #
 
+set -e
+
 git clone --branch v2.5.0 --depth 1 https://github.com/tensorflow/tensorflow.git tf
 git clone --branch 2.5.1 --depth 1 https://github.com/tensorflow/serving.git tfs
 
