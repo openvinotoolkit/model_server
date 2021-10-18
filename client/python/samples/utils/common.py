@@ -34,9 +34,8 @@ def get_model_io_names(client, model_name, model_version):
     metadata_request = make_grpc_metadata_request(model_name, model_version)
     metadata = client.get_model_metadata(metadata_request)
     metadata_dict = metadata.to_dict()
-    version = next(iter(metadata_dict))
-    input_name = next(iter(metadata_dict[version]['inputs']))  # by default resnet has one input and one output
-    output_name = next(iter(metadata_dict[version]['outputs']))
+    input_name = next(iter(metadata_dict['inputs']))  # by default resnet has one input and one output
+    output_name = next(iter(metadata_dict['outputs']))
     return input_name, output_name
 
 
@@ -45,7 +44,6 @@ def get_model_input_shape(client, model_name, model_version):
     metadata_request = make_grpc_metadata_request(model_name, model_version)
     metadata = client.get_model_metadata(metadata_request)
     metadata_dict = metadata.to_dict()
-    version = next(iter(metadata_dict))
-    inputs = metadata_dict[version]['inputs']
+    inputs = metadata_dict['inputs']
     input_name = next(iter(inputs))
     return inputs[input_name]['shape']
