@@ -30,6 +30,12 @@ protected:
     void SetUp() override {
         TestWithTempDir::SetUp();
         modelCacheDirectory = this->directoryPath;
+        dummyModelConfigWithCache = DUMMY_MODEL_CONFIG;
+        dummyModelConfigWithCache.setCacheDir(modelCacheDirectory);
+        dummyModelConfigWithCache.setBatchSize(0);
+        imageModelConfigWithCache = INCREMENT_1x3x4x5_MODEL_CONFIG;
+        imageModelConfigWithCache.setCacheDir(modelCacheDirectory);
+        imageModelConfigWithCache.setBatchSize(0);
     }
 
     size_t getCachedFileCount() {
@@ -38,27 +44,27 @@ protected:
     }
 
     void prepareDummyCachedRun() {
-        ModelConfig config = DUMMY_MODEL_CONFIG;
+        ModelConfig config = dummyModelConfigWithCache;
         auto manager = std::make_unique<ConstructorEnabledModelManager>(modelCacheDirectory);
         ASSERT_EQ(manager->reloadModelWithVersions(config), StatusCode::OK_RELOADED);
     }
 
     void prepareImageModelCachedRun() {
-        ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+        ModelConfig config = imageModelConfigWithCache;
         auto manager = std::make_unique<ConstructorEnabledModelManager>(modelCacheDirectory);
         ASSERT_EQ(manager->reloadModelWithVersions(config), StatusCode::OK_RELOADED);
     }
 
     std::string modelCacheDirectory;
+    ModelConfig dummyModelConfigWithCache;
+    ModelConfig imageModelConfigWithCache;
 };
 
 // This test imitates reloading configuration at service runtime.
-TEST_F(ModelCacheTest, FlowTestSingleManager) {
-    ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setBatchSize(0);
+TEST_F(ModelCacheTest, FlowTestOnlineModifications) {
+    ModelConfig config = dummyModelConfigWithCache;
     ASSERT_EQ(config.parseShapeParameter("(1,10)"), StatusCode::OK);
 
-    // Start manager with no cache directory specified.
     auto manager = std::make_unique<ConstructorEnabledModelManager>(modelCacheDirectory);
     ASSERT_EQ(manager->reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
@@ -74,8 +80,7 @@ TEST_F(ModelCacheTest, FlowTestSingleManager) {
 
     // Restart manager with cache directory specified.
     // Load dummy model with changed shape.
-    ModelConfig config_1x100 = DUMMY_MODEL_CONFIG;
-    config_1x100.setBatchSize(0);
+    ModelConfig config_1x100 = dummyModelConfigWithCache;
     ASSERT_EQ(config_1x100.parseShapeParameter("(1,100)"), StatusCode::OK);
     ASSERT_EQ(manager->reloadModelWithVersions(config_1x100), StatusCode::OK_RELOADED);
 
@@ -86,12 +91,12 @@ TEST_F(ModelCacheTest, FlowTestSingleManager) {
 
     // Start manager with cache directory specified.
     // Load dummy model with initial shape.
-    config = DUMMY_MODEL_CONFIG;
-    config.setBatchSize(0);
+    config = dummyModelConfigWithCache;
     ASSERT_EQ(config.parseShapeParameter("(1,10)"), StatusCode::OK);
     ASSERT_EQ(manager->reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
     // TODO: Uncomment once bug is resolved.
+    // https://jira.devtools.intel.com/browse/CVS-68254
     // Check below is disabled due to OpenVINO bug.
     // OpenVINO caches 2 similar models even though underlying network is the same.
     // 1. Model with no reshape operation executed
@@ -105,7 +110,7 @@ TEST_F(ModelCacheTest, FlowTestSingleManager) {
 }
 
 // This test imitates restarting the service.
-TEST_F(ModelCacheTest, FlowTestManagerRecreation) {
+TEST_F(ModelCacheTest, FlowTestOfflineModifications) {
     ModelConfig config = DUMMY_MODEL_CONFIG;
 
     // Start manager with no cache directory specified.
@@ -118,6 +123,7 @@ TEST_F(ModelCacheTest, FlowTestManagerRecreation) {
 
     // Start manager with cache directory specified.
     manager.reset(new ConstructorEnabledModelManager(modelCacheDirectory));
+    config = dummyModelConfigWithCache;
     ASSERT_EQ(manager->reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
     // Check if any cache file was created.
@@ -135,8 +141,7 @@ TEST_F(ModelCacheTest, FlowTestManagerRecreation) {
 
     // Restart manager with cache directory specified.
     // Load dummy model with changed shape.
-    ModelConfig config_1x100 = DUMMY_MODEL_CONFIG;
-    config_1x100.setBatchSize(0);
+    ModelConfig config_1x100 = dummyModelConfigWithCache;
     ASSERT_EQ(config_1x100.parseShapeParameter("(1,100)"), StatusCode::OK);
     manager.reset(new ConstructorEnabledModelManager(modelCacheDirectory));
     ASSERT_EQ(manager->reloadModelWithVersions(config_1x100), StatusCode::OK_RELOADED);
@@ -161,7 +166,7 @@ TEST_F(ModelCacheTest, BatchSizeChangeImpactsCache) {
     this->prepareDummyCachedRun();
     size_t currentCacheFileCount = this->getCachedFileCount();
 
-    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ModelConfig config = dummyModelConfigWithCache;
     config.setBatchSize(5);
 
     auto manager = std::make_unique<ConstructorEnabledModelManager>(modelCacheDirectory);
@@ -184,7 +189,7 @@ TEST_F(ModelCacheTest, ShapeChangeImpactsCache) {
     this->prepareDummyCachedRun();
     size_t currentCacheFileCount = this->getCachedFileCount();
 
-    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ModelConfig config = dummyModelConfigWithCache;
     config.setBatchSize(0);
     config.parseShapeParameter("(1,100)");
 
@@ -208,7 +213,7 @@ TEST_F(ModelCacheTest, NireqChangeDoesNotImpactCache) {
     this->prepareDummyCachedRun();
     size_t currentCacheFileCount = this->getCachedFileCount();
 
-    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ModelConfig config = dummyModelConfigWithCache;
     config.setNireq(12);
 
     auto manager = std::make_unique<ConstructorEnabledModelManager>(modelCacheDirectory);
@@ -221,7 +226,7 @@ TEST_F(ModelCacheTest, LayoutChangeDoesImpactCache) {
     this->prepareImageModelCachedRun();
     size_t currentCacheFileCount = this->getCachedFileCount();
 
-    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ModelConfig config = imageModelConfigWithCache;
     config.setLayout("nhwc");
 
     auto manager = std::make_unique<ConstructorEnabledModelManager>(modelCacheDirectory);
@@ -244,7 +249,7 @@ TEST_F(ModelCacheTest, PluginConfigChangeDoesImpactCache) {
     this->prepareImageModelCachedRun();
     size_t currentCacheFileCount = this->getCachedFileCount();
 
-    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ModelConfig config = imageModelConfigWithCache;
     config.setPluginConfig({{"CPU_THROUGHPUT_STREAMS", "21"}});
 
     auto manager = std::make_unique<ConstructorEnabledModelManager>(modelCacheDirectory);
@@ -259,6 +264,22 @@ TEST_F(ModelCacheTest, PluginConfigChangeDoesImpactCache) {
     ASSERT_EQ(manager->reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
     lastCachedFileCount = currentCacheFileCount;
+    currentCacheFileCount = this->getCachedFileCount();
+    ASSERT_EQ(currentCacheFileCount, lastCachedFileCount);
+}
+
+TEST_F(ModelCacheTest, CacheDisabledModelConfig) {
+    this->prepareDummyCachedRun();
+    size_t currentCacheFileCount = this->getCachedFileCount();
+
+    ModelConfig config = dummyModelConfigWithCache;
+    config.setDisableCaching(true);
+    config.setBatchSize(5);
+
+    auto manager = std::make_unique<ConstructorEnabledModelManager>(modelCacheDirectory);
+    ASSERT_EQ(manager->reloadModelWithVersions(config), StatusCode::OK_RELOADED);
+
+    size_t lastCachedFileCount = currentCacheFileCount;
     currentCacheFileCount = this->getCachedFileCount();
     ASSERT_EQ(currentCacheFileCount, lastCachedFileCount);
 }
