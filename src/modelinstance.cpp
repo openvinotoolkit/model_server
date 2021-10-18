@@ -460,6 +460,11 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
         return status;
     }
     try {
+        if (!this->config.getCacheDir().empty()) {
+            // TODO: Add cache disable option
+            this->ieCore.SetConfig({{CONFIG_KEY(CACHE_DIR), config.getCacheDir()}});
+        }
+
         if (!this->network) {
             if (this->config.isCustomLoaderRequiredToLoadModel()) {
                 // loading the model using the custom loader
