@@ -217,7 +217,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     // Custom Node
     {StatusCode::NODE_LIBRARY_ALREADY_LOADED, "Custom node library is already loaded"},
     {StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN, "Custom node library failed to open"},
-    {StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM, "Custo node library failed to load symbol"},
+    {StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM, "Custom node library failed to load symbol"},
     {StatusCode::NODE_LIBRARY_MISSING, "Custom node library not found"},
     {StatusCode::NODE_LIBRARY_MISSING_OUTPUT, "Custom node output is missing"},
     {StatusCode::NODE_LIBRARY_EXECUTION_FAILED, "Custom node failed during execution"},
