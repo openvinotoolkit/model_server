@@ -31,13 +31,10 @@ class HttpPredictResponse(PredictResponse):
                 result_dict["outputs"] = {}
                 for key, value in outputs.items():
                     result_dict["outputs"][key] = np.array(value)
-            elif isinstance(outputs, list):
-                result_dict["outputs"] = np.array(outputs)
             else:
-                raise ValueError
-        else:
-            result_dict = response_json
-        return result_dict
+                result_dict["outputs"] = np.array(outputs)
+            return result_dict
+        return response_json
 
 
 class HttpModelMetadataResponse(ModelMetadataResponse):
