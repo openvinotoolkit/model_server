@@ -25,6 +25,7 @@ from ovmsclient.tfs_compat.http.responses import (HttpPredictResponse)
 from tfs_compat_http.config import (PREDICT_RESPONSE_VALID_OUTPUTS,
                                     PREDICT_RESPONSE_VALID_OTHER)
 
+
 def outputsEqual(outputs, expected_outputs):
     outputs = outputs["outputs"]
     expected_outputs = expected_outputs["outputs"]
@@ -34,7 +35,9 @@ def outputsEqual(outputs, expected_outputs):
     elif isinstance(outputs, np.ndarray):
         return array_equal(outputs, expected_outputs)
 
+
 RawResponseMock = namedtuple("RawResponse", "text")
+
 
 @pytest.mark.parametrize("response, expected_output", PREDICT_RESPONSE_VALID_OUTPUTS)
 def test_PredictResponse_to_dict_valid_outputs(response, expected_output):
@@ -44,6 +47,7 @@ def test_PredictResponse_to_dict_valid_outputs(response, expected_output):
     output = predict_response.to_dict()
 
     assert(outputsEqual(output, expected_output))
+
 
 @pytest.mark.parametrize("response, expected_output", PREDICT_RESPONSE_VALID_OTHER)
 def test_PredictResponse_to_dict_valid_other(response, expected_output):

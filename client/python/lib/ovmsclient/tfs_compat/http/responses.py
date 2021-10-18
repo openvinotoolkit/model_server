@@ -23,10 +23,10 @@ from ovmsclient.tfs_compat.base.responses import (PredictResponse, ModelMetadata
 class HttpPredictResponse(PredictResponse):
 
     def to_dict(self):
-        result_dict = {}
         response_json = json.loads(self.raw_response.text)
         outputs = response_json.get("outputs", None)
         if outputs:
+            result_dict = {}
             if isinstance(outputs, dict):
                 result_dict["outputs"] = {}
                 for key, value in outputs.items():

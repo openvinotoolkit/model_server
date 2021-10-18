@@ -372,8 +372,8 @@ PREDICT_RESPONSE_VALID_OUTPUTS = [
         """,
         {
             "outputs": {
-                "output1": array([1,2,3]),
-                "output2": array([4,5,6])
+                "output1": array([1, 2, 3]),
+                "output2": array([4, 5, 6])
             }
         }
     )
@@ -393,8 +393,10 @@ PREDICT_RESPONSE_VALID_OTHER = [
     ),
 
     # This should never happen as this is not OVMS API.
-    # There's no validation in to_dict(). Data not under "outputs" key will be returned as is in dict format.
-    # Data under "outputs" key will be additionally converted to numpy to match gRPC to_dict() output.  
+    # There's no validation in to_dict().
+    # Data not under "outputs" key will be returned as is in dict format.
+    # Data under "outputs" key will be additionally converted to numpy
+    # to match gRPC to_dict() output.
     (
         """
         {
@@ -402,7 +404,7 @@ PREDICT_RESPONSE_VALID_OTHER = [
         }
         """,
         {
-            "output123": [1,2,3,4,5]
+            "output123": [1, 2, 3, 4, 5]
         }
     ),
     (
