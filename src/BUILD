@@ -388,7 +388,7 @@ cc_test(
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
         "test/mockmodelinstancechangingstates.hpp",
-        //"test/model_cache_test.cpp",
+        #"test/model_cache_test.cpp",
         "test/model_service_test.cpp",
         "test/model_version_policy_test.cpp",
         "test/model_test.cpp",

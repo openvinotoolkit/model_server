@@ -26,13 +26,13 @@
 #include <vector>
 
 #include <dlfcn.h>
-#include <unistd.h>
 #include <errno.h>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "azurefilesystem.hpp"
 #include "config.hpp"
@@ -60,32 +60,28 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory) :
     ieCore(std::make_unique<InferenceEngine::Core>()),
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
     modelCacheDirectory(modelCacheDirectory) {
-
     // Take --cache_dir from CLI
     if (this->modelCacheDirectory.empty()) {
         this->modelCacheDirectory = ovms::Config::instance().cacheDir();
     }
-
     // If not enabled via CLI, check for /opt/cache existence.
     if (this->modelCacheDirectory.empty()) {
         if (std::filesystem::exists("/opt/cache")) {
             this->modelCacheDirectory = "/opt/cache";
         }
     }
-
     // If cache dir enabled, check for write access.
     if (!this->modelCacheDirectory.empty()) {
         // Create directory if does not exist
         if (!std::filesystem::exists(this->modelCacheDirectory)) {
             std::filesystem::create_directories(this->modelCacheDirectory);
-            SPDLOG_WARN("Cache directory {} did not exist, created", this->modelCacheDirectory);
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} did not exist, created", this->modelCacheDirectory);
         }
-
         int result = access(this->modelCacheDirectory.c_str(), W_OK);
         if (result != 0) {
-            SPDLOG_WARN("Cache directory {} is not writable; access() result: {}", this->modelCacheDirectory, result);
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} is not writable; access() result: {}", this->modelCacheDirectory, result);
         } else {
-            SPDLOG_INFO("Model cache is enabled: {}", this->modelCacheDirectory);
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Model cache is enabled: {}", this->modelCacheDirectory);
         }
     }
 

@@ -87,7 +87,7 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<uint32_t>()->default_value("5"),
                 "SEQUENCE_CLEANER_POLL_WAIT_MINUTES")
             ("cache_dir",
-                "Model cache directory. If specifieid, first model loading will write cache files into this directory. Subsequent model load time should be shrinked.",
+                "Overrides model cache directory. By default cache files are saved into /opt/cache if the directory is present. When enabled, first model load will produce cache files.",
                 cxxopts::value<std::string>(),
                 "CACHE_DIR");
         options->add_options("multi model")

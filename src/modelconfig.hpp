@@ -112,6 +112,11 @@ private:
     std::string cacheDir;
 
     /**
+         * @brief Optional cache disable flag
+         */
+    bool disabledCaching = false;
+
+    /**
          * @brief Model version
          */
     model_version_t version = -1;
@@ -327,7 +332,24 @@ public:
         this->targetDevice = targetDevice;
     }
 
-    // TODO: Add to ModelConfig comparision?
+    /**
+         * @brief Set the caching disable flag
+         * 
+         * @param flag
+         */
+    void setDisableCaching(bool flag) {
+        this->disabledCaching = flag;
+    }
+
+    /**
+         * @brief Check if caching is disabled
+         * 
+         * @return bool
+         */
+    bool isCachingDisabled() const {
+        return this->disabledCaching;
+    }
+
     /**
          * @brief Get the cache directory
          * 

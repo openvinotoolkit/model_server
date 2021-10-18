@@ -1057,7 +1057,8 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
         true,          // is stateful
         true,          // idle sequence cleanup enabled
         false,         // low latency transformation enabled
-        44,            // steteful sequence max number
+        44,            // steteful sequence max number,
+        "",            // cache dir
         modelVersion,  // version
         modelPath,     // local path
     };
@@ -1077,6 +1078,7 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
         true,          // idle sequence cleanup enabled
         true,          // low latency transformation enabled
         11,            // steteful sequence max number
+        "",            // cache dir
         modelVersion,  // version
         modelPath,     // local path
     };

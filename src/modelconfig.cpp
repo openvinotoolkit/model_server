@@ -101,6 +101,9 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
     if (isCustomLoaderConfigChanged(rhs)) {
         return true;
     }
+    if (this->isCachingDisabled() != rhs.isCachingDisabled()) {
+        return true;
+    }
     return false;
 }
 
@@ -429,6 +432,8 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     }
     if (v.HasMember("target_device"))
         this->setTargetDevice(v["target_device"].GetString());
+    if (v.HasMember("disable_caching"))
+        this->setDisableCaching(v["disable_caching"].GetBool());
     if (v.HasMember("version")) {
         this->setVersion(v["version"].GetUint64());
     }
