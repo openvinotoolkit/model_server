@@ -21,9 +21,16 @@ bool NodeLibrary::isValid() const {
     return execute != nullptr &&
            getInputsInfo != nullptr &&
            getOutputsInfo != nullptr &&
-           release != nullptr &&
-           initialize != nullptr &&
-           deinitialize != nullptr;
+           release != nullptr;
+}
+
+bool NodeLibraryV2::isValid() const {
+    return initialize != nullptr &&
+           deinitialize != nullptr &&
+           execute != nullptr &&
+           getInputsInfo != nullptr &&
+           getOutputsInfo != nullptr &&
+           release != nullptr;
 }
 
 }  // namespace ovms

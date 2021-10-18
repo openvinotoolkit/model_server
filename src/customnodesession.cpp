@@ -76,7 +76,8 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
 
     if (outputTensorsCount <= 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; has corrupted number of outputs", getName(), getSessionKey());
-        library.release(outputTensors, customNodeLibraryInternalManager);
+        nodeLibraryExecutor(outputTensors, customNodeLibraryInternalManager);
+        //library.release(outputTensors, customNodeLibraryInternalManager);
         notifyEndQueue.push({node, getSessionKey()});
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT;
     }
@@ -103,7 +104,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         this->resultBlobs.emplace(std::string(outputTensors[i].name), std::move(resultBlob));
     }
 
-    library.release(outputTensors, customNodeLibraryInternalManager);
+    nodeLibraryExecutor(outputTensors, customNodeLibraryInternalManager);
     notifyEndQueue.push({node, getSessionKey()});
     return status;
 }
@@ -119,27 +120,27 @@ Status CustomNodeSession::fetchResult(const std::string& name, InferenceEngine::
 
 void CustomNodeSession::releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibrary& library, void* customNodeLibraryInternalManager) {
     if (tensor->data) {
-        library.release(tensor->data, customNodeLibraryInternalManager);
+        nodeLibraryExecutor(tensor->data, customNodeLibraryInternalManager);
     }
     if (tensor->dims) {
-        library.release(tensor->dims, customNodeLibraryInternalManager);
+        nodeLibraryExecutor(tensor->dims, customNodeLibraryInternalManager);
     }
 }
 
 class TensorResourcesGuard {
     const struct CustomNodeTensor* tensor;
-    const NodeLibrary& library;
+    const NodeLibraryExecutor& nodeLibraryExecutor;
     bool persistData = false;
     void* customNodeLibraryInternalManager;
 
 public:
-    TensorResourcesGuard(const struct CustomNodeTensor* tensor, const NodeLibrary& library, void* customNodeLibraryInternalManager) :
+    TensorResourcesGuard(const struct CustomNodeTensor* tensor, const NodeLibraryExecutor& nodeLibraryExecutor, void* customNodeLibraryInternalManager) :
         tensor(tensor),
-        library(library),
+        nodeLibraryExecutor(nodeLibraryExecutor),
         customNodeLibraryInternalManager(customNodeLibraryInternalManager) {}
     ~TensorResourcesGuard() {
         if (tensor->data && !persistData) {
-            library.release(tensor->data, customNodeLibraryInternalManager);
+            nodeLibraryExecutor(tensor->data, customNodeLibraryInternalManager);
         }
         if (tensor->dims) {
             library.release(tensor->dims, customNodeLibraryInternalManager);
