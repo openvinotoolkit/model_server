@@ -16,7 +16,6 @@
 
 ARG BASE_IMAGE=ubuntu:20.04
 ARG FINAL_IMAGE=ubuntu:20.04
-ARG BUILD_MINIMAL=yes
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 FROM $BASE_IMAGE as base_build
