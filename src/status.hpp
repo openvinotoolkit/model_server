@@ -162,7 +162,6 @@ enum class StatusCode {
     REST_COULD_NOT_PARSE_VERSION,    /*!< Could not parse model version in request */
     REST_INVALID_URL,                /*!< Malformed REST request url */
     REST_UNSUPPORTED_METHOD,         /*!< Request sent with unsupported method */
-    REST_MALFORMED_REQUEST,          /*!< Malformed REST request */
     UNKNOWN_REQUEST_COMPONENTS_TYPE, /*!< Components type not recognized */
 
     // REST Parse
@@ -259,7 +258,7 @@ enum class StatusCode {
 
     // Model control API
     OK_NOT_RELOADED, /*!< Operation succeeded but no config reload was needed */
-    OK_RELOADED,     /*!< Operation succeeded but no config reload was needed */
+    OK_RELOADED,     /*!< Operation succeeded and config reload was needed */
 
     STATUS_CODE_END
 };
@@ -292,7 +291,7 @@ public:
         if (it != statusMessageMap.end())
             this->message = std::make_unique<std::string>(it->second);
         else
-            this->message = std::make_unique<std::string>("Unknown error");
+            this->message = std::make_unique<std::string>("Undefined error");
     }
 
     Status(StatusCode code, const std::string& details) :
