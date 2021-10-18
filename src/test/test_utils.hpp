@@ -190,8 +190,8 @@ static std::vector<T> asVector(const std::string& tensor_content) {
 
 class ConstructorEnabledModelManager : public ovms::ModelManager {
 public:
-    ConstructorEnabledModelManager() :
-        ovms::ModelManager() {}
+    ConstructorEnabledModelManager(const std::string& modelCacheDirectory = "") :
+        ovms::ModelManager(modelCacheDirectory) {}
     ~ConstructorEnabledModelManager() {
         join();
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());

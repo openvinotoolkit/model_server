@@ -85,7 +85,11 @@ Config& Config::parse(int argc, char** argv) {
             ("sequence_cleaner_poll_wait_minutes",
                 "Time interval between two consecutive sequence cleaner scans. Default is 5. Zero value disables sequence cleaner.",
                 cxxopts::value<uint32_t>()->default_value("5"),
-                "SEQUENCE_CLEANER_POLL_WAIT_MINUTES");
+                "SEQUENCE_CLEANER_POLL_WAIT_MINUTES")
+            ("cache_dir",
+                "Model cache directory. If specifieid, first model loading will write cache files into this directory. Subsequent model load time should be shrinked.",
+                cxxopts::value<std::string>(),
+                "CACHE_DIR");
         options->add_options("multi model")
             ("config_path",
                 "Absolute path to json configuration file",

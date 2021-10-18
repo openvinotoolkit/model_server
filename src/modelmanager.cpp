@@ -54,9 +54,16 @@ namespace ovms {
 static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
 static bool watcherStarted = false;
 
-ModelManager::ModelManager() :
+ModelManager::ModelManager(const std::string& modelCacheDirectory) :
     ieCore(std::make_unique<InferenceEngine::Core>()),
-    waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS) {
+    waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
+    modelCacheDirectory(modelCacheDirectory) {
+    if (this->modelCacheDirectory.empty()) {
+        this->modelCacheDirectory = ovms::Config::instance().cacheDir();
+    }
+    if (!this->modelCacheDirectory.empty()) {
+        this->ieCore->SetConfig({{CONFIG_KEY(CACHE_DIR), this->modelCacheDirectory}});
+    }
     this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManager>();
     if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
         SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
@@ -1147,4 +1154,5 @@ Status ModelManager::getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
 const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() const {
     return *customNodeLibraryManager;
 }
+
 }  // namespace ovms
