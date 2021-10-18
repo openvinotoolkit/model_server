@@ -391,6 +391,26 @@ PREDICT_RESPONSE_VALID_OTHER = [
             "error": "Model with requested name is not found"
         }
     ),
+    (
+        """
+        {
+            "outputs": "string"
+        }
+        """,
+        {
+             "outputs": "string"
+        }
+    ),
+    (
+        """
+        {
+            "outputs": 123456789
+        }
+        """,
+        {
+             "outputs": 123456789
+        }
+    ),
 
     # This should never happen as this is not OVMS API.
     # There's no validation in to_dict().
