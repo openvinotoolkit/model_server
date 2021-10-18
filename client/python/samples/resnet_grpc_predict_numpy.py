@@ -65,4 +65,4 @@ for i in range (iterations):
 
     # response post processing
     label, confidence_score = resnet_postprocess(response, output_name)
-    print(f"Image #{i%imgs.shape[0]} has been classified as {label} with {confidence_score*100}% confidence")
+    print(f"Image #{i%imgs.shape[0]} has been classified as {label}")
