@@ -564,6 +564,248 @@ static const char* stressPipelineCustomNodeDifferentOperationsThenDummyThenChoos
     ]
 })";
 
+static const char* stressPipelineCustomNodeAddOneThanDummy = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_add_one",
+            "base_path": "/ovms/bazel-bin/src/libcustom_node_add_one.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_add_one",
+                    "type": "custom",
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output_numbers",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                     "data_item": "dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+static const char* stressPipelineCustomNodeAddOneThanDummyRemovedLibraryConfig = R"(
+{
+    "custom_node_library_config_list": [],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_add_one",
+                    "type": "custom",
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output_numbers",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                     "data_item": "dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+static const char* stressPipelineCustomNodeAddOneThanDummyChangedLibraryName = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_add_one_changed_name",
+            "base_path": "/ovms/bazel-bin/src/libcustom_node_add_one.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_add_one_changed_name",
+                    "type": "custom",
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output_numbers",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                     "data_item": "dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+static const char* stressPipelineCustomNodeAddOneThanDummyChangedParam = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_add_one",
+            "base_path": "/ovms/bazel-bin/src/libcustom_node_add_one.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_add_one",
+                    "type": "custom",
+                    "params": {
+                        "multiplier": "2"
+                    },
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output_numbers",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                     "data_item": "dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
 class StressPipelineConfigChanges : public TestWithTempDir {
 protected:
     const uint loadThreadCount = 20;
@@ -647,6 +889,24 @@ public:
     void changeCustomLibraryParam() {
         SPDLOG_INFO("{} start", __FUNCTION__);
         SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumChangedParamConfig);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void removePreallocatedCustomLibraryUsed() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(stressPipelineCustomNodeAddOneThanDummyRemovedLibraryConfig);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void renamePreallocatedCustomLibraryUsed() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(stressPipelineCustomNodeAddOneThanDummyChangedLibraryName);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void changeParamPreallocatedCustomLibraryUsed() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(stressPipelineCustomNodeAddOneThanDummyChangedParam);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
@@ -893,6 +1153,7 @@ public:
             }
             ovms::Status executePipelineStatus = StatusCode::UNKNOWN_ERROR;
             executePipelineStatus = pipelinePtr->execute();
+            std::cout << "AFTER EXECUTE" << std::endl;
             createPipelineRetCodesCounters[executePipelineStatus.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(executePipelineStatus.getCode()) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(executePipelineStatus.getCode()) != allowedLoadResults.end()))
@@ -1086,6 +1347,110 @@ TEST_F(StressPipelineConfigChanges, RetireSpecificVersionUsedDuringGetMetadataLo
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
         &StressPipelineConfigChanges::retireSpecificVersionUsed,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
+class StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges : public StressPipelineConfigChanges {
+    const size_t addOneInputSize = 10;
+    const std::vector<float> inputNumbers{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+public:
+    tensorflow::serving::PredictRequest preparePipelinePredictRequest() override {
+        tensorflow::serving::PredictRequest request = preparePredictRequest(getExpectedInputsInfo());
+        auto& input = (*request.mutable_inputs())[pipelineInputName];
+        input.mutable_tensor_content()->assign((char*)inputNumbers.data(), inputNumbers.size() * sizeof(float));
+        return request;
+    }
+    inputs_info_t getExpectedInputsInfo() override {
+        return {{pipelineInputName,
+            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, addOneInputSize}, tensorflow::DataType::DT_FLOAT}}};
+    }
+    void checkPipelineResponse(const std::string& pipelineOutputName,
+        tensorflow::serving::PredictRequest& request,
+        tensorflow::serving::PredictResponse& response) override {
+        std::vector<float> result(inputNumbers.begin(), inputNumbers.end());
+        std::transform(result.begin(), result.end(), result.begin(), [this](float f) -> float { return f + 1; });
+        checkDummyResponse(pipelineOutputName, result, request, response, 1);
+    }
+};
+
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCustomLibraryDuringPredictLoad) {  //timeout FAILED
+    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::removePreallocatedCustomLibraryUsed,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCustomLibraryDuringPredictLoad) {  //timeout FAILED
+    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::renamePreallocatedCustomLibraryUsed,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangeParamCustomLibraryDuringPredictLoad) {  //timeout FAILED
+    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::changeParamPreallocatedCustomLibraryUsed,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCustomLibraryDuringGetMetadataLoad) {
+    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::removePreallocatedCustomLibraryUsed,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCustomLibraryDuringGetMetadataLoad) {
+    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::renamePreallocatedCustomLibraryUsed,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangeParamCustomLibraryDuringGetMetadataLoad) {
+    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
+        &StressPipelineConfigChanges::renamePreallocatedCustomLibraryUsed,
         performWholeConfigReload,
         requiredLoadResults,
         allowedLoadResults);
