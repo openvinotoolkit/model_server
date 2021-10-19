@@ -348,3 +348,93 @@ PREDICT_REQUEST_INVALID_REQUEST_TYPE = [
     ("request", TypeError, 'request type should be HttpPredictRequest, '
      'but is str')
 ]
+
+# (response_outputs_dict, expected_outputs_dict)
+PREDICT_RESPONSE_VALID_OUTPUTS = [
+    (
+        """
+        {
+            "outputs": [[1,2,3,4,5]]
+        }
+        """,
+        {
+            "outputs": array([[1, 2, 3, 4, 5]])
+        }
+    ),
+    (
+        """
+        {
+            "outputs": {
+                "output1": [1,2,3],
+                "output2": [4,5,6]
+            }
+        }
+        """,
+        {
+            "outputs": {
+                "output1": array([1, 2, 3]),
+                "output2": array([4, 5, 6])
+            }
+        }
+    )
+]
+
+# (response_outputs_dict, expected_outputs_dict)
+PREDICT_RESPONSE_VALID_OTHER = [
+    (
+        """
+        {
+            "error": "Model with requested name is not found"
+        }
+        """,
+        {
+            "error": "Model with requested name is not found"
+        }
+    ),
+    (
+        """
+        {
+            "outputs": "string"
+        }
+        """,
+        {
+             "outputs": "string"
+        }
+    ),
+    (
+        """
+        {
+            "outputs": 123456789
+        }
+        """,
+        {
+             "outputs": 123456789
+        }
+    ),
+
+    # This should never happen as this is not OVMS API.
+    # There's no validation in to_dict().
+    # Data not under "outputs" key will be returned as is in dict format.
+    # Data under "outputs" key will be additionally converted to numpy
+    # to match gRPC to_dict() output.
+    (
+        """
+        {
+            "output123": [1,2,3,4,5]
+        }
+        """,
+        {
+            "output123": [1, 2, 3, 4, 5]
+        }
+    ),
+    (
+        """
+        {
+            "output123": "string"
+        }
+        """,
+        {
+            "output123": "string"
+        }
+    ),
+]
