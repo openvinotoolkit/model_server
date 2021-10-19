@@ -14,12 +14,27 @@
 # limitations under the License.
 #
 
+import json
+import numpy as np
 from ovmsclient.tfs_compat.base.responses import (PredictResponse, ModelMetadataResponse,
                                                   ModelStatusResponse)
 
 
 class HttpPredictResponse(PredictResponse):
-    pass
+
+    def to_dict(self):
+        response_json = json.loads(self.raw_response.text)
+        outputs = response_json.get("outputs", None)
+        if outputs:
+            result_dict = {}
+            if isinstance(outputs, dict):
+                result_dict["outputs"] = {}
+                for key, value in outputs.items():
+                    result_dict["outputs"][key] = np.array(value)
+            else:
+                result_dict["outputs"] = np.array(outputs)
+            return result_dict
+        return response_json
 
 
 class HttpModelMetadataResponse(ModelMetadataResponse):
