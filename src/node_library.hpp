@@ -29,14 +29,15 @@ typedef int (*execute_fn)(const struct CustomNodeTensor*, int, struct CustomNode
 typedef int (*metadata_fn)(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int);
 typedef int (*release_fn)(void*);
 
-typedef int (*initialize_ver2_fn)(void**, int*, const struct CustomNodeParam*, int);
+typedef int (*initialize_ver2_fn)(void**, const struct CustomNodeParam*, int);
 typedef int (*deinitialize_ver2_fn)(void*);
 typedef int (*execute_ver2_fn)(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int, void*);
 typedef int (*metadata_ver2_fn)(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void*);
 typedef int (*release_ver2_fn)(void*, void*);
 
-
 struct NodeLibraryBase {
+    NodeLibraryBase(const std::string& basePath) :
+        basePath(basePath) {}
     std::string basePath = "";
     virtual bool isValid() const = 0;
     virtual ~NodeLibraryBase() = default;
@@ -48,9 +49,19 @@ struct NodeLibrary : NodeLibraryBase {
     metadata_fn getOutputsInfo = nullptr;
     release_fn release = nullptr;
     bool isValid() const override;
+    NodeLibrary(const std::string& basePath,
+        execute_fn execute,
+        metadata_fn getInputsInfo,
+        metadata_fn getOutputsInfo,
+        release_fn release) :
+        NodeLibraryBase(basePath),
+        execute(execute),
+        getInputsInfo(getInputsInfo),
+        getOutputsInfo(getOutputsInfo),
+        release(release) {}
 };
 
-struct NodeLibraryV2 :NodeLibraryBase {
+struct NodeLibraryV2 : NodeLibraryBase {
     initialize_ver2_fn initialize = nullptr;
     deinitialize_ver2_fn deinitialize = nullptr;
     execute_ver2_fn execute = nullptr;
@@ -58,12 +69,43 @@ struct NodeLibraryV2 :NodeLibraryBase {
     metadata_ver2_fn getOutputsInfo = nullptr;
     release_ver2_fn release = nullptr;
     bool isValid() const override;
+    NodeLibraryV2(const std::string& basePath,
+        initialize_ver2_fn initialize,
+        deinitialize_ver2_fn deinitialize,
+        execute_ver2_fn execute,
+        metadata_ver2_fn getInputsInfo,
+        metadata_ver2_fn getOutputsInfo,
+        release_ver2_fn release) :
+        NodeLibraryBase(basePath),
+        initialize(initialize),
+        deinitialize(deinitialize),
+        execute(execute),
+        getInputsInfo(getInputsInfo),
+        getOutputsInfo(getOutputsInfo),
+        release(release) {}
 };
 class NodeLibraryExecutor {
-        public:
-int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount);
-private;
+public:
+    initialize_ver2_fn initialize;
+    deinitialize_ver2_fn deinitialize;
+    execute_ver2_fn execute;
+    metadata_ver2_fn getInputsInfo;
+    metadata_ver2_fn getOutputsInfo;
+    release_ver2_fn release;
+
+    bool isValid() const {
+        return nodeLibrary->isValid();
+    }
+    std::string getBasePath() const {
+        return nodeLibrary->basePath;
+    }
+    NodeLibraryExecutor(NodeLibraryExecutor&& rhs) :
+        nodeLibrary(std::move(rhs.nodeLibrary)) {}
+    NodeLibraryExecutor(std::unique_ptr<NodeLibraryBase>&& ptr) :
+        nodeLibrary(std::move(ptr)) {}
+
+private:
     std::unique_ptr<NodeLibraryBase> nodeLibrary;
-}
+};
 
 }  // namespace ovms

@@ -103,7 +103,7 @@ Status PipelineDefinition::initializeNodeResources() {
             }
             auto status = nodeInfo.library.initialize(&customNodeLibraryInternalManager, params, nodeInfo.parameters.size());
             if (status != 0) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Initialization of library with base path: {} failed", nodeInfo.library.basePath);
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Initialization of library with base path: {} failed", nodeInfo.library.getBasePath());
                 return StatusCode::NODE_LIBRARY_INITIALIZE_FAILED;
             }
             if (!internalManagerExists) {
@@ -138,7 +138,7 @@ void PipelineDefinition::deinitializeNodeResources(const std::vector<NodeInfo>& 
             void* customNodeLibraryInternalManager = it->second;
             auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
             if (status != 0) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Deinitialization of library with base path: {} failed", nodeInfo.library.basePath);
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Deinitialization of library with base path: {} failed", nodeInfo.library.getBasePath());
             }
             nodeResources.erase(nodeInfo.nodeName);
         }
@@ -1297,7 +1297,7 @@ Status PipelineDefinition::updateOutputsInfo(const ModelManager& manager) {
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName, void* customNodeLibraryInternalManager) {
+Status PipelineDefinition::getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_ver2_fn callback, const std::string& pipelineName, void* customNodeLibraryInternalManager) {
     struct CustomNodeTensorInfo* info = nullptr;
     int infoCount = 0;
     auto paramArray = createCustomNodeParamArray(customNodeInfo.parameters);

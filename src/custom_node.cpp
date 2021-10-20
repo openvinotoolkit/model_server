@@ -27,7 +27,7 @@ namespace ovms {
 
 CustomNode::CustomNode(
     const std::string& nodeName,
-    const NodeLibrary& library,
+    const NodeLibraryExecutor& library,
     const parameters_t& parameters,
     const std::unordered_map<std::string, std::string>& nodeOutputNameAlias,
     std::optional<uint32_t> demultiplyCount,

@@ -24,11 +24,11 @@ namespace ovms {
 
 class CustomNodeOutputAllocator : public InferenceEngine::IAllocator {
     struct CustomNodeTensor tensor;
-    NodeLibrary nodeLibrary;
+    const NodeLibraryExecutor& nodeLibrary;
     void* customNodeLibraryInternalManager;
 
 public:
-    CustomNodeOutputAllocator(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, void* customNodeLibraryInternalManager) :
+    CustomNodeOutputAllocator(struct CustomNodeTensor tensor, const NodeLibraryExecutor& nodeLibrary, void* customNodeLibraryInternalManager) :
         tensor(tensor),
         nodeLibrary(nodeLibrary),
         customNodeLibraryInternalManager(customNodeLibraryInternalManager) {}

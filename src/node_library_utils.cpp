@@ -97,12 +97,12 @@ std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const std
     return inputTensors;
 }
 
-Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std::map<std::string, std::shared_ptr<TensorInfo>>& out, release_fn freeCallback, void* customNodeLibraryInternalManager) {
+Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std::map<std::string, std::shared_ptr<TensorInfo>>& out, release_ver2_fn nodeLibraryExecutor, void* customNodeLibraryInternalManager) {
     if (info == nullptr) {
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED;
     }
     if (infoCount <= 0) {
-        freeCallback(info, customNodeLibraryInternalManager);
+        release(info, customNodeLibraryInternalManager);
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT;
     }
     // At this point it is important to not exit before we iterate over every info object.
@@ -112,7 +112,7 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std
             continue;
         }
         if (info[i].dimsCount == 0) {
-            freeCallback(info[i].dims, customNodeLibraryInternalManager);
+            release(info[i].dims, customNodeLibraryInternalManager);
             continue;
         }
         if (info[i].name == nullptr) {
@@ -123,10 +123,10 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std
         InferenceEngine::Precision precision = toInferenceEnginePrecision(info[i].precision);
         shape_t shape(info[i].dims, info[i].dims + info[i].dimsCount);
 
-        freeCallback(info[i].dims, customNodeLibraryInternalManager);
+        release(info[i].dims, customNodeLibraryInternalManager);
         out.emplace(name, std::make_shared<TensorInfo>(name, precision, std::move(shape)));
     }
-    freeCallback(info, customNodeLibraryInternalManager);
+    release(info, customNodeLibraryInternalManager);
     return StatusCode::OK;
 }
 

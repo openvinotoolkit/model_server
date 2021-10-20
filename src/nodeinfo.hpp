@@ -73,7 +73,7 @@ struct NodeInfo {
     std::unordered_map<std::string, std::string> outputNameAliases;
     std::optional<size_t> demultiplyCount;
     std::set<std::string> gatherFromNode;
-    NodeLibrary library;
+    const NodeLibraryExecutor library;
     parameters_t parameters;
 
     NodeInfo(NodeKind kind,
@@ -83,7 +83,7 @@ struct NodeInfo {
         std::unordered_map<std::string, std::string> outputNameAliases = {},
         std::optional<size_t> demultiplyCount = std::nullopt,
         const std::set<std::string>& gatherFromNode = {},
-        const NodeLibrary& library = {},
+        NodeLibraryExecutor&& library = {nullptr},
         const parameters_t& parameters = {}) :
         kind(kind),
         nodeName(nodeName),
@@ -92,7 +92,17 @@ struct NodeInfo {
         outputNameAliases(outputNameAliases),
         demultiplyCount(demultiplyCount),
         gatherFromNode(gatherFromNode),
-        library(library),
+        library(std::move(library)),
         parameters(parameters) {}
+    NodeInfo(NodeInfo&& rhs) :
+        kind(std::move(rhs.kind)),
+        nodeName(std::move(rhs.nodeName)),
+        modelName(std::move(rhs.modelName)),
+        modelVersion(std::move(rhs.modelVersion)),
+        outputNameAliases(std::move(rhs.outputNameAliases)),
+        demultiplyCount(std::move(rhs.demultiplyCount)),
+        gatherFromNode(std::move(rhs.gatherFromNode)),
+        library(std::move(rhs.library)),
+        parameters(std::move(rhs.parameters)) {}
 };
 }  // namespace ovms

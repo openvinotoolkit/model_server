@@ -38,7 +38,7 @@ CustomNodeSession::CustomNodeSession(const NodeSessionMetadata&& metadata, const
 
 CustomNodeSession::~CustomNodeSession() = default;
 
-Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node, const NodeLibrary& library, std::unique_ptr<struct CustomNodeParam[]>& parameters, int parametersCount, void* customNodeLibraryInternalManager) {
+Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node, const NodeLibraryExecutor& library, std::unique_ptr<struct CustomNodeParam[]>& parameters, int parametersCount, void* customNodeLibraryInternalManager) {
     const auto& blobMap = this->inputHandler->getInputs();
     auto inputTensorsCount = blobMap.size();
     auto inputTensors = createCustomNodeTensorArray(blobMap);
@@ -76,8 +76,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
 
     if (outputTensorsCount <= 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; has corrupted number of outputs", getName(), getSessionKey());
-        nodeLibraryExecutor(outputTensors, customNodeLibraryInternalManager);
-        //library.release(outputTensors, customNodeLibraryInternalManager);
+        library.release(outputTensors, customNodeLibraryInternalManager);
         notifyEndQueue.push({node, getSessionKey()});
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT;
     }
@@ -104,7 +103,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         this->resultBlobs.emplace(std::string(outputTensors[i].name), std::move(resultBlob));
     }
 
-    nodeLibraryExecutor(outputTensors, customNodeLibraryInternalManager);
+    library.release(outputTensors, customNodeLibraryInternalManager);
     notifyEndQueue.push({node, getSessionKey()});
     return status;
 }
@@ -118,12 +117,12 @@ Status CustomNodeSession::fetchResult(const std::string& name, InferenceEngine::
     return StatusCode::OK;
 }
 
-void CustomNodeSession::releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibrary& library, void* customNodeLibraryInternalManager) {
+void CustomNodeSession::releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibraryExecutor& library, void* customNodeLibraryInternalManager) {
     if (tensor->data) {
-        nodeLibraryExecutor(tensor->data, customNodeLibraryInternalManager);
+        library.release(tensor->data, customNodeLibraryInternalManager);
     }
     if (tensor->dims) {
-        nodeLibraryExecutor(tensor->dims, customNodeLibraryInternalManager);
+        library.release(tensor->dims, customNodeLibraryInternalManager);
     }
 }
 
@@ -140,10 +139,10 @@ public:
         customNodeLibraryInternalManager(customNodeLibraryInternalManager) {}
     ~TensorResourcesGuard() {
         if (tensor->data && !persistData) {
-            nodeLibraryExecutor(tensor->data, customNodeLibraryInternalManager);
+            nodeLibraryExecutor.release(tensor->data, customNodeLibraryInternalManager);
         }
         if (tensor->dims) {
-            library.release(tensor->dims, customNodeLibraryInternalManager);
+            nodeLibraryExecutor.release(tensor->dims, customNodeLibraryInternalManager);
         }
     }
     void setPersistData() {
@@ -151,7 +150,7 @@ public:
     }
 };
 
-Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, InferenceEngine::Blob::Ptr& resultBlob, const NodeLibrary& library, void* customNodeLibraryInternalManager) {
+Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, InferenceEngine::Blob::Ptr& resultBlob, const NodeLibraryExecutor& library, void* customNodeLibraryInternalManager) {
     TensorResourcesGuard tensorResourcesGuard(tensor, library, customNodeLibraryInternalManager);
     InferenceEngine::TensorDesc desc;
 
