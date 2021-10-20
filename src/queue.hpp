@@ -20,11 +20,11 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <thread>
 #include <utility>
 #include <vector>
-#include <optional>
 
 namespace ovms {
 
