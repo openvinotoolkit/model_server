@@ -32,13 +32,11 @@ BuffersQueue::BuffersQueue(size_t singleBufferSize, int streamsLength) :
 
 void* BuffersQueue::getBuffer() {
     // can be easily switched to async version if need arise
-    auto idleId = getIdleStream();
-    if (idleId.wait_for(std::chrono::nanoseconds(0)) == std::future_status::timeout) {
-        auto id = idleId.get();  // temporary solution related to future usage
-        returnBuffer(getInferRequest(id));
-        return nullptr;
+    auto idleId = tryToGetIdleStream();
+    if (idleId.has_value()) {
+        return getInferRequest(idleId.value());
     }
-    return getInferRequest(idleId.get());
+    return nullptr;
 }
 
 bool BuffersQueue::returnBuffer(void* buffer) {
