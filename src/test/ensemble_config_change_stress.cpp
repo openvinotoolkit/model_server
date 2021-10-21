@@ -1088,7 +1088,9 @@ public:
                 break;
             }
             auto status = ovms::GetModelMetadataImpl::createGrpcRequest(pipelineName, 1, &request);
+            std::cout << "BEFORE GET" << std::endl;
             status = ovms::GetModelMetadataImpl::getModelStatus(&request, &response, manager);
+            std::cout << "AFTER GET" << std::endl;
             createPipelineRetCodesCounters[status.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(status.getCode()) != allowedLoadResults.end()))
@@ -1151,7 +1153,9 @@ public:
                 createPipelineRetCodesCounters[createPipelineStatus.getCode()]++;
                 continue;
             }
+            
             ovms::Status executePipelineStatus = StatusCode::UNKNOWN_ERROR;
+            std::cout << "BEFORE EXECUTE" << std::endl;
             executePipelineStatus = pipelinePtr->execute();
             std::cout << "AFTER EXECUTE" << std::endl;
             createPipelineRetCodesCounters[executePipelineStatus.getCode()]++;
@@ -1376,19 +1380,19 @@ public:
     }
 };
 
-// TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCustomLibraryDuringPredictLoad) {  //timeout FAILED
-//     SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
-//     bool performWholeConfigReload = true;
-//     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
-//         StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
-//     std::set<StatusCode> allowedLoadResults = {};
-//     performStressTest(
-//         &StressPipelineConfigChanges::triggerPredictInALoop,
-//         &StressPipelineConfigChanges::removePreallocatedCustomLibraryUsed,
-//         performWholeConfigReload,
-//         requiredLoadResults,
-//         allowedLoadResults);
-// }
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCustomLibraryDuringPredictLoad) {  //timeout FAILED
+    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
+        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::removePreallocatedCustomLibraryUsed,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
 
 // TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCustomLibraryDuringPredictLoad) {  //timeout FAILED
 //     SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);

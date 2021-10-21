@@ -41,16 +41,21 @@ std::shared_mutex internalManagerLock;
 
 template <typename T>
 bool get_buffer(CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size) {
+    std::cout << "LIB: Getting buffersqueue " << buffersQueueName << std::endl;
     auto buffersQueue = internalManager->getBuffersQueue(buffersQueueName);
     if (!(buffersQueue == nullptr)) {
+        std::cout << "LIB: Getting buffer for bq " << buffersQueueName << std::endl;
         *buffer = static_cast<T*>(buffersQueue->getBuffer());
+        std::cout << "LIB: Got buffer for bq " << buffersQueueName << std::endl;
     }
     if (*buffer == nullptr || buffersQueue == nullptr) {
+        std::cout << "LIB: Malloc for buffersqueue " << buffersQueueName << std::endl;
         *buffer = (T*)malloc(byte_size);
         if (*buffer == nullptr) {
             std::cout << "allocation for buffer: " << buffersQueueName << "FAILED" << std::endl;
             return false;
         }
+        std::cout << "LIB: Malloc finished for buffersqueue " << buffersQueueName << std::endl;
     }
     return true;
 }
@@ -114,6 +119,7 @@ int deinitialize(void* customNodeLibraryInternalManager) {
 }
 
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+    std::cout << "LIB: EXECUTE" << std::endl;
     std::shared_lock lock(internalManagerLock);
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
 
