@@ -380,7 +380,7 @@ PREDICT_RESPONSE_VALID_OUTPUTS = [
 ]
 
 # (response_outputs_dict, expected_outputs_dict)
-PREDICT_RESPONSE_VALID_OTHER = [
+RESPONSE_VALID_OTHER = [
     (
         """
         {
@@ -435,6 +435,273 @@ PREDICT_RESPONSE_VALID_OTHER = [
         """,
         {
             "output123": "string"
+        }
+    ),
+]
+
+
+# (response_outputs_dict, expected_outputs_dict)
+METADATA_RESPONSE_VALID_OUTPUTS = [
+    (
+        """
+        {
+            "modelSpec": {
+                "name": "empty",
+                "signatureName": "",
+                "version": "1"
+            },
+            "metadata": {
+                "signature_def": {
+                "@type": "type.googleapis.com/tensorflow.serving.SignatureDefMap",
+                "signatureDef": {
+                    "serving_default": {
+                        "inputs": {
+                            "input": {
+                                "dtype": "DT_FLOAT",
+                                "tensorShape": {
+                                    "dim": [
+                                        {
+                                        "size": "1",
+                                        "name": ""
+                                        },
+                                        {
+                                        "size": "10",
+                                        "name": ""
+                                        }
+                                    ],
+                                    "unknownRank": false
+                                },
+                                "name": "input"
+                            }
+                        },
+                        "outputs": {
+                            "output": {
+                                "dtype": "DT_FLOAT",
+                                "tensorShape": {
+                                    "dim": [
+                                        {
+                                            "size": "1",
+                                            "name": ""
+                                        },
+                                        {
+                                            "size": "10",
+                                            "name": ""
+                                        }
+                                    ],
+                                    "unknownRank": false
+                                },
+                                "name": "output"
+                            }
+                        },
+                    "methodName": ""
+                    }
+                }
+            }
+        }
+        }
+        """,
+        {
+            "model_version": 1,
+            "inputs": {
+                "input": {"dtype": "DT_FLOAT", "shape": [1, 10]}
+            },
+            "outputs": {
+                "output": {"dtype": "DT_FLOAT", "shape": [1, 10]}
+            }
+        }
+    ),
+
+    (
+        """
+        {
+            "modelSpec": {
+                "name": "empty",
+                "signatureName": "",
+                "version": "4"
+            },
+            "metadata": {
+                "signature_def": {
+                "@type": "type.googleapis.com/tensorflow.serving.SignatureDefMap",
+                "signatureDef": {
+                    "serving_default": {
+                        "inputs": {
+                            "input1": {
+                                "dtype": "DT_FLOAT",
+                                "tensorShape": {
+                                    "dim": [
+                                        {
+                                        "size": "1",
+                                        "name": ""
+                                        },
+                                        {
+                                        "size": "300",
+                                        "name": ""
+                                        },
+                                        {
+                                        "size": "300",
+                                        "name": ""
+                                        }
+                                    ],
+                                    "unknownRank": false
+                                },
+                                "name": "input1"
+                            },
+                            "input2": {
+                                "dtype": "DT_FLOAT",
+                                "tensorShape": {
+                                    "dim": [
+                                        {
+                                        "size": "1",
+                                        "name": ""
+                                        },
+                                        {
+                                        "size": "10",
+                                        "name": ""
+                                        }
+                                    ],
+                                    "unknownRank": false
+                                },
+                                "name": "input2"
+                            }
+                        },
+                        "outputs": {
+                            "output1": {
+                                "dtype": "DT_INT64",
+                                "tensorShape": {
+                                    "dim": [
+                                        {
+                                            "size": "1",
+                                            "name": ""
+                                        },
+                                        {
+                                            "size": "1",
+                                            "name": ""
+                                        }
+                                    ],
+                                    "unknownRank": false
+                                },
+                                "name": "output1"
+                            },
+                            "output2": {
+                                "dtype": "DT_FLOAT",
+                                "tensorShape": {
+                                    "dim": [
+                                        {
+                                            "size": "1",
+                                            "name": ""
+                                        },
+                                        {
+                                            "size": "10",
+                                            "name": ""
+                                        },
+                                        {
+                                            "size": "10",
+                                            "name": ""
+                                        },
+                                        {
+                                            "size": "10",
+                                            "name": ""
+                                        }
+                                    ],
+                                    "unknownRank": false
+                                },
+                                "name": "output2"
+                            }
+                        },
+                    "methodName": ""
+                    }
+                }
+            }
+        }
+        }
+        """,
+        {
+            "model_version": 4,
+            "inputs": {
+                "input1": {"dtype": "DT_FLOAT", "shape": [1, 300, 300]},
+                "input2": {"dtype": "DT_FLOAT", "shape": [1, 10]}
+            },
+            "outputs": {
+                "output1": {"dtype": "DT_INT64", "shape": [1, 1]},
+                "output2": {"dtype": "DT_FLOAT", "shape": [1, 10, 10, 10]}
+            }
+        }
+    )
+]
+
+
+# (response_outputs_dict, expected_outputs_dict)
+STATUS_RESPONSE_VALID_OUTPUTS = [
+    (
+        """
+        {
+            "model_version_status": [
+                {
+                    "version": "1",
+                    "state": "AVAILABLE",
+                    "status": {
+                        "error_code": "OK",
+                        "error_message": "OK"
+                    }
+                }
+            ]
+        }
+        """,
+        {
+            1: {
+                "state": "AVAILABLE",
+                "error_code": "OK",
+                "error_message": "OK"
+            }
+        }
+    ),
+    (
+        """
+        {
+            "model_version_status": [
+                {
+                    "version": "1",
+                    "state": "END",
+                    "status": {
+                        "error_code": "OK",
+                        "error_message": "OK"
+                    }
+                },
+                {
+                    "version": "2",
+                    "state": "AVAILABLE",
+                    "status": {
+                        "error_code": "OK",
+                        "error_message": "OK"
+                    }
+                },
+                {
+                    "version": "3",
+                    "state": "LOADING",
+                    "status": {
+                        "error_code": "UNKNOWN",
+                        "error_message": "Could not load model version - topology not supported"
+                    }
+                }
+            ]
+        }
+        """,
+        {
+            1: {
+                "state": "END",
+                "error_code": "OK",
+                "error_message": "OK"
+            },
+            2: {
+                "state": "AVAILABLE",
+                "error_code": "OK",
+                "error_message": "OK"
+            },
+            3: {
+                "state": "LOADING",
+                "error_code": "UNKNOWN",
+                "error_message": "Could not load model version - topology not supported"
+            }
         }
     ),
 ]

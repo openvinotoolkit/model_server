@@ -20,10 +20,14 @@ import numpy as np
 from collections import namedtuple
 from numpy.core.numeric import array_equal
 
-from ovmsclient.tfs_compat.http.responses import (HttpPredictResponse)
+from ovmsclient.tfs_compat.http.responses import (HttpPredictResponse,
+                                                  HttpModelMetadataResponse,
+                                                  HttpModelStatusResponse)
 
 from tfs_compat_http.config import (PREDICT_RESPONSE_VALID_OUTPUTS,
-                                    PREDICT_RESPONSE_VALID_OTHER)
+                                    METADATA_RESPONSE_VALID_OUTPUTS,
+                                    STATUS_RESPONSE_VALID_OUTPUTS,
+                                    RESPONSE_VALID_OTHER)
 
 
 def outputsEqual(outputs, expected_outputs):
@@ -49,11 +53,51 @@ def test_PredictResponse_to_dict_valid_outputs(response, expected_output):
     assert(outputsEqual(output, expected_output))
 
 
-@pytest.mark.parametrize("response, expected_output", PREDICT_RESPONSE_VALID_OTHER)
+@pytest.mark.parametrize("response, expected_output", RESPONSE_VALID_OTHER)
 def test_PredictResponse_to_dict_valid_other(response, expected_output):
     predict_raw_response = RawResponseMock(response)
 
     predict_response = HttpPredictResponse(predict_raw_response)
     output = predict_response.to_dict()
+
+    assert(output == expected_output)
+
+
+@pytest.mark.parametrize("response, expected_output", METADATA_RESPONSE_VALID_OUTPUTS)
+def test_ModelMetadataResponse_to_dict_valid_outputs(response, expected_output):
+    metadata_raw_response = RawResponseMock(response)
+
+    metadata_response = HttpModelMetadataResponse(metadata_raw_response)
+    output = metadata_response.to_dict()
+
+    assert(output == expected_output)
+
+
+@pytest.mark.parametrize("response, expected_output", RESPONSE_VALID_OTHER)
+def test_ModelMetadataResponse_to_dict_valid_other(response, expected_output):
+    metadata_raw_response = RawResponseMock(response)
+
+    metadata_response = HttpModelMetadataResponse(metadata_raw_response)
+    output = metadata_response.to_dict()
+
+    assert(output == expected_output)
+
+
+@pytest.mark.parametrize("response, expected_output", STATUS_RESPONSE_VALID_OUTPUTS)
+def test_ModelStatusResponse_to_dict_valid_outputs(response, expected_output):
+    status_raw_response = RawResponseMock(response)
+
+    status_response = HttpModelStatusResponse(status_raw_response)
+    output = status_response.to_dict()
+
+    assert(output == expected_output)
+
+
+@pytest.mark.parametrize("response, expected_output", RESPONSE_VALID_OTHER)
+def test_ModelStatusResponse_to_dict_valid_other(response, expected_output):
+    status_raw_response = RawResponseMock(response)
+
+    status_response = HttpModelStatusResponse(status_raw_response)
+    output = status_response.to_dict()
 
     assert(output == expected_output)

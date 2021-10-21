@@ -40,13 +40,39 @@ class HttpPredictResponse(PredictResponse):
 class HttpModelMetadataResponse(ModelMetadataResponse):
 
     def to_dict(self):
-        pass
+        response_json = json.loads(self.raw_response.text)
+        metadata = response_json.get("metadata", None)
+        model_spec = response_json.get("modelSpec", None)
+        if metadata and model_spec:
+            io_info = metadata["signature_def"]["signatureDef"]["serving_default"]
+            result_dict = {}
+            for type in ["inputs", "outputs"]:
+                result_dict[type] = {}
+                for name, raw_info in io_info[type].items():
+                    dtype = raw_info["dtype"]
+                    shape = [int(dim["size"]) for dim in raw_info["tensorShape"]["dim"]]
+                    result_dict[type][name] = {"dtype": dtype, "shape": shape}
+            result_dict["model_version"] = int(model_spec["version"])
+            return result_dict
+        return response_json
 
 
 class HttpModelStatusResponse(ModelStatusResponse):
 
     def to_dict(self):
-        pass
+        response_json = json.loads(self.raw_response.text)
+        model_version_status = response_json.get("model_version_status", None)
+        if model_version_status:
+            result_dict = {}
+            for version_status in model_version_status:
+                version = int(version_status["version"])
+                result_dict[version] = {
+                    "state": version_status["state"],
+                    "error_code": version_status["status"]["error_code"],
+                    "error_message": version_status["status"]["error_message"]
+                }
+            return result_dict
+        return response_json
 
 
 class HttpConfigStatusResponse:
