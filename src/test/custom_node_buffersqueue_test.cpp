@@ -65,8 +65,8 @@ TEST(CustomNodeBuffersQueue, GetAllBuffersThenNullptrForNextRequest) {
         buffers[i] = buffersQueue.getBuffer();
         ASSERT_NE(nullptr, buffers[i]) << "Failed to get: " << i;
     }
-    // void* buffer = buffersQueue.getBuffer();
-    // EXPECT_EQ(nullptr, buffer) << "Failed to get buffer";
+    void* buffer = buffersQueue.getBuffer();
+    EXPECT_EQ(nullptr, buffer) << "Failed to get buffer";
     // just to make sure that getBufferAndReturn function had
     // time to call getBuffer
     for (size_t i = 0; i < buffersCount; ++i) {
