@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <string>
+
 #define NODE_ASSERT(cond, msg)                                            \
     if (!(cond)) {                                                        \
         std::cout << "[" << __LINE__ << "] Assert: " << msg << std::endl; \
