@@ -1361,6 +1361,7 @@ class StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges : public Str
     const std::vector<float> inputNumbers{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
 public:
+    int multiplier = 1;
     tensorflow::serving::PredictRequest preparePipelinePredictRequest() override {
         tensorflow::serving::PredictRequest request = preparePredictRequest(getExpectedInputsInfo());
         auto& input = (*request.mutable_inputs())[pipelineInputName];
@@ -1375,12 +1376,12 @@ public:
         tensorflow::serving::PredictRequest& request,
         tensorflow::serving::PredictResponse& response) override {
         std::vector<float> result(inputNumbers.begin(), inputNumbers.end());
-        std::transform(result.begin(), result.end(), result.begin(), [this](float f) -> float { return f + 1; });
+        std::transform(result.begin(), result.end(), result.begin(), [this](float f) -> float { return (f + 1.0f)*multiplier; });
         checkDummyResponse(pipelineOutputName, result, request, response, 1);
-    }
+        }
 };
 
-TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCustomLibraryDuringPredictLoad) {  //timeout FAILED
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
@@ -1394,31 +1395,31 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCust
         allowedLoadResults);
 }
 
-// TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCustomLibraryDuringPredictLoad) {  //timeout FAILED
-//     SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
-//     bool performWholeConfigReload = true;
-//     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
-//     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
-//     performStressTest(
-//         &StressPipelineConfigChanges::triggerPredictInALoop,
-//         &StressPipelineConfigChanges::renamePreallocatedCustomLibraryUsed,
-//         performWholeConfigReload,
-//         requiredLoadResults,
-//         allowedLoadResults);
-// }
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCustomLibraryDuringPredictLoad) {
+    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::renamePreallocatedCustomLibraryUsed,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
 
-// TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangeParamCustomLibraryDuringPredictLoad) {  //timeout FAILED
-//     SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
-//     bool performWholeConfigReload = true;
-//     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
-//     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
-//     performStressTest(
-//         &StressPipelineConfigChanges::triggerPredictInALoop,
-//         &StressPipelineConfigChanges::changeParamPreallocatedCustomLibraryUsed,
-//         performWholeConfigReload,
-//         requiredLoadResults,
-//         allowedLoadResults);
-// }
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangeParamCustomLibraryDuringPredictLoad) {
+    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerPredictInALoop,
+        &StressPipelineConfigChanges::changeParamPreallocatedCustomLibraryUsed,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
