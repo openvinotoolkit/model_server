@@ -20,6 +20,7 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <thread>
 #include <utility>
@@ -49,6 +50,20 @@ public:
             idleStreamPromise.set_value(value);
         }
         return idleStreamFuture;
+    }
+
+    std::optional<int> tryToGetIdleStream() {
+        int value;
+        std::unique_lock<std::mutex> lk(front_mut);
+        if (streams[front_idx] < 0) {  // we need to wait for any idle stream to be returned
+            return std::nullopt;
+        } else {  // we can give idle stream right away
+            value = streams[front_idx];
+            streams[front_idx] = -1;  // negative value indicate consumed vector index
+            front_idx = (front_idx + 1) % streams.size();
+            lk.unlock();
+            return value;
+        }
     }
 
     /**
