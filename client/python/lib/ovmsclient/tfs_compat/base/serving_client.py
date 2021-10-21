@@ -58,19 +58,23 @@ class ServingClient(ABC):
         pass
 
     @abstractmethod
-    def get_model_status(self, request):
+    def get_model_status(self, model_name, model_version = 0, timeout = 10.0):
         '''
         Send ModelStatusRequest to the server and return response.
 
         Args:
-            request: ModelStatusRequest object.
+            model_name: name of the model in the model server.
+            model_version: version of the model (default = 0)
+            timeout: time in seconds to wait for the response (default = 10).
 
         Returns:
-            ModelStatusResponse object
+            Dictionary with the response. Either model status or error message.
 
         Raises:
             TypeError:  if provided argument is of wrong type.
-            Many more for different serving reponses...
+            ValueError: if provided argument has unsupported value 
+            ConnectionError: when there is an issue with server connection or request timed out
+            RuntimeError: when server response in malformed and cannot be parsed
         '''
 
         pass

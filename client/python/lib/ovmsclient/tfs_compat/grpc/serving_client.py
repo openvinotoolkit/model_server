@@ -15,6 +15,7 @@
 #
 
 from grpc import RpcError, ssl_channel_credentials, secure_channel, insecure_channel
+from grpc import StatusCode
 
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from tensorflow_serving.apis import model_service_pb2_grpc
@@ -23,8 +24,9 @@ from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataReque
 from tensorflow_serving.apis.predict_pb2 import PredictRequest
 
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
-from ovmsclient.tfs_compat.grpc.requests import (GrpcModelStatusRequest, GrpcModelMetadataRequest,
-                                                 GrpcPredictRequest)
+from ovmsclient.tfs_compat.grpc.requests import (GrpcModelStatusRequest, make_status_request,
+                                                 GrpcModelMetadataRequest, make_metadata_request,
+                                                 GrpcPredictRequest, make_predict_request)
 from ovmsclient.tfs_compat.grpc.responses import (GrpcModelStatusResponse,
                                                   GrpcModelMetadataResponse,
                                                   GrpcPredictResponse)
@@ -115,43 +117,30 @@ class GrpcClient(ServingClient):
 
         return GrpcModelMetadataResponse(raw_response)
 
-    def get_model_status(self, request):
-        '''
-        Send GrpcModelStatusRequest to the server and return response.
+    def get_model_status(self, model_name, model_version = 0, timeout = 10.0):
 
-        Args:
-            request: GrpcModelStatusRequest object.
+        request = make_status_request(model_name, model_version)
 
-        Returns:
-            GrpcModelStatusResponse object
-
-        Raises:
-            TypeError:  if request argument is of wrong type.
-            ValueError: if request argument has invalid contents.
-            ConnectionError: if there was an error while sending request to the server.
-
-        Examples:
-
-            >>> config = {
-            ...     "address": "localhost",
-            ...     "port": 9000
-            ... }
-            >>> client = make_grpc_client(config)
-            >>> request = make_model_status_request("model")
-            >>> response = client.get_model_status(request)
-            >>> type(response)
-        '''
-
-        GrpcClient._check_model_status_request(request)
+        try:
+            timeout = float(timeout)
+            if timeout < 0.0:
+                raise
+        except:
+            raise TypeError("timeout value must be positive float")
 
         raw_response = None
         try:
-            raw_response = self.model_service_stub.GetModelStatus(request.raw_request, 10.0)
+            raw_response = self.model_service_stub.GetModelStatus(request.raw_request, timeout)
         except RpcError as e_info:
-            raise ConnectionError('There was an error during sending ModelStatusRequest. '
-                                  f'Grpc exited with: \n{e_info.code().name} - {e_info.details()}')
-
-        return GrpcModelStatusResponse(raw_response)
+                raise ConnectionError("There was an error during handling the request."
+                                      f"Grpc exited with: {e_info.code().name} - "
+                                      f"{e_info.details()}")
+        try:
+            response = GrpcModelStatusResponse(raw_response).to_dict()
+        except Exception as e_info:
+            raise RuntimeError("Received response is malformed and could not be parsed."
+                               f"Details: {str(e_info)}")
+        return response
 
     @classmethod
     def _build(cls, url, tls_config):
