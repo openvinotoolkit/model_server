@@ -26,6 +26,7 @@ static constexpr const char* INPUT_DETECTION_TENSOR_NAME = "detection";
 static constexpr const char* OUTPUT_IMAGES_TENSOR_NAME = "images";
 static constexpr const char* OUTPUT_COORDINATES_TENSOR_NAME = "coordinates";
 static constexpr const char* OUTPUT_CONFIDENCES_TENSOR_NAME = "confidences";
+static constexpr const char* OUTPUT_LABEL_IDS_TENSOR_NAME = "label_ids";
 
 bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale) {
     const uint64_t outputBatch = boxes.size();
@@ -127,6 +128,26 @@ bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::ve
     return true;
 }
 
+bool copy_label_ids_into_output(struct CustomNodeTensor* output, const std::vector<int>& labelIds) {
+    const uint64_t outputBatch = labelIds.size();
+    uint64_t byteSize = sizeof(float) * outputBatch;
+
+    float* buffer = (float*)malloc(byteSize);
+    NODE_ASSERT(buffer != nullptr, "malloc has failed");
+    std::memcpy(buffer, labelIds.data(), byteSize);
+
+    output->data = reinterpret_cast<uint8_t*>(buffer);
+    output->dataBytes = byteSize;
+    output->dimsCount = 3;
+    output->dims = (uint64_t*)malloc(output->dimsCount * sizeof(uint64_t));
+    NODE_ASSERT(output->dims != nullptr, "malloc has failed");
+    output->dims[0] = outputBatch;
+    output->dims[1] = 1;
+    output->dims[2] = 1;
+    output->precision = I32;
+    return true;
+}
+
 void cleanup(CustomNodeTensor& tensor) {
     free(tensor.data);
     free(tensor.dims);
@@ -213,6 +234,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     std::vector<cv::Rect> boxes;
     std::vector<cv::Vec4f> detections;
     std::vector<float> confidences;
+    std::vector<int> labelIds;
 
     for (uint64_t i = 0; i < detectionsCount; i++) {
         float* detection = (float*)(detectionTensor->data + (i * featuresCount * sizeof(float)));
@@ -234,6 +256,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
             boxes.emplace_back(box);
             detections.emplace_back(detection[3], detection[4], detection[5], detection[6]);
             confidences.emplace_back(confidence);
+            labelIds.emplace_back(labelId);
             if (debugMode) {
                 std::cout << "Detection:\nImageID: " << imageId << "; LabelID:" << labelId << "; Confidence:" << confidence << "; Box:" << box << std::endl;
             }
@@ -246,7 +269,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         confidences.resize(maxOutputBatch);
     }
 
-    *outputsCount = 3;
+    *outputsCount = 4;
     *outputs = (struct CustomNodeTensor*)malloc(*outputsCount * sizeof(CustomNodeTensor));
     NODE_ASSERT((*outputs) != nullptr, "malloc has failed");
 
@@ -270,6 +293,16 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     if (!copy_confidences_into_output(&confidencesTensor, confidences)) {
         cleanup(imagesTensor);
         cleanup(coordinatesTensor);
+        free(*outputs);
+        return 1;
+    }
+
+    CustomNodeTensor& labelIdsTensor = (*outputs)[3];
+    labelIdsTensor.name = OUTPUT_LABEL_IDS_TENSOR_NAME;
+    if (!copy_label_ids_into_output(&labelIdsTensor, labelIds)) {
+        cleanup(imagesTensor);
+        cleanup(coordinatesTensor);
+        cleanup(labelIdsTensor);
         free(*outputs);
         return 1;
     }
@@ -326,7 +359,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     NODE_ASSERT(targetImageLayout == "NCHW" || targetImageLayout == "NHWC", "target image layout must be NCHW or NHWC");
     bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
 
-    *infoCount = 3;
+    *infoCount = 4;
     *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
     NODE_ASSERT((*info) != nullptr, "malloc has failed");
 
@@ -364,6 +397,15 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     (*info)[2].dims[1] = 1;
     (*info)[2].dims[2] = 1;
     (*info)[2].precision = FP32;
+
+    (*info)[3].name = OUTPUT_LABEL_IDS_TENSOR_NAME;
+    (*info)[3].dimsCount = 3;
+    (*info)[3].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
+    NODE_ASSERT(((*info)[2].dims) != nullptr, "malloc has failed");
+    (*info)[3].dims[0] = 0;
+    (*info)[3].dims[1] = 1;
+    (*info)[3].dims[2] = 1;
+    (*info)[3].precision = I32;
     return 0;
 }
 
