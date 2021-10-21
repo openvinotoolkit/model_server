@@ -66,8 +66,8 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory) :
     }
     // If not enabled via CLI, check for /opt/cache existence.
     if (this->modelCacheDirectory.empty()) {
-        if (std::filesystem::exists("/opt/cache")) {
-            this->modelCacheDirectory = "/opt/cache";
+        if (std::filesystem::exists(DEFAULT_MODEL_CACHE_DIRECTORY)) {
+            this->modelCacheDirectory = DEFAULT_MODEL_CACHE_DIRECTORY;
         }
     }
     // If cache dir enabled, check for write access.
