@@ -1,8 +1,8 @@
 ## Sample CPU Extension (custom ReLU)
 
-User can implement CPU layer which is unsupported by OpenVINO™, load the missing layer with the extension using `InferenceEngine` and run inference successfully. Example in OpenVINO™ repository: [hello_reshape_ssd](https://github.com/openvinotoolkit/openvino/tree/master/inference-engine/samples/hello_reshape_ssd).
+Any CPU layer, unsupported by OpenVINO, can be implemented as a shared library. While loaded in OVMS as a cpu extension, it can help in executing the model. Example in OpenVINO™ repository: [hello_reshape_ssd](https://github.com/openvinotoolkit/openvino/tree/master/inference-engine/samples/hello_reshape_ssd).
 
-Such extension - with some modifications - can be used in OpenVINO™ Model Server as well. This directory contains the same example but adjusted to work with Model Server.
+With some modifications the library can be used in OpenVINO™ Model Server as well. This directory contains the same example but adjusted to generate a shared cpu extension library.
 
 Compile the library by running `make cpu_extension BASE_OS=ubuntu` in root directory of this repository.
 
