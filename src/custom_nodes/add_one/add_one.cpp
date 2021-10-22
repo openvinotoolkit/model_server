@@ -162,8 +162,10 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(inputTensor->dims[0] == 1, "input batch size must be 1");
     NODE_ASSERT(inputTensor->dims[1] == 10, "input dim[1] must be 10");
 
-    int multiplier = get_int_parameter("multiplier", params, paramsCount, 1);
-    NODE_ASSERT(multiplier > 0, "multiplier should be greater than 0");
+    int add_number = get_int_parameter("add_number", params, paramsCount, 1);
+    NODE_ASSERT(add_number >= 0, "add_number should be equal or greater than 0");
+    int sub_number = get_int_parameter("sub_number", params, paramsCount, 0);
+    NODE_ASSERT(sub_number >= 0, "sub_number should be equal or greater than 0");
 
     *outputsCount = 1;
     if (!get_buffer<struct CustomNodeTensor>(internalManager, outputs, OUTPUT_NAME, 1 * sizeof(CustomNodeTensor))) {
@@ -193,7 +195,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     outputTensor->precision = inputTensor->precision;
 
     for (uint64_t i = 0; i < outputTensor->dataBytes; i += sizeof(float)) {
-        *(float*)(outputTensor->data + i) = (*(float*)(inputTensor->data + i) + 1.0f) * multiplier;
+        *(float*)(outputTensor->data + i) = *(float*)(inputTensor->data + i) + add_number - sub_number;
     }
 
     return 0;
