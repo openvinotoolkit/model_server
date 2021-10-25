@@ -84,6 +84,9 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 						"target_device": {
 							"type": "string"
 						},
+                        "disable_caching": {
+                            "type": "boolean"
+                        },
 						"plugin_config": {
 							"type": "object"
 						},

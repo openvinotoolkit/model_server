@@ -460,6 +460,16 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
         return status;
     }
     try {
+        if (!this->config.getCacheDir().empty()) {
+            if (this->config.isCachingDisabled()) {
+                this->ieCore.SetConfig({{CONFIG_KEY(CACHE_DIR), ""}});
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has disabled caching", this->getName());
+            } else {
+                this->ieCore.SetConfig({{CONFIG_KEY(CACHE_DIR), config.getCacheDir()}});
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has enabled caching", this->getName());
+            }
+        }
+
         if (!this->network) {
             if (this->config.isCustomLoaderRequiredToLoadModel()) {
                 // loading the model using the custom loader

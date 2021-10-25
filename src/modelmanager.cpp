@@ -26,11 +26,13 @@
 #include <vector>
 
 #include <dlfcn.h>
+#include <errno.h>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "azurefilesystem.hpp"
 #include "config.hpp"
@@ -54,9 +56,35 @@ namespace ovms {
 static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
 static bool watcherStarted = false;
 
-ModelManager::ModelManager() :
+ModelManager::ModelManager(const std::string& modelCacheDirectory) :
     ieCore(std::make_unique<InferenceEngine::Core>()),
-    waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS) {
+    waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
+    modelCacheDirectory(modelCacheDirectory) {
+    // Take --cache_dir from CLI
+    if (this->modelCacheDirectory.empty()) {
+        this->modelCacheDirectory = ovms::Config::instance().cacheDir();
+    }
+    // If not enabled via CLI, check for /opt/cache existence.
+    if (this->modelCacheDirectory.empty()) {
+        if (std::filesystem::exists(DEFAULT_MODEL_CACHE_DIRECTORY)) {
+            this->modelCacheDirectory = DEFAULT_MODEL_CACHE_DIRECTORY;
+        }
+    }
+    // If cache dir enabled, check for write access.
+    if (!this->modelCacheDirectory.empty()) {
+        // Create directory if does not exist
+        if (!std::filesystem::exists(this->modelCacheDirectory)) {
+            std::filesystem::create_directories(this->modelCacheDirectory);
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} did not exist, created", this->modelCacheDirectory);
+        }
+        int result = access(this->modelCacheDirectory.c_str(), W_OK);
+        if (result != 0) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} is not writable; access() result: {}", this->modelCacheDirectory, result);
+        } else {
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Model cache is enabled: {}", this->modelCacheDirectory);
+        }
+    }
+
     this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManager>();
     if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
         SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
@@ -124,7 +152,8 @@ Status ModelManager::startFromConfig() {
             config.stateful(),
             config.idleSequenceCleanup(),
             config.lowLatencyTransformation(),
-            config.maxSequenceNumber()});
+            config.maxSequenceNumber(),
+            this->modelCacheDirectory});
 
     if (!success) {
         return StatusCode::UNKNOWN_ERROR;
@@ -490,6 +519,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             modelsWithInvalidConfig.emplace(modelConfig.getName());
             continue;
         }
+        modelConfig.setCacheDir(this->modelCacheDirectory);
 
         const auto modelName = modelConfig.getName();
         if (pipelineDefinitionExists(modelName)) {
@@ -1147,4 +1177,5 @@ Status ModelManager::getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
 const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() const {
     return *customNodeLibraryManager;
 }
+
 }  // namespace ovms
