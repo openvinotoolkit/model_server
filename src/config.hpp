@@ -356,5 +356,17 @@ public:
     uint32_t sequenceCleanerPollWaitMinutes() {
         return result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
     }
+
+    /**
+         * @brief Model cache directory
+         * 
+         * @return const std::string& 
+         */
+    const std::string cacheDir() {
+        if (result != nullptr && result->count("cache_dir")) {
+            return result->operator[]("cache_dir").as<std::string>();
+        }
+        return "";
+    }
 };
 }  // namespace ovms

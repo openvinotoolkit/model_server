@@ -107,6 +107,16 @@ private:
     uint32_t maxSequenceNumber;
 
     /**
+         * @brief Model cache directory
+         */
+    std::string cacheDir;
+
+    /**
+         * @brief Optional cache disable flag
+         */
+    bool disabledCaching = false;
+
+    /**
          * @brief Model version
          */
     model_version_t version = -1;
@@ -199,6 +209,7 @@ public:
         bool idleSequenceCleanup = true,
         bool lowLatencyTransformation = false,
         uint32_t maxSequenceNumber = DEFAULT_MAX_SEQUENCE_NUMBER,
+        const std::string& cacheDir = "",
         model_version_t version = 0,
         const std::string& localPath = "") :
         name(name),
@@ -211,6 +222,7 @@ public:
         idleSequenceCleanup(idleSequenceCleanup),
         lowLatencyTransformation(lowLatencyTransformation),
         maxSequenceNumber(maxSequenceNumber),
+        cacheDir(cacheDir),
         version(version),
         pluginConfig({}),
         layout(""),
@@ -327,6 +339,42 @@ public:
          */
     void setTargetDevice(const std::string& targetDevice) {
         this->targetDevice = targetDevice;
+    }
+
+    /**
+         * @brief Set the caching disable flag
+         * 
+         * @param flag
+         */
+    void setDisableCaching(bool flag) {
+        this->disabledCaching = flag;
+    }
+
+    /**
+         * @brief Check if caching is disabled
+         * 
+         * @return bool
+         */
+    bool isCachingDisabled() const {
+        return this->disabledCaching;
+    }
+
+    /**
+         * @brief Get the cache directory
+         * 
+         * @return const std::string& 
+         */
+    const std::string& getCacheDir() const {
+        return this->cacheDir;
+    }
+
+    /**
+         * @brief Set the cache directory
+         * 
+         * @param cache directory
+         */
+    void setCacheDir(const std::string& cacheDir) {
+        this->cacheDir = cacheDir;
     }
 
     /**

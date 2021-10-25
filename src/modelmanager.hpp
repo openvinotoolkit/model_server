@@ -41,6 +41,7 @@
 namespace ovms {
 
 const uint32_t DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
+const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 
 class IVersionReader;
 class CustomNodeLibraryManager;
@@ -52,7 +53,7 @@ protected:
     /**
      * @brief A default constructor is private
      */
-    ModelManager();
+    ModelManager(const std::string& modelCacheDirectory = "");
 
     Status checkStatefulFlagChange(const std::string& modelName, bool configStatefulFlag);
 
@@ -146,6 +147,11 @@ private:
      * @brief Time of last config change
      */
     timespec lastConfigChangeTime;
+
+    /**
+     * @brief Directory for OpenVINO to store cache files.
+     */
+    std::string modelCacheDirectory;
 
 public:
     /**
