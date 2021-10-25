@@ -15,7 +15,33 @@
 //*****************************************************************************
 #include "node_library.hpp"
 
+#include <functional>
 namespace ovms {
+
+NodeLibraryExecutor::NodeLibraryExecutor(std::unique_ptr<NodeLibraryBase>&& ptr) :
+        nodeLibrary(std::move(ptr)) {
+     auto v2Ptr = dynamic_cast<NodeLibraryV2*>(nodeLibrary.get());
+     if (v2Ptr != nullptr) {
+         this->initialize = v2Ptr->initialize;
+         this->deinitialize = v2Ptr->deinitialize;
+         this->execute = v2Ptr->execute;
+         this->getInputsInfo = v2Ptr->getInputsInfo;
+         this->getOutputsInfo = v2Ptr->getOutputsInfo;
+         this->release = v2Ptr->release;
+     } else {
+        auto v1Ptr = dynamic_cast<NodeLibrary*>(nodeLibrary.get());
+         this->translator = V1ToV2ApiTranslator(*v1Ptr);
+         using namespace std::placeholders;
+         auto fInit = std::bind(&V1ToV2ApiTranslator::initialize, &translator, _1, _2, _3);
+         this->initialize = fInit;
+         this->initialize = translator.initialize;
+         this->deinitialize = translator.deinitialize;
+         this->execute = translator.execute;
+         this->getInputsInfo = translator.getInputsInfo;
+         this->getOutputsInfo = translator.getOutputsInfo;
+         this->release = translator.release;
+     }
+}
 
 bool NodeLibrary::isValid() const {
     return execute != nullptr &&

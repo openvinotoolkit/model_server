@@ -48,20 +48,24 @@ Status toNodeKind(const std::string& str, NodeKind& nodeKind) {
 Status PipelineDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of pipeline: {}", getName());
     ValidationResultNotifier notifier(status, loadedNotify);
+    SPDLOG_ERROR("ER");
     auto& models = manager.getModels();
     if (std::find_if(models.begin(), models.end(), [this](auto pair) { return this->pipelineName == pair.first; }) != models.end()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline name: {} is already occupied by model.", pipelineName);
         return StatusCode::PIPELINE_NAME_OCCUPIED;
     }
 
+    SPDLOG_ERROR("ER");
     Status validationResult = initializeNodeResources();
     if (!validationResult.ok()) {
         return validationResult;
     }
+    SPDLOG_ERROR("ER");
     validationResult = validateNodes(manager);
     if (!validationResult.ok()) {
         return validationResult;
     }
+    SPDLOG_ERROR("ER");
     validationResult = validateForCycles();
     if (!validationResult.ok()) {
         return validationResult;
@@ -101,7 +105,9 @@ Status PipelineDefinition::initializeNodeResources() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {} node: {} refers to invalid library", pipelineName, nodeInfo.nodeName);
                 return StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY;
             }
+    SPDLOG_ERROR("ER");
             auto status = nodeInfo.library->initialize(&customNodeLibraryInternalManager, params, nodeInfo.parameters.size());
+    SPDLOG_ERROR("ER");
             if (status != 0) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Initialization of library with base path: {} failed", nodeInfo.library->getBasePath());
                 return StatusCode::NODE_LIBRARY_INITIALIZE_FAILED;
@@ -1060,10 +1066,12 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
             return StatusCode::PIPELINE_NODE_NAME_DUPLICATE;
         }
 
+    SPDLOG_ERROR("ER:{}", node.nodeName);
         auto result = validateNode(manager, node, isMultiBatchAllowed);
         if (!result.ok()) {
             return result;
         }
+    SPDLOG_ERROR("ER:{}", node.nodeName);
     }
     return StatusCode::OK;
 }

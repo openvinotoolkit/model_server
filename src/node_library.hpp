@@ -49,6 +49,7 @@ struct NodeLibrary : NodeLibraryBase {
     metadata_fn getOutputsInfo = nullptr;
     release_fn release = nullptr;
     bool isValid() const override;
+    NodeLibrary() = default;
     NodeLibrary(const std::string& basePath,
         execute_fn execute,
         metadata_fn getInputsInfo,
@@ -84,6 +85,32 @@ struct NodeLibraryV2 : NodeLibraryBase {
         getOutputsInfo(getOutputsInfo),
         release(release) {}
 };
+
+struct V1ToV2ApiTranslator {
+// V1ToV2ApiTranslator() : underlyingLibrary(NodeLibrary(std::string(""), nullptr, nullptr, nullptr, nullptr)) {} // TODO clean
+V1ToV2ApiTranslator() : underlyingLibrary(nullptr) {};
+V1ToV2ApiTranslator(NodeLibrary& nodeLibrary) : underlyingLibrary(&nodeLibrary) {}
+NodeLibrary* underlyingLibrary;
+int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+    return 0;
+}
+int deinitialize(void* customNodeLibraryInternalManager) {
+    return 0;
+}
+int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+    return underlyingLibrary->execute(inputs, inputsCount, outputs, outputsCount, params, paramsCount);
+}
+int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+    return underlyingLibrary->getInputsInfo(info, infoCount, params, paramsCount);
+}
+int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+    return underlyingLibrary->getInputsInfo(info, infoCount, params, paramsCount);
+}
+static int release(void* ptr, void* customNodeLibraryInternalManager) {
+    //return underlyingLibrary->release(ptr);
+    return 0;
+}
+};
 class NodeLibraryExecutor {
 public:
     initialize_ver2_fn initialize;
@@ -108,11 +135,11 @@ public:
         }
         this->nodeLibrary = std::move(rhs.nodeLibrary);
     }
-    NodeLibraryExecutor(std::unique_ptr<NodeLibraryBase>&& ptr) :
-        nodeLibrary(std::move(ptr)) {}
+    NodeLibraryExecutor(std::unique_ptr<NodeLibraryBase>&& ptr);
     NodeLibraryExecutor() {}
 //private: // TODO
     std::unique_ptr<NodeLibraryBase> nodeLibrary;
+    V1ToV2ApiTranslator translator;
 };
 
 }  // namespace ovms
