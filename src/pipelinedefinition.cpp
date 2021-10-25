@@ -97,13 +97,13 @@ Status PipelineDefinition::initializeNodeResources() {
                 customNodeLibraryInternalManager = it->second;
             }
             auto params = createCustomNodeParamArray(nodeInfo.parameters).get();
-            if (!nodeInfo.library.isValid()) {
+            if (!nodeInfo.library->isValid()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {} node: {} refers to invalid library", pipelineName, nodeInfo.nodeName);
                 return StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY;
             }
-            auto status = nodeInfo.library.initialize(&customNodeLibraryInternalManager, params, nodeInfo.parameters.size());
+            auto status = nodeInfo.library->initialize(&customNodeLibraryInternalManager, params, nodeInfo.parameters.size());
             if (status != 0) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Initialization of library with base path: {} failed", nodeInfo.library.getBasePath());
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Initialization of library with base path: {} failed", nodeInfo.library->getBasePath());
                 return StatusCode::NODE_LIBRARY_INITIALIZE_FAILED;
             }
             if (!internalManagerExists) {
@@ -115,9 +115,9 @@ Status PipelineDefinition::initializeNodeResources() {
 }
 
 // returns NodeInfos that are in PipelineDefinition, but are not in nodeInfos(std::vector argument)
-std::vector<NodeInfo> PipelineDefinition::calculateNodeInfosDiff(const std::vector<NodeInfo>& nodeInfos) {
+std::vector<NodeInfo> PipelineDefinition::calculateNodeInfosDiff(std::vector<NodeInfo>& nodeInfos) {
     std::vector<NodeInfo> diff;
-    for (const auto& nodeInfo : this->nodeInfos) {
+    for (auto& nodeInfo : this->nodeInfos) {
         auto it = std::find_if(nodeInfos.begin(), nodeInfos.end(),
             [&nodeInfo](const auto& x) { return x.nodeName == nodeInfo.nodeName; });
         if (it == nodeInfos.end()) {
@@ -136,16 +136,16 @@ void PipelineDefinition::deinitializeNodeResources(const std::vector<NodeInfo>& 
                 continue;
             }
             void* customNodeLibraryInternalManager = it->second;
-            auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
+            auto status = nodeInfo.library->deinitialize(customNodeLibraryInternalManager);
             if (status != 0) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Deinitialization of library with base path: {} failed", nodeInfo.library.getBasePath());
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Deinitialization of library with base path: {} failed", nodeInfo.library->getBasePath());
             }
             nodeResources.erase(nodeInfo.nodeName);
         }
     }
 }
 
-Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections) {
+Status PipelineDefinition::reload(ModelManager& manager, std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections) {
     // block creating new unloadGuards
     this->status.handle(ReloadEvent());
     resetSubscriptions(manager);
@@ -732,7 +732,7 @@ public:
             auto result = PipelineDefinition::getCustomNodeMetadata(
                 dependantNodeInfo,
                 this->inputsInfo,
-                dependantNodeInfo.library.getInputsInfo,
+                dependantNodeInfo.library->getInputsInfo,
                 this->pipelineName,
                 nodeResources.at(dependantNodeInfo.nodeName));
             if (!result.ok()) {
@@ -741,7 +741,7 @@ public:
             result = PipelineDefinition::getCustomNodeMetadata(
                 dependantNodeInfo,
                 this->outputsInfo,
-                dependantNodeInfo.library.getOutputsInfo,
+                dependantNodeInfo.library->getOutputsInfo,
                 this->pipelineName,
                 nodeResources.at(dependantNodeInfo.nodeName));
             if (!result.ok()) {
@@ -760,7 +760,7 @@ public:
         auto result = PipelineDefinition::getCustomNodeMetadata(
             dependencyNodeInfo,
             this->dependencyInputsInfo,
-            dependencyNodeInfo.library.getInputsInfo,
+            dependencyNodeInfo.library->getInputsInfo,
             this->pipelineName,
             nodeResources.at(dependencyNodeInfo.nodeName));
         if (!result.ok()) {
@@ -769,7 +769,7 @@ public:
         result = PipelineDefinition::getCustomNodeMetadata(
             dependencyNodeInfo,
             this->dependencyOutputsInfo,
-            dependencyNodeInfo.library.getOutputsInfo,
+            dependencyNodeInfo.library->getOutputsInfo,
             this->pipelineName,
             nodeResources.at(dependencyNodeInfo.nodeName));
         if (!result.ok()) {
@@ -804,7 +804,7 @@ public:
         }
 
         if (dependantNodeInfo.kind == NodeKind::CUSTOM) {
-            if (!dependantNodeInfo.library.isValid()) {
+            if (!dependantNodeInfo.library->isValid()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {} node: {} refers to incorrect library", pipelineName, dependantNodeInfo.nodeName);
                 return StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY;
             }
@@ -1051,7 +1051,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
 
     const bool isMultiBatchAllowed = !std::any_of(nodeInfos.begin(), nodeInfos.end(), [](const auto& node) { return node.demultiplyCount; });
     for (const auto& node : nodeInfos) {
-        auto findByName = [node](const NodeInfo& nodeInfo) {
+        auto findByName = [&node](const NodeInfo& nodeInfo) {
             return nodeInfo.nodeName == node.nodeName;
         };
 
@@ -1158,12 +1158,12 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                 break;
             }
             case NodeKind::CUSTOM: {
-                if (!dependantNodeInfo->library.isValid()) {
+                if (!dependantNodeInfo->library->isValid()) {
                     return StatusCode::NODE_LIBRARY_MISSING;
                 }
 
                 tensor_map_t info;
-                auto status = getCustomNodeMetadata(*dependantNodeInfo, info, dependantNodeInfo->library.getInputsInfo, this->getName(),
+                auto status = getCustomNodeMetadata(*dependantNodeInfo, info, dependantNodeInfo->library->getInputsInfo, this->getName(),
                     nodeResources.at(dependantNodeInfo->nodeName));
                 if (!status.ok()) {
                     return status;
@@ -1227,11 +1227,11 @@ Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo&
 }
 
 Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const shape_t& gatherShape) const {
-    if (!dependencyNodeInfo.library.isValid()) {
+    if (!dependencyNodeInfo.library->isValid()) {
         return StatusCode::NODE_LIBRARY_MISSING;
     }
     tensor_map_t info;
-    auto status = getCustomNodeMetadata(dependencyNodeInfo, info, dependencyNodeInfo.library.getOutputsInfo, this->getName(),
+    auto status = getCustomNodeMetadata(dependencyNodeInfo, info, dependencyNodeInfo.library->getOutputsInfo, this->getName(),
         nodeResources.at(dependencyNodeInfo.nodeName));
     if (!status.ok()) {
         return status;
@@ -1308,7 +1308,7 @@ Status PipelineDefinition::getCustomNodeMetadata(const NodeInfo& customNodeInfo,
             customNodeInfo.nodeName, pipelineName, result);
         return StatusCode::NODE_LIBRARY_METADATA_FAILED;
     }
-    return createTensorInfoMap(info, infoCount, inputsInfo, customNodeInfo.library.release, customNodeLibraryInternalManager);
+    return createTensorInfoMap(info, infoCount, inputsInfo, customNodeInfo.library->release, customNodeLibraryInternalManager);
 }
 
 const NodeInfo& PipelineDefinition::findNodeByName(const std::string& name) const {
@@ -1330,7 +1330,7 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
             return;
         }
         if (info.gatherFromNode.count(nodeName) > 0) {
-            auto someNodeInfo = this->findNodeByName(nodeName);
+            auto& someNodeInfo = this->findNodeByName(nodeName);
             uint32_t demultiplyCount = someNodeInfo.demultiplyCount.value_or(0);
             if (demultiplyCount == 0) {
                 tensor_map_t nodeOutputsInfo;
@@ -1338,7 +1338,7 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
                     auto result = PipelineDefinition::getCustomNodeMetadata(
                         someNodeInfo,
                         nodeOutputsInfo,
-                        someNodeInfo.library.getOutputsInfo,
+                        someNodeInfo.library->getOutputsInfo,
                         this->pipelineName,
                         nodeResources.at(someNodeInfo.nodeName));
                     if (!result.ok()) {

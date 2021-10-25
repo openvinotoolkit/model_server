@@ -61,7 +61,7 @@ struct DLNodeInfo {
 };
 
 struct CustomNodeInfo {
-    NodeLibrary library;
+        std::shared_ptr<NodeLibraryExecutor> library;
     parameters_t parameters;
 };
 
@@ -73,9 +73,9 @@ struct NodeInfo {
     std::unordered_map<std::string, std::string> outputNameAliases;
     std::optional<size_t> demultiplyCount;
     std::set<std::string> gatherFromNode;
-    const NodeLibraryExecutor library;
+    std::shared_ptr<NodeLibraryExecutor> library;
     parameters_t parameters;
-
+    NodeInfo(const NodeInfo&) = default; //TODO;
     NodeInfo(NodeKind kind,
         const std::string& nodeName,
         const std::string& modelName = "",
@@ -83,7 +83,7 @@ struct NodeInfo {
         std::unordered_map<std::string, std::string> outputNameAliases = {},
         std::optional<size_t> demultiplyCount = std::nullopt,
         const std::set<std::string>& gatherFromNode = {},
-        NodeLibraryExecutor&& library = {nullptr},
+        std::shared_ptr<NodeLibraryExecutor> library = nullptr,
         const parameters_t& parameters = {}) :
         kind(kind),
         nodeName(nodeName),

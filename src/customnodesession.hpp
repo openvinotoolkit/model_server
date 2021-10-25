@@ -41,7 +41,7 @@ public:
     Status execute(
         PipelineEventQueue& notifyEndQueue,
         Node& node,
-        const NodeLibraryExecutor& library,
+        std::shared_ptr<NodeLibraryExecutor> library,
         std::unique_ptr<struct CustomNodeParam[]>& parameters,
         int parametersCount,
         void* customNodeLibraryInternalManager);
@@ -52,7 +52,7 @@ public:
     void release() override;
 
 private:
-    static void releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibraryExecutor& library, void* customNodeLibraryInternalManager);
+    static void releaseTensorResources(const struct CustomNodeTensor* tensor, NodeLibraryExecutor& library, void* customNodeLibraryInternalManager);
     Status createBlob(const struct CustomNodeTensor* tensor, InferenceEngine::Blob::Ptr& resultBlob, const NodeLibraryExecutor& library, void* customNodeLibraryInternalManager);
 };
 }  // namespace ovms

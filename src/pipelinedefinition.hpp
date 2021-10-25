@@ -103,25 +103,25 @@ private:
 public:
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 10000;
     PipelineDefinition(const std::string& pipelineName,
-        const std::vector<NodeInfo>& nodeInfos,
-        const pipeline_connections_t& connections) :
+        std::vector<NodeInfo>&& nodeInfos,
+        pipeline_connections_t&& connections) :
         pipelineName(pipelineName),
-        nodeInfos(nodeInfos),
-        connections(connections),
+        nodeInfos(std::move(nodeInfos)),
+        connections(std::move(connections)),
         status(this->pipelineName) {}
 
     Status create(std::unique_ptr<Pipeline>& pipeline,
         const tensorflow::serving::PredictRequest* request,
         tensorflow::serving::PredictResponse* response,
         ModelManager& manager);
-    Status reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections);
+    Status reload(ModelManager& manager, std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections);
     void retire(ModelManager& manager);
     Status validate(ModelManager& manager);
     Status validateNodes(ModelManager& manager);
     Status validateForCycles();
     Status validateDemultiplexerGatherNodesOrder();
     Status initializeNodeResources();
-    std::vector<NodeInfo> calculateNodeInfosDiff(const std::vector<NodeInfo>& nodeInfos);
+    std::vector<NodeInfo> calculateNodeInfosDiff(std::vector<NodeInfo>& nodeInfos);
     void deinitializeNodeResources(const std::vector<NodeInfo>& nodeInfosDiff);
 
     const std::string& getName() const { return pipelineName; }

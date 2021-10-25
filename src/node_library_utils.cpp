@@ -102,7 +102,7 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED;
     }
     if (infoCount <= 0) {
-        release(info, customNodeLibraryInternalManager);
+        nodeLibraryExecutor(info, customNodeLibraryInternalManager);
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT;
     }
     // At this point it is important to not exit before we iterate over every info object.
@@ -112,7 +112,7 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std
             continue;
         }
         if (info[i].dimsCount == 0) {
-            release(info[i].dims, customNodeLibraryInternalManager);
+            nodeLibraryExecutor(info[i].dims, customNodeLibraryInternalManager);
             continue;
         }
         if (info[i].name == nullptr) {
@@ -123,10 +123,10 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std
         InferenceEngine::Precision precision = toInferenceEnginePrecision(info[i].precision);
         shape_t shape(info[i].dims, info[i].dims + info[i].dimsCount);
 
-        release(info[i].dims, customNodeLibraryInternalManager);
+        nodeLibraryExecutor(info[i].dims, customNodeLibraryInternalManager);
         out.emplace(name, std::make_shared<TensorInfo>(name, precision, std::move(shape)));
     }
-    release(info, customNodeLibraryInternalManager);
+    nodeLibraryExecutor(info, customNodeLibraryInternalManager);
     return StatusCode::OK;
 }
 

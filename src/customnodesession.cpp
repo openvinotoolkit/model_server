@@ -38,7 +38,7 @@ CustomNodeSession::CustomNodeSession(const NodeSessionMetadata&& metadata, const
 
 CustomNodeSession::~CustomNodeSession() = default;
 
-Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node, const NodeLibraryExecutor& library, std::unique_ptr<struct CustomNodeParam[]>& parameters, int parametersCount, void* customNodeLibraryInternalManager) {
+Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node, std::shared_ptr<NodeLibraryExecutor> library, std::unique_ptr<struct CustomNodeParam[]>& parameters, int parametersCount, void* customNodeLibraryInternalManager) {
     const auto& blobMap = this->inputHandler->getInputs();
     auto inputTensorsCount = blobMap.size();
     auto inputTensors = createCustomNodeTensorArray(blobMap);
@@ -46,7 +46,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
     int outputTensorsCount = 0;
 
     this->timer->start("execution");
-    int result = library.execute(
+    int result = library->execute(
         inputTensors.get(),
         inputTensorsCount,
         &outputTensors,
@@ -76,7 +76,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
 
     if (outputTensorsCount <= 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; has corrupted number of outputs", getName(), getSessionKey());
-        library.release(outputTensors, customNodeLibraryInternalManager);
+        library->release(outputTensors, customNodeLibraryInternalManager);
         notifyEndQueue.push({node, getSessionKey()});
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT;
     }
@@ -87,7 +87,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
     Status status = StatusCode::OK;
     for (int i = 0; i < outputTensorsCount; i++) {
         InferenceEngine::Blob::Ptr resultBlob;
-        auto result = this->createBlob(&outputTensors[i], resultBlob, library, customNodeLibraryInternalManager);
+        auto result = this->createBlob(&outputTensors[i], resultBlob, *library, customNodeLibraryInternalManager);
         if (outputTensors[i].name == nullptr) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed blob conversion - missing output name", getName(), getSessionKey());
             status = StatusCode::NODE_LIBRARY_OUTPUT_MISSING_NAME;
@@ -103,7 +103,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         this->resultBlobs.emplace(std::string(outputTensors[i].name), std::move(resultBlob));
     }
 
-    library.release(outputTensors, customNodeLibraryInternalManager);
+    library->release(outputTensors, customNodeLibraryInternalManager);
     notifyEndQueue.push({node, getSessionKey()});
     return status;
 }
@@ -117,7 +117,7 @@ Status CustomNodeSession::fetchResult(const std::string& name, InferenceEngine::
     return StatusCode::OK;
 }
 
-void CustomNodeSession::releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibraryExecutor& library, void* customNodeLibraryInternalManager) {
+void CustomNodeSession::releaseTensorResources(const struct CustomNodeTensor* tensor, NodeLibraryExecutor& library, void* customNodeLibraryInternalManager) {
     if (tensor->data) {
         library.release(tensor->data, customNodeLibraryInternalManager);
     }

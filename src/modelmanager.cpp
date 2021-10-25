@@ -345,11 +345,9 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
     info.emplace_back(std::move(NodeInfo(NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, nonGatheredDemultiplexerNodes)));
     if (!factory.definitionExists(pipelineName)) {
         SPDLOG_DEBUG("Pipeline:{} was not loaded so far. Triggering load", pipelineName);
-        auto status = factory.createDefinition(pipelineName, info, connections, manager);
+        auto status = factory.createDefinition(pipelineName, std::move(info), std::move(connections), manager);
         pipelinesInConfigFile.insert(pipelineName);
-        if (!status.ok()) {
-            return status;
-        }
+        return status;
     }
     SPDLOG_DEBUG("Pipeline:{} is already loaded. Triggering reload", pipelineName);
     auto status = factory.reloadDefinition(pipelineName,

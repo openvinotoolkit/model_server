@@ -44,8 +44,8 @@ class PipelineFactory {
 
 public:
     Status createDefinition(const std::string& pipelineName,
-        const std::vector<NodeInfo>& nodeInfos,
-        const pipeline_connections_t& connections,
+        std::vector<NodeInfo>&& nodeInfos,
+       pipeline_connections_t&& connections,
         ModelManager& manager);
 
     bool definitionExists(const std::string& name) const;
@@ -58,7 +58,7 @@ public:
 
     PipelineDefinition* findDefinitionByName(const std::string& name) const;
     Status reloadDefinition(const std::string& pipelineName,
-        const std::vector<NodeInfo>&& nodeInfos,
+        std::vector<NodeInfo>&& nodeInfos,
         const pipeline_connections_t&& connections,
         ModelManager& manager);
 

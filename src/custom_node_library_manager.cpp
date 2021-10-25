@@ -133,7 +133,7 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
     }
 
     auto it = libraries.find(name);
-    if (it != libraries.end() && it->second->basePath == basePath) {
+    if (it != libraries.end() && it->second->getBasePath() == basePath) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Custom node library name: {} is already loaded", name);
         return StatusCode::NODE_LIBRARY_ALREADY_LOADED;
     }
@@ -151,23 +151,18 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
     if (!status.ok()) {
         auto statusVer2 = tryLoadLibraryVer2(name, basePath, handle, nodeLibrary);
     }
-    // TODO fix logging
-    std::unique_ptr<NodeLibraryBase>& mapped = libraries[name];
-    //libraries[name].reset(std::move(nodeLibrary));
-    mapped = std::move(nodeLibrary);
-    //libraries[name] = std::move(nodeLibrary);
-    //libraries[name].reset(std::move(nodeLibrary));
+    libraries[name] = std::make_unique<NodeLibraryExecutor>(std::move(nodeLibrary));
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Successfully loaded custom node library name: {}; base_path: {}", name, basePath);
     return StatusCode::OK;
 }
 
-Status CustomNodeLibraryManager::getLibrary(const std::string& name, NodeLibraryBase& library) const {
+Status CustomNodeLibraryManager::getLibrary(const std::string& name, std::shared_ptr<NodeLibraryExecutor>& library) const {
     auto it = libraries.find(name);
     if (it == libraries.end()) {
         return StatusCode::NODE_LIBRARY_MISSING;
     } else {
-        library = *it->second;
+        library = it->second;
         return StatusCode::OK;
     }
 }

@@ -101,10 +101,17 @@ public:
     }
     NodeLibraryExecutor(NodeLibraryExecutor&& rhs) :
         nodeLibrary(std::move(rhs.nodeLibrary)) {}
+    NodeLibraryExecutor(const ovms::NodeLibraryExecutor&) = delete;
+    NodeLibraryExecutor& operator=(NodeLibraryExecutor&& rhs) {
+        if (this == &rhs) {
+            return *this;
+        }
+        this->nodeLibrary = std::move(rhs.nodeLibrary);
+    }
     NodeLibraryExecutor(std::unique_ptr<NodeLibraryBase>&& ptr) :
         nodeLibrary(std::move(ptr)) {}
-
-private:
+    NodeLibraryExecutor() {}
+//private: // TODO
     std::unique_ptr<NodeLibraryBase> nodeLibrary;
 };
 
