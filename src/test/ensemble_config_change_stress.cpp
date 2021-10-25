@@ -595,7 +595,9 @@ static const char* stressPipelineCustomNodeAddOneThanDummy = R"(
                     "type": "custom",
                     "params": {
                         "output_queue_size": "20",
-                        "info_queue_size": "20"
+                        "info_queue_size": "20",
+                        "add_number": "1",
+                        "sub_number": "0"
                     },
                     "inputs": [
                         {"input_numbers": {"node_name": "request",
@@ -655,7 +657,9 @@ static const char* stressPipelineCustomNodeAddOneThanDummyRemovedLibraryConfig =
                     "type": "custom",
                     "params": {
                         "output_queue_size": "20",
-                        "info_queue_size": "20"
+                        "info_queue_size": "20",
+                        "add_number": "1",
+                        "sub_number": "0"
                     },
                     "inputs": [
                         {"input_numbers": {"node_name": "request",
@@ -720,7 +724,9 @@ static const char* stressPipelineCustomNodeAddOneThanDummyChangedLibraryName = R
                     "type": "custom",
                     "params": {
                         "output_queue_size": "20",
-                        "info_queue_size": "20"
+                        "info_queue_size": "20",
+                        "add_number": "1",
+                        "sub_number": "0"
                     },
                     "inputs": [
                         {"input_numbers": {"node_name": "request",
@@ -852,7 +858,9 @@ static const char* stressPipelineCustomNodeAddOneThanDummyReducedQueueSize = R"(
                     "type": "custom",
                     "params": {
                         "output_queue_size": "10",
-                        "info_queue_size": "10"
+                        "info_queue_size": "10",
+                        "add_number": "1",
+                        "sub_number": "0"
                     },
                     "inputs": [
                         {"input_numbers": {"node_name": "request",
@@ -917,7 +925,9 @@ static const char* stressPipelineCustomNodeAddOneThanDummyIncreasedQueueSize = R
                     "type": "custom",
                     "params": {
                         "output_queue_size": "30",
-                        "info_queue_size": "30"
+                        "info_queue_size": "30",
+                        "add_number": "1",
+                        "sub_number": "0"
                     },
                     "inputs": [
                         {"input_numbers": {"node_name": "request",
