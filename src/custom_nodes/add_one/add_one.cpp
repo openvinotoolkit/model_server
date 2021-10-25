@@ -56,7 +56,6 @@ bool get_buffer(CustomNodeLibraryInternalManager* internalManager, T** buffer, c
 }
 
 int initializeInternalManager(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
-    // creating InternalManager instance
     std::unique_ptr<CustomNodeLibraryInternalManager> internalManager = std::make_unique<CustomNodeLibraryInternalManager>();
     NODE_ASSERT(internalManager != nullptr, "internalManager allocation failed");
 
@@ -68,22 +67,17 @@ int initializeInternalManager(void** customNodeLibraryInternalManager, const str
     NODE_ASSERT(info_queue_size > 0, "info_queue_size should be greater than 0");
     current_info_queue_size = info_queue_size;
 
-    // creating BuffersQueues for output
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_NAME, 1 * sizeof(CustomNodeTensor), output_queue_size), "output buffer creation failed");
 
-    // creating BuffersQueues for output tensor
     uint64_t byteSize = sizeof(float) * 10;
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, byteSize, output_queue_size), "output tensor buffer creation failed");
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_DIMS_NAME, 2 * sizeof(uint64_t), output_queue_size), "output tensor dimsbuffer creation failed");
 
-    // creating BuffersQueues for info tensors
     NODE_ASSERT(internalManager->createBuffersQueue(INPUT_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), info_queue_size), "input info buffer creation failed");
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), info_queue_size), "output info buffer creation failed");
 
-    // creating BuffersQueues for input info dims
     NODE_ASSERT(internalManager->createBuffersQueue(INPUT_INFO_DIMS_NAME, 2 * sizeof(uint64_t), info_queue_size), "input info dims buffer creation failed");
 
-    // creating BuffersQueues for output info dims
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_INFO_DIMS_NAME, 2 * sizeof(uint64_t), info_queue_size), "output info dims buffer creation failed");
 
     *customNodeLibraryInternalManager = internalManager.release();
@@ -101,24 +95,19 @@ int reinitializeInternalManagerIfNeccessary(void** customNodeLibraryInternalMana
     NODE_ASSERT(info_queue_size > 0, "info_queue_size should be greater than 0");
 
     if (current_output_queue_size != output_queue_size) {
-        // recreating BuffersQueues for output
         NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_NAME, 1 * sizeof(CustomNodeTensor), output_queue_size), "output buffer recreation failed");
 
-        // recreating BuffersQueues for output tensor
         uint64_t byteSize = sizeof(float) * 10;
         NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_TENSOR_NAME, byteSize, output_queue_size), "output tensor buffer recreation failed");
         NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_TENSOR_DIMS_NAME, 2 * sizeof(uint64_t), output_queue_size), "output tensor dimsbuffer recreation failed");
     }
 
     if (current_info_queue_size != info_queue_size) {
-        // recreating BuffersQueues for info tensors
         NODE_ASSERT(internalManager->recreateBuffersQueue(INPUT_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), info_queue_size), "input info buffer recreation failed");
         NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), info_queue_size), "output info buffer recreation failed");
 
-        // recreating BuffersQueues for input info dims
         NODE_ASSERT(internalManager->recreateBuffersQueue(INPUT_INFO_DIMS_NAME, 2 * sizeof(uint64_t), info_queue_size), "input info dims buffer recreation failed");
 
-        // recreating BuffersQueues for output info dims
         NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_INFO_DIMS_NAME, 2 * sizeof(uint64_t), info_queue_size), "output info dims buffer recreation failed");
     }
 
@@ -140,7 +129,6 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
 }
 
 int deinitialize(void* customNodeLibraryInternalManager) {
-    // deallocate InternalManager and its contents
     if (customNodeLibraryInternalManager != nullptr) {
         CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
         delete internalManager;
