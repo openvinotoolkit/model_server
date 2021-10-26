@@ -48,45 +48,37 @@ Status toNodeKind(const std::string& str, NodeKind& nodeKind) {
 Status PipelineDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of pipeline: {}", getName());
     ValidationResultNotifier notifier(status, loadedNotify);
-    SPDLOG_ERROR("ER");
     auto& models = manager.getModels();
     if (std::find_if(models.begin(), models.end(), [this](auto pair) { return this->pipelineName == pair.first; }) != models.end()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline name: {} is already occupied by model.", pipelineName);
         return StatusCode::PIPELINE_NAME_OCCUPIED;
     }
 
-    SPDLOG_ERROR("ER");
     Status validationResult = initializeNodeResources();
     if (!validationResult.ok()) {
         return validationResult;
     }
-    SPDLOG_ERROR("ER");
     validationResult = validateNodes(manager);
     if (!validationResult.ok()) {
         return validationResult;
     }
-    SPDLOG_ERROR("ER");
     validationResult = validateForCycles();
     if (!validationResult.ok()) {
         return validationResult;
     }
-    SPDLOG_ERROR("ER");
     validationResult = validateDemultiplexerGatherNodesOrder();
     if (!validationResult.ok()) {
         return validationResult;
     }
-    SPDLOG_ERROR("ER");
     std::unique_lock lock(metadataMtx);
     validationResult = updateInputsInfo(manager);
     if (!validationResult.ok()) {
         return validationResult;
     }
-    SPDLOG_ERROR("ER");
     validationResult = updateOutputsInfo(manager);
     if (!validationResult.ok()) {
         return validationResult;
     }
-    SPDLOG_ERROR("ER");
     lock.unlock();
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of pipeline: {}", getName());
@@ -109,12 +101,9 @@ Status PipelineDefinition::initializeNodeResources() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {} node: {} refers to invalid library", pipelineName, nodeInfo.nodeName);
                 return StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY;
             }
-    SPDLOG_ERROR("ER");
             auto status = nodeInfo.library->initialize(&customNodeLibraryInternalManager, params, nodeInfo.parameters.size());
-    SPDLOG_ERROR("ER");
             if (status != 0) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Initialization of library with base path: {} failed", nodeInfo.library->getBasePath());
-    SPDLOG_ERROR("ER");
                 return StatusCode::NODE_LIBRARY_INITIALIZE_FAILED;
             }
             if (!internalManagerExists) {
@@ -1071,12 +1060,10 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
             return StatusCode::PIPELINE_NODE_NAME_DUPLICATE;
         }
 
-    SPDLOG_ERROR("ER:{}", node.nodeName);
         auto result = validateNode(manager, node, isMultiBatchAllowed);
         if (!result.ok()) {
             return result;
         }
-    SPDLOG_ERROR("ER:{}", node.nodeName);
     }
     return StatusCode::OK;
 }
@@ -1171,29 +1158,19 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                 break;
             }
             case NodeKind::CUSTOM: {
-                SPDLOG_ERROR("ER");
                 if (!dependantNodeInfo->library->isValid()) {
                     return StatusCode::NODE_LIBRARY_MISSING;
                 }
-
-                SPDLOG_ERROR("ER");
                 tensor_map_t info;
-                auto status = getCustomNodeMetadata(*dependantNodeInfo, info, *dependantNodeInfo->library, true,  this->getName(),
+                auto status = getCustomNodeMetadata(*dependantNodeInfo, info, *dependantNodeInfo->library, true, this->getName(),
                     nodeResources.at(dependantNodeInfo->nodeName));
-                SPDLOG_ERROR("ER");
                 if (!status.ok()) {
                     return status;
                 }
 
                 for (const auto& [alias, realName] : specificDependencyMapping) {
-                    SPDLOG_ERROR("ER : {} ; {}   :  {} ", alias, realName, info.size());
-                    for (auto& [key, value] : info) {
-                        SPDLOG_ERROR("GT {}  :  {}", key, value->getName());
-                    }
-
                     auto tensorInfo = std::make_shared<TensorInfo>(*info.at(realName));
                     auto it = inputsInfo.find(alias);
-                    SPDLOG_ERROR("ER");
                     if (it != inputsInfo.end()) {
                         // Already exists in map
                         if (tensorInfo->isTensorUnspecified()) {
@@ -1208,7 +1185,6 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                     } else {
                         inputsInfo[alias] = tensorInfo;
                     }
-                    SPDLOG_ERROR("ER");
                 }
                 break;
             }

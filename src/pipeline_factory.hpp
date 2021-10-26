@@ -45,7 +45,7 @@ class PipelineFactory {
 public:
     Status createDefinition(const std::string& pipelineName,
         std::vector<NodeInfo>&& nodeInfos,
-       pipeline_connections_t&& connections,
+        pipeline_connections_t&& connections,
         ModelManager& manager);
 
     bool definitionExists(const std::string& name) const;

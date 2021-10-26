@@ -63,12 +63,12 @@ struct NodeLibrary : NodeLibraryBase {
 };
 
 struct NodeLibraryV2 : NodeLibraryBase {
-     initialize_ver2_fn initialize = nullptr;
-     deinitialize_ver2_fn deinitialize = nullptr;
-     execute_ver2_fn execute = nullptr;
-     metadata_ver2_fn getInputsInfo = nullptr;
-     metadata_ver2_fn getOutputsInfo = nullptr;
-     release_ver2_fn release = nullptr;
+    initialize_ver2_fn initialize = nullptr;
+    deinitialize_ver2_fn deinitialize = nullptr;
+    execute_ver2_fn execute = nullptr;
+    metadata_ver2_fn getInputsInfo = nullptr;
+    metadata_ver2_fn getOutputsInfo = nullptr;
+    release_ver2_fn release = nullptr;
 
     bool isValid() const override;
     NodeLibraryV2(const std::string& basePath,
@@ -87,40 +87,14 @@ struct NodeLibraryV2 : NodeLibraryBase {
         release(release) {}
 };
 
-struct V1ToV2ApiTranslator {
-// V1ToV2ApiTranslator() : underlyingLibrary(NodeLibrary(std::string(""), nullptr, nullptr, nullptr, nullptr)) {} // TODO clean
-V1ToV2ApiTranslator() : underlyingLibrary(nullptr) {};
-V1ToV2ApiTranslator(NodeLibrary& nodeLibrary) : underlyingLibrary(&nodeLibrary) {}
-NodeLibrary* underlyingLibrary;
-int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
-    return 0;
-}
-int deinitialize(void* customNodeLibraryInternalManager) {
-    return 0;
-}
-int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
-    return underlyingLibrary->execute(inputs, inputsCount, outputs, outputsCount, params, paramsCount);
-}
-int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
-    return underlyingLibrary->getInputsInfo(info, infoCount, params, paramsCount);
-}
-int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
-    return underlyingLibrary->getInputsInfo(info, infoCount, params, paramsCount);
-}
-static int release(void* ptr, void* customNodeLibraryInternalManager) {
-    //return underlyingLibrary->release(ptr);
-    return 0;
-}
-};
 class NodeLibraryExecutor {
 public:
-
-virtual int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount);
-virtual int deinitialize(void* customNodeLibraryInternalManager);
-virtual int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
-virtual int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
-virtual int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
-virtual int release(void* ptr, void* customNodeLibraryInternalManager);
+    virtual int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount);
+    virtual int deinitialize(void* customNodeLibraryInternalManager);
+    virtual int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
+    virtual int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
+    virtual int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
+    virtual int release(void* ptr, void* customNodeLibraryInternalManager);
 
     bool isValid() const {
         return nodeLibrary->isValid();
@@ -139,20 +113,19 @@ virtual int release(void* ptr, void* customNodeLibraryInternalManager);
     }
     NodeLibraryExecutor(std::unique_ptr<NodeLibraryBase>&& ptr);
     NodeLibraryExecutor() {}
-//private: // TODO
+    //private: // TODO
     std::unique_ptr<NodeLibraryBase> nodeLibrary;
-    V1ToV2ApiTranslator translator;
     ~NodeLibraryExecutor() = default;
 };
 
 class NodeLibraryExecutor1 : public NodeLibraryExecutor {
 public:
-int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) override;
-int deinitialize(void* customNodeLibraryInternalManager) override;
-int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) override;
-int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) override;
-int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) override;
-int release(void* ptr, void* customNodeLibraryInternalManager) override;
+    int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) override;
+    int deinitialize(void* customNodeLibraryInternalManager) override;
+    int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) override;
+    int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) override;
+    int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) override;
+    int release(void* ptr, void* customNodeLibraryInternalManager) override;
     NodeLibraryExecutor1(NodeLibraryExecutor1&& rhs) :
         NodeLibraryExecutor(std::move(rhs)) {}
     NodeLibraryExecutor1(const ovms::NodeLibraryExecutor1&) = delete;
@@ -162,7 +135,8 @@ int release(void* ptr, void* customNodeLibraryInternalManager) override;
         }
         this->nodeLibrary = std::move(rhs.nodeLibrary);
     }
-    NodeLibraryExecutor1(std::unique_ptr<NodeLibraryBase>&& ptr) : NodeLibraryExecutor(std::move(ptr)) {}
+    NodeLibraryExecutor1(std::unique_ptr<NodeLibraryBase>&& ptr) :
+        NodeLibraryExecutor(std::move(ptr)) {}
     NodeLibraryExecutor1() {}
 };
 

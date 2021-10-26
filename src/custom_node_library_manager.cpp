@@ -155,7 +155,6 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
         libraries[name] = std::make_unique<NodeLibraryExecutor1>(std::move(nodeLibrary));
     } else {
         libraries[name] = std::make_unique<NodeLibraryExecutor>(std::move(nodeLibrary));
-
     }
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Successfully loaded custom node library name: {}; base_path: {}", name, basePath);

@@ -61,7 +61,7 @@ struct DLNodeInfo {
 };
 
 struct CustomNodeInfo {
-        std::shared_ptr<NodeLibraryExecutor> library;
+    std::shared_ptr<NodeLibraryExecutor> library;
     parameters_t parameters;
 };
 
@@ -75,7 +75,7 @@ struct NodeInfo {
     std::set<std::string> gatherFromNode;
     std::shared_ptr<NodeLibraryExecutor> library;
     parameters_t parameters;
-    NodeInfo(const NodeInfo&) = default; //TODO;
+    NodeInfo(const NodeInfo&) = default;  //TODO;
     NodeInfo(NodeKind kind,
         const std::string& nodeName,
         const std::string& modelName = "",

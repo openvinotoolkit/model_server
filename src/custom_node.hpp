@@ -30,7 +30,7 @@ namespace ovms {
 class NodeLibraryExecutor;
 
 class CustomNode : public Node {
-        std::shared_ptr<NodeLibraryExecutor> library;
+    std::shared_ptr<NodeLibraryExecutor> library;
     parameters_t parameters;
     std::unordered_map<std::string, std::string> nodeOutputNameAlias;
 
