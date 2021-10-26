@@ -14,16 +14,19 @@
 # limitations under the License.
 #
 
+from json.decoder import JSONDecodeError
 import requests
 
 from ovmsclient.util.ovmsclient_export import ovmsclient_export
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
-from ovmsclient.tfs_compat.http.requests import (HttpModelStatusRequest,
+from ovmsclient.tfs_compat.http.requests import (HttpModelStatusRequest, make_status_request,
                                                  HttpModelMetadataRequest,
                                                  HttpPredictRequest)
 from ovmsclient.tfs_compat.http.responses import (HttpModelStatusResponse,
                                                   HttpModelMetadataResponse,
                                                   HttpPredictResponse)
+
+from ovmsclient.tfs_compat.base.errors import BadResponseError, raise_from_http
 
 
 class HttpClient(ServingClient):
@@ -116,45 +119,34 @@ class HttpClient(ServingClient):
 
         return HttpModelMetadataResponse(raw_response)
 
-    def get_model_status(self, request):
-        '''
-        Send HttpModelStatusRequest to the server and return response..
+    def get_model_status(self, model_name, model_version = 0, timeout = 10.0):
 
-        Args:
-            request: HttpModelStatusRequest object.
+        request = make_status_request(model_name, model_version)
 
-        Returns:
-            HttpModelStatusResponse object
-
-        Raises:
-            TypeError:  if provided argument is of wrong type.
-            Many more for different serving reponses...
-
-        Examples:
-
-            >>> config = {
-            ...     "address": "localhost",
-            ...     "port": 5555
-            ... }
-            >>> client = make_serving_client(config)
-            >>> request = make_model_status_request("model")
-            >>> response = client.get_model_status(request)
-            >>> type(response)
-        '''
-
-        HttpClient._check_model_status_request(request)
+        try:
+            timeout = float(timeout)
+            if timeout <= 0.0:
+                raise
+        except:
+            raise TypeError("timeout value must be positive float")
 
         raw_response = None
         try:
             raw_response = self.session.get(f"http://{self.url}"
                                             f"/v1/models/{request.model_name}"
                                             f"/versions/{request.model_version}",
-                                            cert=self.client_key, verify=self.server_cert)
-        except requests.exceptions.RequestException as e_info:
-            raise ConnectionError('There was an error during sending ModelStatusRequest. '
-                                  f'Http exited with:\n{e_info}')
+                                            cert=self.client_key, verify=self.server_cert,
+                                            timeout=timeout)
+        except requests.exceptions.RequestException as http_error:
+            raise_from_http(http_error)
 
-        return HttpModelStatusResponse(raw_response)
+        try:
+            # to_dict call raises ModelServerError when output JSON contains "error" key
+            response = HttpModelStatusResponse(raw_response).to_dict()
+        except (JSONDecodeError, KeyError, ValueError) as parsing_error:
+            raise BadResponseError("Received response is malformed and could not be parsed."
+                                   f"Details: {str(parsing_error)}")
+        return response
 
     @classmethod
     def _build(cls, url, tls_config):

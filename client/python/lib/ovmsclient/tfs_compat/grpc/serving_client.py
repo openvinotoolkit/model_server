@@ -15,7 +15,6 @@
 #
 
 from grpc import RpcError, ssl_channel_credentials, secure_channel, insecure_channel
-from grpc import StatusCode
 
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from tensorflow_serving.apis import model_service_pb2_grpc
@@ -25,11 +24,12 @@ from tensorflow_serving.apis.predict_pb2 import PredictRequest
 
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
 from ovmsclient.tfs_compat.grpc.requests import (GrpcModelStatusRequest, make_status_request,
-                                                 GrpcModelMetadataRequest, make_metadata_request,
-                                                 GrpcPredictRequest, make_predict_request)
+                                                 GrpcModelMetadataRequest,
+                                                 GrpcPredictRequest)
 from ovmsclient.tfs_compat.grpc.responses import (GrpcModelStatusResponse,
                                                   GrpcModelMetadataResponse,
                                                   GrpcPredictResponse)
+from ovmsclient.tfs_compat.base.errors import BadResponseError, raise_from_grpc
 
 from ovmsclient.util.ovmsclient_export import ovmsclient_export
 
@@ -123,7 +123,7 @@ class GrpcClient(ServingClient):
 
         try:
             timeout = float(timeout)
-            if timeout < 0.0:
+            if timeout <= 0.0:
                 raise
         except:
             raise TypeError("timeout value must be positive float")
@@ -131,15 +131,14 @@ class GrpcClient(ServingClient):
         raw_response = None
         try:
             raw_response = self.model_service_stub.GetModelStatus(request.raw_request, timeout)
-        except RpcError as e_info:
-                raise ConnectionError("There was an error during handling the request."
-                                      f"Grpc exited with: {e_info.code().name} - "
-                                      f"{e_info.details()}")
+        except RpcError as grpc_error:
+                raise_from_grpc(grpc_error)
+        
         try:
             response = GrpcModelStatusResponse(raw_response).to_dict()
-        except Exception as e_info:
-            raise RuntimeError("Received response is malformed and could not be parsed."
-                               f"Details: {str(e_info)}")
+        except Exception as parsing_error:
+            raise BadResponseError("Received response is malformed and could not be parsed."
+                                   f"Details: {str(parsing_error)}")
         return response
 
     @classmethod

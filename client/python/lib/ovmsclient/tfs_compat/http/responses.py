@@ -16,8 +16,10 @@
 
 import json
 import numpy as np
+from tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
 from ovmsclient.tfs_compat.base.responses import (PredictResponse, ModelMetadataResponse,
                                                   ModelStatusResponse)
+from ovmsclient.tfs_compat.base.errors import raise_from_http_response
 
 
 class HttpPredictResponse(PredictResponse):
@@ -59,20 +61,51 @@ class HttpModelMetadataResponse(ModelMetadataResponse):
 
 class HttpModelStatusResponse(ModelStatusResponse):
 
+    # Error codes in REST API are returned as strings.
+    # To unify the return value between gRPC and HTTP we map error codes strings to numers
+    # to match gRPC response.
+    _ERROR_CODE_TO_NUMBER = {
+        "OK": ErrorCode.OK,
+        "CANCELLED": ErrorCode.CANCELLED,
+        "UNKNOWN": ErrorCode.UNKNOWN,
+        "INVALID_ARGUMENT": ErrorCode.INVALID_ARGUMENT,
+        "DEADLINE_EXCEEDED": ErrorCode.DEADLINE_EXCEEDED,
+        "NOT_FOUND": ErrorCode.NOT_FOUND,
+        "ALREADY_EXISTS": ErrorCode.ALREADY_EXISTS,
+        "UNAUTHENTICATED": ErrorCode.UNAUTHENTICATED,
+        "RESOURCE_EXHAUSTED": ErrorCode.RESOURCE_EXHAUSTED,
+        "FAILED_PRECONDITION": ErrorCode.FAILED_PRECONDITION,
+        "ABORTED": ErrorCode.ABORTED,
+        "OUT_OF_RANGE": ErrorCode.OUT_OF_RANGE,
+        "UNIMPLEMENTED": ErrorCode.UNIMPLEMENTED,
+        "INTERNAL": ErrorCode.INTERNAL,
+        "UNAVAILABLE" : ErrorCode.UNAVAILABLE,
+        "DATA_LOSS": ErrorCode.DATA_LOSS,
+        "DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD_": 
+            ErrorCode.DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD_
+    }
+
     def to_dict(self):
         response_json = json.loads(self.raw_response.text)
+        error_message = response_json.get("error", None)
         model_version_status = response_json.get("model_version_status", None)
-        if model_version_status:
-            result_dict = {}
-            for version_status in model_version_status:
-                version = int(version_status["version"])
-                result_dict[version] = {
-                    "state": version_status["state"],
-                    "error_code": version_status["status"]["error_code"],
-                    "error_message": version_status["status"]["error_message"]
-                }
-            return result_dict
-        return response_json
+        if not error_message and not model_version_status:
+            raise(ValueError("No model status or error found in response"))
+
+        if error_message:
+            raise_from_http_response(self.raw_response.status_code, error_message)
+
+        result_dict = {}
+        for version_status in model_version_status:
+            version = int(version_status["version"])
+            error_code = self._ERROR_CODE_TO_NUMBER.get(version_status["status"]["error_code"], ErrorCode.UNKNOWN)
+            result_dict[version] = {
+                "state": version_status["state"],
+                "error_code": error_code,
+                "error_message": version_status["status"]["error_message"]
+            }
+        return result_dict
+        
 
 
 class HttpConfigStatusResponse:

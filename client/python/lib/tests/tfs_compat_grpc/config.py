@@ -16,6 +16,7 @@
 
 from grpc import StatusCode
 from numpy import array, float64, int32, int8, float128, float32
+from ovmsclient.tfs_compat.base.errors import ModelNotFoundError
 
 from config import CallCount, PATH_VALID # noqa
 
@@ -23,7 +24,7 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
 from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
 from tensorflow.core.framework.types_pb2 import DataType
-from tensorflow.core.protobuf.error_codes_pb2 import Code
+from tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
 from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
 from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
 from tensorflow_serving.apis.predict_pb2 import PredictRequest
@@ -35,15 +36,15 @@ from ovmsclient.tfs_compat.grpc.requests import (GrpcModelMetadataRequest, GrpcM
 #    model_version: { expected_status }
 # }
 MODEL_STATUS_RESPONSE_VALID = [{
-    1: {"state": ModelVersionStatus.State.AVAILABLE, "error_code": Code.OK, "error_message": ""}
+    1: {"state": ModelVersionStatus.State.AVAILABLE, "error_code": ErrorCode.OK, "error_message": ""}
 }, {
-    2: {"state": ModelVersionStatus.State.END, "error_code": Code.OK, "error_message": ""},
-    3: {"state": ModelVersionStatus.State.AVAILABLE, "error_code": Code.OK, "error_message": ""}
+    2: {"state": ModelVersionStatus.State.END, "error_code": ErrorCode.OK, "error_message": ""},
+    3: {"state": ModelVersionStatus.State.AVAILABLE, "error_code": ErrorCode.OK, "error_message": ""}
 }, {
-    1: {"state": ModelVersionStatus.State.START, "error_code": Code.OK, "error_message": ""},
-    2: {"state": ModelVersionStatus.State.LOADING, "error_code": Code.UNKNOWN,
+    1: {"state": ModelVersionStatus.State.START, "error_code": ErrorCode.OK, "error_message": ""},
+    2: {"state": ModelVersionStatus.State.LOADING, "error_code": ErrorCode.UNKNOWN,
         "error_message": "Could not load CNN"},
-    3: {"state": ModelVersionStatus.State.UNLOADING, "error_code": Code.OK, "error_message": ""}
+    3: {"state": ModelVersionStatus.State.UNLOADING, "error_code": ErrorCode.OK, "error_message": ""}
 }
 ]
 
@@ -302,20 +303,18 @@ MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE = [
 ]
 
 
-# (expected_message, grpc_error_status_code, grpc_error_details)
+# (grpc_error_status_code, grpc_error_details, raised_error_type, raised_error_message)
 GET_MODEL_STATUS_INVALID_GRPC = [
-    ("There was an error during sending ModelStatusRequest. "
-     f"Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - failed to connect to all adresses",
-     StatusCode.UNAVAILABLE, "failed to connect to all adresses"),
-    ("There was an error during sending ModelStatusRequest. "
-     f"Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - Empty update",
-     StatusCode.UNAVAILABLE, "Empty update"),
-    ("There was an error during sending ModelStatusRequest. "
-     f"Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested version is not found",
-     StatusCode.NOT_FOUND, "Model with requested version is not found"),
-    ("There was an error during sending ModelStatusRequest. "
-     f"Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested name is not found",
-     StatusCode.NOT_FOUND, "Model with requested name is not found"),
+    (StatusCode.UNAVAILABLE, "failed to connect to all adresses",
+     ConnectionError, "Error occurred during handling the request: failed to connect to all adresses"),
+    (StatusCode.UNAVAILABLE, "Empty update",
+     ConnectionError, "Error occurred during handling the request: Empty update"),
+    (StatusCode.DEADLINE_EXCEEDED, "Deadline Exceeded",
+     TimeoutError, "Error occurred during handling the request: Request handling exceeded timeout"),
+    (StatusCode.NOT_FOUND, "Model with requested version is not found",
+     ModelNotFoundError, "Error occurred during handling the request: Model with requested version is not found"),
+    (StatusCode.NOT_FOUND, "Model with requested name is not found",
+     ModelNotFoundError, "Error occurred during handling the request: Model with requested name is not found"),
 ]
 
 # ({"model_name": model_name, "model_version": model_version,
