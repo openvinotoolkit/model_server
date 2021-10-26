@@ -128,12 +128,12 @@ void CustomNodeSession::releaseTensorResources(const struct CustomNodeTensor* te
 
 class TensorResourcesGuard {
     const struct CustomNodeTensor* tensor;
-    const NodeLibraryExecutor& nodeLibraryExecutor;
+    NodeLibraryExecutor& nodeLibraryExecutor;
     bool persistData = false;
     void* customNodeLibraryInternalManager;
 
 public:
-    TensorResourcesGuard(const struct CustomNodeTensor* tensor, const NodeLibraryExecutor& nodeLibraryExecutor, void* customNodeLibraryInternalManager) :
+    TensorResourcesGuard(const struct CustomNodeTensor* tensor, NodeLibraryExecutor& nodeLibraryExecutor, void* customNodeLibraryInternalManager) :
         tensor(tensor),
         nodeLibraryExecutor(nodeLibraryExecutor),
         customNodeLibraryInternalManager(customNodeLibraryInternalManager) {}
@@ -150,7 +150,7 @@ public:
     }
 };
 
-Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, InferenceEngine::Blob::Ptr& resultBlob, const NodeLibraryExecutor& library, void* customNodeLibraryInternalManager) {
+Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, InferenceEngine::Blob::Ptr& resultBlob, NodeLibraryExecutor& library, void* customNodeLibraryInternalManager) {
     TensorResourcesGuard tensorResourcesGuard(tensor, library, customNodeLibraryInternalManager);
     InferenceEngine::TensorDesc desc;
 

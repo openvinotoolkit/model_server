@@ -14,32 +14,106 @@
 // limitations under the License.
 //*****************************************************************************
 #include "node_library.hpp"
-
+#include <spdlog/spdlog.h>
 #include <functional>
 namespace ovms {
 
 NodeLibraryExecutor::NodeLibraryExecutor(std::unique_ptr<NodeLibraryBase>&& ptr) :
         nodeLibrary(std::move(ptr)) {
+ //    auto v2Ptr = dynamic_cast<NodeLibraryV2*>(nodeLibrary.get());
+}
+int NodeLibraryExecutor::initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+     auto v2Ptr = dynamic_cast<NodeLibraryV2*>(nodeLibrary.get());
+    SPDLOG_ERROR("ER");
+     if (v2Ptr != nullptr) {
+    SPDLOG_ERROR("ER");
+         return v2Ptr->initialize(customNodeLibraryInternalManager, params, paramsCount);
+     } else {
+    SPDLOG_ERROR("ER");
+         return 999;
+   }
+}
+int NodeLibraryExecutor::deinitialize(void* customNodeLibraryInternalManager) {
      auto v2Ptr = dynamic_cast<NodeLibraryV2*>(nodeLibrary.get());
      if (v2Ptr != nullptr) {
-         this->initialize = v2Ptr->initialize;
-         this->deinitialize = v2Ptr->deinitialize;
-         this->execute = v2Ptr->execute;
-         this->getInputsInfo = v2Ptr->getInputsInfo;
-         this->getOutputsInfo = v2Ptr->getOutputsInfo;
-         this->release = v2Ptr->release;
+         return v2Ptr->deinitialize(customNodeLibraryInternalManager);
      } else {
-        auto v1Ptr = dynamic_cast<NodeLibrary*>(nodeLibrary.get());
-         this->translator = V1ToV2ApiTranslator(*v1Ptr);
-         using namespace std::placeholders;
-         auto fInit = std::bind(&V1ToV2ApiTranslator::initialize, &translator, _1, _2, _3);
-         this->initialize = fInit;
-         this->initialize = translator.initialize;
-         this->deinitialize = translator.deinitialize;
-         this->execute = translator.execute;
-         this->getInputsInfo = translator.getInputsInfo;
-         this->getOutputsInfo = translator.getOutputsInfo;
-         this->release = translator.release;
+         return 999;
+   }
+}
+int NodeLibraryExecutor::execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+     auto v2Ptr = dynamic_cast<NodeLibraryV2*>(nodeLibrary.get());
+     if (v2Ptr != nullptr) {
+         return v2Ptr->execute(inputs, inputsCount, outputs, outputsCount, params, paramsCount, customNodeLibraryInternalManager);
+     } else {
+         return 999;
+   }
+    
+}
+int NodeLibraryExecutor::getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+     auto v2Ptr = dynamic_cast<NodeLibraryV2*>(nodeLibrary.get());
+     if (v2Ptr != nullptr) {
+         return v2Ptr->getInputsInfo(info, infoCount, params, paramsCount, customNodeLibraryInternalManager);
+     } else {
+         return 999;
+   }
+}
+int NodeLibraryExecutor::getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+     auto v2Ptr = dynamic_cast<NodeLibraryV2*>(nodeLibrary.get());
+     if (v2Ptr != nullptr) {
+         return v2Ptr->getOutputsInfo(info, infoCount, params, paramsCount, customNodeLibraryInternalManager);
+     } else {
+         return 999;
+   }
+}
+int NodeLibraryExecutor::release(void* ptr, void* customNodeLibraryInternalManager) {
+     auto v2Ptr = dynamic_cast<NodeLibraryV2*>(nodeLibrary.get());
+     if (v2Ptr != nullptr) {
+         return v2Ptr->release(ptr, customNodeLibraryInternalManager);
+     } else {
+         return 999;
+   }
+}
+
+int NodeLibraryExecutor1::initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+    SPDLOG_ERROR("ER");
+    return 0;
+}
+int NodeLibraryExecutor1::deinitialize(void* customNodeLibraryInternalManager) {
+    SPDLOG_ERROR("ER");
+        return 0;
+}
+int NodeLibraryExecutor1::execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+     auto v2Ptr = dynamic_cast<NodeLibrary*>(nodeLibrary.get());
+     if (v2Ptr != nullptr) {
+         return v2Ptr->execute(inputs, inputsCount, outputs, outputsCount, params, paramsCount);
+     } else {
+         return 999;
+   }
+    
+}
+int NodeLibraryExecutor1::getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+     auto v2Ptr = dynamic_cast<NodeLibrary*>(nodeLibrary.get());
+     if (v2Ptr != nullptr) {
+         return v2Ptr->getInputsInfo(info, infoCount, params, paramsCount);
+     } else {
+         return 999;
+   }
+}
+int NodeLibraryExecutor1::getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+     auto v2Ptr = dynamic_cast<NodeLibrary*>(nodeLibrary.get());
+     if (v2Ptr != nullptr) {
+         return v2Ptr->getOutputsInfo(info, infoCount, params, paramsCount);
+     } else {
+         return 999;
+   }
+}
+int NodeLibraryExecutor1::release(void* ptr, void* customNodeLibraryInternalManager) {
+     auto v2Ptr = dynamic_cast<NodeLibrary*>(nodeLibrary.get());
+     if (v2Ptr != nullptr) {
+         return v2Ptr->release(ptr);
+     } else {
+         return 999;
      }
 }
 

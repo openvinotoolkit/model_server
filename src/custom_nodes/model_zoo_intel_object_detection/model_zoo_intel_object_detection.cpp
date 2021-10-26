@@ -251,6 +251,7 @@ int reinitializeInternalManagerIfNeccessary(void** customNodeLibraryInternalMana
 }
 
 int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+    std::cout << "Started initialize of new API" << std::endl;
     auto status = 0;
     if (*customNodeLibraryInternalManager == nullptr) {
         status = initializeInternalManager(customNodeLibraryInternalManager, params, paramsCount);

@@ -27,6 +27,7 @@ namespace ovms {
 
 Status CustomNodeLibraryManager::tryLoadLibraryVer2(const std::string& name, const std::string& basePath, void* handle, std::unique_ptr<NodeLibraryBase>& nodeLibrary) {
     char* error;
+    SPDLOG_ERROR("LOADING_VER2");
     initialize_ver2_fn initialize = reinterpret_cast<initialize_ver2_fn>(dlsym(handle, "initialize"));
     error = dlerror();
     if (error || initialize == nullptr) {
@@ -86,6 +87,7 @@ Status CustomNodeLibraryManager::tryLoadLibraryVer2(const std::string& name, con
 }
 
 Status CustomNodeLibraryManager::tryLoadLibraryVer1(const std::string& name, const std::string& basePath, void* handle, std::unique_ptr<NodeLibraryBase>& nodeLibrary) {
+    SPDLOG_ERROR("LOADING_VER1");
     char* error;
     execute_fn execute = reinterpret_cast<execute_fn>(dlsym(handle, "execute"));
     error = dlerror();
@@ -147,11 +149,14 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN;
     }
     std::unique_ptr<NodeLibraryBase> nodeLibrary;
-    auto status = tryLoadLibraryVer1(name, basePath, handle, nodeLibrary);
+    auto status = tryLoadLibraryVer2(name, basePath, handle, nodeLibrary);
     if (!status.ok()) {
-        auto statusVer2 = tryLoadLibraryVer2(name, basePath, handle, nodeLibrary);
+        auto statusVer2 = tryLoadLibraryVer1(name, basePath, handle, nodeLibrary);
+        libraries[name] = std::make_unique<NodeLibraryExecutor1>(std::move(nodeLibrary));
+    } else {
+        libraries[name] = std::make_unique<NodeLibraryExecutor>(std::move(nodeLibrary));
+
     }
-    libraries[name] = std::make_unique<NodeLibraryExecutor>(std::move(nodeLibrary));
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Successfully loaded custom node library name: {}; base_path: {}", name, basePath);
     return StatusCode::OK;

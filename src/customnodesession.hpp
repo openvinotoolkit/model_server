@@ -53,6 +53,6 @@ public:
 
 private:
     static void releaseTensorResources(const struct CustomNodeTensor* tensor, NodeLibraryExecutor& library, void* customNodeLibraryInternalManager);
-    Status createBlob(const struct CustomNodeTensor* tensor, InferenceEngine::Blob::Ptr& resultBlob, const NodeLibraryExecutor& library, void* customNodeLibraryInternalManager);
+    Status createBlob(const struct CustomNodeTensor* tensor, InferenceEngine::Blob::Ptr& resultBlob, NodeLibraryExecutor& library, void* customNodeLibraryInternalManager);
 };
 }  // namespace ovms
