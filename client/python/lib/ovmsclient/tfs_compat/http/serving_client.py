@@ -119,18 +119,11 @@ class HttpClient(ServingClient):
 
         return HttpModelMetadataResponse(raw_response)
 
-    def get_model_status(self, model_name, model_version = 0, timeout = 10.0):
-
+    def get_model_status(self, model_name, model_version=0, timeout=10.0):
+        self._validate_timeout(timeout)
         request = make_status_request(model_name, model_version)
-
-        try:
-            timeout = float(timeout)
-            if timeout <= 0.0:
-                raise
-        except:
-            raise TypeError("timeout value must be positive float")
-
         raw_response = None
+
         try:
             raw_response = self.session.get(f"http://{self.url}"
                                             f"/v1/models/{request.model_name}"

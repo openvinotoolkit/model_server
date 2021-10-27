@@ -22,7 +22,7 @@ from http import HTTPStatus
 from numpy import array, int32, float32, float128
 from tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
 
-from ovmsclient.tfs_compat.base.errors import BadResponseError, ModelNotFoundError
+from ovmsclient.tfs_compat.base.errors import ModelNotFoundError
 from config import CallCount, PATH_VALID # noqa
 
 RawResponseMock = namedtuple("RawResponse", "text, status_code")
@@ -740,7 +740,7 @@ STATUS_RESPONSE_VALID_OUTPUTS = [
 # (response_outputs_dict, expected_error_type)
 STATUS_RESPONSE_MALFROMED_RESPONSE = [
     (
-        # Missing "state" key, malformed output 
+        # Missing "state" key, malformed output
         ("""
         {
             "model_version_status": [
@@ -774,23 +774,27 @@ STATUS_RESPONSE_MALFROMED_RESPONSE = [
 ]
 
 COMMON_RESPONSE_ERROR = [
-    ( 
-        ("""
-        { 
-            "error": "Model with requested name is not found"
-        }
-        """, 
-        HTTPStatus.NOT_FOUND),
+    (
+        (
+            """
+            {
+                "error": "Model with requested name is not found"
+            }
+            """,
+            HTTPStatus.NOT_FOUND
+        ),
         ModelNotFoundError,
         "Error occurred during handling the request: Model with requested name is not found"
     ),
-    ( 
-        ("""
-        { 
-            "error": "Model with requested version is not found"
-        }
-        """, 
-        HTTPStatus.NOT_FOUND),
+    (
+        (
+            """
+            {
+                "error": "Model with requested version is not found"
+            }
+            """,
+            HTTPStatus.NOT_FOUND
+        ),
         ModelNotFoundError,
         "Error occurred during handling the request: Model with requested version is not found"
     ),

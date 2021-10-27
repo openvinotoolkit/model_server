@@ -79,9 +79,9 @@ class HttpModelStatusResponse(ModelStatusResponse):
         "OUT_OF_RANGE": ErrorCode.OUT_OF_RANGE,
         "UNIMPLEMENTED": ErrorCode.UNIMPLEMENTED,
         "INTERNAL": ErrorCode.INTERNAL,
-        "UNAVAILABLE" : ErrorCode.UNAVAILABLE,
+        "UNAVAILABLE": ErrorCode.UNAVAILABLE,
         "DATA_LOSS": ErrorCode.DATA_LOSS,
-        "DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD_": 
+        "DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD_":
             ErrorCode.DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD_
     }
 
@@ -98,14 +98,14 @@ class HttpModelStatusResponse(ModelStatusResponse):
         result_dict = {}
         for version_status in model_version_status:
             version = int(version_status["version"])
-            error_code = self._ERROR_CODE_TO_NUMBER.get(version_status["status"]["error_code"], ErrorCode.UNKNOWN)
+            error_code = self._ERROR_CODE_TO_NUMBER.get(version_status["status"]["error_code"],
+                                                        ErrorCode.UNKNOWN)
             result_dict[version] = {
                 "state": version_status["state"],
                 "error_code": error_code,
                 "error_message": version_status["status"]["error_message"]
             }
         return result_dict
-        
 
 
 class HttpConfigStatusResponse:

@@ -35,17 +35,43 @@ from ovmsclient.tfs_compat.grpc.requests import (GrpcModelMetadataRequest, GrpcM
 # responses_dict = {
 #    model_version: { expected_status }
 # }
-MODEL_STATUS_RESPONSE_VALID = [{
-    1: {"state": ModelVersionStatus.State.AVAILABLE, "error_code": ErrorCode.OK, "error_message": ""}
-}, {
-    2: {"state": ModelVersionStatus.State.END, "error_code": ErrorCode.OK, "error_message": ""},
-    3: {"state": ModelVersionStatus.State.AVAILABLE, "error_code": ErrorCode.OK, "error_message": ""}
-}, {
-    1: {"state": ModelVersionStatus.State.START, "error_code": ErrorCode.OK, "error_message": ""},
-    2: {"state": ModelVersionStatus.State.LOADING, "error_code": ErrorCode.UNKNOWN,
-        "error_message": "Could not load CNN"},
-    3: {"state": ModelVersionStatus.State.UNLOADING, "error_code": ErrorCode.OK, "error_message": ""}
-}
+MODEL_STATUS_RESPONSE_VALID = [
+    {
+        1: {
+            "state": ModelVersionStatus.State.AVAILABLE,
+            "error_code": ErrorCode.OK,
+            "error_message": "OK"
+        }
+    },
+    {
+        2: {
+            "state": ModelVersionStatus.State.END,
+            "error_code": ErrorCode.OK,
+            "error_message": "OK"
+        },
+        3: {
+            "state": ModelVersionStatus.State.AVAILABLE,
+            "error_code": ErrorCode.OK,
+            "error_message": ""
+        }
+    },
+    {
+        1: {
+            "state": ModelVersionStatus.State.START,
+            "error_code": ErrorCode.OK,
+            "error_message": ""
+        },
+        2: {
+            "state": ModelVersionStatus.State.LOADING,
+            "error_code": ErrorCode.UNKNOWN,
+            "error_message": "Could not load CNN"
+        },
+        3: {
+            "state": ModelVersionStatus.State.UNLOADING,
+            "error_code": ErrorCode.OK,
+            "error_message": ""
+        }
+    }
 ]
 
 
@@ -306,15 +332,19 @@ MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE = [
 # (grpc_error_status_code, grpc_error_details, raised_error_type, raised_error_message)
 GET_MODEL_STATUS_INVALID_GRPC = [
     (StatusCode.UNAVAILABLE, "failed to connect to all adresses",
-     ConnectionError, "Error occurred during handling the request: failed to connect to all adresses"),
+     ConnectionError, "Error occurred during handling the request: "
+                      "failed to connect to all adresses"),
     (StatusCode.UNAVAILABLE, "Empty update",
      ConnectionError, "Error occurred during handling the request: Empty update"),
     (StatusCode.DEADLINE_EXCEEDED, "Deadline Exceeded",
-     TimeoutError, "Error occurred during handling the request: Request handling exceeded timeout"),
+     TimeoutError, "Error occurred during handling the request: "
+                   "Request handling exceeded timeout"),
     (StatusCode.NOT_FOUND, "Model with requested version is not found",
-     ModelNotFoundError, "Error occurred during handling the request: Model with requested version is not found"),
+     ModelNotFoundError, "Error occurred during handling the request: "
+                         "Model with requested version is not found"),
     (StatusCode.NOT_FOUND, "Model with requested name is not found",
-     ModelNotFoundError, "Error occurred during handling the request: Model with requested name is not found"),
+     ModelNotFoundError, "Error occurred during handling the request: "
+                         "Model with requested name is not found"),
 ]
 
 # ({"model_name": model_name, "model_version": model_version,

@@ -17,20 +17,29 @@ from grpc import StatusCode
 from http import HTTPStatus
 from requests import ReadTimeout
 
-class ModelServerError(Exception): pass
 
-class ModelNotFoundError(ModelServerError): pass
+class ModelServerError(Exception):
+    pass
 
-class InvalidInputError(ModelServerError): pass
 
-class BadResponseError(ModelServerError): pass
+class ModelNotFoundError(ModelServerError):
+    pass
+
+
+class InvalidInputError(ModelServerError):
+    pass
+
+
+class BadResponseError(ModelServerError):
+    pass
+
 
 GRPC_ERROR_CODE_TO_EXCEPTION = {
-    # If "message" key is present, then the source error message is overrode  
+    # If "message" key is present, then the source error message is overrode
     StatusCode.NOT_FOUND: {"class": ModelNotFoundError},
     StatusCode.INVALID_ARGUMENT: {"class": InvalidInputError},
     StatusCode.DEADLINE_EXCEEDED: {
-                                      "class": TimeoutError, 
+                                      "class": TimeoutError,
                                       "message": "Request handling exceeded timeout"
                                   }
 }
@@ -54,6 +63,7 @@ def raise_from_grpc(grpc_error):
 
     raise(error_class(details))
 
+
 def raise_from_http(http_error):
     error = HTTP_ERROR_TYPE_TO_EXCEPTION.get(type(http_error))
 
@@ -62,6 +72,7 @@ def raise_from_http(http_error):
     details = f"Error occurred during handling the request: {error_message}"
 
     raise(error_class(details))
+
 
 def raise_from_http_response(error_code, error_message):
     error = HTTP_ERROR_CODE_TO_EXCEPTION.get(error_code)

@@ -117,23 +117,16 @@ class GrpcClient(ServingClient):
 
         return GrpcModelMetadataResponse(raw_response)
 
-    def get_model_status(self, model_name, model_version = 0, timeout = 10.0):
-
+    def get_model_status(self, model_name, model_version=0, timeout=10.0):
+        self._validate_timeout(timeout)
         request = make_status_request(model_name, model_version)
-
-        try:
-            timeout = float(timeout)
-            if timeout <= 0.0:
-                raise
-        except:
-            raise TypeError("timeout value must be positive float")
-
         raw_response = None
+
         try:
             raw_response = self.model_service_stub.GetModelStatus(request.raw_request, timeout)
         except RpcError as grpc_error:
-                raise_from_grpc(grpc_error)
-        
+            raise_from_grpc(grpc_error)
+
         try:
             response = GrpcModelStatusResponse(raw_response).to_dict()
         except Exception as parsing_error:

@@ -18,24 +18,23 @@ import pytest
 import requests
 
 from ovmsclient.tfs_compat.http.serving_client import HttpClient, make_http_client
-from ovmsclient.tfs_compat.http.responses import (HttpModelStatusResponse,
-                                                  HttpModelMetadataResponse,
+from ovmsclient.tfs_compat.http.responses import (HttpModelMetadataResponse,
                                                   HttpPredictResponse)
-from ovmsclient.tfs_compat.http.requests import (HttpModelStatusRequest,
-                                                 HttpModelMetadataRequest,
+from ovmsclient.tfs_compat.http.requests import (HttpModelMetadataRequest,
                                                  HttpPredictRequest)
 from ovmsclient.tfs_compat.base.errors import BadResponseError
 
 from tfs_compat_http.config import (BUILD_VALID, BUILD_INVALID_CONFIG, COMMON_RESPONSE_ERROR,
                                     GET_MODEL_STATUS_VALID,
-                                    MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE,
                                     MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE,
-                                    PREDICT_REQUEST_INVALID_REQUEST_TYPE, STATUS_RESPONSE_MALFROMED_RESPONSE, RawResponseMock)
+                                    PREDICT_REQUEST_INVALID_REQUEST_TYPE,
+                                    STATUS_RESPONSE_MALFROMED_RESPONSE, RawResponseMock)
 
 
 @pytest.fixture
 def valid_http_serving_client_min():
     return make_http_client("localhost:9000")
+
 
 # Remove and use RawResponseMock from config after refactoring all endpoints
 def mocked_requests_get(*args, **kwargs):
@@ -45,6 +44,7 @@ def mocked_requests_get(*args, **kwargs):
 
     return MockResponse(args)
 # -----
+
 
 @pytest.mark.parametrize("config, method_call_count, expected_client_key, expected_server_cert",
                          BUILD_VALID)
@@ -97,25 +97,28 @@ def test_get_model_status_valid(mocker, valid_http_serving_client_min,
     assert response == expected_output
 
 
-@pytest.mark.parametrize("source_error, raised_error",
-                        [(requests.exceptions.ConnectionError, ConnectionError),
-                         (requests.exceptions.ReadTimeout, TimeoutError)])
+@pytest.mark.parametrize("source_error, raised_error", [
+                         (requests.exceptions.ConnectionError, ConnectionError),
+                         (requests.exceptions.ReadTimeout, TimeoutError)
+                         ])
 def test_get_model_status_connection_error(mocker, valid_http_serving_client_min,
                                            source_error, raised_error):
 
     valid_http_serving_client_min.session.get\
         = mocker.Mock(side_effect=source_error())
 
-    with pytest.raises(raised_error) as e_info:
+    with pytest.raises(raised_error):
         valid_http_serving_client_min.get_model_status("model_name")
 
     assert valid_http_serving_client_min.session.get.call_count == 1
+
 
 @pytest.mark.parametrize("params, expected_error, error_message", [
     # Model name check
     ([("model", "name"), 1, 10], TypeError, "model_name type should be string, but is tuple"),
     # Model version check
-    (["model_name", "model_version", 10], TypeError, "model_version type should be int, but is str"),
+    (["model_name", "model_version", 10], TypeError,
+        "model_version type should be int, but is str"),
     (["model_name", 2**63, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
     (["model_name", -1, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
     # Timeout check
@@ -123,7 +126,6 @@ def test_get_model_status_connection_error(mocker, valid_http_serving_client_min
     (["model_name", 1, 0], TypeError, "timeout value must be positive float"),
     (["model_name", 1, -1], TypeError, "timeout value must be positive float"),
 ])
-
 def test_get_model_status_invalid_params(mocker, valid_http_serving_client_min,
                                          params, expected_error, error_message):
 
@@ -135,6 +137,7 @@ def test_get_model_status_invalid_params(mocker, valid_http_serving_client_min,
 
     assert valid_http_serving_client_min.session.get.call_count == 0
     assert str(error.value) == error_message
+
 
 @pytest.mark.parametrize("response, expected_error, expected_message", COMMON_RESPONSE_ERROR)
 def test_get_model_status_server_error(mocker, valid_http_serving_client_min,
@@ -149,6 +152,7 @@ def test_get_model_status_server_error(mocker, valid_http_serving_client_min,
 
     assert valid_http_serving_client_min.session.get.call_count == 1
     assert str(error.value) == expected_message
+
 
 @pytest.mark.parametrize("response, _", STATUS_RESPONSE_MALFROMED_RESPONSE)
 def test_get_model_status_malformed_response(mocker, valid_http_serving_client_min,

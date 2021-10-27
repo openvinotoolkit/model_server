@@ -17,7 +17,6 @@
 import pytest
 import numpy as np
 
-from collections import namedtuple
 from numpy.core.numeric import array_equal
 
 from ovmsclient.tfs_compat.http.responses import (HttpPredictResponse,
@@ -41,7 +40,6 @@ def outputsEqual(outputs, expected_outputs):
     elif isinstance(outputs, np.ndarray):
         return array_equal(outputs, expected_outputs)
 
-### Predict response parsing tests ###
 
 @pytest.mark.parametrize("response, expected_output", PREDICT_RESPONSE_VALID_OUTPUTS)
 def test_PredictResponse_to_dict_valid_outputs(response, expected_output):
@@ -63,8 +61,6 @@ def test_PredictResponse_to_dict_valid_other(response, expected_output):
     assert(output == expected_output)
 
 
-### Model Metadata response parsing tests ###
-
 @pytest.mark.parametrize("response, expected_output", METADATA_RESPONSE_VALID_OUTPUTS)
 def test_ModelMetadataResponse_to_dict_valid_outputs(response, expected_output):
     metadata_raw_response = RawResponseMock(*response)
@@ -84,8 +80,6 @@ def test_ModelMetadataResponse_to_dict_valid_other(response, expected_output):
 
     assert(output == expected_output)
 
-
-### Model Status response parsing tests ###
 
 @pytest.mark.parametrize("response, expected_output", STATUS_RESPONSE_VALID_OUTPUTS)
 def test_ModelStatusResponse_to_dict_valid_outputs(response, expected_output):
@@ -108,7 +102,7 @@ def test_ModelStatusResponse_to_dict_malformed_response(response, expected_error
 
 @pytest.mark.parametrize("response, expected_error, expected_message",
                          COMMON_RESPONSE_ERROR)
-def test_ModelStatusResponse_to_dict_common_server_error(response, expected_error, 
+def test_ModelStatusResponse_to_dict_common_server_error(response, expected_error,
                                                          expected_message):
     status_raw_response = RawResponseMock(*response)
 
