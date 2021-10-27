@@ -381,13 +381,12 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
     for (const auto pair : pluginConfig) {
         const auto key = pair.first;
         const auto value = pair.second;
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "OVMS will set plugin settings key:{}; value:{};", key, value);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key:{}; value:{};", key, value);
     }
 
     const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
     std::vector<std::string> supportedConfigKeys;
     try {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging model:{}; version {};target device: {}; ExecutableNetwork configuration", getName(), getVersion(), targetDevice);
         std::vector<std::string> supportedConfigKeys2 = execNetwork->GetMetric(supportedConfigKey);
         supportedConfigKeys = std::move(supportedConfigKeys2);
     } catch (std::exception& e) {
@@ -397,6 +396,7 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, ExecutableNetwork metric key: {}", targetDevice, supportedConfigKey);
         return StatusCode::OK;
     }
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging model:{}; version {};target device: {}; ExecutableNetwork configuration", getName(), getVersion(), targetDevice);
     for (auto& key : supportedConfigKeys) {
         std::string value;
         try {

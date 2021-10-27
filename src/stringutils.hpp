@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <iostream>
 #include <limits>
 #include <locale>
 #include <optional>
@@ -24,8 +25,22 @@
 #include <string>
 #include <utility>
 #include <vector>
-
 namespace ovms {
+
+static inline std::string joins(const std::vector<std::string>& listOfStrings, const std::string delimiter) {
+    std::stringstream ss;
+    auto it = listOfStrings.cbegin();
+    if (it == listOfStrings.end()) {
+        return "";
+    }
+    for (; it != (listOfStrings.end() - 1); ++it) {
+        ss << *it << delimiter;
+    }
+    if (it != listOfStrings.end()) {
+        ss << *it;
+    }
+    return ss.str();
+}
 
 /**
  * @brief Trims the string on the left side

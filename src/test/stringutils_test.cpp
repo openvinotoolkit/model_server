@@ -24,6 +24,14 @@
 
 using namespace testing;
 
+TEST(StringUtils, joins) {
+    EXPECT_EQ("", ovms::joins({}, ","));
+    EXPECT_EQ("A", ovms::joins({"A"}, ","));
+    EXPECT_EQ("A,B", ovms::joins({"A", "B"}, ","));
+    EXPECT_EQ("Abe,Bece", ovms::joins({"Abe", "Bece"}, ","));
+    EXPECT_EQ("A,B,,D", ovms::joins({"A", "B", "", "D"}, ","));
+}
+
 TEST(StringUtils, ltrim) {
     std::string str0 = "";
     std::string str1 = "   {1234 5 67890}   ";

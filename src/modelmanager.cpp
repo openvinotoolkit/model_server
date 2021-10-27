@@ -101,22 +101,10 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory) :
             throw;
         }
     }
-    this->details();
+    this->logPluginConfiguration();
 }
 
-static inline std::string joins(const std::vector<std::string>& listOfStrings, const std::string delimiter) {
-    std::stringstream ss;
-    auto it = listOfStrings.cbegin();
-    for (; it != (listOfStrings.end() - 1); ++it) {
-        ss << *it << delimiter;
-    }
-    if (it != listOfStrings.end()) {
-        ss << *it;
-    }
-    return ss.str();
-}
-
-void ModelManager::details() {
+void ModelManager::logPluginConfiguration() {
     auto availableDevices = ieCore->GetAvailableDevices();
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Available devices for Open VINO: {}", joins(availableDevices, std::string(", ")));
     auto availablePlugins = availableDevices;
