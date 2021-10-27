@@ -349,3 +349,13 @@ tools_get_deps:
 	sleep 5
 	-docker rm -f ovms-$(BASE_OS)-deps
 	@echo "Success! Dependencies saved to rpms.tar.xz in this directory"
+
+cpu_extension:
+	cd src/example/SampleCpuExtension && \
+	docker build -f Dockerfile.$(BASE_OS) -t sample_cpu_extension:latest \
+		--build-arg http_proxy=${http_proxy} \
+		--build-arg https_proxy=${https_proxy} \
+		--build-arg no_proxy=${no_proxy} \
+		--build-arg DLDT_PACKAGE_URL=${DLDT_PACKAGE_URL} .
+	mkdir -p ./lib/${BASE_OS}
+	docker cp $$(docker create --rm sample_cpu_extension:latest):/workspace/libcustom_relu_cpu_extension.so ./lib/${BASE_OS}
