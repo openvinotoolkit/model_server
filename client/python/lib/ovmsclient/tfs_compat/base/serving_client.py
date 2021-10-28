@@ -64,7 +64,7 @@ class ServingClient(ABC):
 
         Args:
             model_name: name of the model in the model server.
-            model_version: version of the model (default = 0)
+            model_version: version of the model (default = 0).
             timeout: time in seconds to wait for the response (default = 10).
 
         Returns:
@@ -74,7 +74,7 @@ class ServingClient(ABC):
             TypeError:  if provided argument is of wrong type.
             ValueError: if provided argument has unsupported value.
             ConnectionError: if there is an issue with server connection.
-            TimeoutError: if request handling duration exceeded timeout
+            TimeoutError: if request handling duration exceeded timeout.
             ModelNotFound: if model with specified name and version does not exist
                            in the model server.
             BadResponseError: if server response in malformed and cannot be parsed.

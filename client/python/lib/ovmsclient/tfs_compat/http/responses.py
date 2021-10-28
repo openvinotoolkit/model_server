@@ -62,7 +62,7 @@ class HttpModelMetadataResponse(ModelMetadataResponse):
 class HttpModelStatusResponse(ModelStatusResponse):
 
     # Error codes in REST API are returned as strings.
-    # To unify the return value between gRPC and HTTP we map error codes strings to numers
+    # To unify the return value between gRPC and HTTP we map error codes strings to numbers
     # to match gRPC response.
     _ERROR_CODE_TO_NUMBER = {
         "OK": ErrorCode.OK,
