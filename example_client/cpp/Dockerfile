@@ -90,8 +90,8 @@ COPY .bazelrc WORKSPACE /build/
 COPY external /build/external/
 COPY third_party /build/third_party/
 
-RUN mkdir -p /opt/intel/openvino/extras/opencv/ && ln -sf /usr/lib/x86_64-linux-gnu /opt/intel/openvino/extras/opencv/lib
-RUN mkdir -p /opt/intel/openvino/extras/opencv/include && ln -sf /usr/include/opencv4/opencv2 /opt/intel/openvino/extras/opencv/include
+RUN mkdir -p /opt/intel/openvino/opencv/ && ln -sf /usr/lib/x86_64-linux-gnu /opt/intel/openvino/opencv/lib
+RUN mkdir -p /opt/intel/openvino/opencv/include && ln -sf /usr/include/opencv4/opencv2 /opt/intel/openvino/opencv/include
 
 RUN bazel build \
     @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
@@ -102,7 +102,6 @@ RUN bazel build \
     @opencv//:opencv
 
 COPY src/ /build/src/
-
 RUN bazel build //src:all
 
 FROM ubuntu:20.04 as release
