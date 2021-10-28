@@ -58,19 +58,26 @@ class ServingClient(ABC):
         pass
 
     @abstractmethod
-    def get_model_status(self, request):
+    def get_model_status(self, model_name, model_version=0, timeout=10.0):
         '''
         Send ModelStatusRequest to the server and return response.
 
         Args:
-            request: ModelStatusRequest object.
+            model_name: name of the model in the model server.
+            model_version: version of the model (default = 0).
+            timeout: time in seconds to wait for the response (default = 10).
 
         Returns:
-            ModelStatusResponse object
+            Dictionary with the model status response.
 
         Raises:
             TypeError:  if provided argument is of wrong type.
-            Many more for different serving reponses...
+            ValueError: if provided argument has unsupported value.
+            ConnectionError: if there is an issue with server connection.
+            TimeoutError: if request handling duration exceeded timeout.
+            ModelNotFound: if model with specified name and version does not exist
+                           in the model server.
+            BadResponseError: if server response in malformed and cannot be parsed.
         '''
 
         pass
@@ -79,6 +86,15 @@ class ServingClient(ABC):
     @abstractmethod
     def _build(cls, config):
         raise NotImplementedError
+
+    @classmethod
+    def _validate_timeout(cls, timeout):
+        try:
+            timeout = float(timeout)
+            if timeout <= 0.0:
+                raise TypeError("timeout set to negative value")
+        except Exception:
+            raise TypeError("timeout value must be positive float")
 
     @classmethod
     def _prepare_certs(cls, server_cert_path, client_cert_path, client_key_path):
