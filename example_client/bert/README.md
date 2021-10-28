@@ -12,13 +12,12 @@ docker run -d -v $(pwd)/model:/models -p 9000:9000 openvino/model_server:latest 
 ```
 docker build -t bert-client:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} .
 
-export SERVER_IP=<external IP>
 docker run -it --network host -e no_proxy=localhost bert-client:latest --grpc_address localhost
 ```
 
 Docker image with BERT client by default start the container with a command:
 ```
-python bert_question_answering_demo_ovms.py -v vocab.txt -i "https://en.wikipedia.org/wiki/BERT_(language_model)" --question "what is bert" --grpc_port 4000 --input_names result.1,result.2,result.3 --output_names 5211,5212
+python bert_question_answering_demo_ovms.py -v vocab.txt -i "https://en.wikipedia.org/wiki/BERT_(language_model)" --question "what is bert" --grpc_port 4000 --input_names attention_mask,input_ids,position_ids,token_type_ids --output_names output_s,output_e
 ```
 You can change the entrypoint to adjust to different parameters
 
