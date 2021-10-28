@@ -18,12 +18,10 @@
 #include <shared_mutex>
 
 #include "../../custom_node_interface.h"
-#include "../common/buffersqueue.hpp"
-#include "../common/customNodeLibraryInternalManager.hpp"
-#include "utils.hpp"
+#include "addOneInternalManager.hpp"
+#include "../common/utils.hpp"
 
-using CustomNodeLibraryInternalManager = ovms::custom_nodes_common::CustomNodeLibraryInternalManager;
-using BuffersQueue = ovms::custom_nodes_common::BuffersQueue;
+using InternalManager = ovms::custom_nodes_common::AddOneInternalManager;
 
 static constexpr const char* INPUT_TENSOR_NAME = "input_numbers";
 static constexpr const char* INPUT_INFO_NAME = "input_info";
@@ -37,41 +35,23 @@ static constexpr const char* OUTPUT_INFO_DIMS_NAME = "output_info_dims";
 
 std::shared_timed_mutex internalManagerLock;
 
-int current_output_queue_size = 10;
-int current_info_queue_size = 10;
-
-template <typename T>
-bool get_buffer(CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size) {
-    auto buffersQueue = internalManager->getBuffersQueue(buffersQueueName);
-    if (!(buffersQueue == nullptr)) {
-        *buffer = static_cast<T*>(buffersQueue->getBuffer());
-    }
-    if (*buffer == nullptr || buffersQueue == nullptr) {
-        *buffer = (T*)malloc(byte_size);
-        if (*buffer == nullptr) {
-            return false;
-        }
-    }
-    return true;
-}
-
 int initializeInternalManager(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
-    std::unique_ptr<CustomNodeLibraryInternalManager> internalManager = std::make_unique<CustomNodeLibraryInternalManager>();
+    std::unique_ptr<InternalManager> internalManager = std::make_unique<InternalManager>();
     NODE_ASSERT(internalManager != nullptr, "internalManager allocation failed");
 
-    int output_queue_size = get_int_parameter("output_queue_size", params, paramsCount, 10);
+    int output_queue_size = get_int_parameter("output_queue_size", params, paramsCount, internalManager->getCurrentOutputQueueSize());
     NODE_ASSERT(output_queue_size > 0, "output_queue_size should be greater than 0");
-    current_output_queue_size = output_queue_size;
+    internalManager->setCurrentOutputQueueSize(output_queue_size);
 
-    int info_queue_size = get_int_parameter("info_queue_size", params, paramsCount, 10);
+    int info_queue_size = get_int_parameter("info_queue_size", params, paramsCount, internalManager->getCurrentInfoQueueSize());
     NODE_ASSERT(info_queue_size > 0, "info_queue_size should be greater than 0");
-    current_info_queue_size = info_queue_size;
+    internalManager->setCurrentInfoQueueSize(info_queue_size);
 
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_NAME, 1 * sizeof(CustomNodeTensor), output_queue_size), "output buffer creation failed");
 
-    uint64_t byteSize = sizeof(float) * 10;
+    uint64_t byteSize = sizeof(float) * internalManager->getOutputSize();
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, byteSize, output_queue_size), "output tensor buffer creation failed");
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_DIMS_NAME, 2 * sizeof(uint64_t), output_queue_size), "output tensor dimsbuffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_DIMS_NAME, 2 * sizeof(uint64_t), output_queue_size), "output tensor dims buffer creation failed");
 
     NODE_ASSERT(internalManager->createBuffersQueue(INPUT_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), info_queue_size), "input info buffer creation failed");
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), info_queue_size), "output info buffer creation failed");
@@ -86,33 +66,34 @@ int initializeInternalManager(void** customNodeLibraryInternalManager, const str
 
 int reinitializeInternalManagerIfNeccessary(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
     std::unique_lock<std::shared_timed_mutex> lock(internalManagerLock);
-    CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(*customNodeLibraryInternalManager);
+    InternalManager* internalManager = static_cast<InternalManager*>(*customNodeLibraryInternalManager);
 
-    int output_queue_size = get_int_parameter("output_queue_size", params, paramsCount, 10);
+    int output_queue_size = get_int_parameter("output_queue_size", params, paramsCount, internalManager->getCurrentOutputQueueSize());
     NODE_ASSERT(output_queue_size > 0, "output_queue_size should be greater than 0");
 
-    int info_queue_size = get_int_parameter("info_queue_size", params, paramsCount, 10);
+    int info_queue_size = get_int_parameter("info_queue_size", params, paramsCount, internalManager->getCurrentInfoQueueSize());
     NODE_ASSERT(info_queue_size > 0, "info_queue_size should be greater than 0");
 
-    if (current_output_queue_size != output_queue_size) {
+    if (internalManager->getCurrentOutputQueueSize() != output_queue_size) {
         NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_NAME, 1 * sizeof(CustomNodeTensor), output_queue_size), "output buffer recreation failed");
 
-        uint64_t byteSize = sizeof(float) * 10;
+        uint64_t byteSize = sizeof(float) * internalManager->getOutputSize();
         NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_TENSOR_NAME, byteSize, output_queue_size), "output tensor buffer recreation failed");
-        NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_TENSOR_DIMS_NAME, 2 * sizeof(uint64_t), output_queue_size), "output tensor dimsbuffer recreation failed");
+        NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_TENSOR_DIMS_NAME, 2 * sizeof(uint64_t), output_queue_size), "output tensor dims buffer recreation failed");
+
+        internalManager->setCurrentOutputQueueSize(output_queue_size);
     }
 
-    if (current_info_queue_size != info_queue_size) {
+    if (internalManager->getCurrentInfoQueueSize() != info_queue_size) {
         NODE_ASSERT(internalManager->recreateBuffersQueue(INPUT_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), info_queue_size), "input info buffer recreation failed");
         NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), info_queue_size), "output info buffer recreation failed");
 
         NODE_ASSERT(internalManager->recreateBuffersQueue(INPUT_INFO_DIMS_NAME, 2 * sizeof(uint64_t), info_queue_size), "input info dims buffer recreation failed");
 
         NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_INFO_DIMS_NAME, 2 * sizeof(uint64_t), info_queue_size), "output info dims buffer recreation failed");
-    }
 
-    current_output_queue_size = output_queue_size;
-    current_info_queue_size = info_queue_size;
+        internalManager->setCurrentInfoQueueSize(info_queue_size);
+    }
 
     return 0;
 }
@@ -130,7 +111,7 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
 
 int deinitialize(void* customNodeLibraryInternalManager) {
     if (customNodeLibraryInternalManager != nullptr) {
-        CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
+        InternalManager* internalManager = static_cast<InternalManager*>(customNodeLibraryInternalManager);
         delete internalManager;
     }
     return 0;
@@ -138,7 +119,7 @@ int deinitialize(void* customNodeLibraryInternalManager) {
 
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     std::shared_lock<std::shared_timed_mutex> lock(internalManagerLock);
-    CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
+    InternalManager* internalManager = static_cast<InternalManager*>(customNodeLibraryInternalManager);
 
     NODE_ASSERT(inputsCount == 1, "too many inputs provided");
     NODE_ASSERT(std::strcmp(inputs[0].name, INPUT_TENSOR_NAME) == 0, "invalid input name");
@@ -191,7 +172,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
 int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     std::shared_lock<std::shared_timed_mutex> lock(internalManagerLock);
-    CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
+    InternalManager* internalManager = static_cast<InternalManager*>(customNodeLibraryInternalManager);
 
     *infoCount = 1;
     if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, INPUT_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo))) {
@@ -204,14 +185,14 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
         return 1;
     }
     (*info)->dims[0] = 1;
-    (*info)->dims[1] = 10;
+    (*info)->dims[1] = internalManager->getInputSize();
     (*info)->precision = FP32;
     return 0;
 }
 
 int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     std::shared_lock<std::shared_timed_mutex> lock(internalManagerLock);
-    CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
+    InternalManager* internalManager = static_cast<InternalManager*>(customNodeLibraryInternalManager);
 
     *infoCount = 1;
     if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, OUTPUT_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo))) {
@@ -224,13 +205,13 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
         return 1;
     }
     (*info)->dims[0] = 1;
-    (*info)->dims[1] = 10;
+    (*info)->dims[1] = internalManager->getOutputSize();
     (*info)->precision = FP32;
     return 0;
 }
 
 int release(void* ptr, void* customNodeLibraryInternalManager) {
-    CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
+    InternalManager* internalManager = static_cast<InternalManager*>(customNodeLibraryInternalManager);
     if (!internalManager->releaseBuffer(ptr)) {
         free(ptr);
         return 0;

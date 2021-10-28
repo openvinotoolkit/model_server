@@ -17,6 +17,8 @@
 
 #include <string>
 
+using CustomNodeLibraryInternalManager = ovms::custom_nodes_common::CustomNodeLibraryInternalManager;
+
 #define NODE_ASSERT(cond, msg)                                            \
     if (!(cond)) {                                                        \
         std::cout << "[" << __LINE__ << "] Assert: " << msg << std::endl; \
@@ -36,4 +38,19 @@ int get_int_parameter(const std::string& name, const struct CustomNodeParam* par
         }
     }
     return defaultValue;
+}
+
+template <typename T>
+bool get_buffer(CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size) {
+    auto buffersQueue = internalManager->getBuffersQueue(buffersQueueName);
+    if (!(buffersQueue == nullptr)) {
+        *buffer = static_cast<T*>(buffersQueue->getBuffer());
+    }
+    if (*buffer == nullptr || buffersQueue == nullptr) {
+        *buffer = (T*)malloc(byte_size);
+        if (*buffer == nullptr) {
+            return false;
+        }
+    }
+    return true;
 }

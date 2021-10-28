@@ -312,13 +312,14 @@ cc_binary(
     name = "libcustom_node_add_one.so",
     srcs = [
         "custom_nodes/add_one/add_one.cpp",
-        "custom_nodes/add_one/utils.hpp",
         "custom_node_interface.h",
         "queue.hpp",
         "custom_nodes/common/buffersqueue.hpp",
         "custom_nodes/common/buffersqueue.cpp",
         "custom_nodes/common/customNodeLibraryInternalManager.hpp",
-        "custom_nodes/common/customNodeLibraryInternalManager.cpp"
+        "custom_nodes/common/customNodeLibraryInternalManager.cpp",
+        "custom_nodes/common/utils.hpp",
+        "custom_nodes/add_one/addOneInternalManager.hpp"
     ],
     linkshared = 1,
     copts = [

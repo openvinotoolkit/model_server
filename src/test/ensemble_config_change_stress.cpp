@@ -564,7 +564,7 @@ static const char* stressPipelineCustomNodeDifferentOperationsThenDummyThenChoos
     ]
 })";
 
-static const char* stressPipelineCustomNodeAddOneThanDummy = R"(
+static const char* stressPipelineCustomNodeAddOneThenDummy = R"(
 {
     "custom_node_library_config_list": [
         {
@@ -579,7 +579,7 @@ static const char* stressPipelineCustomNodeAddOneThanDummy = R"(
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "nireq": 100,
+                "nireq": 20,
                 "shape": {"b": "(1,10) "}
             }
         }
@@ -631,7 +631,7 @@ static const char* stressPipelineCustomNodeAddOneThanDummy = R"(
     ]
 })";
 
-static const char* stressPipelineCustomNodeAddOneThanDummyRemovedLibraryConfig = R"(
+static const char* stressPipelineCustomNodeAddOneThenDummyRemovedLibraryConfig = R"(
 {
     "custom_node_library_config_list": [],
     "model_config_list": [
@@ -641,7 +641,7 @@ static const char* stressPipelineCustomNodeAddOneThanDummyRemovedLibraryConfig =
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "nireq": 100,
+                "nireq": 20,
                 "shape": {"b": "(1,10) "}
             }
         }
@@ -693,7 +693,7 @@ static const char* stressPipelineCustomNodeAddOneThanDummyRemovedLibraryConfig =
     ]
 })";
 
-static const char* stressPipelineCustomNodeAddOneThanDummyChangedLibraryName = R"(
+static const char* stressPipelineCustomNodeAddOneThenDummyChangedLibraryName = R"(
 {
     "custom_node_library_config_list": [
         {
@@ -708,7 +708,7 @@ static const char* stressPipelineCustomNodeAddOneThanDummyChangedLibraryName = R
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "nireq": 100,
+                "nireq": 20,
                 "shape": {"b": "(1,10) "}
             }
         }
@@ -760,7 +760,7 @@ static const char* stressPipelineCustomNodeAddOneThanDummyChangedLibraryName = R
     ]
 })";
 
-static const char* stressPipelineCustomNodeAddOneThanDummyChangedParam = R"(
+static const char* stressPipelineCustomNodeAddOneThenDummyChangedParam = R"(
 {
     "custom_node_library_config_list": [
         {
@@ -775,7 +775,7 @@ static const char* stressPipelineCustomNodeAddOneThanDummyChangedParam = R"(
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "nireq": 100,
+                "nireq": 20,
                 "shape": {"b": "(1,10) "}
             }
         }
@@ -827,7 +827,7 @@ static const char* stressPipelineCustomNodeAddOneThanDummyChangedParam = R"(
     ]
 })";
 
-static const char* stressPipelineCustomNodeAddOneThanDummyReducedQueueSize = R"(
+static const char* stressPipelineCustomNodeAddOneThenDummyReducedQueueSize = R"(
 {
     "custom_node_library_config_list": [
         {
@@ -842,7 +842,7 @@ static const char* stressPipelineCustomNodeAddOneThanDummyReducedQueueSize = R"(
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "nireq": 100,
+                "nireq": 20,
                 "shape": {"b": "(1,10) "}
             }
         }
@@ -894,7 +894,7 @@ static const char* stressPipelineCustomNodeAddOneThanDummyReducedQueueSize = R"(
     ]
 })";
 
-static const char* stressPipelineCustomNodeAddOneThanDummyIncreasedQueueSize = R"(
+static const char* stressPipelineCustomNodeAddOneThenDummyIncreasedQueueSize = R"(
 {
     "custom_node_library_config_list": [
         {
@@ -909,7 +909,7 @@ static const char* stressPipelineCustomNodeAddOneThanDummyIncreasedQueueSize = R
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "nireq": 100,
+                "nireq": 20,
                 "shape": {"b": "(1,10) "}
             }
         }
@@ -1049,31 +1049,31 @@ public:
     }
     void removePreallocatedCustomLibraryUsed() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressPipelineCustomNodeAddOneThanDummyRemovedLibraryConfig);
+        SetUpConfig(stressPipelineCustomNodeAddOneThenDummyRemovedLibraryConfig);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
     void renamePreallocatedCustomLibraryUsed() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressPipelineCustomNodeAddOneThanDummyChangedLibraryName);
+        SetUpConfig(stressPipelineCustomNodeAddOneThenDummyChangedLibraryName);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
     void changeParamPreallocatedCustomLibraryUsed() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressPipelineCustomNodeAddOneThanDummyChangedParam);
+        SetUpConfig(stressPipelineCustomNodeAddOneThenDummyChangedParam);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
     void reduceQueueSizePreallocatedCustomLibraryUsed() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressPipelineCustomNodeAddOneThanDummyReducedQueueSize);
+        SetUpConfig(stressPipelineCustomNodeAddOneThenDummyReducedQueueSize);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
     void increaseQueueSizePreallocatedCustomLibraryUsed() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressPipelineCustomNodeAddOneThanDummyIncreasedQueueSize);
+        SetUpConfig(stressPipelineCustomNodeAddOneThenDummyIncreasedQueueSize);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
@@ -1520,32 +1520,18 @@ TEST_F(StressPipelineConfigChanges, RetireSpecificVersionUsedDuringGetMetadataLo
 }
 
 class StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges : public StressPipelineConfigChanges {
-    const size_t addOneInputSize = 10;
-    const std::vector<float> inputNumbers{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-
 public:
-    int multiplier = 1;
-    tensorflow::serving::PredictRequest preparePipelinePredictRequest() override {
-        tensorflow::serving::PredictRequest request = preparePredictRequest(getExpectedInputsInfo());
-        auto& input = (*request.mutable_inputs())[pipelineInputName];
-        input.mutable_tensor_content()->assign((char*)inputNumbers.data(), inputNumbers.size() * sizeof(float));
-        return request;
-    }
-    inputs_info_t getExpectedInputsInfo() override {
-        return {{pipelineInputName,
-            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, addOneInputSize}, tensorflow::DataType::DT_FLOAT}}};
-    }
     void checkPipelineResponse(const std::string& pipelineOutputName,
         tensorflow::serving::PredictRequest& request,
         tensorflow::serving::PredictResponse& response) override {
-        std::vector<float> result(inputNumbers.begin(), inputNumbers.end());
+        std::vector<float> result(requestData.begin(), requestData.end());
         std::transform(result.begin(), result.end(), result.begin(), [this](float f) -> float { return f + 1 - 0; });
         checkDummyResponse(pipelineOutputName, result, request, response, 1);
     }
 };
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCustomLibraryDuringPredictLoad) {
-    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
         StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
@@ -1559,7 +1545,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCust
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCustomLibraryDuringPredictLoad) {
-    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
@@ -1572,7 +1558,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCust
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangeParamCustomLibraryDuringPredictLoad) {
-    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
@@ -1585,7 +1571,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangePara
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_ReduceQueueSizeCustomLibraryDuringPredictLoad) {
-    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
@@ -1598,7 +1584,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_R
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_IncreaseQueueSizeCustomLibraryDuringPredictLoad) {
-    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
@@ -1611,7 +1597,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_I
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCustomLibraryDuringGetMetadataLoad) {
-    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
         StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
@@ -1625,7 +1611,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCust
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCustomLibraryDuringGetMetadataLoad) {
-    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
@@ -1638,7 +1624,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCust
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangeParamCustomLibraryDuringGetMetadataLoad) {
-    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
@@ -1651,7 +1637,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangePara
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_ReduceQueueSizeCustomLibraryDuringGetMetadataLoad) {
-    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
@@ -1664,7 +1650,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_R
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_IncreaseQueueSizeCustomLibraryDuringGetMetadataLoad) {
-    SetUpConfig(stressPipelineCustomNodeAddOneThanDummy);
+    SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
     std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // might hit reload phase
