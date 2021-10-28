@@ -68,7 +68,7 @@ class ServingClient(ABC):
             timeout: time in seconds to wait for the response (default = 10).
 
         Returns:
-            Dictionary with the response. Either model status or error message.
+            Dictionary with the model status response.
 
         Raises:
             TypeError:  if provided argument is of wrong type.

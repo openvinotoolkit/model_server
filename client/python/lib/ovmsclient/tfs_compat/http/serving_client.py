@@ -26,7 +26,7 @@ from ovmsclient.tfs_compat.http.responses import (HttpModelStatusResponse,
                                                   HttpModelMetadataResponse,
                                                   HttpPredictResponse)
 
-from ovmsclient.tfs_compat.base.errors import BadResponseError, raise_from_http
+from ovmsclient.tfs_compat.base.errors import BadResponseError, ModelServerError, raise_from_http
 
 
 class HttpClient(ServingClient):
@@ -134,8 +134,9 @@ class HttpClient(ServingClient):
             raise_from_http(http_error)
 
         try:
-            # to_dict call raises ModelServerError when output JSON contains "error" key
             response = HttpModelStatusResponse(raw_response).to_dict()
+        except ModelServerError as model_server_error:
+            raise model_server_error
         except (JSONDecodeError, KeyError, ValueError) as parsing_error:
             raise BadResponseError("Received response is malformed and could not be parsed."
                                    f"Details: {str(parsing_error)}")
