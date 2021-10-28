@@ -14,11 +14,18 @@
 # limitations under the License.
 #
 
+from collections import namedtuple
 import json
+from json.decoder import JSONDecodeError
 import requests
+from http import HTTPStatus
 from numpy import array, int32, float32, float128
+from tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
 
+from ovmsclient.tfs_compat.base.errors import ModelNotFoundError
 from config import CallCount, PATH_VALID # noqa
+
+RawResponseMock = namedtuple("RawResponse", "text, status_code")
 
 # (inputs_dict,
 # model_name, model_version, expected_exception, expected_message)
@@ -328,6 +335,30 @@ BUILD_INVALID_CONFIG = [
 
 ]
 
+GET_MODEL_STATUS_VALID = [
+    (
+        ("""{
+         "model_version_status": [
+          {
+           "version": "1",
+           "state": "AVAILABLE",
+           "status": {
+            "error_code": "OK",
+            "error_message": "OK"
+           }
+          }
+         ]
+        }""", HTTPStatus.OK),
+        {
+            1: {
+                "state": "AVAILABLE",
+                "error_code": ErrorCode.OK,
+                "error_message": "OK"
+            }
+        }
+    )
+]
+
 MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE = [
     (requests.Request(), TypeError, 'request type should be HttpModelStatusRequest, '
      'but is Request'),
@@ -352,24 +383,24 @@ PREDICT_REQUEST_INVALID_REQUEST_TYPE = [
 # (response_outputs_dict, expected_outputs_dict)
 PREDICT_RESPONSE_VALID_OUTPUTS = [
     (
-        """
+        ("""
         {
             "outputs": [[1,2,3,4,5]]
         }
-        """,
+        """, HTTPStatus.OK),
         {
             "outputs": array([[1, 2, 3, 4, 5]])
         }
     ),
     (
-        """
+        ("""
         {
             "outputs": {
                 "output1": [1,2,3],
                 "output2": [4,5,6]
             }
         }
-        """,
+        """, HTTPStatus.OK),
         {
             "outputs": {
                 "output1": array([1, 2, 3]),
@@ -382,31 +413,31 @@ PREDICT_RESPONSE_VALID_OUTPUTS = [
 # (response_outputs_dict, expected_outputs_dict)
 RESPONSE_VALID_OTHER = [
     (
-        """
+        ("""
         {
             "error": "Model with requested name is not found"
         }
-        """,
+        """, HTTPStatus.OK),
         {
             "error": "Model with requested name is not found"
         }
     ),
     (
-        """
+        ("""
         {
             "outputs": "string"
         }
-        """,
+        """, HTTPStatus.OK),
         {
              "outputs": "string"
         }
     ),
     (
-        """
+        ("""
         {
             "outputs": 123456789
         }
-        """,
+        """, HTTPStatus.OK),
         {
              "outputs": 123456789
         }
@@ -418,21 +449,21 @@ RESPONSE_VALID_OTHER = [
     # Data under "outputs" key will be additionally converted to numpy
     # to match gRPC to_dict() output.
     (
-        """
+        ("""
         {
             "output123": [1,2,3,4,5]
         }
-        """,
+        """, HTTPStatus.OK),
         {
             "output123": [1, 2, 3, 4, 5]
         }
     ),
     (
-        """
+        ("""
         {
             "output123": "string"
         }
-        """,
+        """, HTTPStatus.OK),
         {
             "output123": "string"
         }
@@ -443,7 +474,7 @@ RESPONSE_VALID_OTHER = [
 # (response_outputs_dict, expected_outputs_dict)
 METADATA_RESPONSE_VALID_OUTPUTS = [
     (
-        """
+        ("""
         {
             "modelSpec": {
                 "name": "empty",
@@ -499,7 +530,7 @@ METADATA_RESPONSE_VALID_OUTPUTS = [
             }
         }
         }
-        """,
+        """, HTTPStatus.OK),
         {
             "model_version": 1,
             "inputs": {
@@ -512,7 +543,7 @@ METADATA_RESPONSE_VALID_OUTPUTS = [
     ),
 
     (
-        """
+        ("""
         {
             "modelSpec": {
                 "name": "empty",
@@ -614,7 +645,7 @@ METADATA_RESPONSE_VALID_OUTPUTS = [
             }
         }
         }
-        """,
+        """, HTTPStatus.OK),
         {
             "model_version": 4,
             "inputs": {
@@ -633,7 +664,7 @@ METADATA_RESPONSE_VALID_OUTPUTS = [
 # (response_outputs_dict, expected_outputs_dict)
 STATUS_RESPONSE_VALID_OUTPUTS = [
     (
-        """
+        ("""
         {
             "model_version_status": [
                 {
@@ -646,17 +677,17 @@ STATUS_RESPONSE_VALID_OUTPUTS = [
                 }
             ]
         }
-        """,
+        """, HTTPStatus.OK),
         {
             1: {
                 "state": "AVAILABLE",
-                "error_code": "OK",
+                "error_code": ErrorCode.OK,
                 "error_message": "OK"
             }
         }
     ),
     (
-        """
+        ("""
         {
             "model_version_status": [
                 {
@@ -685,23 +716,86 @@ STATUS_RESPONSE_VALID_OUTPUTS = [
                 }
             ]
         }
-        """,
+        """, HTTPStatus.OK),
         {
             1: {
                 "state": "END",
-                "error_code": "OK",
+                "error_code": ErrorCode.OK,
                 "error_message": "OK"
             },
             2: {
                 "state": "AVAILABLE",
-                "error_code": "OK",
+                "error_code": ErrorCode.OK,
                 "error_message": "OK"
             },
             3: {
                 "state": "LOADING",
-                "error_code": "UNKNOWN",
+                "error_code": ErrorCode.UNKNOWN,
                 "error_message": "Could not load model version - topology not supported"
             }
         }
+    ),
+]
+
+# (response_outputs_dict, expected_error_type)
+STATUS_RESPONSE_MALFROMED_RESPONSE = [
+    (
+        # Missing "state" key, malformed output
+        ("""
+        {
+            "model_version_status": [
+                {
+                    "version": "1",
+                    "status": {
+                        "error_code": "OK",
+                        "error_message": "OK"
+                    }
+                }
+            ]
+        }
+        """, HTTPStatus.OK), KeyError
+    ),
+    (
+        # Invalid JSON, missing closure
+        ("""
+        {
+            "model_version_status": [
+                {
+                    "version": "1",
+                    "state": "AVAILABLE",
+                    "status": {
+                        "error_code": "OK",
+                        "error_message": "OK"
+                    }
+                }
+            ]
+        """, HTTPStatus.OK), JSONDecodeError
+    ),
+]
+
+COMMON_RESPONSE_ERROR = [
+    (
+        (
+            """
+            {
+                "error": "Model with requested name is not found"
+            }
+            """,
+            HTTPStatus.NOT_FOUND
+        ),
+        ModelNotFoundError,
+        "Error occurred during handling the request: Model with requested name is not found"
+    ),
+    (
+        (
+            """
+            {
+                "error": "Model with requested version is not found"
+            }
+            """,
+            HTTPStatus.NOT_FOUND
+        ),
+        ModelNotFoundError,
+        "Error occurred during handling the request: Model with requested version is not found"
     ),
 ]
