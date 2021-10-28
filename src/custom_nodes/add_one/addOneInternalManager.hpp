@@ -25,6 +25,7 @@ class AddOneInternalManager : public CustomNodeLibraryInternalManager {
     int inputSize;
     int currentOutputQueueSize;
     int currentInfoQueueSize;
+    std::shared_timed_mutex internalManagerLock;
 
 public:
     AddOneInternalManager(int outputSize = 10, int inputSize = 10,
@@ -57,6 +58,9 @@ public:
     }
     void setCurrentInfoQueueSize(int currentInfoQueueSize) {
         this->currentInfoQueueSize = currentInfoQueueSize;
+    }
+    std::shared_timed_mutex& getInternalManagerLock() {
+        return this->internalManagerLock;
     }
 };
 }  // namespace custom_nodes_common
