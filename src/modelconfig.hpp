@@ -137,9 +137,18 @@ private:
     mapping_config_t mappingInputs;
 
     /**
-         * @brief Input mapping configuration
+         * @brief Output mapping configuration
          */
     mapping_config_t mappingOutputs;
+
+     /**
+         * @brief Reversed input mapping configuration
+         */
+    mapping_config_t reversedMappingInputs;
+    /**
+         * @brief Reversed output mapping configuration
+         */
+    mapping_config_t reversedMappingOutputs;
 
     /**
          * @brief Shape left opening bracket in string format
@@ -792,6 +801,28 @@ public:
     const std::string getMappingOutputByKey(const std::string& key) const {
         auto it = mappingOutputs.find(key);
         return it != mappingOutputs.end() ? it->second : "";
+    }
+
+     /**
+         * @brief Get the real inputs by value
+         * 
+         * @param value 
+         * @return const std::string 
+         */
+    const std::string getRealInputByValue(const std::string& value) const {
+         auto it = reversedMappingInputs.find(value);
+         return it != reversedMappingInputs.end() ? it->second : "";
+    }
+
+     /**
+         * @brief Get the real outputs by value
+         * 
+         * @param value 
+         * @return const std::string 
+         */
+    const std::string getRealOutputByValue(const std::string& value) const {
+         auto it = reversedMappingOutputs.find(value);
+         return it != reversedMappingOutputs.end() ? it->second : "";
     }
 
     /**

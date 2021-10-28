@@ -82,13 +82,13 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         if (name == ANONYMOUS_INPUT_NAME) {
             continue;
         }
-        if (networkInputs.count(name) == 0) {
+        if (networkInputs.count(name) == 0 && networkInputs.count(config.getRealInputByValue(name)) == 0) {
             SPDLOG_WARN("Config shape - {} not found in network", name);
             return StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK;
         }
     }
     for (const auto& [name, _] : config.getLayouts()) {
-        if (networkInputs.count(name) == 0 && network->getOutputsInfo().count(name) == 0) {
+        if (networkInputs.count(name) == 0 && network->getOutputsInfo().count(name) == 0 && networkInputs.count(config.getRealInputByValue(name)) == 0 && network->getOutputsInfo().count(config.getRealOutputByValue(name)) == 0) {
             SPDLOG_WARN("Config layout - {} not found in network", name);
             return StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK;
         }
@@ -106,6 +106,8 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             shape = parameter.getShape(name);
         } else if (config.getShapes().count(name) && config.getShapes().at(name).shape.size()) {
             shape = config.getShapes().at(name).shape;
+        } else if (config.getShapes().count(config.getMappingInputByKey(name)) && config.getShapes().at(config.getMappingInputByKey(name)).shape.size()) {
+            shape = config.getShapes().at(config.getMappingInputByKey(name)).shape;
         } else if (config.getShapes().count(ANONYMOUS_INPUT_NAME) && config.getShapes().at(ANONYMOUS_INPUT_NAME).shape.size()) {
             shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
         }
@@ -150,6 +152,11 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             auto it = config.getLayouts().find(name);
             if (it != config.getLayouts().end()) {
                 layout = TensorInfo::getLayoutFromString(it->second);
+            } else {
+                auto it = config.getLayouts().find(config.getMappingInputByKey(name));
+                if (it != config.getLayouts().end()) {
+                    layout = TensorInfo::getLayoutFromString(it->second);
+                }
             }
         }
 
@@ -177,6 +184,11 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
             auto it = config.getLayouts().find(name);
             if (it != config.getLayouts().end()) {
                 layout = TensorInfo::getLayoutFromString(it->second);
+            } else {
+                auto it = config.getLayouts().find(config.getMappingOutputByKey(name));
+                if (it != config.getLayouts().end()) {
+                    layout = TensorInfo::getLayoutFromString(it->second);
+                }
             }
         }
 
