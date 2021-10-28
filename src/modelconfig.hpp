@@ -141,7 +141,7 @@ private:
          */
     mapping_config_t mappingOutputs;
 
-     /**
+    /**
          * @brief Reversed input mapping configuration
          */
     mapping_config_t reversedMappingInputs;
@@ -803,26 +803,26 @@ public:
         return it != mappingOutputs.end() ? it->second : "";
     }
 
-     /**
+    /**
          * @brief Get the real inputs by value
          * 
          * @param value 
          * @return const std::string 
          */
     const std::string getRealInputByValue(const std::string& value) const {
-         auto it = reversedMappingInputs.find(value);
-         return it != reversedMappingInputs.end() ? it->second : "";
+        auto it = reversedMappingInputs.find(value);
+        return it != reversedMappingInputs.end() ? it->second : "";
     }
 
-     /**
+    /**
          * @brief Get the real outputs by value
          * 
          * @param value 
          * @return const std::string 
          */
     const std::string getRealOutputByValue(const std::string& value) const {
-         auto it = reversedMappingOutputs.find(value);
-         return it != reversedMappingOutputs.end() ? it->second : "";
+        auto it = reversedMappingOutputs.find(value);
+        return it != reversedMappingOutputs.end() ? it->second : "";
     }
 
     /**
