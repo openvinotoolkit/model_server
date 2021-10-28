@@ -17,6 +17,8 @@
 
 #include <string>
 
+#include "customNodeLibraryInternalManager.hpp"
+
 using CustomNodeLibraryInternalManager = ovms::custom_nodes_common::CustomNodeLibraryInternalManager;
 
 #define NODE_ASSERT(cond, msg)                                            \
