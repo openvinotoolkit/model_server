@@ -1570,7 +1570,6 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangePara
         allowedLoadResults);
 }
 
-
 // Disabled with new CN API with option to reinitialize during execution/metadata operations. In order for this test to work
 // adjustments regarding to CustomNodeLibraryInternalManager and ovms(pipelinedefinition) behavior during reload need to be made.
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_ReduceQueueSizeCustomLibraryDuringPredictLoad) {

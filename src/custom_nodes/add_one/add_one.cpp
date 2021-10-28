@@ -18,8 +18,8 @@
 #include <shared_mutex>
 
 #include "../../custom_node_interface.h"
-#include "addOneInternalManager.hpp"
 #include "../common/utils.hpp"
+#include "addOneInternalManager.hpp"
 
 using InternalManager = ovms::custom_nodes_common::AddOneInternalManager;
 
