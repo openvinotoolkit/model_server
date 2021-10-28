@@ -16,9 +16,9 @@
 
 
 FROM ubuntu:20.04
-RUN apt install -y python3-pip
+RUN apt update && apt install -y python3-pip && apt-get clean && rm -rf /var/lib/apt/lists/*
 WORKDIR /bert
-COPY bert_question_answering_demo_ovms.py tokens_bert.py html_reader.py .
+COPY bert_question_answering_demo_ovms.py tokens_bert.py html_reader.py ./
 ADD https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/models/intel/bert-small-uncased-whole-word-masking-squad-int8-0002/vocab.txt .
 RUN pip3 install --upgrade pip && pip3 install --no-cache-dir tensorflow-serving-api
 
