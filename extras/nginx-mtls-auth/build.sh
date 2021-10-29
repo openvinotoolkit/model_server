@@ -19,7 +19,7 @@ BASE_IMAGE=${1:-openvino/model_server:latest}
 OUTPUT_IMAGE=${2:-openvino/model_server:nginx-mtls}
 BASE_OS=${3:-ubuntu}
 
-docker build  -f Dockerfile.$BASE_OS . --no-cache \
+docker build  -f Dockerfile.$BASE_OS . \
         --build-arg http_proxy="$http_proxy" --build-arg https_proxy="$https_proxy" \
         --build-arg no_proxy="$no_proxy" \
         --build-arg BASE_IMAGE="$BASE_IMAGE" \

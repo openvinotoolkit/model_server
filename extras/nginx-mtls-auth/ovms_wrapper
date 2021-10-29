@@ -88,9 +88,9 @@ do
         continue
     fi
     if [[ "${a}" != "$(sed 's/"//g' <<< "${a}")" ]]; then
-        a="'${a}'"
+        a="$(sed 's/ //g' <<< "${a}")"
         a="$(sed 's/"/\\"/g' <<< "${a}")"
-        new_args+=("'$a'")
+        new_args+=("$a")
         continue
     fi
 
