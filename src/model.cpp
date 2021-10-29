@@ -250,7 +250,9 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
         config.setVersion(version);
 
         auto modelVersion = getModelInstanceByVersion(version);
-        config.setLocalPath(modelVersion->getModelConfig().getLocalPath());
+        if (modelVersion != nullptr) {
+            config.setLocalPath(modelVersion->getModelConfig().getLocalPath());
+        }
         auto status = config.parseModelMapping();
         if ((!status.ok()) && (status != StatusCode::FILE_INVALID)) {
             SPDLOG_ERROR("Error while parsing model mapping for model {}", status.string());

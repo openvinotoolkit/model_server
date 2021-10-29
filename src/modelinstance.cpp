@@ -82,13 +82,13 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         if (name == ANONYMOUS_INPUT_NAME) {
             continue;
         }
-        if (networkInputs.count(name) == 0 && networkInputs.count(config.getRealInputByValue(name)) == 0) {
+        if (networkInputs.count(name) == 0 && networkInputs.count(config.getRealInputNameByValue(name)) == 0) {
             SPDLOG_WARN("Config shape - {} not found in network", name);
             return StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK;
         }
     }
     for (const auto& [name, _] : config.getLayouts()) {
-        if (networkInputs.count(name) == 0 && network->getOutputsInfo().count(name) == 0 && networkInputs.count(config.getRealInputByValue(name)) == 0 && network->getOutputsInfo().count(config.getRealOutputByValue(name)) == 0) {
+        if (networkInputs.count(name) == 0 && network->getOutputsInfo().count(name) == 0 && networkInputs.count(config.getRealInputNameByValue(name)) == 0 && network->getOutputsInfo().count(config.getRealOutputNameByValue(name)) == 0) {
             SPDLOG_WARN("Config layout - {} not found in network", name);
             return StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK;
         }

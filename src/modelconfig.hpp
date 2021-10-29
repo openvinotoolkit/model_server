@@ -809,7 +809,7 @@ public:
          * @param value 
          * @return const std::string 
          */
-    const std::string getRealInputByValue(const std::string& value) const {
+    const std::string getRealInputNameByValue(const std::string& value) const {
         auto it = reversedMappingInputs.find(value);
         return it != reversedMappingInputs.end() ? it->second : "";
     }
@@ -820,7 +820,7 @@ public:
          * @param value 
          * @return const std::string 
          */
-    const std::string getRealOutputByValue(const std::string& value) const {
+    const std::string getRealOutputNameByValue(const std::string& value) const {
         auto it = reversedMappingOutputs.find(value);
         return it != reversedMappingOutputs.end() ? it->second : "";
     }
