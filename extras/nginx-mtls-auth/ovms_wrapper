@@ -87,6 +87,12 @@ do
         DELETE_NEXT_ARG=1
         continue
     fi
+    if [[ "${a}" != "$(sed 's/"//g' <<< "${a}")" ]]; then
+        a="'${a}'"
+        a="$(sed 's/"/\\"/g' <<< "${a}")"
+        new_args+=("'$a'")
+        continue
+    fi
 
     if [[ "${a}" != "$(sed 's/ //g' <<< "${a}")" ]]; then
         echo "This argument: ${a} will be changed to: '${a}'"
@@ -100,7 +106,10 @@ echo "${new_args[@]}"
 
 echo "Requested ports: GRPC: $GRPC_ORIGINAL_PORT ; REST: $REST_ORIGINAL_PORT "
 
+
+
 # select ports other than specified original:
+
 GRPC_OVMS_NEW_PORT=7000
 while [ $GRPC_OVMS_NEW_PORT -eq $GRPC_ORIGINAL_PORT ] || [ $GRPC_OVMS_NEW_PORT -eq $REST_ORIGINAL_PORT ]
 do
