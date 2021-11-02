@@ -16,7 +16,7 @@
 
 from grpc._channel import _RPCState, _InactiveRpcError, Channel
 import pytest
-from numpy import float64, array, int32
+import numpy as np
 from ovmsclient.tfs_compat.grpc.requests import GrpcPredictRequest
 
 from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
@@ -40,15 +40,16 @@ from ovmsclient.tfs_compat.base.errors import BadResponseError
 
 from tfs_compat_grpc.config import (BUILD_INVALID_CONFIG, BUILD_VALID, BUILD_INVALID_CERTS,
                                     MODEL_METADATA_RESPONSE_VALID,
-                                    GET_MODEL_STATUS_INVALID_GRPC,
+                                    COMMON_INVALID_GRPC,
+                                    MODEL_STATUS_INVALID_PARAMS,
                                     MODEL_METADATA_REQUEST_VALID,
                                     MODEL_METADATA_REQUEST_INVALID_RAW_REQUEST,
                                     MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE,
                                     GET_MODEL_METADATA_INVALID_GRPC,
-                                    PREDICT_REQUEST_VALID_SPEC,
-                                    PREDICT_REQUEST_INVALID_SPEC_RAW_REQUEST,
-                                    PREDICT_REQUEST_INVALID_SPEC_TYPE,
-                                    PREDICT_INVAlID_GRPC)
+                                    PREDICT_INVALID_PARAMS,
+                                    PREDICT_RESPONSE_VALID,
+                                    PREDICT_RESPONSE_TENSOR_TYPE_INVALID,
+                                    PREDICT_INVALID_GRPC)
 
 from tfs_compat_grpc.utils import (create_model_metadata_response,
                                    create_model_status_response,
@@ -99,24 +100,13 @@ def create_model_metadata_request(name, version, raw_name, raw_version,
     return GrpcModelMetadataRequest(name, version, raw_request)
 
 
-@pytest.fixture
-def valid_predict_response():
+def create_predict_response(outputs):
     predict_raw_response = PredictResponse()
 
     predict_raw_response.model_spec.name = 'name'
     predict_raw_response.model_spec.version.value = 0
 
-    outputs_dict = {
-        "0": TensorProto(dtype=DataType.DT_INT32,
-                         tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=2),
-                                                       TensorShapeProto.Dim(size=3)]),
-                         tensor_content=array([1, 2, 3, 4, 5, 6], dtype=int32).tobytes()),
-        "1": TensorProto(dtype=DataType.DT_DOUBLE,
-                         tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]),
-                         double_val=array([12.0], dtype=float64)),
-    }
-
-    for key, value in outputs_dict.items():
+    for key, value in outputs.items():
         predict_raw_response.outputs[key].CopyFrom(value)
     return GrpcPredictResponse(predict_raw_response)
 
@@ -202,19 +192,7 @@ def test_make_grpc_client_invalid_certs(mocker, config, method_call_spec, expect
         assert mock.call_count == call_count
 
 
-@pytest.mark.parametrize("params, expected_error, error_message", [
-    # Model name check
-    ([("model", "name"), 1, 10], TypeError, "model_name type should be string, but is tuple"),
-    # Model version check
-    (["model_name", "model_version", 10], TypeError,
-        "model_version type should be int, but is str"),
-    (["model_name", 2**63, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
-    (["model_name", -1, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
-    # Timeout check
-    (["model_name", 1, "string"], TypeError, "timeout value must be positive float"),
-    (["model_name", 1, 0], TypeError, "timeout value must be positive float"),
-    (["model_name", 1, -1], TypeError, "timeout value must be positive float"),
-])
+@pytest.mark.parametrize("params, expected_error, error_message", MODEL_STATUS_INVALID_PARAMS)
 def test_get_model_status_invalid_params(mocker, valid_grpc_serving_client_min,
                                          params, expected_error, error_message):
 
@@ -256,7 +234,7 @@ def test_get_model_status_valid(mocker, valid_grpc_serving_client_min):
 
 
 @pytest.mark.parametrize("grpc_error_status_code, grpc_error_details,"
-                         "raised_error_type, raised_error_message", GET_MODEL_STATUS_INVALID_GRPC)
+                         "raised_error_type, raised_error_message", COMMON_INVALID_GRPC)
 def test_get_model_status_invalid_grpc(mocker, valid_grpc_serving_client_min,
                                        grpc_error_status_code, grpc_error_details,
                                        raised_error_type, raised_error_message):
@@ -401,111 +379,75 @@ def test_get_model_metadata_invalid_type(mocker, valid_grpc_serving_client_min,
     assert mock_check_request.call_count == 1
 
 
-@pytest.mark.parametrize("request_parameter_dict", PREDICT_REQUEST_VALID_SPEC)
-def test_check_predict_request_valid(request_parameter_dict):
-    predict_request = create_predict_request(request_parameter_dict['model_name'],
-                                             request_parameter_dict['model_version'],
-                                             request_parameter_dict['raw_request_model_name'],
-                                             request_parameter_dict['raw_request_model_version'],
-                                             request_parameter_dict['inputs_dict'],
-                                             request_parameter_dict['raw_request_inputs_dict'])
-    GrpcClient._check_predict_request(predict_request)
+@pytest.mark.parametrize("params, expected_error, error_message", PREDICT_INVALID_PARAMS)
+def test_predict_invalid_params(mocker, valid_grpc_serving_client_min,
+                                params, expected_error, error_message):
 
-
-@pytest.mark.parametrize("request_parameter_dict,"
-                         "expected_exception, expected_message",
-                         PREDICT_REQUEST_INVALID_SPEC_RAW_REQUEST)
-def test_check_predict_request_invalid_raw_request(request_parameter_dict, expected_exception,
-                                                   expected_message):
-    predict_request = create_predict_request(request_parameter_dict['model_name'],
-                                             request_parameter_dict['model_version'],
-                                             request_parameter_dict['raw_request_model_name'],
-                                             request_parameter_dict['raw_request_model_version'],
-                                             request_parameter_dict['inputs_dict'],
-                                             request_parameter_dict['raw_request_inputs_dict'])
-    with pytest.raises(expected_exception) as e_info:
-        GrpcClient._check_predict_request(predict_request)
-
-    assert str(e_info.value) == expected_message
-
-
-@pytest.mark.parametrize("predict_request, expected_exception,"
-                         "expected_message", PREDICT_REQUEST_INVALID_SPEC_TYPE)
-def test_check_predict_request_invalid_type(predict_request, expected_exception, expected_message):
-    with pytest.raises(expected_exception) as e_info:
-        GrpcClient._check_predict_request(predict_request)
-
-    assert str(e_info.value) == expected_message
-
-
-def test_predict_valid(mocker, valid_grpc_serving_client_min, valid_predict_response):
-    predict_request = mocker.Mock()
-
-    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client'
-                                      '.GrpcClient._check_predict_request')
     valid_grpc_serving_client_min.prediction_service_stub.Predict\
-        = mocker.Mock(return_value=valid_predict_response.raw_response)
+        = mocker.Mock()
 
-    response = valid_grpc_serving_client_min.predict(predict_request)
+    with pytest.raises(expected_error) as error:
+        valid_grpc_serving_client_min.predict(*params)
 
-    assert mock_check_request.call_count == 1
+    valid_grpc_serving_client_min.prediction_service_stub.Predict.call_count == 0
+    assert str(error.value) == error_message
+
+
+@pytest.mark.parametrize("outputs_dict, model_name, model_version,"
+                         "expected_outputs", PREDICT_RESPONSE_VALID)
+def test_predict_valid(mocker, valid_grpc_serving_client_min, 
+                       outputs_dict, model_name, model_version,
+                       expected_outputs):
+
+    predict_response = create_predict_response(outputs_dict)
+    valid_grpc_serving_client_min.prediction_service_stub.Predict\
+        = mocker.Mock(return_value=predict_response.raw_response)
+
+    mock_inputs = {"input": [1,2,3]}
+    response = valid_grpc_serving_client_min.predict(mock_inputs, model_name, model_version)
+
     assert valid_grpc_serving_client_min.prediction_service_stub.Predict.call_count == 1
-    assert type(response) == type(valid_predict_response)
-    assert response.raw_response == valid_predict_response.raw_response
+ 
+    if isinstance(response, dict):
+        for output_name, array in response.items():
+            assert output_name in predict_response.raw_response.outputs.keys()
+            assert type(array) is np.ndarray
+            assert np.array_equal(array, expected_outputs["outputs"][output_name])
+    else:
+        assert type(response) is np.ndarray
+        assert np.array_equal(response, expected_outputs["outputs"])
 
 
-@pytest.mark.parametrize("expected_message, grpc_error_status_code,"
-                         "grpc_error_details", PREDICT_INVAlID_GRPC)
+@pytest.mark.parametrize("grpc_error_status_code, grpc_error_details,"
+                         "raised_error_type, raised_error_message", PREDICT_INVALID_GRPC)
 def test_predict_invalid_grpc(mocker, valid_grpc_serving_client_min,
-                              expected_message, grpc_error_status_code,
-                              grpc_error_details):
-    predict_request = mocker.Mock()
+                              grpc_error_status_code, grpc_error_details,
+                              raised_error_type, raised_error_message):
 
-    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client'
-                                      '.GrpcClient._check_predict_request')
     valid_grpc_serving_client_min.prediction_service_stub.Predict\
         = mocker.Mock(side_effect=create_grpc_error(grpc_error_status_code, grpc_error_details))
 
-    with pytest.raises(ConnectionError) as e_info:
-        valid_grpc_serving_client_min.predict(predict_request)
+    mock_inputs = {"input": [1,2,3]}
+    with pytest.raises(raised_error_type) as grpc_error:
+        valid_grpc_serving_client_min.predict(mock_inputs, "model_name")
 
-    assert str(e_info.value) == expected_message
-    assert mock_check_request.call_count == 1
+    assert str(grpc_error.value) == raised_error_message
     assert valid_grpc_serving_client_min.prediction_service_stub.Predict.call_count == 1
 
 
-@pytest.mark.parametrize("request_parameter_dict, expected_exception,"
-                         "expected_message", PREDICT_REQUEST_INVALID_SPEC_RAW_REQUEST)
-def test_predict_invalid_raw_request(mocker, valid_grpc_serving_client_min,
-                                     request_parameter_dict, expected_exception,
-                                     expected_message):
-    predict_request = create_predict_request(request_parameter_dict['model_name'],
-                                             request_parameter_dict['model_version'],
-                                             request_parameter_dict['raw_request_model_name'],
-                                             request_parameter_dict['raw_request_model_version'],
-                                             request_parameter_dict['inputs_dict'],
-                                             request_parameter_dict['raw_request_inputs_dict'])
-    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client'
-                                      '.GrpcClient._check_predict_request',
-                                      side_effect=expected_exception(expected_message))
+@pytest.mark.parametrize("outputs_dict, model_name, model_version, _,"
+                         "expected_message", PREDICT_RESPONSE_TENSOR_TYPE_INVALID)
+def test_predict_invalid_dtype_returned(mocker, valid_grpc_serving_client_min,
+                                        outputs_dict, model_name, model_version,
+                                        _, expected_message):
 
-    with pytest.raises(expected_exception) as e_info:
-        valid_grpc_serving_client_min.predict(predict_request)
+    predict_response = create_predict_response(outputs_dict)
+    valid_grpc_serving_client_min.prediction_service_stub.Predict\
+        = mocker.Mock(return_value=predict_response.raw_response)
 
-    assert str(e_info.value) == expected_message
-    assert mock_check_request.call_count == 1
+    mock_inputs = {"input": [1,2,3]}
+    with pytest.raises(BadResponseError) as parsing_error:
+        valid_grpc_serving_client_min.predict(mock_inputs, model_name, model_version)
 
-
-@pytest.mark.parametrize("predict_request, expected_exception,"
-                         "expected_message", PREDICT_REQUEST_INVALID_SPEC_TYPE)
-def test_predict_invalid_type(mocker, valid_grpc_serving_client_min,
-                              predict_request, expected_exception, expected_message):
-    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client'
-                                      '.GrpcClient._check_predict_request',
-                                      side_effect=expected_exception(expected_message))
-
-    with pytest.raises(expected_exception) as e_info:
-        valid_grpc_serving_client_min.predict(predict_request)
-
-    assert str(e_info.value) == expected_message
-    assert mock_check_request.call_count == 1
+    assert valid_grpc_serving_client_min.prediction_service_stub.Predict.call_count == 1
+    assert expected_message in str(parsing_error)

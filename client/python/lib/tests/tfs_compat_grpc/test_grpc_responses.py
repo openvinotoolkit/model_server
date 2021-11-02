@@ -28,7 +28,7 @@ from ovmsclient.tfs_compat.grpc.responses import (GrpcModelMetadataResponse,
                                                   GrpcPredictResponse)
 
 from tfs_compat_grpc.config import (MODEL_METADATA_RESPONSE_VALID, MODEL_STATUS_RESPONSE_VALID,
-                                    PREDICT_RESPONSE_VALID, PREDICT_RESPONSE_INVALID)
+                                    PREDICT_RESPONSE_VALID, PREDICT_RESPONSE_TENSOR_TYPE_INVALID)
 
 from tfs_compat_grpc.utils import (create_model_metadata_response,
                                    create_model_status_response,
@@ -36,9 +36,9 @@ from tfs_compat_grpc.utils import (create_model_metadata_response,
 
 
 @pytest.mark.parametrize("outputs_dict, model_name, model_version,"
-                         "expected_outputs_dict", PREDICT_RESPONSE_VALID)
+                         "expected_outputs", PREDICT_RESPONSE_VALID)
 def test_PredictResponse_to_dict_valid(outputs_dict, model_name, model_version,
-                                       expected_outputs_dict):
+                                       expected_outputs):
     predict_raw_response = PredictResponse()
 
     predict_raw_response.model_spec.name = model_name
@@ -51,16 +51,21 @@ def test_PredictResponse_to_dict_valid(outputs_dict, model_name, model_version,
     response_dict = predict_response.to_dict()
 
     assert isinstance(response_dict, dict)
-    assert len(response_dict) == len(outputs_dict)
+    assert "outputs" in response_dict
+    assert len(response_dict) == 1
     raw_response = predict_response.raw_response
-    for output_name, array in response_dict.items():
-        assert output_name in raw_response.outputs.keys()
-        assert type(array) is ndarray
-        assert array_equal(array, expected_outputs_dict[output_name])
+    if isinstance(response_dict["outputs"], dict):
+        for output_name, array in response_dict["outputs"].items():
+            assert output_name in raw_response.outputs.keys()
+            assert type(array) is ndarray
+            assert array_equal(array, expected_outputs["outputs"][output_name])
+    else:
+        assert type(response_dict["outputs"]) is ndarray
+        assert array_equal(response_dict["outputs"], expected_outputs["outputs"])
 
 
 @pytest.mark.parametrize("outputs_dict, model_name, model_version, expected_exception,"
-                         "expected_message", PREDICT_RESPONSE_INVALID)
+                         "expected_message", PREDICT_RESPONSE_TENSOR_TYPE_INVALID)
 def test_PredictResponse_to_dict_invalid(outputs_dict, model_name, model_version,
                                          expected_exception, expected_message):
     predict_raw_response = PredictResponse()
