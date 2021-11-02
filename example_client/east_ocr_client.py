@@ -70,21 +70,22 @@ def decode(text):
     for character in text:
         if character == last_character:
             continue
-        elif character == '_':
+        elif character == '#':
             last_character = None
         else:
             last_character = character
             word += character
     return word
 
-def crnn_output_to_text(output_nd):
+def text_recognition_output_to_text(output_nd):
     for i in range(output_nd.shape[0]):
         data = output_nd[i]
-        alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789_'
+        alphabet = '#1234567890abcdefghijklmnopqrstuvwxyz'
         preds = data.argmax(2)
         word = ''
         for i in range(preds.shape[0]):
             word += alphabet[preds[i,0]]
+        print(word)
         print(decode(word))
 
 
@@ -124,4 +125,4 @@ for name in response.outputs:
     if name == args['text_images_output_name'] and len(args['text_images_save_path']) > 0:
         save_text_images_as_jpgs(output_nd, name, args['text_images_save_path'])
     if name == args['texts_output_name']:
-        crnn_output_to_text(output_nd)
+        text_recognition_output_to_text(output_nd)

@@ -1,7 +1,7 @@
 #  Optical Character Recognition with Directed Acyclic Graph
 
 This document demonstrate how to create and use an Optical Character Recognition (OCR) pipeline based on [east-resnet50](https://github.com/argman/EAST) text detection model,
-[CRNN](https://github.com/MaybeShewill-CV/CRNN_Tensorflow) text recognition combined with a custom node implementation.
+[text-recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/text-recognition-0014) combined with a custom node implementation.
 
 Using such pipeline, a single request to OVMS can perform a complex set of operations with a response containing
 recognized characters for all detected text boxes. 
@@ -20,7 +20,7 @@ from the original image, resize them to the target resolution and combines into 
 boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [east_ocr custom node](../src/custom_nodes/east_ocr)
 - demultiplexer - output from the Custom node east_ocr have variable batch size. In order to match it with the sequential text detection model, the data is split into individuial images with batch size 1 each.
 Such smaller requests can be submitted for inference in parallel to the next Model Node. Learn more about the [demultiplexing](./demultiplexing.md)
-- Model crnn - this model recognizes characters included in the input image. 
+- Model text-recognition - this model recognizes characters included in the input image. 
 - Response - the output of the whole pipeline combines the recognized `image_texts` with their metadata. 
 The metadata are the `text_coordinates` and the `confidence_level` outputs.
 
@@ -87,46 +87,15 @@ Converted east-reasnet50 model will have the following interface:
 - Output name: `feature_fusion/Conv_7/Sigmoid` ; shape: `[1 1 256 480]` ; precision: `FP32`
 - Output name: `feature_fusion/concat_3` ; shape: `[1 5 256 480]` ; precision: `FP32`
 
-### CRNN model
-In this pipeline example is used from from https://github.com/MaybeShewill-CV/CRNN_Tensorflow. It includes TensorFlow
-model in a checkpoint format. You can get the pretrained model and convert it to IR format using the procedure below:
-
+### text-recognition model
+Download [text-recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/text-recognition-0014) model and store it in `${PWD}/text-recognition/IR/1` folder.
 ```bash
-git clone https://github.com/MaybeShewill-CV/CRNN_Tensorflow
-cd CRNN_Tensorflow
-git checkout 64f1f1867bffaacfeacc7a80eebf5834a5726122
-export PYTHONPATH="${PYTHONPATH}:${PWD}"
+wget -P ${PWD}/text-recognition/IR/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/text-recognition-0014/FP32/text-recognition-0014.xml https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/text-recognition-0014/FP32/text-recognition-0014.bin
 ```
-Open the tools/demo_shadownet.py script. After saver.restore(sess=sess, save_path=weights_path) line, add the following code:
-```python
-from tensorflow.python.framework import graph_io
-frozen = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, ['shadow/LSTMLayers/transpose_time_major'])
-graph_io.write_graph(frozen, '.', 'frozen_graph.pb', as_text=False)
-```
-It will save the frozen graph of the model during the demo execution.
 
-Install the following python dependencies in your python virtual environment:
-```
-virtualenv .venv ; source .venv/bin/activate
-pip install tensorflow==1.15.0 opencv-python matplotlib easydict
-```
-> NOTE: If you encounter errors installing `tensorflow==1.15.0`, downgrade python.
-
-Run the demo code via 
-```bash
-python3 tools/demo_shadownet.py --image_path data/test_images/test_01.jpg --weights_path model/shadownet/shadownet_2017-10-17-11-47-46.ckpt-199999
-```
-Convert the frozen TensorFlow graph to OpenVINO format:
-```
-docker run -u $(id -u):$(id -g) -v ${PWD}/:/CRNN_Tensorflow:rw openvino/ubuntu18_dev:2021.3 deployment_tools/model_optimizer/mo_tf.py \
---input_model /CRNN_Tensorflow/frozen_graph.pb \
---output_dir /CRNN_Tensorflow/IR/1/
-```
-It will export the optimized CRNN model to `${PWD}/IR/1` folder.
-
-Converted CRNN model will have the following interface:
-- Input name: `input`;  shape: `[1 3 32 100]` ; precision: `FP32`, layout: `NCHW`
-- Output name: `shadow/LSTMLayers/transpose_time_major` ; shape: `[25 1 37]` ; precision: `FP32`
+text-recognition model will have the following interface:
+- Input name: `imgs`;  shape: `[1 1 32 128]` ; precision: `FP32`, layout: `NCHW`
+- Output name: `logits` ; shape: `[16 1 37]` ; precision: `FP32`
 
 ## Building the Custom Node "east_ocr" Library 
 
@@ -138,7 +107,7 @@ The custom node east_ocr can be built inside a docker container via the followin
 - run `make` command
 
 This command will export the compiled library in `./lib` folder.
-Copy this `lib` folder to the same location with `CRNN_Tensorflow` and `east_icdar2015_resnet_v1_50_rbox`.
+Copy this `lib` folder to the same location with `text-recognition` and `east_icdar2015_resnet_v1_50_rbox`.
 
 ## OVMS Configuration File
 
@@ -147,10 +116,10 @@ Copy this file along with the model files and the custom node library like prese
 ```bash
 OCR
 ├── config.json
-├── crnn_tf
+├── text-recognition
 │   └── 1
-│       ├── frozen_graph.bin
-│       └── frozen_graph.xml
+│       ├── text-recognition-0014.bin
+│       └── text-recognition-0014.xml
 ├── east_fp32
 │   └── 1
 │       ├── model.bin
@@ -182,23 +151,23 @@ mkdir results
 ```
 ```bash
 python east_ocr_client.py --grpc_port 9000 --image_input_path ../src/custom_nodes/east_ocr/demo_images/input.jpg --pipeline_name detect_text_images --text_images_save_path ./results/ --image_layout NHWC
-Output: name[text_coordinates]
-    numpy => shape[(9, 1, 4)] data[int32]
+Output: name[confidence_levels]
+    numpy => shape[(9, 1, 1)] data[float32]
 Output: name[texts]
-    numpy => shape[(9, 25, 1, 37)] data[float32]
-periormancd
+    numpy => shape[(9, 16, 1, 37)] data[float32]
+performance
 gdansk
 server
 model
 openvino
 pipeline
-2o21
+2021
 intel
-rotationn
-Output: name[confidence_levels]
-    numpy => shape[(9, 1, 1)] data[float32]
+rotations
 Output: name[text_images]
-    numpy => shape[(9, 1, 3, 32, 100)] data[float32]
+    numpy => shape[(9, 1, 32, 128, 1)] data[float32]
+Output: name[text_coordinates]
+    numpy => shape[(9, 1, 4)] data[int32]
 ```
 
 With additional parameter `--text_images_save_path` the client script saves all detected text images to jpeg files into directory path to confirm
@@ -212,15 +181,15 @@ if the image was analyzed correctly.
 The custom node generates the following text images retrieved from the original input to CRNN model:
 | #| Image | CRNN Recognition | Decoded Word |                     
 | --- | --- | --- | --- |
-| text 0 |![text0](../src/custom_nodes/east_ocr/demo_images/text_images_0.jpg)| pp___er_ior_m__a_n_c____d | periormancd |
-| text 1 |![text1](../src/custom_nodes/east_ocr/demo_images/text_images_1.jpg)| g______d___a_nn__ss_____k | gdansk |
-| text 2 |![text2](../src/custom_nodes/east_ocr/demo_images/text_images_2.jpg)| s______ee__r_v___e_____rr | server |
-| text 3 |![text3](../src/custom_nodes/east_ocr/demo_images/text_images_3.jpg)| mm_______o___dd___e_____l | model |
-| text 4 |![text4](../src/custom_nodes/east_ocr/demo_images/text_images_4.jpg)| o_____p_ee_n_vv_inn_____o | openvino |
-| text 5 |![text5](../src/custom_nodes/east_ocr/demo_images/text_images_5.jpg)| pp____iipp__elliin______e | pipeline |
-| text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_6.jpg)| 2_______o_____2_________1 | 2o21 |
-| text 7 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_7.jpg)| ii____nn____tt___e_____ll | intel |
-| text 8 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_8.jpg)| rr____o_ttaa_tiio__n____n | rotationn |
+| text 0 |![text0](../src/custom_nodes/east_ocr/demo_images/text_images_0.jpg)| p##erformaance## | performance |
+| text 1 |![text1](../src/custom_nodes/east_ocr/demo_images/text_images_1.jpg)| g####d#a#n#s#k## | gdansk |
+| text 2 |![text2](../src/custom_nodes/east_ocr/demo_images/text_images_2.jpg)| s###e#rrv##e#r## | server |
+| text 3 |![text3](../src/custom_nodes/east_ocr/demo_images/text_images_3.jpg)| m####oo#d##ee#l# | model |
+| text 4 |![text4](../src/custom_nodes/east_ocr/demo_images/text_images_4.jpg)| oo##pe#n#vi#n#o# | openvino |
+| text 5 |![text5](../src/custom_nodes/east_ocr/demo_images/text_images_5.jpg)| p###i#peelinne## | pipeline |
+| text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_6.jpg)| 2####0##2###1### | 2021 |
+| text 7 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_7.jpg)| i###n##t##e###l# | intel |
+| text 8 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_8.jpg)| r###ot#atiion#s# | rotations |
 
 ## Accurracy
 Please note that it is possible to swap the models included in DAG with your own to adjust pipeline accuracy for various scenarios and datasets.
