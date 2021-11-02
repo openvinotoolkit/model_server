@@ -37,41 +37,7 @@ static constexpr const char* OUTPUT_TENSOR_NAME = "output";
 static constexpr const char* OUTPUT_IMAGES_TENSOR_NAME = "images";
 static constexpr const char* OUTPUT_COORDINATES_TENSOR_NAME = "coordinates";
 static constexpr const char* OUTPUT_CONFIDENCES_TENSOR_NAME = "confidences";
-<<<<<<< HEAD
 static constexpr const char* OUTPUT_LABEL_IDS_TENSOR_NAME = "label_ids";
-=======
-static constexpr const char* OUTPUT_IMAGES_DIMS_NAME = "images_dims";
-static constexpr const char* OUTPUT_COORDINATES_DIMS_NAME = "coordinates_dims";
-static constexpr const char* OUTPUT_CONFIDENCES_DIMS_NAME = "confidences_dims";
-static constexpr const char* OUTPUT_TENSOR_INFO_NAME = "output_info";
-static constexpr const char* OUTPUT_COORDINATES_INFO_DIMS_NAME = "coordinates_info_dims";
-static constexpr const char* OUTPUT_IMAGES_INFO_DIMS_NAME = "images_info_dims";
-static constexpr const char* OUTPUT_CONFIDENCES_INFO_DIMS_NAME = "confidences_info_dims";
-
-static constexpr const int QUEUE_SIZE = 1;
-
-std::shared_mutex internalManagerLock;
-
-void cleanup(CustomNodeTensor& tensor, CustomNodeLibraryInternalManager* internalManager) {
-    release(tensor.data, internalManager);
-    release(tensor.dims, internalManager);
-}
-
-template <typename T>
-bool get_buffer(CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size) {
-    auto buffersQueue = internalManager->getBuffersQueue(buffersQueueName);
-    if (!(buffersQueue == nullptr))
-        *buffer = static_cast<T*>(buffersQueue->getBuffer());
-    if (*buffer == nullptr || buffersQueue == nullptr) {
-        *buffer = (T*)malloc(byte_size);
-        if (*buffer == nullptr) {
-            std::cout << "allocation for buffer: " << buffersQueueName << "FAILED" << std::endl;
-            return false;
-        }
-    }
-    return true;
-}
->>>>>>> OMZ custom node adjustments for new API usage (#942)
 
 bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale, CustomNodeLibraryInternalManager* internalManager) {
     const uint64_t outputBatch = boxes.size();
@@ -335,19 +301,9 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         confidences.resize(maxOutputBatch);
     }
 
-<<<<<<< HEAD
     *outputsCount = 4;
     *outputs = (struct CustomNodeTensor*)malloc(*outputsCount * sizeof(CustomNodeTensor));
     NODE_ASSERT((*outputs) != nullptr, "malloc has failed");
-=======
-    std::shared_lock lock(internalManagerLock);
-    CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
-
-    *outputsCount = 3;
-    if (!get_buffer<struct CustomNodeTensor>(internalManager, outputs, OUTPUT_TENSOR_NAME, 3 * sizeof(CustomNodeTensor))) {
-        return 1;
-    }
->>>>>>> OMZ custom node adjustments for new API usage (#942)
 
     CustomNodeTensor& imagesTensor = (*outputs)[0];
     imagesTensor.name = OUTPUT_IMAGES_TENSOR_NAME;
@@ -444,19 +400,9 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     NODE_ASSERT(targetImageLayout == "NCHW" || targetImageLayout == "NHWC", "target image layout must be NCHW or NHWC");
     bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
 
-<<<<<<< HEAD
     *infoCount = 4;
     *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
     NODE_ASSERT((*info) != nullptr, "malloc has failed");
-=======
-    std::shared_lock lock(internalManagerLock);
-    CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
-
-    *infoCount = 3;
-    if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo))) {
-        return 1;
-    }
->>>>>>> OMZ custom node adjustments for new API usage (#942)
 
     (*info)[0].name = OUTPUT_IMAGES_TENSOR_NAME;
     if (!get_buffer<uint64_t>(internalManager, &((*info)[0].dims), OUTPUT_IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t))) {

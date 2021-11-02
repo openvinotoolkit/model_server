@@ -247,6 +247,10 @@ public:
             return false;
         }
         tensorflow::TensorProto& resultTensorProto = it->second;
+        if (resultTensorProto.dtype() != tensorflow::DataType::DT_FLOAT) {
+            std::cout << "result has non-float datatype" << std::endl;
+            return false;
+        }
         tensorflow::Tensor tensor;
         bool converted = tensor.FromProto(resultTensorProto);
         if (!converted) {
