@@ -17,6 +17,7 @@
 
 #include <memory>
 #include <string>
+#include <shared_mutex>
 #include <unordered_map>
 
 #include "../common/buffersqueue.hpp"
@@ -26,6 +27,7 @@ namespace custom_nodes_common {
 
 class CustomNodeLibraryInternalManager {
     std::unordered_map<std::string, std::unique_ptr<BuffersQueue>> outputBuffers;
+    std::shared_timed_mutex internalManagerLock;
 
 public:
     CustomNodeLibraryInternalManager() = default;
@@ -33,6 +35,7 @@ public:
     bool recreateBuffersQueue(const std::string& name, size_t singleBufferSize, int streamsLength);
     BuffersQueue* getBuffersQueue(const std::string& name);
     bool releaseBuffer(void* ptr);
+    std::shared_timed_mutex& getInternalManagerLock();
 };
 }  // namespace custom_nodes_common
 }  // namespace ovms
