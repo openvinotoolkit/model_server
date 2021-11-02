@@ -309,6 +309,27 @@ cc_binary(
 )
 
 cc_binary(
+    name = "libcustom_node_add_one.so",
+    srcs = [
+        "custom_nodes/add_one/add_one.cpp",
+        "custom_node_interface.h",
+        "queue.hpp",
+        "custom_nodes/common/buffersqueue.hpp",
+        "custom_nodes/common/buffersqueue.cpp",
+        "custom_nodes/common/customNodeLibraryInternalManager.hpp",
+        "custom_nodes/common/customNodeLibraryInternalManager.cpp",
+        "custom_nodes/common/utils.hpp",
+        "custom_nodes/add_one/addOneInternalManager.hpp"
+    ],
+    linkshared = 1,
+    copts = [
+        "-Wall",
+        "-Wno-unknown-pragmas",
+        "-Werror"
+    ]
+)
+
+cc_binary(
     name = "libcustom_node_model_zoo_intel_object_detection.so",
     srcs = [
         "custom_nodes/model_zoo_intel_object_detection/model_zoo_intel_object_detection.cpp",
@@ -462,6 +483,7 @@ cc_test(
         "//src:libcustom_node_east_ocr.so",
         "//src:libcustom_node_model_zoo_intel_object_detection.so",
         "//src:libcustom_node_image_transformation.so",
+        "//src:libcustom_node_add_one.so",
         "@com_google_googletest//:gtest",
     ],
     copts = [

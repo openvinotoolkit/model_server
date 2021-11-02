@@ -96,12 +96,13 @@ Status PipelineDefinition::initializeNodeResources() {
             if (internalManagerExists) {
                 customNodeLibraryInternalManager = it->second;
             }
-            auto params = createCustomNodeParamArray(nodeInfo.parameters).get();
+            auto params = createCustomNodeParamArray(nodeInfo.parameters);
+            int paramsLength = nodeInfo.parameters.size();
             if (!nodeInfo.library.isValid()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {} node: {} refers to invalid library", pipelineName, nodeInfo.nodeName);
                 return StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY;
             }
-            auto status = nodeInfo.library.initialize(&customNodeLibraryInternalManager, params, nodeInfo.parameters.size());
+            auto status = nodeInfo.library.initialize(&customNodeLibraryInternalManager, params.get(), paramsLength);
             if (status != 0) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Initialization of library with base path: {} failed", nodeInfo.library.basePath);
                 return StatusCode::NODE_LIBRARY_INITIALIZE_FAILED;
