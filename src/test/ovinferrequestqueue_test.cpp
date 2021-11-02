@@ -31,9 +31,9 @@ using namespace testing;
 const std::string DUMMY_MODEL_PATH = std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml";
 
 TEST(OVInferRequestQueue, ShortQueue) {
-    InferenceEngine::Core engine;
-    InferenceEngine::CNNNetwork network = engine.ReadNetwork(DUMMY_MODEL_PATH);
-    InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
+    InferenceEngine::Core ieCore;
+    InferenceEngine::CNNNetwork network = ieCore.ReadNetwork(DUMMY_MODEL_PATH);
+    InferenceEngine::ExecutableNetwork execNetwork = ieCore.LoadNetwork(network, "CPU");
     ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, 3);
     int reqid;
     reqid = inferRequestsQueue.getIdleStream().get();
@@ -54,9 +54,9 @@ void releaseStream(ovms::OVInferRequestsQueue& requestsQueue) {
 
 TEST(OVInferRequestQueue, FullQueue) {
     ovms::Timer timer;
-    InferenceEngine::Core engine;
-    InferenceEngine::CNNNetwork network = engine.ReadNetwork(DUMMY_MODEL_PATH);
-    InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
+    InferenceEngine::Core ieCore;
+    InferenceEngine::CNNNetwork network = ieCore.ReadNetwork(DUMMY_MODEL_PATH);
+    InferenceEngine::ExecutableNetwork execNetwork = ieCore.LoadNetwork(network, "CPU");
     ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, 50);
     int reqid;
     for (int i = 0; i < 50; i++) {
@@ -90,9 +90,9 @@ void inferenceSimulate(ovms::OVInferRequestsQueue& ms, std::vector<int>& tv) {
 TEST(OVInferRequestQueue, MultiThread) {
     int nireq = 10;            // represnet queue size
     int number_clients = 100;  // represent number of serving clients
-    InferenceEngine::Core engine;
-    InferenceEngine::CNNNetwork network = engine.ReadNetwork(DUMMY_MODEL_PATH);
-    InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
+    InferenceEngine::Core ieCore;
+    InferenceEngine::CNNNetwork network = ieCore.ReadNetwork(DUMMY_MODEL_PATH);
+    InferenceEngine::ExecutableNetwork execNetwork = ieCore.LoadNetwork(network, "CPU");
 
     ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, nireq);
 
@@ -108,9 +108,9 @@ TEST(OVInferRequestQueue, MultiThread) {
 }
 
 TEST(OVInferRequestQueue, AsyncGetInferRequest) {
-    InferenceEngine::Core engine;
-    InferenceEngine::CNNNetwork network = engine.ReadNetwork(DUMMY_MODEL_PATH);
-    InferenceEngine::ExecutableNetwork execNetwork = engine.LoadNetwork(network, "CPU");
+    InferenceEngine::Core ieCore;
+    InferenceEngine::CNNNetwork network = ieCore.ReadNetwork(DUMMY_MODEL_PATH);
+    InferenceEngine::ExecutableNetwork execNetwork = ieCore.LoadNetwork(network, "CPU");
     const int nireq = 1;
     ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, nireq);
 
