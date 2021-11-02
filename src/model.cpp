@@ -268,8 +268,6 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
         }
         if (modelVersion->getStatus().getState() == ModelVersionState::END || modelVersion->getModelConfig().getBasePath() != config.getBasePath()) {
             downloadModels(fs, config, versionsToReload);
-        } else {
-            config.setLocalPath(modelVersion->getModelConfig().getLocalPath());
         }
         status = modelVersion->reloadModel(config);
         if (!status.ok()) {

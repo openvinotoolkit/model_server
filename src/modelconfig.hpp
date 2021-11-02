@@ -782,6 +782,24 @@ public:
     }
 
     /**
+         * @brief Get the reversed mapping for inputs
+         * 
+         * @return const mapping_config_t& 
+         */
+    const mapping_config_t& getRealMappingInputs() const {
+        return this->reversedMappingInputs;
+    }
+
+    /**
+         * @brief Get the reversed mapping for outputs
+         * 
+         * @return const mapping_config_t& 
+         */
+    const mapping_config_t& getRealMappingOutputs() const {
+        return this->reversedMappingOutputs;
+    }
+
+    /**
          * @brief Get the mapping inputs by key
          * 
          * @param key 
@@ -841,6 +859,24 @@ public:
          */
     void setMappingOutputs(const mapping_config_t& mapping) {
         this->mappingOutputs = mapping;
+    }
+
+    /**
+         * @brief Set the reversed mapping inputs
+         * 
+         * @param mapping 
+         */
+    void setRealMappingInputs(const mapping_config_t& mapping) {
+        this->reversedMappingInputs = mapping;
+    }
+
+    /**
+         * @brief Set the reversed mapping outputs
+         * 
+         * @param mapping 
+         */
+    void setRealMappingOutputs(const mapping_config_t& mapping) {
+        this->reversedMappingOutputs = mapping;
     }
 
     /**
