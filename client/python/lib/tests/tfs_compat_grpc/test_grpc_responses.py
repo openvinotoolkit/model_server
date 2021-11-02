@@ -58,10 +58,10 @@ def test_PredictResponse_to_dict_valid(outputs_dict, model_name, model_version,
         for output_name, array in response_dict["outputs"].items():
             assert output_name in raw_response.outputs.keys()
             assert type(array) is ndarray
-            assert array_equal(array, expected_outputs["outputs"][output_name])
+            assert array_equal(array, expected_outputs[output_name])
     else:
         assert type(response_dict["outputs"]) is ndarray
-        assert array_equal(response_dict["outputs"], expected_outputs["outputs"])
+        assert array_equal(response_dict["outputs"], expected_outputs)
 
 
 @pytest.mark.parametrize("outputs_dict, model_name, model_version, expected_exception,"

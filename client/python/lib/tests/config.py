@@ -362,3 +362,60 @@ CERTIFICATE_VALID = [
 PRIVATE_KEY_VALID = [
     (PATH_VALID),
 ]
+
+MODEL_STATUS_INVALID_PARAMS = [
+    # Model name check
+    ([("model", "name"), 1, 10], TypeError, "model_name type should be string, but is tuple"),
+    # Model version check
+    (["model_name", "model_version", 10], TypeError,
+        "model_version type should be int, but is str"),
+    (["model_name", 2**63, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
+    (["model_name", -1, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
+    # Timeout check
+    (["model_name", 1, "string"], TypeError, "timeout value must be positive float"),
+    (["model_name", 1, 0], TypeError, "timeout value must be positive float"),
+    (["model_name", 1, -1], TypeError, "timeout value must be positive float"),
+]
+
+MODEL_METADATA_INVALID_PARAMS = MODEL_STATUS_INVALID_PARAMS
+
+# ([inputs, model_name, model_version, timeout], expected_exception, expected_message)
+PREDICT_INVALID_PARAMS = [
+    # Inputs check
+    (
+        ["string", "model_name", 1, 1], 
+        TypeError, "inputs type should be dict, but is str"
+    ),
+    (
+        [1, "model_name", 1, 1], 
+        TypeError, "inputs type should be dict, but is int"
+    ),
+    (
+        [[1, 2, 3], "model_name", 1, 1], 
+        TypeError, "inputs type should be dict, but is list"
+    ),
+    (
+        [{1 : [1,2,3]}, "model_name", 1, 1], 
+        TypeError, "inputs keys type should be str, but found int"
+    ),
+    (
+        [{"input": [1, 2, "three"]}, "model_name", 1, 1], 
+        TypeError, "provided values type is not valid"
+    ),
+    (
+        [{"input": [[1,2], [3, 4, 5]]}, "model_name", 1, 1], 
+        ValueError, "argument must be a dense tensor: [[1, 2], [3, 4, 5]] "
+                   "- got shape [2], but wanted [2, 2]"
+    ),
+    # Model name check
+    ([{"input": 1.0}, ("model", "name"), 1, 10], TypeError, "model_name type should be string, but is tuple"),
+    # Model version check
+    ([{"input": 1.0}, "model_name", "model_version", 10], TypeError,
+     "model_version type should be int, but is str"),
+    ([{"input": 1.0}, "model_name", 2**63, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
+    ([{"input": 1.0}, "model_name", -1, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
+    # Timeout check
+    ([{"input": 1.0}, "model_name", 1, "string"], TypeError, "timeout value must be positive float"),
+    ([{"input": 1.0}, "model_name", 1, 0], TypeError, "timeout value must be positive float"),
+    ([{"input": 1.0}, "model_name", 1, -1], TypeError, "timeout value must be positive float"),
+]

@@ -38,15 +38,14 @@ from ovmsclient.tfs_compat.grpc.responses import GrpcModelMetadataResponse
 from ovmsclient.tfs_compat.grpc.responses import GrpcPredictResponse
 from ovmsclient.tfs_compat.base.errors import BadResponseError
 
+from config import (MODEL_STATUS_INVALID_PARAMS, PREDICT_INVALID_PARAMS)
 from tfs_compat_grpc.config import (BUILD_INVALID_CONFIG, BUILD_VALID, BUILD_INVALID_CERTS,
                                     MODEL_METADATA_RESPONSE_VALID,
                                     COMMON_INVALID_GRPC,
-                                    MODEL_STATUS_INVALID_PARAMS,
                                     MODEL_METADATA_REQUEST_VALID,
                                     MODEL_METADATA_REQUEST_INVALID_RAW_REQUEST,
                                     MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE,
                                     GET_MODEL_METADATA_INVALID_GRPC,
-                                    PREDICT_INVALID_PARAMS,
                                     PREDICT_RESPONSE_VALID,
                                     PREDICT_RESPONSE_TENSOR_TYPE_INVALID,
                                     PREDICT_INVALID_GRPC)
@@ -412,10 +411,10 @@ def test_predict_valid(mocker, valid_grpc_serving_client_min,
         for output_name, array in response.items():
             assert output_name in predict_response.raw_response.outputs.keys()
             assert type(array) is np.ndarray
-            assert np.array_equal(array, expected_outputs["outputs"][output_name])
+            assert np.array_equal(array, expected_outputs[output_name])
     else:
         assert type(response) is np.ndarray
-        assert np.array_equal(response, expected_outputs["outputs"])
+        assert np.array_equal(response, expected_outputs)
 
 
 @pytest.mark.parametrize("grpc_error_status_code, grpc_error_details,"
