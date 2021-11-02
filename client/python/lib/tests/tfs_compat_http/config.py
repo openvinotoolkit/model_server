@@ -564,7 +564,6 @@ PREDICT_RESPONSE_ERROR = COMMON_RESPONSE_ERROR + [
                            "Invalid number of shape dimensions - "
                            "Expected: (1,300); Actual: (3)"
     ),
-    
 ]
 
 # (response_outputs_dict, expected_outputs_dict)

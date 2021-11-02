@@ -247,8 +247,7 @@ PREDICT_RESPONSE_VALID = [
         "1463": TensorProto(dtype=DataType.DT_INT8,
                             tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]),
                             tensor_content=array([1, 2, 3], dtype=int8).tobytes()),
-    }, "model_name", 0,
-        array([1, 2, 3], dtype=int8)
+    }, "model_name", 0, array([1, 2, 3], dtype=int8)
     ),
 
     ({
@@ -259,8 +258,7 @@ PREDICT_RESPONSE_VALID = [
         "2": TensorProto(dtype=DataType.DT_DOUBLE,
                          tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]),
                          double_val=array([12.0], dtype=float64)),
-    }, "model_name", 0,
-    {
+    }, "model_name", 0, {
         "1463": array([[1, 2, 3], [4, 5, 6]], dtype=int32),
         "2": array([12.0], dtype=float64)
     }),
@@ -272,8 +270,7 @@ PREDICT_RESPONSE_VALID = [
         "2": TensorProto(dtype=DataType.DT_STRING,
                          tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]),
                          string_val=[bytes([1, 2, 3])]),
-    }, "model_name", 0,
-    {
+    }, "model_name", 0, {
         "1463": [bytes([1, 2, 3]), bytes([4, 5])],
         "2": [bytes([1, 2, 3])]
     }),

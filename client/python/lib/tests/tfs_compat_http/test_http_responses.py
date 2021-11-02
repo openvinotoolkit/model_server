@@ -72,7 +72,6 @@ def test_PredictResponse_to_dict_server_error(response, expected_error,
         predict_response.to_dict()
     assert str(error.value) == expected_message
 
-###
 
 @pytest.mark.parametrize("response, expected_output", METADATA_RESPONSE_VALID_OUTPUTS)
 def test_ModelMetadataResponse_to_dict_valid_outputs(response, expected_output):

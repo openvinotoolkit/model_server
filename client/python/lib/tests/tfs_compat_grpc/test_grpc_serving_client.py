@@ -20,8 +20,6 @@ import numpy as np
 from ovmsclient.tfs_compat.grpc.requests import GrpcPredictRequest
 
 from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
-from tensorflow.core.framework.tensor_pb2 import TensorProto
-from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
 from tensorflow_serving.apis.model_service_pb2_grpc import ModelServiceStub
 from tensorflow_serving.apis.predict_pb2 import PredictRequest, PredictResponse
 from tensorflow_serving.apis.prediction_service_pb2_grpc import PredictionServiceStub
@@ -394,7 +392,7 @@ def test_predict_invalid_params(mocker, valid_grpc_serving_client_min,
 
 @pytest.mark.parametrize("outputs_dict, model_name, model_version,"
                          "expected_outputs", PREDICT_RESPONSE_VALID)
-def test_predict_valid(mocker, valid_grpc_serving_client_min, 
+def test_predict_valid(mocker, valid_grpc_serving_client_min,
                        outputs_dict, model_name, model_version,
                        expected_outputs):
 
@@ -402,11 +400,11 @@ def test_predict_valid(mocker, valid_grpc_serving_client_min,
     valid_grpc_serving_client_min.prediction_service_stub.Predict\
         = mocker.Mock(return_value=predict_response.raw_response)
 
-    mock_inputs = {"input": [1,2,3]}
+    mock_inputs = {"input": [1, 2, 3]}
     response = valid_grpc_serving_client_min.predict(mock_inputs, model_name, model_version)
 
     assert valid_grpc_serving_client_min.prediction_service_stub.Predict.call_count == 1
- 
+
     if isinstance(response, dict):
         for output_name, array in response.items():
             assert output_name in predict_response.raw_response.outputs.keys()
@@ -426,7 +424,7 @@ def test_predict_invalid_grpc(mocker, valid_grpc_serving_client_min,
     valid_grpc_serving_client_min.prediction_service_stub.Predict\
         = mocker.Mock(side_effect=create_grpc_error(grpc_error_status_code, grpc_error_details))
 
-    mock_inputs = {"input": [1,2,3]}
+    mock_inputs = {"input": [1, 2, 3]}
     with pytest.raises(raised_error_type) as grpc_error:
         valid_grpc_serving_client_min.predict(mock_inputs, "model_name")
 
@@ -444,7 +442,7 @@ def test_predict_invalid_dtype_returned(mocker, valid_grpc_serving_client_min,
     valid_grpc_serving_client_min.prediction_service_stub.Predict\
         = mocker.Mock(return_value=predict_response.raw_response)
 
-    mock_inputs = {"input": [1,2,3]}
+    mock_inputs = {"input": [1, 2, 3]}
     with pytest.raises(BadResponseError) as parsing_error:
         valid_grpc_serving_client_min.predict(mock_inputs, model_name, model_version)
 

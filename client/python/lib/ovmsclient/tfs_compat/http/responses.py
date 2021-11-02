@@ -35,7 +35,7 @@ class HttpPredictResponse(PredictResponse):
         if error_message:
             raise_from_http_response(self.raw_response.status_code, error_message)
 
-        result_dict = { "outputs": {} }
+        result_dict = {"outputs": {}}
         if isinstance(outputs, dict):
             for key, value in outputs.items():
                 result_dict["outputs"][key] = np.array(value)

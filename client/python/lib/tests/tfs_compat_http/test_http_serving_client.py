@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-from http import HTTPStatus
 import pytest
 import requests
 import numpy as np
@@ -289,7 +288,7 @@ def test_predict_valid(mocker, valid_http_serving_client_min, response, expected
     valid_http_serving_client_min.session.post\
         = mocker.Mock(return_value=raw_response)
 
-    mocked_inputs = {"input": [1,2,3]}
+    mocked_inputs = {"input": [1, 2, 3]}
     response = valid_http_serving_client_min.predict(mocked_inputs, "model_name")
 
     assert valid_http_serving_client_min.session.post.call_count == 1
@@ -310,7 +309,7 @@ def test_predict_connection_error(mocker, valid_http_serving_client_min,
     valid_http_serving_client_min.session.post\
         = mocker.Mock(side_effect=source_error())
 
-    mocked_inputs = {"input": [1,2,3]}
+    mocked_inputs = {"input": [1, 2, 3]}
     with pytest.raises(raised_error):
         valid_http_serving_client_min.predict(mocked_inputs, "model_name")
 
@@ -319,7 +318,7 @@ def test_predict_connection_error(mocker, valid_http_serving_client_min,
 
 @pytest.mark.parametrize("params, expected_error, error_message", PREDICT_INVALID_PARAMS)
 def test_predict_invalid_params(mocker, valid_http_serving_client_min,
-                                         params, expected_error, error_message):
+                                params, expected_error, error_message):
 
     valid_http_serving_client_min.session.post\
         = mocker.Mock()
@@ -333,13 +332,13 @@ def test_predict_invalid_params(mocker, valid_http_serving_client_min,
 
 @pytest.mark.parametrize("response, expected_error, expected_message", PREDICT_RESPONSE_ERROR)
 def test_predict_server_error(mocker, valid_http_serving_client_min,
-                                       response, expected_error, expected_message):
+                              response, expected_error, expected_message):
 
     raw_response = RawResponseMock(*response)
     valid_http_serving_client_min.session.post\
         = mocker.Mock(return_value=raw_response)
 
-    mocked_inputs = {"input": [1,2,3]}
+    mocked_inputs = {"input": [1, 2, 3]}
     with pytest.raises(expected_error) as error:
         valid_http_serving_client_min.predict(mocked_inputs, "model_name")
 
@@ -349,13 +348,13 @@ def test_predict_server_error(mocker, valid_http_serving_client_min,
 
 @pytest.mark.parametrize("response, _", PREDICT_RESPONSE_MALFROMED_RESPONSE)
 def test_predict_malformed_response(mocker, valid_http_serving_client_min,
-                                             response, _):
+                                    response, _):
 
     raw_response = RawResponseMock(*response)
     valid_http_serving_client_min.session.post\
         = mocker.Mock(return_value=raw_response)
 
-    mocked_inputs = {"input": [1,2,3]}
+    mocked_inputs = {"input": [1, 2, 3]}
     with pytest.raises(BadResponseError):
         valid_http_serving_client_min.predict(mocked_inputs, "model_name")
 

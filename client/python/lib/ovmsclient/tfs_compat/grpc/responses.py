@@ -26,7 +26,7 @@ from ovmsclient.tfs_compat.grpc.tensors import make_ndarray
 class GrpcPredictResponse(PredictResponse):
 
     def to_dict(self):
-        result_dict = { "outputs": {} }
+        result_dict = {"outputs": {}}
         output_names = list(self.raw_response.outputs.keys())
 
         for key, value in self.raw_response.outputs.items():

@@ -58,7 +58,6 @@ class GrpcClient(ServingClient):
                                    f"Details: {str(parsing_error)}")
         return response["outputs"]
 
-
     def get_model_metadata(self, request):
         '''
         Send GrpcModelMetadataRequest to the server and return response..
