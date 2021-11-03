@@ -77,7 +77,7 @@ inline tensorflow::DataType fromInferenceEnginePrecision(Precision precision) {
 class MockBlob : public InferenceEngine::MemoryBlob {
 public:
     using Ptr = std::shared_ptr<MockBlob>;
-    MOCK_METHOD(size_t, element_size, (), (const, noexcept));
+    MOCK_METHOD(size_t, byteSize, (), (const, noexcept));
     MockBlob(const InferenceEngine::TensorDesc& tensorDesc) :
         MemoryBlob(tensorDesc) {
         to = const_cast<char*>("12345678");
