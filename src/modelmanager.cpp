@@ -119,9 +119,9 @@ void ModelManager::logPluginConfiguration() {
             std::vector<std::string> supportedConfigKeys2 = ieCore->GetMetric(plugin, supportedConfigKey);
             supportedConfigKeys = std::move(supportedConfigKeys2);
         } catch (std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}, key: {} value. Error: {}", plugin, supportedConfigKey, e.what());
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", plugin, supportedConfigKey, e.what());
         } catch (...) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}, key: {} value.", plugin, supportedConfigKey);
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value.", plugin, supportedConfigKey);
         }
         for (auto& key : supportedConfigKeys) {
             std::string value;
@@ -129,13 +129,13 @@ void ModelManager::logPluginConfiguration() {
                 auto paramValue = ieCore->GetConfig(plugin, key);
                 value = paramValue.as<std::string>();
             } catch (std::exception& e) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}, config key: {}; Error: {}", plugin, key, e.what());
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; config key: {}; Error: {}", plugin, key, e.what());
                 continue;
             } catch (...) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}, config key: {}", plugin, key);
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; config key: {}", plugin, key);
                 continue;
             }
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Global plugin: {}, key: {}, value :{}", plugin, key, value);
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Global plugin: {}; key: {}; value: {}", plugin, key, value);
         }
     }
 }
