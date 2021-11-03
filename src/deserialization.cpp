@@ -38,6 +38,27 @@ Status InputSink<InferenceEngine::InferRequest&>::give(const std::string& name, 
     return status;
 }
 
+template <>
+Status ___InputSink<ov::runtime::InferRequest&>::give(const std::string& name, const ov::runtime::Tensor& tensor) {
+    Status status;
+    try {
+        requester.set_tensor(name, tensor);
+        // OV implementation the InferenceEngine::Exception is not
+        // a base class for all other exceptions thrown from OV.
+        // OV can throw exceptions derived from std::logic_error.
+    } catch (const ov::Exception& e) {
+        status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+        SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+        return status;
+    } catch (std::logic_error& e) {
+        status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+        SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+        return status;
+    }
+
+    return status;
+}
+
 InferenceEngine::TensorDesc getFinalTensorDesc(const ovms::TensorInfo& servableInfo, const tensorflow::TensorProto& requestInput, bool isPipeline) {
     InferenceEngine::Precision precision = servableInfo.getPrecision();
     if (!isPipeline) {

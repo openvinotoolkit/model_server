@@ -286,6 +286,7 @@ Status ModelInstance::loadOVCNNNetwork() {
     SPDLOG_DEBUG("Try reading model file: {}", modelFile);
     try {
         network = loadOVCNNNetworkPtr(modelFile);
+        ___network = ___ieCore.read_model(modelFile);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Error: {}; occurred during loading CNNNetwork for model: {} version: {}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
@@ -345,6 +346,7 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 
 void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
     execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*network, targetDevice, pluginConfig));
+    ___execNetwork.reset(new ov::runtime::ExecutableNetwork(___ieCore.compile_model(___network, targetDevice, pluginConfig)));
 }
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
@@ -460,6 +462,7 @@ Status ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
         return Status(StatusCode::INVALID_NIREQ, "Exceeded allowed nireq value");
     }
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
+    ___inferRequestsQueue = std::make_unique<___OVInferRequestsQueue>(*___execNetwork, numberOfParallelInferRequests);
     SPDLOG_INFO("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
         getName(),
         getVersion(),
@@ -777,6 +780,24 @@ Status ModelInstance::performInference(InferenceEngine::InferRequest& inferReque
     return StatusCode::OK;
 }
 
+Status ModelInstance::performInference(ov::runtime::InferRequest& inferRequest) {
+    try {
+        inferRequest.start_async();
+        // InferenceEngine::StatusCode sts = inferRequest.Wait(InferenceEngine::IInferRequest::RESULT_READY);
+        inferRequest.wait();
+        // if (sts != InferenceEngine::StatusCode::OK) {
+        //     Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+        //     SPDLOG_ERROR("Async infer failed {}: {}", status.string(), sts);
+        //     return status;
+        // }
+    } catch (const ov::Exception& e) {
+        Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+        SPDLOG_ERROR("Async caught an exception {}: {}", status.string(), e.what());
+        return status;
+    }
+    return StatusCode::OK;
+}
+
 Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,
     tensorflow::serving::PredictResponse* responseProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
@@ -789,17 +810,26 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
         return status;
     timer.start("get infer request");
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+    ___ExecutingStreamIdGuard ___executingStreamIdGuard(___getInferRequestsQueue());
     int executingInferId = executingStreamIdGuard.getId();
+    int ___executingInferId = ___executingStreamIdGuard.getId();
+    (void)___executingInferId;
     InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    ov::runtime::InferRequest& ___inferRequest = ___executingStreamIdGuard.getInferRequest();
+    (void)___inferRequest;
     timer.stop("get infer request");
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
 
     timer.start("deserialize");
     InputSink<InferRequest&> inputSink(inferRequest);
+    ___InputSink<ov::runtime::InferRequest&> ___inputSink(___inferRequest);
     bool isPipeline = false;
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
     timer.stop("deserialize");
+    if (!status.ok())
+        return status;
+    status = ___deserializePredictRequest<___ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), ___inputSink, isPipeline);
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
@@ -810,11 +840,15 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     timer.stop("prediction");
     if (!status.ok())
         return status;
+    status = performInference(___inferRequest);
+    if (!status.ok())
+        return status;
     SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
 
     timer.start("serialize");
-    status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
+    status = serializePredictResponse(___inferRequest, getOutputsInfo(), responseProto);
+    //status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
     timer.stop("serialize");
     if (!status.ok())
         return status;

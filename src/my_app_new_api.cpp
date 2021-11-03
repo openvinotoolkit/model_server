@@ -73,15 +73,17 @@ int main() {
     ov::runtime::ExecutableNetwork exec_network = ie.compile_model(model, "CPU");
     ov::runtime::InferRequest infer_request = exec_network.create_infer_request();
 
-    ov::runtime::Tensor tensor0(ov::element::i32, {1, 100});
-    ov::runtime::Tensor tensor1(ov::element::i32, {1, 100});
-    ov::runtime::Tensor tensor2(ov::element::i32, {1, 100});
+    {
+        ov::runtime::Tensor tensor0(ov::element::i32, {1, 100});
+        ov::runtime::Tensor tensor1(ov::element::i32, {1, 100});
+        ov::runtime::Tensor tensor2(ov::element::i32, {1, 100});
 
-    infer_request.set_tensor("0", tensor0);
-    infer_request.set_tensor("1", tensor1);
-    infer_request.set_tensor("2", tensor2);
-    std::cout << "2" << std::endl;
-
+        infer_request.set_tensor("0", tensor0);
+        infer_request.set_tensor("1", tensor1);
+        infer_request.set_tensor("2", tensor2);
+        std::cout << "2" << std::endl;
+    }
+    
     infer_request.infer();
     std::cout << "3" << std::endl;
 

@@ -24,6 +24,7 @@
 #include <vector>
 
 #include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -87,16 +88,19 @@ protected:
          * @brief Inference Engine core object
          */
     InferenceEngine::Core& ieCore;
+    ov::runtime::Core ___ieCore;
 
     /**
          * @brief Inference Engine CNNNetwork object
          */
     std::unique_ptr<InferenceEngine::CNNNetwork> network;
+    std::shared_ptr<ov::Function> ___network;
 
     /**
          * @brief Inference Engine device network
          */
     std::shared_ptr<InferenceEngine::ExecutableNetwork> execNetwork;
+    std::shared_ptr<ov::runtime::ExecutableNetwork> ___execNetwork;
 
     /**
          * @brief Model name
@@ -238,6 +242,7 @@ private:
          * @brief OpenVINO inference execution stream pool
          */
     std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
+    std::unique_ptr<___OVInferRequestsQueue> ___inferRequestsQueue;
 
     /**
          * @brief Holds current usage count in predict requests
@@ -426,6 +431,9 @@ public:
     OVInferRequestsQueue& getInferRequestsQueue() {
         return *inferRequestsQueue;
     }
+    ___OVInferRequestsQueue& ___getInferRequestsQueue() {
+        return *___inferRequestsQueue;
+    }
 
     /**
          * @brief Combines plugin config from user with default config calculated at runtime
@@ -508,6 +516,7 @@ public:
     const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
 
     Status performInference(InferenceEngine::InferRequest& inferRequest);
+    Status performInference(ov::runtime::InferRequest& inferRequest);
 
     virtual Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,

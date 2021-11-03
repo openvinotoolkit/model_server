@@ -34,4 +34,20 @@ private:
     const int id_;
     InferenceEngine::InferRequest& inferRequest;
 };
+struct ___ExecutingStreamIdGuard {
+    ___ExecutingStreamIdGuard(ovms::___OVInferRequestsQueue& inferRequestsQueue) :
+        inferRequestsQueue_(inferRequestsQueue),
+        id_(inferRequestsQueue_.getIdleStream().get()),
+        inferRequest(inferRequestsQueue.getInferRequest(id_)) {}
+    ~___ExecutingStreamIdGuard() {
+        inferRequestsQueue_.returnStream(id_);
+    }
+    int getId() { return id_; }
+    ov::runtime::InferRequest& getInferRequest() { return inferRequest; }
+
+private:
+    ovms::___OVInferRequestsQueue& inferRequestsQueue_;
+    const int id_;
+    ov::runtime::InferRequest& inferRequest;
+};
 }  //  namespace ovms

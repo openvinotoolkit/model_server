@@ -19,6 +19,7 @@
 #include <string>
 
 #include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
 #pragma GCC diagnostic push
@@ -41,6 +42,15 @@ InferenceEngine::Blob::Ptr makeBlob(const tensorflow::TensorProto& requestInput,
     return InferenceEngine::make_shared_blob<T>(
         getFinalTensorDesc(*tensorInfo, requestInput, isPipeline),
         const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
+}
+
+template <typename T>
+ov::runtime::Tensor ___makeBlob(const tensorflow::TensorProto& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+    return ov::runtime::Tensor(ov::element::f32, tensorInfo->getEffectiveShape(), const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
+    // return InferenceEngine::make_shared_blob<T>(
+    //     getFinalTensorDesc(*tensorInfo, requestInput, isPipeline),
+    //     const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
 }
 
 class ConcreteTensorProtoDeserializator {
@@ -95,8 +105,67 @@ public:
     }
 };
 
+class ___ConcreteTensorProtoDeserializator {
+public:
+    static ov::runtime::Tensor deserializeTensorProto(
+        const tensorflow::TensorProto& requestInput,
+        const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+        switch (tensorInfo->getPrecision()) {
+        case InferenceEngine::Precision::FP32:
+            return ___makeBlob<float>(requestInput, tensorInfo, isPipeline);
+        // case InferenceEngine::Precision::I32:
+        //     return ___makeBlob<int32_t>(requestInput, tensorInfo, isPipeline);
+        // case InferenceEngine::Precision::I8:
+        //     return ___makeBlob<int8_t>(requestInput, tensorInfo, isPipeline);
+        // case InferenceEngine::Precision::U8:
+        //     return ___makeBlob<uint8_t>(requestInput, tensorInfo, isPipeline);
+        // case InferenceEngine::Precision::I16:
+        //     return ___makeBlob<int16_t>(requestInput, tensorInfo, isPipeline);
+        // case InferenceEngine::Precision::FP16: {
+        //     InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<uint16_t>(getFinalTensorDesc(*tensorInfo, requestInput, isPipeline));
+        //     blob->allocate();
+        //     // Needs conversion due to zero padding for each value:
+        //     // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
+        //     uint16_t* ptr = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->wmap();
+        //     auto size = static_cast<size_t>(requestInput.half_val_size());
+        //     for (size_t i = 0; i < size; i++) {
+        //         ptr[i] = requestInput.half_val(i);
+        //     }
+        //     return blob;
+        // }
+        // case InferenceEngine::Precision::U16: {
+        //     InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<uint16_t>(getFinalTensorDesc(*tensorInfo, requestInput, isPipeline));
+        //     blob->allocate();
+        //     // Needs conversion due to zero padding for each value:
+        //     // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
+        //     uint16_t* ptr = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->wmap();
+        //     auto size = static_cast<size_t>(requestInput.int_val_size());
+        //     for (size_t i = 0; i < size; i++) {
+        //         ptr[i] = requestInput.int_val(i);
+        //     }
+        //     return blob;
+        // }
+        case InferenceEngine::Precision::I64:
+        case InferenceEngine::Precision::MIXED:
+        case InferenceEngine::Precision::Q78:
+        case InferenceEngine::Precision::BIN:
+        case InferenceEngine::Precision::BOOL:
+        case InferenceEngine::Precision::CUSTOM:
+        default:
+            return {};
+        }
+    }
+};
+
 template <class TensorProtoDeserializator>
 InferenceEngine::Blob::Ptr deserializeTensorProto(
+    const tensorflow::TensorProto& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+    return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, isPipeline);
+}
+
+template <class TensorProtoDeserializator>
+ov::runtime::Tensor ___deserializeTensorProto(
     const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, isPipeline);
@@ -112,11 +181,22 @@ public:
     Status give(const std::string& name, InferenceEngine::Blob::Ptr blob);
 };
 
+template <class Requester>
+class ___InputSink {
+    Requester requester;
+
+public:
+    ___InputSink(Requester requester) :
+        requester(requester) {}
+    Status give(const std::string& name, const ov::runtime::Tensor& tensor); // todo change
+};
+
 template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const tensorflow::serving::PredictRequest& request,
     const tensor_map_t& inputMap,
-    Sink& inputSink, bool isPipeline) {
+    Sink& inputSink,
+    bool isPipeline) {
     Status status;
     for (const auto& pair : inputMap) {
         try {
@@ -168,4 +248,66 @@ Status deserializePredictRequest(
     }
     return status;
 }
+
+template <class TensorProtoDeserializator, class Sink>
+Status ___deserializePredictRequest(
+    const tensorflow::serving::PredictRequest& request,
+    const tensor_map_t& inputMap,
+    Sink& inputSink,
+    bool isPipeline) {
+    Status status;
+    for (const auto& pair : inputMap) {
+        try {
+            const auto& name = pair.first;
+            auto tensorInfo = pair.second;
+            auto requestInputItr = request.inputs().find(name);
+            if (requestInputItr == request.inputs().end()) {
+                SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
+                return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
+            }
+            auto& requestInput = requestInputItr->second;
+            ov::runtime::Tensor tensor;
+
+            if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
+                // SPDLOG_DEBUG("Request contains binary input: {}", name);
+                // status = convertStringValToBlob(requestInput, blob, tensorInfo, isPipeline);
+                // if (!status.ok()) {
+                //     SPDLOG_DEBUG("Binary inputs conversion failed.");
+                //     return status;
+                // }
+                return StatusCode::UNKNOWN_ERROR;
+            } else {
+                //blob = deserializeTensorProto<TensorProtoDeserializator>(
+                //    requestInput, tensorInfo, isPipeline);
+                tensor = ___deserializeTensorProto<TensorProtoDeserializator>(
+                    requestInput, tensorInfo, isPipeline);
+            }
+
+            // if (blob == nullptr) {
+            //     status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
+            //     SPDLOG_DEBUG(status.string());
+            //     return status;
+            // }
+            const std::string ovBlobName = isPipeline ? name : tensorInfo->getName();
+            status = inputSink.give(ovBlobName, tensor);
+            if (!status.ok()) {
+                SPDLOG_DEBUG("Feeding inputs to inference performer failed:{}", status.string());
+                return status;
+            }
+            // OV implementation the InferenceEngine::Exception is not
+            // a base class for all other exceptions thrown from OV.
+            // OV can throw exceptions derived from std::logic_error.
+        } catch (const ov::Exception& e) {
+            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+            return status;
+        } catch (std::logic_error& e) {
+            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+            return status;
+        }
+    }
+    return status;
+}
+
 }  // namespace ovms

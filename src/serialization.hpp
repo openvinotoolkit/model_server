@@ -19,6 +19,7 @@
 #include <string>
 
 #include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
 #pragma GCC diagnostic push
@@ -43,13 +44,33 @@ private:
     T outputSource;
 };
 
+template <typename T>
+class ___OutputGetter {
+public:
+    ___OutputGetter(T t) :
+        outputSource(t) {}
+    Status get(const std::string& name, ov::runtime::Tensor& blob);
+
+private:
+    T outputSource;
+};
+
 Status serializeBlobToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& networkOutput,
     InferenceEngine::Blob::Ptr blob);
+Status serializeTensorToTensorProto(
+    tensorflow::TensorProto& responseOutput,
+    const std::shared_ptr<TensorInfo>& networkOutput,
+    ov::runtime::Tensor& tensor);
 
 Status serializePredictResponse(
     InferenceEngine::InferRequest& inferRequest,
+    const tensor_map_t& outputMap,
+    tensorflow::serving::PredictResponse* response);
+
+Status serializePredictResponse(
+    ov::runtime::InferRequest& inferRequest,
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response);
 
