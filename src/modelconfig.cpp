@@ -228,10 +228,15 @@ Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
     }
 
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
-        if (!it->value.IsString()) {
+        if (it->value.IsString()) {
+            pluginConfig[it->name.GetString()] = it->value.GetString();
+        } else if (it->value.IsInt64()) {
+            pluginConfig[it->name.GetString()] = std::to_string(it->value.GetInt64());
+        } else if (it->value.IsDouble()) {
+            pluginConfig[it->name.GetString()] = std::to_string(it->value.GetDouble());
+        } else {
             return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
         }
-        pluginConfig[it->name.GetString()] = it->value.GetString();
     }
 
     return StatusCode::OK;
@@ -513,7 +518,8 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             if (!firstErrorStatus.ok()) {
                 firstErrorStatus = status;
             }
-            SPDLOG_WARN("Couldn't parse plugin config");
+            SPDLOG_ERROR("Couldn't parse plugin config");
+            return status;
         }
     }
 
