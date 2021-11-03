@@ -228,7 +228,6 @@ Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
     }
 
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
-
         if (it->value.IsString()) {
             pluginConfig[it->name.GetString()] = it->value.GetString();
         } else if (it->value.IsInt64()) {
