@@ -271,6 +271,27 @@ cc_binary(
     ],
     linkshared = 1,
 )
+
+cc_binary(
+    name = "my_app_old_api",
+    srcs = [
+        "my_app.cpp_old_api",
+    ],
+    deps = [
+        "@openvino//:openvino",
+    ],
+)
+
+cc_binary(
+    name = "my_app_new_api",
+    srcs = [
+        "my_app_new_api.cpp",
+    ],
+    deps = [
+        "@openvino//:openvino",
+    ],
+)
+
 cc_binary(
     name = "lib_node_perform_different_operations.so",
     srcs = [
