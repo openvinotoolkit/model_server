@@ -30,6 +30,7 @@ A few key features:
 - [Custom nodes in DAG pipelines](docs/custom_node_development.md) Model inference or data transformations can be implemented by a custom node C/C++ implementation loaded as an external library.
 - [Serving stateful models](docs/stateful_models.md). Serve models that operate on sequences of data and maintain state between inference requests.
 - [Binary format of the input data](docs/binary_input.md). Input data can be sent in JPEG or PNG format to reduce traffic and offload the client applications.
+- [Model caching](docs/model_cache.md). Cache the models on first load and re-use models from cache on subsequent loads.
 
 **Note:** OVMS has been tested on RedHat*, CentOS* and Ubuntu*. Latest publicly released docker images are based on Ubuntu and UBI.
 They are stored in:
