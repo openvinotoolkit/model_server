@@ -383,7 +383,7 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
         loadExecutableNetworkPtr(pluginConfig);
     } catch (std::exception& e) {
         Status status = StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE;
-        SPDLOG_ERROR("{}; error: {}; model: {}; version: {}; device: {}",
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}; error: {}; model: {}; version: {}; device: {}",
             status.string(),
             e.what(),
             getName(),
@@ -391,11 +391,39 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
             config.getTargetDevice());
         return status;
     }
-    SPDLOG_INFO("Plugin config for device {}:", targetDevice);
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Plugin config for device {}:", targetDevice);
     for (const auto pair : pluginConfig) {
         const auto key = pair.first;
         const auto value = pair.second;
-        SPDLOG_INFO("{}: {}", key, value);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key:{}; value:{};", key, value);
+    }
+
+    const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
+    std::vector<std::string> supportedConfigKeys;
+    try {
+        std::vector<std::string> supportedConfigKeys2 = execNetwork->GetMetric(supportedConfigKey);
+        supportedConfigKeys = std::move(supportedConfigKeys2);
+    } catch (std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, ExecutableNetwork metric key: {}; Error: {}", targetDevice, supportedConfigKey, e.what());
+        return StatusCode::OK;
+    } catch (...) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, ExecutableNetwork metric key: {}", targetDevice, supportedConfigKey);
+        return StatusCode::OK;
+    }
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging model:{}; version {};target device: {}; ExecutableNetwork configuration", getName(), getVersion(), targetDevice);
+    for (auto& key : supportedConfigKeys) {
+        std::string value;
+        try {
+            auto paramValue = execNetwork->GetConfig(key);
+            value = paramValue.as<std::string>();
+        } catch (std::exception& e) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, ExecutableNetwork config key: {}; Error: {}", targetDevice, key, e.what());
+            continue;
+        } catch (...) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, ExecutableNetwork config key: {}", targetDevice, key);
+            continue;
+        }
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}; version: {}; target device: {}, ExecutableNetwork config key: {}, value :{}", getName(), getVersion(), targetDevice, key, value);
     }
     return StatusCode::OK;
 }

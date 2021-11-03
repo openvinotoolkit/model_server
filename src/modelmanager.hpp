@@ -55,6 +55,8 @@ protected:
      */
     ModelManager(const std::string& modelCacheDirectory = "");
 
+    void logPluginConfiguration();
+
     Status checkStatefulFlagChange(const std::string& modelName, bool configStatefulFlag);
 
     std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name, const bool isStateful);
