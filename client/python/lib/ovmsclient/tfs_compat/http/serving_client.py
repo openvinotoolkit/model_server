@@ -60,7 +60,7 @@ class HttpClient(ServingClient):
                                    f"Details: {str(parsing_error)}")
         return response["outputs"]
 
-    def get_model_metadata(self, request):
+    def get_model_metadata(self, model_name, model_version=0, timeout=10.0):
         '''
         Send HttpModelMetadataRequest to the server and return response..
 
