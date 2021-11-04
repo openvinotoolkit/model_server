@@ -125,7 +125,15 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs", getName(), getVersion());
         try {
             SPDLOG_INFO("Initial network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
-            network->reshape(networkShapes);
+            //network->reshape(networkShapes);
+            std::map<std::string, ov::PartialShape> new_shapes;
+            for (const auto& [name, shape] : networkShapes) {
+                ov::PartialShape s;
+                for (auto d : shape)
+                    s.push_back(ngraph::Dimension(1, d));
+                new_shapes[name] = s;
+            }
+            ___network->reshape(new_shapes);
         } catch (const InferenceEngine::Exception& e) {
             SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
             SPDLOG_DEBUG("Description: {}", e.what());
@@ -804,47 +812,52 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     Timer timer;
     using std::chrono::microseconds;
 
-    auto status = validate(requestProto);
-    status = reloadModelIfRequired(status, requestProto, modelUnloadGuardPtr);
-    if (!status.ok())
-        return status;
+    Status status;
+    //auto status = validate(requestProto);
+    //status = reloadModelIfRequired(status, requestProto, modelUnloadGuardPtr);
+    //if (!status.ok())
+    //    return status;
     timer.start("get infer request");
-    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+    //ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
     ___ExecutingStreamIdGuard ___executingStreamIdGuard(___getInferRequestsQueue());
-    int executingInferId = executingStreamIdGuard.getId();
+    //int executingInferId = executingStreamIdGuard.getId();
     int ___executingInferId = ___executingStreamIdGuard.getId();
     (void)___executingInferId;
-    InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    //InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     ov::runtime::InferRequest& ___inferRequest = ___executingStreamIdGuard.getInferRequest();
     (void)___inferRequest;
     timer.stop("get infer request");
+    //SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
+    //    requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
-
+        requestProto->model_spec().name(), getVersion(), ___executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
     timer.start("deserialize");
-    InputSink<InferRequest&> inputSink(inferRequest);
+    //InputSink<InferRequest&> inputSink(inferRequest);
     ___InputSink<ov::runtime::InferRequest&> ___inputSink(___inferRequest);
     bool isPipeline = false;
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
-    timer.stop("deserialize");
-    if (!status.ok())
-        return status;
+    //status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
+    //if (!status.ok())
+    //    return status;
     status = ___deserializePredictRequest<___ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), ___inputSink, isPipeline);
     if (!status.ok())
         return status;
+    timer.stop("deserialize");
+    //SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
+    //    requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
-
+        requestProto->model_spec().name(), getVersion(), ___executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
     timer.start("prediction");
-    status = performInference(inferRequest);
-    timer.stop("prediction");
-    if (!status.ok())
-        return status;
+    //status = performInference(inferRequest);
+    //if (!status.ok())
+    //    return status;
     status = performInference(___inferRequest);
     if (!status.ok())
         return status;
+    timer.stop("prediction");
+    //SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
+    //    requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
     SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
+        requestProto->model_spec().name(), getVersion(), ___executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
 
     timer.start("serialize");
     status = serializePredictResponse(___inferRequest, getOutputsInfo(), responseProto);
@@ -852,8 +865,10 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     timer.stop("serialize");
     if (!status.ok())
         return status;
+    //SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
+    //    requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
+        requestProto->model_spec().name(), getVersion(), ___executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
 
     return StatusCode::OK;
 }

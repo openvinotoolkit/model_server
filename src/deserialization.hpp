@@ -47,7 +47,12 @@ InferenceEngine::Blob::Ptr makeBlob(const tensorflow::TensorProto& requestInput,
 template <typename T>
 ov::runtime::Tensor ___makeBlob(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
-    return ov::runtime::Tensor(ov::element::f32, tensorInfo->getEffectiveShape(), const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
+    std::vector<size_t> shape;
+    for (size_t i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
+        shape.push_back(requestInput.tensor_shape().dim(i).size());
+    }
+    //return ov::runtime::Tensor(ov::element::f32, tensorInfo->getEffectiveShape(), const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
+    return ov::runtime::Tensor(ov::element::f32, shape, const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
     // return InferenceEngine::make_shared_blob<T>(
     //     getFinalTensorDesc(*tensorInfo, requestInput, isPipeline),
     //     const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));

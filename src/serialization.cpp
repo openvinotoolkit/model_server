@@ -144,28 +144,30 @@ Status serializeTensorToTensorProto(
     }
     }
     responseOutput.mutable_tensor_shape()->Clear();
-    auto& effectiveNetworkOutputShape = networkOutput->getEffectiveShape();
-    //auto& actualBlobShape = getEffectiveBlobShape(blob);
-    // if (effectiveNetworkOutputShape.size() != actualBlobShape.size()) {
-    //     SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in number of dimensions expected:{} vs actual:{}",
-    //         networkOutput->getName(), effectiveNetworkOutputShape.size(), actualBlobShape.size());
-    //     return StatusCode::INTERNAL_ERROR;
+    // auto& effectiveNetworkOutputShape = networkOutput->getEffectiveShape();
+    // //auto& actualBlobShape = getEffectiveBlobShape(blob);
+    // // if (effectiveNetworkOutputShape.size() != actualBlobShape.size()) {
+    // //     SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in number of dimensions expected:{} vs actual:{}",
+    // //         networkOutput->getName(), effectiveNetworkOutputShape.size(), actualBlobShape.size());
+    // //     return StatusCode::INTERNAL_ERROR;
+    // // }
+    // for (size_t i = 0; i < effectiveNetworkOutputShape.size(); ++i) {
+    //     size_t dim;
+    //     if (effectiveNetworkOutputShape[i] != 0) {
+    //         // if (effectiveNetworkOutputShape[i] != actualBlobShape[i]) {
+    //         //     SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in dimension:{} expected:{} vs actual:{}",
+    //         //         networkOutput->getName(), i, effectiveNetworkOutputShape[i], actualBlobShape[i]);
+    //         //     return StatusCode::INTERNAL_ERROR;
+    //         // }
+    //         dim = effectiveNetworkOutputShape[i];
+    //     } else {
+    //         return StatusCode::INTERNAL_ERROR;
+    //         //dim = actualBlobShape[i];
+    //     }
+    //     responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
     // }
-    for (size_t i = 0; i < effectiveNetworkOutputShape.size(); ++i) {
-        size_t dim;
-        if (effectiveNetworkOutputShape[i] != 0) {
-            // if (effectiveNetworkOutputShape[i] != actualBlobShape[i]) {
-            //     SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in dimension:{} expected:{} vs actual:{}",
-            //         networkOutput->getName(), i, effectiveNetworkOutputShape[i], actualBlobShape[i]);
-            //     return StatusCode::INTERNAL_ERROR;
-            // }
-            dim = effectiveNetworkOutputShape[i];
-        } else {
-            return StatusCode::INTERNAL_ERROR;
-            //dim = actualBlobShape[i];
-        }
-        responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
-    }
+    for (size_t i = 0; i < tensor.get_shape().size(); i++)
+        responseOutput.mutable_tensor_shape()->add_dim()->set_size(tensor.get_shape()[i]);
     //responseOutput.mutable_tensor_content()->assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<char*>(), blob->byteSize());
     responseOutput.mutable_tensor_content()->assign((char*)tensor.data(), tensor.get_byte_size());
     return StatusCode::OK;
