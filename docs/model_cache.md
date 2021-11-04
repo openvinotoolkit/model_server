@@ -35,7 +35,7 @@ $ ./ovms --model_name model --model_path /path/to/model --cache_dir /home/my_use
 
 ## Disable cache for selected models
 When using Model Server with configuration file, it is possible to serve more than one model. In such case, model cache is applied to all the models, with an exception to:
-- Models with custom loader for security reasons since custom loaders in most cases are used to encrypt the model. Dumping the network to cache does not encrypt the network.
+- Models with custom loader for security reasons since custom loaders can be used to encrypt the model. Dumping the network to cache does not encrypt the network.
 - Models configured to shape and batch size `auto`. Shape `auto` makes the model reload if the input shape does not match network shape. Every reshape to new shape is treated by OpenVINO&trade; as different network and new cache files are generated. Since the model cache files are usually large, it might be possible flood the disk using multiple requests with different input shape.
 
 In case the security is not a concern, it is possible to force enablement of model cache for such models with `"force_caching": true` parameter:
