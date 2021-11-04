@@ -21,7 +21,7 @@ from ovmsclient.util.ovmsclient_export import ovmsclient_export
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
 from ovmsclient.tfs_compat.http.requests import (HttpModelStatusRequest, make_status_request,
                                                  HttpModelMetadataRequest,
-                                                 HttpPredictRequest)
+                                                 HttpPredictRequest, make_predict_request)
 from ovmsclient.tfs_compat.http.responses import (HttpModelStatusResponse,
                                                   HttpModelMetadataResponse,
                                                   HttpPredictResponse)
@@ -37,46 +37,28 @@ class HttpClient(ServingClient):
         self.client_key = client_key
         self.server_cert = server_cert
 
-    def predict(self, request):
-        '''
-        Send HttpPredictRequest to the server and return response.
-
-        Args:
-            request: HttpPredictRequest object.
-
-        Returns:
-            HttpPredictResponse object
-
-        Raises:
-            TypeError:  if provided argument is of wrong type.
-            Many more for different serving reponses...
-
-        Examples:
-
-            >>> config = {
-            ...     "address": "localhost",
-            ...     "port": 5555
-            ... }
-            >>> client = make_serving_client(config)
-            >>> request = make_predict_request({"input": [1, 2, 3]}, "model")
-            >>> response = client.predict(request)
-            >>> type(response)
-        '''
-
-        HttpClient._check_predict_request(request)
-
+    def predict(self, inputs, model_name, model_version=0, timeout=10.0):
+        self._validate_timeout(timeout)
+        request = make_predict_request(inputs, model_name, model_version)
         raw_response = None
         try:
             raw_response = self.session.post(f"http://{self.url}"
                                              f"/v1/models/{request.model_name}"
                                              f"/versions/{request.model_version}:predict",
                                              data=request.parsed_inputs,
-                                             cert=self.client_key, verify=self.server_cert)
-        except requests.exceptions.RequestException as e_info:
-            raise ConnectionError('There was an error during sending PredictRequest. '
-                                  f'Http exited with:\n{e_info}')
+                                             cert=self.client_key, verify=self.server_cert,
+                                             timeout=timeout)
+        except requests.exceptions.RequestException as http_error:
+            raise_from_http(http_error)
 
-        return HttpPredictResponse(raw_response)
+        try:
+            response = HttpPredictResponse(raw_response).to_dict()
+        except ModelServerError as model_server_error:
+            raise model_server_error
+        except (JSONDecodeError, ValueError) as parsing_error:
+            raise BadResponseError("Received response is malformed and could not be parsed."
+                                   f"Details: {str(parsing_error)}")
+        return response["outputs"]
 
     def get_model_metadata(self, request):
         '''

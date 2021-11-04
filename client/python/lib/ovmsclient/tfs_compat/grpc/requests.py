@@ -121,7 +121,7 @@ def make_predict_request(inputs, model_name, model_version=0):
 
     for input_name, input_data in inputs.items():
         if not isinstance(input_name, str):
-            raise TypeError(f'inputs keys should be type str, but found '
+            raise TypeError(f'inputs keys type should be str, but found '
                             f'{type(input_name).__name__}')
         if isinstance(input_data, TensorProto):
             request.inputs[input_name].CopyFrom(input_data)

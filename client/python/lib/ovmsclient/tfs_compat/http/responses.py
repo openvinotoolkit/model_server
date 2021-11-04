@@ -26,17 +26,23 @@ class HttpPredictResponse(PredictResponse):
 
     def to_dict(self):
         response_json = json.loads(self.raw_response.text)
+        error_message = response_json.get("error", None)
         outputs = response_json.get("outputs", None)
-        if outputs:
-            result_dict = {}
-            if isinstance(outputs, dict):
-                result_dict["outputs"] = {}
-                for key, value in outputs.items():
-                    result_dict["outputs"][key] = np.array(value)
-            else:
-                result_dict["outputs"] = np.array(outputs)
-            return result_dict
-        return response_json
+
+        if not error_message and not outputs:
+            raise(ValueError("No outputs or error found in response"))
+
+        if error_message:
+            raise_from_http_response(self.raw_response.status_code, error_message)
+
+        result_dict = {"outputs": {}}
+        if isinstance(outputs, dict):
+            for key, value in outputs.items():
+                result_dict["outputs"][key] = np.array(value)
+        else:
+            # For models with only one output, put results directly under "outputs" key
+            result_dict["outputs"] = np.array(outputs)
+        return result_dict
 
 
 class HttpModelMetadataResponse(ModelMetadataResponse):
