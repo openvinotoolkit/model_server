@@ -18,20 +18,21 @@ import pytest
 import requests
 import numpy as np
 
-from ovmsclient.tfs_compat.http.serving_client import HttpClient, make_http_client
-from ovmsclient.tfs_compat.http.requests import HttpModelMetadataRequest
+from ovmsclient.tfs_compat.http.serving_client import make_http_client
 from ovmsclient.tfs_compat.base.errors import BadResponseError
 
-from config import (MODEL_STATUS_INVALID_PARAMS, PREDICT_INVALID_PARAMS, MODEL_METADATA_INVALID_PARAMS)
+from config import (MODEL_STATUS_INVALID_PARAMS, PREDICT_INVALID_PARAMS,
+                    MODEL_METADATA_INVALID_PARAMS)
 
 from tfs_compat_http.config import (BUILD_VALID, BUILD_INVALID_CONFIG, COMMON_RESPONSE_ERROR,
                                     GET_MODEL_STATUS_VALID,
                                     METADATA_RESPONSE_VALID_OUTPUTS,
-                                    MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE,
+                                    METADATA_RESPONSE_MALFROMED_RESPONSE,
                                     PREDICT_RESPONSE_ERROR,
                                     PREDICT_RESPONSE_MALFROMED_RESPONSE,
                                     PREDICT_RESPONSE_VALID_OUTPUTS,
-                                    STATUS_RESPONSE_MALFROMED_RESPONSE, RawResponseMock)
+                                    STATUS_RESPONSE_MALFROMED_RESPONSE,
+                                    RawResponseMock)
 
 
 @pytest.fixture
@@ -173,7 +174,23 @@ def test_get_model_metadata_valid(mocker, valid_http_serving_client_min,
     assert response == expected_output
 
 
-@pytest.mark.parametrize("params, expected_error, error_message", MODEL_METADATA_INVALID_PARAMS )
+@pytest.mark.parametrize("source_error, raised_error", [
+                         (requests.exceptions.ConnectionError, ConnectionError),
+                         (requests.exceptions.ReadTimeout, TimeoutError)
+                         ])
+def test_get_model_metadata_connection_error(mocker, valid_http_serving_client_min,
+                                             source_error, raised_error):
+
+    valid_http_serving_client_min.session.get\
+        = mocker.Mock(side_effect=source_error())
+
+    with pytest.raises(raised_error):
+        valid_http_serving_client_min.get_model_metadata("model_name")
+
+    assert valid_http_serving_client_min.session.get.call_count == 1
+
+
+@pytest.mark.parametrize("params, expected_error, error_message", MODEL_METADATA_INVALID_PARAMS)
 def test_get_model_metadata_invalid_params(mocker, valid_http_serving_client_min,
                                            params, expected_error, error_message):
 
@@ -202,18 +219,18 @@ def test_get_model_metadata_server_error(mocker, valid_http_serving_client_min,
     assert str(error.value) == expected_message
 
 
-def test_check_model_metadata_request_valid():
-    HttpClient._check_model_metadata_request(HttpModelMetadataRequest("model_name", 0))
+@pytest.mark.parametrize("response, _", METADATA_RESPONSE_MALFROMED_RESPONSE)
+def test_get_model_metadata_malformed_response(mocker, valid_http_serving_client_min,
+                                               response, _):
 
+    raw_response = RawResponseMock(*response)
+    valid_http_serving_client_min.session.get\
+        = mocker.Mock(return_value=raw_response)
 
-@pytest.mark.parametrize("model_metadata_request, expected_exception,"
-                         "expected_message", MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE)
-def test_check_model_metadata_request_invalid_type(model_metadata_request, expected_exception,
-                                                   expected_message):
-    with pytest.raises(expected_exception) as e_info:
-        HttpClient._check_model_metadata_request(model_metadata_request)
+    with pytest.raises(BadResponseError):
+        valid_http_serving_client_min.get_model_status("model_name")
 
-    assert str(e_info.value) == expected_message
+    assert valid_http_serving_client_min.session.get.call_count == 1
 
 
 @pytest.mark.parametrize("response, expected_output", PREDICT_RESPONSE_VALID_OUTPUTS)

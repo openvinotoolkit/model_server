@@ -23,26 +23,20 @@ from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataReque
 from tensorflow_serving.apis.model_service_pb2_grpc import ModelServiceStub
 from tensorflow_serving.apis.predict_pb2 import PredictRequest, PredictResponse
 from tensorflow_serving.apis.prediction_service_pb2_grpc import PredictionServiceStub
-from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
-from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
+from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest, ModelVersionStatus
 from tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
 from tensorflow.core.framework.types_pb2 import DataType
 
-from ovmsclient.tfs_compat.grpc.serving_client import (make_grpc_client,
-                                                       GrpcClient)
-from ovmsclient.tfs_compat.grpc.requests import GrpcModelStatusRequest
-from ovmsclient.tfs_compat.grpc.requests import GrpcModelMetadataRequest
-from ovmsclient.tfs_compat.grpc.responses import GrpcModelMetadataResponse
-from ovmsclient.tfs_compat.grpc.responses import GrpcPredictResponse
+from ovmsclient.tfs_compat.grpc.serving_client import make_grpc_client
+from ovmsclient.tfs_compat.grpc.requests import GrpcModelStatusRequest, GrpcModelMetadataRequest
+from ovmsclient.tfs_compat.grpc.responses import GrpcModelMetadataResponse, GrpcPredictResponse
 from ovmsclient.tfs_compat.base.errors import BadResponseError
 
-from config import (MODEL_STATUS_INVALID_PARAMS, PREDICT_INVALID_PARAMS, MODEL_METADATA_INVALID_PARAMS )
+from config import (MODEL_STATUS_INVALID_PARAMS, PREDICT_INVALID_PARAMS,
+                    MODEL_METADATA_INVALID_PARAMS)
 from tfs_compat_grpc.config import (BUILD_INVALID_CONFIG, BUILD_VALID, BUILD_INVALID_CERTS,
                                     MODEL_METADATA_RESPONSE_VALID,
                                     COMMON_INVALID_GRPC,
-                                    MODEL_METADATA_REQUEST_VALID,
-                                    MODEL_METADATA_REQUEST_INVALID_RAW_REQUEST,
-                                    MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE,
                                     PREDICT_RESPONSE_VALID,
                                     PREDICT_RESPONSE_TENSOR_TYPE_INVALID,
                                     PREDICT_INVALID_GRPC)
@@ -260,47 +254,7 @@ def test_get_model_status_malformed_response(mocker, valid_grpc_serving_client_m
     assert valid_grpc_serving_client_min.model_service_stub.GetModelStatus.call_count == 1
 
 
-@pytest.mark.parametrize("request_parameters_dict", MODEL_METADATA_REQUEST_VALID)
-def test_check_model_metadata_request_valid(request_parameters_dict):
-    model_metadata_request\
-        = create_model_metadata_request(request_parameters_dict['model_name'],
-                                        request_parameters_dict['model_version'],
-                                        request_parameters_dict['raw_request_model_name'],
-                                        request_parameters_dict['raw_request_model_version'],
-                                        request_parameters_dict['metadata_field_list'])
-
-    GrpcClient._check_model_metadata_request(model_metadata_request)
-
-
-@pytest.mark.parametrize("request_parameters_dict, expected_exception,"
-                         "expected_message", MODEL_METADATA_REQUEST_INVALID_RAW_REQUEST)
-def test_check_model_metadata_request_invalid_raw_request(request_parameters_dict,
-                                                          expected_exception,
-                                                          expected_message):
-    model_metadata_request\
-        = create_model_metadata_request(request_parameters_dict['model_name'],
-                                        request_parameters_dict['model_version'],
-                                        request_parameters_dict['raw_request_model_name'],
-                                        request_parameters_dict['raw_request_model_version'],
-                                        request_parameters_dict['metadata_field_list'])
-
-    with pytest.raises(expected_exception) as e_info:
-        GrpcClient._check_model_metadata_request(model_metadata_request)
-
-    assert str(e_info.value) == expected_message
-
-
-@pytest.mark.parametrize("model_metadata_request, expected_exception,"
-                         "expected_message", MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE)
-def test_check_model_metadata_request_invalid_type(model_metadata_request,
-                                                   expected_exception, expected_message):
-    with pytest.raises(expected_exception) as e_info:
-        GrpcClient._check_model_metadata_request(model_metadata_request)
-
-    assert str(e_info.value) == expected_message
-
-
-@pytest.mark.parametrize("params, expected_error, error_message", MODEL_METADATA_INVALID_PARAMS )
+@pytest.mark.parametrize("params, expected_error, error_message", MODEL_METADATA_INVALID_PARAMS)
 def test_get_model_metadata_invalid_params(mocker, valid_grpc_serving_client_min,
                                            params, expected_error, error_message):
     valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata\
@@ -342,6 +296,20 @@ def test_get_model_metadata_invalid_grpc(mocker, valid_grpc_serving_client_min,
 
     assert str(grpc_error.value) == raised_error_message
     assert valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata.call_count == 1
+
+
+def test_get_model_metadata_malformed_response(mocker, valid_grpc_serving_client_min,):
+    # Using status response to simulate situation with bad response returning from the server
+    raw_response = create_model_status_response(1, 0, "OK", ModelVersionStatus.State.AVAILABLE)
+
+    valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata\
+        = mocker.Mock(return_value=raw_response)
+
+    with pytest.raises(BadResponseError):
+        valid_grpc_serving_client_min.get_model_metadata("model_name")
+
+    assert valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata.call_count == 1
+
 
 @pytest.mark.parametrize("params, expected_error, error_message", PREDICT_INVALID_PARAMS)
 def test_predict_invalid_params(mocker, valid_grpc_serving_client_min,
