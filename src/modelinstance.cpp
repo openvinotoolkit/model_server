@@ -129,12 +129,17 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             std::map<std::string, ov::PartialShape> new_shapes;
             for (const auto& [name, shape] : networkShapes) {
                 ov::PartialShape s;
-                for (auto d : shape)
-                    s.push_back(ngraph::Dimension(1, d));
+                for (auto d : shape) {
+                    if (d == 1) {
+                        s.push_back(1);
+                    } else {
+                        s.push_back(ngraph::Dimension(1, d));
+                    }
+                }
                 new_shapes[name] = s;
             }
             ___network->reshape(new_shapes);
-        } catch (const InferenceEngine::Exception& e) {
+        } catch (const ov::Exception& e) {
             SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
             SPDLOG_DEBUG("Description: {}", e.what());
             return StatusCode::RESHAPE_ERROR;
@@ -354,7 +359,7 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 
 void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
     execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*network, targetDevice, pluginConfig));
-    ___execNetwork.reset(new ov::runtime::ExecutableNetwork(___ieCore.compile_model(___network, targetDevice, pluginConfig)));
+    ___execNetwork.reset(new ov::runtime::ExecutableNetwork(___ieCore.compile_model(___network, targetDevice)));// CRASHES THE APP  , pluginConfig)));
 }
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
@@ -377,6 +382,15 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
     plugin_config_t pluginConfig = prepareDefaultPluginConfig(config);
     try {
         loadExecutableNetworkPtr(pluginConfig);
+    } catch (ov::Exception& e) {
+        Status status = StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE;
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}; error: {}; model: {}; version: {}; device: {}",
+            status.string(),
+            e.what(),
+            getName(),
+            getVersion(),
+            config.getTargetDevice());
+        return status;
     } catch (std::exception& e) {
         Status status = StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE;
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}; error: {}; model: {}; version: {}; device: {}",
@@ -531,6 +545,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
         }
         loadOutputTensors(this->config);
         status = loadOVExecutableNetwork(this->config);
+        std::cout << "11111" << std::endl;
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;

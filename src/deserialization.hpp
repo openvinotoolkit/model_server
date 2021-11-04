@@ -52,7 +52,8 @@ ov::runtime::Tensor ___makeBlob(const tensorflow::TensorProto& requestInput,
         shape.push_back(requestInput.tensor_shape().dim(i).size());
     }
     //return ov::runtime::Tensor(ov::element::f32, tensorInfo->getEffectiveShape(), const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
-    return ov::runtime::Tensor(ov::element::f32, shape, const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
+    auto type = tensorInfo->getPrecision() == InferenceEngine::Precision::FP32 ? ov::element::f32 : ov::element::i32;
+    return ov::runtime::Tensor(type, shape, const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
     // return InferenceEngine::make_shared_blob<T>(
     //     getFinalTensorDesc(*tensorInfo, requestInput, isPipeline),
     //     const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
@@ -118,8 +119,8 @@ public:
         switch (tensorInfo->getPrecision()) {
         case InferenceEngine::Precision::FP32:
             return ___makeBlob<float>(requestInput, tensorInfo, isPipeline);
-        // case InferenceEngine::Precision::I32:
-        //     return ___makeBlob<int32_t>(requestInput, tensorInfo, isPipeline);
+         case InferenceEngine::Precision::I32:
+             return ___makeBlob<int32_t>(requestInput, tensorInfo, isPipeline);
         // case InferenceEngine::Precision::I8:
         //     return ___makeBlob<int8_t>(requestInput, tensorInfo, isPipeline);
         // case InferenceEngine::Precision::U8:
