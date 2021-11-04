@@ -343,7 +343,6 @@ def test_get_model_metadata_invalid_grpc(mocker, valid_grpc_serving_client_min,
     assert str(grpc_error.value) == raised_error_message
     assert valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata.call_count == 1
 
-
 @pytest.mark.parametrize("params, expected_error, error_message", PREDICT_INVALID_PARAMS)
 def test_predict_invalid_params(mocker, valid_grpc_serving_client_min,
                                 params, expected_error, error_message):

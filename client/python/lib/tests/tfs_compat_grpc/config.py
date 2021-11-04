@@ -388,24 +388,6 @@ MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE = [
      "request is not valid GrpcModelMetadataRequest")
 ]
 
-# expected_message, grpc_error_status_code, grpc_error_details)
-GET_MODEL_METADATA_INVALID_GRPC = [
-    (StatusCode.UNAVAILABLE, "failed to connect to all adresses",
-     ConnectionError, "Error occurred during handling the request: "
-                      "failed to connect to all adresses"),
-    (StatusCode.UNAVAILABLE, "Empty update",
-     ConnectionError, "Error occurred during handling the request: Empty update"),
-    (StatusCode.DEADLINE_EXCEEDED, "Deadline Exceeded",
-     TimeoutError, "Error occurred during handling the request: "
-                   "Request handling exceeded timeout"),
-    (StatusCode.NOT_FOUND, "Model with requested version is not found",
-     ModelNotFoundError, "Error occurred during handling the request: "
-                         "Model with requested version is not found"),
-    (StatusCode.NOT_FOUND, "Model with requested name is not found",
-     ModelNotFoundError, "Error occurred during handling the request: "
-                         "Model with requested name is not found"),
-]
-
 # ({"model_name": model_name, "model_version": model_version,
 #   "raw_request_model_name": raw_request_model_name, "raw_request_model_version": raw_request_model_version,# noqa : E501
 # "inputs_dict": inputs_for_request, "raw_request_inputs_dict": inputs_for_raw_request})
