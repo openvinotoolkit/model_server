@@ -27,6 +27,7 @@ from config import (MODEL_STATUS_INVALID_PARAMS, PREDICT_INVALID_PARAMS)
 
 from tfs_compat_http.config import (BUILD_VALID, BUILD_INVALID_CONFIG, COMMON_RESPONSE_ERROR,
                                     GET_MODEL_STATUS_VALID,
+                                    METADATA_RESPONSE_VALID_OUTPUTS,
                                     MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE,
                                     PREDICT_RESPONSE_ERROR,
                                     PREDICT_RESPONSE_MALFROMED_RESPONSE,
@@ -159,73 +160,17 @@ def test_get_model_status_malformed_response(mocker, valid_http_serving_client_m
     assert valid_http_serving_client_min.session.get.call_count == 1
 
 
-@pytest.mark.parametrize("text", [
-    """{
-        'modelSpec': {
-            'name': 'ssd_mobilenet',
-            'signatureName': '',
-            'version': '1'
-            },
-        'metadata': {
-            'signature_def': {
-                '@type': 'type.googleapis.com/tensorflow.serving.SignatureDefMap',
-                'signatureDef': {
-                    'serving_default': {
-                        'inputs': {
-                            'image_tensor': {
-                                'dtype': 'DT_FLOAT',
-                                'tensorShape': {
-                                    'dim': [
-                                        {'size': '1', 'name': ''},
-                                        {'size': '3', 'name': ''},
-                                        {'size': '300', 'name': ''},
-                                        {'size': '300', 'name': ''}],
-                                    'unknownRank': False
-                                },
-                                'name': 'image_tensor'
-                            }
-                        },
-                        'outputs': {
-                            'DetectionOutput': {
-                                'dtype': 'DT_FLOAT',
-                                'tensorShape': {
-                                    'dim': [
-                                        {'size': '1', 'name': ''},
-                                        {'size': '1', 'name': ''},
-                                        {'size': '100', 'name': ''},
-                                        {'size': '7', 'name': ''}],
-                                    'unknownRank': False
-                                },
-                                'name': 'DetectionOutput'
-                            }
-                        },
-                    'methodName': ''
-                    }
-                }
-            }
-        }
-    }
-"""
-])
+@pytest.mark.parametrize("response, expected_output", METADATA_RESPONSE_VALID_OUTPUTS)
 def test_get_model_metadata_valid(mocker, valid_http_serving_client_min,
-                                  text):
-    model_metadata_request = mocker.Mock()
-
-    mock_check_request = mocker.patch('ovmsclient.tfs_compat.http.serving_client'
-                                      '.HttpClient._check_model_metadata_request')
-
-    raw_response = mocked_requests_get(text)
+                                response, expected_output):
+    raw_response = RawResponseMock(*response)
     valid_http_serving_client_min.session.get\
         = mocker.Mock(return_value=raw_response)
 
-    response = valid_http_serving_client_min.get_model_metadata(model_metadata_request)
+    response = valid_http_serving_client_min.get_model_metadata("model_name")
 
-    assert mock_check_request.call_count == 1
     assert valid_http_serving_client_min.session.get.call_count == 1
-    assert type(response) == HttpModelMetadataResponse
-    assert response.raw_response == raw_response
-    assert response.raw_response.text == raw_response.text
-
+    assert response == expected_output
 
 @pytest.mark.parametrize("expected_message", [
     ("('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))"),

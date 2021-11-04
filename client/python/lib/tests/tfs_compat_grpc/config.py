@@ -390,18 +390,20 @@ MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE = [
 
 # expected_message, grpc_error_status_code, grpc_error_details)
 GET_MODEL_METADATA_INVALID_GRPC = [
-    ("There was an error during sending ModelMetadataRequest. "
-     f"Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - failed to connect to all adresses",
-     StatusCode.UNAVAILABLE, "failed to connect to all adresses"),
-    ("There was an error during sending ModelMetadataRequest. "
-     f"Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - Empty update",
-     StatusCode.UNAVAILABLE, "Empty update"),
-    ("There was an error during sending ModelMetadataRequest. "
-     f"Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested version is not found",
-     StatusCode.NOT_FOUND, "Model with requested version is not found"),
-    ("There was an error during sending ModelMetadataRequest. "
-     f"Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested name is not found",
-     StatusCode.NOT_FOUND, "Model with requested name is not found"),
+    (StatusCode.UNAVAILABLE, "failed to connect to all adresses",
+     ConnectionError, "Error occurred during handling the request: "
+                      "failed to connect to all adresses"),
+    (StatusCode.UNAVAILABLE, "Empty update",
+     ConnectionError, "Error occurred during handling the request: Empty update"),
+    (StatusCode.DEADLINE_EXCEEDED, "Deadline Exceeded",
+     TimeoutError, "Error occurred during handling the request: "
+                   "Request handling exceeded timeout"),
+    (StatusCode.NOT_FOUND, "Model with requested version is not found",
+     ModelNotFoundError, "Error occurred during handling the request: "
+                         "Model with requested version is not found"),
+    (StatusCode.NOT_FOUND, "Model with requested name is not found",
+     ModelNotFoundError, "Error occurred during handling the request: "
+                         "Model with requested name is not found"),
 ]
 
 # ({"model_name": model_name, "model_version": model_version,

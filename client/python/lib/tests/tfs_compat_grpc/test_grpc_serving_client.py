@@ -300,81 +300,63 @@ def test_check_model_metadata_request_invalid_type(model_metadata_request,
 
     assert str(e_info.value) == expected_message
 
+@pytest.mark.parametrize("params, expected_error, error_message", [
+    # Model name check
+    ([("model", "name"), 1, 10], TypeError, "model_name type should be string, but is tuple"),
+    # Model version check
+    (["model_name", "model_version", 10], TypeError,
+        "model_version type should be int, but is str"),
+    (["model_name", 2**63, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
+    (["model_name", -1, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
+    # Timeout check
+    (["model_name", 1, "string"], TypeError, "timeout value must be positive float"),
+    (["model_name", 1, 0], TypeError, "timeout value must be positive float"),
+    (["model_name", 1, -1], TypeError, "timeout value must be positive float"),
+])
+def test_get_model_metadata_invalid_params(mocker, valid_grpc_serving_client_min,
+                                         params, expected_error, error_message):
+
+    valid_grpc_serving_client_min.model_service_stub.GetModelMetadata\
+        = mocker.Mock()
+
+    with pytest.raises(expected_error) as error:
+        valid_grpc_serving_client_min.get_model_metadata(*params)
+
+    valid_grpc_serving_client_min.model_service_stub.GetModelMetadata.call_count == 0
+    assert str(error.value) == error_message
+
 
 def test_get_model_metadata_valid(mocker, valid_grpc_serving_client_min,
                                   valid_model_metadata_response):
-    model_metadata_request = mocker.Mock()
-
     mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client'
                                       '.GrpcClient._check_model_metadata_request')
+
+    expected_output = {'inputs': {'0': {'dtype': 'DT_FLOAT', 'shape': [1, 3, 244, 244]}},
+       'model_version': 2,
+       'outputs': {'1463': {'dtype': 'DT_FLOAT', 'shape': [1, 1000]}}}
+
     valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata\
         = mocker.Mock(return_value=valid_model_metadata_response.raw_response)
 
-    response = valid_grpc_serving_client_min.get_model_metadata(model_metadata_request)
+    response = valid_grpc_serving_client_min.get_model_metadata("model_name")
 
-    assert mock_check_request.call_count == 1
     assert valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata.call_count == 1
-    assert type(response) == type(valid_model_metadata_response)
-    assert response.raw_response == valid_model_metadata_response.raw_response
+    assert response == expected_output
 
-
-@pytest.mark.parametrize("expected_message, grpc_error_status_code,"
-                         "grpc_error_details", GET_MODEL_METADATA_INVALID_GRPC)
+@pytest.mark.parametrize("grpc_error_status_code, grpc_error_details,"
+                         "raised_error_type, raised_error_message", GET_MODEL_METADATA_INVALID_GRPC)
 def test_get_model_metadata_invalid_grpc(mocker, valid_grpc_serving_client_min,
-                                         expected_message, grpc_error_status_code,
-                                         grpc_error_details):
-    model_metadata_request = mocker.Mock()
+                                       grpc_error_status_code, grpc_error_details,
+                                       raised_error_type, raised_error_message):
 
-    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client'
-                                      '.GrpcClient._check_model_metadata_request')
-    valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata\
+    valid_grpc_serving_client_min.model_service_stub.GetModelStatus\
         = mocker.Mock(side_effect=create_grpc_error(grpc_error_status_code, grpc_error_details))
 
-    with pytest.raises(ConnectionError) as e_info:
-        valid_grpc_serving_client_min.get_model_metadata(model_metadata_request)
+    with pytest.raises(raised_error_type) as grpc_error:
+        valid_grpc_serving_client_min.get_model_status("model_name")
 
-    assert str(e_info.value) == expected_message
-    assert mock_check_request.call_count == 1
-    assert valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata.call_count == 1
-
-
-@pytest.mark.parametrize("request_parameters_dict, expected_exception,"
-                         "expected_message", MODEL_METADATA_REQUEST_INVALID_RAW_REQUEST)
-def test_get_model_metadata_invalid_raw_request(mocker, valid_grpc_serving_client_min,
-                                                request_parameters_dict, expected_exception,
-                                                expected_message):
-    model_metadata_request \
-        = create_model_metadata_request(request_parameters_dict['model_name'],
-                                        request_parameters_dict['model_version'],
-                                        request_parameters_dict['raw_request_model_name'],
-                                        request_parameters_dict['raw_request_model_version'],
-                                        request_parameters_dict['metadata_field_list'])
-
-    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client'
-                                      '.GrpcClient._check_model_metadata_request',
-                                      side_effect=expected_exception(expected_message))
-    with pytest.raises(expected_exception) as e_info:
-        valid_grpc_serving_client_min.get_model_metadata(model_metadata_request)
-
-    assert str(e_info.value) == expected_message
-    assert mock_check_request.call_count == 1
-
-
-@pytest.mark.parametrize("model_metadata_request, expected_exception,"
-                         "expected_message", MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE)
-def test_get_model_metadata_invalid_type(mocker, valid_grpc_serving_client_min,
-                                         model_metadata_request, expected_exception,
-                                         expected_message):
-    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client'
-                                      '.GrpcClient._check_model_metadata_request',
-                                      side_effect=expected_exception(expected_message))
-
-    with pytest.raises(expected_exception) as e_info:
-        valid_grpc_serving_client_min.get_model_metadata(model_metadata_request)
-
-    assert str(e_info.value) == expected_message
-    assert mock_check_request.call_count == 1
-
+    assert str(grpc_error.value) == raised_error_message
+    assert valid_grpc_serving_client_min.model_service_stub.GetModelStatus.call_count == 1
 
 @pytest.mark.parametrize("params, expected_error, error_message", PREDICT_INVALID_PARAMS)
 def test_predict_invalid_params(mocker, valid_grpc_serving_client_min,
