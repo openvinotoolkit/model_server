@@ -84,6 +84,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         }
         if (networkInputs.count(name) == 1 && config.getMappingInputByKey(name) != "") {
             SPDLOG_WARN("Config shape - {} is mapped by {}. Changes will not apply", name, config.getMappingInputByKey(name));
+            return StatusCode::CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME;
         } else if (networkInputs.count(name) == 0 && networkInputs.count(config.getRealInputNameByValue(name)) == 0) {
             SPDLOG_WARN("Config shape - {} not found in network", name);
             return StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK;
@@ -92,8 +93,10 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     for (const auto& [name, _] : config.getLayouts()) {
         if (networkInputs.count(name) == 1 && config.getMappingInputByKey(name) != "") {
             SPDLOG_WARN("Config layout - {} is mapped by {}. Changes will not apply", name, config.getMappingInputByKey(name));
+            return StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME;
         } else if (network->getOutputsInfo().count(name) == 1 && config.getMappingOutputByKey(name) != "") {
             SPDLOG_WARN("Config layout - {} is mapped by {}. Changes will not apply", name, config.getMappingOutputByKey(name));
+            return StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME;
         } else if (networkInputs.count(name) == 0 && network->getOutputsInfo().count(name) == 0 && networkInputs.count(config.getRealInputNameByValue(name)) == 0 && network->getOutputsInfo().count(config.getRealOutputNameByValue(name)) == 0) {
             SPDLOG_WARN("Config layout - {} not found in network", name);
             return StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK;

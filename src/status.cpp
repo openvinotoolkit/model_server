@@ -58,6 +58,8 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_SIGNATURE_DEF, "Invalid signature name"},
     {StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK, "Shape from config not found in network"},
     {StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK, "Layout from config not found in network"},
+    {StatusCode::CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME, "Shape from config has real name. Use mapped name instead"},
+    {StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME, "Layout from config has real name. Use mapped name instead"},
     {StatusCode::INVALID_NIREQ, "Nireq parameter too high"},
     {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL, "Requested dynamic parameters but model is used in pipeline"},
     {StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET, "Node is not ready for execution"},

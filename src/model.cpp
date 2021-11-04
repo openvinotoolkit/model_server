@@ -248,15 +248,12 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
     for (const auto version : *versionsToReload) {
         SPDLOG_INFO("Will reload model: {}; version: {} ...", getName(), version);
         config.setVersion(version);
-
-        auto modelVersion = getModelInstanceByVersion(version);
-        if (modelVersion != nullptr) {
-            config.setLocalPath(modelVersion->getModelConfig().getLocalPath());
-        }
         auto status = config.parseModelMapping();
         if ((!status.ok()) && (status != StatusCode::FILE_INVALID)) {
             SPDLOG_ERROR("Error while parsing model mapping for model {}", status.string());
         }
+
+        auto modelVersion = getModelInstanceByVersion(version);
 
         if (!modelVersion) {
             SPDLOG_ERROR("Error occurred while reloading model: {}; version: {}; error: {}",
@@ -268,6 +265,8 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
         }
         if (modelVersion->getStatus().getState() == ModelVersionState::END || modelVersion->getModelConfig().getBasePath() != config.getBasePath()) {
             downloadModels(fs, config, versionsToReload);
+        } else {
+            config.setLocalPath(modelVersion->getModelConfig().getLocalPath());
         }
         status = modelVersion->reloadModel(config);
         if (!status.ok()) {
