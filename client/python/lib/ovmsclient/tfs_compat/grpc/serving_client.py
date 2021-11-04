@@ -63,10 +63,11 @@ class GrpcClient(ServingClient):
         request = make_metadata_request(model_name, model_version)
         raw_response = None
         try:
-            raw_response = self.prediction_service_stub.GetModelMetadata(request.raw_request, timeout)
+            raw_response = self.prediction_service_stub.GetModelMetadata(request.raw_request,
+                                                                         timeout)
         except RpcError as grpc_error:
             raise_from_grpc(grpc_error)
-        
+
         try:
             response = GrpcModelMetadataResponse(raw_response).to_dict()
         except Exception as parsing_error:

@@ -36,14 +36,13 @@ from ovmsclient.tfs_compat.grpc.responses import GrpcModelMetadataResponse
 from ovmsclient.tfs_compat.grpc.responses import GrpcPredictResponse
 from ovmsclient.tfs_compat.base.errors import BadResponseError
 
-from config import (MODEL_STATUS_INVALID_PARAMS, PREDICT_INVALID_PARAMS)
+from config import (MODEL_STATUS_INVALID_PARAMS, PREDICT_INVALID_PARAMS, MODEL_METADATA_INVALID_PARAMS )
 from tfs_compat_grpc.config import (BUILD_INVALID_CONFIG, BUILD_VALID, BUILD_INVALID_CERTS,
                                     MODEL_METADATA_RESPONSE_VALID,
                                     COMMON_INVALID_GRPC,
                                     MODEL_METADATA_REQUEST_VALID,
                                     MODEL_METADATA_REQUEST_INVALID_RAW_REQUEST,
                                     MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE,
-                                    GET_MODEL_METADATA_INVALID_GRPC,
                                     PREDICT_RESPONSE_VALID,
                                     PREDICT_RESPONSE_TENSOR_TYPE_INVALID,
                                     PREDICT_INVALID_GRPC)
@@ -300,9 +299,10 @@ def test_check_model_metadata_request_invalid_type(model_metadata_request,
 
     assert str(e_info.value) == expected_message
 
-@pytest.mark.parametrize("params, expected_error, error_message", MODEL_STATUS_INVALID_PARAMS)
+
+@pytest.mark.parametrize("params, expected_error, error_message", MODEL_METADATA_INVALID_PARAMS )
 def test_get_model_metadata_invalid_params(mocker, valid_grpc_serving_client_min,
-                                         params, expected_error, error_message):
+                                           params, expected_error, error_message):
     valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata\
         = mocker.Mock()
 
@@ -315,11 +315,9 @@ def test_get_model_metadata_invalid_params(mocker, valid_grpc_serving_client_min
 
 def test_get_model_metadata_valid(mocker, valid_grpc_serving_client_min,
                                   valid_model_metadata_response):
-    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client')
-
     expected_output = {'inputs': {'0': {'dtype': 'DT_FLOAT', 'shape': [1, 3, 244, 244]}},
-       'model_version': 2,
-       'outputs': {'1463': {'dtype': 'DT_FLOAT', 'shape': [1, 1000]}}}
+                       'model_version': 2,
+                       'outputs': {'1463': {'dtype': 'DT_FLOAT', 'shape': [1, 1000]}}}
 
     valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata\
         = mocker.Mock(return_value=valid_model_metadata_response.raw_response)
@@ -329,11 +327,12 @@ def test_get_model_metadata_valid(mocker, valid_grpc_serving_client_min,
     assert valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata.call_count == 1
     assert response == expected_output
 
+
 @pytest.mark.parametrize("grpc_error_status_code, grpc_error_details,"
                          "raised_error_type, raised_error_message", COMMON_INVALID_GRPC)
 def test_get_model_metadata_invalid_grpc(mocker, valid_grpc_serving_client_min,
-                                       grpc_error_status_code, grpc_error_details,
-                                       raised_error_type, raised_error_message):
+                                         grpc_error_status_code, grpc_error_details,
+                                         raised_error_type, raised_error_message):
 
     valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata\
         = mocker.Mock(side_effect=create_grpc_error(grpc_error_status_code, grpc_error_details))
@@ -343,6 +342,7 @@ def test_get_model_metadata_invalid_grpc(mocker, valid_grpc_serving_client_min,
 
     assert str(grpc_error.value) == raised_error_message
     assert valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata.call_count == 1
+
 
 @pytest.mark.parametrize("params, expected_error, error_message", PREDICT_INVALID_PARAMS)
 def test_predict_invalid_params(mocker, valid_grpc_serving_client_min,
@@ -381,6 +381,7 @@ def test_predict_valid(mocker, valid_grpc_serving_client_min,
     else:
         assert type(response) is np.ndarray
         assert np.array_equal(response, expected_outputs)
+
 
 @pytest.mark.parametrize("grpc_error_status_code, grpc_error_details,"
                          "raised_error_type, raised_error_message", PREDICT_INVALID_GRPC)
