@@ -26,10 +26,14 @@ from ovmsclient.tfs_compat.grpc.tensors import make_ndarray
 class GrpcPredictResponse(PredictResponse):
 
     def to_dict(self):
-        result_dict = {}
+        result_dict = {"outputs": {}}
+        output_names = list(self.raw_response.outputs.keys())
 
         for key, value in self.raw_response.outputs.items():
-            result_dict[key] = make_ndarray(value)
+            result_dict["outputs"][key] = make_ndarray(value)
+        # For models with only one output, put results directly under "outputs" key
+        if len(output_names) == 1:
+            result_dict["outputs"] = result_dict["outputs"][output_names[0]]
 
         return result_dict
 

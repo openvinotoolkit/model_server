@@ -22,7 +22,7 @@ from http import HTTPStatus
 from numpy import array, int32, float32, float128
 from tensorflow.core.protobuf.error_codes_pb2 import Code as ErrorCode
 
-from ovmsclient.tfs_compat.base.errors import ModelNotFoundError
+from ovmsclient.tfs_compat.base.errors import InvalidInputError, ModelNotFoundError
 from config import CallCount, PATH_VALID # noqa
 
 RawResponseMock = namedtuple("RawResponse", "text, status_code")
@@ -37,7 +37,7 @@ PREDICT_REQUEST_INVALID_INPUTS = [
     ({
         1: [1, 2, 3],
         "input2": [1, 2]
-    }, 'model_name', 0, TypeError, "inputs keys should be type str, but found int"),
+    }, 'model_name', 0, TypeError, "inputs keys type should be str, but found int"),
     ({
         "input1": [[1.0, 2.0], [1.0, 2.0, 3.0]]
     }, 'model_name', 0, ValueError,
@@ -380,34 +380,32 @@ PREDICT_REQUEST_INVALID_REQUEST_TYPE = [
      'but is str')
 ]
 
-# (response_outputs_dict, expected_outputs_dict)
-PREDICT_RESPONSE_VALID_OUTPUTS = [
+# ((response_output, http_error_code), raised_exception, error_message)
+COMMON_RESPONSE_ERROR = [
     (
-        ("""
-        {
-            "outputs": [[1,2,3,4,5]]
-        }
-        """, HTTPStatus.OK),
-        {
-            "outputs": array([[1, 2, 3, 4, 5]])
-        }
+        (
+            """
+            {
+                "error": "Model with requested name is not found"
+            }
+            """,
+            HTTPStatus.NOT_FOUND
+        ),
+        ModelNotFoundError,
+        "Error occurred during handling the request: Model with requested name is not found"
     ),
     (
-        ("""
-        {
-            "outputs": {
-                "output1": [1,2,3],
-                "output2": [4,5,6]
+        (
+            """
+            {
+                "error": "Model with requested version is not found"
             }
-        }
-        """, HTTPStatus.OK),
-        {
-            "outputs": {
-                "output1": array([1, 2, 3]),
-                "output2": array([4, 5, 6])
-            }
-        }
-    )
+            """,
+            HTTPStatus.NOT_FOUND
+        ),
+        ModelNotFoundError,
+        "Error occurred during handling the request: Model with requested version is not found"
+    ),
 ]
 
 # (response_outputs_dict, expected_outputs_dict)
@@ -470,6 +468,103 @@ RESPONSE_VALID_OTHER = [
     ),
 ]
 
+# (response_outputs_dict, expected_outputs_dict)
+PREDICT_RESPONSE_VALID_OUTPUTS = [
+    (
+        ("""
+        {
+            "outputs": [[1,2,3,4,5]]
+        }
+        """, HTTPStatus.OK),
+        array([[1, 2, 3, 4, 5]])
+    ),
+    (
+        ("""
+        {
+            "outputs": {
+                "output1": [1,2,3],
+                "output2": [4,5,6]
+            }
+        }
+        """, HTTPStatus.OK),
+        {
+            "output1": array([1, 2, 3]),
+            "output2": array([4, 5, 6])
+        }
+    )
+]
+
+# (response_outputs_dict, expected_error_type)
+PREDICT_RESPONSE_MALFROMED_RESPONSE = [
+    (
+        # Missing "error" or "outputs" key, malformed output
+        ("""
+        {
+            "results": [1,2,3]
+        }
+        """, HTTPStatus.OK), ValueError
+    ),
+    (
+        # Invalid JSON, missing closure
+        ("""
+        {
+            "outputs": [1,2,3]
+        """, HTTPStatus.OK), JSONDecodeError
+    ),
+]
+
+# ((response_output, http_error_code), raised_exception, error_message)
+PREDICT_RESPONSE_ERROR = COMMON_RESPONSE_ERROR + [
+    (
+        (
+            """
+            {
+                "error": "Invalid input precision - Expected: FP32; Actual: I64"
+            }
+            """,
+            HTTPStatus.BAD_REQUEST
+        ),
+        InvalidInputError, "Error occurred during handling the request: "
+                           "Invalid input precision - Expected: FP32; Actual: I64"
+    ),
+    (
+        (
+            """
+            {
+                "error": "Invalid number of inputs - Expected: 1; Actual: 0"
+            }
+            """,
+            HTTPStatus.BAD_REQUEST
+        ),
+        InvalidInputError, "Error occurred during handling the request: "
+                           "Invalid number of inputs - Expected: 1; Actual: 0"
+    ),
+    (
+        (
+            """
+            {
+                "error": "Missing input with specific name - Required input: 0"
+            }
+            """,
+            HTTPStatus.BAD_REQUEST
+        ),
+        InvalidInputError, "Error occurred during handling the request: "
+                           "Missing input with specific name - Required input: 0"
+    ),
+    (
+        (
+            """
+            {
+                "error": "Invalid number of shape dimensions - Expected: (1,300); Actual: (3)"
+            }
+            """,
+            HTTPStatus.BAD_REQUEST
+        ),
+        InvalidInputError, "Error occurred during handling the request: "
+                           "Invalid number of shape dimensions - "
+                           "Expected: (1,300); Actual: (3)"
+    ),
+]
 
 # (response_outputs_dict, expected_outputs_dict)
 METADATA_RESPONSE_VALID_OUTPUTS = [
@@ -770,32 +865,5 @@ STATUS_RESPONSE_MALFROMED_RESPONSE = [
                 }
             ]
         """, HTTPStatus.OK), JSONDecodeError
-    ),
-]
-
-COMMON_RESPONSE_ERROR = [
-    (
-        (
-            """
-            {
-                "error": "Model with requested name is not found"
-            }
-            """,
-            HTTPStatus.NOT_FOUND
-        ),
-        ModelNotFoundError,
-        "Error occurred during handling the request: Model with requested name is not found"
-    ),
-    (
-        (
-            """
-            {
-                "error": "Model with requested version is not found"
-            }
-            """,
-            HTTPStatus.NOT_FOUND
-        ),
-        ModelNotFoundError,
-        "Error occurred during handling the request: Model with requested version is not found"
     ),
 ]
