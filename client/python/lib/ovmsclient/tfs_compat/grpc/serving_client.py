@@ -24,7 +24,7 @@ from tensorflow_serving.apis.predict_pb2 import PredictRequest
 
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
 from ovmsclient.tfs_compat.grpc.requests import (GrpcModelStatusRequest, make_status_request,
-                                                 GrpcModelMetadataRequest,
+                                                 GrpcModelMetadataRequest, make_metadata_request,
                                                  GrpcPredictRequest, make_predict_request)
 from ovmsclient.tfs_compat.grpc.responses import (GrpcModelStatusResponse,
                                                   GrpcModelMetadataResponse,

@@ -300,36 +300,22 @@ def test_check_model_metadata_request_invalid_type(model_metadata_request,
 
     assert str(e_info.value) == expected_message
 
-@pytest.mark.parametrize("params, expected_error, error_message", [
-    # Model name check
-    ([("model", "name"), 1, 10], TypeError, "model_name type should be string, but is tuple"),
-    # Model version check
-    (["model_name", "model_version", 10], TypeError,
-        "model_version type should be int, but is str"),
-    (["model_name", 2**63, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
-    (["model_name", -1, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
-    # Timeout check
-    (["model_name", 1, "string"], TypeError, "timeout value must be positive float"),
-    (["model_name", 1, 0], TypeError, "timeout value must be positive float"),
-    (["model_name", 1, -1], TypeError, "timeout value must be positive float"),
-])
+@pytest.mark.parametrize("params, expected_error, error_message", MODEL_STATUS_INVALID_PARAMS)
 def test_get_model_metadata_invalid_params(mocker, valid_grpc_serving_client_min,
                                          params, expected_error, error_message):
-
-    valid_grpc_serving_client_min.model_service_stub.GetModelMetadata\
+    valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata\
         = mocker.Mock()
 
     with pytest.raises(expected_error) as error:
         valid_grpc_serving_client_min.get_model_metadata(*params)
 
-    valid_grpc_serving_client_min.model_service_stub.GetModelMetadata.call_count == 0
+    valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata.call_count == 0
     assert str(error.value) == error_message
 
 
 def test_get_model_metadata_valid(mocker, valid_grpc_serving_client_min,
                                   valid_model_metadata_response):
-    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client'
-                                      '.GrpcClient._check_model_metadata_request')
+    mock_check_request = mocker.patch('ovmsclient.tfs_compat.grpc.serving_client')
 
     expected_output = {'inputs': {'0': {'dtype': 'DT_FLOAT', 'shape': [1, 3, 244, 244]}},
        'model_version': 2,
@@ -344,19 +330,19 @@ def test_get_model_metadata_valid(mocker, valid_grpc_serving_client_min,
     assert response == expected_output
 
 @pytest.mark.parametrize("grpc_error_status_code, grpc_error_details,"
-                         "raised_error_type, raised_error_message", GET_MODEL_METADATA_INVALID_GRPC)
+                         "raised_error_type, raised_error_message", COMMON_INVALID_GRPC)
 def test_get_model_metadata_invalid_grpc(mocker, valid_grpc_serving_client_min,
                                        grpc_error_status_code, grpc_error_details,
                                        raised_error_type, raised_error_message):
 
-    valid_grpc_serving_client_min.model_service_stub.GetModelStatus\
+    valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata\
         = mocker.Mock(side_effect=create_grpc_error(grpc_error_status_code, grpc_error_details))
 
     with pytest.raises(raised_error_type) as grpc_error:
-        valid_grpc_serving_client_min.get_model_status("model_name")
+        valid_grpc_serving_client_min.get_model_metadata("model_name")
 
     assert str(grpc_error.value) == raised_error_message
-    assert valid_grpc_serving_client_min.model_service_stub.GetModelStatus.call_count == 1
+    assert valid_grpc_serving_client_min.prediction_service_stub.GetModelMetadata.call_count == 1
 
 @pytest.mark.parametrize("params, expected_error, error_message", PREDICT_INVALID_PARAMS)
 def test_predict_invalid_params(mocker, valid_grpc_serving_client_min,
@@ -395,7 +381,6 @@ def test_predict_valid(mocker, valid_grpc_serving_client_min,
     else:
         assert type(response) is np.ndarray
         assert np.array_equal(response, expected_outputs)
-
 
 @pytest.mark.parametrize("grpc_error_status_code, grpc_error_details,"
                          "raised_error_type, raised_error_message", PREDICT_INVALID_GRPC)

@@ -172,19 +172,7 @@ def test_get_model_metadata_valid(mocker, valid_http_serving_client_min,
     assert valid_http_serving_client_min.session.get.call_count == 1
     assert response == expected_output
 
-@pytest.mark.parametrize("params, expected_error, error_message", [
-    # Model name check
-    ([("model", "name"), 1, 10], TypeError, "model_name type should be string, but is tuple"),
-    # Model version check
-    (["model_name", "model_version", 10], TypeError,
-        "model_version type should be int, but is str"),
-    (["model_name", 2**63, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
-    (["model_name", -1, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
-    # Timeout check
-    (["model_name", 1, "string"], TypeError, "timeout value must be positive float"),
-    (["model_name", 1, 0], TypeError, "timeout value must be positive float"),
-    (["model_name", 1, -1], TypeError, "timeout value must be positive float"),
-])
+@pytest.mark.parametrize("params, expected_error, error_message", MODEL_STATUS_INVALID_PARAMS)
 def test_get_model_metadata_invalid_params(mocker, valid_http_serving_client_min,
                                          params, expected_error, error_message):
 

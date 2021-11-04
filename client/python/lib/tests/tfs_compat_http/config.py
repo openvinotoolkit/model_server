@@ -413,16 +413,6 @@ RESPONSE_VALID_OTHER = [
     (
         ("""
         {
-            "error": "Model with requested name is not found"
-        }
-        """, HTTPStatus.OK),
-        {
-            "error": "Model with requested name is not found"
-        }
-    ),
-    (
-        ("""
-        {
             "outputs": "string"
         }
         """, HTTPStatus.OK),

@@ -20,7 +20,7 @@ import requests
 from ovmsclient.util.ovmsclient_export import ovmsclient_export
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
 from ovmsclient.tfs_compat.http.requests import (HttpModelStatusRequest, make_status_request,
-                                                 HttpModelMetadataRequest,
+                                                 HttpModelMetadataRequest, make_metadata_request,
                                                  HttpPredictRequest, make_predict_request)
 from ovmsclient.tfs_compat.http.responses import (HttpModelStatusResponse,
                                                   HttpModelMetadataResponse,
