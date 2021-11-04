@@ -98,7 +98,7 @@ def make_predict_request(inputs, model_name, model_version=0):
     parsed_inputs = {}
     for input_name, input_data in inputs.items():
         if not isinstance(input_name, str):
-            raise TypeError(f'inputs keys should be type str, but found '
+            raise TypeError(f'inputs keys type should be str, but found '
                             f'{type(input_name).__name__}')
         try:
             parsed_inputs[input_name] = _parse_input_data(input_data)

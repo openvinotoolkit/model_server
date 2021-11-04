@@ -28,12 +28,13 @@ from tfs_compat_http.config import (PREDICT_RESPONSE_VALID_OUTPUTS,
                                     STATUS_RESPONSE_VALID_OUTPUTS,
                                     STATUS_RESPONSE_MALFROMED_RESPONSE,
                                     COMMON_RESPONSE_ERROR,
+                                    PREDICT_RESPONSE_MALFROMED_RESPONSE,
+                                    PREDICT_RESPONSE_ERROR,
                                     RESPONSE_VALID_OTHER, RawResponseMock)
 
 
 def outputsEqual(outputs, expected_outputs):
     outputs = outputs["outputs"]
-    expected_outputs = expected_outputs["outputs"]
     if isinstance(outputs, dict):
         for key in outputs:
             return array_equal(outputs[key], expected_outputs[key])
@@ -51,14 +52,25 @@ def test_PredictResponse_to_dict_valid_outputs(response, expected_output):
     assert(outputsEqual(output, expected_output))
 
 
-@pytest.mark.parametrize("response, expected_output", RESPONSE_VALID_OTHER)
-def test_PredictResponse_to_dict_valid_other(response, expected_output):
+@pytest.mark.parametrize("response, expected_error", PREDICT_RESPONSE_MALFROMED_RESPONSE)
+def test_PredictResponse_to_dict_malformed_response(response, expected_error):
     predict_raw_response = RawResponseMock(*response)
 
     predict_response = HttpPredictResponse(predict_raw_response)
-    output = predict_response.to_dict()
+    with pytest.raises(expected_error):
+        predict_response.to_dict()
 
-    assert(output == expected_output)
+
+@pytest.mark.parametrize("response, expected_error, expected_message",
+                         PREDICT_RESPONSE_ERROR)
+def test_PredictResponse_to_dict_server_error(response, expected_error,
+                                              expected_message):
+    predict_raw_response = RawResponseMock(*response)
+
+    predict_response = HttpPredictResponse(predict_raw_response)
+    with pytest.raises(expected_error) as error:
+        predict_response.to_dict()
+    assert str(error.value) == expected_message
 
 
 @pytest.mark.parametrize("response, expected_output", METADATA_RESPONSE_VALID_OUTPUTS)
