@@ -140,7 +140,7 @@ def test_get_model_status_server_error(mocker, valid_http_serving_client_min,
         = mocker.Mock(return_value=raw_response)
 
     with pytest.raises(expected_error) as error:
-        valid_http_serving_client_min.get_model_status("model_name")
+        valid_http_serving_client_min.get_model_status("model")
 
     assert valid_http_serving_client_min.session.get.call_count == 1
     assert str(error.value) == expected_message
@@ -172,45 +172,45 @@ def test_get_model_metadata_valid(mocker, valid_http_serving_client_min,
     assert valid_http_serving_client_min.session.get.call_count == 1
     assert response == expected_output
 
-@pytest.mark.parametrize("expected_message", [
-    ("('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))"),
-    ("HTTPConnectionPool(host='localhost', port=54000): "
-     "Max retries exceeded with url: /v1/models/resnet/versions/1/metadata "
-     "(Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7ff21a41f370>: "
-     "Failed to establish a new connection: [Errno 111] Connection refused'))")
+@pytest.mark.parametrize("params, expected_error, error_message", [
+    # Model name check
+    ([("model", "name"), 1, 10], TypeError, "model_name type should be string, but is tuple"),
+    # Model version check
+    (["model_name", "model_version", 10], TypeError,
+        "model_version type should be int, but is str"),
+    (["model_name", 2**63, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
+    (["model_name", -1, 10], ValueError, f"model_version should be in range <0, {2**63-1}>"),
+    # Timeout check
+    (["model_name", 1, "string"], TypeError, "timeout value must be positive float"),
+    (["model_name", 1, 0], TypeError, "timeout value must be positive float"),
+    (["model_name", 1, -1], TypeError, "timeout value must be positive float"),
 ])
-def test_get_model_metadata_invalid_http(mocker, valid_http_serving_client_min,
-                                         expected_message):
-    model_metadata_request = mocker.Mock()
-
-    mock_check_request = mocker.patch('ovmsclient.tfs_compat.http.serving_client'
-                                      '.HttpClient._check_model_metadata_request')
+def test_get_model_metadata_invalid_params(mocker, valid_http_serving_client_min,
+                                         params, expected_error, error_message):
 
     valid_http_serving_client_min.session.get\
-        = mocker.Mock(side_effect=requests.exceptions.ConnectionError(expected_message))
+        = mocker.Mock()
 
-    with pytest.raises(ConnectionError) as e_info:
-        valid_http_serving_client_min.get_model_metadata(model_metadata_request)
+    with pytest.raises(expected_error) as error:
+        valid_http_serving_client_min.get_model_metadata(*params)
 
-    assert str(e_info.value) == ("There was an error during sending ModelMetadataRequest. "
-                                 "Http exited with:\n" + expected_message)
-    assert mock_check_request.call_count == 1
+    assert valid_http_serving_client_min.session.get.call_count == 0
+    assert str(error.value) == error_message
+
+
+@pytest.mark.parametrize("response, expected_error, expected_message", COMMON_RESPONSE_ERROR)
+def test_get_model_metadata_server_error(mocker, valid_http_serving_client_min,
+                                       response, expected_error, expected_message):
+
+    raw_response = RawResponseMock(*response)
+    valid_http_serving_client_min.session.get\
+        = mocker.Mock(return_value=raw_response)
+
+    with pytest.raises(expected_error) as error:
+        valid_http_serving_client_min.get_model_metadata("model_name")
+
     assert valid_http_serving_client_min.session.get.call_count == 1
-
-
-@pytest.mark.parametrize("model_metadata_request, expected_exception,"
-                         "expected_message", MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE)
-def test_get_model_metadata_invalid_request_type(mocker, valid_http_serving_client_min,
-                                                 model_metadata_request, expected_exception,
-                                                 expected_message):
-    mock_check_request = mocker.patch('ovmsclient.tfs_compat.http.serving_client'
-                                      '.HttpClient._check_model_metadata_request',
-                                      side_effect=expected_exception(expected_message))
-    with pytest.raises(expected_exception) as e_info:
-        valid_http_serving_client_min.get_model_metadata(model_metadata_request)
-
-    assert str(e_info.value) == expected_message
-    assert mock_check_request.call_count == 1
+    assert str(error.value) == expected_message
 
 
 def test_check_model_metadata_request_valid():

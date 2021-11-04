@@ -61,30 +61,6 @@ class HttpClient(ServingClient):
         return response["outputs"]
 
     def get_model_metadata(self, model_name, model_version=0, timeout=10.0):
-        '''
-        Send HttpModelMetadataRequest to the server and return response..
-
-        Args:
-            request: HttpModelMetadataRequest object.
-
-        Returns:
-            HttpModelMetadataResponse object
-
-        Raises:
-            TypeError:  if provided argument is of wrong type.
-            Many more for different serving reponses...
-
-        Examples:
-
-            >>> config = {
-            ...     "address": "localhost",
-            ...     "port": 5555
-            ... }
-            >>> client = make_serving_client(config)
-            >>> request = make_model_metadata_request("model")
-            >>> response = client.get_model_metadata(request)
-            >>> type(response)
-        '''
         self._validate_timeout(timeout)
         request = make_metadata_request(model_name, model_version)
         raw_response = None
@@ -94,7 +70,8 @@ class HttpClient(ServingClient):
                                             f"/v1/models/{request.model_name}"
                                             f"/versions/{request.model_version}"
                                             f"/metadata",
-                                            cert=self.client_key, verify=self.server_cert)
+                                            cert=self.client_key, verify=self.server_cert,
+                                            timeout=timeout)
         except requests.exceptions.RequestException as http_error:
             raise_from_http(http_error)
 
