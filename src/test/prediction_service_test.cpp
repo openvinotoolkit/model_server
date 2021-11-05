@@ -281,11 +281,12 @@ TEST_F(TestPredict, SuccesfullOnDummyModel) {
             std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}});
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(1);
+
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     performPredict(config.getName(), config.getVersion(), request);
 }
 
-static const char* oneDummyConfig = R"(
+static const char* oneDummyWithMappedInputConfig = R"(
 {
     "model_config_list": [
         {
@@ -295,7 +296,7 @@ static const char* oneDummyConfig = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"latest": {"num_versions":1}},
                 "nireq": 100,
-                "shape": {"b": "(1,10) "}
+                "shape": {"input_tensor": "(1,10) "}
             }
         }
     ]
@@ -309,7 +310,6 @@ protected:
     std::string mappingConfigPath;
     const std::string dummyModelInputMapping = "input_tensor";
     const std::string dummyModelOutputMapping = "output_tensor";
-    const ovms::mapping_config_t mapping{{dummyModelInputMapping, DUMMY_MODEL_INPUT_NAME}};
 
 public:
     void SetUpConfig(const std::string& configContent) {
@@ -325,7 +325,7 @@ public:
         TestWithTempDir::SetUp();
         modelPath = directoryPath + "/dummy/";
         mappingConfigPath = modelPath + "1/mapping_config.json";
-        SetUpConfig(oneDummyConfig);
+        SetUpConfig(oneDummyWithMappedInputConfig);
         std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         createConfigFileWithContent(R"({

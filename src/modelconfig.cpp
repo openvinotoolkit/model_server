@@ -405,6 +405,7 @@ Status ModelConfig::parseModelMapping() {
         for (const auto& key : itr->value.GetObject()) {
             SPDLOG_DEBUG("Loaded input mapping {} => {}", key.name.GetString(), key.value.GetString());
             mappingInputs[key.name.GetString()] = key.value.GetString();
+            reversedMappingInputs[key.value.GetString()] = key.name.GetString();
         }
     }
 
@@ -416,6 +417,7 @@ Status ModelConfig::parseModelMapping() {
         for (const auto& key : it->value.GetObject()) {
             SPDLOG_DEBUG("Loaded output mapping {} => {}", key.name.GetString(), key.value.GetString());
             mappingOutputs[key.name.GetString()] = key.value.GetString();
+            reversedMappingOutputs[key.value.GetString()] = key.name.GetString();
         }
     }
 
