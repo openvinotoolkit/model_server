@@ -50,19 +50,26 @@ class ServingClient(ABC):
         pass
 
     @abstractmethod
-    def get_model_metadata(self, request):
+    def get_model_metadata(model_name, model_version=0, timeout=10.0):
         '''
         Send ModelMetadataRequest to the server and return response.
 
         Args:
-            request: ModelMetadataRequest object.
+            model_name: name of the model in the model server.
+            model_version: version of the model (default = 0).
+            timeout: time in seconds to wait for the response (default = 10).
 
         Returns:
-            ModelMetadataResponse object
+            Dictionary with the model metadata response.
 
         Raises:
             TypeError:  if provided argument is of wrong type.
-            Many more for different serving reponses...
+            ValueError: if provided argument has unsupported value.
+            ConnectionError: if there is an issue with server connection.
+            TimeoutError: if request handling duration exceeded timeout.
+            ModelNotFound: if model with specified name and version does not exist
+                           in the model server.
+            BadResponseError: if server response in malformed and cannot be parsed.
         '''
 
         pass

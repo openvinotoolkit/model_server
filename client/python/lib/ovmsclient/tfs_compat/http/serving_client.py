@@ -20,7 +20,7 @@ import requests
 from ovmsclient.util.ovmsclient_export import ovmsclient_export
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
 from ovmsclient.tfs_compat.http.requests import (HttpModelStatusRequest, make_status_request,
-                                                 HttpModelMetadataRequest,
+                                                 HttpModelMetadataRequest, make_metadata_request,
                                                  HttpPredictRequest, make_predict_request)
 from ovmsclient.tfs_compat.http.responses import (HttpModelStatusResponse,
                                                   HttpModelMetadataResponse,
@@ -60,46 +60,29 @@ class HttpClient(ServingClient):
                                    f"Details: {str(parsing_error)}")
         return response["outputs"]
 
-    def get_model_metadata(self, request):
-        '''
-        Send HttpModelMetadataRequest to the server and return response..
-
-        Args:
-            request: HttpModelMetadataRequest object.
-
-        Returns:
-            HttpModelMetadataResponse object
-
-        Raises:
-            TypeError:  if provided argument is of wrong type.
-            Many more for different serving reponses...
-
-        Examples:
-
-            >>> config = {
-            ...     "address": "localhost",
-            ...     "port": 5555
-            ... }
-            >>> client = make_serving_client(config)
-            >>> request = make_model_metadata_request("model")
-            >>> response = client.get_model_metadata(request)
-            >>> type(response)
-        '''
-
-        HttpClient._check_model_metadata_request(request)
-
+    def get_model_metadata(self, model_name, model_version=0, timeout=10.0):
+        self._validate_timeout(timeout)
+        request = make_metadata_request(model_name, model_version)
         raw_response = None
+
         try:
             raw_response = self.session.get(f"http://{self.url}"
                                             f"/v1/models/{request.model_name}"
                                             f"/versions/{request.model_version}"
                                             f"/metadata",
-                                            cert=self.client_key, verify=self.server_cert)
-        except requests.exceptions.RequestException as e_info:
-            raise ConnectionError('There was an error during sending ModelMetadataRequest. '
-                                  f'Http exited with:\n{e_info}')
+                                            cert=self.client_key, verify=self.server_cert,
+                                            timeout=timeout)
+        except requests.exceptions.RequestException as http_error:
+            raise_from_http(http_error)
 
-        return HttpModelMetadataResponse(raw_response)
+        try:
+            response = HttpModelMetadataResponse(raw_response).to_dict()
+        except ModelServerError as model_server_error:
+            raise model_server_error
+        except (JSONDecodeError, KeyError, ValueError) as parsing_error:
+            raise BadResponseError("Received response is malformed and could not be parsed."
+                                   f"Details: {str(parsing_error)}")
+        return response
 
     def get_model_status(self, model_name, model_version=0, timeout=10.0):
         self._validate_timeout(timeout)

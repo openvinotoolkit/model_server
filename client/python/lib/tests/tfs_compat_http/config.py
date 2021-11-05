@@ -413,16 +413,6 @@ RESPONSE_VALID_OTHER = [
     (
         ("""
         {
-            "error": "Model with requested name is not found"
-        }
-        """, HTTPStatus.OK),
-        {
-            "error": "Model with requested name is not found"
-        }
-    ),
-    (
-        ("""
-        {
             "outputs": "string"
         }
         """, HTTPStatus.OK),
@@ -755,6 +745,123 @@ METADATA_RESPONSE_VALID_OUTPUTS = [
     )
 ]
 
+# (response_outputs_dict, expected_error_type)
+METADATA_RESPONSE_MALFROMED_RESPONSE = [
+    (
+        # Missing "modelSpec" key, malformed output
+        ("""
+        {
+            "metadata": {
+                "signature_def": {
+                "@type": "type.googleapis.com/tensorflow.serving.SignatureDefMap",
+                "signatureDef": {
+                    "serving_default": {
+                        "inputs": {
+                            "input": {
+                                "dtype": "DT_FLOAT",
+                                "tensorShape": {
+                                    "dim": [
+                                        {
+                                        "size": "1",
+                                        "name": ""
+                                        },
+                                        {
+                                        "size": "10",
+                                        "name": ""
+                                        }
+                                    ],
+                                    "unknownRank": false
+                                },
+                                "name": "input"
+                            }
+                        },
+                        "outputs": {
+                            "output": {
+                                "dtype": "DT_FLOAT",
+                                "tensorShape": {
+                                    "dim": [
+                                        {
+                                            "size": "1",
+                                            "name": ""
+                                        },
+                                        {
+                                            "size": "10",
+                                            "name": ""
+                                        }
+                                    ],
+                                    "unknownRank": false
+                                },
+                                "name": "output"
+                            }
+                        },
+                    "methodName": ""
+                    }
+                }
+            }
+        }
+        }
+        """, HTTPStatus.OK), KeyError
+    ),
+    (
+        # Invalid JSON, missing closure
+        ("""
+        {
+            "modelSpec": {
+                "name": "empty",
+                "signatureName": "",
+                "version": "1"
+            },
+            "metadata": {
+                "signature_def": {
+                "@type": "type.googleapis.com/tensorflow.serving.SignatureDefMap",
+                "signatureDef": {
+                    "serving_default": {
+                        "inputs": {
+                            "input": {
+                                "dtype": "DT_FLOAT",
+                                "tensorShape": {
+                                    "dim": [
+                                        {
+                                        "size": "1",
+                                        "name": ""
+                                        },
+                                        {
+                                        "size": "10",
+                                        "name": ""
+                                        }
+                                    ],
+                                    "unknownRank": false
+                                },
+                                "name": "input"
+                            }
+                        },
+                        "outputs": {
+                            "output": {
+                                "dtype": "DT_FLOAT",
+                                "tensorShape": {
+                                    "dim": [
+                                        {
+                                            "size": "1",
+                                            "name": ""
+                                        },
+                                        {
+                                            "size": "10",
+                                            "name": ""
+                                        }
+                                    ],
+                                    "unknownRank": false
+                                },
+                                "name": "output"
+                            }
+                        },
+                    "methodName": ""
+                    }
+                }
+            }
+        }
+        """, HTTPStatus.OK), JSONDecodeError
+    ),
+]
 
 # (response_outputs_dict, expected_outputs_dict)
 STATUS_RESPONSE_VALID_OUTPUTS = [
