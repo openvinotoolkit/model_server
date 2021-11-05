@@ -274,6 +274,44 @@ TEST(ModelConfig, mappingOutputs) {
     EXPECT_EQ(empty, "");
 }
 
+TEST(ModelConfig, mappingRealInputs) {
+    ovms::ModelConfig config;
+    ovms::mapping_config_t realMapping{
+        {"value", "resnet"},
+        {"input", "output"}};
+
+    config.setRealMappingInputs(realMapping);
+    auto ret = config.getRealMappingInputs();
+    EXPECT_THAT(ret, UnorderedElementsAre(
+                         Pair("value", "resnet"),
+                         Pair("input", "output")));
+
+    auto in = config.getRealInputNameByValue("input");
+    auto empty = config.getRealInputNameByValue("notexist");
+
+    EXPECT_EQ(in, "output");
+    EXPECT_EQ(empty, "");
+}
+
+TEST(ModelConfig, mappingRealOutputs) {
+    ovms::ModelConfig config;
+    ovms::mapping_config_t realMapping{
+        {"value", "resnet"},
+        {"input", "output"}};
+
+    config.setRealMappingOutputs(realMapping);
+    auto ret = config.getRealMappingOutputs();
+    EXPECT_THAT(ret, UnorderedElementsAre(
+                         Pair("value", "resnet"),
+                         Pair("input", "output")));
+
+    auto in = config.getRealOutputNameByValue("input");
+    auto empty = config.getRealOutputNameByValue("notexist");
+
+    EXPECT_EQ(in, "output");
+    EXPECT_EQ(empty, "");
+}
+
 TEST(ModelConfig, isDeviceUsed) {
     ovms::ModelConfig config;
     config.setTargetDevice("GPU");

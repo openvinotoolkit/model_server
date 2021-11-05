@@ -137,9 +137,18 @@ private:
     mapping_config_t mappingInputs;
 
     /**
-         * @brief Input mapping configuration
+         * @brief Output mapping configuration
          */
     mapping_config_t mappingOutputs;
+
+    /**
+         * @brief Reversed input mapping configuration
+         */
+    mapping_config_t reversedMappingInputs;
+    /**
+         * @brief Reversed output mapping configuration
+         */
+    mapping_config_t reversedMappingOutputs;
 
     /**
          * @brief Shape left opening bracket in string format
@@ -773,6 +782,24 @@ public:
     }
 
     /**
+         * @brief Get the reversed mapping for inputs
+         * 
+         * @return const mapping_config_t& 
+         */
+    const mapping_config_t& getRealMappingInputs() const {
+        return this->reversedMappingInputs;
+    }
+
+    /**
+         * @brief Get the reversed mapping for outputs
+         * 
+         * @return const mapping_config_t& 
+         */
+    const mapping_config_t& getRealMappingOutputs() const {
+        return this->reversedMappingOutputs;
+    }
+
+    /**
          * @brief Get the mapping inputs by key
          * 
          * @param key 
@@ -795,6 +822,28 @@ public:
     }
 
     /**
+         * @brief Get the real inputs by value
+         * 
+         * @param value 
+         * @return const std::string 
+         */
+    const std::string getRealInputNameByValue(const std::string& value) const {
+        auto it = reversedMappingInputs.find(value);
+        return it != reversedMappingInputs.end() ? it->second : "";
+    }
+
+    /**
+         * @brief Get the real outputs by value
+         * 
+         * @param value 
+         * @return const std::string 
+         */
+    const std::string getRealOutputNameByValue(const std::string& value) const {
+        auto it = reversedMappingOutputs.find(value);
+        return it != reversedMappingOutputs.end() ? it->second : "";
+    }
+
+    /**
          * @brief Set the mapping inputs
          * 
          * @param mapping 
@@ -810,6 +859,24 @@ public:
          */
     void setMappingOutputs(const mapping_config_t& mapping) {
         this->mappingOutputs = mapping;
+    }
+
+    /**
+         * @brief Set the reversed mapping inputs
+         * 
+         * @param mapping 
+         */
+    void setRealMappingInputs(const mapping_config_t& mapping) {
+        this->reversedMappingInputs = mapping;
+    }
+
+    /**
+         * @brief Set the reversed mapping outputs
+         * 
+         * @param mapping 
+         */
+    void setRealMappingOutputs(const mapping_config_t& mapping) {
+        this->reversedMappingOutputs = mapping;
     }
 
     /**

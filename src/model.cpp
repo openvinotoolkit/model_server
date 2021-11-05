@@ -250,16 +250,15 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload,
         config.setVersion(version);
         auto status = config.parseModelMapping();
         if ((!status.ok()) && (status != StatusCode::FILE_INVALID)) {
-            SPDLOG_ERROR("Error while parsing model mapping for model {}", status.string());
+            SPDLOG_ERROR("Error while parsing model mapping for model {}; error: {}", getName(), status.string());
         }
 
         auto modelVersion = getModelInstanceByVersion(version);
 
         if (!modelVersion) {
-            SPDLOG_ERROR("Error occurred while reloading model: {}; version: {}; error: {}",
+            SPDLOG_ERROR("Error occurred while reloading model: {}; version: {}; Model version was not found",
                 getName(),
-                version,
-                status.string());
+                version);
             result = StatusCode::UNKNOWN_ERROR;
             continue;
         }
