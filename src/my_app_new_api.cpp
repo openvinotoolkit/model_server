@@ -70,6 +70,11 @@ int main() {
     //std::shared_ptr<ov::Function> model = ie.read_model("/workspace/models/resnet50-binary/1/resnet50-binary-0001.xml");
     std::shared_ptr<ov::Function> model = ie.read_model("/workspace/models/bert-base-chinese-xnli-zh-fp32-onnx-0001/1/bert-base-chinese-xnli-zh-fp32-onnx-0001.xml");
 
+    ov::Output<ov::Node> input = model->input("1");
+    ov::Shape shape = input.get_shape();
+    ov::element::Type type = input.get_element_type();
+    std::cout << "Input: 1; Shape: " << shape << "; Type: " << type << std::endl;
+
     // ov::PartialShape input_shape{1, ngraph::Dimension(1, 50)};
     // std::map<std::string, ov::PartialShape> new_shapes{{"b", input_shape}};
     // model->reshape(new_shapes);
