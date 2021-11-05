@@ -18,20 +18,21 @@ import pytest
 import requests
 import numpy as np
 
-from ovmsclient.tfs_compat.http.serving_client import HttpClient, make_http_client
-from ovmsclient.tfs_compat.http.responses import HttpModelMetadataResponse
-from ovmsclient.tfs_compat.http.requests import HttpModelMetadataRequest
+from ovmsclient.tfs_compat.http.serving_client import make_http_client
 from ovmsclient.tfs_compat.base.errors import BadResponseError
 
-from config import (MODEL_STATUS_INVALID_PARAMS, PREDICT_INVALID_PARAMS)
+from config import (MODEL_STATUS_INVALID_PARAMS, PREDICT_INVALID_PARAMS,
+                    MODEL_METADATA_INVALID_PARAMS)
 
 from tfs_compat_http.config import (BUILD_VALID, BUILD_INVALID_CONFIG, COMMON_RESPONSE_ERROR,
                                     GET_MODEL_STATUS_VALID,
-                                    MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE,
+                                    METADATA_RESPONSE_VALID_OUTPUTS,
+                                    METADATA_RESPONSE_MALFROMED_RESPONSE,
                                     PREDICT_RESPONSE_ERROR,
                                     PREDICT_RESPONSE_MALFROMED_RESPONSE,
                                     PREDICT_RESPONSE_VALID_OUTPUTS,
-                                    STATUS_RESPONSE_MALFROMED_RESPONSE, RawResponseMock)
+                                    STATUS_RESPONSE_MALFROMED_RESPONSE,
+                                    RawResponseMock)
 
 
 @pytest.fixture
@@ -139,7 +140,7 @@ def test_get_model_status_server_error(mocker, valid_http_serving_client_min,
         = mocker.Mock(return_value=raw_response)
 
     with pytest.raises(expected_error) as error:
-        valid_http_serving_client_min.get_model_status("model_name")
+        valid_http_serving_client_min.get_model_status("model")
 
     assert valid_http_serving_client_min.session.get.call_count == 1
     assert str(error.value) == expected_message
@@ -159,127 +160,77 @@ def test_get_model_status_malformed_response(mocker, valid_http_serving_client_m
     assert valid_http_serving_client_min.session.get.call_count == 1
 
 
-@pytest.mark.parametrize("text", [
-    """{
-        'modelSpec': {
-            'name': 'ssd_mobilenet',
-            'signatureName': '',
-            'version': '1'
-            },
-        'metadata': {
-            'signature_def': {
-                '@type': 'type.googleapis.com/tensorflow.serving.SignatureDefMap',
-                'signatureDef': {
-                    'serving_default': {
-                        'inputs': {
-                            'image_tensor': {
-                                'dtype': 'DT_FLOAT',
-                                'tensorShape': {
-                                    'dim': [
-                                        {'size': '1', 'name': ''},
-                                        {'size': '3', 'name': ''},
-                                        {'size': '300', 'name': ''},
-                                        {'size': '300', 'name': ''}],
-                                    'unknownRank': False
-                                },
-                                'name': 'image_tensor'
-                            }
-                        },
-                        'outputs': {
-                            'DetectionOutput': {
-                                'dtype': 'DT_FLOAT',
-                                'tensorShape': {
-                                    'dim': [
-                                        {'size': '1', 'name': ''},
-                                        {'size': '1', 'name': ''},
-                                        {'size': '100', 'name': ''},
-                                        {'size': '7', 'name': ''}],
-                                    'unknownRank': False
-                                },
-                                'name': 'DetectionOutput'
-                            }
-                        },
-                    'methodName': ''
-                    }
-                }
-            }
-        }
-    }
-"""
-])
+@pytest.mark.parametrize("response, expected_output", METADATA_RESPONSE_VALID_OUTPUTS)
 def test_get_model_metadata_valid(mocker, valid_http_serving_client_min,
-                                  text):
-    model_metadata_request = mocker.Mock()
+                                  response, expected_output):
+    raw_response = RawResponseMock(*response)
 
-    mock_check_request = mocker.patch('ovmsclient.tfs_compat.http.serving_client'
-                                      '.HttpClient._check_model_metadata_request')
-
-    raw_response = mocked_requests_get(text)
     valid_http_serving_client_min.session.get\
         = mocker.Mock(return_value=raw_response)
 
-    response = valid_http_serving_client_min.get_model_metadata(model_metadata_request)
+    response = valid_http_serving_client_min.get_model_metadata("model_name")
 
-    assert mock_check_request.call_count == 1
     assert valid_http_serving_client_min.session.get.call_count == 1
-    assert type(response) == HttpModelMetadataResponse
-    assert response.raw_response == raw_response
-    assert response.raw_response.text == raw_response.text
+    assert response == expected_output
 
 
-@pytest.mark.parametrize("expected_message", [
-    ("('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))"),
-    ("HTTPConnectionPool(host='localhost', port=54000): "
-     "Max retries exceeded with url: /v1/models/resnet/versions/1/metadata "
-     "(Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7ff21a41f370>: "
-     "Failed to establish a new connection: [Errno 111] Connection refused'))")
-])
-def test_get_model_metadata_invalid_http(mocker, valid_http_serving_client_min,
-                                         expected_message):
-    model_metadata_request = mocker.Mock()
-
-    mock_check_request = mocker.patch('ovmsclient.tfs_compat.http.serving_client'
-                                      '.HttpClient._check_model_metadata_request')
+@pytest.mark.parametrize("source_error, raised_error", [
+                         (requests.exceptions.ConnectionError, ConnectionError),
+                         (requests.exceptions.ReadTimeout, TimeoutError)
+                         ])
+def test_get_model_metadata_connection_error(mocker, valid_http_serving_client_min,
+                                             source_error, raised_error):
 
     valid_http_serving_client_min.session.get\
-        = mocker.Mock(side_effect=requests.exceptions.ConnectionError(expected_message))
+        = mocker.Mock(side_effect=source_error())
 
-    with pytest.raises(ConnectionError) as e_info:
-        valid_http_serving_client_min.get_model_metadata(model_metadata_request)
+    with pytest.raises(raised_error):
+        valid_http_serving_client_min.get_model_metadata("model_name")
 
-    assert str(e_info.value) == ("There was an error during sending ModelMetadataRequest. "
-                                 "Http exited with:\n" + expected_message)
-    assert mock_check_request.call_count == 1
     assert valid_http_serving_client_min.session.get.call_count == 1
 
 
-@pytest.mark.parametrize("model_metadata_request, expected_exception,"
-                         "expected_message", MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE)
-def test_get_model_metadata_invalid_request_type(mocker, valid_http_serving_client_min,
-                                                 model_metadata_request, expected_exception,
-                                                 expected_message):
-    mock_check_request = mocker.patch('ovmsclient.tfs_compat.http.serving_client'
-                                      '.HttpClient._check_model_metadata_request',
-                                      side_effect=expected_exception(expected_message))
-    with pytest.raises(expected_exception) as e_info:
-        valid_http_serving_client_min.get_model_metadata(model_metadata_request)
+@pytest.mark.parametrize("params, expected_error, error_message", MODEL_METADATA_INVALID_PARAMS)
+def test_get_model_metadata_invalid_params(mocker, valid_http_serving_client_min,
+                                           params, expected_error, error_message):
 
-    assert str(e_info.value) == expected_message
-    assert mock_check_request.call_count == 1
+    valid_http_serving_client_min.session.get\
+        = mocker.Mock()
 
+    with pytest.raises(expected_error) as error:
+        valid_http_serving_client_min.get_model_metadata(*params)
 
-def test_check_model_metadata_request_valid():
-    HttpClient._check_model_metadata_request(HttpModelMetadataRequest("model_name", 0))
+    assert valid_http_serving_client_min.session.get.call_count == 0
+    assert str(error.value) == error_message
 
 
-@pytest.mark.parametrize("model_metadata_request, expected_exception,"
-                         "expected_message", MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE)
-def test_check_model_metadata_request_invalid_type(model_metadata_request, expected_exception,
-                                                   expected_message):
-    with pytest.raises(expected_exception) as e_info:
-        HttpClient._check_model_metadata_request(model_metadata_request)
+@pytest.mark.parametrize("response, expected_error, expected_message", COMMON_RESPONSE_ERROR)
+def test_get_model_metadata_server_error(mocker, valid_http_serving_client_min,
+                                         response, expected_error, expected_message):
 
-    assert str(e_info.value) == expected_message
+    raw_response = RawResponseMock(*response)
+    valid_http_serving_client_min.session.get\
+        = mocker.Mock(return_value=raw_response)
+
+    with pytest.raises(expected_error) as error:
+        valid_http_serving_client_min.get_model_metadata("model_name")
+
+    assert valid_http_serving_client_min.session.get.call_count == 1
+    assert str(error.value) == expected_message
+
+
+@pytest.mark.parametrize("response, _", METADATA_RESPONSE_MALFROMED_RESPONSE)
+def test_get_model_metadata_malformed_response(mocker, valid_http_serving_client_min,
+                                               response, _):
+
+    raw_response = RawResponseMock(*response)
+    valid_http_serving_client_min.session.get\
+        = mocker.Mock(return_value=raw_response)
+
+    with pytest.raises(BadResponseError):
+        valid_http_serving_client_min.get_model_status("model_name")
+
+    assert valid_http_serving_client_min.session.get.call_count == 1
 
 
 @pytest.mark.parametrize("response, expected_output", PREDICT_RESPONSE_VALID_OUTPUTS)

@@ -24,7 +24,7 @@ from tensorflow_serving.apis.predict_pb2 import PredictRequest
 
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
 from ovmsclient.tfs_compat.grpc.requests import (GrpcModelStatusRequest, make_status_request,
-                                                 GrpcModelMetadataRequest,
+                                                 GrpcModelMetadataRequest, make_metadata_request,
                                                  GrpcPredictRequest, make_predict_request)
 from ovmsclient.tfs_compat.grpc.responses import (GrpcModelStatusResponse,
                                                   GrpcModelMetadataResponse,
@@ -58,43 +58,22 @@ class GrpcClient(ServingClient):
                                    f"Details: {str(parsing_error)}")
         return response["outputs"]
 
-    def get_model_metadata(self, request):
-        '''
-        Send GrpcModelMetadataRequest to the server and return response..
-
-        Args:
-            request: GrpcModelMetadataRequest object.
-
-        Returns:
-            GrpcModelMetadataResponse object
-
-        Raises:
-            TypeError:  if request argument is of wrong type.
-            ValueError: if request argument has invalid contents.
-            ConnectionError: if there was an error while sending request to the server.
-
-        Examples:
-
-            >>> config = {
-            ...     "address": "localhost",
-            ...     "port": 9000
-            ... }
-            >>> client = make_grpc_client(config)
-            >>> request = make_model_metadata_request("model")
-            >>> response = client.get_model_metadata(request)
-            >>> type(response)
-        '''
-
-        GrpcClient._check_model_metadata_request(request)
-
+    def get_model_metadata(self, model_name, model_version=0, timeout=10.0):
+        self._validate_timeout(timeout)
+        request = make_metadata_request(model_name, model_version)
         raw_response = None
         try:
-            raw_response = self.prediction_service_stub.GetModelMetadata(request.raw_request, 10.0)
-        except RpcError as e_info:
-            raise ConnectionError('There was an error during sending ModelMetadataRequest. '
-                                  f'Grpc exited with: \n{e_info.code().name} - {e_info.details()}')
+            raw_response = self.prediction_service_stub.GetModelMetadata(request.raw_request,
+                                                                         timeout)
+        except RpcError as grpc_error:
+            raise_from_grpc(grpc_error)
 
-        return GrpcModelMetadataResponse(raw_response)
+        try:
+            response = GrpcModelMetadataResponse(raw_response).to_dict()
+        except Exception as parsing_error:
+            raise BadResponseError("Received response is malformed and could not be parsed."
+                                   f"Details: {str(parsing_error)}")
+        return response
 
     def get_model_status(self, model_name, model_version=0, timeout=10.0):
         self._validate_timeout(timeout)

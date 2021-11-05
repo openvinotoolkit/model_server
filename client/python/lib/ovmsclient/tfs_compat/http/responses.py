@@ -51,6 +51,11 @@ class HttpModelMetadataResponse(ModelMetadataResponse):
         response_json = json.loads(self.raw_response.text)
         metadata = response_json.get("metadata", None)
         model_spec = response_json.get("modelSpec", None)
+        error_message = response_json.get("error", None)
+
+        if error_message:
+            raise_from_http_response(self.raw_response.status_code, error_message)
+
         if metadata and model_spec:
             io_info = metadata["signature_def"]["signatureDef"]["serving_default"]
             result_dict = {}
