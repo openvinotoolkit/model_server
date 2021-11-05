@@ -287,18 +287,18 @@ TEST_F(TestLoadModel, UnSuccessfulLoadWhenNireqTooHigh) {
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
 }
 
-class TestLoadModelWithMapping : public TestLoadModel {
+class TestLoadImageModelWithMapping : public TestLoadModel {
 protected:
     void SetUp() override {
         TestLoadModel::SetUp();
-        config = DUMMY_MODEL_CONFIG;
-        ovms::mapping_config_t mappingOutputs{{"a", "output"}};
-        ovms::mapping_config_t mappingInputs{{"b", "input"}};
+        config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+        ovms::mapping_config_t mappingOutputs{{INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME, "custom_output"}};
+        ovms::mapping_config_t mappingInputs{{INCREMENT_1x3x4x5_MODEL_INPUT_NAME, "custom_input"}};
         config.setMappingInputs(mappingInputs);
         config.setMappingOutputs(mappingOutputs);
 
-        ovms::mapping_config_t realMappingOutputs{{"output", "a"}};
-        ovms::mapping_config_t realMappingInputs{{"input", "b"}};
+        ovms::mapping_config_t realMappingOutputs{{"custom_output", INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME}};
+        ovms::mapping_config_t realMappingInputs{{"custom_input", INCREMENT_1x3x4x5_MODEL_INPUT_NAME}};
         config.setRealMappingInputs(realMappingInputs);
         config.setRealMappingOutputs(realMappingOutputs);
     }
@@ -307,60 +307,60 @@ protected:
     ovms::layouts_map_t layouts;
 };
 
-TEST_F(TestLoadModelWithMapping, SuccessfulLoad) {
+TEST_F(TestLoadImageModelWithMapping, SuccessfulLoad) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["input"] = inputShape;
+    shapeMap["custom_input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["input"] = "LAYOUT_INPUT";
-    layouts["output"] = "LAYOUT_OUTPUT";
+    layouts["custom_input"] = "NCHW";
+    layouts["custom_output"] = "NCHW";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestLoadModelWithMapping, UnSuccessfulLoadOldInputShapeName) {
+TEST_F(TestLoadImageModelWithMapping, UnSuccessfulLoadOldInputShapeName) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["b"] = inputShape;
+    shapeMap[INCREMENT_1x3x4x5_MODEL_INPUT_NAME] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["input"] = "LAYOUT_INPUT";
-    layouts["output"] = "LAYOUT_OUTPUT";
+    layouts["custom_input"] = "NCHW";
+    layouts["custom_output"] = "NCHW";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestLoadModelWithMapping, UnSuccessfulLoadOldInputLayoutName) {
+TEST_F(TestLoadImageModelWithMapping, UnSuccessfulLoadOldInputLayoutName) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["input"] = inputShape;
+    shapeMap["custom_input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["b"] = "LAYOUT_INPUT";
-    layouts["output"] = "LAYOUT_OUTPUT";
+    layouts[INCREMENT_1x3x4x5_MODEL_INPUT_NAME] = "NCHW";
+    layouts["custom_output"] = "NCHW";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestLoadModelWithMapping, UnSuccessfulLoadOldOutputLayoutName) {
+TEST_F(TestLoadImageModelWithMapping, UnSuccessfulLoadOldOutputLayoutName) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["input"] = inputShape;
+    shapeMap["custom_input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["input"] = "LAYOUT_INPUT";
-    layouts["a"] = "LAYOUT_OUTPUT";
+    layouts["custom_input"] = "NCHW";
+    layouts[INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME] = "NCHW";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME);
@@ -467,18 +467,18 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewShape) {
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
-class TestReloadModelWithMapping : public TestReloadModel {
+class TestReloadImageModelWithMapping : public TestReloadModel {
 protected:
     void SetUp() override {
         TestReloadModel::SetUp();
-        config = DUMMY_MODEL_CONFIG;
-        ovms::mapping_config_t mappingOutputs{{"a", "output"}};
-        ovms::mapping_config_t mappingInputs{{"b", "input"}};
+        config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+        ovms::mapping_config_t mappingOutputs{{INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME, "custom_output"}};
+        ovms::mapping_config_t mappingInputs{{INCREMENT_1x3x4x5_MODEL_INPUT_NAME, "custom_input"}};
         config.setMappingInputs(mappingInputs);
         config.setMappingOutputs(mappingOutputs);
 
-        ovms::mapping_config_t realMappingOutputs{{"output", "a"}};
-        ovms::mapping_config_t realMappingInputs{{"input", "b"}};
+        ovms::mapping_config_t realMappingOutputs{{"custom_output", INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME}};
+        ovms::mapping_config_t realMappingInputs{{"custom_input", INCREMENT_1x3x4x5_MODEL_INPUT_NAME}};
         config.setRealMappingInputs(realMappingInputs);
         config.setRealMappingOutputs(realMappingOutputs);
     }
@@ -487,79 +487,79 @@ protected:
     ovms::layouts_map_t layouts;
 };
 
-TEST_F(TestReloadModelWithMapping, SuccessfulReload) {
+TEST_F(TestReloadImageModelWithMapping, SuccessfulReload) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["input"] = inputShape;
+    shapeMap["custom_input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["input"] = "LAYOUT_INPUT";
-    layouts["output"] = "LAYOUT_OUTPUT";
+    layouts["custom_input"] = "NCHW";
+    layouts["custom_output"] = "NCHW";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestReloadModelWithMapping, UnSuccessfulReloadOldInputShapeName) {
+TEST_F(TestReloadImageModelWithMapping, UnSuccessfulReloadOldInputShapeName) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["b"] = inputShape;
+    shapeMap[INCREMENT_1x3x4x5_MODEL_INPUT_NAME] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["input"] = "LAYOUT_INPUT";
-    layouts["output"] = "LAYOUT_OUTPUT";
+    layouts["custom_input"] = "NCHW";
+    layouts["custom_output"] = "NCHW";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestReloadModelWithMapping, UnSuccessfulReloadOldInputLayoutName) {
+TEST_F(TestReloadImageModelWithMapping, UnSuccessfulReloadOldInputLayoutName) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["input"] = inputShape;
+    shapeMap["custom_input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["b"] = "LAYOUT_INPUT";
-    layouts["output"] = "LAYOUT_OUTPUT";
+    layouts[INCREMENT_1x3x4x5_MODEL_INPUT_NAME] = "NCHW";
+    layouts["custom_output"] = "NCHW";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestReloadModelWithMapping, UnSuccessfulReloadOldOutputLayoutName) {
+TEST_F(TestReloadImageModelWithMapping, UnSuccessfulReloadOldOutputLayoutName) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["input"] = inputShape;
+    shapeMap["custom_input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["input"] = "LAYOUT_INPUT";
-    layouts["a"] = "LAYOUT_OUTPUT";
+    layouts["custom_input"] = "NCHW";
+    layouts[INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME] = "NCHW";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestReloadModelWithMapping, ReloadMultipleTimes) {
+TEST_F(TestReloadImageModelWithMapping, ReloadMultipleTimes) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     // initial load
@@ -568,23 +568,23 @@ TEST_F(TestReloadModelWithMapping, ReloadMultipleTimes) {
 
     // load with mapping
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["input"] = inputShape;
+    shapeMap["custom_input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["input"] = "LAYOUT_INPUT";
-    layouts["output"] = "LAYOUT_OUTPUT";
+    layouts["custom_input"] = "NCHW";
+    layouts["custom_output"] = "NCHW";
     config.setLayouts(layouts);
     EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 
     // load with invalid shape and layouts
     ovms::shapes_map_t shapeMapInvalid;
-    shapeMapInvalid["b"] = inputShape;
+    shapeMapInvalid[INCREMENT_1x3x4x5_MODEL_INPUT_NAME] = inputShape;
     config.setShapes(shapeMapInvalid);
 
     ovms::layouts_map_t layoutsInvalid;
-    layoutsInvalid["b"] = "LAYOUT_INPUT";
-    layoutsInvalid["a"] = "LAYOUT_OUTPUT";
+    layoutsInvalid[INCREMENT_1x3x4x5_MODEL_INPUT_NAME] = "NCHW";
+    layoutsInvalid[INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME] = "NCHW";
     config.setLayouts(layoutsInvalid);
     EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
@@ -621,8 +621,8 @@ TEST_F(TestReloadModelWithMapping, ReloadMultipleTimes) {
 
     // load with invalid layout
     ovms::layouts_map_t layoutsUnknown;
-    layoutsUnknown["input"] = "LAYOUT_INPUT";
-    layoutsUnknown["unknown"] = "LAYOUT_OUTPUT";
+    layoutsUnknown["custom_input"] = "NCHW";
+    layoutsUnknown["unknown"] = "NCHW";
     config.setLayouts(layoutsUnknown);
     EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
