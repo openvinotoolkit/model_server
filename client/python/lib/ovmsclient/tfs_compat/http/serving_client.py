@@ -146,7 +146,7 @@ def make_http_client(url, tls_config=None):
 
     Args:
         url - Model Server URL as a string in format `<address>:<port>`
-        tls_config (optional): dictionary with TLS configuration. The accepted format is: 
+        tls_config (optional): dictionary with TLS configuration. The accepted format is:
 
             .. code-block::
 

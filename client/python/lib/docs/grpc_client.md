@@ -1,5 +1,5 @@
 
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L26"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L37"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `GrpcClient`
 
@@ -75,7 +75,7 @@ model_metadata = client.get_model_metadata(model_name="model")
 
 ---
 
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L89"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L78"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `get_model_status`
 
@@ -136,7 +136,7 @@ model_status = client.get_model_status(model_name="model")
 
 ---
 
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L33"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L44"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `predict`
 

@@ -21,8 +21,6 @@ from ovmsclient.tfs_compat.base.requests import (PredictRequest, ModelMetadataRe
                                                  ModelStatusRequest, _check_model_spec)
 from ovmsclient.tfs_compat.grpc.tensors import make_tensor_proto
 
-from ovmsclient.util.ovmsclient_export import ovmsclient_export
-
 
 class GrpcPredictRequest(PredictRequest):
     def __init__(self, inputs, model_name, model_version, raw_request):
