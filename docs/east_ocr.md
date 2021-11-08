@@ -87,10 +87,10 @@ Converted east-reasnet50 model will have the following interface:
 - Output name: `feature_fusion/Conv_7/Sigmoid` ; shape: `[1 1 256 480]` ; precision: `FP32`
 - Output name: `feature_fusion/concat_3` ; shape: `[1 5 256 480]` ; precision: `FP32`
 
-### text-recognition model
-Download [text-recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/text-recognition-0014) model and store it in `${PWD}/text-recognition/IR/1` folder.
+### Text-recognition model
+Download [text-recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/text-recognition-0014) model and store it in `${PWD}/text-recognition/1` folder.
 ```bash
-wget -P ${PWD}/text-recognition/IR/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/text-recognition-0014/FP32/text-recognition-0014.xml https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/text-recognition-0014/FP32/text-recognition-0014.bin
+curl -L --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/text-recognition-0014/FP32/text-recognition-0014.bin -o text-recognition/1/model.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/text-recognition-0014/FP32/text-recognition-0014.xml -o text-recognition/1/model.xml
 ```
 
 text-recognition model will have the following interface:
@@ -118,8 +118,8 @@ OCR
 ├── config.json
 ├── text-recognition
 │   └── 1
-│       ├── text-recognition-0014.bin
-│       └── text-recognition-0014.xml
+│       ├── model.bin
+│       └── model.xml
 ├── east_fp32
 │   └── 1
 │       ├── model.bin
