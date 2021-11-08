@@ -38,7 +38,6 @@ class HttpModelStatusRequest(ModelStatusRequest):
     pass
 
 
-@ovmsclient_export("make_http_predict_request", httpclient="make_predict_request")
 def make_predict_request(inputs, model_name, model_version=0):
     '''
     Create HttpPredictRequest object.
@@ -110,7 +109,6 @@ def make_predict_request(inputs, model_name, model_version=0):
     return HttpPredictRequest(inputs, model_name, model_version, parsed_inputs)
 
 
-@ovmsclient_export("make_http_metadata_request", httpclient="make_metadata_request")
 def make_metadata_request(model_name, model_version=0):
     '''
     Create HttpModelMetadataRequest object.
@@ -140,7 +138,6 @@ def make_metadata_request(model_name, model_version=0):
     return HttpModelMetadataRequest(model_name, model_version)
 
 
-@ovmsclient_export("make_http_status_request", httpclient="make_status_request")
 def make_status_request(model_name, model_version=0):
     '''
     Create HttpModelStatusRequest object.
