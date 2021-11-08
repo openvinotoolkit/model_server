@@ -118,8 +118,8 @@ OCR
 ├── config.json
 ├── text-recognition
 │   └── 1
-│       ├── text-recognition-0014.bin
-│       └── text-recognition-0014.xml
+│       ├── model.bin
+│       └── model.xml
 ├── east_fp32
 │   └── 1
 │       ├── model.bin

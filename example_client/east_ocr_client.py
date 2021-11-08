@@ -85,7 +85,6 @@ def text_recognition_output_to_text(output_nd):
         word = ''
         for i in range(preds.shape[0]):
             word += alphabet[preds[i,0]]
-        print(word)
         print(decode(word))
 
 
