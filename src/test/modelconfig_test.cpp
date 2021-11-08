@@ -221,19 +221,37 @@ TEST(ModelConfig, parseShapeParam) {
     EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
 }
 
-TEST(ModelConfig, plugin_config) {
+TEST(ModelConfig, plugin_config_number) {
     ovms::ModelConfig config;
-    ovms::plugin_config_t pluginConfig{
-        {"OptionA", "ValueA"},
-        {"OptionX", "ValueX"},
-    };
+    std::string pluginConfig_str = "{\"OptionA\":1,\"OptionX\":2.45}";
 
-    config.setPluginConfig(pluginConfig);
-
+    auto status = config.parsePluginConfig(pluginConfig_str);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_THAT(actualPluginConfig, UnorderedElementsAre(
-                                        Pair("OptionA", "ValueA"),
-                                        Pair("OptionX", "ValueX")));
+                                        Pair("OptionA", "1"),
+                                        Pair("OptionX", "2.450000")));
+}
+
+TEST(ModelConfig, plugin_config_string) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"OptionA\":\"1\",\"OptionX\":\"2.45\"}";
+
+    auto status = config.parsePluginConfig(pluginConfig_str);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_THAT(actualPluginConfig, UnorderedElementsAre(
+                                        Pair("OptionA", "1"),
+                                        Pair("OptionX", "2.45")));
+}
+
+TEST(ModelConfig, plugin_config_invalid) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"OptionX\":{}}";
+
+    auto status = config.parsePluginConfig(pluginConfig_str);
+    EXPECT_EQ(status, ovms::StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
+    auto actualPluginConfig = config.getPluginConfig();
 }
 
 TEST(ModelConfig, mappingInputs) {
