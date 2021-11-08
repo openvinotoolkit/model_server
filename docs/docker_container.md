@@ -388,45 +388,23 @@ plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_pl
 
 The Intel® Movidius™ Neural Compute Stick must be visible and accessible on host machine. 
 
-Follow steps to update the udev rules if necessary</summary>
-</br>
-
-1. Create a file named `97-usbboot.rules` that includes the following content:
-
-```
-   SUBSYSTEM=="usb", ATTRS{idProduct}=="2150", ATTRS{idVendor}=="03e7", GROUP="users", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1" 
-   SUBSYSTEM=="usb", ATTRS{idProduct}=="2485", ATTRS{idVendor}=="03e7", GROUP="users", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1"
-   SUBSYSTEM=="usb", ATTRS{idProduct}=="f63b", ATTRS{idVendor}=="03e7", GROUP="users", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1"
-```
- 
-2. In the same directory execute these commands: 
-
-```
-   sudo cp 97-usbboot.rules /etc/udev/rules.d/
-   sudo udevadm control --reload-rules
-   sudo udevadm trigger
-   sudo ldconfig
-   rm 97-usbboot.rules
-```
 NCS devices should be reported by `lsusb` command, which should print out `ID 03e7:2485`.<br>
 
-</br>
 
 #### Start the server with an Intel® Movidius™ Neural Compute Stick
 
-To start server with Neural Compute Stick:
-
+To start server with Neural Compute Stick using one of the options below:
+1) More secure without docker privileged mode and mounting only the usb devices:
+```
+docker run --rm -it -u 0 --device-cgroup-rule='c 189:* rmw' -v /opt/model:/opt/model -v /dev/bus/usb:/dev/bus/usb -p 9001:9001 openvino/model_server \
+--model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
+```
+2) less secure in docker privileged mode wth mounted all devices:
 ```
 docker run --rm -it --net=host -u root --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 openvino/model_server \
 --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
 ```
 
-`--net=host` and `--privileged` parameters are required for USB connection to work properly. 
-
-`-v /dev:/dev` mounts USB drives.
-
-A single stick can handle one model at a time. If there are multiple sticks plugged in, OpenVINO Toolkit 
-chooses to which one the model is loaded. 
 </details>
 
 <details><summary>Starting docker container with HDDL</summary>
