@@ -213,7 +213,6 @@ def make_tensor_proto(values, dtype=None, shape=None):
     return tensor_proto
 
 
-@ovmsclient_export("make_ndarray", grpcclient="make_ndarray")
 def make_ndarray(tensor_proto):
     '''
     Create numpy ndarray from tensor_proto.
