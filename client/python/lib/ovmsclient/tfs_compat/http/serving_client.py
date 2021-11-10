@@ -145,61 +145,42 @@ def make_http_client(url, tls_config=None):
     Create HttpClient object.
 
     Args:
-        config: Python dictionary with client configuration. The accepted format is:
+        url - Model Server URL as a string in format `<address>:<port>`
+        tls_config (optional): dictionary with TLS configuration. The accepted format is:
 
             .. code-block::
 
                 {
-                    "address": <IP address of the serving>,
-                    "port": <Port number used by the HTTP interface of the server>,
-                        ...more connection options...
-                    "tls_config": {
-                        "client_key_path": <Path to client key file>,
-                        "client_cert_path": <Path to client certificate file>,
-                        "server_cert_path": <Path to server certificate file>
-                    }
+                    "client_key_path": <Path to client key file>,
+                    "client_cert_path": <Path to client certificate file>,
+                    "server_cert_path": <Path to server certificate file>
                 }
 
             With following types accepted:
 
             ==================  ==========
-            address             string
-            port                integer
             client_key_path     string
             client_cert_path    string
             server_cert_path    string
             ==================  ==========
 
-            The minimal config must contain address and port.
-
     Returns:
         HttpClient object
 
     Raises:
-        ValueError:  if provided config is invalid.
+        ValueError, TypeError:  if provided config is invalid.
 
     Examples:
         Create minimal HttpClient:
-
-        >>> config = {
-        ...     "address": "localhost",
-        ...     "port": 9000
-        ... }
-        >>> client = make_http_client(config)
-        >>> print(client)
+        >>> client = make_http_client("localhost:9000")
 
         Create HttpClient with TLS:
 
-        >>> config = {
-        ...     "address": "localhost",
-        ...     "port": 9000,
-        ...     "tls_config": {
-        ...         "client_key_path": "/opt/tls/client.key",
-        ...         "client_cert_path": "/opt/tls/client.crt",
-        ...         "server_cert_path": "/opt/tls/server.crt"
-        ...      }
+        >>> tls_config = {
+        ...     "client_key_path": "/opt/tls/client.key",
+        ...     "client_cert_path": "/opt/tls/client.crt",
+        ...     "server_cert_path": "/opt/tls/server.crt"
         ... }
-        >>> client = make_http_client(config)
-        >>> print(client)
+        >>> client = make_http_client("localhost:9000", tls_config)
     '''
     return HttpClient._build(url, tls_config)
