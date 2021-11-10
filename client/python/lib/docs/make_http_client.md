@@ -1,14 +1,14 @@
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L212"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/http/serving_client.py#L143"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
-## <kbd>function</kbd> `make_grpc_client`
+## <kbd>function</kbd> `make_http_client`
 
 ```python
-make_grpc_client(config)
+make_http_client(config)
 ```
 
 **Description**:
 
-Creates [`GrpcClient`](grpc_client.md) object. 
+Creates [`HttpClient`](http_client.md) object. 
 
 
 **Args:**
@@ -37,7 +37,7 @@ Creates [`GrpcClient`](grpc_client.md) object.
 
 
 **Returns:**
- [`GrpcClient`](grpc_client.md) object 
+ [`HttpClient`](http_client.md) object 
 
 
 
@@ -49,20 +49,20 @@ Creates [`GrpcClient`](grpc_client.md) object.
 
 **Examples:**
 
- Create minimal `GrpcClient`: 
+ Create minimal `HttpClient`: 
 
 ```python
 
-from ovmsclient import make_grpc_client
-client = make_grpc_client("localhost:9000")
+from ovmsclient import make_http_client
+client = make_http_client("localhost:9000")
 
 ```
 
-Create `GrpcClient` with TLS:
+Create `HttpClient` with TLS:
 
 ```python
 
-from ovmsclient import make_grpc_client
+from ovmsclient import make_http_client
 
 tls_config = {
     "tls_config": {
@@ -72,7 +72,7 @@ tls_config = {
     }
 }
 
-client = make_grpc_client("localhost:9000", tls_config=tls_config)
+client = make_http_client("localhost:9000", tls_config=tls_config)
 
 ```
 
