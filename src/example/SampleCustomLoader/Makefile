@@ -18,13 +18,14 @@ OUT_LIB = libsampleloader.so
 BASE_OS ?= ubuntu
 LIB_INC = -Iinclude -I../../ -Irapidjson-1.1.0/include
 CFLAGS = -fPIC -Wl,-rpath,. -fpic 
+OPS = -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow
 LDFLAGS = -ldl -lpthread
 
 all:
 	wget https://github.com/Tencent/rapidjson/archive/v1.1.0.zip
 	unzip v1.1.0.zip
-	g++ -c -g -fPIC $(LIB_INC) *.cpp
-	g++ *.o -g $(CFLAGS) $(LDFLAGS) $(LIB_INC) -shared -o $(OUT_LIB) 
+	g++ -c -g0 -fPIC $(OPS) $(LIB_INC) *.cpp
+	g++ *.o -g0 $(CFLAGS) $(LDFLAGS) $(LIB_INC) -shared -o $(OUT_LIB) 
 	$(RM) *.o
 	$(RM) v1.1.0.zip
 	$(RM) rapidjson-1.1.0 -r
