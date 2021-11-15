@@ -21,8 +21,8 @@
 #include "../../custom_node_interface.h"
 #include "../common/buffersqueue.hpp"
 #include "../common/customNodeLibraryInternalManager.hpp"
+#include "../common/utils.hpp"
 #include "opencv2/opencv.hpp"
-#include "utils.hpp"
 
 using CustomNodeLibraryInternalManager = ovms::custom_nodes_common::CustomNodeLibraryInternalManager;
 using BuffersQueue = ovms::custom_nodes_common::BuffersQueue;
@@ -50,150 +50,6 @@ static constexpr const char* OUTPUT_LABEL_IDS_INFO_DIMS_NAME = "label_ids_info_d
 static constexpr const int QUEUE_SIZE = 1;
 
 std::shared_mutex internalManagerLock;
-
-void cleanup(CustomNodeTensor& tensor, CustomNodeLibraryInternalManager* internalManager) {
-    release(tensor.data, internalManager);
-    release(tensor.dims, internalManager);
-}
-
-template <typename T>
-bool get_buffer(CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size) {
-    auto buffersQueue = internalManager->getBuffersQueue(buffersQueueName);
-    if (!(buffersQueue == nullptr))
-        *buffer = static_cast<T*>(buffersQueue->getBuffer());
-    if (*buffer == nullptr || buffersQueue == nullptr) {
-        *buffer = (T*)malloc(byte_size);
-        if (*buffer == nullptr) {
-            std::cout << "allocation for buffer: " << buffersQueueName << "FAILED" << std::endl;
-            return false;
-        }
-    }
-    return true;
-}
-
-bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale, CustomNodeLibraryInternalManager* internalManager) {
-    const uint64_t outputBatch = boxes.size();
-    int channels = convertToGrayScale ? 1 : 3;
-    uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * outputBatch;
-
-    float* buffer = nullptr;
-    if (!get_buffer<float>(internalManager, &buffer, OUTPUT_IMAGES_TENSOR_NAME, byteSize))
-        return false;
-
-    cv::Size targetShape(targetImageWidth, targetImageHeight);
-    for (uint64_t i = 0; i < outputBatch; i++) {
-        cv::Mat image;
-
-        if (!crop_rotate_resize(originalImage, image, boxes[i], 0.0, boxes[i].width, boxes[i].height, targetShape)) {
-            std::cout << "box is outside of original image" << std::endl;
-            release(buffer, internalManager);
-            return false;
-        }
-        if (convertToGrayScale) {
-            image = apply_grayscale(image);
-        }
-        if (targetImageLayout == "NCHW") {
-            auto imgBuffer = reorder_to_nchw((float*)image.data, image.rows, image.cols, image.channels());
-            std::memcpy(buffer + (i * channels * targetImageWidth * targetImageHeight), imgBuffer.data(), byteSize / outputBatch);
-        } else {
-            std::memcpy(buffer + (i * channels * targetImageWidth * targetImageHeight), image.data, byteSize / outputBatch);
-        }
-    }
-    output->data = reinterpret_cast<uint8_t*>(buffer);
-    output->dataBytes = byteSize;
-
-    if (!get_buffer<uint64_t>(internalManager, &(output->dims), OUTPUT_IMAGES_DIMS_NAME, 5 * sizeof(uint64_t))) {
-        release(buffer, internalManager);
-        return false;
-    }
-    output->dimsCount = 5;
-    output->dims[0] = outputBatch;
-    output->dims[1] = 1;
-    if (targetImageLayout == "NCHW") {
-        output->dims[2] = channels;
-        output->dims[3] = targetImageHeight;
-        output->dims[4] = targetImageWidth;
-    } else {
-        output->dims[2] = targetImageHeight;
-        output->dims[3] = targetImageWidth;
-        output->dims[4] = channels;
-    }
-    output->precision = FP32;
-    return true;
-}
-
-bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Vec4f>& detections, CustomNodeLibraryInternalManager* internalManager) {
-    const uint64_t outputBatch = detections.size();
-    uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
-
-    int32_t* buffer = nullptr;
-    if (!get_buffer<int32_t>(internalManager, &buffer, OUTPUT_COORDINATES_TENSOR_NAME, byteSize))
-        return false;
-    for (size_t i = 0; i < outputBatch; i++) {
-        float entry[] = {
-            detections[i][0], detections[i][1], detections[i][2], detections[i][3]};
-        std::memcpy(buffer + (i * 4), entry, byteSize / outputBatch);
-    }
-    output->data = reinterpret_cast<uint8_t*>(buffer);
-    output->dataBytes = byteSize;
-
-    if (!get_buffer<uint64_t>(internalManager, &(output->dims), OUTPUT_COORDINATES_DIMS_NAME, 3 * sizeof(uint64_t))) {
-        release(buffer, internalManager);
-        return false;
-    }
-    output->dimsCount = 3;
-    output->dims[0] = outputBatch;
-    output->dims[1] = 1;
-    output->dims[2] = 4;
-    output->precision = FP32;
-    return true;
-}
-
-bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::vector<float>& confidences, CustomNodeLibraryInternalManager* internalManager) {
-    const uint64_t outputBatch = confidences.size();
-    uint64_t byteSize = sizeof(float) * outputBatch;
-
-    float* buffer = nullptr;
-    if (!get_buffer<float>(internalManager, &buffer, OUTPUT_CONFIDENCES_TENSOR_NAME, byteSize))
-        return false;
-    std::memcpy(buffer, confidences.data(), byteSize);
-    output->data = reinterpret_cast<uint8_t*>(buffer);
-    output->dataBytes = byteSize;
-
-    if (!get_buffer<uint64_t>(internalManager, &(output->dims), OUTPUT_CONFIDENCES_DIMS_NAME, 3 * sizeof(uint64_t))) {
-        release(buffer, internalManager);
-        return false;
-    }
-    output->dimsCount = 3;
-    output->dims[0] = outputBatch;
-    output->dims[1] = 1;
-    output->dims[2] = 1;
-    output->precision = FP32;
-    return true;
-}
-
-bool copy_label_ids_into_output(struct CustomNodeTensor* output, const std::vector<int>& labelIds, CustomNodeLibraryInternalManager* internalManager) {
-    const uint64_t outputBatch = labelIds.size();
-    uint64_t byteSize = sizeof(int32_t) * outputBatch;
-
-    int32_t* buffer = nullptr;
-    if (!get_buffer<int32_t>(internalManager, &buffer, OUTPUT_LABEL_IDS_TENSOR_NAME, byteSize))
-        return false;
-    std::memcpy(buffer, labelIds.data(), byteSize);
-
-    output->data = reinterpret_cast<uint8_t*>(buffer);
-    output->dataBytes = byteSize;
-    output->dimsCount = 3;
-    if (!get_buffer<uint64_t>(internalManager, &(output->dims), OUTPUT_LABEL_IDS_DIMS_NAME, 3 * sizeof(uint64_t))) {
-        release(buffer, internalManager);
-        return false;
-    }
-    output->dims[0] = outputBatch;
-    output->dims[1] = 1;
-    output->dims[2] = 1;
-    output->precision = I32;
-    return true;
-}
 
 int initializeInternalManager(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
     // creating InternalManager instance
@@ -427,14 +283,14 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     CustomNodeTensor& imagesTensor = (*outputs)[0];
     imagesTensor.name = OUTPUT_IMAGES_TENSOR_NAME;
-    if (!copy_images_into_output(&imagesTensor, boxes, image, targetImageHeight, targetImageWidth, targetImageLayout, convertToGrayScale, internalManager)) {
+    if (!copy_images_into_output(&imagesTensor, boxes, image, targetImageHeight, targetImageWidth, targetImageLayout, convertToGrayScale, OUTPUT_IMAGES_TENSOR_NAME, OUTPUT_IMAGES_DIMS_NAME, internalManager)) {
         release(*outputs, internalManager);
         return 1;
     }
 
     CustomNodeTensor& coordinatesTensor = (*outputs)[1];
     coordinatesTensor.name = OUTPUT_COORDINATES_TENSOR_NAME;
-    if (!copy_coordinates_into_output(&coordinatesTensor, detections, internalManager)) {
+    if (!copy_coordinates_into_output(&coordinatesTensor, detections, OUTPUT_COORDINATES_TENSOR_NAME, OUTPUT_COORDINATES_DIMS_NAME, internalManager)) {
         cleanup(imagesTensor, internalManager);
         release(*outputs, internalManager);
         return 1;
@@ -442,7 +298,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     CustomNodeTensor& confidencesTensor = (*outputs)[2];
     confidencesTensor.name = OUTPUT_CONFIDENCES_TENSOR_NAME;
-    if (!copy_confidences_into_output(&confidencesTensor, confidences, internalManager)) {
+    if (!copy_confidences_into_output(&confidencesTensor, confidences, OUTPUT_CONFIDENCES_TENSOR_NAME, OUTPUT_CONFIDENCES_DIMS_NAME, internalManager)) {
         cleanup(imagesTensor, internalManager);
         cleanup(coordinatesTensor, internalManager);
         free(*outputs);

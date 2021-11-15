@@ -18,9 +18,9 @@
 #include <vector>
 
 #include "../../custom_node_interface.h"
+#include "../common/utils.hpp"
 #include "nms.hpp"
 #include "opencv2/opencv.hpp"
-#include "utils.hpp"
 
 static constexpr const char* IMAGE_TENSOR_NAME = "image";
 static constexpr const char* SCORES_TENSOR_NAME = "scores";
@@ -86,58 +86,6 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     }
     output->precision = FP32;
     return true;
-}
-
-bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
-    const uint64_t outputBatch = boxes.size();
-    uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
-
-    int32_t* buffer = (int32_t*)malloc(byteSize);
-    NODE_ASSERT(buffer != nullptr, "malloc has failed");
-
-    for (uint64_t i = 0; i < outputBatch; i++) {
-        int32_t entry[] = {
-            boxes[i].x,
-            boxes[i].y,
-            boxes[i].width,
-            boxes[i].height};
-        std::memcpy(buffer + (i * 4), entry, byteSize / outputBatch);
-    }
-    output->data = reinterpret_cast<uint8_t*>(buffer);
-    output->dataBytes = byteSize;
-    output->dimsCount = 3;
-    output->dims = (uint64_t*)malloc(output->dimsCount * sizeof(uint64_t));
-    NODE_ASSERT(output->dims != nullptr, "malloc has failed");
-    output->dims[0] = outputBatch;
-    output->dims[1] = 1;
-    output->dims[2] = 4;
-    output->precision = I32;
-    return true;
-}
-
-bool copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<float>& scores) {
-    const uint64_t outputBatch = scores.size();
-    uint64_t byteSize = sizeof(float) * outputBatch;
-
-    float* buffer = (float*)malloc(byteSize);
-    NODE_ASSERT(buffer != nullptr, "malloc has failed");
-    std::memcpy(buffer, scores.data(), byteSize);
-
-    output->data = reinterpret_cast<uint8_t*>(buffer);
-    output->dataBytes = byteSize;
-    output->dimsCount = 3;
-    output->dims = (uint64_t*)malloc(output->dimsCount * sizeof(uint64_t));
-    NODE_ASSERT(output->dims != nullptr, "malloc has failed");
-    output->dims[0] = outputBatch;
-    output->dims[1] = 1;
-    output->dims[2] = 1;
-    output->precision = FP32;
-    return true;
-}
-
-void cleanup(CustomNodeTensor& tensor) {
-    free(tensor.data);
-    free(tensor.dims);
 }
 
 int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
@@ -358,7 +306,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     CustomNodeTensor& coordinatesTensor = (*outputs)[1];
     coordinatesTensor.name = COORDINATES_TENSOR_NAME;
-    if (!copy_coordinates_into_output(&coordinatesTensor, filteredBoxes)) {
+    if (!copy_rect_into_output(&coordinatesTensor, filteredBoxes)) {
         free(*outputs);
         cleanup(textImagesTensor);
         return 1;
@@ -366,7 +314,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     CustomNodeTensor& confidenceTensor = (*outputs)[2];
     confidenceTensor.name = CONFIDENCE_TENSOR_NAME;
-    if (!copy_scores_into_output(&confidenceTensor, filteredScores)) {
+    if (!copy_confidences_into_output(&confidenceTensor, filteredScores)) {
         free(*outputs);
         cleanup(textImagesTensor);
         cleanup(coordinatesTensor);

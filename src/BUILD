@@ -299,8 +299,13 @@ cc_binary(
 cc_binary(
     name = "libcustom_node_east_ocr.so",
     srcs = [
+        "custom_nodes/common/utils.hpp",
+        "custom_nodes/common/buffersqueue.hpp",
+        "custom_nodes/common/buffersqueue.cpp",
+        "custom_nodes/common/customNodeLibraryInternalManager.hpp",
+        "custom_nodes/common/customNodeLibraryInternalManager.cpp",
+        "queue.hpp",
         "custom_nodes/east_ocr/east_ocr.cpp",
-        "custom_nodes/east_ocr/utils.hpp",
         "custom_nodes/east_ocr/nms.hpp",
         "custom_node_interface.h",
     ],
@@ -318,15 +323,18 @@ cc_binary(
 cc_binary(
     name = "libcustom_node_add_one.so",
     srcs = [
-        "custom_nodes/add_one/add_one.cpp",
-        "custom_node_interface.h",
-        "queue.hpp",
+        "custom_nodes/common/utils.hpp",
         "custom_nodes/common/buffersqueue.hpp",
         "custom_nodes/common/buffersqueue.cpp",
         "custom_nodes/common/customNodeLibraryInternalManager.hpp",
         "custom_nodes/common/customNodeLibraryInternalManager.cpp",
-        "custom_nodes/common/utils.hpp",
+        "queue.hpp",
+        "custom_nodes/add_one/add_one.cpp",
+        "custom_node_interface.h",
         "custom_nodes/add_one/addOneInternalManager.hpp"
+    ],
+    deps = [
+        "@opencv//:opencv"
     ],
     linkshared = 1,
     copts = [
@@ -339,14 +347,14 @@ cc_binary(
 cc_binary(
     name = "libcustom_node_model_zoo_intel_object_detection.so",
     srcs = [
-        "custom_nodes/model_zoo_intel_object_detection/model_zoo_intel_object_detection.cpp",
-        "custom_nodes/model_zoo_intel_object_detection/utils.hpp",
-        "custom_node_interface.h",
-        "queue.hpp",
+        "custom_nodes/common/utils.hpp",
         "custom_nodes/common/buffersqueue.hpp",
         "custom_nodes/common/buffersqueue.cpp",
         "custom_nodes/common/customNodeLibraryInternalManager.hpp",
-        "custom_nodes/common/customNodeLibraryInternalManager.cpp"
+        "custom_nodes/common/customNodeLibraryInternalManager.cpp",
+        "queue.hpp",
+        "custom_nodes/model_zoo_intel_object_detection/model_zoo_intel_object_detection.cpp",
+        "custom_node_interface.h",
     ],
     deps = [
         "@opencv//:opencv"
@@ -362,8 +370,13 @@ cc_binary(
 cc_binary(
     name = "libcustom_node_image_transformation.so",
     srcs = [
+        "custom_nodes/common/utils.hpp",
+        "custom_nodes/common/buffersqueue.hpp",
+        "custom_nodes/common/buffersqueue.cpp",
+        "custom_nodes/common/customNodeLibraryInternalManager.hpp",
+        "custom_nodes/common/customNodeLibraryInternalManager.cpp",
+        "queue.hpp",
         "custom_nodes/image_transformation/image_transformation.cpp",
-        "custom_nodes/image_transformation/utils.hpp",
         "custom_node_interface.h",
     ],
     deps = [
