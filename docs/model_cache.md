@@ -23,7 +23,7 @@ Alternatively the location of the cache storage can be set using the parameter `
 The model server security context must have read-write access to the cache storage path.
 
 When using Model Server with configuration file, it is possible to serve more than one model. In such case, model cache is applied to all the models, with an exception to:
-- Models with custom loader for security reasons since custom loaders
+- Models with custom loader (for security reasons explained earlier)
 - Models configured to shape `auto` or batch_size `auto`
 
 In case there are valid reasons to enable the model cache also in those two conditions, it is possible to force enablement with `"force_caching": true` parameter:
