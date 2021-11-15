@@ -16,6 +16,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "customNodeLibraryInternalManager.hpp"
 #include "opencv2/opencv.hpp"
