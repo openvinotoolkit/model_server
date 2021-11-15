@@ -15,20 +15,21 @@
 #
 
 import argparse
-from ovmsclient import make_grpc_client
-from utils.common import read_image_paths, load_image, get_model_io_names
-from utils.resnet_utils import resnet_postprocess
+from ovmsclient import make_http_client
+from utils.common import load_image, read_image_paths, get_model_io_names
+from utils.vehicle_utils import vehicle_postprocess
 
-
-parser = argparse.ArgumentParser(description='Make prediction using images in binary format')
+parser = argparse.ArgumentParser(description='Make vehicle detection prediction using images in binary format')
 parser.add_argument('--images_dir', required=True,
                     help='Path to a directory with images in JPG or PNG format')
 parser.add_argument('--service_url', required=False, default='localhost:9000',
-                    help='Specify url to grpc service. default:localhost', dest='service_url')
-parser.add_argument('--model_name', default='resnet', help='Model name to query. default: resnet',
-                    dest='model_name')
-parser.add_argument('--model_version', default=0, type=int, help='Model version to query. default: latest available',
-                    dest='model_version')
+                    help='Specify url to http service. default:localhost', dest='service_url')
+parser.add_argument('--model_name', default='vehicle-detection',
+                    help='Model name to query. default: vehicle-detection')
+parser.add_argument('--model_version', default=0, type=int,
+                    help='Model version to query. default: latest available')
+parser.add_argument('--output_save_path', required=True,
+                    help='Path to store output.')
 parser.add_argument('--timeout', default=10.0, help='Request timeout. default: 10.0',
                     dest='timeout')
 args = vars(parser.parse_args())
@@ -38,29 +39,31 @@ images_dir = args.get('images_dir')
 service_url = args.get('service_url')
 model_name = args.get('model_name')
 model_version = args.get('model_version')
+output_save_path = args.get('output_save_path')
 timeout = args.get('timeout')
-
-# creating grpc client
-client = make_grpc_client(service_url)
-
-# receiving metadata from model
-input_name, output_name = get_model_io_names(client, model_name, model_version)
 
 # preparing images
 img_paths = read_image_paths(images_dir)
 
+# creating http client
+client = make_http_client(service_url)
+
+# receiving metadata from model
+input_name, output_name = get_model_io_names(client, model_name, model_version)
+
 for img_path in img_paths:
     # reading image and its label
+    img_path = img_path.strip()
+
     img = load_image(img_path)
 
-    # preparing inputs 
+    # preparing inputs
     inputs = {
         input_name: img
     }
 
     # sending predict request and receiving response
-    response = client.predict(inputs, model_name, model_version, timeout)
+    response = client.predict(inputs, model_name, timeout)
 
-    # response post processing
-    label, _ = resnet_postprocess(response, output_name)
-    print(f"Image {img_path} has been classified as {label}")
+    # output post-processing
+    vehicle_postprocess(response, img_path, output_name, output_save_path)

@@ -14,53 +14,57 @@
 # limitations under the License.
 #
 
+import numpy as np
 import argparse
-from ovmsclient import make_grpc_client
-from utils.common import read_image_paths, load_image, get_model_io_names
+from ovmsclient import make_http_client
+from utils.common import get_model_io_names
 from utils.resnet_utils import resnet_postprocess
 
 
-parser = argparse.ArgumentParser(description='Make prediction using images in binary format')
-parser.add_argument('--images_dir', required=True,
-                    help='Path to a directory with images in JPG or PNG format')
+parser = argparse.ArgumentParser(description='Make prediction using images in numerical format')
+parser.add_argument('--images_numpy', required=True,
+                    help='Path to a .npy file with data to infer')
 parser.add_argument('--service_url', required=False, default='localhost:9000',
-                    help='Specify url to grpc service. default:localhost', dest='service_url')
+                    help='Specify url to http service. default:localhost', dest='service_url')
 parser.add_argument('--model_name', default='resnet', help='Model name to query. default: resnet',
                     dest='model_name')
 parser.add_argument('--model_version', default=0, type=int, help='Model version to query. default: latest available',
                     dest='model_version')
+parser.add_argument('--iterations', default=0, type=int, help='Total number of requests to be sent. default: 0 - all elements in numpy',
+                    dest='iterations')
 parser.add_argument('--timeout', default=10.0, help='Request timeout. default: 10.0',
                     dest='timeout')
 args = vars(parser.parse_args())
 
 # configuration
-images_dir = args.get('images_dir')
+images_numpy_path = args.get('images_numpy')
 service_url = args.get('service_url')
 model_name = args.get('model_name')
 model_version = args.get('model_version')
+iterations = args.get('iterations')
 timeout = args.get('timeout')
 
-# creating grpc client
-client = make_grpc_client(service_url)
+# creating http client
+client = make_http_client(service_url)
 
 # receiving metadata from model
 input_name, output_name = get_model_io_names(client, model_name, model_version)
 
 # preparing images
-img_paths = read_image_paths(images_dir)
+imgs = np.load(images_numpy_path, mmap_mode='r', allow_pickle=False)
 
-for img_path in img_paths:
-    # reading image and its label
-    img = load_image(img_path)
+if iterations == 0:
+    iterations = imgs.shape[0]
 
-    # preparing inputs 
+for i in range (iterations):
+    # preparing inputs
     inputs = {
-        input_name: img
+        input_name: [imgs[i%imgs.shape[0]]]
     }
 
     # sending predict request and receiving response
     response = client.predict(inputs, model_name, model_version, timeout)
 
     # response post processing
-    label, _ = resnet_postprocess(response, output_name)
-    print(f"Image {img_path} has been classified as {label}")
+    label, confidence_score = resnet_postprocess(response, output_name)
+    print(f"Image #{i%imgs.shape[0]} has been classified as {label}")

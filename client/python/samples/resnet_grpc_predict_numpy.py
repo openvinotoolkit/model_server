@@ -16,7 +16,7 @@
 
 import numpy as np
 import argparse
-from ovmsclient import make_grpc_client, make_grpc_predict_request
+from ovmsclient import make_grpc_client
 from utils.common import get_model_io_names
 from utils.resnet_utils import resnet_postprocess
 
@@ -32,6 +32,8 @@ parser.add_argument('--model_version', default=0, type=int, help='Model version 
                     dest='model_version')
 parser.add_argument('--iterations', default=0, type=int, help='Total number of requests to be sent. default: 0 - all elements in numpy',
                     dest='iterations')
+parser.add_argument('--timeout', default=10.0, help='Request timeout. default: 10.0',
+                    dest='timeout')
 args = vars(parser.parse_args())
 
 # configuration
@@ -40,6 +42,7 @@ service_url = args.get('service_url')
 model_name = args.get('model_name')
 model_version = args.get('model_version')
 iterations = args.get('iterations')
+timeout = args.get('timeout')
 
 # creating grpc client
 client = make_grpc_client(service_url)
@@ -54,14 +57,13 @@ if iterations == 0:
     iterations = imgs.shape[0]
 
 for i in range (iterations):
-    # preparing predict request
+    # preparing inputs
     inputs = {
         input_name: [imgs[i%imgs.shape[0]]]
     }
-    request = make_grpc_predict_request(inputs, model_name, model_version)
 
     # sending predict request and receiving response
-    response = client.predict(request)
+    response = client.predict(inputs, model_name, model_version, timeout)
 
     # response post processing
     label, confidence_score = resnet_postprocess(response, output_name)
