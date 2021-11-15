@@ -4,7 +4,7 @@
 The Model Server can leverage a [OpenVINO&trade; model cache functionality](https://docs.openvino.ai/latest/openvino_docs_IE_DG_Model_caching_overview.html), to speed up subsequent model loading on a target device. 
 The cached files make the Model Server initialization faster. 
 The boost depends on a model and a target device. The most noticable improvement will be observed with GPU devices. The cache may consist of a compiled model blob in a form of `.blob` file or compiled kernels (GPU) in a form of multiple `.cl_cache` files. 
-Cache files can be reused within the same Model Server version, target device, hardware, model and the model shape paramters. 
+Cache files can be reused within the same Model Server version, target device, hardware, model and the model shape parameters. 
 The Model Server, automatically detects if the cache is present and re-generates new cache files when required. 
 
 Note: Model Server cache feature doesn't avoid downloading the model files from the remote storage. It speeds up the model loading but acceess to the original model files is still required.
