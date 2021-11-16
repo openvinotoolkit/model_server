@@ -3033,7 +3033,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, MultipleBatchInCustomNo
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
         {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
             parameters_t{
-                {"in_InputNumbers", "3,3,10;FP32"},  // 1,3,10 is correct
+                {"in_InputNumbers", "3,3,10;FP32"},
                 {"out_OutputNumbers_1", "9,1,700;I32"},
                 {"out_OutputNumbers_2", "9,1,8;FP32"}}},
         {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
@@ -3041,7 +3041,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, MultipleBatchInCustomNo
                 {"in_InputNumbers_1", "1,700;I32"},
                 {"in_InputNumbers_2", "1,8;FP32"},
                 {"out_OutputNumbers", "1,2000;FP32"}}},
-        {NodeKind::EXIT, EXIT_NODE_NAME},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
     };
 
     pipeline_connections_t connections;
@@ -3059,7 +3059,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, MultipleBatchInCustomNo
     ConstructorEnabledModelManager manager;
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     auto status = pipelineDefinition->validate(manager);
-    ASSERT_EQ(status, StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE) << status.string();
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
 }
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplexerNodeNotEnoughDimensionsToDemultiply) {
@@ -3899,6 +3899,8 @@ static const char* pipelineCustomNodeDynamicDemultiplexThenDummyConfig = R"(
         }
     ]
 })";
+
+// Add tests here
 
 TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, JustDynamicDemultiplexerConfig) {
     std::unique_ptr<Pipeline> pipeline;
