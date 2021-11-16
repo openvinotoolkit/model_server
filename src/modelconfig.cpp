@@ -616,13 +616,16 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         }
         this->setDisableCaching(true);
     }
+
+    // Model Cache options
     if (anyShapeSetToAuto())
         this->setDisableCaching(true);
     if (getBatchingMode() == Mode::AUTO)
         this->setDisableCaching(true);
-    if (v.HasMember("disable_caching"))
-        this->setDisableCaching(v["disable_caching"].GetBool());
-    SPDLOG_DEBUG("disable_caching: {}", isCachingDisabled());
+    if (v.HasMember("allow_cache")) {
+        this->setDisableCaching(!v["allow_cache"].GetBool());
+        SPDLOG_DEBUG("allow_cache: {}", !isCachingDisabled());
+    }
     return StatusCode::OK;
 }
 

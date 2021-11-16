@@ -774,7 +774,7 @@ TEST(ModelConfig, ConfigParseCacheForceEnableForCustomLoaders) {
                     "model_file": "resnet50-binary-0001.xml",
                     "bin_file": "resnet50-binary-0001.bin"
                 },
-                "disable_caching": false
+                "allow_cache": true
             }
         }]}
     )#";
@@ -801,7 +801,7 @@ TEST(ModelConfig, ConfigParseCacheForceEnableForBatchAuto) {
                 "name": "alpha",
                 "base_path": "/tmp/models/alpha",
                 "batch_size": "auto",
-                "disable_caching": false
+                "allow_cache": true
             }
         }]}
     )#";
@@ -828,7 +828,7 @@ TEST(ModelConfig, ConfigParseCacheForceEnableForShapeAuto) {
                 "name": "alpha",
                 "base_path": "/tmp/models/alpha",
                 "shape": "auto",
-                "disable_caching": false
+                "allow_cache": true
             }
         }]}
     )#";
