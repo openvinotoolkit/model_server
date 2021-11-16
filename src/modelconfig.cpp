@@ -439,8 +439,6 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     }
     if (v.HasMember("target_device"))
         this->setTargetDevice(v["target_device"].GetString());
-    if (v.HasMember("disable_caching"))
-        this->setDisableCaching(v["disable_caching"].GetBool());
     if (v.HasMember("version")) {
         this->setVersion(v["version"].GetUint64());
     }
@@ -616,7 +614,14 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         if (!parseCustomLoaderOptionsConfig(v["custom_loader_options"]).ok()) {
             SPDLOG_ERROR("Couldn't parse custom loader options config");
         }
+        this->setDisableCaching(true);
     }
+    if (anyShapeSetToAuto())
+        this->setDisableCaching(true);
+    // is batch size auto?
+    if (v.HasMember("disable_caching"))
+        this->setDisableCaching(v["disable_caching"].GetBool());
+    SPDLOG_DEBUG("batch_size: {}", isCachingDisabled());
     return StatusCode::OK;
 }
 
