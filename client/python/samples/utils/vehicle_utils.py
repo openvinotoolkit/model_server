@@ -20,8 +20,7 @@ import os
 
 def vehicle_postprocess(response, image_path, output_name, output_save_path):
     img_name = image_path.split('/')[-1]
-    response_dict = response.to_dict()
-    output = response_dict[output_name]
+    output = response[output_name]
     image = cv2.imread(image_path)
     width = image.shape[1]
     height = image.shape[0]

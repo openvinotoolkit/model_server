@@ -19,8 +19,7 @@ from imagenet_classes import imagenet_classes
 
 
 def resnet_postprocess(response, output_name):
-    response_dict = response.to_dict()
-    output = response_dict[output_name]
+    output = response[output_name]
     predicted_class = np.argmax(output[0])
     offset = 0
     if output.shape[1] == 1001:

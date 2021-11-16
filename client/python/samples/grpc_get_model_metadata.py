@@ -15,14 +15,15 @@
 #
 
 import argparse
-from ovmsclient import make_http_client
+from ovmsclient import make_grpc_client
 
-parser = argparse.ArgumentParser(description='Get information about the status of served models over HTTP interace')
+parser = argparse.ArgumentParser(description='Get information about the status of served models over gRPC interace')
 parser.add_argument('--service_url', required=False, default='localhost:9000',
-                    help='Specify url to http service. default:localhost', dest='service_url')
+                    help='Specify url to grpc service. default:localhost', dest='service_url')
 parser.add_argument('--model_name', default='resnet', help='Model name to query. default: resnet',
                     dest='model_name')
-parser.add_argument('--model_version', default=0, type=int, help='Model version to query. Lists all versions if omitted',
+parser.add_argument('--model_version', default=0, type=int,
+                    help='Model version to query. If ommited or set to 0 returns result for latest version',
                     dest='model_version')
 parser.add_argument('--timeout', default=10.0, help='Request timeout. default: 10.0',
                     dest='timeout')
@@ -34,10 +35,9 @@ model_name = args.get('model_name')  # default='resnet'
 model_version = args.get('model_version')   # default=0
 timeout = args.get('timeout')   # default=10.0
 
-# creating http client
-client = make_http_client(service_url)
+# creating grpc client
+client = make_grpc_client(service_url)
 
-# getting model status from the server
-status = client.get_model_status(model_name, model_version, timeout)
-status_dict = status.to_dict()
-print(status_dict)
+# getting model metadata from the server
+metadata = client.get_model_metadata(model_name, model_version, timeout)
+print(metadata)

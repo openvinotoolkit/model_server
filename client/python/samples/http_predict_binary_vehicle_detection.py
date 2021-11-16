@@ -28,7 +28,7 @@ parser.add_argument('--model_name', default='vehicle-detection',
                     help='Model name to query. default: vehicle-detection')
 parser.add_argument('--model_version', default=0, type=int,
                     help='Model version to query. default: latest available')
-parser.add_argument('--output_save_path', required=True,
+parser.add_argument('--output_dir', required=True,
                     help='Path to store output.')
 parser.add_argument('--timeout', default=10.0, help='Request timeout. default: 10.0',
                     dest='timeout')
@@ -39,7 +39,7 @@ images_dir = args.get('images_dir')
 service_url = args.get('service_url')
 model_name = args.get('model_name')
 model_version = args.get('model_version')
-output_save_path = args.get('output_save_path')
+output_dir = args.get('output_dir')
 timeout = args.get('timeout')
 
 # preparing images
@@ -66,4 +66,4 @@ for img_path in img_paths:
     response = client.predict(inputs, model_name, timeout)
 
     # output post-processing
-    vehicle_postprocess(response, img_path, output_name, output_save_path)
+    vehicle_postprocess(response, img_path, output_name, output_dir)
