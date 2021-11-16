@@ -618,10 +618,11 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     }
     if (anyShapeSetToAuto())
         this->setDisableCaching(true);
-    // is batch size auto?
+    if (getBatchingMode() == Mode::AUTO)
+        this->setDisableCaching(true);
     if (v.HasMember("disable_caching"))
         this->setDisableCaching(v["disable_caching"].GetBool());
-    SPDLOG_DEBUG("batch_size: {}", isCachingDisabled());
+    SPDLOG_DEBUG("disable_caching: {}", isCachingDisabled());
     return StatusCode::OK;
 }
 
