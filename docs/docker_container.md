@@ -247,6 +247,7 @@ Configuration options for server are defined only via command line options and d
 | `cpu_extension` | `string` | Optional path to a library with [custom layers implementation](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_Extensibility_DG_Intro.html).
 | `log_level` | `"DEBUG"/"INFO"/"ERROR"` | Serving logging level ||
 | `log_path` | `string` | Optional path to the log file. ||
+| `cache_dir` | `string` | Path to the model cache storage. Caching will be enabled if this parameter is defined or the default path /opt/cache exists ||
 
 
 </details>
