@@ -55,6 +55,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     return 0;
 }
 
+// parse dims parameter from string representing list of ints, e.g. "dims" = "[3,5,10]"
 int parametrizeDimensions(std::vector<int>& dims, const struct CustomNodeParam* params, int paramsCount) {
     for (int i = 0; i < paramsCount; i++) {
         if (strcmp(params[i].key, "dims") == 0) {
@@ -64,6 +65,7 @@ int parametrizeDimensions(std::vector<int>& dims, const struct CustomNodeParam* 
                 return 1;
             }
             dims.clear();
+            // remove '[' and ']'
             dimsString.erase(0, 1).pop_back();
             size_t pos = 0;
             while ((pos = dimsString.find(',')) != std::string::npos) {
