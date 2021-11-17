@@ -246,6 +246,15 @@ cc_binary(
 )
 
 cc_binary(
+    name = "lib_node_do_nothing.so",
+    srcs = [
+	    "test/custom_nodes/node_do_nothing.cpp",
+	    "custom_node_interface.h",
+    ],
+    linkshared = 1,
+)
+
+cc_binary(
     name = "lib_node_add_sub.so",
     srcs = [
 	    "test/custom_nodes/node_add_sub.c",
@@ -475,6 +484,7 @@ cc_test(
         "//src:libsampleloader.so",
         "//src:lib_node_mock.so",
         "//src:lib_node_missing_implementation.so",
+        "//src:lib_node_do_nothing.so",
         "//src:lib_node_add_sub.so",
         "//src:lib_node_dynamic_image.so",
         "//src:lib_node_dynamic_demultiplex.so",

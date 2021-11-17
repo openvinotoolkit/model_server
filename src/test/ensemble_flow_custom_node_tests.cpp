@@ -3900,8 +3900,6 @@ static const char* pipelineCustomNodeDynamicDemultiplexThenDummyConfig = R"(
     ]
 })";
 
-// Add tests here
-
 TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, JustDynamicDemultiplexerConfig) {
     std::unique_ptr<Pipeline> pipeline;
     uint8_t dynamicDemultiplyCount = 3;
@@ -4126,6 +4124,80 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, D
     EXPECT_EQ(output->getEffectiveShape(), shape_t({0, 1, 10}));
 }
 
+static const char* pipelineEntryNodeDemultiplexThenDummyConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(5, 10) ",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "demultiply_count": 3,
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "dummyNode",
+                                     "data_item": "dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DemultiplexerEntryThenDummyConfig) {
+    std::unique_ptr<Pipeline> pipeline;
+    std::vector<float> input(3 * 5 * DUMMY_MODEL_INPUT_SIZE);
+    std::iota(input.begin(), input.end(), 42);
+    this->prepareRequest(request, input, pipelineInputName, {3, 5, DUMMY_MODEL_INPUT_SIZE});
+    this->loadConfiguration(pipelineEntryNodeDemultiplexThenDummyConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    std::vector<float> expectedOutput = input;
+    std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
+        [](float f) -> float { return f + 1; });
+    this->checkResponse(pipelineOutputName, response, expectedOutput, {3, 5, DUMMY_MODEL_OUTPUT_SIZE});
+}
+
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DemultiplexerEntryMetadataCorrectness) {
+    this->loadConfiguration(pipelineEntryNodeDemultiplexThenDummyConfig);
+    auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(pipelineName);
+    ASSERT_NE(pipelineDefinition, nullptr);
+
+    auto inputs = pipelineDefinition->getInputsInfo();
+    auto outputs = pipelineDefinition->getOutputsInfo();
+    ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
+    ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
+
+    const auto& input = inputs.at(pipelineInputName);
+    EXPECT_EQ(input->getEffectiveShape(), shape_t({3, 5, DUMMY_MODEL_INPUT_SIZE}));
+    const auto& output = outputs.at(pipelineOutputName);
+    EXPECT_EQ(output->getEffectiveShape(), shape_t({3, 5, DUMMY_MODEL_OUTPUT_SIZE}));
+}
+
 TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DynamicDemultiplexerHittingLimitShouldReturnError) {
     std::unique_ptr<Pipeline> pipeline;
     const uint64_t demultiplyLimit = 10'000;  // node.cpp
@@ -4239,6 +4311,97 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
         [](float f) -> float { return f + 1; });
     std::vector<float> expectedResult = prepareGatherHighestExpectedOutput(expectedOutput, Method::MAXIMUM_MINIMUM);
     this->checkResponse("pipeline_output", response, expectedResult, {1, 10});
+}
+
+static const char* pipelineCustomNodeDoNothingWithDemultiplexerThenDummyConfig = R"(
+{
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_node_do_nothing",
+            "base_path": "/ovms/bazel-bin/src/lib_node_do_nothing.so"
+        }
+    ],
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1,
+                "shape": "(5, 10) "
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_node_do_nothing",
+                    "type": "custom",
+                    "demultiply_count": 7,
+                    "params": {
+                        "dims": "[7,5,10]"  
+                    },
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                           "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "custom_node",
+                               "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "dummyNode",
+                                     "data_item": "dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DoNothingCustomNodeThenDummySuccess) {
+    std::unique_ptr<Pipeline> pipeline;
+    std::vector<float> input(7 * 5 * DUMMY_MODEL_INPUT_SIZE);
+    std::iota(input.begin(), input.end(), 42);
+    this->prepareRequest(request, input, pipelineInputName, {7, 5, DUMMY_MODEL_INPUT_SIZE});
+    this->loadConfiguration(pipelineCustomNodeDoNothingWithDemultiplexerThenDummyConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    std::vector<float> expectedOutput = input;
+    std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
+        [](float f) -> float { return f + 1; });
+    this->checkResponse(pipelineOutputName, response, expectedOutput, {7, 5, DUMMY_MODEL_OUTPUT_SIZE});
+
+    auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(pipelineName);
+    ASSERT_NE(pipelineDefinition, nullptr);
+    auto inputs = pipelineDefinition->getInputsInfo();
+    auto outputs = pipelineDefinition->getOutputsInfo();
+    ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
+    ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
+
+    const auto& pipeline_input = inputs.at(pipelineInputName);
+    EXPECT_EQ(pipeline_input->getEffectiveShape(), shape_t({7, 5, DUMMY_MODEL_INPUT_SIZE}));
+    const auto& pipeline_output = outputs.at(pipelineOutputName);
+    EXPECT_EQ(pipeline_output->getEffectiveShape(), shape_t({7, 5, DUMMY_MODEL_OUTPUT_SIZE}));
 }
 
 TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DynamicDemultiplexerNoResults) {
