@@ -13,11 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <stdlib.h>
-#include <string.h>
+#include <iostream>
 #include <string>
 #include <vector>
-#include <iostream>
+
+#include <stdlib.h>
+#include <string.h>
 
 #include "../../custom_node_interface.h"
 
@@ -25,7 +26,7 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
     return 0;
 }
 
-int deinitialize(void* customNodeLibraryInternalManager){
+int deinitialize(void* customNodeLibraryInternalManager) {
     return 0;
 }
 
@@ -60,7 +61,7 @@ int parametrizeDimensions(std::vector<int>& dims, const struct CustomNodeParam* 
     for (int i = 0; i < paramsCount; i++) {
         if (strcmp(params[i].key, "dims") == 0) {
             std::string dimsString = params[i].value;
-            if(dimsString.front() != '[' || dimsString.back() != ']') {
+            if (dimsString.front() != '[' || dimsString.back() != ']') {
                 std::cout << "dims param wrong format, should be [int, ...]" << std::endl;
                 return 1;
             }
@@ -87,10 +88,10 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     }
 
     *infoCount = 1;
-    *info = (struct CustomNodeTensorInfo*) malloc (*infoCount * sizeof(struct CustomNodeTensorInfo));
+    *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
     (*info)->name = "input";
     (*info)->dimsCount = dims.size();
-    (*info)->dims = (uint64_t*) malloc((*info)->dimsCount * sizeof(uint64_t));
+    (*info)->dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     for (int i = 0; i < dims.size(); i++) {
         (*info)->dims[i] = dims.at(i);
     }
@@ -103,12 +104,12 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     if (parametrizeDimensions(dims, params, paramsCount) != 0) {
         return 1;
     }
-    
+
     *infoCount = 1;
-    *info = (struct CustomNodeTensorInfo*) malloc (*infoCount * sizeof(struct CustomNodeTensorInfo));
+    *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
     (*info)->name = "output";
     (*info)->dimsCount = dims.size();
-    (*info)->dims = (uint64_t*) malloc((*info)->dimsCount * sizeof(uint64_t));
+    (*info)->dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     for (int i = 0; i < dims.size(); i++) {
         (*info)->dims[i] = dims.at(i);
     }
