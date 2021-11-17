@@ -25,7 +25,7 @@ ARG TEMP_DIR=/tmp/openvino_installer
 ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
 ARG JOBS
-ARG APT_OV_PACKAGE=intel-openvino-runtime-ubuntu20-2021.4.689
+ARG APT_OV_PACKAGE=intel-openvino-runtime-ubuntu20-2021.4.752
 
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
