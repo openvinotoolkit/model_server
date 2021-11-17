@@ -19,9 +19,9 @@ import requests
 
 from ovmsclient.util.ovmsclient_export import ovmsclient_export
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
-from ovmsclient.tfs_compat.http.requests import (HttpModelStatusRequest, make_status_request,
-                                                 HttpModelMetadataRequest, make_metadata_request,
-                                                 HttpPredictRequest, make_predict_request)
+from ovmsclient.tfs_compat.http.requests import (make_status_request,
+                                                 make_metadata_request,
+                                                 make_predict_request)
 from ovmsclient.tfs_compat.http.responses import (HttpModelStatusResponse,
                                                   HttpModelMetadataResponse,
                                                   HttpPredictResponse)
@@ -119,24 +119,6 @@ class HttpClient(ServingClient):
             server_cert = tls_config.get('server_cert_path', None),
         session = requests.Session()
         return cls(url, session, client_cert, server_cert)
-
-    @classmethod
-    def _check_model_status_request(cls, request):
-        if not isinstance(request, HttpModelStatusRequest):
-            raise TypeError('request type should be HttpModelStatusRequest, '
-                            f'but is {type(request).__name__}')
-
-    @classmethod
-    def _check_model_metadata_request(cls, request):
-        if not isinstance(request, HttpModelMetadataRequest):
-            raise TypeError('request type should be HttpModelMetadataRequest, '
-                            f'but is {type(request).__name__}')
-
-    @classmethod
-    def _check_predict_request(cls, request):
-        if not isinstance(request, HttpPredictRequest):
-            raise TypeError('request type should be HttpPredictRequest, '
-                            f'but is {type(request).__name__}')
 
 
 @ovmsclient_export("make_http_client", httpclient="make_client")
