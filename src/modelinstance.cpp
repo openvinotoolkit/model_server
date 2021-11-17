@@ -338,16 +338,28 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
             return StatusCode::INTERNAL_ERROR;
         }
 
+        if (!this->config.getCacheDir().empty()) {
+            if (!this->config.isCachingDisabled()) {
+                if ( !(
+                    (res == CustomLoaderStatus::MODEL_TYPE_IR_CACHE_ALLOWED) ||
+                    (res == CustomLoaderStatus::MODEL_TYPE_ONNX_CACHE_ALLOWED) ||
+                    (res == CustomLoaderStatus::MODEL_TYPE_BLOB_CACHE_ALLOWED)) ) {
+                    SPDLOG_ERROR("Model cache allowed by config file but custom loader does not allow caching");
+                    return StatusCode::INTERNAL_ERROR;
+                }
+            }
+        }
+
         std::string strModel(model.begin(), model.end());
 
-        if (res == CustomLoaderStatus::MODEL_TYPE_IR) {
+        if (res == CustomLoaderStatus::MODEL_TYPE_IR || res == CustomLoaderStatus::MODEL_TYPE_IR_CACHE_ALLOWED) {
             Blob::Ptr blobWts = make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C});
             blobWts->allocate();
             std::memcpy(InferenceEngine::as<InferenceEngine::MemoryBlob>(blobWts)->wmap(), weights.data(), weights.size());
             network = std::make_unique<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(strModel, blobWts));
-        } else if (res == CustomLoaderStatus::MODEL_TYPE_ONNX) {
+        } else if (res == CustomLoaderStatus::MODEL_TYPE_ONNX || res == CustomLoaderStatus::MODEL_TYPE_ONNX_CACHE_ALLOWED) {
             network = std::make_unique<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(strModel, InferenceEngine::Blob::CPtr()));
-        } else if (res == CustomLoaderStatus::MODEL_TYPE_BLOB) {
+        } else if (res == CustomLoaderStatus::MODEL_TYPE_BLOB || res == CustomLoaderStatus::MODEL_TYPE_BLOB_CACHE_ALLOWED) {
             return StatusCode::INTERNAL_ERROR;
         }
     } catch (std::exception& e) {

@@ -27,7 +27,10 @@ enum class CustomLoaderStatus {
     MODEL_TYPE_BLOB,   /*!< When model buffers are returned, they belong to Blob */
     MODEL_LOAD_ERROR,  /*!< Error while loading the model */
     MODEL_BLACKLISTED, /*!< Model is blacklisted. Do not load */
-    INTERNAL_ERROR     /*!< generic error */
+    INTERNAL_ERROR,    /*!< generic error */
+    MODEL_TYPE_IR_CACHE_ALLOWED,
+    MODEL_TYPE_ONNX_CACHE_ALLOWED,
+    MODEL_TYPE_BLOB_CACHE_ALLOWED,
 };
 
 /**
