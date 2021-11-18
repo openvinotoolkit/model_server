@@ -102,6 +102,12 @@ RUN bazel build \
     @opencv//:opencv
 
 COPY src/ /build/src/
+RUN bazel build //src:all
+
+FROM ubuntu:20.04 as release
+ENV DEBIAN_FRONTEND=noninteractive 
+RUN apt update && apt install -y --no-install-recommends libopencv-core4.2 libopencv-imgcodecs4.2 libtbb-dev && \
+    apt clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 RUN bazel build //src:all
 

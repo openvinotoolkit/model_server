@@ -22,7 +22,7 @@ A few key features:
 - Online deployment of new [model versions](docs/model_version_policy.md).
 - [Configuration updates in a runtime](docs/docker_container.md#updating-configuration-file)
 - Support for AI accelerators including [Intel Movidius Myriad VPUs](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html), 
-[GPU](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CL_DNN.html) and [HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html). 
+[GPU](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_GPU.html) and [HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html). 
 - The server can be enabled both on [Bare Metal Hosts](docs/host.md) or in
 [Docker containers](docs/docker_container.md).
 - [Model reshaping](docs/shape_batch_size_and_layout.md). The server supports reshaping models in runtime.

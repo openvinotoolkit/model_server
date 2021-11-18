@@ -48,8 +48,9 @@ make BASE_OS=redhat
 | Output name        | Description           | Shape  | Precision |
 | ------------- |:-------------:| -----:| -----:|
 | images      | Returns images representing detected text boxes. Boxes are filtered based on confidence_threshold param. Resolution is defined by the node parameters. All images are in a single batch. Batch size depend on the number of detected objects.  | `N,1,C,H,W` | FP32 |
-| coordinates      | For every detected box `N` the following info is added: x coordinate for the box center, y coordinate for the box center, box original width, box original height | `N,1,4` | I32 |
+| coordinates      | For every detected box `N` the following info is added: x coordinate for the box center, y coordinate for the box center, box original width, box original height | `N,1,4` | FP32 |
 | confidences |   For every detected box `N` information about confidence level (N - number of detected boxes; more about demultiplexing [here](./../../../docs/demultiplexing.md)) | `N,1,1` | FP32 |
+| label_ids   |   For every detected box `N` information about label id (N - number of detected boxes; more about demultiplexing [here](./../../../docs/demultiplexing.md)) | `N,1,1` | I32 |
 
 # Custom node parameters
 Parameters can be defined in pipeline definition in OVMS configuration file. [Read more](./../../../docs/custom_node_development.md) about node parameters.
