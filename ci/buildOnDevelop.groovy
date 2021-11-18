@@ -19,10 +19,8 @@ pipeline {
               env
               """
               echo shortCommit
-              parallel(
-                  ubuntu: { build job: "ovmsc/ubuntu/ubuntu-ovms-recompile-develop", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]] },
-                  redhat: { build job: "ovmsc/redhat/redhat-ovms-recompile-develop", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]] }
-              )
+              ubuntu: { build job: "ovmsc/ubuntu/ubuntu-ovms-recompile-develop", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]] }
+              redhat: { build job: "ovmsc/redhat/redhat-ovms-recompile-develop", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]] }
           }
         }
     }
