@@ -57,7 +57,7 @@ for img_path in img_paths:
     inputs = {
         input_name: img
     }
-    print(inputs)
+
     # sending predict request and receiving response
     response = client.predict(inputs, model_name, model_version, timeout)
 
