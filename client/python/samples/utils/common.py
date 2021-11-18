@@ -31,19 +31,15 @@ def load_image(path):
 
 # get input and output name from model metadata
 def get_model_io_names(client, model_name, model_version):
-    metadata_request = make_grpc_metadata_request(model_name, model_version)
-    metadata = client.get_model_metadata(metadata_request)
-    metadata_dict = metadata.to_dict()
-    input_name = next(iter(metadata_dict['inputs']))  # by default resnet has one input and one output
-    output_name = next(iter(metadata_dict['outputs']))
+    metadata = client.get_model_metadata(model_name, model_version)
+    input_name = next(iter(metadata['inputs']))  # by default resnet has one input and one output
+    output_name = next(iter(metadata['outputs']))
     return input_name, output_name
 
 
 # get input shape from model metadata
 def get_model_input_shape(client, model_name, model_version):
-    metadata_request = make_grpc_metadata_request(model_name, model_version)
-    metadata = client.get_model_metadata(metadata_request)
-    metadata_dict = metadata.to_dict()
-    inputs = metadata_dict['inputs']
+    metadata = client.get_model_metadata(model_name, model_version)
+    inputs = metadata['inputs']
     input_name = next(iter(inputs))
     return inputs[input_name]['shape']

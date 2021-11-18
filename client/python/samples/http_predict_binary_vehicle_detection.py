@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser(description='Make vehicle detection prediction 
 parser.add_argument('--images_dir', required=True,
                     help='Path to a directory with images in JPG or PNG format')
 parser.add_argument('--service_url', required=False, default='localhost:9000',
-                    help='Specify url to http service. default:localhost', dest='service_url')
+                    help='Specify url to http service. default:localhost:9000', dest='service_url')
 parser.add_argument('--model_name', default='vehicle-detection',
                     help='Model name to query. default: vehicle-detection')
 parser.add_argument('--model_version', default=0, type=int,

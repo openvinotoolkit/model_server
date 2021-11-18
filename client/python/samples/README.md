@@ -56,8 +56,7 @@ docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50
 
 ```bash
 python grpc_get_model_status.py -h
-usage: grpc_get_model_status.py [-h] [--grpc_address GRPC_ADDRESS]
-                                [--grpc_port GRPC_PORT]
+usage: grpc_get_model_status.py [-h] [--service_url SERVICE_URL]
                                 [--model_name MODEL_NAME]
                                 [--model_version MODEL_VERSION]
                                 [--timeout TIMEOUT]
@@ -65,8 +64,7 @@ usage: grpc_get_model_status.py [-h] [--grpc_address GRPC_ADDRESS]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --grpc_address GRPC_ADDRESS Specify url to grpc service. default:localhost
-  --grpc_port GRPC_PORT Specify port to grpc service. default: 9000
+  --service_url SERVICE_URL Specify url to grpc service. default:localhost:9000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. Lists all versions if omitted
   --timeout TIMEOUT Request timeout. default: 10.0
@@ -75,7 +73,7 @@ optional arguments:
 - Usage Example
 
 ```
-python grpc_get_model_status.py --grpc_port 9000 --model_name resnet
+python grpc_get_model_status.py --model_name resnet
 {1: {'state': 'AVAILABLE', 'error_code': 0, 'error_message': 'OK'}}
 ```
 
@@ -88,8 +86,7 @@ python grpc_get_model_status.py --grpc_port 9000 --model_name resnet
 
 ```bash
 python grpc_get_model_metadata.py --help
-usage: grpc_get__model_metadata.py [-h] [--grpc_address GRPC_ADDRESS]
-                                  [--grpc_port GRPC_PORT]
+usage: grpc_get__model_metadata.py [-h] [--service_url SERVICE_URL]
                                   [--model_name MODEL_NAME]
                                   [--model_version MODEL_VERSION]
                                   [--timeout TIMEOUT]
@@ -97,8 +94,7 @@ usage: grpc_get__model_metadata.py [-h] [--grpc_address GRPC_ADDRESS]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --grpc_address GRPC_ADDRESS Specify url to grpc service. default:localhost
-  --grpc_port GRPC_PORT Specify port to grpc service. default: 9000
+  --service_url SERVICE_URL Specify url to grpc service. default:localhost:9000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. If ommited or set to 0 returns result for latest version
   --timeout TIMEOUT Request timeout. default: 10.0
@@ -106,7 +102,7 @@ optional arguments:
 - Usage Example
 
 ```
-python grpc_get_model_metadata.py --grpc_port 9000 --model_name resnet --model_version 1
+python grpc_get_model_metadata.py --model_name resnet --model_version 1
 {1: {'inputs': {'map/TensorArrayStack/TensorArrayGatherV3': {'shape': [1, 224, 224, 3], 'dtype': 'DT_FLOAT'}}, 'outputs': {'softmax_tensor': {'shape': [1, 1001], 'dtype': 'DT_FLOAT'}}}}
 ```
 
@@ -118,9 +114,8 @@ python grpc_get_model_metadata.py --grpc_port 9000 --model_name resnet --model_v
 - Command
 
 ```bash
-usage: grpc_predict_resnet.py [-h] --images_dir IMAGES_DIR
-                              [--grpc_address GRPC_ADDRESS]
-                              [--grpc_port GRPC_PORT]
+usage: grpc_predict_resnet.py [-h] [--images_numpy IMAGES_NUMPY]
+                              [--service_url SERVICE_URL]
                               [--model_name MODEL_NAME]
                               [--model_version MODEL_VERSION]
                               [--timeout TIMEOUT]
@@ -128,9 +123,8 @@ usage: grpc_predict_resnet.py [-h] --images_dir IMAGES_DIR
 
 optional arguments:
   -h, --help            show this help message and exit 
-  --images_dir IMAGES_DIR Path to a directory with images in JPG or PNG format
-  --grpc_address GRPC_ADDRESS Specify url to grpc service. default:localhost
-  --grpc_port GRPC_PORT Specify port to grpc service. default: 9000
+  --images_numpy IMAGES_NUMPY Path to a .npy file with data to infer
+  --service_url SERVICE_URL Specify url to grpc service. default:localhost:9000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. default: latest available
   --timeout TIMEOUT Request timeout. default: 10.0
@@ -138,7 +132,7 @@ optional arguments:
 - Usage example
 
 ```
-python grpc_predict_resnet.py --grpc_port 9000 --images_dir images --model_name resnet
+python grpc_predict_resnet.py --images_dir images --model_name resnet
 Image images/magnetic_compass.jpeg has been classified as magnetic compass
 Image images/pelican.jpeg has been classified as pelican
 Image images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
@@ -164,9 +158,8 @@ docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50
 - Command
 
 ```bash
-usage: grpc_predict_binary_resnet.py [-h] --images_dir IMAGES_DIR
-                              [--grpc_address GRPC_ADDRESS]
-                              [--grpc_port GRPC_PORT]
+usage: grpc_predict_binary_resnet.py [-h] [--images_dir IMAGES_DIR]
+                              [--service_url SERVICE_URL]
                               [--model_name MODEL_NAME]
                               [--model_version MODEL_VERSION]
                               [--timeout TIMEOUT]
@@ -175,8 +168,7 @@ usage: grpc_predict_binary_resnet.py [-h] --images_dir IMAGES_DIR
 optional arguments:
   -h, --help            show this help message and exit 
   --images_dir IMAGES_DIR Path to a directory with images in JPG or PNG format
-  --grpc_address GRPC_ADDRESS Specify url to grpc service. default:localhost
-  --grpc_port GRPC_PORT Specify port to grpc service. default: 9000
+  --service_url SERVICE_URL Specify url to grpc service. default:localhost:9000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. default: latest available
   --timeout TIMEOUT Request timeout. default: 10.0
@@ -184,7 +176,7 @@ optional arguments:
 - Usage example
 
 ```
-python grpc_predict_binary_resnet.py --grpc_port 9000 --images_dir images --model_name resnet
+python grpc_predict_binary_resnet.py --images_dir images --model_name resnet
 Image images/magnetic_compass.jpeg has been classified as magnetic compass
 Image images/pelican.jpeg has been classified as pelican
 Image images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
@@ -220,9 +212,8 @@ docker run -d --rm -v ${PWD}/models/vehicle-detection:/models/vehicle-detection 
 - Command
 
 ```bash
-usage: grpc_predict_binary_vehicle_detection.py [-h] --images_dir IMAGES_DIR
-                                           [--grpc_address GRPC_ADDRESS]
-                                           [--grpc_port GRPC_PORT]
+usage: grpc_predict_binary_vehicle_detection.py [-h] [--images_dir IMAGES_DIR]
+                                           [--service_url SERVICE_URL]
                                            [--model_name MODEL_NAME]
                                            [--model_version MODEL_VERSION]
                                            [--output_dir OUTPUT_DIR]
@@ -232,8 +223,7 @@ usage: grpc_predict_binary_vehicle_detection.py [-h] --images_dir IMAGES_DIR
 optional arguments:
   -h, --help            show this help message and exit
   --images_dir IMAGES_DIR Path to a directory with images in JPG or PNG format
-  --grpc_address GRPC_ADDRESS Specify url to grpc service. default:localhost
-  --grpc_port GRPC_PORT Specify port to grpc service. default: 9000
+  --service_url SERVICE_URL Specify url to grpc service. default:localhost:9000
   --model_name MODEL_NAME Model name to query. default: vehicle-detection
   --model_version MODEL_VERSION Model version to query. default: latest available
   --output_dir OUTPUT_DIR Path to store output.
@@ -258,8 +248,7 @@ Detection results in file:  ./output/road1.jpg
 
 ```bash
 python http_get_model_status.py -h
-usage: http_get_model_status.py [-h] [--http_address HTTP_ADDRESS]
-                                [--http_port HTTP_PORT]
+usage: http_get_model_status.py [-h] [--service_url SERVICE_URL]
                                 [--model_name MODEL_NAME]
                                 [--model_version MODEL_VERSION]
                                 [--timeout TIMEOUT]
@@ -267,8 +256,7 @@ usage: http_get_model_status.py [-h] [--http_address HTTP_ADDRESS]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --http_address HTTP_ADDRESS Specify url to http service. default:localhost
-  --http_port HTTP_PORT Specify port to http service. default: 9000
+  --service_url SERVICE_URL Specify url to http service. default:localhost:9000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. Lists all versions if omitted
   --timeout TIMEOUT Request timeout. default: 10.0
@@ -277,7 +265,7 @@ optional arguments:
 - Usage Example
 
 ```
-python http_get_model_status.py --http_port 9000 --model_name resnet
+python http_get_model_status.py --model_name resnet
 {1: {'state': 'AVAILABLE', 'error_code': 0, 'error_message': 'OK'}}
 ```
 
@@ -290,8 +278,7 @@ python http_get_model_status.py --http_port 9000 --model_name resnet
 
 ```bash
 python http_get_model_metadata.py --help
-usage: http_get_model_metadata.py [-h] [--http_address HTTP_ADDRESS]
-                                  [--http_port HTTP_PORT]
+usage: http_get_model_metadata.py [-h] [--service_url SERVICE_URL]
                                   [--model_name MODEL_NAME]
                                   [--model_version MODEL_VERSION]
                                   [--timeout TIMEOUT]
@@ -299,8 +286,7 @@ usage: http_get_model_metadata.py [-h] [--http_address HTTP_ADDRESS]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --http_address HTTP_ADDRESS Specify url to http service. default:localhost
-  --http_port HTTP_PORT Specify port to http service. default: 9000
+  --service_url SERVICE_URL Specify url to http service. default:localhost:9000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. If ommited or set to 0 returns result for latest version
   --timeout TIMEOUT Request timeout. default: 10.0
@@ -308,7 +294,7 @@ optional arguments:
 - Usage Example
 
 ```
-python http_get_model_metadata.py --http_port 9000 --model_name resnet --model_version 1
+python http_get_model_metadata.py --model_name resnet --model_version 1
 {1: {'inputs': {'map/TensorArrayStack/TensorArrayGatherV3': {'shape': [1, 224, 224, 3], 'dtype': 'DT_FLOAT'}}, 'outputs': {'softmax_tensor': {'shape': [1, 1001], 'dtype': 'DT_FLOAT'}}}}
 ```
 
@@ -320,9 +306,8 @@ python http_get_model_metadata.py --http_port 9000 --model_name resnet --model_v
 - Command
 
 ```bash
-usage: http_predict_resnet.py [-h] --images_dir IMAGES_DIR
-                              [--http_address HTTP_ADDRESS]
-                              [--http_port HTTP_PORT]
+usage: http_predict_resnet.py [-h] [--images_numpy IMAGES_NUMPY]
+                              [--service_url SERVICE_URL]
                               [--model_name MODEL_NAME]
                               [--model_version MODEL_VERSION]
                               [--timeout TIMEOUT]
@@ -330,9 +315,8 @@ usage: http_predict_resnet.py [-h] --images_dir IMAGES_DIR
 
 optional arguments:
   -h, --help            show this help message and exit 
-  --images_dir IMAGES_DIR Path to a directory with images in JPG or PNG format
-  --http_address HTTP_ADDRESS Specify url to http service. default:localhost
-  --http_port HTTP_PORT Specify port to http service. default: 9000
+  --images_numpy IMAGES_NUMPY Path to a .npy file with data to infer
+  --service_url SERVICE_URL Specify url to http service. default:localhost:9000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. default: latest available
   --timeout TIMEOUT Request timeout. default: 10.0
@@ -340,7 +324,7 @@ optional arguments:
 - Usage example
 
 ```
-python http_predict_resnet.py --http_port 9000 --images_dir images --model_name resnet
+python http_predict_resnet.py --images_dir images --model_name resnet
 Image images/magnetic_compass.jpeg has been classified as magnetic compass
 Image images/pelican.jpeg has been classified as pelican
 Image images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
@@ -366,9 +350,8 @@ docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50
 - Command
 
 ```bash
-usage: http_predict_binary_resnet.py [-h] --images_dir IMAGES_DIR
-                              [--http_address HTTP_ADDRESS]
-                              [--http_port HTTP_PORT]
+usage: http_predict_binary_resnet.py [-h] [--images_dir IMAGES_DIR]
+                              [--service_url SERVICE_URL]
                               [--model_name MODEL_NAME]
                               [--model_version MODEL_VERSION]
                               [--timeout TIMEOUT]
@@ -377,8 +360,7 @@ usage: http_predict_binary_resnet.py [-h] --images_dir IMAGES_DIR
 optional arguments:
   -h, --help            show this help message and exit 
   --images_dir IMAGES_DIR Path to a directory with images in JPG or PNG format
-  --http_address HTTP_ADDRESS Specify url to http service. default:localhost
-  --http_port HTTP_PORT Specify port to http service. default: 9000
+  --service_url SERVICE_URL Specify url to http service. default:localhost:9000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. default: latest available
   --timeout TIMEOUT Request timeout. default: 10.0
@@ -386,7 +368,7 @@ optional arguments:
 - Usage example
 
 ```
-python http_predict_binary_resnet.py --http_port 9000 --images_dir images --model_name resnet
+python http_predict_binary_resnet.py --images_dir images --model_name resnet
 Image images/magnetic_compass.jpeg has been classified as magnetic compass
 Image images/pelican.jpeg has been classified as pelican
 Image images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
@@ -422,9 +404,8 @@ docker run -d --rm -v ${PWD}/models/vehicle-detection:/models/vehicle-detection 
 - Command
 
 ```bash
-usage: http_predict_binary_vehicle_detection.py [-h] --images_dir IMAGES_DIR
-                                           [--http_address HTTP_ADDRESS]
-                                           [--http_port HTTP_PORT]
+usage: http_predict_binary_vehicle_detection.py [-h] [--images_dir IMAGES_DIR]
+                                           [--service_url SERVICE_URL]
                                            [--model_name MODEL_NAME]
                                            [--model_version MODEL_VERSION]
                                            [--output_dir OUTPUT_DIR]
@@ -434,8 +415,7 @@ usage: http_predict_binary_vehicle_detection.py [-h] --images_dir IMAGES_DIR
 optional arguments:
   -h, --help            show this help message and exit
   --images_dir IMAGES_DIR Path to a directory with images in JPG or PNG format
-  --http_address HTTP_ADDRESS Specify url to http service. default:localhost
-  --http_port HTTP_PORT Specify port to http service. default: 9000
+  --service_url SERVICE_URL Specify url to http service. default:localhost:9000
   --model_name MODEL_NAME Model name to query. default: vehicle-detection
   --model_version MODEL_VERSION Model version to query. default: latest available
   --output_dir OUTPUT_DIR Path to store output.

@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(description='Make prediction using images in bi
 parser.add_argument('--images_dir', required=True,
                     help='Path to a directory with images in JPG or PNG format')
 parser.add_argument('--service_url', required=False, default='localhost:9000',
-                    help='Specify url to grpc service. default:localhost', dest='service_url')
+                    help='Specify url to grpc service. default:localhost:9000', dest='service_url')
 parser.add_argument('--model_name', default='resnet', help='Model name to query. default: resnet',
                     dest='model_name')
 parser.add_argument('--model_version', default=0, type=int, help='Model version to query. default: latest available',
