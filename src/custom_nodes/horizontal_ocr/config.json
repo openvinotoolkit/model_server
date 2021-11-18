@@ -1,0 +1,103 @@
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "text-detection",
+                "base_path": "/OCR/horizontal-text-detection",
+                "layout": "NHWC",
+                "plugin_config": {
+                    "CPU_THROUGHPUT_STREAMS":  "1"
+                }
+            }
+        },
+        {
+            "config": {
+                "name": "text-recognition",
+                "layout": "NHWC",
+                "base_path": "/OCR/text-recognition"
+            }
+        }
+    ],
+    "custom_node_library_config_list": [
+        {
+            "name": "ocr_image_extractor",
+            "base_path": "/OCR/lib/libcustom_node_horizontal_ocr.so"
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "detect_text_images",
+            "inputs": ["image"],
+            "nodes": [
+                {
+                    "name": "text_detection_node",
+                    "model_name": "text-detection",
+                    "type": "DL model",
+                    "inputs": [
+                        {"image": {"node_name": "request",
+                                          "data_item": "image"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "boxes",
+                         "alias": "boxes"}
+                    ]
+                },
+                {
+                    "name": "extract_node",
+                    "library_name": "ocr_image_extractor",
+                    "type": "custom",
+                    "demultiply_count": 0,
+                    "params": {
+                        "original_image_width": "704",
+                        "original_image_height": "704",
+                        "original_image_layout": "NHWC",
+                        "target_image_width": "128",
+                        "target_image_height": "32",
+                        "target_image_layout": "NHWC",
+                        "convert_to_gray_scale": "true",
+                        "confidence_threshold": "0.3",
+                        "max_output_batch": "100",
+                        "debug": "true"
+                    },
+                    "inputs": [
+                        {"image": {"node_name": "request",
+                                   "data_item": "image"}},
+                        {"boxes": {"node_name": "text_detection_node",
+                                      "data_item": "boxes"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "text_images",
+                         "alias": "text_images"},
+                        {"data_item": "text_coordinates",
+                         "alias": "text_coordinates"},
+                        {"data_item": "confidence_levels",
+                         "alias": "confidence_levels"}
+                    ]
+                },
+                {
+                    "name": "text_recognition_node",
+                    "model_name": "text-recognition",
+                    "type": "DL model",
+                    "inputs": [
+                        {"imgs": {"node_name": "extract_node",
+                            "data_item": "text_images"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "logits",
+                            "alias": "texts"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"text_images": {"node_name": "extract_node",
+                         "data_item": "text_images"}},
+                {"text_coordinates": {"node_name": "extract_node",
+                         "data_item": "text_coordinates"}},
+                {"confidence_levels": {"node_name": "extract_node",
+                         "data_item": "confidence_levels"}},
+                {"texts": {"node_name": "text_recognition_node",
+                         "data_item": "texts"}}
+            ]
+        }
+    ]
+}
