@@ -206,8 +206,7 @@ while(True):
     frame_to_display = threads[i].get_output()
     threads[i].set_input(grab_frame(cap))
 
-    # cv2.imshow('frame', frame_to_display)
-    cv2.imwrite(f'./results/{frames_processed}_frame.jpg', frame_to_display)
+    cv2.imshow('frame', frame_to_display)
     now = time.time()
     time_since_last_display = now - last_display_time
     last_display_time = now
