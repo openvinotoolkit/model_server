@@ -19,7 +19,7 @@ from imagenet_classes import imagenet_classes
 
 
 def resnet_postprocess(response, output_name):
-    if isinstance(response, map):
+    if isinstance(response, dict):
         output = response[output_name]
     else:
         output = response

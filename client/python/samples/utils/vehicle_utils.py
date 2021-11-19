@@ -20,7 +20,7 @@ import os
 
 def vehicle_postprocess(response, image_path, output_name, output_save_path):
     img_name = image_path.split('/')[-1]
-    if isinstance(response, map):
+    if isinstance(response, dict):
         output = response[output_name]
     else:
         output = response
