@@ -38,7 +38,7 @@ In case there are valid reasons to enable the model cache also for models with a
     ],
 }
 ```
-> IMPORTANT: It is not possible to force enablement of cache for models with custom loaders.
+> IMPORTANT: Models imported via the custom loaders never create or use any cache.
 
 ## Use case example
 
