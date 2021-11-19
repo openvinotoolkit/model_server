@@ -196,7 +196,7 @@ def _parse_input_data(values):
         b64_values = []
         for value in tensor_values:
             b64_value = base64.b64encode(value).decode('utf-8')
-            b64_values.append(b64_value)
-        return {"b64": b64_values}
+            b64_values.append({"b64": b64_value})
+        return b64_values
     else:
         return tensor_values.tolist()
