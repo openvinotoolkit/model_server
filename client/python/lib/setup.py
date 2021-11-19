@@ -22,6 +22,11 @@ from setuptools import Command
 
 class BuildApis(Command):
 
+    description = """
+    Prepare OVMS supported APIs modules
+    """
+    user_options = []
+
     def initialize_options(self):
         ...
 
