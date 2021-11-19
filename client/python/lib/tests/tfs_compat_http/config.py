@@ -85,7 +85,7 @@ PREDICT_REQUEST_VALID = [
     }, json.dumps({
         "inputs": {
             "input1": [5.0],
-            "input2": {"b64": ["AQID"]}
+            "input2": [{"b64": "AQID"}]
         }
     }), 'model_name', 0),
 
@@ -114,7 +114,8 @@ PARSE_INPUT_DATA_VALID = [
 
     ([1, 2, 3.0], [1.0, 2.0, 3.0]),
 
-    ([bytes([1, 2, 3]), bytes([4, 5, 6]), bytes([7, 8, 9])], {"b64": ["AQID", "BAUG", "BwgJ"]})
+    ([bytes([1, 2, 3]), bytes([4, 5, 6]), bytes([7, 8, 9])],
+     [{"b64": "AQID"}, {"b64": "BAUG"}, {"b64": "BwgJ"}])
 ]
 
 # (inputs_dict,
