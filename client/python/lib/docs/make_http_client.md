@@ -1,9 +1,9 @@
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/http/serving_client.py#L143"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/http/serving_client.py#L125"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `make_http_client`
 
 ```python
-make_http_client(config)
+make_http_client(url, tls_config)
 ```
 
 **Description**:

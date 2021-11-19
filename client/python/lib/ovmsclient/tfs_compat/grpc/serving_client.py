@@ -18,14 +18,11 @@ from grpc import RpcError, ssl_channel_credentials, secure_channel, insecure_cha
 
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from tensorflow_serving.apis import model_service_pb2_grpc
-from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
-from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
-from tensorflow_serving.apis.predict_pb2 import PredictRequest
 
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
-from ovmsclient.tfs_compat.grpc.requests import (GrpcModelStatusRequest, make_status_request,
-                                                 GrpcModelMetadataRequest, make_metadata_request,
-                                                 GrpcPredictRequest, make_predict_request)
+from ovmsclient.tfs_compat.grpc.requests import (make_status_request,
+                                                 make_metadata_request,
+                                                 make_predict_request)
 from ovmsclient.tfs_compat.grpc.responses import (GrpcModelStatusResponse,
                                                   GrpcModelMetadataResponse,
                                                   GrpcPredictResponse)
@@ -114,60 +111,6 @@ class GrpcClient(ServingClient):
         model_service_stub = model_service_pb2_grpc.ModelServiceStub(channel)
 
         return cls(channel, prediction_service_stub, model_service_stub)
-
-    @classmethod
-    def _check_model_status_request(cls, request):
-
-        if not isinstance(request, GrpcModelStatusRequest):
-            raise TypeError('request type should be GrpcModelStatusRequest, '
-                            f'but is {type(request).__name__}')
-
-        if not isinstance(request.raw_request, GetModelStatusRequest):
-            raise TypeError('request is not valid GrpcModelStatusRequest')
-
-        if request.raw_request.model_spec.name != request.model_name:
-            raise ValueError('request is not valid GrpcModelStatusRequest')
-
-        if request.raw_request.model_spec.version.value != request.model_version:
-            raise ValueError('request is not valid GrpcModelStatusRequest')
-
-    @classmethod
-    def _check_model_metadata_request(cls, request):
-
-        if not isinstance(request, GrpcModelMetadataRequest):
-            raise TypeError('request type should be GrpcModelMetadataRequest, '
-                            f'but is {type(request).__name__}')
-
-        if not isinstance(request.raw_request, GetModelMetadataRequest):
-            raise TypeError('request is not valid GrpcModelMetadataRequest')
-
-        if request.raw_request.model_spec.name != request.model_name:
-            raise ValueError('request is not valid GrpcModelMetadataRequest')
-
-        if request.raw_request.model_spec.version.value != request.model_version:
-            raise ValueError('request is not valid GrpcModelMetadataRequest')
-
-        if list(request.raw_request.metadata_field) != ['signature_def']:
-            raise ValueError('request is not valid GrpcModelMetadataRequest')
-
-    @classmethod
-    def _check_predict_request(cls, request):
-
-        if not isinstance(request, GrpcPredictRequest):
-            raise TypeError('request type should be GrpcPredictRequest, '
-                            f'but is {type(request).__name__}')
-
-        if not isinstance(request.raw_request, PredictRequest):
-            raise TypeError('request is not valid GrpcPredictRequest')
-
-        if request.raw_request.model_spec.name != request.model_name:
-            raise ValueError('request is not valid GrpcPredictRequest')
-
-        if request.raw_request.model_spec.version.value != request.model_version:
-            raise ValueError('request is not valid GrpcPredictRequest')
-
-        if list(request.inputs.keys()) != list(request.raw_request.inputs.keys()):
-            raise ValueError('request is not valid GrpcPredictRequest')
 
 
 @ovmsclient_export("make_grpc_client", grpcclient="make_client")

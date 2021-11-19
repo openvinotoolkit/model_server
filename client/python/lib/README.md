@@ -11,7 +11,13 @@ See [API documentation](docs/README.md) for details on what the library provides
 
 ## Installation
 
-The client library requires Python in version >= 3.6.
+**Note:** The client library requires Python in version >= 3.6.
+
+Install the `ovmsclient` package with:
+
+`pip install ovmsclient`
+
+You can also build the wheel from sources:
 
 ### Linux
 

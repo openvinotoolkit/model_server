@@ -1,9 +1,9 @@
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L212"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L117"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `make_grpc_client`
 
 ```python
-make_grpc_client(config)
+make_grpc_client(url, tls_config)
 ```
 
 **Description**:
