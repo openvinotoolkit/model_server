@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-from ovmsclient import make_grpc_metadata_request
 import numpy as np
 from os import listdir
 from os.path import isfile, join

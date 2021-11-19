@@ -63,7 +63,7 @@ for img_path in img_paths:
     }
 
     # sending predict request and receiving response
-    response = client.predict(inputs, model_name, timeout)
+    response = client.predict(inputs, model_name, model_version, timeout)
 
     # output post-processing
     vehicle_postprocess(response, img_path, output_name, output_dir)
