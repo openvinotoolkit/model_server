@@ -609,14 +609,6 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         SPDLOG_DEBUG("low_latency_transformation: {}", isLowLatencyTransformationUsed());
     }
 
-    // if the config has models which require custom loader to be used, then load the same here
-    if (v.HasMember("custom_loader_options")) {
-        if (!parseCustomLoaderOptionsConfig(v["custom_loader_options"]).ok()) {
-            SPDLOG_ERROR("Couldn't parse custom loader options config");
-        }
-        this->setDisableCaching(true);
-    }
-
     // Model Cache options
     if (anyShapeSetToAuto())
         this->setDisableCaching(true);
@@ -625,6 +617,15 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     if (v.HasMember("allow_cache")) {
         this->setDisableCaching(!v["allow_cache"].GetBool());
         SPDLOG_DEBUG("allow_cache: {}", !isCachingDisabled());
+    }
+
+    // if the config has models which require custom loader to be used, then load the same here
+    if (v.HasMember("custom_loader_options")) {
+        if (!parseCustomLoaderOptionsConfig(v["custom_loader_options"]).ok()) {
+            SPDLOG_ERROR("Couldn't parse custom loader options config");
+        }
+        // force disable caching
+        this->setDisableCaching(true);
     }
     return StatusCode::OK;
 }

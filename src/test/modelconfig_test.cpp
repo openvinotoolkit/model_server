@@ -763,7 +763,7 @@ TEST(ModelConfig, ConfigParseCacheDisabledForShapeAutoByDefault) {
     EXPECT_TRUE(modelConfig.isCachingDisabled());
 }
 
-TEST(ModelConfig, ConfigParseCacheForceEnableForCustomLoaders) {
+TEST(ModelConfig, ConfigParseCacheCannotForceEnableForCustomLoaders) {
     std::string config = R"#(
         {"model_config_list": [{
             "config": {
@@ -791,10 +791,10 @@ TEST(ModelConfig, ConfigParseCacheForceEnableForCustomLoaders) {
     auto status = modelConfig.parseNode(configs[0]["config"]);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_FALSE(modelConfig.isCachingDisabled());
+    EXPECT_TRUE(modelConfig.isCachingDisabled());
 }
 
-TEST(ModelConfig, ConfigParseCacheForceEnableForBatchAuto) {
+TEST(ModelConfig, ConfigParseCacheCanForceEnableForBatchAuto) {
     std::string config = R"#(
         {"model_config_list": [{
             "config": {
@@ -821,7 +821,7 @@ TEST(ModelConfig, ConfigParseCacheForceEnableForBatchAuto) {
     EXPECT_FALSE(modelConfig.isCachingDisabled());
 }
 
-TEST(ModelConfig, ConfigParseCacheForceEnableForShapeAuto) {
+TEST(ModelConfig, ConfigParseCacheCanForceEnableForShapeAuto) {
     std::string config = R"#(
         {"model_config_list": [{
             "config": {
