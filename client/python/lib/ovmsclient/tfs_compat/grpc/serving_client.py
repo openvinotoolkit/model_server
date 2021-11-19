@@ -94,8 +94,8 @@ class GrpcClient(ServingClient):
 
         ServingClient._check_url(url)
 
-        # Setting 1 GB max message size. 
-        # TO DO: Make it configurable from make_grpc_client function 
+        # Setting 1 GB max message size.
+        # TO DO: Make it configurable from make_grpc_client function
         MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
         channel_options = [
             ('grpc.max_send_message_length', MAX_MESSAGE_LENGTH),
