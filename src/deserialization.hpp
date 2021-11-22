@@ -19,6 +19,7 @@
 #include <string>
 
 #include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
 #pragma GCC diagnostic push
@@ -110,6 +111,16 @@ public:
     InputSink(Requester requester) :
         requester(requester) {}
     Status give(const std::string& name, InferenceEngine::Blob::Ptr blob);
+};
+
+template <class Requester>
+class InputSink_2 {
+    Requester requester;
+
+public:
+    InputSink_2(Requester requester) :
+        requester(requester) {}
+    Status give(const std::string& name, ov::runtime::Tensor& blob);
 };
 
 template <class TensorProtoDeserializator, class Sink>

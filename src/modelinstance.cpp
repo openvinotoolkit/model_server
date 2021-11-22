@@ -803,6 +803,18 @@ Status ModelInstance::performInference(InferenceEngine::InferRequest& inferReque
     return StatusCode::OK;
 }
 
+Status ModelInstance::performInference_2(ov::runtime::InferRequest& inferRequest) {
+    try {
+        inferRequest.start_async();
+        inferRequest.wait();
+    } catch (const ov::Exception& e) {
+        Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+        SPDLOG_ERROR("Async caught an exception {}: {}", status.string(), e.what());
+        return status;
+    }
+    return StatusCode::OK;
+}
+
 Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,
     tensorflow::serving::PredictResponse* responseProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
@@ -815,14 +827,20 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
         return status;
     timer.start("get infer request");
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+    ExecutingStreamIdGuard_2 executingStreamIdGuard_2(getInferRequestsQueue_2());
     int executingInferId = executingStreamIdGuard.getId();
+    int executingInferId_2 = executingStreamIdGuard_2.getId();
+    (void)executingInferId_2;
     InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    ov::runtime::InferRequest& inferRequest_2 = executingStreamIdGuard_2.getInferRequest();
     timer.stop("get infer request");
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
 
     timer.start("deserialize");
     InputSink<InferRequest&> inputSink(inferRequest);
+    InputSink_2<ov::runtime::InferRequest&> inputSink_2(inferRequest_2);
+    (void)inputSink_2;
     bool isPipeline = false;
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
     timer.stop("deserialize");

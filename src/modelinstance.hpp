@@ -517,6 +517,7 @@ public:
     const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
 
     Status performInference(InferenceEngine::InferRequest& inferRequest);
+    Status performInference_2(ov::runtime::InferRequest& inferRequest);
 
     virtual Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,
