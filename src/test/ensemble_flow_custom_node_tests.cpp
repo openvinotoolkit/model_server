@@ -3297,8 +3297,6 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, CustomNodeWithDemultipl
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
 }
 
-
-
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy) {
     // Prepare request
     std::vector<float> input(7 * 5 * DUMMY_MODEL_INPUT_SIZE);
@@ -3340,8 +3338,9 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomNodeWithDemultiplexerA
         "custom_node",
         createLibraryMock<LibraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy>(),
         parameters_t{
-                {"input_dims", "[7,5,10]"},
-                {"output_dims", "[7,5,10]"}}, aliases, demultiplyCount);
+            {"input_dims", "[7,5,10]"},
+            {"output_dims", "[7,5,10]"}},
+        aliases, demultiplyCount);
     auto model_node = std::make_unique<DLNode>("dummy_node", "dummy", std::nullopt, manager);
 
     auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
