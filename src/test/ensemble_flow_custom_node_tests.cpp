@@ -3297,6 +3297,73 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, CustomNodeWithDemultipl
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
 }
 
+
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy) {
+    // Prepare request
+    std::vector<float> input(7 * 5 * DUMMY_MODEL_INPUT_SIZE);
+    std::iota(input.begin(), input.end(), 42);
+    PredictRequest request;
+    PredictResponse response;
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[pipelineInputName];
+    proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+    proto.mutable_tensor_content()->assign((char*)input.data(), input.size() * sizeof(float));
+    proto.mutable_tensor_shape()->add_dim()->set_size(7);
+    proto.mutable_tensor_shape()->add_dim()->set_size(5);
+    proto.mutable_tensor_shape()->add_dim()->set_size(10);
+
+    // Prepare model
+    std::cout << "BATMAN" << std::endl;
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchSize(5);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare pipeline
+    std::optional<uint32_t> demultiplyCount = 7;
+    std::set<std::string> gather = {"custom_node"};
+    std::unordered_map<std::string, std::string> aliases{{"out", "out"}};
+
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        InferenceEngine::Precision::FP32,
+        shape_t{7, 5, 10},
+        InferenceEngine::Layout::ANY);
+    const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        InferenceEngine::Precision::FP32,
+        shape_t{7, 5, 10},
+        InferenceEngine::Layout::ANY);
+    const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo, gather);
+    auto custom_node = std::make_unique<CustomNode>(
+        "custom_node",
+        createLibraryMock<LibraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy>(),
+        parameters_t{
+                {"input_dims", "[7,5,10]"},
+                {"output_dims", "[7,5,10]"}}, aliases, demultiplyCount);
+    auto model_node = std::make_unique<DLNode>("dummy_node", "dummy", std::nullopt, manager);
+
+    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+    pipeline->connect(*input_node, *custom_node, {{pipelineInputName, "in"}});
+    pipeline->connect(*custom_node, *model_node, {{"out", DUMMY_MODEL_INPUT_NAME}});
+    pipeline->connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}});
+
+    pipeline->push(std::move(input_node));
+    pipeline->push(std::move(custom_node));
+    pipeline->push(std::move(model_node));
+    pipeline->push(std::move(output_node));
+
+    // Execute
+    ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
+
+    // Check response
+    std::vector<float> expectedOutput = input;
+    std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
+        [](float f) -> float { return f + 1; });
+    this->checkResponse(pipelineOutputName, response, expectedOutput, {7, 5, 10});
+}
+
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenDLModelAndCustomNode) {
     const size_t demultiplyCount = 33;
     std::vector<NodeInfo> info{
