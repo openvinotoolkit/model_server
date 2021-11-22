@@ -3143,14 +3143,124 @@ public:
     }
 };
 
+struct LibraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        if (inputsCount != 1) {
+            return 1;
+        }
+
+        if (strcmp(inputs[0].name, "in") != 0) {
+            return 2;
+        }
+
+        const struct CustomNodeTensor* input = &inputs[0];
+
+        *outputsCount = 1;
+        *outputs = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor) * (*outputsCount));
+        struct CustomNodeTensor* output = (&(*outputs))[0];
+
+        output->name = "out";
+        output->data = (uint8_t*)malloc(input->dataBytes * sizeof(uint8_t));
+        output->dataBytes = input->dataBytes;
+        memcpy((void*)output->data, (void*)input->data, input->dataBytes * sizeof(uint8_t));
+        output->dims = (uint64_t*)malloc(input->dimsCount * sizeof(uint64_t));
+        output->dimsCount = input->dimsCount;
+        memcpy((void*)output->dims, (void*)input->dims, input->dimsCount * sizeof(uint64_t));
+        output->precision = input->precision;
+        return 0;
+    }
+
+    static std::vector<int> get_int_list_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsCount) {
+        std::string listStr;
+        for (int i = 0; i < paramsCount; i++) {
+            if (name == params[i].key) {
+                listStr = params[i].value;
+                break;
+            }
+        }
+
+        if (listStr.length() < 2 || listStr.front() != '[' || listStr.back() != ']') {
+            return {};
+        }
+
+        listStr = listStr.substr(1, listStr.size() - 2);
+
+        std::vector<int> result;
+
+        std::stringstream lineStream(listStr);
+        std::string element;
+        while (std::getline(lineStream, element, ',')) {
+            try {
+                int e = std::stoi(element.c_str());
+                result.push_back(e);
+            } catch (std::invalid_argument& e) {
+                return {};
+            } catch (std::out_of_range& e) {
+                return {};
+            }
+        }
+
+        return result;
+    }
+
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        std::vector<int> dims = get_int_list_parameter("input_dims", params, paramsCount);
+        if (dims.empty()) {
+            return 1;
+        }
+
+        *infoCount = 1;
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
+        (*info)->name = "in";
+        (*info)->dimsCount = dims.size();
+        (*info)->dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
+        for (size_t i = 0; i < (*info)->dimsCount; i++) {
+            (*info)->dims[i] = dims.at(i);
+        }
+        (*info)->precision = FP32;
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        std::vector<int> dims = get_int_list_parameter("output_dims", params, paramsCount);
+        if (dims.empty()) {
+            return 1;
+        }
+
+        *infoCount = 1;
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
+        (*info)->name = "out";
+        (*info)->dimsCount = dims.size();
+        (*info)->dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
+        for (size_t i = 0; i < (*info)->dimsCount; i++) {
+            (*info)->dims[i] = dims.at(i);
+        }
+        (*info)->precision = FP32;
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, CustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy) {
-    const size_t demultiplyCount = 3;
+    NodeLibrary libraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy = createLibraryMock<LibraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy>();
+    ASSERT_TRUE(libraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy.isValid());
+
+    const size_t demultiplyCount = 7;
+
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
-        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"out_output", "out_output"}}, demultiplyCount, {}, mockedLibrary,
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"out", "out"}}, demultiplyCount, {}, libraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy,
             parameters_t{
-                {"in_input", "3,5,10;FP32"},
-                {"out_output", "3,5,10;FP32"}}},
+                {"input_dims", "[7,5,10]"},
+                {"output_dims", "[7,5,10]"}}},
         {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
         {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node"}},
     };
@@ -3158,10 +3268,10 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, CustomNodeWithDemultipl
     pipeline_connections_t connections;
 
     connections["custom_node"] = {
-        {ENTRY_NODE_NAME, {{pipelineInputName, "in_input"}}}};
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in"}}}};
 
     connections["dummy_node"] = {
-        {"custom_node", {{"out_output", DUMMY_MODEL_INPUT_NAME}}}};
+        {"custom_node", {{"out", DUMMY_MODEL_INPUT_NAME}}}};
 
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
