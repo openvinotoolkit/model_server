@@ -19,6 +19,7 @@
 #include <string>
 
 #include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -127,6 +128,17 @@ const tensorflow::DataType TensorInfo::getPrecisionAsDataType(InferenceEngine::P
         return tensorflow::DataType::DT_BOOL;
     default:
         return tensorflow::DataType::DT_INVALID;
+    }
+}
+
+ov::element::Type TensorInfo::getPrecisionFromDataType(tensorflow::DataType dataType) {
+    switch (dataType) {
+    case tensorflow::DataType::DT_FLOAT:
+        return ov::element::f32;
+    case tensorflow::DataType::DT_INT32:
+        return ov::element::i32;
+    default:
+        return ov::element::undefined;
     }
 }
 
