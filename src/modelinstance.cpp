@@ -300,6 +300,7 @@ Status ModelInstance::loadOVCNNNetwork() {
     SPDLOG_DEBUG("Try reading model file: {}", modelFile);
     try {
         network = loadOVCNNNetworkPtr(modelFile);
+        network_2 = ieCore_2.read_model(modelFile);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Error: {}; occurred during loading CNNNetwork for model: {} version: {}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
@@ -359,6 +360,7 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 
 void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
     execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*network, targetDevice, pluginConfig));
+    execNetwork_2 = std::make_shared<ov::runtime::ExecutableNetwork>(ieCore_2.compile_model(network_2, targetDevice, pluginConfig));
 }
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
@@ -381,6 +383,15 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
     plugin_config_t pluginConfig = prepareDefaultPluginConfig(config);
     try {
         loadExecutableNetworkPtr(pluginConfig);
+    } catch (ov::Exception& e) {
+        Status status = StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE;
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}; error: {}; model: {}; version: {}; device: {}",
+            status.string(),
+            e.what(),
+            getName(),
+            getVersion(),
+            config.getTargetDevice());
+        return status;
     } catch (std::exception& e) {
         Status status = StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE;
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}; error: {}; model: {}; version: {}; device: {}",
@@ -474,6 +485,7 @@ Status ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
         return Status(StatusCode::INVALID_NIREQ, "Exceeded allowed nireq value");
     }
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
+    inferRequestsQueue_2 = std::make_unique<OVInferRequestsQueue_2>(*execNetwork_2, numberOfParallelInferRequests);
     SPDLOG_INFO("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
         getName(),
         getVersion(),
