@@ -3143,77 +3143,14 @@ public:
     }
 };
 
-struct LibraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy {
-    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
-        return 0;
-    }
-    static int deinitialize(void* customNodeLibraryInternalManager) {
-        return 0;
-    }
-    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
-        if (inputsCount != 1) {
-            return 1;
-        }
-
-        if (strcmp(inputs[0].name, "in") != 0) {
-            return 2;
-        }
-
-        const struct CustomNodeTensor* input = &inputs[0];
-
-        *outputsCount = 1;
-        *outputs = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor) * (*outputsCount));
-        struct CustomNodeTensor* output = (&(*outputs))[0];
-
-        output->name = "out";
-        output->data = (uint8_t*)malloc(input->dataBytes * sizeof(uint8_t));
-        output->dataBytes = input->dataBytes;
-        memcpy((void*)output->data, (void*)input->data, input->dataBytes * sizeof(uint8_t));
-        output->dims = (uint64_t*)malloc(input->dimsCount * sizeof(uint64_t));
-        output->dimsCount = input->dimsCount;
-        memcpy((void*)output->dims, (void*)input->dims, input->dimsCount * sizeof(uint64_t));
-        output->precision = input->precision;
-        return 0;
-    }
-    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
-        *infoCount = 1;
-        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
-        (*info)->name = "in";
-        (*info)->dimsCount = 3;
-        (*info)->dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
-        (*info)->dims[0] = 3;
-        (*info)->dims[1] = 5;
-        (*info)->dims[2] = 10;
-        (*info)->precision = FP32;
-        return 0;
-    }
-    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
-        *infoCount = 1;
-        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
-        (*info)->name = "out";
-        (*info)->dimsCount = 3;
-        (*info)->dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
-        (*info)->dims[0] = 3;
-        (*info)->dims[1] = 5;
-        (*info)->dims[2] = 10;
-        (*info)->precision = FP32;
-        return 0;
-    }
-    static int release(void* ptr, void* customNodeLibraryInternalManager) {
-        free(ptr);
-        return 0;
-    }
-};
-
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, CustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy) {
-    NodeLibrary libraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy = createLibraryMock<LibraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy>();
-    ASSERT_TRUE(libraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy.isValid());
-
     const size_t demultiplyCount = 3;
-
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
-        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"out", "out"}}, demultiplyCount, {}, libraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy, {}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"out_output", "out_output"}}, demultiplyCount, {}, mockedLibrary,
+            parameters_t{
+                {"in_input", "3,5,10;FP32"},
+                {"out_output", "3,5,10;FP32"}}},
         {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
         {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node"}},
     };
@@ -3221,10 +3158,10 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, CustomNodeWithDemultipl
     pipeline_connections_t connections;
 
     connections["custom_node"] = {
-        {ENTRY_NODE_NAME, {{pipelineInputName, "in"}}}};
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in_input"}}}};
 
     connections["dummy_node"] = {
-        {"custom_node", {{"out", DUMMY_MODEL_INPUT_NAME}}}};
+        {"custom_node", {{"out_output", DUMMY_MODEL_INPUT_NAME}}}};
 
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
