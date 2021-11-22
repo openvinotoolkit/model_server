@@ -26,6 +26,14 @@
 from types import SimpleNamespace
 
 
+# Exported errors
+
+from ovmsclient.tfs_compat.base.errors import ModelServerError # noqa
+from ovmsclient.tfs_compat.base.errors import ModelNotFoundError # noqa
+from ovmsclient.tfs_compat.base.errors import InvalidInputError # noqa
+from ovmsclient.tfs_compat.base.errors import BadResponseError # noqa
+
+
 # Exported API functions
 
 from ovmsclient.tfs_compat.grpc.tensors import make_tensor_proto as make_tensor_proto
