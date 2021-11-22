@@ -413,9 +413,7 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
         SPDLOG_DEBUG("Pipeline:{} was not loaded so far. Triggering load", pipelineName);
         auto status = factory.createDefinition(pipelineName, info, connections, manager);
         pipelinesInConfigFile.insert(pipelineName);
-        if (!status.ok()) {
-            return status;
-        }
+        return status;
     }
     SPDLOG_DEBUG("Pipeline:{} is already loaded. Triggering reload", pipelineName);
     auto status = factory.reloadDefinition(pipelineName,
