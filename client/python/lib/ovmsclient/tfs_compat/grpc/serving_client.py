@@ -94,6 +94,13 @@ class GrpcClient(ServingClient):
 
         ServingClient._check_url(url)
 
+        # Setting 1 GB max message size.
+        MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
+        channel_options = [
+            ('grpc.max_send_message_length', MAX_MESSAGE_LENGTH),
+            ('grpc.max_receive_message_length', MAX_MESSAGE_LENGTH),
+        ]
+
         if tls_config is not None:
             ServingClient._check_tls_config(tls_config)
             server_cert, client_cert, client_key = ServingClient._prepare_certs(
@@ -103,9 +110,9 @@ class GrpcClient(ServingClient):
             )
             creds = ssl_channel_credentials(root_certificates=server_cert,
                                             private_key=client_key, certificate_chain=client_cert)
-            channel = secure_channel(url, creds)
+            channel = secure_channel(url, creds, channel_options)
         else:
-            channel = insecure_channel(url)
+            channel = insecure_channel(url, channel_options)
 
         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
         model_service_stub = model_service_pb2_grpc.ModelServiceStub(channel)
