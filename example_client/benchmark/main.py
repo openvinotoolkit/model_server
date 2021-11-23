@@ -180,8 +180,8 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--id", required=False, default="worker",
                         help="client id. default: worker")
     parser.add_argument("-c", "--concurrency", required=False, default="1",
-                        help="concurrency - number of parrlel clients. default: localhost")
-    parser.add_argument("-a", "--server_address", required=False, default="localhost",
+                        help="concurrency - number of parrlel clients. default: 1")
+    parser.add_argument("-a", "--server_address", required=False, default=None,
                         help="url to rest/grpc OVMS service. default: None")
     parser.add_argument("-p", "--grpc_port", required=False, default=None,
                         help="port to grpc OVMS service. default: None")
