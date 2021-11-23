@@ -175,10 +175,10 @@ bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::ve
 
 bool copy_label_ids_into_output(struct CustomNodeTensor* output, const std::vector<int>& labelIds, CustomNodeLibraryInternalManager* internalManager) {
     const uint64_t outputBatch = labelIds.size();
-    uint64_t byteSize = sizeof(float) * outputBatch;
+    uint64_t byteSize = sizeof(int32_t) * outputBatch;
 
-    float* buffer = nullptr;
-    if (!get_buffer<float>(internalManager, &buffer, OUTPUT_LABEL_IDS_TENSOR_NAME, byteSize))
+    int32_t* buffer = nullptr;
+    if (!get_buffer<int32_t>(internalManager, &buffer, OUTPUT_LABEL_IDS_TENSOR_NAME, byteSize))
         return false;
     std::memcpy(buffer, labelIds.data(), byteSize);
 
@@ -226,6 +226,11 @@ int initializeInternalManager(void** customNodeLibraryInternalManager, const str
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE), "buffer creation failed");
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
 
+    // creating BuffersQueues for output: label_ids
+    uint64_t labelIdsByteSize = sizeof(int32_t) * maxOutputBatch;
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_LABEL_IDS_TENSOR_NAME, labelIdsByteSize, QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_LABEL_IDS_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+
     // creating BuffersQueues for inputs
     NODE_ASSERT(internalManager->createBuffersQueue(INPUT_IMAGE_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
     NODE_ASSERT(internalManager->createBuffersQueue(INPUT_DETECTION_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
@@ -241,6 +246,7 @@ int initializeInternalManager(void** customNodeLibraryInternalManager, const str
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_COORDINATES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_LABEL_IDS_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
 
     *customNodeLibraryInternalManager = internalManager.release();
     return 0;
@@ -269,6 +275,9 @@ int reinitializeInternalManagerIfNeccessary(void** customNodeLibraryInternalMana
 
     uint64_t confidenceByteSize = sizeof(float) * maxOutputBatch;
     NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE), "buffer recreation failed");
+    
+    uint64_t labelIdsByteSize = sizeof(int32_t) * maxOutputBatch;
+    NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_LABEL_IDS_TENSOR_NAME, labelIdsByteSize, QUEUE_SIZE), "buffer recreation failed");
 
     return 0;
 }
