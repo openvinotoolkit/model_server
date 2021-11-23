@@ -82,9 +82,9 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
 
 bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Vec4f>& detections) {
     const uint64_t outputBatch = detections.size();
-    uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
+    uint64_t byteSize = sizeof(float) * 4 * outputBatch;
 
-    int32_t* buffer = (int32_t*)malloc(byteSize);
+    float* buffer = (float*)malloc(byteSize);
     NODE_ASSERT(buffer != nullptr, "malloc has failed");
     if (buffer == nullptr) {
         return false;
@@ -130,9 +130,9 @@ bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::ve
 
 bool copy_label_ids_into_output(struct CustomNodeTensor* output, const std::vector<int>& labelIds) {
     const uint64_t outputBatch = labelIds.size();
-    uint64_t byteSize = sizeof(float) * outputBatch;
+    uint64_t byteSize = sizeof(int32_t) * outputBatch;
 
-    float* buffer = (float*)malloc(byteSize);
+    int32_t* buffer = (int32_t*)malloc(byteSize);
     NODE_ASSERT(buffer != nullptr, "malloc has failed");
     std::memcpy(buffer, labelIds.data(), byteSize);
 
