@@ -275,7 +275,7 @@ int reinitializeInternalManagerIfNeccessary(void** customNodeLibraryInternalMana
 
     uint64_t confidenceByteSize = sizeof(float) * maxOutputBatch;
     NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE), "buffer recreation failed");
-    
+
     uint64_t labelIdsByteSize = sizeof(int32_t) * maxOutputBatch;
     NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_LABEL_IDS_TENSOR_NAME, labelIdsByteSize, QUEUE_SIZE), "buffer recreation failed");
 
