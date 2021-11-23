@@ -240,7 +240,7 @@ int initializeInternalManager(void** customNodeLibraryInternalManager, const str
 
     // creating BuffersQueues for info tensors
     NODE_ASSERT(internalManager->createBuffersQueue(INPUT_TENSOR_INFO_NAME, 2 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE), "buffer creation failed");
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 4 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE), "buffer creation failed");
 
     // creating BuffersQueues for outputs dims in getOutputsInfo
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
