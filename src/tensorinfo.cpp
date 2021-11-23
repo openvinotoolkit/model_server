@@ -159,6 +159,7 @@ inline static tensorflow::DataType getPrecisionAsDataType(Precision precision) {
 };
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
+// TODO missing precisions
         return tensorflow::DataType::DT_INVALID;
     }
     return it->second;
@@ -166,14 +167,21 @@ inline static tensorflow::DataType getPrecisionAsDataType(Precision precision) {
 
 inline static std::string getPrecisionAsString(Precision precision) {
     static std::unordered_map<Precision, const char*> precisionMap {
+    {Precision::BF16, "BF16"},
+    {Precision::FP64, "FP64"},
     {Precision::FP32, "FP32"},
-    {Precision::I32, "I32"},
-    {Precision::I8, "I8"},
-    {Precision::U8, "U8"},
-    {Precision::I16, "I16"},
     {Precision::FP16, "FP16"},
-    {Precision::U16, "U16"},
     {Precision::I64, "I64"},
+    {Precision::I32, "I32"},
+    {Precision::I16, "I16"},
+    {Precision::I8, "I8"},
+    {Precision::I4, "I4"},
+    {Precision::U64, "U64"},
+    {Precision::U32, "U32"},
+    {Precision::U16, "U16"},
+    {Precision::U8, "U8"},
+    {Precision::U4, "U4"},
+    {Precision::U1, "U1"},
     {Precision::MIXED, "MIXED"},
     {Precision::Q78, "Q78"},
     {Precision::BIN, "BIN"},
