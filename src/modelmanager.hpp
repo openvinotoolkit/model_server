@@ -27,7 +27,6 @@
 
 #include <inference_engine.hpp>
 #include <openvino/openvino.hpp>
-
 #include <rapidjson/document.h>
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>

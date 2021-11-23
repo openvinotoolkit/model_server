@@ -343,14 +343,23 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 
         if (res == CustomLoaderStatus::MODEL_TYPE_IR) {
             Blob::Ptr blobWts = make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C});
+            ov::runtime::Tensor tensorWts(ov::element::u8, ov::Shape{weights.size()});
+            (void)tensorWts;
             blobWts->allocate();
+            // dont need to allocate
             std::memcpy(InferenceEngine::as<InferenceEngine::MemoryBlob>(blobWts)->wmap(), weights.data(), weights.size());
+            std::memcpy(tensorWts.data(), weights.data(), weights.size());
             network = std::make_unique<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(strModel, blobWts));
+            network_2 = ieCore_2.read_model(strModel, tensorWts);
         } else if (res == CustomLoaderStatus::MODEL_TYPE_ONNX) {
             network = std::make_unique<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(strModel, InferenceEngine::Blob::CPtr()));
+            network_2 = ieCore_2.read_model(strModel, ov::runtime::Tensor());
         } else if (res == CustomLoaderStatus::MODEL_TYPE_BLOB) {
             return StatusCode::INTERNAL_ERROR;
         }
+    } catch (ov::Exception& e) {
+        SPDLOG_ERROR("Error: {}; occurred during loading CNNNetwork for model: {} version: {}", e.what(), getName(), getVersion());
+        return StatusCode::INTERNAL_ERROR;
     } catch (std::exception& e) {
         SPDLOG_ERROR("Error: {}; occurred during loading CNNNetwork for model: {} version: {}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
