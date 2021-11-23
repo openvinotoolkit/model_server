@@ -302,7 +302,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     if (!copy_label_ids_into_output(&labelIdsTensor, labelIds)) {
         cleanup(imagesTensor);
         cleanup(coordinatesTensor);
-        cleanup(labelIdsTensor);
+        cleanup(confidencesTensor);
         free(*outputs);
         return 1;
     }
@@ -401,7 +401,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     (*info)[3].name = OUTPUT_LABEL_IDS_TENSOR_NAME;
     (*info)[3].dimsCount = 3;
     (*info)[3].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
-    NODE_ASSERT(((*info)[2].dims) != nullptr, "malloc has failed");
+    NODE_ASSERT(((*info)[3].dims) != nullptr, "malloc has failed");
     (*info)[3].dims[0] = 0;
     (*info)[3].dims[1] = 1;
     (*info)[3].dims[2] = 1;
