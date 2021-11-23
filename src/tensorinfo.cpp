@@ -139,7 +139,52 @@ ov::element::Type TensorInfo::getPrecisionFromDataType(tensorflow::DataType data
         return ov::element::i32;
     default:
         return ov::element::undefined;
+}
+
+inline static tensorflow::DataType getPrecisionAsDataType(Precision precision) {
+    static std::unordered_map<Precision, tensorflow::DataType> precisionMap{
+    {Precision::FP32, tensorflow::DataType::DT_FLOAT},
+    {Precision::I32, tensorflow::DataType::DT_INT32},
+    {Precision::I8, tensorflow::DataType::DT_INT8},
+    {Precision::U8, tensorflow::DataType::DT_UINT8},
+    {Precision::I16, tensorflow::DataType::DT_INT16},
+    {Precision::FP16, tensorflow::DataType::DT_HALF},
+    {Precision::U16, tensorflow::DataType::DT_UINT16},
+    {Precision::I64, tensorflow::DataType::DT_INT64},
+//    {Precision::MIXED, tensorflow::DataType::DT_INVALID},
+//    {Precision::Q78, tensorflow::DataType::DT_INVALID},
+//    {Precision::BIN, tensorflow::DataType::DT_INVALID},
+    {Precision::BOOL, tensorflow::DataType::DT_BOOL}
+//    {Precision::CUSTOM, tensorflow::DataType::DT_INVALID}
+};
+    auto it = precisionMap.find(precision);
+    if (it == precisionMap.end()) {
+        return tensorflow::DataType::DT_INVALID;
     }
+    return it->second;
+}
+
+inline static std::string getPrecisionAsString(Precision precision) {
+    static std::unordered_map<Precision, const char*> precisionMap {
+    {Precision::FP32, "FP32"},
+    {Precision::I32, "I32"},
+    {Precision::I8, "I8"},
+    {Precision::U8, "U8"},
+    {Precision::I16, "I16"},
+    {Precision::FP16, "FP16"},
+    {Precision::U16, "U16"},
+    {Precision::I64, "I64"},
+    {Precision::MIXED, "MIXED"},
+    {Precision::Q78, "Q78"},
+    {Precision::BIN, "BIN"},
+    {Precision::BOOL, "BOOL"},
+    {Precision::CUSTOM, "CUSTOM"}
+};
+    auto it = precisionMap.find(precision);
+    if (it == precisionMap.end()) {
+        return "DT_INVALID"; // TODO other way? why translate it to TF equivalent
+    }
+    return it->second;
 }
 
 const std::string TensorInfo::getPrecisionAsString() const {

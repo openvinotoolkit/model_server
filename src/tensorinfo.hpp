@@ -28,6 +28,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "precision.hpp"
 #include "shapeinfo.hpp"
 
 namespace ovms {
@@ -55,6 +56,7 @@ protected:
          * @brief Tensor precision data type
          */
     InferenceEngine::Precision precision;
+    Precision precision_2;
 
     /**
          * @brief Model input shape
@@ -99,6 +101,9 @@ public:
     TensorInfo(const std::string& name,
         const InferenceEngine::Precision& precision,
         const shape_t& shape);
+    TensorInfo(const std::string& name,
+        const Precision& precision,
+        const shape_t& shape);
 
     /**
          * @brief Construct a new Tensor Info object
@@ -110,6 +115,10 @@ public:
          */
     TensorInfo(const std::string& name,
         const InferenceEngine::Precision& precision,
+        const shape_t& shape,
+        const InferenceEngine::Layout& layout);
+    TensorInfo(const std::string& name,
+        const Precision& precision,
         const shape_t& shape,
         const InferenceEngine::Layout& layout);
 
@@ -127,6 +136,11 @@ public:
     TensorInfo(const std::string& name,
         const std::string& mapping,
         const InferenceEngine::Precision& precision,
+        const shape_t& shape,
+        const InferenceEngine::Layout& layout);
+    TensorInfo(const std::string& name,
+        const std::string& mapping,
+        const Precision& precision,
         const shape_t& shape,
         const InferenceEngine::Layout& layout);
 
@@ -175,6 +189,7 @@ public:
 
     static const tensorflow::DataType getPrecisionAsDataType(InferenceEngine::Precision precision);
     static ov::element::Type getPrecisionFromDataType(tensorflow::DataType dataType);
+    static const tensorflow::DataType getPrecisionAsDataType(Precision precision);
 
     /**
         * @brief Get the Precision As String object
@@ -184,6 +199,7 @@ public:
     const std::string getPrecisionAsString() const;
 
     static const std::string getPrecisionAsString(const InferenceEngine::Precision precision);
+    static const std::string getPrecisionAsString(Precision precision);
 
     static const std::string getDataTypeAsString(tensorflow::DataType dataType);
 

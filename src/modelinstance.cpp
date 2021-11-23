@@ -342,7 +342,7 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
         std::string strModel(model.begin(), model.end());
 
         if (res == CustomLoaderStatus::MODEL_TYPE_IR) {
-            Blob::Ptr blobWts = make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C});
+            Blob::Ptr blobWts = make_shared_blob<uint8_t>({InferenceEngine::Precision::U8, {weights.size()}, C});
             ov::runtime::Tensor tensorWts(ov::element::u8, ov::Shape{weights.size()});
             (void)tensorWts;
             blobWts->allocate();
