@@ -37,7 +37,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const shape_t& shape) :
     name(name),
     mapping(""),
-    precision(precision),
+    precision_2(IE1PrecisionToOvmsPrecision(precision)),
     shape(shape),
     layout(InferenceEngine::Layout::ANY) {
     this->updateEffectiveShape();
@@ -49,7 +49,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const InferenceEngine::Layout& layout) :
     name(name),
     mapping(""),
-    precision(precision),
+    precision_2(IE1PrecisionToOvmsPrecision(precision)),
     shape(shape),
     layout(layout) {
     this->updateEffectiveShape();
@@ -59,7 +59,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const InferenceEngine::TensorDesc& tensorDesc) :
     name(name),
     mapping(""),
-    precision(tensorDesc.getPrecision()),
+    precision_2(IE1PrecisionToOvmsPrecision(tensorDesc.getPrecision())),
     shape(tensorDesc.getDims()),
     layout(tensorDesc.getLayout()) {
     this->updateEffectiveShape();
@@ -72,7 +72,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const InferenceEngine::Layout& layout) :
     name(name),
     mapping(mapping),
-    precision(precision),
+    precision_2(IE1PrecisionToOvmsPrecision(precision)),
     shape(shape),
     layout(layout) {
     this->updateEffectiveShape();
@@ -91,44 +91,22 @@ void TensorInfo::setMappedName(const std::string& mappedName) {
 }
 
 const InferenceEngine::Precision TensorInfo::getPrecision() const {
-    return precision;
+    return ovmsPrecisionToIE1Precision(precision_2);
+}
+const Precision TensorInfo::getPrecision_2() const {
+    return precision_2;
 }
 
 void TensorInfo::setPrecision(const InferenceEngine::Precision& requestedPrecision) {
-    precision = requestedPrecision;
+    precision_2 = IE1PrecisionToOvmsPrecision(requestedPrecision);
 }
 
-const tensorflow::DataType TensorInfo::getPrecisionAsDataType() const {
-    return getPrecisionAsDataType(precision);
+tensorflow::DataType TensorInfo::getPrecisionAsDataType() const {
+    return getPrecisionAsDataType(precision_2);
 }
 
-const tensorflow::DataType TensorInfo::getPrecisionAsDataType(InferenceEngine::Precision precision) {
-    switch (precision) {
-    case InferenceEngine::Precision::FP32:
-        return tensorflow::DataType::DT_FLOAT;
-    case InferenceEngine::Precision::I32:
-        return tensorflow::DataType::DT_INT32;
-    case InferenceEngine::Precision::I8:
-        return tensorflow::DataType::DT_INT8;
-    case InferenceEngine::Precision::U8:
-        return tensorflow::DataType::DT_UINT8;
-    case InferenceEngine::Precision::FP16:
-        return tensorflow::DataType::DT_HALF;
-    // case InferenceEngine::Precision::Q78:   return tensorflow::DataType::
-    case InferenceEngine::Precision::I16:
-        return tensorflow::DataType::DT_INT16;
-    case InferenceEngine::Precision::U16:
-        return tensorflow::DataType::DT_UINT16;
-    case InferenceEngine::Precision::U64:
-        return tensorflow::DataType::DT_UINT64;
-    case InferenceEngine::Precision::I64:
-        return tensorflow::DataType::DT_INT64;
-    // case InferenceEngine::Precision::BIN:   return tensorflow::DataType::
-    case InferenceEngine::Precision::BOOL:
-        return tensorflow::DataType::DT_BOOL;
-    default:
-        return tensorflow::DataType::DT_INVALID;
-    }
+tensorflow::DataType TensorInfo::getPrecisionAsDataType(InferenceEngine::Precision precision) {
+    return getPrecisionAsDataType(IE1PrecisionToOvmsPrecision(precision));
 }
 
 ov::element::Type TensorInfo::getPrecisionFromDataType(tensorflow::DataType dataType) {
@@ -140,17 +118,19 @@ ov::element::Type TensorInfo::getPrecisionFromDataType(tensorflow::DataType data
     default:
         return ov::element::undefined;
 }
+}
 
-inline static tensorflow::DataType getPrecisionAsDataType(Precision precision) {
+tensorflow::DataType TensorInfo::getPrecisionAsDataType(Precision precision) {
     static std::unordered_map<Precision, tensorflow::DataType> precisionMap{
     {Precision::FP32, tensorflow::DataType::DT_FLOAT},
-    {Precision::I32, tensorflow::DataType::DT_INT32},
-    {Precision::I8, tensorflow::DataType::DT_INT8},
-    {Precision::U8, tensorflow::DataType::DT_UINT8},
-    {Precision::I16, tensorflow::DataType::DT_INT16},
     {Precision::FP16, tensorflow::DataType::DT_HALF},
-    {Precision::U16, tensorflow::DataType::DT_UINT16},
     {Precision::I64, tensorflow::DataType::DT_INT64},
+    {Precision::I32, tensorflow::DataType::DT_INT32},
+    {Precision::I16, tensorflow::DataType::DT_INT16},
+    {Precision::I8, tensorflow::DataType::DT_INT8},
+    {Precision::U64, tensorflow::DataType::DT_UINT64},
+    {Precision::U16, tensorflow::DataType::DT_UINT16},
+    {Precision::U8, tensorflow::DataType::DT_UINT8},
 //    {Precision::MIXED, tensorflow::DataType::DT_INVALID},
 //    {Precision::Q78, tensorflow::DataType::DT_INVALID},
 //    {Precision::BIN, tensorflow::DataType::DT_INVALID},
@@ -165,7 +145,7 @@ inline static tensorflow::DataType getPrecisionAsDataType(Precision precision) {
     return it->second;
 }
 
-inline static std::string getPrecisionAsString(Precision precision) {
+std::string TensorInfo::getPrecisionAsString(Precision precision) {
     static std::unordered_map<Precision, const char*> precisionMap {
     {Precision::BF16, "BF16"},
     {Precision::FP64, "FP64"},
@@ -186,43 +166,22 @@ inline static std::string getPrecisionAsString(Precision precision) {
     {Precision::Q78, "Q78"},
     {Precision::BIN, "BIN"},
     {Precision::BOOL, "BOOL"},
+    {Precision::UNDEFINED, "UNDEFINED"},
     {Precision::CUSTOM, "CUSTOM"}
 };
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
-        return "DT_INVALID"; // TODO other way? why translate it to TF equivalent
+        return "DT_INVALID"; // TODO other way? why translate it to TF equivalent maybe UNDEFINED?
     }
     return it->second;
 }
 
-const std::string TensorInfo::getPrecisionAsString() const {
-    return getPrecisionAsString(precision);
+std::string TensorInfo::getPrecisionAsString() const {
+    return getPrecisionAsString(precision_2);
 }
 
-const std::string TensorInfo::getPrecisionAsString(InferenceEngine::Precision precision) {
-    switch (precision) {
-    case InferenceEngine::Precision::FP32:
-        return "FP32";
-    case InferenceEngine::Precision::I32:
-        return "I32";
-    case InferenceEngine::Precision::I8:
-        return "I8";
-    case InferenceEngine::Precision::U8:
-        return "U8";
-    case InferenceEngine::Precision::FP16:
-        return "FP16";
-        // case InferenceEngine::Precision::Q78:   return tensorflow::DataType::
-    case InferenceEngine::Precision::I16:
-        return "I16";
-    case InferenceEngine::Precision::U16:
-        return "U16";
-    case InferenceEngine::Precision::I64:
-        return "I64";
-    case InferenceEngine::Precision::BOOL:
-        return "BOOL";
-    default:
-        return "DT_INVALID";
-    }
+std::string TensorInfo::getPrecisionAsString(InferenceEngine::Precision precision) {
+        return getPrecisionAsString(IE1PrecisionToOvmsPrecision(precision));
 }
 
 const std::string TensorInfo::getDataTypeAsString(tensorflow::DataType dataType) {
@@ -341,6 +300,10 @@ const shape_t& TensorInfo::getShape() const {
     return shape;
 }
 
+const shape_t& TensorInfo::getShape_2() const {
+    return shape_2;
+}
+
 bool TensorInfo::isInfluencedByDemultiplexer() const {
     return influencedByDemultiplexer;
 }
@@ -361,6 +324,7 @@ void TensorInfo::setLayout(InferenceEngine::Layout layout) {
 
 void TensorInfo::updateEffectiveShape() {
     this->effectiveShape = this->getTensorDesc().getBlockingDesc().getBlockDims();
+    this->shape_2 = effectiveShape;
 }
 
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const shape_t& shape) const {
@@ -376,20 +340,22 @@ std::shared_ptr<TensorInfo> TensorInfo::createCopyWithEffectiveDimensionPrefix(s
     copy->influencedByDemultiplexer = true;
     copy->effectiveShape = this->getEffectiveShape();
     copy->effectiveShape.insert(copy->effectiveShape.begin(), dim);
+    copy->shape_2 = copy->effectiveShape;
     return copy;
 }
 
 const InferenceEngine::TensorDesc TensorInfo::getTensorDesc() const {
-    return InferenceEngine::TensorDesc{precision, shape, layout};
+        // TODO how to
+    return InferenceEngine::TensorDesc{ovmsPrecisionToIE1Precision(precision_2), shape, layout};
 }
 
 bool TensorInfo::isTensorSpecEqual(const TensorInfo& other) const {
-    return this->getEffectiveShape() == other.getEffectiveShape() &&
-           this->getPrecision() == other.getPrecision();
+    return this->getShape_2() == other.getShape_2() &&
+           this->getPrecision_2() == other.getPrecision_2();
 }
 
 bool TensorInfo::isTensorUnspecified() const {
-    return this->getPrecision() == InferenceEngine::Precision::UNSPECIFIED;
+    return this->getPrecision_2() == Precision::UNDEFINED;
 }
 
 std::string TensorInfo::shapeToString(const shape_t& shape) {

@@ -16,6 +16,7 @@
 #pragma once
 
 #include <inference_engine.hpp>
+#include <map> // TODO remove
 #include <unordered_map>
 
 namespace ovms {
@@ -55,12 +56,14 @@ inline static InferenceEngine::Precision ovmsPrecisionToIE1Precision(Precision p
     {Precision::I32, InferenceEngine::Precision::I32},
     {Precision::I16, InferenceEngine::Precision::I16},
     {Precision::I8, InferenceEngine::Precision::I8},
+    {Precision::U64, InferenceEngine::Precision::U64},
     {Precision::U16, InferenceEngine::Precision::U16},
     {Precision::U8, InferenceEngine::Precision::U8},
     {Precision::BOOL, InferenceEngine::Precision::BOOL},
     {Precision::MIXED, InferenceEngine::Precision::MIXED},
     {Precision::Q78, InferenceEngine::Precision::Q78},
     {Precision::BIN, InferenceEngine::Precision::BIN},
+    {Precision::UNDEFINED, InferenceEngine::Precision::UNSPECIFIED},
     {Precision::CUSTOM, InferenceEngine::Precision::CUSTOM}
 };
     auto it = precisionMap.find(precision);
@@ -78,8 +81,12 @@ static std::unordered_map<Precision, ov::element::Type_t> precisionMap{
     {Precision::I32, ov::element::Type_t::i32},
     {Precision::I16, ov::element::Type_t::i16},
     {Precision::I8, ov::element::Type_t::i8},
+    {Precision::I4, ov::element::Type_t::i4},
+    {Precision::U64, ov::element::Type_t::u64},
     {Precision::U16, ov::element::Type_t::u16},
     {Precision::U8, ov::element::Type_t::u8},
+    {Precision::U4, ov::element::Type_t::u4},
+    {Precision::U1, ov::element::Type_t::u1},
     {Precision::BOOL, ov::element::Type_t::boolean},
     {Precision::UNDEFINED, ov::element::Type_t::undefined}, // TODO
     {Precision::DYNAMIC, ov::element::Type_t::dynamic} // TODO
@@ -139,6 +146,32 @@ static std::unordered_map<ov::element::Type_t, Precision> precisionMap{
 */
 };
     auto it = precisionMap.find(type);
+    if (it == precisionMap.end()) {
+        return Precision::UNDEFINED; // TODO other way?
+    }
+    return it->second;
+}
+inline static Precision IE1PrecisionToOvmsPrecision(InferenceEngine::Precision precision) {
+    static std::map<InferenceEngine::Precision, Precision> precisionMap {
+    {InferenceEngine::Precision::BF16, Precision::BF16},
+    {InferenceEngine::Precision::FP64, Precision::FP64},
+    {InferenceEngine::Precision::FP32, Precision::FP32},
+    {InferenceEngine::Precision::FP16, Precision::FP16},
+    {InferenceEngine::Precision::I64, Precision::I64},
+    {InferenceEngine::Precision::I32, Precision::I32},
+    {InferenceEngine::Precision::I16, Precision::I16},
+    {InferenceEngine::Precision::I8, Precision::I8},
+    {InferenceEngine::Precision::U64, Precision::U64},
+    {InferenceEngine::Precision::U16, Precision::U16},
+    {InferenceEngine::Precision::U8, Precision::U8},
+    {InferenceEngine::Precision::BOOL, Precision::BOOL},
+    {InferenceEngine::Precision::MIXED, Precision::MIXED},
+    {InferenceEngine::Precision::Q78, Precision::Q78},
+    {InferenceEngine::Precision::BIN, Precision::BIN},
+    {InferenceEngine::Precision::UNSPECIFIED, Precision::UNDEFINED},
+    {InferenceEngine::Precision::CUSTOM, Precision::CUSTOM}
+};
+    auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
         return Precision::UNDEFINED; // TODO other way?
     }

@@ -52,16 +52,13 @@ protected:
          */
     std::string mapping;
 
-    /**
-         * @brief Tensor precision data type
-         */
-    InferenceEngine::Precision precision;
     Precision precision_2;
 
     /**
          * @brief Model input shape
          */
     shape_t shape;
+    shape_t shape_2;
 
     /**
         * @brief Model input effective shape
@@ -77,11 +74,6 @@ protected:
          * @brief Information if influenced by demultiplexer
          */
     bool influencedByDemultiplexer = false;
-
-    /**
-         * @brief TensorDesc
-         */
-    InferenceEngine::TensorDesc tensorDesc;
 
 public:
     /**
@@ -165,6 +157,7 @@ public:
          * @return const InferenceEngine::Precision
          */
     const InferenceEngine::Precision getPrecision() const;
+    const Precision getPrecision_2() const;
 
     /**
          * @brief Set the Precision object
@@ -185,21 +178,21 @@ public:
          * 
          * @return const tensorflow::DataType
          */
-    const tensorflow::DataType getPrecisionAsDataType() const;
+    tensorflow::DataType getPrecisionAsDataType() const;
 
-    static const tensorflow::DataType getPrecisionAsDataType(InferenceEngine::Precision precision);
+    static tensorflow::DataType getPrecisionAsDataType(InferenceEngine::Precision precision);
+    static tensorflow::DataType getPrecisionAsDataType(Precision precision);
     static ov::element::Type getPrecisionFromDataType(tensorflow::DataType dataType);
-    static const tensorflow::DataType getPrecisionAsDataType(Precision precision);
 
     /**
         * @brief Get the Precision As String object
         *
         * @return const std::string
         */
-    const std::string getPrecisionAsString() const;
+    std::string getPrecisionAsString() const;
 
-    static const std::string getPrecisionAsString(const InferenceEngine::Precision precision);
-    static const std::string getPrecisionAsString(Precision precision);
+    static std::string getPrecisionAsString(const InferenceEngine::Precision precision);
+    static std::string getPrecisionAsString(Precision precision);
 
     static const std::string getDataTypeAsString(tensorflow::DataType dataType);
 
@@ -232,6 +225,7 @@ public:
          * @return shape
          */
     const shape_t& getShape() const;
+    const shape_t& getShape_2() const;
 
     /**
          * @brief Gets input effective shape
