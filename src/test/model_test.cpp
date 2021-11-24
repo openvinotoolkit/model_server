@@ -27,11 +27,14 @@
 class ModelDefaultVersions : public ::testing::Test {
 protected:
     std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::runtime::Core> ieCore_2;
     void SetUp() {
         ieCore = std::make_unique<InferenceEngine::Core>();
+        ieCore_2 = std::make_unique<ov::runtime::Core>();
     }
     void TearDown() {
         ieCore.reset();
+        ieCore_2.reset();
     }
 };
 
@@ -49,7 +52,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionNullWhenVersionRetired) {
     versionsToChange->push_back(1);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     auto fs = ovms::ModelManager::getFilesystem(config.getBasePath());
-    mockModel.addVersions(versionsToChange, config, fs, *ieCore, versionsFailed);
+    mockModel.addVersions(versionsToChange, config, fs, *ieCore, *ieCore_2, versionsFailed);
     mockModel.retireVersions(versionsToChange);
 
     std::shared_ptr<ovms::ModelInstance> defaultInstance;
@@ -64,7 +67,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnValidWhen1Added) {
     versionsToChange->push_back(1);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     auto fs = ovms::ModelManager::getFilesystem(config.getBasePath());
-    ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, versionsFailed), ovms::StatusCode::OK);
+    ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, *ieCore_2, versionsFailed), ovms::StatusCode::OK);
 
     std::shared_ptr<ovms::ModelInstance> defaultInstance;
     defaultInstance = mockModel.getDefaultModelInstance();
@@ -79,11 +82,11 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighest) {
     versionsToChange->push_back(1);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     auto fs = ovms::ModelManager::getFilesystem(config.getBasePath());
-    ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, versionsFailed), ovms::StatusCode::OK);
+    ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, *ieCore_2, versionsFailed), ovms::StatusCode::OK);
     versionsToChange->clear();
     versionsToChange->push_back(2);
     config.setVersion(2);
-    ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, versionsFailed), ovms::StatusCode::OK);
+    ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, *ieCore_2, versionsFailed), ovms::StatusCode::OK);
 
     std::shared_ptr<ovms::ModelInstance> defaultInstance;
     defaultInstance = mockModel.getDefaultModelInstance();
@@ -98,12 +101,12 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighestNonRetired) {
     versionsToChange->push_back(1);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     auto fs = ovms::ModelManager::getFilesystem(config.getBasePath());
-    ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, versionsFailed), ovms::StatusCode::OK);
+    ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, *ieCore_2, versionsFailed), ovms::StatusCode::OK);
     versionsToChange->clear();
 
     versionsToChange->push_back(2);
     config.setVersion(2);
-    ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, versionsFailed), ovms::StatusCode::OK);
+    ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, *ieCore_2, versionsFailed), ovms::StatusCode::OK);
     versionsToChange->clear();
 
     versionsToChange->push_back(2);
@@ -123,12 +126,12 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighestWhenVersionReloade
     versionsToChange->push_back(1);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     auto fs = ovms::ModelManager::getFilesystem(config.getBasePath());
-    ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, versionsFailed), ovms::StatusCode::OK);
+    ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, *ieCore_2, versionsFailed), ovms::StatusCode::OK);
     versionsToChange->clear();
 
     versionsToChange->push_back(2);
     config.setVersion(2);
-    ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, versionsFailed), ovms::StatusCode::OK);
+    ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, *ieCore_2, versionsFailed), ovms::StatusCode::OK);
     versionsToChange->clear();
 
     versionsToChange->push_back(2);
@@ -137,7 +140,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighestWhenVersionReloade
 
     versionsToChange->push_back(2);
     config.setVersion(2);
-    ASSERT_EQ(mockModel.reloadVersions(versionsToChange, config, fs, *ieCore, versionsFailed), ovms::StatusCode::OK);
+    ASSERT_EQ(mockModel.reloadVersions(versionsToChange, config, fs, *ieCore, *ieCore_2, versionsFailed), ovms::StatusCode::OK);
     versionsToChange->clear();
 
     std::shared_ptr<ovms::ModelInstance> defaultInstance;

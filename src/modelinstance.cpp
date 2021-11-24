@@ -300,6 +300,7 @@ Status ModelInstance::loadOVCNNNetwork() {
     SPDLOG_DEBUG("Try reading model file: {}", modelFile);
     try {
         network = loadOVCNNNetworkPtr(modelFile);
+        network_2 = ieCore_2.read_model(modelFile);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Error: {}; occurred during loading CNNNetwork for model: {} version: {}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
@@ -342,14 +343,23 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 
         if (res == CustomLoaderStatus::MODEL_TYPE_IR) {
             Blob::Ptr blobWts = make_shared_blob<uint8_t>({Precision::U8, {weights.size()}, C});
+            ov::runtime::Tensor tensorWts(ov::element::u8, ov::Shape{weights.size()});
+            (void)tensorWts;
             blobWts->allocate();
+            // dont need to allocate
             std::memcpy(InferenceEngine::as<InferenceEngine::MemoryBlob>(blobWts)->wmap(), weights.data(), weights.size());
+            std::memcpy(tensorWts.data(), weights.data(), weights.size());
             network = std::make_unique<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(strModel, blobWts));
+            network_2 = ieCore_2.read_model(strModel, tensorWts);
         } else if (res == CustomLoaderStatus::MODEL_TYPE_ONNX) {
             network = std::make_unique<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(strModel, InferenceEngine::Blob::CPtr()));
+            network_2 = ieCore_2.read_model(strModel, ov::runtime::Tensor());
         } else if (res == CustomLoaderStatus::MODEL_TYPE_BLOB) {
             return StatusCode::INTERNAL_ERROR;
         }
+    } catch (ov::Exception& e) {
+        SPDLOG_ERROR("Error: {}; occurred during loading CNNNetwork for model: {} version: {}", e.what(), getName(), getVersion());
+        return StatusCode::INTERNAL_ERROR;
     } catch (std::exception& e) {
         SPDLOG_ERROR("Error: {}; occurred during loading CNNNetwork for model: {} version: {}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
@@ -359,6 +369,7 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 
 void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
     execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*network, targetDevice, pluginConfig));
+    execNetwork_2 = std::make_shared<ov::runtime::ExecutableNetwork>(ieCore_2.compile_model(network_2, targetDevice, pluginConfig));
 }
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
@@ -381,6 +392,15 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
     plugin_config_t pluginConfig = prepareDefaultPluginConfig(config);
     try {
         loadExecutableNetworkPtr(pluginConfig);
+    } catch (ov::Exception& e) {
+        Status status = StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE;
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}; error: {}; model: {}; version: {}; device: {}",
+            status.string(),
+            e.what(),
+            getName(),
+            getVersion(),
+            config.getTargetDevice());
+        return status;
     } catch (std::exception& e) {
         Status status = StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE;
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}; error: {}; model: {}; version: {}; device: {}",
@@ -474,6 +494,7 @@ Status ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
         return Status(StatusCode::INVALID_NIREQ, "Exceeded allowed nireq value");
     }
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
+    inferRequestsQueue_2 = std::make_unique<OVInferRequestsQueue_2>(*execNetwork_2, numberOfParallelInferRequests);
     SPDLOG_INFO("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
         getName(),
         getVersion(),
@@ -791,6 +812,18 @@ Status ModelInstance::performInference(InferenceEngine::InferRequest& inferReque
     return StatusCode::OK;
 }
 
+Status ModelInstance::performInference_2(ov::runtime::InferRequest& inferRequest) {
+    try {
+        inferRequest.start_async();
+        inferRequest.wait();
+    } catch (const ov::Exception& e) {
+        Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+        SPDLOG_ERROR("Async caught an exception {}: {}", status.string(), e.what());
+        return status;
+    }
+    return StatusCode::OK;
+}
+
 Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,
     tensorflow::serving::PredictResponse* responseProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
@@ -803,14 +836,20 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
         return status;
     timer.start("get infer request");
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+    ExecutingStreamIdGuard_2 executingStreamIdGuard_2(getInferRequestsQueue_2());
     int executingInferId = executingStreamIdGuard.getId();
+    int executingInferId_2 = executingStreamIdGuard_2.getId();
+    (void)executingInferId_2;
     InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    ov::runtime::InferRequest& inferRequest_2 = executingStreamIdGuard_2.getInferRequest();
     timer.stop("get infer request");
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
 
     timer.start("deserialize");
     InputSink<InferRequest&> inputSink(inferRequest);
+    InputSink_2<ov::runtime::InferRequest&> inputSink_2(inferRequest_2);
+    (void)inputSink_2;
     bool isPipeline = false;
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
     timer.stop("deserialize");

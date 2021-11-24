@@ -3097,8 +3097,8 @@ class DummyModelWithMockedMetadata : public ovms::ModelInstance {
     ovms::tensor_map_t mockedInputsInfo, mockedOutputsInfo;
 
 public:
-    DummyModelWithMockedMetadata(InferenceEngine::Core& ieCore, const ovms::tensor_map_t& inputsInfo, const ovms::tensor_map_t& outputsInfo) :
-        ovms::ModelInstance("dummy", 1, ieCore),
+    DummyModelWithMockedMetadata(InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2, const ovms::tensor_map_t& inputsInfo, const ovms::tensor_map_t& outputsInfo) :
+        ovms::ModelInstance("dummy", 1, ieCore, ieCore_2),
         mockedInputsInfo(inputsInfo),
         mockedOutputsInfo(outputsInfo) {}
 
@@ -3126,7 +3126,7 @@ public:
     ModelWithDummyModelWithMockedMetadata(const std::string& name, std::shared_ptr<DummyModelWithMockedMetadata> modelInstance) :
         Model(name, false, nullptr),
         modelInstance(modelInstance) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, InferenceEngine::Core& ieCore) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2) override {
         return modelInstance;
     }
 };
@@ -3345,8 +3345,10 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenDL
     connections[EXIT_NODE_NAME] = {
         {"custom_node", {{"out", pipelineOutputName}}}};
     auto ieCore = std::make_unique<InferenceEngine::Core>();
+    auto ieCore_2 = std::make_unique<ov::runtime::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore,
+        *ieCore_2,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
@@ -3569,8 +3571,10 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
         {"custom_node_2", {{"out", pipelineOutputName}}}};
 
     auto ieCore = std::make_unique<InferenceEngine::Core>();
+    auto ieCore_2 = std::make_unique<ov::runtime::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore,
+        *ieCore_2,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
@@ -3622,8 +3626,10 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
 
     auto ieCore = std::make_unique<InferenceEngine::Core>();
+    auto ieCore_2 = std::make_unique<ov::runtime::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore,
+        *ieCore_2,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
@@ -3718,8 +3724,10 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenDLModelAn
         {"custom_node_2", {{"out", pipelineOutputName}}}};
 
     auto ieCore = std::make_unique<InferenceEngine::Core>();
+    auto ieCore_2 = std::make_unique<ov::runtime::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore,
+        *ieCore_2,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
@@ -3771,8 +3779,10 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenCustomNod
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
 
     auto ieCore = std::make_unique<InferenceEngine::Core>();
+    auto ieCore_2 = std::make_unique<ov::runtime::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore,
+        *ieCore_2,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,

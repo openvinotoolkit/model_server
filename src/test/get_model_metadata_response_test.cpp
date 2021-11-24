@@ -39,8 +39,8 @@ class GetModelMetadataResponse : public ::testing::Test {
 
     class MockModelInstance : public MockModelInstanceChangingStates {
     public:
-        MockModelInstance(InferenceEngine::Core& ieCore) :
-            MockModelInstanceChangingStates("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
+        MockModelInstance(InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2) :
+            MockModelInstanceChangingStates("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore, ieCore_2) {
             status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_MODEL_VERSION, ovms::ModelVersionState::AVAILABLE);
         }
 
@@ -68,9 +68,10 @@ protected:
     std::shared_ptr<NiceMock<MockModelInstance>> instance;
     tensorflow::serving::GetModelMetadataResponse response;
     std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::runtime::Core> ieCore_2;
 
     virtual void prepare() {
-        instance = std::make_shared<NiceMock<MockModelInstance>>(*ieCore);
+        instance = std::make_shared<NiceMock<MockModelInstance>>(*ieCore, *ieCore_2);
 
         inputTensors = tensor_desc_map_t({
             {"Input_FP32_1_3_224_224", {
@@ -119,10 +120,12 @@ protected:
 
     void SetUp() override {
         ieCore = std::make_unique<InferenceEngine::Core>();
+        ieCore_2 = std::make_unique<ov::runtime::Core>();
         this->prepare();
     }
     void TearDown() override {
         ieCore.reset();
+        ieCore_2.reset();
     }
 };
 

@@ -25,6 +25,7 @@
 #include <vector>
 
 #include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
 #include "queue.hpp"
@@ -38,6 +39,17 @@ public:
         for (int i = 0; i < streamsLength; ++i) {
             streams[i] = i;
             inferRequests.push_back(network.CreateInferRequest());
+        }
+    }
+};
+
+class OVInferRequestsQueue_2 : public Queue<ov::runtime::InferRequest> {
+public:
+    OVInferRequestsQueue_2(ov::runtime::ExecutableNetwork& network, int streamsLength) :
+        Queue(streamsLength) {
+        for (int i = 0; i < streamsLength; ++i) {
+            streams[i] = i;
+            inferRequests.push_back(network.create_infer_request());
         }
     }
 };
