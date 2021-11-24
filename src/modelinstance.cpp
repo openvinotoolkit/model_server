@@ -872,11 +872,11 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
 
-    status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
+    status = serializePredictResponse_2(inferRequest_2, getOutputsInfo(), responseProto);
 
     responseProto->Clear();
     timer.start("serialize");
-    status = serializePredictResponse_2(inferRequest_2, getOutputsInfo(), responseProto);
+    status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
     timer.stop("serialize");
     if (!status.ok())
         return status;
