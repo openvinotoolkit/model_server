@@ -1,6 +1,6 @@
 # Benchmark Client
 
-## Dockumentation
+## Documentation
 
 See `benchmark-client.pdf` to read more about this client.
 

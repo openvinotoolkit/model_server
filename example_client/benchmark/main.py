@@ -33,6 +33,7 @@ import json
 import argparse
 import multiprocessing
 import time
+import os
 
 from ovms_benchmark_client.metrics import XMetrics
 from ovms_benchmark_client.db_exporter import DBExporter
@@ -45,7 +46,7 @@ from ovms_benchmark_client.client import BaseClient
 def run_single_client(xargs, worker_name_or_client, index, json_flag=None):
 
     # choose Client import for Triton / OVMS
-    if xargs["nvidia"]:
+    if xargs["nv_triton"]:
         Client = NvTrtClient
     else: Client = OVmsClient
 
@@ -84,8 +85,7 @@ def run_single_client(xargs, worker_name_or_client, index, json_flag=None):
                                   xargs["warmup"],
                                   xargs["window"],
                                   xargs["hist_base"],
-                                  xargs["hist_factor"],
-                                  float(xargs["extra_sleep"]))
+                                  xargs["hist_factor"])
     return_code = 0 if client.get_status() else -1
     return return_code, results
 
@@ -94,7 +94,7 @@ def run_single_client(xargs, worker_name_or_client, index, json_flag=None):
 def exec_single_client(xargs, db_exporter):
     worker_id = xargs.get("id", "worker")
     # choose Client import for Triton / OVMS
-    if xargs["nvidia"]:
+    if xargs["nv_triton"]:
         Client = NvTrtClient
     else: Client = OVmsClient
     client = Client(f"{worker_id}", xargs["server_address"], xargs["grpc_port"],
@@ -198,56 +198,59 @@ if __name__ == "__main__":
     parser.add_argument("-j", "--json", required=False, action="store_true",
                         help="flag to form output in JSON format")
     parser.add_argument("-m", "--model_name", required=False, default=None,
-                        help="model name to inference")
+                        help="model name to inference, default: None")
     parser.add_argument("-k", "--dataset_length", required=False, default=None,
-                        help="synthetic dataset length")
+                        help="synthetic dataset length, default: None")
     parser.add_argument("-v", "--model_version", required=False, default=None,
-                        help="model version to inference")
+                        help="model version to inference, default: None")
     parser.add_argument("-n", "--steps_number", required=False, default=None,
-                        help="number of iteration")
+                        help="number of iteration, default: None")
     parser.add_argument("-t", "--duration", required=False, default=None,
-                        help="duration in seconds")
+                        help="duration in seconds, default: None")
     parser.add_argument("-u", "--warmup", required=False, default=0,
-                        help="warmup duration in seconds")
+                        help="warmup duration in seconds, default: 0")
     parser.add_argument("-w", "--window", required=False, default=None,
-                        help="window duration in seconds")
+                        help="window duration in seconds, default: None")
     parser.add_argument("-e", "--error_limit", required=False, default=None,
-                        help="counter limit of errors to break ")
+                        help="counter limit of errors to break, default: None")
     parser.add_argument("-x", "--error_exposition", required=False, default=None,
-                        help="counter limit of errors to show ")
+                        help="counter limit of errors to show, default None")
     parser.add_argument("--max_value", required=False, default=255.0,
-                        help="random maximal value")
+                        help="random maximal value, default: 255")
     parser.add_argument("--min_value", required=False, default=0.0,
-                        help="random minimal value")
+                        help="random minimal value, default: 0")
     parser.add_argument("--step_timeout", required=False, default=30,
-                        help="iteration timeout in seconds")
+                        help="iteration timeout in seconds, default: 30")
     parser.add_argument("--metadata_timeout", required=False, default=30,
-                        help="metadata timeout in seconds")
+                        help="metadata timeout in seconds, default: 30")
     parser.add_argument("-y", "--db_config", required=False, default=None,
                         help="database configuration. default: None")
     parser.add_argument("--print_all", required=False, action="store_true",
                         help="flag to form output in JSON format")
     parser.add_argument("--certs_dir", required=False, default=None,
-                        help="directory to certificats")
+                        help="directory to certificats, default: None")
     parser.add_argument("-q", "--stateful_length", required=False, default=0,
-                        help="stateful series length")
+                        help="stateful series length, default: 0")
     parser.add_argument("--stateful_id", required=False, default=1,
-                        help="stateful sequence id")
+                        help="stateful sequence id, default: 1")
     parser.add_argument("--stateful_hop", required=False, default=0,
-                        help="stateful sequence id hopsize")
-    parser.add_argument("--nvidia", required=False, action="store_true",
+                        help="stateful sequence id hopsize, default: 0")
+    parser.add_argument("--nv_triton", required=False, action="store_true",
                         help="flag to use NvClient to connect with Nvidia Triton Server")
     parser.add_argument("--sync_interval", required=False, default=1,
-                        help="sync interval for multi-client mode")
-    parser.add_argument("--extra_sleep", required=False, default=0,
-                        help="extra_sleep, default: 2")
-    parser.add_argument("--hist_factor", required=False, default=100,
-                        help="histogram factor, default: 10")
-    parser.add_argument("--hist_base", required=False, default=1.5,
-                        help="histogram base, default: 2")
+                        help="sync interval for multi-client mode, default: 1")
     parser.add_argument("--quantile_list", required=False, default=None, nargs="*",
                         help="quantile list, default: None")
+    parser.add_argument("--hist_factor", required=False, default=100,
+                        help="histogram factor, default: 100")
+    parser.add_argument("--hist_base", required=False, default=1.5,
+                        help="histogram base, default: 1.5")
+    parser.add_argument("--internal_version", required=False, action="store_true",
+                        help="flag to print internal version")
     xargs = vars(parser.parse_args())
+    if xargs["internal_version"]:
+        os.system("cat /ovms_benchmark_client/VERSION")
+        sys.exit(0)
 
     # check address is specified
     server_address = xargs["server_address"]

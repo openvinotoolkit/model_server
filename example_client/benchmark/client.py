@@ -49,7 +49,6 @@ class BaseClient(metaclass=abc.ABCMeta):
     indent2 = 2 * " "
     json_prefix = "JSON-OUTPUT:"
     grpc_options = [
-        ("grpc.max_message_length", 1024 * 1024 * 1024),
         ("grpc.max_send_message_length", 1024 * 1024 * 1024),
         ("grpc.max_receive_message_length", 1024 * 1024 * 1024)
     ]
@@ -298,7 +297,6 @@ class BaseClient(metaclass=abc.ABCMeta):
         images_list = ["/data/road1.jpg"]
         self.__fix_dataset_length(input_name, dataset_length)
         shape, _ = self.__fix_shape_and_type(input_name)
-        # assert shape[-1] == 3, "JPEG has to be RGB at last shape position"
 
         counter = 0
         self.xdata[input_name] = [] 
@@ -352,8 +350,8 @@ class BaseClient(metaclass=abc.ABCMeta):
             xargs = batch, {"dtype": dtype, "shape": batch.shape}
             self.xdata[input_name].append(xargs)       
 
-    def run_workload(self, steps_number, duration, timeout=30, errors_limits=(0,0), warmup=0,
-                     window=None, hist_base=10, hist_factor=1000, extra_sleep=0.0):
+    def run_workload(self, steps_number, duration, timeout=30, errors_limits=(0,0),
+                     warmup=0, window=None, hist_base=10, hist_factor=1000):
         assert self.dataset_length, "no data to inference!"
         errors_limit, errors_exposition = errors_limits
         fail_counter, counter = 0, 0
@@ -412,8 +410,6 @@ class BaseClient(metaclass=abc.ABCMeta):
                     info = f"Limit of erros {errors_limit} is reached!"
                     self.print_error(info)
                     break
-            if extra_sleep > 0:
-                time.sleep(extra_sleep)
             counter += 1
 
             total_series.add(current_status, request_time, batch_size)

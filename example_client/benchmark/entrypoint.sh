@@ -20,10 +20,6 @@
 #
 #! /bin/bash
 
-# version is set in VERSION file
-XCLIENT_VERSION=$(cat /ovms_benchmark_client/VERSION)
-echo "XClient $XCLIENT_VERSION"
-
 PROXY="no"
 OPTIONS="$@"
 for OPT in $OPTIONS
