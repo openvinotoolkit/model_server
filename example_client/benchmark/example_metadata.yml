@@ -13,3 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+endpoint:
+  address: mongodb://your.mongodb.address
+  collection: your_collection_name
+  database: your_database_name
+
+metadata:
+  key_0: value_0
+  key_1: value_1
+  environ: virtual
+  branch: develop
+  backend: ovms
+  device: CPU
+  cpu-streams: 0
+  grpc-workers: 0
