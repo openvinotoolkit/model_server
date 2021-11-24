@@ -101,7 +101,7 @@ public:
 
 class ConcreteTensorProtoDeserializator_2 {
 public:
-    static ov::runtime::Tensor deserializeTensorProto(
+    static ov::runtime::Tensor deserializeTensorProto_2(
         const tensorflow::TensorProto& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
         switch (tensorInfo->getPrecision()) {
@@ -120,6 +120,13 @@ InferenceEngine::Blob::Ptr deserializeTensorProto(
     const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, isPipeline);
+}
+
+template <class TensorProtoDeserializator>
+ov::runtime::Tensor deserializeTensorProto_2(
+    const tensorflow::TensorProto& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+    return TensorProtoDeserializator::deserializeTensorProto_2(requestInput, tensorInfo, isPipeline);
 }
 
 template <class Requester>
@@ -173,6 +180,63 @@ Status deserializePredictRequest(
             }
 
             if (blob == nullptr) {
+                status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
+                SPDLOG_DEBUG(status.string());
+                return status;
+            }
+            const std::string ovBlobName = isPipeline ? name : tensorInfo->getName();
+            status = inputSink.give(ovBlobName, blob);
+            if (!status.ok()) {
+                SPDLOG_DEBUG("Feeding inputs to inference performer failed:{}", status.string());
+                return status;
+            }
+            // OV implementation the InferenceEngine::Exception is not
+            // a base class for all other exceptions thrown from OV.
+            // OV can throw exceptions derived from std::logic_error.
+        } catch (const InferenceEngine::Exception& e) {
+            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+            return status;
+        } catch (std::logic_error& e) {
+            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+            return status;
+        }
+    }
+    return status;
+}
+
+template <class TensorProtoDeserializator, class Sink>
+Status deserializePredictRequest_2(
+    const tensorflow::serving::PredictRequest& request,
+    const tensor_map_t& inputMap,
+    Sink& inputSink, bool isPipeline) {
+    Status status;
+    for (const auto& pair : inputMap) {
+        try {
+            const auto& name = pair.first;
+            auto tensorInfo = pair.second;
+            auto requestInputItr = request.inputs().find(name);
+            if (requestInputItr == request.inputs().end()) {
+                SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
+                return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
+            }
+            auto& requestInput = requestInputItr->second;
+            ov::runtime::Tensor blob;
+
+            if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
+                SPDLOG_DEBUG("Request contains binary input: {}", name);
+                status = convertStringValToBlob_2(requestInput, blob, tensorInfo, isPipeline);
+                if (!status.ok()) {
+                    SPDLOG_DEBUG("Binary inputs conversion failed.");
+                    return status;
+                }
+            } else {
+                blob = deserializeTensorProto_2<TensorProtoDeserializator>(
+                    requestInput, tensorInfo, isPipeline);
+            }
+
+            if (blob.data() == nullptr) {
                 status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
                 SPDLOG_DEBUG(status.string());
                 return status;

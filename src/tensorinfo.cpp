@@ -181,6 +181,17 @@ std::string TensorInfo::getPrecisionAsString(Precision precision) {
     return it->second;
 }
 
+ov::element::Type TensorInfo::getOvPrecision() const {
+    switch (getPrecision()) {
+    case InferenceEngine::Precision::FP32:
+        return ov::element::f32;
+    case InferenceEngine::Precision::I32:
+        return ov::element::i32;
+    default:
+        return ov::element::undefined;
+    }
+}
+
 std::string TensorInfo::getPrecisionAsString() const {
     return getPrecisionAsString(precision_2);
 }
