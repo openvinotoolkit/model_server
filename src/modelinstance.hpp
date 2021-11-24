@@ -24,6 +24,7 @@
 #include <vector>
 
 #include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -87,16 +88,19 @@ protected:
          * @brief Inference Engine core object
          */
     InferenceEngine::Core& ieCore;
+    ov::runtime::Core& ieCore_2;
 
     /**
          * @brief Inference Engine CNNNetwork object
          */
     std::unique_ptr<InferenceEngine::CNNNetwork> network;
+    std::shared_ptr<ov::Function> network_2;
 
     /**
          * @brief Inference Engine device network
          */
     std::shared_ptr<InferenceEngine::ExecutableNetwork> execNetwork;
+    std::shared_ptr<ov::runtime::ExecutableNetwork> execNetwork_2;
 
     /**
          * @brief Model name
@@ -238,6 +242,7 @@ private:
          * @brief OpenVINO inference execution stream pool
          */
     std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
+    std::unique_ptr<OVInferRequestsQueue_2> inferRequestsQueue_2;
 
     /**
          * @brief Holds current usage count in predict requests
@@ -296,8 +301,9 @@ public:
     /**
          * @brief A default constructor
          */
-    ModelInstance(const std::string& name, model_version_t version, InferenceEngine::Core& ieCore) :
+    ModelInstance(const std::string& name, model_version_t version, InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2) :
         ieCore(ieCore),
+        ieCore_2(ieCore_2),
         name(name),
         version(version),
         subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)) { isCustomLoaderConfigChanged = false; }
@@ -426,6 +432,9 @@ public:
     OVInferRequestsQueue& getInferRequestsQueue() {
         return *inferRequestsQueue;
     }
+    OVInferRequestsQueue_2& getInferRequestsQueue_2() {
+        return *inferRequestsQueue_2;
+    }
 
     /**
          * @brief Combines plugin config from user with default config calculated at runtime
@@ -508,6 +517,7 @@ public:
     const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
 
     Status performInference(InferenceEngine::InferRequest& inferRequest);
+    Status performInference_2(ov::runtime::InferRequest& inferRequest);
 
     virtual Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,

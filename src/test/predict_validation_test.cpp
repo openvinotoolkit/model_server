@@ -32,8 +32,8 @@ using ::testing::ReturnRef;
 class PredictValidation : public ::testing::Test {
     class MockModelInstance : public ovms::ModelInstance {
     public:
-        MockModelInstance(InferenceEngine::Core& ieCore) :
-            ModelInstance("UNUSED_NAME", 42, ieCore) {}
+        MockModelInstance(InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2) :
+            ModelInstance("UNUSED_NAME", 42, ieCore, ieCore_2) {}
         MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
         MOCK_METHOD(size_t, getBatchSize, (), (const, override));
         MOCK_METHOD(const ovms::ModelConfig&, getModelConfig, (), (const, override));
@@ -46,6 +46,7 @@ protected:
     using tensor_desc_map_t = std::unordered_map<std::string, InferenceEngine::TensorDesc>;
 
     std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::runtime::Core> ieCore_2;
     std::unique_ptr<NiceMock<MockModelInstance>> instance;
     tensorflow::serving::PredictRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
@@ -54,7 +55,8 @@ protected:
 
     void SetUp() override {
         ieCore = std::make_unique<InferenceEngine::Core>();
-        instance = std::make_unique<NiceMock<MockModelInstance>>(*ieCore);
+        ieCore_2 = std::make_unique<ov::runtime::Core>();
+        instance = std::make_unique<NiceMock<MockModelInstance>>(*ieCore, *ieCore_2);
         tensors = tensor_desc_map_t({
             {"Input_FP32_1_3_224_224_NHWC", {InferenceEngine::Precision::FP32, {1, 3, 224, 224}, InferenceEngine::Layout::NHWC}},
             {"Input_U8_1_3_62_62_NCHW", {InferenceEngine::Precision::U8, {1, 3, 62, 62}, InferenceEngine::Layout::NCHW}},

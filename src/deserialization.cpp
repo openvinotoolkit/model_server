@@ -38,6 +38,27 @@ Status InputSink<InferenceEngine::InferRequest&>::give(const std::string& name, 
     return status;
 }
 
+template <>
+Status InputSink_2<ov::runtime::InferRequest&>::give(const std::string& name, ov::runtime::Tensor& blob) {
+    Status status;
+    try {
+        requester.set_tensor(name, blob);
+        // OV implementation the InferenceEngine::Exception is not
+        // a base class for all other exceptions thrown from OV.
+        // OV can throw exceptions derived from std::logic_error.
+    } catch (const ov::Exception& e) {
+        status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+        SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+        return status;
+    } catch (std::logic_error& e) {
+        status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+        SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+        return status;
+    }
+
+    return status;
+}
+
 InferenceEngine::TensorDesc getFinalTensorDesc(const ovms::TensorInfo& servableInfo, const tensorflow::TensorProto& requestInput, bool isPipeline) {
     InferenceEngine::Precision precision = servableInfo.getPrecision();
     if (!isPipeline) {
@@ -49,4 +70,16 @@ InferenceEngine::TensorDesc getFinalTensorDesc(const ovms::TensorInfo& servableI
     }
     return InferenceEngine::TensorDesc(precision, shape, InferenceEngine::Layout::ANY);
 }
+
+ov::runtime::Tensor makeBlob_2(const tensorflow::TensorProto& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+    ov::Shape shape;
+    // TODO: Use isPipeline when DAG are switched to OV 2.0.
+    for (size_t i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
+        shape.push_back(requestInput.tensor_shape().dim(i).size());
+    }
+    ov::element::Type precision = TensorInfo::getPrecisionFromDataType(requestInput.dtype());
+    return ov::runtime::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.tensor_content().data())));
+}
+
 }  // namespace ovms

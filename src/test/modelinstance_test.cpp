@@ -40,16 +40,16 @@ class MockModelInstanceInState : public ovms::ModelInstance {
     static const ovms::model_version_t UNUSED_VERSION = 987789;
 
 public:
-    MockModelInstanceInState(InferenceEngine::Core& ieCore, ovms::ModelVersionState state) :
-        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
+    MockModelInstanceInState(InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2, ovms::ModelVersionState state) :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore, ieCore_2) {
         status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_VERSION, state);
     }
 };
 
 class MockModelInstance : public ovms::ModelInstance {
 public:
-    MockModelInstance(InferenceEngine::Core& ieCore) :
-        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
+    MockModelInstance(InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2) :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore, ieCore_2) {}
     MOCK_METHOD(bool, canUnloadInstance, (), (const));
 };
 
@@ -58,13 +58,15 @@ public:
 class TestUnloadModel : public ::testing::Test {
 protected:
     std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::runtime::Core> ieCore_2;
     void SetUp() {
         ieCore = std::make_unique<InferenceEngine::Core>();
+        ieCore_2 = std::make_unique<ov::runtime::Core>();
     }
 };
 
 TEST_F(TestUnloadModel, SuccessfulUnload) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
     ASSERT_EQ(modelInstance.loadModel(DUMMY_MODEL_CONFIG), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     modelInstance.retireModel();
@@ -72,7 +74,7 @@ TEST_F(TestUnloadModel, SuccessfulUnload) {
 }
 
 TEST_F(TestUnloadModel, CantUnloadModelWhilePredictPathAcquiredAndLockedInstance) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
     ovms::Status status = modelInstance.loadModel(DUMMY_MODEL_CONFIG);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     ASSERT_EQ(status, ovms::StatusCode::OK);
@@ -81,7 +83,7 @@ TEST_F(TestUnloadModel, CantUnloadModelWhilePredictPathAcquiredAndLockedInstance
 }
 
 TEST_F(TestUnloadModel, CanUnloadModelNotHoldingModelInstanceAtPredictPath) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
     ovms::Status status = modelInstance.loadModel(DUMMY_MODEL_CONFIG);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
@@ -96,8 +98,8 @@ TEST_F(TestUnloadModel, UnloadWaitsUntilMetadataResponseIsBuilt) {
 
     class MockModelInstanceTriggeringUnload : public ovms::ModelInstance {
     public:
-        MockModelInstanceTriggeringUnload(InferenceEngine::Core& ieCore) :
-            ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
+        MockModelInstanceTriggeringUnload(InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2) :
+            ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore, ieCore_2) {}
         // This is to trigger model unloading in separate thread during GetModelMetadataImpl::buildResponse call.
         const ovms::tensor_map_t& getInputsInfo() const override {
             thread = std::thread([]() {
@@ -108,7 +110,7 @@ TEST_F(TestUnloadModel, UnloadWaitsUntilMetadataResponseIsBuilt) {
             return ovms::ModelInstance::getInputsInfo();
         }
     };
-    instance = std::make_shared<MockModelInstanceTriggeringUnload>(*ieCore);
+    instance = std::make_shared<MockModelInstanceTriggeringUnload>(*ieCore, *ieCore_2);
     ovms::Status status = instance->loadModel(DUMMY_MODEL_CONFIG);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, instance->getStatus().getState());
@@ -130,7 +132,7 @@ TEST_F(TestUnloadModel, UnloadWaitsUntilMetadataResponseIsBuilt) {
 }
 
 TEST_F(TestUnloadModel, CheckIfCanUnload) {
-    MockModelInstance mockModelInstance(*ieCore);
+    MockModelInstance mockModelInstance(*ieCore, *ieCore_2);
     mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, mockModelInstance.getStatus().getState());
     EXPECT_CALL(mockModelInstance, canUnloadInstance())
@@ -142,8 +144,8 @@ TEST_F(TestUnloadModel, CheckIfCanUnload) {
 
 class MockModelInstanceCheckingUnloadingState : public ovms::ModelInstance {
 public:
-    MockModelInstanceCheckingUnloadingState(InferenceEngine::Core& ieCore) :
-        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
+    MockModelInstanceCheckingUnloadingState(InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2) :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore, ieCore_2) {}
     virtual bool canUnloadInstance() const {
         EXPECT_EQ(ovms::ModelVersionState::UNLOADING, getStatus().getState());
         return true;
@@ -151,7 +153,7 @@ public:
 };
 
 TEST_F(TestUnloadModel, CheckIfStateIsUnloadingDuringUnloading) {
-    MockModelInstanceCheckingUnloadingState mockModelInstance(*ieCore);
+    MockModelInstanceCheckingUnloadingState mockModelInstance(*ieCore, *ieCore_2);
     mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, mockModelInstance.getStatus().getState());
     mockModelInstance.retireModel();
@@ -161,15 +163,17 @@ TEST_F(TestUnloadModel, CheckIfStateIsUnloadingDuringUnloading) {
 class TestLoadModel : public ::testing::Test {
 protected:
     std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::runtime::Core> ieCore_2;
     void SetUp() {
         ieCore = std::make_unique<InferenceEngine::Core>();
+        ieCore_2 = std::make_unique<ov::runtime::Core>();
     }
 };
 
 class MockModelInstanceThrowingFileNotFoundForLoadingCNN : public ovms::ModelInstance {
 public:
-    MockModelInstanceThrowingFileNotFoundForLoadingCNN(InferenceEngine::Core& ieCore) :
-        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
+    MockModelInstanceThrowingFileNotFoundForLoadingCNN(InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2) :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore, ieCore_2) {}
 
 protected:
     std::unique_ptr<InferenceEngine::CNNNetwork> loadOVCNNNetworkPtr(const std::string& modelFile) override {
@@ -180,15 +184,15 @@ protected:
 
 TEST_F(TestLoadModel, CheckIfOVNonExistingXMLFileErrorIsCatched) {
     // Check if handling file removal after file existence was checked
-    MockModelInstanceThrowingFileNotFoundForLoadingCNN mockModelInstance(*ieCore);
+    MockModelInstanceThrowingFileNotFoundForLoadingCNN mockModelInstance(*ieCore, *ieCore_2);
     auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
     EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR) << status.string();
 }
 
 class MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork : public ovms::ModelInstance {
 public:
-    MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork(InferenceEngine::Core& ieCore) :
-        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
+    MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork(InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2) :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore, ieCore_2) {}
 
 protected:
     void loadExecutableNetworkPtr(const ovms::plugin_config_t& pluginConfig) override {
@@ -198,13 +202,13 @@ protected:
 
 TEST_F(TestLoadModel, CheckIfOVNonExistingBinFileErrorIsCatched) {
     // Check if handling file removal after file existence was checked
-    MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork mockModelInstance(*ieCore);
+    MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork mockModelInstance(*ieCore, *ieCore_2);
     auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
     EXPECT_EQ(status, ovms::StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE) << status.string();
 }
 
 TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
 
     const std::string modelPath = "/tmp/test_load_model";
     std::filesystem::create_directories(modelPath);
@@ -240,7 +244,7 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
 }
 
 TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
 
     const std::string modelPath = "/tmp/test_load_model";
     std::filesystem::create_directories(modelPath);
@@ -276,13 +280,13 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
 }
 
 TEST_F(TestLoadModel, SuccessfulLoad) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
     EXPECT_EQ(modelInstance.loadModel(DUMMY_MODEL_CONFIG), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
 TEST_F(TestLoadModel, UnSuccessfulLoadWhenNireqTooHigh) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
     auto config = DUMMY_MODEL_CONFIG;
     config.setNireq(100000 + 1);
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::INVALID_NIREQ);
@@ -310,7 +314,7 @@ protected:
 };
 
 TEST_F(TestLoadModelWithMapping, SuccessfulLoad) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
     shapeMap["input"] = inputShape;
@@ -325,7 +329,7 @@ TEST_F(TestLoadModelWithMapping, SuccessfulLoad) {
 }
 
 TEST_F(TestLoadModelWithMapping, UnSuccessfulLoadOldInputShapeName) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
     shapeMap["b"] = inputShape;
@@ -340,7 +344,7 @@ TEST_F(TestLoadModelWithMapping, UnSuccessfulLoadOldInputShapeName) {
 }
 
 TEST_F(TestLoadModelWithMapping, UnSuccessfulLoadOldInputLayoutName) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
     shapeMap["input"] = inputShape;
@@ -355,7 +359,7 @@ TEST_F(TestLoadModelWithMapping, UnSuccessfulLoadOldInputLayoutName) {
 }
 
 TEST_F(TestLoadModelWithMapping, UnSuccessfulLoadOldOutputLayoutName) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
     shapeMap["input"] = inputShape;
@@ -372,20 +376,22 @@ TEST_F(TestLoadModelWithMapping, UnSuccessfulLoadOldOutputLayoutName) {
 class TestReloadModel : public ::testing::Test {
 protected:
     std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::runtime::Core> ieCore_2;
     void SetUp() {
         ieCore = std::make_unique<InferenceEngine::Core>();
+        ieCore_2 = std::make_unique<ov::runtime::Core>();
     }
 };
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoaded) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
     ASSERT_TRUE(modelInstance.loadModel(DUMMY_MODEL_CONFIG).ok());
     EXPECT_TRUE(modelInstance.reloadModel(DUMMY_MODEL_CONFIG).ok());
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithChangedModelMapping) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     ASSERT_TRUE(modelInstance.loadModel(config).ok());
     ovms::mapping_config_t mappingOutputs{{"a", "output"}};
@@ -409,7 +415,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithChangedModelMapping
 }
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloaded) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
     ASSERT_TRUE(modelInstance.loadModel(DUMMY_MODEL_CONFIG).ok());
     modelInstance.retireModel();
     ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
@@ -418,7 +424,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloaded) {
 }
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewBatchSize) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(1);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
@@ -430,7 +436,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewBatchSize) {
 }
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewShape) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.parseShapeParameter("{\"b\": \"auto\"}");
     std::map<std::string, ovms::shape_t> requestShapes = {{"b", {2, 10}}};
@@ -442,7 +448,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewShape) {
 }
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewBatchSize) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(1);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
@@ -456,7 +462,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewBatchSize) {
 }
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewShape) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.parseShapeParameter("auto");
     std::map<std::string, ovms::shape_t> requestShapes = {{"b", {2, 10}}};
@@ -490,7 +496,7 @@ protected:
 };
 
 TEST_F(TestReloadModelWithMapping, SuccessfulReload) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
@@ -508,7 +514,7 @@ TEST_F(TestReloadModelWithMapping, SuccessfulReload) {
 }
 
 TEST_F(TestReloadModelWithMapping, UnSuccessfulReloadOldInputShapeName) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
@@ -526,7 +532,7 @@ TEST_F(TestReloadModelWithMapping, UnSuccessfulReloadOldInputShapeName) {
 }
 
 TEST_F(TestReloadModelWithMapping, UnSuccessfulReloadOldInputLayoutName) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
@@ -544,7 +550,7 @@ TEST_F(TestReloadModelWithMapping, UnSuccessfulReloadOldInputLayoutName) {
 }
 
 TEST_F(TestReloadModelWithMapping, UnSuccessfulReloadOldOutputLayoutName) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
@@ -562,7 +568,7 @@ TEST_F(TestReloadModelWithMapping, UnSuccessfulReloadOldOutputLayoutName) {
 }
 
 TEST_F(TestReloadModelWithMapping, ReloadMultipleTimes) {
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore, *ieCore_2);
 
     // initial load
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);

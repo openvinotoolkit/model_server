@@ -174,6 +174,7 @@ public:
     const tensorflow::DataType getPrecisionAsDataType() const;
 
     static const tensorflow::DataType getPrecisionAsDataType(InferenceEngine::Precision precision);
+    static ov::element::Type getPrecisionFromDataType(tensorflow::DataType dataType);
 
     /**
         * @brief Get the Precision As String object

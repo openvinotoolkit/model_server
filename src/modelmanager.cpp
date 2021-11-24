@@ -59,6 +59,7 @@ static bool watcherStarted = false;
 
 ModelManager::ModelManager(const std::string& modelCacheDirectory) :
     ieCore(std::make_unique<InferenceEngine::Core>()),
+    ieCore_2(std::make_unique<ov::runtime::Core>()),
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
     modelCacheDirectory(modelCacheDirectory) {
     // Take --cache_dir from CLI
@@ -1005,7 +1006,7 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
 Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed) {
     Status status = StatusCode::OK;
     try {
-        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed);
+        status = model->addVersions(versionsToStart, config, fs, *ieCore, *ieCore_2, versionsFailed);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
@@ -1022,7 +1023,7 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
     Status status = StatusCode::OK;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading model versions");
     try {
-        auto status = model->reloadVersions(versionsToReload, config, fs, *ieCore, versionsFailed);
+        auto status = model->reloadVersions(versionsToReload, config, fs, *ieCore, *ieCore_2, versionsFailed);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading model: {}; versions; error: {}",
                 config.getName(),

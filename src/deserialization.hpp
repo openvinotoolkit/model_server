@@ -19,6 +19,7 @@
 #include <string>
 
 #include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
 #pragma GCC diagnostic push
@@ -42,6 +43,9 @@ InferenceEngine::Blob::Ptr makeBlob(const tensorflow::TensorProto& requestInput,
         getFinalTensorDesc(*tensorInfo, requestInput, isPipeline),
         const_cast<T*>(reinterpret_cast<const T*>(requestInput.tensor_content().data())));
 }
+
+ov::runtime::Tensor makeBlob_2(const tensorflow::TensorProto& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline);
 
 class ConcreteTensorProtoDeserializator {
 public:
@@ -95,6 +99,22 @@ public:
     }
 };
 
+class ConcreteTensorProtoDeserializator_2 {
+public:
+    static ov::runtime::Tensor deserializeTensorProto(
+        const tensorflow::TensorProto& requestInput,
+        const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+        switch (tensorInfo->getPrecision()) {
+        case InferenceEngine::Precision::FP32:
+            return makeBlob_2(requestInput, tensorInfo, isPipeline);
+        case InferenceEngine::Precision::I32:
+            return makeBlob_2(requestInput, tensorInfo, isPipeline);
+        default:
+            return ov::runtime::Tensor();
+        }
+    }
+};
+
 template <class TensorProtoDeserializator>
 InferenceEngine::Blob::Ptr deserializeTensorProto(
     const tensorflow::TensorProto& requestInput,
@@ -110,6 +130,16 @@ public:
     InputSink(Requester requester) :
         requester(requester) {}
     Status give(const std::string& name, InferenceEngine::Blob::Ptr blob);
+};
+
+template <class Requester>
+class InputSink_2 {
+    Requester requester;
+
+public:
+    InputSink_2(Requester requester) :
+        requester(requester) {}
+    Status give(const std::string& name, ov::runtime::Tensor& blob);
 };
 
 template <class TensorProtoDeserializator, class Sink>
