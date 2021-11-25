@@ -340,17 +340,11 @@ InferenceEngine::Blob::Ptr convertMatsToBlob(std::vector<cv::Mat>& images, const
 ov::runtime::Tensor convertMatsToBlob_2(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     switch (tensorInfo->getPrecision()) {
     case InferenceEngine::Precision::FP32:
-        return createBlobFromMats_2(images, tensorInfo, isPipeline);
     case InferenceEngine::Precision::I32:
-        return createBlobFromMats_2(images, tensorInfo, isPipeline);
     case InferenceEngine::Precision::I8:
-        return createBlobFromMats_2(images, tensorInfo, isPipeline);
     case InferenceEngine::Precision::U8:
-        return createBlobFromMats_2(images, tensorInfo, isPipeline);
     case InferenceEngine::Precision::FP16:
-        return createBlobFromMats_2(images, tensorInfo, isPipeline);
     case InferenceEngine::Precision::U16:
-        return createBlobFromMats_2(images, tensorInfo, isPipeline);
     case InferenceEngine::Precision::I16:
         return createBlobFromMats_2(images, tensorInfo, isPipeline);
     case InferenceEngine::Precision::I64:
