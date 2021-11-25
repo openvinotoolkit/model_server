@@ -40,7 +40,6 @@ using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
 
 using InferenceEngine::IInferRequest;
-using InferenceEngine::Precision;
 using InferenceEngine::PreProcessInfo;
 using InferenceEngine::ResponseDesc;
 
@@ -51,44 +50,44 @@ using testing::_;
 using testing::NiceMock;
 using testing::Throw;
 
-const std::vector<Precision> SUPPORTED_INPUT_PRECISIONS{
-    // Precision::UNSPECIFIED,
-    // Precision::MIXED,
-    Precision::FP32,
-    Precision::FP16,
-    // Precision::Q78,
-    Precision::I16,
-    Precision::U8,
-    Precision::I8,
-    Precision::U16,
-    Precision::I32,
-    // Precision::I64,
-    // Precision::BIN,
-    // Precision::BOOL
-    // //Precision::CUSTOM)
+const std::vector<InferenceEngine::Precision> SUPPORTED_INPUT_PRECISIONS{
+    // InferenceEngine::Precision::UNSPECIFIED,
+    // InferenceEngine::Precision::MIXED,
+    InferenceEngine::Precision::FP32,
+    InferenceEngine::Precision::FP16,
+    // InferenceEngine::Precision::Q78,
+    InferenceEngine::Precision::I16,
+    InferenceEngine::Precision::U8,
+    InferenceEngine::Precision::I8,
+    InferenceEngine::Precision::U16,
+    InferenceEngine::Precision::I32,
+    // InferenceEngine::Precision::I64,
+    // InferenceEngine::Precision::BIN,
+    // InferenceEngine::Precision::BOOL
+    // //InferenceEngine::Precision::CUSTOM)
 };
 
-const std::vector<Precision> UNSUPPORTED_INPUT_PRECISIONS{
-    Precision::UNSPECIFIED,
-    Precision::MIXED,
-    // Precision::FP32,
-    // Precision::FP16,
-    Precision::Q78,
-    // Precision::I16,
-    // Precision::U8,
-    // Precision::I8,
-    // Precision::U16,
-    // Precision::I32,
-    Precision::I64,
-    Precision::BIN,
-    Precision::BOOL
-    // Precision::CUSTOM)
+const std::vector<InferenceEngine::Precision> UNSUPPORTED_INPUT_PRECISIONS{
+    InferenceEngine::Precision::UNSPECIFIED,
+    InferenceEngine::Precision::MIXED,
+    // InferenceEngine::Precision::FP32,
+    // InferenceEngine::Precision::FP16,
+    InferenceEngine::Precision::Q78,
+    // InferenceEngine::Precision::I16,
+    // InferenceEngine::Precision::U8,
+    // InferenceEngine::Precision::I8,
+    // InferenceEngine::Precision::U16,
+    // InferenceEngine::Precision::I32,
+    InferenceEngine::Precision::I64,
+    InferenceEngine::Precision::BIN,
+    InferenceEngine::Precision::BOOL
+    // InferenceEngine::Precision::CUSTOM)
 };
 
-class TensorflowGRPCPredict : public ::testing::TestWithParam<Precision> {
+class TensorflowGRPCPredict : public ::testing::TestWithParam<InferenceEngine::Precision> {
 protected:
     void SetUp() override {
-        Precision precision = Precision::FP32;
+        InferenceEngine::Precision precision = InferenceEngine::Precision::FP32;
         InferenceEngine::TensorDesc tensorDesc_prec_1_3_1_1_NHWC = {
             precision,
             {1, 3, 1, 1},
@@ -138,7 +137,7 @@ public:
 class GRPCPredictRequestNegative : public GRPCPredictRequest {};
 
 TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision) {
-    Precision testedPrecision = GetParam();
+    InferenceEngine::Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
     InferenceEngine::InferRequest inferRequest;
     InputSink<InferRequest&> inputSink(inferRequest);
@@ -150,7 +149,7 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision)
 }
 
 TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobException) {
-    Precision testedPrecision = GetParam();
+    InferenceEngine::Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
     InferenceEngine::InferRequest inferRequest;
     InputSink<InferRequest&> inputSink(inferRequest);
@@ -180,7 +179,7 @@ public:
 MockTensorProtoDeserializatorThrowingInferenceEngine* MockTensorProtoDeserializator::mock = nullptr;
 
 TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobException2) {
-    InferenceEngine::TensorDesc tensorDesc(Precision::FP32, shape_t{1, 10}, InferenceEngine::Layout::NC);
+    InferenceEngine::TensorDesc tensorDesc(InferenceEngine::Precision::FP32, shape_t{1, 10}, InferenceEngine::Layout::NC);
     std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
         DUMMY_MODEL_INPUT_NAME,
         tensorDesc.getPrecision(),
@@ -207,7 +206,7 @@ TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobExc
 }
 
 TEST_F(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
-    InferenceEngine::TensorDesc tensorDesc(Precision::FP32, shape_t{1, 10}, InferenceEngine::Layout::NC);
+    InferenceEngine::TensorDesc tensorDesc(InferenceEngine::Precision::FP32, shape_t{1, 10}, InferenceEngine::Layout::NC);
     std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
         DUMMY_MODEL_INPUT_NAME,
         tensorDesc.getPrecision(),
@@ -226,7 +225,7 @@ TEST_F(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
 }
 
 TEST_P(DeserializeTFTensorProtoNegative, ShouldReturnNullptrForPrecision) {
-    Precision testedPrecision = GetParam();
+    InferenceEngine::Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
     InferenceEngine::Blob::Ptr blobPtr = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], isPipeline);
     EXPECT_EQ(nullptr, blobPtr) << "Unsupported OVMS precision:"
@@ -235,7 +234,7 @@ TEST_P(DeserializeTFTensorProtoNegative, ShouldReturnNullptrForPrecision) {
 }
 
 TEST_P(DeserializeTFTensorProto, ShouldReturnValidBlob) {
-    Precision testedPrecision = GetParam();
+    InferenceEngine::Precision testedPrecision = GetParam();
     SetUpTensorProto(fromInferenceEnginePrecision(testedPrecision));
     tensorMap[tensorName]->setPrecision(testedPrecision);
     InferenceEngine::Blob::Ptr blobPtr = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], isPipeline);
