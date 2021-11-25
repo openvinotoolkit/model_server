@@ -223,6 +223,9 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
 
     timer.start("preprocess");
+    status = preInferenceProcessing(inferRequest, sequence, sequenceProcessingSpec);
+    if (!status.ok())
+        return status;
     status = preInferenceProcessing_2(inferRequest_2, sequence, sequenceProcessingSpec);
     timer.stop("preprocess");
     if (!status.ok())
@@ -265,6 +268,7 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
 
     timer.start("postprocess");
+    status = postInferenceProcessing_2(responseProto, inferRequest_2, sequence, sequenceProcessingSpec);
     status = postInferenceProcessing(responseProto, inferRequest, sequence, sequenceProcessingSpec);
     timer.stop("postprocess");
     if (!status.ok())
