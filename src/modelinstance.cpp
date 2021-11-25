@@ -76,6 +76,8 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     }
 
     auto networkShapes = network->getInputShapes();
+    std::map<std::string, ov::PartialShape> networkShapes_2;
+
     const auto& networkInputs = network->getInputsInfo();
     bool reshapeRequired = false;
     for (const auto& [name, _] : config.getShapes()) {
@@ -130,6 +132,19 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             reshapeRequired = true;
             networkShapes[name] = shape;
         }
+
+        try {
+            ov::Output<ov::Node> input_2 = network_2->input(name);
+            ov::PartialShape ov2NetworkShape = input_2.get_partial_shape();
+            if (ov2NetworkShape != (ov::Shape)shape) {
+                networkShapes_2[name] = (ov::Shape)shape;
+            } else {
+                networkShapes_2[name] = ov2NetworkShape;
+            }
+        } catch (const ov::Exception& e) {
+            SPDLOG_ERROR("Missing input {} in OV 2.0 network: {}", name, e.what());
+            return StatusCode::INVALID_MISSING_INPUT;
+        }
     }
 
     // Update OV model shapes
@@ -138,9 +153,14 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         try {
             SPDLOG_INFO("Initial network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
             network->reshape(networkShapes);
+            network_2->reshape(networkShapes_2);
         } catch (const InferenceEngine::Exception& e) {
             SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
             SPDLOG_DEBUG("Description: {}", e.what());
+            return StatusCode::RESHAPE_ERROR;
+        } catch (const ov::Exception& e2) {
+            SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
+            SPDLOG_DEBUG("Description: {}", e2.what());
             return StatusCode::RESHAPE_ERROR;
         }
     } else {
@@ -872,11 +892,11 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
 
-    status = serializePredictResponse_2(inferRequest_2, getOutputsInfo(), responseProto);
+    status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
 
     responseProto->Clear();
     timer.start("serialize");
-    status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
+    status = serializePredictResponse_2(inferRequest_2, getOutputsInfo(), responseProto);
     timer.stop("serialize");
     if (!status.ok())
         return status;
