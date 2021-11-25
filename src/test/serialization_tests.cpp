@@ -40,7 +40,6 @@ using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
 
 using InferenceEngine::IInferRequest;
-using InferenceEngine::Precision;
 using InferenceEngine::PreProcessInfo;
 using InferenceEngine::ResponseDesc;
 
@@ -51,44 +50,44 @@ using testing::_;
 using testing::NiceMock;
 using testing::Throw;
 
-const std::vector<Precision> SUPPORTED_OUTPUT_PRECISIONS{
-    // Precision::UNSPECIFIED,
-    // Precision::MIXED,
-    Precision::FP32,
-    Precision::FP16,
-    // Precision::Q78,
-    Precision::I16,
-    Precision::U8,
-    Precision::I8,
-    Precision::U16,
-    Precision::I32,
-    Precision::I64,
-    // Precision::BIN,
-    // Precision::BOOL
-    // //Precision::CUSTOM)
+const std::vector<InferenceEngine::Precision> SUPPORTED_OUTPUT_PRECISIONS{
+    // InferenceEngine::InferenceEngine::Precision::UNSPECIFIED,
+    // InferenceEngine::Precision::MIXED,
+    InferenceEngine::Precision::FP32,
+    InferenceEngine::Precision::FP16,
+    // InferenceEngine::Precision::Q78,
+    InferenceEngine::Precision::I16,
+    InferenceEngine::Precision::U8,
+    InferenceEngine::Precision::I8,
+    InferenceEngine::Precision::U16,
+    InferenceEngine::Precision::I32,
+    InferenceEngine::Precision::I64,
+    // InferenceEngine::Precision::BIN,
+    // InferenceEngine::Precision::BOOL
+    // //InferenceEngine::Precision::CUSTOM)
 };
 
-const std::vector<Precision> UNSUPPORTED_OUTPUT_PRECISIONS{
-    Precision::UNSPECIFIED,
-    Precision::MIXED,
-    // Precision::FP32,
-    // Precision::FP16,
-    Precision::Q78,
-    // Precision::I16,
-    // Precision::U8,
-    // Precision::I8,
-    // Precision::U16,
-    // Precision::I32,
-    // Precision::I64,
-    Precision::BIN,
-    Precision::BOOL
-    // Precision::CUSTOM),
+const std::vector<InferenceEngine::Precision> UNSUPPORTED_OUTPUT_PRECISIONS{
+    InferenceEngine::Precision::UNSPECIFIED,
+    InferenceEngine::Precision::MIXED,
+    // InferenceEngine::Precision::FP32,
+    // InferenceEngine::Precision::FP16,
+    InferenceEngine::Precision::Q78,
+    // InferenceEngine::Precision::I16,
+    // InferenceEngine::Precision::U8,
+    // InferenceEngine::Precision::I8,
+    // InferenceEngine::Precision::U16,
+    // InferenceEngine::Precision::I32,
+    // InferenceEngine::Precision::I64,
+    InferenceEngine::Precision::BIN,
+    InferenceEngine::Precision::BOOL
+    // InferenceEngine::Precision::CUSTOM),
 };
 
-class TensorflowGRPCPredict : public ::testing::TestWithParam<Precision> {
+class TensorflowGRPCPredict : public ::testing::TestWithParam<InferenceEngine::Precision> {
 protected:
     void SetUp() override {
-        Precision precision = Precision::FP32;
+        InferenceEngine::Precision precision = InferenceEngine::Precision::FP32;
         InferenceEngine::TensorDesc tensorDesc_prec_1_3_1_1_NHWC = {
             precision,
             {1, 3, 1, 1},
@@ -122,7 +121,7 @@ public:
     std::tuple<
         std::shared_ptr<ovms::TensorInfo>,
         std::shared_ptr<MockBlob>>
-    getInputs(Precision precision) {
+    getInputs(InferenceEngine::Precision precision) {
         std::shared_ptr<ovms::TensorInfo> networkOutput =
             std::make_shared<ovms::TensorInfo>(
                 std::string("2_values_C_layout"),
@@ -135,12 +134,12 @@ public:
 };
 
 TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobPrecision) {
-    Precision tensorInfoPrecision = Precision::FP32;
+    InferenceEngine::Precision tensorInfoPrecision = InferenceEngine::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
     auto layout = Layout::NCHW;
     const std::string name = "NOT_IMPORTANT";
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
-    const TensorDesc tensorDesc(Precision::I32, tensorInfoShape, layout);
+    const TensorDesc tensorDesc(InferenceEngine::Precision::I32, tensorInfoShape, layout);
     InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<int32_t>(tensorDesc);
     blob->allocate();
     TensorProto responseOutput;
@@ -151,13 +150,13 @@ TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobPreci
 }
 
 TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobShape) {
-    Precision tensorInfoPrecision = Precision::FP32;
+    InferenceEngine::Precision tensorInfoPrecision = InferenceEngine::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
     shape_t blobShape{1, 3, 225, 225};
     auto layout = Layout::NCHW;
     const std::string name = "NOT_IMPORTANT";
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
-    const TensorDesc tensorDesc(Precision::FP32, blobShape, layout);
+    const TensorDesc tensorDesc(InferenceEngine::Precision::FP32, blobShape, layout);
     InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<float>(tensorDesc);
     blob->allocate();
     TensorProto responseOutput;
@@ -168,7 +167,7 @@ TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobShape
 }
 
 TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
-    Precision testedPrecision = GetParam();
+    InferenceEngine::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
     std::shared_ptr<MockBlob> mockBlob = std::get<1>(inputs);
@@ -185,7 +184,7 @@ TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
 class SerializeTFTensorProtoNegative : public SerializeTFTensorProto {};
 
 TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldSucceedForPrecision) {
-    Precision testedPrecision = GetParam();
+    InferenceEngine::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
     auto status = serializeBlobToTensorProto(responseOutput,
@@ -204,7 +203,7 @@ TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     InferenceEngine::ExecutableNetwork execNetwork = ieCore.LoadNetwork(network, "CPU");
     InferenceEngine::InferRequest inferRequest = execNetwork.CreateInferRequest();
     ovms::tensor_map_t tenMap;
-    InferenceEngine::TensorDesc tensorDesc(Precision::FP32, shape_t{1, 10}, InferenceEngine::Layout::NC);
+    InferenceEngine::TensorDesc tensorDesc(InferenceEngine::Precision::FP32, shape_t{1, 10}, InferenceEngine::Layout::NC);
     std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
         DUMMY_MODEL_INPUT_NAME,
         tensorDesc.getPrecision(),

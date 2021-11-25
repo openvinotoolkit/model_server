@@ -43,25 +43,20 @@ CustomNodeTensorPrecision toCustomNodeTensorPrecision(InferenceEngine::Precision
     }
 }
 
-InferenceEngine::Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision) {
-    switch (precision) {
-    case CustomNodeTensorPrecision::FP32:
-        return InferenceEngine::Precision::FP32;
-    case CustomNodeTensorPrecision::I32:
-        return InferenceEngine::Precision::I32;
-    case CustomNodeTensorPrecision::I8:
-        return InferenceEngine::Precision::I8;
-    case CustomNodeTensorPrecision::U8:
-        return InferenceEngine::Precision::U8;
-    case CustomNodeTensorPrecision::FP16:
-        return InferenceEngine::Precision::FP16;
-    case CustomNodeTensorPrecision::I16:
-        return InferenceEngine::Precision::I16;
-    case CustomNodeTensorPrecision::U16:
-        return InferenceEngine::Precision::U16;
-    default:
-        return InferenceEngine::Precision::UNSPECIFIED;
+Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision) {
+    static std::unordered_map<CustomNodeTensorPrecision, Precision> precisionMap{
+        {CustomNodeTensorPrecision::FP32, Precision::FP32},
+        {CustomNodeTensorPrecision::I32, Precision::I32},
+        {CustomNodeTensorPrecision::I8, Precision::I8},
+        {CustomNodeTensorPrecision::U8, Precision::U8},
+        {CustomNodeTensorPrecision::FP16, Precision::FP16},
+        {CustomNodeTensorPrecision::I16, Precision::I16},
+        {CustomNodeTensorPrecision::U16, Precision::U16}};
+    auto it = precisionMap.find(precision);
+    if (it == precisionMap.end()) {
+        return Precision::UNDEFINED;
     }
+    return it->second;
 }
 
 std::unique_ptr<struct CustomNodeParam[]> createCustomNodeParamArray(const std::unordered_map<std::string, std::string>& paramMap) {
@@ -120,7 +115,7 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std
         }
 
         std::string name = std::string(info[i].name);
-        InferenceEngine::Precision precision = toInferenceEnginePrecision(info[i].precision);
+        auto precision = toInferenceEnginePrecision(info[i].precision);
         shape_t shape(info[i].dims, info[i].dims + info[i].dimsCount);
 
         freeCallback(info[i].dims, customNodeLibraryInternalManager);
