@@ -154,15 +154,16 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, Infe
     TensorResourcesGuard tensorResourcesGuard(tensor, library, customNodeLibraryInternalManager);
     InferenceEngine::TensorDesc desc;
 
-    InferenceEngine::Precision precision = toInferenceEnginePrecision(tensor->precision);
-    if (precision == InferenceEngine::Precision::UNSPECIFIED) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; Unspecified output precision from custom node tensor: {}",
+    auto precision = toInferenceEnginePrecision(tensor->precision);
+    if (precision == Precision::UNDEFINED) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; Unspecified output precision:{} from custom node tensor: {}",
             this->getName(),
             this->getSessionKey(),
+            precision,
             tensor->name);
         return StatusCode::NODE_LIBRARY_INVALID_PRECISION;
     }
-    desc.setPrecision(precision);
+    desc.setPrecision(ovmsPrecisionToIE1Precision(precision));
 
     if (tensor->dims == nullptr || tensor->dimsCount == 0) {
         std::string error;
@@ -181,7 +182,7 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, Infe
     desc.setDims(shape);
 
     size_t expectedElementsCount = std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<size_t>());
-    size_t expectedDataLength = expectedElementsCount *= precision.size();
+    size_t expectedDataLength = expectedElementsCount *= ovmsPrecisionToIE1Precision(precision).size();
     if (tensor->data == nullptr || tensor->dataBytes != expectedDataLength) {
         std::stringstream error;
         if (tensor->data == nullptr) {

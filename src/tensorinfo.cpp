@@ -34,10 +34,14 @@ namespace ovms {
 
 TensorInfo::TensorInfo(const std::string& name,
     const InferenceEngine::Precision& precision,
+    const shape_t& shape) : TensorInfo(name, IE1PrecisionToOvmsPrecision(precision), shape) {}
+
+TensorInfo::TensorInfo(const std::string& name,
+    const Precision& precision,
     const shape_t& shape) :
     name(name),
     mapping(""),
-    precision_2(IE1PrecisionToOvmsPrecision(precision)),
+    precision_2(precision),
     shape(shape),
     layout(InferenceEngine::Layout::ANY) {
     this->updateEffectiveShape();
