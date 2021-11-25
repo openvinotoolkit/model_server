@@ -19,6 +19,7 @@
 #include <unordered_map>
 
 #include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 namespace ovms {
 

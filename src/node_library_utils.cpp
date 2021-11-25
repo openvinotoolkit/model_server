@@ -44,7 +44,7 @@ CustomNodeTensorPrecision toCustomNodeTensorPrecision(InferenceEngine::Precision
 }
 
 Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision) {
-    std::unordered_map<CustomNodeTensorPrecision, Precision> precisionMap{
+    static std::unordered_map<CustomNodeTensorPrecision, Precision> precisionMap{
         {CustomNodeTensorPrecision::FP32, Precision::FP32},
         {CustomNodeTensorPrecision::I32, Precision::I32},
         {CustomNodeTensorPrecision::I8, Precision::I8},
