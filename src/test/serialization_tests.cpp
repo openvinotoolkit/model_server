@@ -53,7 +53,7 @@ using testing::Throw;
 const std::vector<InferenceEngine::Precision> SUPPORTED_OUTPUT_PRECISIONS{
     // InferenceEngine::InferenceEngine::Precision::UNSPECIFIED,
     // InferenceEngine::Precision::MIXED,
-        InferenceEngine::Precision::FP32,
+    InferenceEngine::Precision::FP32,
     InferenceEngine::Precision::FP16,
     // InferenceEngine::Precision::Q78,
     InferenceEngine::Precision::I16,
@@ -68,7 +68,7 @@ const std::vector<InferenceEngine::Precision> SUPPORTED_OUTPUT_PRECISIONS{
 };
 
 const std::vector<InferenceEngine::Precision> UNSUPPORTED_OUTPUT_PRECISIONS{
-        InferenceEngine::Precision::UNSPECIFIED,
+    InferenceEngine::Precision::UNSPECIFIED,
     InferenceEngine::Precision::MIXED,
     // InferenceEngine::Precision::FP32,
     // InferenceEngine::Precision::FP16,
@@ -87,7 +87,7 @@ const std::vector<InferenceEngine::Precision> UNSUPPORTED_OUTPUT_PRECISIONS{
 class TensorflowGRPCPredict : public ::testing::TestWithParam<InferenceEngine::Precision> {
 protected:
     void SetUp() override {
-            InferenceEngine::Precision precision = InferenceEngine::Precision::FP32;
+        InferenceEngine::Precision precision = InferenceEngine::Precision::FP32;
         InferenceEngine::TensorDesc tensorDesc_prec_1_3_1_1_NHWC = {
             precision,
             {1, 3, 1, 1},
@@ -134,7 +134,7 @@ public:
 };
 
 TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobPrecision) {
-        InferenceEngine::Precision tensorInfoPrecision = InferenceEngine::Precision::FP32;
+    InferenceEngine::Precision tensorInfoPrecision = InferenceEngine::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
     auto layout = Layout::NCHW;
     const std::string name = "NOT_IMPORTANT";
@@ -150,7 +150,7 @@ TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobPreci
 }
 
 TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobShape) {
-        InferenceEngine::Precision tensorInfoPrecision = InferenceEngine::Precision::FP32;
+    InferenceEngine::Precision tensorInfoPrecision = InferenceEngine::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
     shape_t blobShape{1, 3, 225, 225};
     auto layout = Layout::NCHW;
@@ -167,7 +167,7 @@ TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobShape
 }
 
 TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
-        InferenceEngine::Precision testedPrecision = GetParam();
+    InferenceEngine::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
     std::shared_ptr<MockBlob> mockBlob = std::get<1>(inputs);
@@ -184,7 +184,7 @@ TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
 class SerializeTFTensorProtoNegative : public SerializeTFTensorProto {};
 
 TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldSucceedForPrecision) {
-        InferenceEngine::Precision testedPrecision = GetParam();
+    InferenceEngine::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
     auto status = serializeBlobToTensorProto(responseOutput,

@@ -44,15 +44,14 @@ CustomNodeTensorPrecision toCustomNodeTensorPrecision(InferenceEngine::Precision
 }
 
 Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision) {
-    std::unordered_map<CustomNodeTensorPrecision, Precision> precisionMap {
-    {CustomNodeTensorPrecision::FP32, Precision::FP32},
-    {CustomNodeTensorPrecision::I32, Precision::I32},
-    {CustomNodeTensorPrecision::I8, Precision::I8},
-    {CustomNodeTensorPrecision::U8, Precision::U8},
-    {CustomNodeTensorPrecision::FP16, Precision::FP16},
-    {CustomNodeTensorPrecision::I16, Precision::I16},
-    {CustomNodeTensorPrecision::U16, Precision::U16}
-    };
+    std::unordered_map<CustomNodeTensorPrecision, Precision> precisionMap{
+        {CustomNodeTensorPrecision::FP32, Precision::FP32},
+        {CustomNodeTensorPrecision::I32, Precision::I32},
+        {CustomNodeTensorPrecision::I8, Precision::I8},
+        {CustomNodeTensorPrecision::U8, Precision::U8},
+        {CustomNodeTensorPrecision::FP16, Precision::FP16},
+        {CustomNodeTensorPrecision::I16, Precision::I16},
+        {CustomNodeTensorPrecision::U16, Precision::U16}};
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
         return Precision::UNDEFINED;

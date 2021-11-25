@@ -17,6 +17,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 
 #include <inference_engine.hpp>
 #include <openvino/openvino.hpp>
@@ -34,7 +35,8 @@ namespace ovms {
 
 TensorInfo::TensorInfo(const std::string& name,
     const InferenceEngine::Precision& precision,
-    const shape_t& shape) : TensorInfo(name, IE1PrecisionToOvmsPrecision(precision), shape) {}
+    const shape_t& shape) :
+    TensorInfo(name, IE1PrecisionToOvmsPrecision(precision), shape) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
@@ -121,61 +123,60 @@ ov::element::Type TensorInfo::getPrecisionFromDataType(tensorflow::DataType data
         return ov::element::i32;
     default:
         return ov::element::undefined;
-}
+    }
 }
 
 tensorflow::DataType TensorInfo::getPrecisionAsDataType(Precision precision) {
     static std::unordered_map<Precision, tensorflow::DataType> precisionMap{
-    {Precision::FP32, tensorflow::DataType::DT_FLOAT},
-    {Precision::FP16, tensorflow::DataType::DT_HALF},
-    {Precision::I64, tensorflow::DataType::DT_INT64},
-    {Precision::I32, tensorflow::DataType::DT_INT32},
-    {Precision::I16, tensorflow::DataType::DT_INT16},
-    {Precision::I8, tensorflow::DataType::DT_INT8},
-    {Precision::U64, tensorflow::DataType::DT_UINT64},
-    {Precision::U16, tensorflow::DataType::DT_UINT16},
-    {Precision::U8, tensorflow::DataType::DT_UINT8},
-//    {Precision::MIXED, tensorflow::DataType::DT_INVALID},
-//    {Precision::Q78, tensorflow::DataType::DT_INVALID},
-//    {Precision::BIN, tensorflow::DataType::DT_INVALID},
-    {Precision::BOOL, tensorflow::DataType::DT_BOOL}
-//    {Precision::CUSTOM, tensorflow::DataType::DT_INVALID}
-};
+        {Precision::FP32, tensorflow::DataType::DT_FLOAT},
+        {Precision::FP16, tensorflow::DataType::DT_HALF},
+        {Precision::I64, tensorflow::DataType::DT_INT64},
+        {Precision::I32, tensorflow::DataType::DT_INT32},
+        {Precision::I16, tensorflow::DataType::DT_INT16},
+        {Precision::I8, tensorflow::DataType::DT_INT8},
+        {Precision::U64, tensorflow::DataType::DT_UINT64},
+        {Precision::U16, tensorflow::DataType::DT_UINT16},
+        {Precision::U8, tensorflow::DataType::DT_UINT8},
+        //    {Precision::MIXED, tensorflow::DataType::DT_INVALID},
+        //    {Precision::Q78, tensorflow::DataType::DT_INVALID},
+        //    {Precision::BIN, tensorflow::DataType::DT_INVALID},
+        {Precision::BOOL, tensorflow::DataType::DT_BOOL}
+        //    {Precision::CUSTOM, tensorflow::DataType::DT_INVALID}
+    };
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
-// TODO missing precisions
+        // TODO missing precisions
         return tensorflow::DataType::DT_INVALID;
     }
     return it->second;
 }
 
 std::string TensorInfo::getPrecisionAsString(Precision precision) {
-    static std::unordered_map<Precision, const char*> precisionMap {
-    {Precision::BF16, "BF16"},
-    {Precision::FP64, "FP64"},
-    {Precision::FP32, "FP32"},
-    {Precision::FP16, "FP16"},
-    {Precision::I64, "I64"},
-    {Precision::I32, "I32"},
-    {Precision::I16, "I16"},
-    {Precision::I8, "I8"},
-    {Precision::I4, "I4"},
-    {Precision::U64, "U64"},
-    {Precision::U32, "U32"},
-    {Precision::U16, "U16"},
-    {Precision::U8, "U8"},
-    {Precision::U4, "U4"},
-    {Precision::U1, "U1"},
-    {Precision::MIXED, "MIXED"},
-    {Precision::Q78, "Q78"},
-    {Precision::BIN, "BIN"},
-    {Precision::BOOL, "BOOL"},
-    {Precision::UNDEFINED, "UNDEFINED"},
-    {Precision::CUSTOM, "CUSTOM"}
-};
+    static std::unordered_map<Precision, const char*> precisionMap{
+        {Precision::BF16, "BF16"},
+        {Precision::FP64, "FP64"},
+        {Precision::FP32, "FP32"},
+        {Precision::FP16, "FP16"},
+        {Precision::I64, "I64"},
+        {Precision::I32, "I32"},
+        {Precision::I16, "I16"},
+        {Precision::I8, "I8"},
+        {Precision::I4, "I4"},
+        {Precision::U64, "U64"},
+        {Precision::U32, "U32"},
+        {Precision::U16, "U16"},
+        {Precision::U8, "U8"},
+        {Precision::U4, "U4"},
+        {Precision::U1, "U1"},
+        {Precision::MIXED, "MIXED"},
+        {Precision::Q78, "Q78"},
+        {Precision::BIN, "BIN"},
+        {Precision::BOOL, "BOOL"},
+        {Precision::UNDEFINED, "UNDEFINED"},
+        {Precision::CUSTOM, "CUSTOM"}};
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
-        return "DT_INVALID"; // TODO other way? why translate it to TF equivalent maybe UNDEFINED?
+        return "DT_INVALID";  // TODO other way? why translate it to TF equivalent maybe UNDEFINED?
     }
     return it->second;
 }
@@ -185,7 +186,7 @@ std::string TensorInfo::getPrecisionAsString() const {
 }
 
 std::string TensorInfo::getPrecisionAsString(InferenceEngine::Precision precision) {
-        return getPrecisionAsString(IE1PrecisionToOvmsPrecision(precision));
+    return getPrecisionAsString(IE1PrecisionToOvmsPrecision(precision));
 }
 
 const std::string TensorInfo::getDataTypeAsString(tensorflow::DataType dataType) {
@@ -349,7 +350,7 @@ std::shared_ptr<TensorInfo> TensorInfo::createCopyWithEffectiveDimensionPrefix(s
 }
 
 const InferenceEngine::TensorDesc TensorInfo::getTensorDesc() const {
-        // TODO how to
+    // TODO how to
     return InferenceEngine::TensorDesc{ovmsPrecisionToIE1Precision(precision_2), shape, layout};
 }
 
