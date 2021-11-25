@@ -3311,7 +3311,6 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomNodeWithDemultiplexerA
     proto.mutable_tensor_shape()->add_dim()->set_size(10);
 
     // Prepare model
-    std::cout << "BATMAN" << std::endl;
     ConstructorEnabledModelManager manager;
     ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchSize(5);
