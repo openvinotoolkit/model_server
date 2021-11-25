@@ -23,6 +23,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 #include <stdlib.h>
 
 #include "../executingstreamidguard.hpp"
@@ -322,19 +323,20 @@ public:
         std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance = nullptr,
         std::unique_ptr<std::future<void>> waitBeforePerformInference = nullptr);
 
-    void deserialize(const std::vector<float>& input, InferenceEngine::InferRequest& inferRequest, std::shared_ptr<ovms::ModelInstance> modelInstance) {
-        auto blob = InferenceEngine::make_shared_blob<float>(
-            modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getTensorDesc(),
+    void deserialize(const std::vector<float>& input, ov::runtime::InferRequest& inferRequest, std::shared_ptr<ovms::ModelInstance> modelInstance) {
+        ov::runtime::Tensor tensor(
+            modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getOvPrecision(),
+            modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getShape_2(),
             const_cast<float*>(reinterpret_cast<const float*>(input.data())));
-        inferRequest.SetBlob(DUMMY_MODEL_INPUT_NAME, blob);
+        inferRequest.set_tensor(DUMMY_MODEL_INPUT_NAME, tensor);
     }
 
-    void serializeAndCheck(int outputSize, InferenceEngine::InferRequest& inferRequest) {
+    void serializeAndCheck(int outputSize, ov::runtime::InferRequest& inferRequest) {
         std::vector<float> output(outputSize);
         ASSERT_THAT(output, Each(Eq(0.)));
-        auto blobOutput = inferRequest.GetBlob(DUMMY_MODEL_OUTPUT_NAME);
-        ASSERT_EQ(blobOutput->byteSize(), outputSize * sizeof(float));
-        std::memcpy(output.data(), InferenceEngine::as<InferenceEngine::MemoryBlob>(blobOutput)->rmap(), outputSize * sizeof(float));
+        auto blobOutput = inferRequest.get_tensor(DUMMY_MODEL_OUTPUT_NAME);
+        ASSERT_EQ(blobOutput.get_byte_size(), outputSize * sizeof(float));
+        std::memcpy(output.data(), blobOutput.data(), outputSize * sizeof(float));
         EXPECT_THAT(output, Each(Eq(2.)));
     }
 
@@ -404,13 +406,13 @@ void TestCustomLoader::performPredict(const std::string modelName,
                 validationStatus == ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
     ASSERT_EQ(modelInstance->reloadModelIfRequired(validationStatus, &request, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 
-    ovms::ExecutingStreamIdGuard executingStreamIdGuard(modelInstance->getInferRequestsQueue());
-    InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    ovms::ExecutingStreamIdGuard_2 executingStreamIdGuard(modelInstance->getInferRequestsQueue_2());
+    ov::runtime::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     std::vector<float> input(inputSize);
     std::generate(input.begin(), input.end(), []() { return 1.; });
     ASSERT_THAT(input, Each(Eq(1.)));
     deserialize(input, inferRequest, modelInstance);
-    auto status = modelInstance->performInference(inferRequest);
+    auto status = modelInstance->performInference_2(inferRequest);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     size_t outputSize = batchSize * DUMMY_MODEL_OUTPUT_SIZE;
     serializeAndCheck(outputSize, inferRequest);
