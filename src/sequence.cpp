@@ -29,6 +29,11 @@ const sequence_memory_state_t& Sequence::getMemoryState() const {
     return memoryState;
 }
 
+const sequence_memory_state_t_2& Sequence::getMemoryState_2() const {
+    return memoryState_2;
+}
+
+
 const bool Sequence::isIdle() const {
     return idle;
 }
@@ -47,6 +52,16 @@ Status Sequence::updateMemoryState(model_memory_state_t& newState) {
             return status;
         }
         memoryState[stateName] = copyBlobPtr;
+    }
+    setIdle(false);
+    return StatusCode::OK;
+}
+
+Status Sequence::updateMemoryState_2(model_memory_state_t_2& newState) {
+    for (auto&& state : newState) {
+        auto stateName = state.get_name();
+        ov::runtime::Tensor tensor = state.get_state();
+        memoryState_2[stateName] = tensor;
     }
     setIdle(false);
     return StatusCode::OK;
