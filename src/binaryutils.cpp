@@ -28,6 +28,7 @@
 #include <vector>
 
 #include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #include "binaryutils.hpp"
 #include "logging.hpp"
@@ -297,6 +298,18 @@ InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images
     return blob;
 }
 
+ov::runtime::Tensor createBlobFromMats_2(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+    ov::Shape shape = tensorInfo->getShape();
+    ov::element::Type precision = tensorInfo->getOvPrecision();
+    ov::runtime::Tensor tensor(precision, shape);
+    char* ptr = (char*)tensor.data();
+    for (cv::Mat image : images) {
+        memcpy(ptr, (char*)image.data, image.total() * image.elemSize());
+        ptr += (image.total() * image.elemSize());
+    }
+    return tensor;
+}
+
 InferenceEngine::Blob::Ptr convertMatsToBlob(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     switch (tensorInfo->getPrecision()) {
     case InferenceEngine::Precision::FP32:
@@ -324,6 +337,27 @@ InferenceEngine::Blob::Ptr convertMatsToBlob(std::vector<cv::Mat>& images, const
     }
 }
 
+ov::runtime::Tensor convertMatsToBlob_2(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+    switch (tensorInfo->getPrecision()) {
+    case InferenceEngine::Precision::FP32:
+    case InferenceEngine::Precision::I32:
+    case InferenceEngine::Precision::I8:
+    case InferenceEngine::Precision::U8:
+    case InferenceEngine::Precision::FP16:
+    case InferenceEngine::Precision::U16:
+    case InferenceEngine::Precision::I16:
+        return createBlobFromMats_2(images, tensorInfo, isPipeline);
+    case InferenceEngine::Precision::I64:
+    case InferenceEngine::Precision::MIXED:
+    case InferenceEngine::Precision::Q78:
+    case InferenceEngine::Precision::BIN:
+    case InferenceEngine::Precision::BOOL:
+    case InferenceEngine::Precision::CUSTOM:
+    default:
+        return ov::runtime::Tensor();
+    }
+}
+
 Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     auto status = validateTensor(tensorInfo, src);
     if (status != StatusCode::OK) {
@@ -338,6 +372,23 @@ Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngin
     }
 
     blob = convertMatsToBlob(images, tensorInfo, isPipeline);
+    return StatusCode::OK;
+}
+
+Status convertStringValToBlob_2(const tensorflow::TensorProto& src, ov::runtime::Tensor& blob, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+    auto status = validateTensor(tensorInfo, src);
+    if (status != StatusCode::OK) {
+        return status;
+    }
+
+    std::vector<cv::Mat> images;
+
+    status = convertTensorToMatsMatchingTensorInfo(src, images, tensorInfo);
+    if (!status.ok()) {
+        return status;
+    }
+
+    blob = convertMatsToBlob_2(images, tensorInfo, isPipeline);
     return StatusCode::OK;
 }
 }  // namespace ovms
