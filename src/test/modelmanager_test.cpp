@@ -1228,6 +1228,7 @@ TEST_F(ReloadAvailableModelDueToConfigChange, ExpectReloadDueToShapeConfiguratio
     EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
 }
 
+// TODO: Enable tests once the issue https://jira.devtools.intel.com/browse/CVS-71746 is resolved.
 class DISABLED_GetModelInstanceTest : public ::testing::Test {};
 
 class MockModel : public ovms::Model {};

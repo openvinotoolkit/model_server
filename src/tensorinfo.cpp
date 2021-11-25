@@ -181,6 +181,10 @@ std::string TensorInfo::getPrecisionAsString(Precision precision) {
     return it->second;
 }
 
+ov::element::Type TensorInfo::getOvPrecision() const {
+    return ovmsPrecisionToIE2Precision(precision_2);
+}
+
 std::string TensorInfo::getPrecisionAsString() const {
     return getPrecisionAsString(precision_2);
 }

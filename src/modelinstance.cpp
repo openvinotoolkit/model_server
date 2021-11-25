@@ -855,6 +855,9 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     timer.stop("deserialize");
     if (!status.ok())
         return status;
+    status = deserializePredictRequest_2<ConcreteTensorProtoDeserializator_2>(*requestProto, getInputsInfo(), inputSink_2, isPipeline);
+    if (!status.ok())
+        return status;
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
 
@@ -863,14 +866,21 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     timer.stop("prediction");
     if (!status.ok())
         return status;
+    status = performInference_2(inferRequest_2);
+    if (!status.ok())
+        return status;
     SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
 
+    status = serializePredictResponse_2(inferRequest_2, getOutputsInfo(), responseProto);
+
+    responseProto->Clear();
     timer.start("serialize");
     status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
     timer.stop("serialize");
     if (!status.ok())
         return status;
+
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
 
