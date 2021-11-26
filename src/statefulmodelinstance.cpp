@@ -242,6 +242,9 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     timer.stop("deserialize");
     if (!status.ok())
         return status;
+    status = deserializePredictRequest_2<ConcreteTensorProtoDeserializator_2>(*requestProto, getInputsInfo(), inputSink_2, isPipeline);
+    if (!status.ok())
+        return status;
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
 
@@ -269,6 +272,7 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
 
     timer.start("postprocess");
     status = postInferenceProcessing_2(responseProto, inferRequest_2, sequence, sequenceProcessingSpec);
+    responseProto->Clear();
     status = postInferenceProcessing(responseProto, inferRequest, sequence, sequenceProcessingSpec);
     timer.stop("postprocess");
     if (!status.ok())
