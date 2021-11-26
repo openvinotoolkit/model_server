@@ -133,8 +133,8 @@ public:
     TensorInfo(const std::string& name,
         const std::string& mapping,
         const Precision& precision,
-        const shape_t& shape,
-        const InferenceEngine::Layout& layout);
+        const shape_t& shape);
+    //        const InferenceEngine::Layout& layout);
 
     /**
          * @brief Get the Name object

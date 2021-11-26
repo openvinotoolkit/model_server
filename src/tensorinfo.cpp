@@ -83,6 +83,17 @@ TensorInfo::TensorInfo(const std::string& name,
     layout(layout) {
     this->updateEffectiveShape();
 }
+TensorInfo::TensorInfo(const std::string& name,
+    const std::string& mapping,
+    const Precision& precision,
+    const shape_t& shape) :
+    name(name),
+    mapping(mapping),
+    precision_2(precision),
+    shape(shape),
+    layout(InferenceEngine::Layout::ANY) {
+    this->updateEffectiveShape();
+}
 
 const std::string& TensorInfo::getName() const {
     return name;
@@ -333,7 +344,11 @@ void TensorInfo::setLayout(InferenceEngine::Layout layout) {
 
 void TensorInfo::updateEffectiveShape() {
     this->effectiveShape = this->getTensorDesc().getBlockingDesc().getBlockDims();
-    this->shape_2 = effectiveShape;
+    if (effectiveShape.size() == 0) {
+        this->shape_2 = this->shape;
+    } else {
+        this->shape_2 = effectiveShape;
+    }
 }
 
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const shape_t& shape) const {
