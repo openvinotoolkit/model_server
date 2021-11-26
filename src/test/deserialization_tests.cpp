@@ -51,7 +51,7 @@ using testing::NiceMock;
 using testing::Throw;
 
 const std::vector<InferenceEngine::Precision> SUPPORTED_INPUT_PRECISIONS{
-    // InferenceEngine::Precision::UNSPECIFIED,
+    // InferenceEngine::Precision::UNDEFINED,
     // InferenceEngine::Precision::MIXED,
     InferenceEngine::Precision::FP32,
     InferenceEngine::Precision::FP16,
@@ -65,6 +65,23 @@ const std::vector<InferenceEngine::Precision> SUPPORTED_INPUT_PRECISIONS{
     // InferenceEngine::Precision::BIN,
     // InferenceEngine::Precision::BOOL
     // //InferenceEngine::Precision::CUSTOM)
+};
+
+const std::vector<ovms::Precision> SUPPORTED_INPUT_PRECISIONS_2{
+    // ovms::Precision::UNSPECIFIED,
+    // ovms::Precision::MIXED,
+    ovms::Precision::FP32,
+    ovms::Precision::FP16,
+    // InferenceEngine::Precision::Q78,
+    ovms::Precision::I16,
+    ovms::Precision::U8,
+    ovms::Precision::I8,
+    ovms::Precision::U16,
+    ovms::Precision::I32,
+    // ovms::Precision::I64,
+    // ovms::Precision::BIN,
+    // ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
 };
 
 const std::vector<InferenceEngine::Precision> UNSUPPORTED_INPUT_PRECISIONS{
@@ -82,6 +99,23 @@ const std::vector<InferenceEngine::Precision> UNSUPPORTED_INPUT_PRECISIONS{
     InferenceEngine::Precision::BIN,
     InferenceEngine::Precision::BOOL
     // InferenceEngine::Precision::CUSTOM)
+};
+
+const std::vector<ovms::Precision> UNSUPPORTED_INPUT_PRECISIONS_2{
+   ovms::Precision::UNDEFINED,
+   ovms::Precision::MIXED,
+    // ovms::Precision::FP32,
+    // ovms::Precision::FP16,
+    ovms::Precision::Q78,
+    // ovms::Precision::I16,
+    // ovms::Precision::U8,
+    // ovms::Precision::I8,
+    // ovms::Precision::U16,
+    // ovms::Precision::I32,
+    ovms::Precision::I64,
+    ovms::Precision::BIN,
+    ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
 };
 
 class TensorflowGRPCPredict : public ::testing::TestWithParam<InferenceEngine::Precision> {
@@ -116,7 +150,35 @@ protected:
     bool isPipeline = false;
 };
 
+class TensorflowGRPCPredict_2 : public ::testing::TestWithParam<ovms::Precision> {
+protected:
+    void SetUp() override {
+        auto precision = ovms::Precision::FP32;
+        tensorMap[tensorName] = std::make_shared<ovms::TensorInfo>(
+            tensorName,
+            precision,
+            shape_t{1, 3, 1, 1},
+            InferenceEngine::Layout::NHWC);
+        SetUpTensorProto(TensorInfo::getPrecisionAsDataType(precision));
+    }
+    void SetUpTensorProto(tensorflow::DataType dataType) {
+        tensorProto.set_dtype(dataType);
+        auto tensorShape = tensorProto.mutable_tensor_shape();
+        tensorShape->Clear();
+        tensorShape->add_dim()->set_size(1);
+        tensorShape->add_dim()->set_size(3);
+        tensorShape->add_dim()->set_size(1);
+        tensorShape->add_dim()->set_size(1);
+        *(tensorProto.mutable_tensor_content()) = std::string(1 * 3 * 1 * 1, '1');
+    }
+    TensorProto tensorProto;
+    const char* tensorName = "Input_PRECISION_1_3_1_1_NHWC";
+    ovms::tensor_map_t tensorMap;
+    bool isPipeline = false;
+};
+
 class DeserializeTFTensorProto : public TensorflowGRPCPredict {};
+class DeserializeTFTensorProto_2 : public TensorflowGRPCPredict_2 {};
 
 class DeserializeTFTensorProtoNegative : public TensorflowGRPCPredict {};
 
@@ -233,13 +295,13 @@ TEST_P(DeserializeTFTensorProtoNegative, ShouldReturnNullptrForPrecision) {
                                 << " should return nullptr";
 }
 
-TEST_P(DeserializeTFTensorProto, ShouldReturnValidBlob) {
-    InferenceEngine::Precision testedPrecision = GetParam();
-    SetUpTensorProto(fromInferenceEnginePrecision(testedPrecision));
+TEST_P(DeserializeTFTensorProto_2, ShouldReturnValidBlob) {
+    ovms::Precision testedPrecision = GetParam();
+    SetUpTensorProto(TensorInfo::getPrecisionAsDataType(testedPrecision));
     tensorMap[tensorName]->setPrecision(testedPrecision);
-    InferenceEngine::Blob::Ptr blobPtr = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], isPipeline);
-    EXPECT_NE(nullptr, blobPtr) << "Supported OVMS precision:"
-                                << testedPrecision
+    ov::runtime::Tensor tensor = deserializeTensorProto_2<ConcreteTensorProtoDeserializator_2>(tensorProto, tensorMap[tensorName], isPipeline);
+    EXPECT_NE(nullptr, tensor.data()) << "Supported OVMS precision:"
+                                << toString(testedPrecision)
                                 << " should return valid blob ptr";
 }
 
@@ -263,6 +325,8 @@ INSTANTIATE_TEST_SUITE_P(
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    DeserializeTFTensorProto,
-    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
-    ::testing::PrintToStringParamName());
+    DeserializeTFTensorProto_2,
+    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS_2),
+    [](const ::testing::TestParamInfo<DeserializeTFTensorProto_2::ParamType>& info) {
+      return toString(info.param);
+    });

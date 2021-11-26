@@ -106,9 +106,36 @@ public:
         const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
         switch (tensorInfo->getPrecision()) {
         case InferenceEngine::Precision::FP32:
-            return makeBlob_2(requestInput, tensorInfo, isPipeline);
         case InferenceEngine::Precision::I32:
+        case InferenceEngine::Precision::U8:
+        case InferenceEngine::Precision::I16:
             return makeBlob_2(requestInput, tensorInfo, isPipeline);
+        case InferenceEngine::Precision::I8: {
+            std::cout << "U8!" << std::endl;
+            return makeBlob_2(requestInput, tensorInfo, isPipeline);
+        }
+        case InferenceEngine::Precision::FP16: {
+            ov::runtime::Tensor tensor(ov::element::f16, tensorInfo->getShape());
+            // Needs conversion due to zero padding for each value:
+            // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
+            uint16_t* ptr = (uint16_t*)tensor.data();
+            auto size = static_cast<size_t>(requestInput.half_val_size());
+            for (size_t i = 0; i < size; i++) {
+                ptr[i] = requestInput.half_val(i);
+            }
+            return tensor;
+        }
+        case InferenceEngine::Precision::U16: {
+            ov::runtime::Tensor tensor(ov::element::u16, tensorInfo->getShape());
+            // Needs conversion due to zero padding for each value:
+            // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
+            uint16_t* ptr = (uint16_t*)tensor.data();
+            auto size = static_cast<size_t>(requestInput.int_val_size());
+            for (size_t i = 0; i < size; i++) {
+                ptr[i] = requestInput.int_val(i);
+            }
+            return tensor;
+        }
         default:
             return ov::runtime::Tensor();
         }
