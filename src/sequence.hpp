@@ -22,12 +22,11 @@
 #include <unordered_map>
 #include <vector>
 
+#include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
 #include "ov_utils.hpp"
 #include "status.hpp"
-
-#include <openvino/openvino.hpp>
 
 namespace ovms {
 

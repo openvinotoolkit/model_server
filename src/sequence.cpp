@@ -33,7 +33,6 @@ const sequence_memory_state_t_2& Sequence::getMemoryState_2() const {
     return memoryState_2;
 }
 
-
 const bool Sequence::isIdle() const {
     return idle;
 }

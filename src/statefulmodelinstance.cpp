@@ -15,14 +15,14 @@
 //*****************************************************************************
 #include "statefulmodelinstance.hpp"
 
+#include <openvino/openvino.hpp>
+
 #include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
 #include "logging.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "serialization.hpp"
 #include "timer.hpp"
-
-#include <openvino/openvino.hpp>
 
 using namespace InferenceEngine;
 
