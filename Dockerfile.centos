@@ -203,7 +203,7 @@ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN if [ -f /opt/intel/openvino/bin/setupvars.sh ];  then cd /ovms/src/test/cpu_extension/ && make ; fi
 
-RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
+#RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
 
 COPY ${ovms_metadata_file} metadata.json
 
