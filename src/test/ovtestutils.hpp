@@ -103,3 +103,17 @@ private:
     std::shared_ptr<IAllocator> _allocator;
     char* to;
 };
+
+class MockBlob_2 : public ov::runtime::Tensor {
+public:
+    MockBlob_2(const std::shared_ptr<ovms::TensorInfo>& info) :
+        ov::runtime::Tensor(info->getOvPrecision(), info->getShape_2()) {
+        to = const_cast<char*>("12345678");
+    }
+
+    // TODO: Needed?
+    MOCK_METHOD(ov::Shape, get_shape, (), (const));
+
+private:
+    char* to;
+};

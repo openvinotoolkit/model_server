@@ -263,7 +263,7 @@ Status deserializePredictRequest_2(
                     requestInput, tensorInfo, isPipeline);
             }
 
-            if (blob.data() == nullptr) {
+            if (!blob) {
                 status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
                 SPDLOG_DEBUG(status.string());
                 return status;

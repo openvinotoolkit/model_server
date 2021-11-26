@@ -103,6 +103,7 @@ enum class StatusCode {
 
     // Deserialization
     OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against network precision */
+    BINARY_UNSUPPORTED_DESERIALIZATION_PRECISION,
     OV_INTERNAL_DESERIALIZATION_ERROR,        /*!< Error occured during deserialization */
 
     // Inference
