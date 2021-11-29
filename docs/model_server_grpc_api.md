@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server gRPC API Documentation {#model_server_docs_grpc_api}
+# OpenVINO&trade; Model Server gRPC API Documentation {#ovms_docs_grpc_api}
 
 ## Introduction 
 This documents gives information about OpenVINO&trade; Model Server gRPC API. It is documented in the proto buffer files in [tensorflow_serving_api](https://github.com/tensorflow/serving/tree/r1.14/tensorflow_serving/apis). 

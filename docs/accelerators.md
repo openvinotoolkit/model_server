@@ -1,2 +1,2 @@
-# Running OVMS with AI accelerators {#model_server_docs_using_ai_accelerators}
+# Running OVMS with AI accelerators {#ovms_docs_using_ai_accelerators}
 

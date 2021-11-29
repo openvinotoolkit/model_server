@@ -1,4 +1,4 @@
-# Starting the OpenVINO Model Server {#model_server_docs_starting_the_service}
+# Starting the OpenVINO Model Server {#ovms_docs_starting_the_service}
 
 @sphinxdirective
 

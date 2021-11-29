@@ -1,17 +1,16 @@
 # OpenVINO&trade; Model Server {#model_server_what_is_openvino_model_server}
 
-
 @sphinxdirective
 
 .. toctree::
    :maxdepth: 1
    :hidden:
-   model_server_docs_what_is_openvino_model_server
-   model_server_docs_quick_start_guide
-   model_server_docs_models_repository
-   model_server_docs_starting_the_serving
-   model_server_docs_grpc_api
-   model_server_docs_rest_api
+   ovms_docs_what_is_openvino_model_server
+   ovms_docs_quick_start_guide
+   ovms_docs_models_repository
+   ovms_docs_starting_the_serving
+   ovms_docs_grpc_api
+   ovms_docs_rest_api
 
 @endsphinxdirective
 
