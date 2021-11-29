@@ -45,6 +45,8 @@ static constexpr const char* OUTPUT_COORDINATES_INFO_DIMS_NAME = "coordinates_in
 static constexpr const char* OUTPUT_IMAGES_INFO_DIMS_NAME = "images_info_dims";
 static constexpr const char* OUTPUT_CONFIDENCES_INFO_DIMS_NAME = "confidences_info_dims";
 static constexpr const char* OUTPUT_LABEL_IDS_TENSOR_NAME = "label_ids";
+static constexpr const char* OUTPUT_LABEL_IDS_DIMS_NAME = "label_ids_dims";
+static constexpr const char* OUTPUT_LABEL_IDS_INFO_DIMS_NAME = "label_ids_info_dims";
 static constexpr const int QUEUE_SIZE = 1;
 
 std::shared_mutex internalManagerLock;
@@ -170,6 +172,29 @@ bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::ve
     return true;
 }
 
+bool copy_label_ids_into_output(struct CustomNodeTensor* output, const std::vector<int>& labelIds, CustomNodeLibraryInternalManager* internalManager) {
+    const uint64_t outputBatch = labelIds.size();
+    uint64_t byteSize = sizeof(int32_t) * outputBatch;
+
+    int32_t* buffer = nullptr;
+    if (!get_buffer<int32_t>(internalManager, &buffer, OUTPUT_LABEL_IDS_TENSOR_NAME, byteSize))
+        return false;
+    std::memcpy(buffer, labelIds.data(), byteSize);
+
+    output->data = reinterpret_cast<uint8_t*>(buffer);
+    output->dataBytes = byteSize;
+    output->dimsCount = 3;
+    if (!get_buffer<uint64_t>(internalManager, &(output->dims), OUTPUT_LABEL_IDS_DIMS_NAME, 3 * sizeof(uint64_t))) {
+        release(buffer, internalManager);
+        return false;
+    }
+    output->dims[0] = outputBatch;
+    output->dims[1] = 1;
+    output->dims[2] = 1;
+    output->precision = I32;
+    return true;
+}
+
 int initializeInternalManager(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
     // creating InternalManager instance
     std::unique_ptr<CustomNodeLibraryInternalManager> internalManager = std::make_unique<CustomNodeLibraryInternalManager>();
@@ -200,6 +225,11 @@ int initializeInternalManager(void** customNodeLibraryInternalManager, const str
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE), "buffer creation failed");
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
 
+    // creating BuffersQueues for output: label_ids
+    uint64_t labelIdsByteSize = sizeof(int32_t) * maxOutputBatch;
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_LABEL_IDS_TENSOR_NAME, labelIdsByteSize, QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_LABEL_IDS_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+
     // creating BuffersQueues for inputs
     NODE_ASSERT(internalManager->createBuffersQueue(INPUT_IMAGE_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
     NODE_ASSERT(internalManager->createBuffersQueue(INPUT_DETECTION_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
@@ -209,12 +239,13 @@ int initializeInternalManager(void** customNodeLibraryInternalManager, const str
 
     // creating BuffersQueues for info tensors
     NODE_ASSERT(internalManager->createBuffersQueue(INPUT_TENSOR_INFO_NAME, 2 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE), "buffer creation failed");
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 4 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE), "buffer creation failed");
 
     // creating BuffersQueues for outputs dims in getOutputsInfo
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_COORDINATES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_LABEL_IDS_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
 
     *customNodeLibraryInternalManager = internalManager.release();
     return 0;
@@ -243,6 +274,9 @@ int reinitializeInternalManagerIfNeccessary(void** customNodeLibraryInternalMana
 
     uint64_t confidenceByteSize = sizeof(float) * maxOutputBatch;
     NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_CONFIDENCES_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE), "buffer recreation failed");
+
+    uint64_t labelIdsByteSize = sizeof(int32_t) * maxOutputBatch;
+    NODE_ASSERT(internalManager->recreateBuffersQueue(OUTPUT_LABEL_IDS_TENSOR_NAME, labelIdsByteSize, QUEUE_SIZE), "buffer recreation failed");
 
     return 0;
 }
@@ -386,8 +420,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     std::shared_lock lock(internalManagerLock);
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
 
-    *outputsCount = 3;
-    if (!get_buffer<struct CustomNodeTensor>(internalManager, outputs, OUTPUT_TENSOR_NAME, 3 * sizeof(CustomNodeTensor))) {
+    *outputsCount = 4;
+    if (!get_buffer<struct CustomNodeTensor>(internalManager, outputs, OUTPUT_TENSOR_NAME, *outputsCount * sizeof(CustomNodeTensor))) {
         return 1;
     }
 
@@ -409,6 +443,16 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     CustomNodeTensor& confidencesTensor = (*outputs)[2];
     confidencesTensor.name = OUTPUT_CONFIDENCES_TENSOR_NAME;
     if (!copy_confidences_into_output(&confidencesTensor, confidences, internalManager)) {
+        cleanup(coordinatesTensor, internalManager);
+        cleanup(imagesTensor, internalManager);
+        release(*outputs, internalManager);
+        return 1;
+    }
+
+    CustomNodeTensor& labelIdsTensor = (*outputs)[3];
+    labelIdsTensor.name = OUTPUT_LABEL_IDS_TENSOR_NAME;
+    if (!copy_label_ids_into_output(&labelIdsTensor, labelIds, internalManager)) {
+        cleanup(confidencesTensor, internalManager);
         cleanup(coordinatesTensor, internalManager);
         cleanup(imagesTensor, internalManager);
         release(*outputs, internalManager);
@@ -479,8 +523,8 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     std::shared_lock lock(internalManagerLock);
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
 
-    *infoCount = 3;
-    if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo))) {
+    *infoCount = 4;
+    if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, OUTPUT_TENSOR_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {
         return 1;
     }
 
@@ -529,9 +573,14 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     (*info)[2].precision = FP32;
 
     (*info)[3].name = OUTPUT_LABEL_IDS_TENSOR_NAME;
+    if (!get_buffer<uint64_t>(internalManager, &((*info)[3].dims), OUTPUT_LABEL_IDS_INFO_DIMS_NAME, 3 * sizeof(uint64_t))) {
+        release((*info)[2].dims, internalManager);
+        release((*info)[1].dims, internalManager);
+        release((*info)[0].dims, internalManager);
+        release(*info, internalManager);
+        return 1;
+    }
     (*info)[3].dimsCount = 3;
-    (*info)[3].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
-    NODE_ASSERT(((*info)[2].dims) != nullptr, "malloc has failed");
     (*info)[3].dims[0] = 0;
     (*info)[3].dims[1] = 1;
     (*info)[3].dims[2] = 1;
