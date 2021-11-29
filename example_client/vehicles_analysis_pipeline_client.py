@@ -77,15 +77,6 @@ def update_vehicle_types(output_nd, vehicles):
             vehicles[i].update({'type': detection_str})
     return vehicles
 
-def update_vehicle_labels(output_nd, vehicles):
-    for i in range(output_nd.shape[0]):
-        detection = output_nd[i,0,0]
-        if len(vehicles) < i + 1:
-            vehicles.append({'label': detection})
-        else:
-            vehicles[i].update({'label': detection})
-    return vehicles
-
 def update_vehicle_colors(output_nd, vehicles):
     for i in range(output_nd.shape[0]):
         detection = np.argmax(output_nd[i,0])
@@ -147,12 +138,9 @@ for name in response.outputs:
         vehicles = update_vehicle_types(output_nd, vehicles)
     if name == 'colors':
         vehicles = update_vehicle_colors(output_nd, vehicles)
-    if name == 'labels':
-        vehicles = update_vehicle_labels(output_nd, vehicles)
-
 
 print('\nFound', len(vehicles), 'vehicles:')
 i = 0
 for vehicle in vehicles:
-    print(i, 'Type:', vehicle['type'], 'Color:', vehicle['color'], vehicle['label'])
+    print(i, 'Type:', vehicle['type'], 'Color:', vehicle['color'])
     i += 1
