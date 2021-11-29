@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server Architecture
+# OpenVINO&trade; Model Server Architecture {#model_server_docs_architecture}
 
 - OpenVINO&trade; Model Server is a C++ implementation of gRPC and RESTful API interfaces defined by [Tensorflow Serving](https://www.tensorflow.org/tfx/guide/serving).
 

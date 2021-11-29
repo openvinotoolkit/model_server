@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server Quickstart
+# OpenVINO&trade; Model Server Quickstart {#model_server_docs_quick_start_guide}
 
 The OpenVINO Model Server requires a trained model in Intermediate Representation (IR) or ONNX format on which it performs inference. Options to download appropriate models include:
  

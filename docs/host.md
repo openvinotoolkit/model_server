@@ -1,4 +1,4 @@
-# Landing OpenVINO&trade; Model Server on Bare Metal Hosts and Virtual Machines
+# Landing OpenVINO&trade; Model Server on Bare Metal Hosts and Virtual Machines {#model_server_docs_baremetal}
 
 ## Introduction
 OpenVINO&trade; Model Server includes a C++ implementation of gRPC and RESTful API interfaces defined by Tensorflow serving. 

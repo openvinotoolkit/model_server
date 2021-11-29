@@ -1,5 +1,5 @@
-# Deploying OpenVINO&trade; Model Server using Docker Container
-
+# Deploying OpenVINO&trade; Model Server using Docker Container {#model_server_docs_docker_container}
+_
 ## Introduction
 
 OpenVINO&trade; Model Server is a serving system for machine learning models. OpenVINO&trade; Model Server makes it easy to deploy new algorithms and experiments, while keeping the same server architecture and APIs. This guide will help you deploy OpenVINO&trade; Model Server through docker containers.

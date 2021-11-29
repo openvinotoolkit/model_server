@@ -1,4 +1,4 @@
-# Preparing the Models Repository for OpenVINO&trade; Model Server
+# Preparing the Models Repository for OpenVINO&trade; Model Server {#model_server_docs_models_repository}
 
 ## Introduction 
 This guide will help you to create a models repository for serving with the OpenVINO&trade; Model Server. This will help you to serve any model with the OpenVINO&trade; Model Server.

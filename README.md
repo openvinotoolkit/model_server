@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server
+# OpenVINO&trade; Model Server {#model_server_what_is_openvino_model_server}
 
 ![OVMS picture](docs/ovms.png)
 
@@ -134,5 +134,16 @@ Submit Github issue to ask question, request a feature or report a bug.
 
 ---
 \* Other names and brands may be claimed as the property of others.
+
+@sphinxdirective
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   model_server_docs_architecture
+
+
+
+@endsphinxdirective
 
 
