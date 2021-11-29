@@ -74,7 +74,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         SPDLOG_WARN(status.string());
         return status;
     }
-
+    // TODO handling network shapes vs network inputs to be done later
     auto networkShapes = network->getInputShapes();
     std::map<std::string, ov::PartialShape> networkShapes_2;
 
@@ -190,13 +190,65 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
 
         auto mappingName = config.getMappingInputByKey(name);
         auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
-        this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
+        // this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
     }
-    SPDLOG_INFO("Final network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
+    auto inputTensors = this->network_2->inputs();
+    for (const auto& input : inputTensors) {
+        std::string name;
+        try {
+            name = input.get_any_name();
+        } catch (const ov::Exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+                getName(),
+                getVersion(),
+                e.what());
+            // TODO potentially allow for empty names if OV will load such model. Then potentially use empty string as input/output names
+            // and adjust validation, metadata, dags for that
+            return StatusCode::UNKNOWN_ERROR;
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+                getName(),
+                getVersion(),
+                e.what());
+            return StatusCode::UNKNOWN_ERROR;
+        } catch (...) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO",
+                getName(),
+                getVersion());
+            return StatusCode::UNKNOWN_ERROR;
+        }
+        auto precision = ovElementTypeToOvmsPrecision(input.get_element_type());
+        // TODO auto layout = input->getLayout();
+        /*
+        if (config.getLayouts().size() > 0) {
+            auto mappedName = config.getMappingOutputByKey(name);
+            auto it = config.getLayouts().find(mappedName == "" ? name : mappedName);
+            if (it != config.getLayouts().end()) {
+                layout = TensorInfo::getLayoutFromString(it->second);
+            }
+        }
+        input->setLayout(layout);
+        */
+        auto OVshape = input.get_shape();
+        shape_t shape(OVshape.begin(), OVshape.end());
+        auto mappingName = config.getMappingInputByKey(name);
+        auto tensorInfo = std::make_shared<TensorInfo>(name, mappingName, precision, shape);
+        std::string precision_str = tensorInfo->getPrecisionAsString();
+        this->inputsInfo[tensorInfo->getMappedName()] = std::move(tensorInfo);
+        std::stringstream shape_stream;
+        std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Input name: {}; mapping name: {}; shape: {}; effective shape; precision: {}; layout: ",
+            name, mappingName,
+            shape_stream.str(),
+            // effective_shape_stream.str()
+            precision_str);
+        //           TensorInfo::getStringFromLayout(input->getLayout()));
+    }
+    SPDLOG_INFO("Final network inputs_V1: {}", getNetworkInputsInfoString(networkInputs, config));
     return StatusCode::OK;
 }
 
-void ModelInstance::loadOutputTensors(const ModelConfig& config) {
+Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
     this->outputsInfo.clear();
     for (const auto& pair : network->getOutputsInfo()) {
         const auto& name = pair.first;
@@ -230,6 +282,59 @@ void ModelInstance::loadOutputTensors(const ModelConfig& config) {
             name, mappingName, shape_stream.str(), effective_shape_stream.str(), precision_str,
             TensorInfo::getStringFromLayout(output->getLayout()));
     }
+    auto outputTensors = this->network_2->outputs();
+    for (const auto& output : outputTensors) {
+        std::string name;
+        try {
+            name = output.get_any_name();
+        } catch (const ov::Exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get output name for model:{}; version:{}; from OpenVINO with error:{}",
+                getName(),
+                getVersion(),
+                e.what());
+            // TODO potentially allow for empty names if OV will load such model. Then potentially use empty string as input/output names
+            // and adjust validation, metadata, dags for that
+            return StatusCode::UNKNOWN_ERROR;
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get output name for model:{}; version:{}; from OpenVINO with error:{}",
+                getName(),
+                getVersion(),
+                e.what());
+            return StatusCode::UNKNOWN_ERROR;
+        } catch (...) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get output name for model:{}; version:{}; from OpenVINO",
+                getName(),
+                getVersion());
+            return StatusCode::UNKNOWN_ERROR;
+        }
+        auto precision = ovElementTypeToOvmsPrecision(output.get_element_type());
+        // TODO auto layout = output->getLayout();
+        /*
+        if (config.getLayouts().size() > 0) {
+            auto mappedName = config.getMappingOutputByKey(name);
+            auto it = config.getLayouts().find(mappedName == "" ? name : mappedName);
+            if (it != config.getLayouts().end()) {
+                layout = TensorInfo::getLayoutFromString(it->second);
+            }
+        }
+        output->setLayout(layout);
+        */
+        auto OVshape = output.get_shape();
+        shape_t shape(OVshape.begin(), OVshape.end());
+        auto mappingName = config.getMappingOutputByKey(name);
+        auto tensorInfo = std::make_shared<TensorInfo>(name, mappingName, precision, shape);
+        std::string precision_str = tensorInfo->getPrecisionAsString();
+        this->outputsInfo[tensorInfo->getMappedName()] = std::move(tensorInfo);
+        std::stringstream shape_stream;
+        std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Output name: {}; mapping name: {}; shape: {}; effective shape; precision: {}; layout: ",
+            name, mappingName,
+            shape_stream.str(),
+            // effective_shape_stream.str()
+            precision_str);
+        //           TensorInfo::getStringFromLayout(output->getLayout()));
+    }
+    return StatusCode::OK;
 }
 
 // Temporary methods. To be replaces with proper storage class.
@@ -573,7 +678,11 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
         }
-        loadOutputTensors(this->config);
+        status = loadOutputTensors(this->config);
+        if (!status.ok()) {
+            this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
+            return status;
+        }
         status = loadOVExecutableNetwork(this->config);
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);

@@ -263,7 +263,7 @@ private:
          *
          * @param config
          */
-    void loadOutputTensors(const ModelConfig& config);
+    Status loadOutputTensors(const ModelConfig& config);
 
     /**
          * @brief Configures batchsize
