@@ -91,8 +91,8 @@ def draw_boxes_ocr(frame, result):
         y_min = text_coordinates[i][0][1]
         x_max = text_coordinates[i][0][0] + text_coordinates[i][0][2]
         y_max = text_coordinates[i][0][1] + text_coordinates[i][0][3]
-        frame = cv2.rectangle(frame, (x_min,y_min), (x_max,y_max), (36,255,12), 1)
-        cv2.putText(frame, text, (x_min, y_min-5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (36,255,12), 1)
+        frame = cv2.rectangle(frame, (x_min,y_min), (x_max,y_max), (0,0,255), 1)
+        cv2.putText(frame, text, (x_min, y_min-5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
     return frame
 
 
@@ -206,7 +206,8 @@ while(True):
     frame_to_display = threads[i].get_output()
     threads[i].set_input(grab_frame(cap))
 
-    cv2.imshow('frame', frame_to_display)
+    # cv2.imshow('frame', frame_to_display)
+    cv2.imwrite(f'./results/frame_{frames_processed}.jpg', frame_to_display)
     now = time.time()
     time_since_last_display = now - last_display_time
     last_display_time = now
