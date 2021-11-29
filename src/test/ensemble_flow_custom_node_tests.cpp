@@ -2115,6 +2115,29 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Demultip
     this->checkResponse("pipeline_output", response, expectedOutput, {1, 10});
 }
 
+// Extract TensorInfo out of string in format: "1,3,500,500;FP32"
+static CustomNodeTensorInfo extractMetadata(const char* key, const char* value) {
+    std::string keyStr = key;
+    std::string valueStr = value;
+    auto tokens = tokenize(valueStr, ';');
+    EXPECT_EQ(tokens.size(), 2);
+    std::string shapeStr = tokens[0];
+    std::string precisionStr = tokens[1];
+    tokens = tokenize(shapeStr, ',');
+    EXPECT_GE(tokens.size(), 1);
+    shape_t shape;
+    std::transform(tokens.begin(), tokens.end(), std::back_inserter(shape),
+        [](const std::string& str) { return std::stoull(str); });
+    CustomNodeTensorPrecision precision = toCustomNodeTensorPrecision(InferenceEngine::Precision::FromStr(precisionStr));
+    CustomNodeTensorInfo info;
+    info.name = key;
+    info.dimsCount = shape.size();
+    info.dims = (uint64_t*)malloc(info.dimsCount * sizeof(uint64_t));
+    std::memcpy(info.dims, shape.data(), info.dimsCount * sizeof(uint64_t));
+    info.precision = precision;
+    return info;
+}
+
 struct LibraryParamControlledMetadata {
     static bool startsWith(const char* str, const char* prefix) {
         // Ensure null terminated
@@ -2134,28 +2157,6 @@ struct LibraryParamControlledMetadata {
         size_t strLen = std::strlen(str);
         size_t prefixLen = std::strlen(prefix);
         return strLen < prefixLen ? false : std::memcmp(str, prefix, prefixLen) == 0;
-    }
-    // Extract TensorInfo out of string in format: "1,3,500,500;FP32"
-    static CustomNodeTensorInfo extractMetadata(const char* key, const char* value) {
-        std::string keyStr = key;
-        std::string valueStr = value;
-        auto tokens = tokenize(valueStr, ';');
-        EXPECT_EQ(tokens.size(), 2);
-        std::string shapeStr = tokens[0];
-        std::string precisionStr = tokens[1];
-        tokens = tokenize(shapeStr, ',');
-        EXPECT_GE(tokens.size(), 1);
-        shape_t shape;
-        std::transform(tokens.begin(), tokens.end(), std::back_inserter(shape),
-            [](const std::string& str) { return std::stoull(str); });
-        CustomNodeTensorPrecision precision = toCustomNodeTensorPrecision(InferenceEngine::Precision::FromStr(precisionStr));
-        CustomNodeTensorInfo info;
-        info.name = key;
-        info.dimsCount = shape.size();
-        info.dims = (uint64_t*)malloc(info.dimsCount * sizeof(uint64_t));
-        std::memcpy(info.dims, shape.data(), info.dimsCount * sizeof(uint64_t));
-        info.precision = precision;
-        return info;
     }
     static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
         return 0;
@@ -3176,72 +3177,31 @@ struct LibraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy {
         return 0;
     }
 
-    static std::vector<int> get_int_list_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsCount) {
-        std::string listStr;
-        for (int i = 0; i < paramsCount; i++) {
-            if (name == params[i].key) {
-                listStr = params[i].value;
-                break;
-            }
-        }
-
-        if (listStr.length() < 2 || listStr.front() != '[' || listStr.back() != ']') {
-            return {};
-        }
-
-        listStr = listStr.substr(1, listStr.size() - 2);
-
-        std::vector<int> result;
-
-        std::stringstream lineStream(listStr);
-        std::string element;
-        while (std::getline(lineStream, element, ',')) {
-            try {
-                int e = std::stoi(element.c_str());
-                result.push_back(e);
-            } catch (std::invalid_argument& e) {
-                return {};
-            } catch (std::out_of_range& e) {
-                return {};
-            }
-        }
-
-        return result;
-    }
-
     static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
-        std::vector<int> dims = get_int_list_parameter("input_dims", params, paramsCount);
-        if (dims.empty()) {
-            return 1;
-        }
-
+        std::string name = "input_dims";
         *infoCount = 1;
-        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
-        (*info)->name = "in";
-        (*info)->dimsCount = dims.size();
-        (*info)->dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
-        for (size_t i = 0; i < (*info)->dimsCount; i++) {
-            (*info)->dims[i] = dims.at(i);
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(CustomNodeTensorInfo));
+        for (int i = 0; i < paramsCount; i++) {
+            if (params[i].key == name) {
+                (*info)[0] = extractMetadata(params[i].key, params[i].value);
+                (*info)->name = "in";
+                return 0;
+            }
         }
-        (*info)->precision = FP32;
-        return 0;
+        return 1;
     }
     static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
-        std::vector<int> dims = get_int_list_parameter("output_dims", params, paramsCount);
-        if (dims.empty()) {
-            return 1;
-        }
-
+        std::string name = "output_dims";
         *infoCount = 1;
-        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
-        (*info)->name = "out";
-        (*info)->dimsCount = dims.size();
-        (*info)->dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
-        for (size_t i = 0; i < (*info)->dimsCount; i++) {
-            (*info)->dims[i] = dims.at(i);
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(CustomNodeTensorInfo));
+        for (int i = 0; i < paramsCount; i++) {
+            if (params[i].key == name) {
+                (*info)[0] = extractMetadata(params[i].key, params[i].value);
+                (*info)->name = "out";
+                return 0;
+            }
         }
-        (*info)->precision = FP32;
-        return 0;
+        return 1;
     }
     static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
@@ -3259,8 +3219,8 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, CustomNodeWithDemultipl
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
         {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"out", "out"}}, demultiplyCount, {}, libraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy,
             parameters_t{
-                {"input_dims", "[7,5,10]"},
-                {"output_dims", "[7,5,10]"}}},
+                {"input_dims", "7,5,10;FP32"},
+                {"output_dims", "7,5,10;FP32"}}},
         {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
         {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node"}},
     };
@@ -3337,8 +3297,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomNodeWithDemultiplexerA
         "custom_node",
         createLibraryMock<LibraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy>(),
         parameters_t{
-            {"input_dims", "[7,5,10]"},
-            {"output_dims", "[7,5,10]"}},
+            {"input_dims", "7,5,10;FP32"},
+            {"output_dims", "7,5,10;FP32"}},
         aliases, demultiplyCount);
     auto model_node = std::make_unique<DLNode>("dummy_node", "dummy", std::nullopt, manager);
 
