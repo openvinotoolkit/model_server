@@ -67,6 +67,23 @@ const std::vector<InferenceEngine::Precision> SUPPORTED_OUTPUT_PRECISIONS{
     // //InferenceEngine::Precision::CUSTOM)
 };
 
+const std::vector<ovms::Precision> SUPPORTED_OUTPUT_PRECISIONS_2{
+    // ovms::Precision::UNDEFINED,
+    // ovms::Precision::MIXED,
+    ovms::Precision::FP32,
+    ovms::Precision::FP16,
+    // ovms::Precision::Q78,
+    ovms::Precision::I16,
+    ovms::Precision::U8,
+    ovms::Precision::I8,
+    ovms::Precision::U16,
+    ovms::Precision::I32,
+    ovms::Precision::I64,
+    // ovms::Precision::BIN,
+    // ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
+};
+
 const std::vector<InferenceEngine::Precision> UNSUPPORTED_OUTPUT_PRECISIONS{
     InferenceEngine::Precision::UNSPECIFIED,
     InferenceEngine::Precision::MIXED,
@@ -82,6 +99,23 @@ const std::vector<InferenceEngine::Precision> UNSUPPORTED_OUTPUT_PRECISIONS{
     InferenceEngine::Precision::BIN,
     InferenceEngine::Precision::BOOL
     // InferenceEngine::Precision::CUSTOM),
+};
+
+const std::vector<ovms::Precision> UNSUPPORTED_OUTPUT_PRECISIONS_2{
+    ovms::Precision::UNDEFINED,
+    ovms::Precision::MIXED,
+    // ovms::Precision::FP32,
+    // ovms::Precision::FP16,
+    ovms::Precision::Q78,
+    // ovms::Precision::I16,
+    // ovms::Precision::U8,
+    // ovms::Precision::I8,
+    // ovms::Precision::U16,
+    // ovms::Precision::I32,
+    // ovms::Precision::I64,
+    ovms::Precision::BIN,
+    ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM),
 };
 
 class TensorflowGRPCPredict : public ::testing::TestWithParam<InferenceEngine::Precision> {
@@ -133,36 +167,32 @@ public:
     }
 };
 
-TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobPrecision) {
-    InferenceEngine::Precision tensorInfoPrecision = InferenceEngine::Precision::FP32;
+TEST(SerializeTFTensorProtoSingle_2, NegativeMismatchBetweenTensorInfoAndBlobPrecision) {
+    ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
     auto layout = Layout::NCHW;
     const std::string name = "NOT_IMPORTANT";
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
-    const TensorDesc tensorDesc(InferenceEngine::Precision::I32, tensorInfoShape, layout);
-    InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<int32_t>(tensorDesc);
-    blob->allocate();
+    ov::runtime::Tensor tensor(ov::element::i32, tensorInfoShape);
     TensorProto responseOutput;
-    auto status = serializeBlobToTensorProto(responseOutput,
+    auto status = serializeBlobToTensorProto_2(responseOutput,
         tensorInfo,
-        blob);
+        tensor);
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
 }
 
-TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobShape) {
-    InferenceEngine::Precision tensorInfoPrecision = InferenceEngine::Precision::FP32;
+TEST(SerializeTFTensorProtoSingle_2, NegativeMismatchBetweenTensorInfoAndBlobShape) {
+    ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
     shape_t blobShape{1, 3, 225, 225};
     auto layout = Layout::NCHW;
     const std::string name = "NOT_IMPORTANT";
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
-    const TensorDesc tensorDesc(InferenceEngine::Precision::FP32, blobShape, layout);
-    InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<float>(tensorDesc);
-    blob->allocate();
+    ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), blobShape);
     TensorProto responseOutput;
-    auto status = serializeBlobToTensorProto(responseOutput,
+    auto status = serializeBlobToTensorProto_2(responseOutput,
         tensorInfo,
-        blob);
+        tensor);
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
 }
 
