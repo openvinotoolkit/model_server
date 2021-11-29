@@ -111,8 +111,10 @@ public:
         to = const_cast<char*>("12345678");
     }
 
-    // TODO: Needed?
+    // TODO: Those are not virtual methods, therefore mocks do not work.
     MOCK_METHOD(ov::Shape, get_shape, (), (const));
+    MOCK_METHOD(size_t, get_byte_size, (), (const));
+    MOCK_METHOD(ov::element::Type, get_element_type, (), (const));
 
 private:
     char* to;
