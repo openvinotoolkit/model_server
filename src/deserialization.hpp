@@ -281,6 +281,10 @@ Status deserializePredictRequest_2(
             status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
             SPDLOG_DEBUG("{}: {}", status.string(), e.what());
             return status;
+        } catch (const ov::Exception& e) {
+            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+            return status;
         } catch (std::logic_error& e) {
             status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
             SPDLOG_DEBUG("{}: {}", status.string(), e.what());

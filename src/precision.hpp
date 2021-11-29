@@ -16,8 +16,8 @@
 #pragma once
 
 #include <map>  // TODO remove
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 
 #include <inference_engine.hpp>
 #include <openvino/openvino.hpp>
