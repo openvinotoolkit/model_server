@@ -62,7 +62,7 @@ public:
     Status checkBatchSizeMismatch(const tensorflow::TensorProto& proto, const size_t networkBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
     Status checkBinaryBatchSizeMismatch(const tensorflow::TensorProto& proto, const size_t networkBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
     Status checkShapeMismatch(const tensorflow::TensorProto& proto, const ovms::TensorInfo& inputInfo, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
-    Status validateTensorContentSize(const tensorflow::TensorProto& proto, InferenceEngine::Precision expectedPrecision) const;
+    Status validateTensorContentSize(const tensorflow::TensorProto& proto, ovms::Precision expectedPrecision) const;
     Status validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const tensorflow::TensorProto& proto) const;
     Status validatePrecision(const ovms::TensorInfo& inputInfo, const tensorflow::TensorProto& proto) const;
     Status validate();
@@ -193,7 +193,7 @@ Status RequestValidator::checkShapeMismatch(const tensorflow::TensorProto& proto
     return StatusCode::OK;
 }
 
-Status RequestValidator::validateTensorContentSize(const tensorflow::TensorProto& proto, InferenceEngine::Precision expectedPrecision) const {
+Status RequestValidator::validateTensorContentSize(const tensorflow::TensorProto& proto, ovms::Precision expectedPrecision) const {
     /*
     int8        data in request.tensor_content
     uint8       data in request.tensor_content
@@ -236,7 +236,7 @@ Status RequestValidator::validateTensorContentSize(const tensorflow::TensorProto
             return Status(StatusCode::INVALID_VALUE_COUNT, details);
         }
     } else {
-        size_t expectedContentSize = expectedValueCount * expectedPrecision.size();
+        size_t expectedContentSize = expectedValueCount * ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
         if (expectedContentSize != proto.tensor_content().size()) {
             std::stringstream ss;
             ss << "Expected: " << expectedContentSize << " bytes; Actual: " << proto.tensor_content().size() << " bytes; input name: " << getCurrentlyValidatedInputName();
@@ -343,7 +343,7 @@ Status RequestValidator::validate() {
         if (!status.ok())
             return status;
 
-        status = validateTensorContentSize(proto, inputInfo->getPrecision());
+        status = validateTensorContentSize(proto, inputInfo->getPrecision_2());
         if (!status.ok())
             return status;
     }
