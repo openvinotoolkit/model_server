@@ -6,6 +6,8 @@ Each image in the output will be resized to the predefined target size to fit th
 DAG pipeline.
 Additionally to the detected text boxes, in the two additional outputs are returned their coordinates and confidence levels.  
 
+This custom node can be used to process video frames via [camera example](../../../docs/camera_example.md).
+
 # Building custom node library
 
 You can build the shared library of the custom node simply by running command in this custom node folder context:

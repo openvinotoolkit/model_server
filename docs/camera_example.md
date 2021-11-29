@@ -68,6 +68,8 @@ python3 camera_client.py --grpc_address [hostname] --grpc_port 9001 --video_sour
 Optical Character Recognition (OCR) pipeline based on [horizontal text detection](https://docs.openvino.ai/latest/omz_models_model_horizontal_text_detection_0001.html) model, [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/text-recognition-0014) 
 combined with a custom node implementation can be used with this client. Using such pipeline each processed frame containes detected boxes and additionaly recognized texts.
 
+![horizontal text detection using OCR pipeline](horizontal-text-detection-ocr.gif)
+
 > **NOTE**: In the next steps we assume that horizontal text detection model is already downloaded.
 
 ### Download text recognition model from OpenVINO Model Zoo
@@ -113,13 +115,13 @@ OCR
 ```
 
 ### Deploying OVMS
-Deploy OMVS with OCR pipeline using the following command:
+Deploy OVMS with OCR pipeline using the following command:
 ```bash
 chmod -R 755 OCR/
 docker run -p 9001:9001 -d -v ${PWD}/OCR:/OCR openvino/model_server --config_path /OCR/config.json --port 9001
 ```
 
-### Requesting the Service
+### Sending Request to the Server
 In the context of [example_client](../example_client) directory, run the following commands.
 
 Install python libraries:
