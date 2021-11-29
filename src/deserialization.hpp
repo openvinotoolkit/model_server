@@ -104,17 +104,17 @@ public:
     static ov::runtime::Tensor deserializeTensorProto_2(
         const tensorflow::TensorProto& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
-        switch (tensorInfo->getPrecision()) {
-        case InferenceEngine::Precision::FP32:
-        case InferenceEngine::Precision::I32:
-        case InferenceEngine::Precision::U8:
-        case InferenceEngine::Precision::I16:
+        switch (tensorInfo->getPrecision_2()) {
+        case ovms::Precision::FP32:
+        case ovms::Precision::I32:
+        case ovms::Precision::U8:
+        case ovms::Precision::I16:
             return makeBlob_2(requestInput, tensorInfo, isPipeline);
-        case InferenceEngine::Precision::I8: {
+        case ovms::Precision::I8: {
             std::cout << "U8!" << std::endl;
             return makeBlob_2(requestInput, tensorInfo, isPipeline);
         }
-        case InferenceEngine::Precision::FP16: {
+        case ovms::Precision::FP16: {
             ov::runtime::Tensor tensor(ov::element::f16, tensorInfo->getShape());
             // Needs conversion due to zero padding for each value:
             // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
@@ -125,7 +125,7 @@ public:
             }
             return tensor;
         }
-        case InferenceEngine::Precision::U16: {
+        case ovms::Precision::U16: {
             ov::runtime::Tensor tensor(ov::element::u16, tensorInfo->getShape());
             // Needs conversion due to zero padding for each value:
             // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55

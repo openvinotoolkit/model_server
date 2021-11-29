@@ -31,7 +31,7 @@ using namespace rapidjson;
 
 class GetModelMetadataResponse : public ::testing::Test {
     struct Info {
-        InferenceEngine::Precision precision;
+        ovms::Precision precision;
         ovms::shape_t shape;
     };
 
@@ -75,22 +75,22 @@ protected:
 
         inputTensors = tensor_desc_map_t({
             {"Input_FP32_1_3_224_224", {
-                                           InferenceEngine::Precision::FP32,
+                                           ovms::Precision::FP32,
                                            {1, 3, 224, 224},
                                        }},
             {"Input_U8_1_3_62_62", {
-                                       InferenceEngine::Precision::U8,
+                                       ovms::Precision::U8,
                                        {1, 3, 62, 62},
                                    }},
         });
 
         outputTensors = tensor_desc_map_t({
             {"Output_I32_1_2000", {
-                                      InferenceEngine::Precision::I32,
+                                      ovms::Precision::I32,
                                       {1, 2000},
                                   }},
             {"Output_FP32_2_20_3", {
-                                       InferenceEngine::Precision::FP32,
+                                       ovms::Precision::FP32,
                                        {2, 20, 3},
                                    }},
         });
