@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server {#model_server_what_is_openvino_model_server}
+# OpenVINO&trade; Model Server {#ovms_what_is_openvino_model_server}
 
 @sphinxdirective
 
