@@ -347,7 +347,7 @@ const Status StatefulModelInstance::preInferenceProcessing_2(ov::runtime::InferR
             auto stateName = state.get_name();
             if (!sequenceMemoryState.count(stateName))
                 return StatusCode::INTERNAL_ERROR;
-            state.set_state(sequenceMemoryState.at(stateName));
+            state.set_state(*sequenceMemoryState.at(stateName));
         }
     }
     return StatusCode::OK;

@@ -60,7 +60,12 @@ Status Sequence::updateMemoryState_2(model_memory_state_t_2& newState) {
     for (auto&& state : newState) {
         auto stateName = state.get_name();
         ov::runtime::Tensor tensor = state.get_state();
-        memoryState_2[stateName] = tensor;
+        std::shared_ptr<ov::runtime::Tensor> copyTensor;
+        auto status = tensorClone(copyTensor, tensor);
+        if (!status.ok()) {
+            return status;
+        }
+        memoryState_2[stateName] = copyTensor;
     }
     setIdle(false);
     return StatusCode::OK;
