@@ -19,7 +19,7 @@
 
 #include "../../custom_node_interface.h"
 #include "opencv2/opencv.hpp"
-#include "utils.hpp"
+#include "../common/utils.hpp"
 
 static constexpr const char* IMAGE_TENSOR_NAME = "image";
 static constexpr const char* SCORES_TENSOR_NAME = "scores";
@@ -122,11 +122,6 @@ bool copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<
     output->dims[2] = 1;
     output->precision = FP32;
     return true;
-}
-
-void cleanup(CustomNodeTensor& tensor) {
-    free(tensor.data);
-    free(tensor.dims);
 }
 
 int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
