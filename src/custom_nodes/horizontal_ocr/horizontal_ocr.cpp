@@ -18,8 +18,8 @@
 #include <vector>
 
 #include "../../custom_node_interface.h"
-#include "opencv2/opencv.hpp"
 #include "../common/utils.hpp"
+#include "opencv2/opencv.hpp"
 
 static constexpr const char* IMAGE_TENSOR_NAME = "image";
 static constexpr const char* SCORES_TENSOR_NAME = "scores";
