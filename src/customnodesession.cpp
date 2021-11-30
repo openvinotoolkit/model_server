@@ -197,6 +197,7 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, Infe
         return StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE;
     }
     auto allocator = std::make_shared<CustomNodeOutputAllocator>(*tensor, library, customNodeLibraryInternalManager);
+    //auto allocator = std::make_shared<CustomNodeOutputAllocator_2>(*tensor, library, customNodeLibraryInternalManager);
     try {
         switch (tensor->precision) {
         case CustomNodeTensorPrecision::FP32:
