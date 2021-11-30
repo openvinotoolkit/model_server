@@ -40,6 +40,15 @@ struct NodeLibrary {
     std::string basePath = "";
 
     bool isValid() const;
+    bool operator==(const NodeLibrary& other) const {
+        return (initialize == other.initialize) &&
+               (deinitialize == other.deinitialize) &&
+               (execute == other.execute) &&
+               (getInputsInfo == other.getInputsInfo) &&
+               (getOutputsInfo == other.getOutputsInfo) &&
+               (release == other.release) &&
+               (basePath == other.basePath);
+    }
 };
 
 }  // namespace ovms
