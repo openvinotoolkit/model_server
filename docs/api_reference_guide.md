@@ -1,4 +1,15 @@
-# OpenVINO&trade; Model Server API References
+# OpenVINO&trade; Model Server API References {#ovms_api}
+
+@sphinxdirective
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   ovms_docs_grpc_api
+   ovms_docs_rest_api
+
+@endsphinxdirective
 
 ## Introduction
 

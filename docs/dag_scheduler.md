@@ -1,4 +1,16 @@
-# Directed Acyclic Graph Scheduler in OpenVINO&trade; Model Server
+# Directed Acyclic Graph Scheduler in OpenVINO&trade; Model Server {#ovms_docs_dag}
+
+@sphinxdirective
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   ovms_docs_demuliplexing
+   ovms_docs_custom_node_development
+
+
+@endsphinxdirective
 
 ## Introduction
 OpenVINO&trade; Model Server provides possibility to create pipeline of models for execution in a single client request. 

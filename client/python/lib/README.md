@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server Client Library
+# OpenVINO&trade; Model Server Client Library {#ovms_client_python_lib_readme}
 
 Model server client library is a set of objects and methods designed to simplify user interaction with the instance of the model server. The library contains functions that hide API specific aspects, so user doesn't have to know about creating protos, preparing requests, parsing responses etc. and can focus on the application itself, rather than dealing with all the aspects of the interaction with OVMS.
 

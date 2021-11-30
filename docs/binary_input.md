@@ -1,4 +1,4 @@
-# Support for binary inputs data in OpenVINO Model Server
+# Support for binary inputs data in OpenVINO Model Server {#ovms_docs_demo_binary_input}
 
 While OpenVINO models don't have the ability to process binary inputs, the model server can accept them and convert
 automatically using OpenCV library.

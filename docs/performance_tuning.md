@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server Performance Information
+# OpenVINO&trade; Model Server Performance Information {#ovms_docs_performance_tuning}
 
 ## Introduction
 

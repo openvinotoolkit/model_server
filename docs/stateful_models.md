@@ -1,4 +1,4 @@
-# Serving Stateful Models with OpenVINO&trade; Model Server
+# Serving Stateful Models with OpenVINO&trade; Model Server {#ovms_docs_stateful_models}
 
 ## Table of Contents
 

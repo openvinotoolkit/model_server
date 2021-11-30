@@ -1,4 +1,4 @@
-# Prediction Use Case Example with an ONNX Model
+# Prediction Use Case Example with an ONNX Model {#ovms_docs_demos_onnx}
 
 Steps are similar to [quick start](ovms_quickstart.md) guide with IR model format. Model Server accepts ONNX models as well with no differences in versioning. Locate ONNX model file in separate model version directory.
 Below is a complete functional use case using python 3.6 or higher.
