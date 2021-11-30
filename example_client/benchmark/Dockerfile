@@ -40,12 +40,15 @@ RUN mkdir -p /ovms_benchmark_client
 COPY VERSION /ovms_benchmark_client
 COPY main.py /ovms_benchmark_client
 COPY client.py /ovms_benchmark_client
-COPY client_nvtrt.py /ovms_benchmark_client
 COPY client_ovms.py /ovms_benchmark_client
 COPY metrics.py /ovms_benchmark_client
 COPY db_exporter.py /ovms_benchmark_client
+COPY db_config.yml /ovms_benchmark_client
 COPY __init__.py /ovms_benchmark_client
 COPY entrypoint.sh /
+
+# Comment it to remove NvTrt support from the image
+COPY client_nvtrt.py /ovms_benchmark_client
 
 RUN mkdir -p /data
 COPY road1.jpg /data

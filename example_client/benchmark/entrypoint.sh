@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 #! /bin/bash
-echo "OVMS benchmark client 1.9"
+echo "OVMS benchmark client 1.10"
 
 PROXY="no"
 OPTIONS="$@"

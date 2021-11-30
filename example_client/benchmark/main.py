@@ -28,22 +28,30 @@ import json
 import argparse
 import multiprocessing
 import time
-import os
 
 from ovms_benchmark_client.metrics import XMetrics
 from ovms_benchmark_client.db_exporter import DBExporter
-from ovms_benchmark_client.client_nvtrt import NvTrtClient
 from ovms_benchmark_client.client_ovms import OVmsClient
 from ovms_benchmark_client.client import BaseClient
 
-INTERNAL_VERSION="1.9"
+try:
+    from ovms_benchmark_client.client_nvtrt import NvTrtClient
+except ImportError:
+    # NvTrt is optional
+    print("NvTrt is not included!")
+    NvTrtClient = None
+
+# Version used for print only...
+INTERNAL_VERSION="1.10"
 
 # client engine - used for single and multiple client configuration
 def run_single_client(xargs, worker_name_or_client, index, json_flag=None):
 
     # choose Client import for Triton / OVMS
     if xargs["nv_triton"]:
-        Client = NvTrtClient
+        if NvTrtClient is None:
+            raise TypeError("NvTrt is not included!")
+        else: Client = NvTrtClient
     else: Client = OVmsClient
 
     if isinstance(worker_name_or_client, str):
@@ -91,7 +99,9 @@ def exec_single_client(xargs, db_exporter):
     worker_id = xargs.get("id", "worker")
     # choose Client import for Triton / OVMS
     if xargs["nv_triton"]:
-        Client = NvTrtClient
+        if NvTrtClient is None:
+            raise TypeError("NvTrt is not included!")
+        else: Client = NvTrtClient
     else: Client = OVmsClient
     client = Client(f"{worker_id}", xargs["server_address"], xargs["grpc_port"],
                     xargs["rest_port"], xargs["certs_dir"])
