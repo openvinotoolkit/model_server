@@ -59,6 +59,7 @@ cc_library(
         "custom_node_interface.h",
         "custom_node_library_manager.cpp",
         "custom_node_library_manager.hpp",
+        "custom_node_output_allocator.cpp",
         "custom_node_output_allocator.hpp",
         "customnodesession.cpp",
         "customnodesession.hpp",

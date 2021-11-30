@@ -16,6 +16,7 @@
 #pragma once
 
 #include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #include "custom_node_interface.h"  // NOLINT
 #include "node_library.hpp"
@@ -48,4 +49,18 @@ public:
     }
 };
 
+bool operator==(const CustomNodeTensor& t1, const CustomNodeTensor& t2);
+
+class CustomNodeOutputAllocator_2 : public ov::runtime::AllocatorImpl {
+    struct CustomNodeTensor tensor;
+    NodeLibrary nodeLibrary;
+    void* customNodeLibraryInternalManager;
+
+public:
+    CustomNodeOutputAllocator_2(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, void* customNodeLibraryInternalManager);
+    void* allocate(const size_t bytes, const size_t alignment = alignof(max_align_t)) override;
+    void deallocate(void* handle, const size_t bytes, size_t alignment = alignof(max_align_t)) override;
+    bool is_equal(const CustomNodeOutputAllocator_2& other) const;
+    bool is_equal(const AllocatorImpl& other) const override;
+};
 }  // namespace ovms
