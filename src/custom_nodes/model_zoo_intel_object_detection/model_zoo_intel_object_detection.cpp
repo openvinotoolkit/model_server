@@ -51,6 +51,107 @@ static constexpr const int QUEUE_SIZE = 1;
 
 std::shared_mutex internalManagerLock;
 
+bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale, const std::string& tensor_name, const std::string& dims_name, CustomNodeLibraryInternalManager* internalManager) {
+    const uint64_t outputBatch = boxes.size();
+    int channels = convertToGrayScale ? 1 : 3;
+    uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * outputBatch;
+
+    float* buffer = nullptr;
+    if (!get_buffer<float>(internalManager, &buffer, tensor_name, byteSize))
+        return false;
+
+    cv::Size targetShape(targetImageWidth, targetImageHeight);
+    for (uint64_t i = 0; i < outputBatch; i++) {
+        cv::Mat image;
+
+        if (!crop_rotate_resize(originalImage, image, boxes[i], 0.0, boxes[i].width, boxes[i].height, targetShape)) {
+            std::cout << "box is outside of original image" << std::endl;
+            release(buffer, internalManager);
+            return false;
+        }
+        if (convertToGrayScale) {
+            image = apply_grayscale(image);
+        }
+        if (targetImageLayout == "NCHW") {
+            auto imgBuffer = reorder_to_nchw((float*)image.data, image.rows, image.cols, image.channels());
+            std::memcpy(buffer + (i * channels * targetImageWidth * targetImageHeight), imgBuffer.data(), byteSize / outputBatch);
+        } else {
+            std::memcpy(buffer + (i * channels * targetImageWidth * targetImageHeight), image.data, byteSize / outputBatch);
+        }
+    }
+    output->data = reinterpret_cast<uint8_t*>(buffer);
+    output->dataBytes = byteSize;
+
+    if (!get_buffer<uint64_t>(internalManager, &(output->dims), dims_name, 5 * sizeof(uint64_t))) {
+        release(buffer, internalManager);
+        return false;
+    }
+    output->dimsCount = 5;
+    output->dims[0] = outputBatch;
+    output->dims[1] = 1;
+    if (targetImageLayout == "NCHW") {
+        output->dims[2] = channels;
+        output->dims[3] = targetImageHeight;
+        output->dims[4] = targetImageWidth;
+    } else {
+        output->dims[2] = targetImageHeight;
+        output->dims[3] = targetImageWidth;
+        output->dims[4] = channels;
+    }
+    output->precision = FP32;
+    return true;
+}
+
+bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::vector<float>& confidences, const std::string& tensor_name, const std::string& dims_name, CustomNodeLibraryInternalManager* internalManager) {
+    const uint64_t outputBatch = confidences.size();
+    uint64_t byteSize = sizeof(float) * outputBatch;
+
+    float* buffer = nullptr;
+    if (!get_buffer<float>(internalManager, &buffer, tensor_name, byteSize))
+        return false;
+    std::memcpy(buffer, confidences.data(), byteSize);
+    output->data = reinterpret_cast<uint8_t*>(buffer);
+    output->dataBytes = byteSize;
+
+    if (!get_buffer<uint64_t>(internalManager, &(output->dims), dims_name, 3 * sizeof(uint64_t))) {
+        release(buffer, internalManager);
+        return false;
+    }
+    output->dimsCount = 3;
+    output->dims[0] = outputBatch;
+    output->dims[1] = 1;
+    output->dims[2] = 1;
+    output->precision = FP32;
+    return true;
+}
+
+bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Vec4f>& detections, const std::string& tensor_name, const std::string& dims_name, CustomNodeLibraryInternalManager* internalManager) {
+    const uint64_t outputBatch = detections.size();
+    uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
+
+    int32_t* buffer = nullptr;
+    if (!get_buffer<int32_t>(internalManager, &buffer, tensor_name, byteSize))
+        return false;
+    for (size_t i = 0; i < outputBatch; i++) {
+        float entry[] = {
+            detections[i][0], detections[i][1], detections[i][2], detections[i][3]};
+        std::memcpy(buffer + (i * 4), entry, byteSize / outputBatch);
+    }
+    output->data = reinterpret_cast<uint8_t*>(buffer);
+    output->dataBytes = byteSize;
+
+    if (!get_buffer<uint64_t>(internalManager, &(output->dims), dims_name, 3 * sizeof(uint64_t))) {
+        release(buffer, internalManager);
+        return false;
+    }
+    output->dimsCount = 3;
+    output->dims[0] = outputBatch;
+    output->dims[1] = 1;
+    output->dims[2] = 4;
+    output->precision = FP32;
+    return true;
+}
+
 int initializeInternalManager(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
     // creating InternalManager instance
     std::unique_ptr<CustomNodeLibraryInternalManager> internalManager = std::make_unique<CustomNodeLibraryInternalManager>();
