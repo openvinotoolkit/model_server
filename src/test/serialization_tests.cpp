@@ -78,6 +78,8 @@ const std::vector<ovms::Precision> UNSUPPORTED_OUTPUT_PRECISIONS_2{
     // ovms::Precision::BIN, // Cannot create blob with such precision
     ovms::Precision::BOOL
     // ovms::Precision::CUSTOM),
+
+    // TODO: There are new API 2.0 precisions we do not support. Add tests for those.
 };
 
 class TensorflowGRPCPredict_2 : public ::testing::TestWithParam<ovms::Precision> {

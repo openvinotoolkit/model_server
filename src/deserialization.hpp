@@ -111,7 +111,6 @@ public:
         case ovms::Precision::I16:
             return makeBlob_2(requestInput, tensorInfo, isPipeline);
         case ovms::Precision::I8: {
-            std::cout << "U8!" << std::endl;
             return makeBlob_2(requestInput, tensorInfo, isPipeline);
         }
         case ovms::Precision::FP16: {
@@ -277,10 +276,6 @@ Status deserializePredictRequest_2(
             // OV implementation the InferenceEngine::Exception is not
             // a base class for all other exceptions thrown from OV.
             // OV can throw exceptions derived from std::logic_error.
-        } catch (const InferenceEngine::Exception& e) {
-            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
-            return status;
         } catch (const ov::Exception& e) {
             status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
             SPDLOG_DEBUG("{}: {}", status.string(), e.what());

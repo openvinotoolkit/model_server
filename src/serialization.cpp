@@ -106,30 +106,14 @@ Status serializeBlobToTensorProto_2(
     }
     switch (networkOutput->getPrecision_2()) {
     case ovms::Precision::FP32:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value);
-        break;
     case ovms::Precision::I32:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<int>::value);
-        break;
     case ovms::Precision::I8:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<int8_t>::value);
-        break;
     case ovms::Precision::U8:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<uint8_t>::value);
-        break;
-    case ovms::Precision::I16:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<int16_t>::value);
-        break;
-    // 2 byte padding [v1, v0, 0, 0, u1, u0, 0, 0, ...]
+    case ovms::Precision::I16:  // 2 byte padding [v1, v0, 0, 0, u1, u0, 0, 0, ...]
     case ovms::Precision::U16:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<uint32_t>::value);
-        break;
     case ovms::Precision::FP16:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value);
-        break;
-
     case ovms::Precision::I64:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<int32_t>::value);
+        responseOutput.set_dtype(networkOutput->getPrecisionAsDataType());
         break;
 
     case ovms::Precision::Q78:  // TODO: This does not exist in OV 2.0
