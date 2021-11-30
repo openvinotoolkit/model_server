@@ -20,7 +20,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #include "blobmap.hpp"
 #include "session_id.hpp"
@@ -28,20 +28,20 @@
 
 namespace ovms {
 
-using BlobMap = std::unordered_map<std::string, InferenceEngine::Blob::Ptr>;
+using TensorMap = std::unordered_map<std::string, std::shared_ptr<ov::runtime::Tensor>>;  // TODO rename to TensorMap
 
 class NodeInputHandler {
 protected:
-    BlobMap inputBlobs;
+    TensorMap inputTensors;
     uint32_t remainingDependencies;
     bool isUsed = false;
 
 public:
     NodeInputHandler(uint32_t inputsMissingCount);
-    virtual Status setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr, session_id_t shardId);
-    const BlobMap& getInputs() {
+    virtual Status setInput(const std::string& inputName, std::shared_ptr<ov::runtime::Tensor>& blobPtr, session_id_t shardId);
+    const TensorMap& getInputs() {
         isUsed = true;
-        return inputBlobs;
+        return inputTensors;
     }
     void clearInputs();
     bool isReady();

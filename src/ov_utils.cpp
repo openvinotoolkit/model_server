@@ -24,7 +24,15 @@
 #include "tensorinfo.hpp"
 
 namespace ovms {
-
+std::shared_ptr<ov::runtime::Tensor> createSharedTensor(ov::element::Type_t precision, const shape_t& shape, void* data) {
+    auto tensor = std::make_shared<ov::runtime::Tensor>(precision, shape);
+    std::memcpy(tensor.data(), data, std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>()));
+    return std::move(tensor);
+}
+Status createSharedTensor(std::shared_ptr<ov::runtime::Tensor>& destinationBlob, ov::element::Type_t precision, const ov::Shape& shape) {
+    destinationBlob = std::make_shared<ov::runtime::Tensor>(precision, shape);
+    return StatusCode::OK;
+}
 Status createSharedBlob(InferenceEngine::Blob::Ptr& destinationBlob, InferenceEngine::TensorDesc tensorDesc) {
     try {
         switch (tensorDesc.getPrecision()) {

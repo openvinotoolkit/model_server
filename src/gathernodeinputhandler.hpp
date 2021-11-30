@@ -20,14 +20,14 @@
 #include <unordered_map>
 #include <utility>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #include "nodeinputhandler.hpp"
 #include "session_id.hpp"
 
 namespace ovms {
 
-using shard_map_t = std::unordered_map<session_id_t, InferenceEngine::Blob::Ptr>;
+using shard_map_t = std::unordered_map<session_id_t, std::shared_ptr<ov::runtime::Tensor>>;
 
 class CollapseDetails;
 
@@ -37,7 +37,7 @@ class GatherNodeInputHandler : public NodeInputHandler {
 
 public:
     GatherNodeInputHandler(uint32_t inputsMissingCount, const CollapseDetails& collapsingDetails);
-    Status setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr, session_id_t shardId) override;
+    Status setInput(const std::string& inputName, std::shared_ptr<ov::runtime::Tensor>& blobPtr, session_id_t shardId) override;
     Status notifyFinishedDependency() override;
 };
 }  // namespace ovms

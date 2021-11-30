@@ -34,7 +34,7 @@ GatherNodeInputHandler::GatherNodeInputHandler(uint32_t inputsMissingCount, cons
         std::multiplies<session_id_t>());
 }
 
-Status GatherNodeInputHandler::setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& ptr, session_id_t shardId) {
+Status GatherNodeInputHandler::setInput(const std::string& inputName, std::shared_ptr<ov::runtime::Tensor>& ptr, session_id_t shardId) {
     auto inputsShardsIt = shardsStorage.find(inputName);
     if (inputsShardsIt == shardsStorage.end()) {
         shard_map_t shardMap{{shardId, ptr}};
@@ -62,36 +62,39 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
         const auto shardsCount = shardMap.size();
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Consolidating: {} shards for input: {}", shardsCount, inputName);
         session_id_t firstShardId = 0;
-        auto firstShardTensorDesc = shardMap.at(firstShardId)->getTensorDesc();
-        auto shardDims = getEffectiveShape(firstShardTensorDesc);
+        auto firstShard = shardMap.at(firstShardId);
+        auto shardDims = firstShard->get_shape();
+        auto precision = firstShard->get_element_type();
         auto newDims = shardDims;
         newDims.insert(newDims.begin(),
             collapsingDetails->collapsedSessionSizes.begin(),
             collapsingDetails->collapsedSessionSizes.end());
-        const InferenceEngine::TensorDesc consolidatedBlobDesc(
-            firstShardTensorDesc.getPrecision(),
-            newDims,
-            InferenceEngine::Layout::ANY);
-        InferenceEngine::Blob::Ptr consolidatedBlob;
-        auto status = createSharedBlob(consolidatedBlob, consolidatedBlobDesc);
+        auto status = createSharedTensor(consolidatedTensor, precision, newDims);
         if (!status.ok()) {
             return status;
         }
-        for (auto& [shardId, blob] : shardMap) {
-            auto& shardTensorDesc = blob->getTensorDesc();
-            if (shardTensorDesc != firstShardTensorDesc) {
-                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to consolidate blob: {} shards in gather node. First shard has different tensor description: {} than current shard: {}",
-                    inputName,
-                    TensorInfo::tensorDescToString(shardTensorDesc));
+        for (auto& [shardId, tensor] : shardMap) {
+            if ((tensor->get_element_type() != precision) ||
+                (tensor->get_shape() != shape)) {  // TODO check if compares are appropiate with new types
+                std::stringstream firstShardShapeStream;
+                std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(firstShardShapeStream, " "));
+                std::stringstream currentShardShapeStream;
+                std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(currentShardShapeStream, " "));
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to consolidate tensor: {}; shards in gather node. First shard has different tensor precision:{};  or shape: {}; than current shard precision: {}; shape:{};",
+                    inputName
+                        precision,  // TODO to string
+                    firstShardShapeStream.str(),
+                    tensor->get_element_type(),  // TODO to string
+                    currentShardShapeStream.str());
                 return StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS;
             }
-            const auto memstep = blob->byteSize();
+            const auto memstep = tensor->get_byte_size();
             size_t offset = shardId * memstep;
-            memcpy(InferenceEngine::as<InferenceEngine::MemoryBlob>(consolidatedBlob)->wmap().as<char*>() + offset,
-                InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<char*>(),
+            memcpy(consolidatedTensor.data() + offset,
+                tensor.data(),
                 memstep);
         }
-        inputBlobs.insert({inputName, consolidatedBlob});
+        inputTensors.insert({inputName, consolidatedTensor});
     }
     return StatusCode::OK;
 }
