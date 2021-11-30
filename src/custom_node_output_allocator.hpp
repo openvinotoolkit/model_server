@@ -16,6 +16,7 @@
 #pragma once
 
 #include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #include "custom_node_interface.h"  // NOLINT
 #include "node_library.hpp"
