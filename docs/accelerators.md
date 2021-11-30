@@ -1,2 +1,12 @@
-# Running OVMS with AI accelerators {#ovms_docs_using_ai_accelerators}
+# Using AI accelerators {#ovms_docs_target_devices}
+
+## NCS
+
+## HDDL
+
+## GPU
+
+## GNA
+
+## CUDA
 

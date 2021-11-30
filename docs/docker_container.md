@@ -1,4 +1,4 @@
-# Deploying OpenVINO&trade; Model Server using Docker Container {#model_server_docs_docker_container}
+# Using Docker Containers {#ovms_docs_docker_container}
 _
 ## Introduction
 

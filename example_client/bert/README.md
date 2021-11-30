@@ -1,4 +1,4 @@
-# BERT model usage example with OVMS
+# BERT model usage example with OVMS {#ovms_example_client_bert_readme}
 
 ## Starting OVMS with BERT model
 

@@ -1,5 +1,5 @@
 
-## Image classification with models ensemble {#ovms_docs_demos_ensemble}
+## Image classification with models ensemble {#ovms_docs_demo_ensemble}
 
 This document presents ensemble models as an example of [DAG Scheduler](dag_scheduler.md) implementation.
 

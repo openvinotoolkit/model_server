@@ -1,4 +1,4 @@
-# Example of Face Detection with OpenVINO&trade; Model Server<a name="facedetection"></a> {#ovms_docs_demos_face_detection}
+# Face Detection <a name="facedetection"></a> {#ovms_docs_demo_face_detection}
 
 This page guides you through an example script to run face detection inference with OpenVINO&trade; Model Server.
 

@@ -1,4 +1,4 @@
-#  Optical Character Recognition with Directed Acyclic Graph {#ovms_docs_demos_ocr}
+#  Optical Character Recognition with Directed Acyclic Graph {#ovms_docs_demo_ocr}
 
 This document demonstrate how to create and use an Optical Character Recognition (OCR) pipeline based on [east-resnet50](https://github.com/argman/EAST) text detection model,
 [text-recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/text-recognition-0014) combined with a custom node implementation.

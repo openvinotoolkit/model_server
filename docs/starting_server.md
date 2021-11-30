@@ -10,8 +10,6 @@
    ovms_docs_baremetal
    ovms_docs_parameters
    ovms_docs_target_devices
-   ovms_doc_
-
 
 @endsphinxdirective
 

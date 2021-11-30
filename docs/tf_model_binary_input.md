@@ -1,4 +1,4 @@
-# TensorFlow model conversion to IR with scaling for binary input {#ovms_docs_tensorflow_conversion}
+# TensorFlow model conversion for serving {#ovms_docs_demo_tensorflow_conversion}
 
 This document guides how to convert TensorFlow model and deploy it with the OpenVINO&trade; Model Server. It also explains how to scale the input tensors and adjust to binary JPEG and PNG input data.
 

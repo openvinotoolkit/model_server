@@ -1,4 +1,4 @@
-# Directed Acyclic Graph Scheduler in OpenVINO&trade; Model Server {#ovms_docs_dag}
+# Directed Acyclic Graph Scheduler {#ovms_docs_dag}
 
 @sphinxdirective
 
