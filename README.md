@@ -5,7 +5,7 @@
 .. toctree::
    :maxdepth: 1
    :hidden:
-   ovms_docs_what_is_openvino_model_server
+
    ovms_docs_quick_start_guide
    ovms_docs_models_repository
    ovms_docs_starting_the_serving
@@ -13,6 +13,7 @@
    ovms_docs_rest_api
 
 @endsphinxdirective
+
 
 ![OVMS picture](docs/ovms.png)
 
