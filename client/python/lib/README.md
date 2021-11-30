@@ -13,12 +13,6 @@ See [API documentation](docs/README.md) for details on what the library provides
 
 **Note:** The client library requires Python in version >= 3.6.
 
-Install the `ovmsclient` package with:
-
-`pip3 install ovmsclient`
-
-You can also build the wheel from sources:
-
 ### Linux
 
 Prerequisites:
@@ -41,7 +35,7 @@ Assuming you have TFS API built, you can use `make build-package` target to buil
    `pip3 install dist/ovmsclient-2021.4.2-py3-none-any.whl`
 
 *Note*: For development purposes you may want to repeatedly reinstall the package.
-For that consider using `pip install` with `--force-reinstall` and `--no-deps` options.
+For that consider using `pip3 install` with `--force-reinstall` and `--no-deps` options.
 
 Apart from `make build`, there are also other targets available:
  - `make build-deps` - downloads and compiles TFS API protos
