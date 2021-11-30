@@ -73,7 +73,7 @@ def check_dir(start_dir):
                      'libuuid.LICENSE.txt', 'input_images.txt', 'REST_age_gender.ipynb', 'dummy.xml', 'listen.patch', 'add.xml',
                      'requirements.txt', 'missing_headers.txt', 'libevent/BUILD', 'azure_sdk.patch', 'rest_sdk_v2.10.16.patch', '.wav',
                      'forbidden_functions.txt', 'missing_headers.txt', 'increment_1x3x4x5.xml', 'horizontal-text-detection.gif', 'model.xml',
-                     'summator.xml', 'resnet_images.txt', 'vehicle_images.txt']
+                     'summator.xml', 'resnet_images.txt', 'vehicle_images.txt', 'horizontal-text-detection-ocr.gif']
 
     exclude_directories = ['/dist/', 'extras/ovms-operator', 'extras/openvino-operator-openshift']
 
