@@ -276,7 +276,7 @@ public:
         timer.start("postprocess");
         status = postInferenceProcessing(responseProto, inferRequest, sequence, sequenceProcessingSpec);
         responseProto->Clear();
-        //status = postInferenceProcessing_2(responseProto, inferRequest_2, sequence, sequenceProcessingSpec);
+        status = postInferenceProcessing_2(responseProto, inferRequest_2, sequence, sequenceProcessingSpec);
         timer.stop("postprocess");
         if (!status.ok())
             return status;
