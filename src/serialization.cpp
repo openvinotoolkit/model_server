@@ -104,39 +104,23 @@ Status serializeBlobToTensorProto_2(
             networkOutput->getName(), networkOutput->getPrecision());
         return StatusCode::INTERNAL_ERROR;
     }
-    switch (networkOutput->getPrecision()) {
-    case InferenceEngine::Precision::FP32:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value);
-        break;
-    case InferenceEngine::Precision::I32:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<int>::value);
-        break;
-    case InferenceEngine::Precision::I8:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<int8_t>::value);
-        break;
-    case InferenceEngine::Precision::U8:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<uint8_t>::value);
-        break;
-    case InferenceEngine::Precision::I16:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<int16_t>::value);
-        break;
-    // 2 byte padding [v1, v0, 0, 0, u1, u0, 0, 0, ...]
-    case InferenceEngine::Precision::U16:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<uint32_t>::value);
-        break;
-    case InferenceEngine::Precision::FP16:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<float>::value);
+    switch (networkOutput->getPrecision_2()) {
+    case ovms::Precision::FP32:
+    case ovms::Precision::I32:
+    case ovms::Precision::I8:
+    case ovms::Precision::U8:
+    case ovms::Precision::I16:  // 2 byte padding [v1, v0, 0, 0, u1, u0, 0, 0, ...]
+    case ovms::Precision::U16:
+    case ovms::Precision::FP16:
+    case ovms::Precision::I64:
+        responseOutput.set_dtype(networkOutput->getPrecisionAsDataType());
         break;
 
-    case InferenceEngine::Precision::I64:
-        responseOutput.set_dtype(tensorflow::DataTypeToEnum<int32_t>::value);
-        break;
-
-    case InferenceEngine::Precision::Q78:
-    case InferenceEngine::Precision::BIN:
-    case InferenceEngine::Precision::BOOL:
-    case InferenceEngine::Precision::MIXED:
-    case InferenceEngine::Precision::CUSTOM:
+    case ovms::Precision::Q78:  // TODO: This does not exist in OV 2.0
+    case ovms::Precision::BIN:  // TODO: This does not exist in OV 2.0
+    case ovms::Precision::BOOL:
+    case ovms::Precision::MIXED:   // TODO: This does not exist in OV 2.0
+    case ovms::Precision::CUSTOM:  // TODO: This does not exist in OV 2.0
     default: {
         Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
         SPDLOG_ERROR(status.string());

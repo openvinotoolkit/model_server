@@ -39,10 +39,6 @@ using tensorflow::TensorProto;
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
 
-using InferenceEngine::IInferRequest;
-using InferenceEngine::PreProcessInfo;
-using InferenceEngine::ResponseDesc;
-
 using namespace ovms;
 using namespace InferenceEngine;
 
@@ -50,55 +46,53 @@ using testing::_;
 using testing::NiceMock;
 using testing::Throw;
 
-const std::vector<InferenceEngine::Precision> SUPPORTED_OUTPUT_PRECISIONS{
-    // InferenceEngine::InferenceEngine::Precision::UNSPECIFIED,
-    // InferenceEngine::Precision::MIXED,
-    InferenceEngine::Precision::FP32,
-    InferenceEngine::Precision::FP16,
-    // InferenceEngine::Precision::Q78,
-    InferenceEngine::Precision::I16,
-    InferenceEngine::Precision::U8,
-    InferenceEngine::Precision::I8,
-    InferenceEngine::Precision::U16,
-    InferenceEngine::Precision::I32,
-    InferenceEngine::Precision::I64,
-    // InferenceEngine::Precision::BIN,
-    // InferenceEngine::Precision::BOOL
-    // //InferenceEngine::Precision::CUSTOM)
+const std::vector<ovms::Precision> SUPPORTED_OUTPUT_PRECISIONS_2{
+    // ovms::Precision::UNDEFINED,
+    // ovms::Precision::MIXED,
+    ovms::Precision::FP32,
+    ovms::Precision::FP16,
+    // ovms::Precision::Q78,
+    ovms::Precision::I16,
+    ovms::Precision::U8,
+    ovms::Precision::I8,
+    ovms::Precision::U16,
+    ovms::Precision::I32,
+    ovms::Precision::I64,
+    // ovms::Precision::BIN,
+    // ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
 };
 
-const std::vector<InferenceEngine::Precision> UNSUPPORTED_OUTPUT_PRECISIONS{
-    InferenceEngine::Precision::UNSPECIFIED,
-    InferenceEngine::Precision::MIXED,
-    // InferenceEngine::Precision::FP32,
-    // InferenceEngine::Precision::FP16,
-    InferenceEngine::Precision::Q78,
-    // InferenceEngine::Precision::I16,
-    // InferenceEngine::Precision::U8,
-    // InferenceEngine::Precision::I8,
-    // InferenceEngine::Precision::U16,
-    // InferenceEngine::Precision::I32,
-    // InferenceEngine::Precision::I64,
-    InferenceEngine::Precision::BIN,
-    InferenceEngine::Precision::BOOL
-    // InferenceEngine::Precision::CUSTOM),
+const std::vector<ovms::Precision> UNSUPPORTED_OUTPUT_PRECISIONS_2{
+    // ovms::Precision::UNDEFINED, // Cannot create blob with such precision
+    // ovms::Precision::MIXED, // Cannot create blob with such precision
+    // ovms::Precision::FP32,
+    // ovms::Precision::FP16,
+    // ovms::Precision::Q78, // Cannot create blob with such precision
+    // ovms::Precision::I16,
+    // ovms::Precision::U8,
+    // ovms::Precision::I8,
+    // ovms::Precision::U16,
+    // ovms::Precision::I32,
+    // ovms::Precision::I64,
+    // ovms::Precision::BIN, // Cannot create blob with such precision
+    ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM),
+
+    // TODO: There are new API 2.0 precisions we do not support. Add tests for those.
 };
 
-class TensorflowGRPCPredict : public ::testing::TestWithParam<InferenceEngine::Precision> {
+class TensorflowGRPCPredict_2 : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     void SetUp() override {
-        InferenceEngine::Precision precision = InferenceEngine::Precision::FP32;
-        InferenceEngine::TensorDesc tensorDesc_prec_1_3_1_1_NHWC = {
-            precision,
-            {1, 3, 1, 1},
-            InferenceEngine::Layout::NHWC};
+        ovms::Precision precision = ovms::Precision::FP32;
 
         tensorMap[tensorName] = std::make_shared<ovms::TensorInfo>(
             tensorName,
-            tensorDesc_prec_1_3_1_1_NHWC.getPrecision(),
-            tensorDesc_prec_1_3_1_1_NHWC.getDims(),
-            tensorDesc_prec_1_3_1_1_NHWC.getLayout());
-        SetUpTensorProto(fromInferenceEnginePrecision(precision));
+            precision,
+            shape_t{1, 3, 1, 1},
+            InferenceEngine::Layout::NHWC);
+        SetUpTensorProto(TensorInfo::getPrecisionAsDataType(precision));
     }
 
     void SetUpTensorProto(tensorflow::DataType dataType) {
@@ -116,114 +110,113 @@ protected:
     ovms::tensor_map_t tensorMap;
 };
 
-class SerializeTFTensorProto : public TensorflowGRPCPredict {
+class SerializeTFTensorProto_2 : public TensorflowGRPCPredict_2 {
 public:
     std::tuple<
         std::shared_ptr<ovms::TensorInfo>,
-        std::shared_ptr<MockBlob>>
-    getInputs(InferenceEngine::Precision precision) {
+        std::shared_ptr<MockBlob_2>>
+    getInputs(ovms::Precision precision) {
         std::shared_ptr<ovms::TensorInfo> networkOutput =
             std::make_shared<ovms::TensorInfo>(
                 std::string("2_values_C_layout"),
                 precision,
                 shape_t{2},
                 InferenceEngine::Layout::C);
-        std::shared_ptr<MockBlob> mockBlob = std::make_shared<MockBlob>(networkOutput->getTensorDesc());
+        std::shared_ptr<MockBlob_2> mockBlob = std::make_shared<MockBlob_2>(networkOutput);
         return std::make_tuple(networkOutput, mockBlob);
     }
 };
 
-TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobPrecision) {
-    InferenceEngine::Precision tensorInfoPrecision = InferenceEngine::Precision::FP32;
+TEST(SerializeTFTensorProtoSingle_2, NegativeMismatchBetweenTensorInfoAndBlobPrecision) {
+    ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
     auto layout = Layout::NCHW;
     const std::string name = "NOT_IMPORTANT";
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
-    const TensorDesc tensorDesc(InferenceEngine::Precision::I32, tensorInfoShape, layout);
-    InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<int32_t>(tensorDesc);
-    blob->allocate();
+    ov::runtime::Tensor tensor(ov::element::i32, tensorInfoShape);
     TensorProto responseOutput;
-    auto status = serializeBlobToTensorProto(responseOutput,
+    auto status = serializeBlobToTensorProto_2(responseOutput,
         tensorInfo,
-        blob);
+        tensor);
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
 }
 
-TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobShape) {
-    InferenceEngine::Precision tensorInfoPrecision = InferenceEngine::Precision::FP32;
+TEST(SerializeTFTensorProtoSingle_2, NegativeMismatchBetweenTensorInfoAndBlobShape) {
+    ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
     shape_t blobShape{1, 3, 225, 225};
     auto layout = Layout::NCHW;
     const std::string name = "NOT_IMPORTANT";
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
-    const TensorDesc tensorDesc(InferenceEngine::Precision::FP32, blobShape, layout);
-    InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<float>(tensorDesc);
-    blob->allocate();
+    ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), blobShape);
     TensorProto responseOutput;
-    auto status = serializeBlobToTensorProto(responseOutput,
+    auto status = serializeBlobToTensorProto_2(responseOutput,
         tensorInfo,
-        blob);
+        tensor);
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
 }
 
-TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
-    InferenceEngine::Precision testedPrecision = GetParam();
+TEST_P(SerializeTFTensorProto_2, SerializeTensorProtoShouldSucceedForPrecision) {
+    ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
-    std::shared_ptr<MockBlob> mockBlob = std::get<1>(inputs);
-    EXPECT_CALL(*mockBlob, byteSize());
-    auto status = serializeBlobToTensorProto(responseOutput,
+    std::shared_ptr<MockBlob_2> mockBlob = std::get<1>(inputs);
+    // EXPECT_CALL(*mockBlob, get_byte_size()); // TODO: Mock it properly with templates
+    auto status = serializeBlobToTensorProto_2(responseOutput,
         std::get<0>(inputs),
-        std::get<1>(inputs));
+        *mockBlob);
     EXPECT_TRUE(status.ok())
         << "Supported OV serialization precision"
-        << testedPrecision
+        << toString(testedPrecision)
         << "should succeed";
 }
 
-class SerializeTFTensorProtoNegative : public SerializeTFTensorProto {};
+class SerializeTFTensorProtoNegative_2 : public SerializeTFTensorProto_2 {};
 
-TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldSucceedForPrecision) {
-    InferenceEngine::Precision testedPrecision = GetParam();
+TEST_P(SerializeTFTensorProtoNegative_2, SerializeTensorProtoShouldSucceedForPrecision) {
+    ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
-    auto status = serializeBlobToTensorProto(responseOutput,
+    auto status = serializeBlobToTensorProto_2(responseOutput,
         std::get<0>(inputs),
-        std::get<1>(inputs));
+        *std::get<1>(inputs));
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION)
         << "Unsupported OV serialization precision"
-        << testedPrecision
+        << toString(testedPrecision)
         << "should fail";
 }
 
 TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     PredictResponse response;
-    InferenceEngine::Core ieCore;
-    InferenceEngine::CNNNetwork network = ieCore.ReadNetwork(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
-    InferenceEngine::ExecutableNetwork execNetwork = ieCore.LoadNetwork(network, "CPU");
-    InferenceEngine::InferRequest inferRequest = execNetwork.CreateInferRequest();
+    ov::runtime::Core ieCore;
+    std::shared_ptr<ov::Function> network = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ov::runtime::ExecutableNetwork execNetwork = ieCore.compile_model(network, "CPU");
+    ov::runtime::InferRequest inferRequest = execNetwork.create_infer_request();
     ovms::tensor_map_t tenMap;
-    InferenceEngine::TensorDesc tensorDesc(InferenceEngine::Precision::FP32, shape_t{1, 10}, InferenceEngine::Layout::NC);
     std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
         DUMMY_MODEL_INPUT_NAME,
-        tensorDesc.getPrecision(),
-        tensorDesc.getDims(),
-        tensorDesc.getLayout());
-    tenMap["First"] = tensorInfo;
-    std::shared_ptr<NiceMock<MockBlob>> mockBlobPtr = std::make_shared<NiceMock<MockBlob>>(tensorDesc);
-    inferRequest.SetBlob("b", mockBlobPtr);
-    auto status = serializePredictResponse(inferRequest, tenMap, &response);
+        ovms::Precision::FP32,
+        shape_t{1, 10},
+        InferenceEngine::Layout::NC);
+    tenMap[DUMMY_MODEL_OUTPUT_NAME] = tensorInfo;
+    ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), tensorInfo->getShape_2());
+    inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
+    auto status = serializePredictResponse_2(inferRequest, tenMap, &response);
     EXPECT_TRUE(status.ok());
 }
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    SerializeTFTensorProto,
-    ::testing::ValuesIn(SUPPORTED_OUTPUT_PRECISIONS),
-    ::testing::PrintToStringParamName());
+    SerializeTFTensorProto_2,
+    ::testing::ValuesIn(SUPPORTED_OUTPUT_PRECISIONS_2),
+    [](const ::testing::TestParamInfo<SerializeTFTensorProto_2::ParamType>& info) {
+        return toString(info.param);
+    });
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    SerializeTFTensorProtoNegative,
-    ::testing::ValuesIn(UNSUPPORTED_OUTPUT_PRECISIONS),
-    ::testing::PrintToStringParamName());
+    SerializeTFTensorProtoNegative_2,
+    ::testing::ValuesIn(UNSUPPORTED_OUTPUT_PRECISIONS_2),
+    [](const ::testing::TestParamInfo<SerializeTFTensorProtoNegative_2::ParamType>& info) {
+        return toString(info.param);
+    });

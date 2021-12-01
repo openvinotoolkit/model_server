@@ -389,6 +389,9 @@ Status convertStringValToBlob_2(const tensorflow::TensorProto& src, ov::runtime:
     }
 
     blob = convertMatsToBlob_2(images, tensorInfo, isPipeline);
+    if (!blob) {
+        return StatusCode::IMAGE_PARSING_FAILED;  // TODO: Add unit test.
+    }
     return StatusCode::OK;
 }
 }  // namespace ovms

@@ -43,34 +43,28 @@ class PredictValidation : public ::testing::Test {
     };
 
 protected:
-    using tensor_desc_map_t = std::unordered_map<std::string, InferenceEngine::TensorDesc>;
-
     std::unique_ptr<InferenceEngine::Core> ieCore;
     std::unique_ptr<ov::runtime::Core> ieCore_2;
     std::unique_ptr<NiceMock<MockModelInstance>> instance;
     tensorflow::serving::PredictRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t networkInputs;
-    std::unordered_map<std::string, InferenceEngine::TensorDesc> tensors;
 
     void SetUp() override {
         ieCore = std::make_unique<InferenceEngine::Core>();
         ieCore_2 = std::make_unique<ov::runtime::Core>();
         instance = std::make_unique<NiceMock<MockModelInstance>>(*ieCore, *ieCore_2);
-        tensors = tensor_desc_map_t({
-            {"Input_FP32_1_3_224_224_NHWC", {InferenceEngine::Precision::FP32, {1, 3, 224, 224}, InferenceEngine::Layout::NHWC}},
-            {"Input_U8_1_3_62_62_NCHW", {InferenceEngine::Precision::U8, {1, 3, 62, 62}, InferenceEngine::Layout::NCHW}},
-            {"Input_I64_1_6_128_128_16_NCDHW", {InferenceEngine::Precision::I64, {1, 6, 128, 128, 16}, InferenceEngine::Layout::NCDHW}},
-            {"Input_U16_1_2_8_4_NCHW", {InferenceEngine::Precision::U16, {1, 2, 8, 4}, InferenceEngine::Layout::NCHW}},
-        });
 
-        for (const auto& pair : tensors) {
-            networkInputs[pair.first] = std::make_shared<ovms::TensorInfo>(
-                pair.first,
-                pair.second.getPrecision(),
-                pair.second.getDims(),
-                pair.second.getLayout());
-        }
+        networkInputs = ovms::tensor_map_t({
+            {"Input_FP32_1_3_224_224_NHWC",
+                std::make_shared<ovms::TensorInfo>("Input_FP32_1_3_224_224_NHWC", ovms::Precision::FP32, ovms::shape_t{1, 3, 224, 224}, InferenceEngine::Layout::NHWC)},
+            {"Input_U8_1_3_62_62_NCHW",
+                std::make_shared<ovms::TensorInfo>("Input_U8_1_3_62_62_NCHW", ovms::Precision::U8, ovms::shape_t{1, 3, 62, 62}, InferenceEngine::Layout::NCHW)},
+            {"Input_I64_1_6_128_128_16_NCDHW",
+                std::make_shared<ovms::TensorInfo>("Input_I64_1_6_128_128_16_NCDHW", ovms::Precision::I64, ovms::shape_t{1, 6, 128, 128, 16}, InferenceEngine::Layout::NCDHW)},
+            {"Input_U16_1_2_8_4_NCHW",
+                std::make_shared<ovms::TensorInfo>("Input_U16_1_2_8_4_NCHW", ovms::Precision::U16, ovms::shape_t{1, 2, 8, 4}, InferenceEngine::Layout::NCHW)},
+        });
 
         ON_CALL(*instance, getInputsInfo()).WillByDefault(ReturnRef(networkInputs));
         ON_CALL(*instance, getBatchSize()).WillByDefault(Return(1));
@@ -85,6 +79,7 @@ protected:
                 {"Input_I64_1_6_128_128_16_NCDHW",
                     std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 6, 128, 128, 16}, tensorflow::DataType::DT_INT64}},
             });
+
         // U16 uses int_val instead of tensor_content so it needs separate test
         auto& inputD = (*request.mutable_inputs())["Input_U16_1_2_8_4_NCHW"];
         inputD.set_dtype(tensorflow::DataType::DT_UINT16);
@@ -187,7 +182,7 @@ TEST_F(PredictValidation, ValidRequestBinaryInputs) {
     ovms::shape_t shape = {1, 3, 224, 224};
     networkInputs[inputName] = std::make_shared<ovms::TensorInfo>(
         inputName,
-        InferenceEngine::Precision::FP32,
+        ovms::Precision::FP32,
         shape,
         InferenceEngine::Layout::NHWC);
 
@@ -211,7 +206,7 @@ TEST_F(PredictValidation, RequestWrongBatchSizeBinaryInputs) {
     ovms::shape_t shape = {1, 3, 224, 224};
     networkInputs[inputName] = std::make_shared<ovms::TensorInfo>(
         inputName,
-        InferenceEngine::Precision::FP32,
+        ovms::Precision::FP32,
         shape,
         InferenceEngine::Layout::NHWC);
 
@@ -236,7 +231,7 @@ TEST_F(PredictValidation, RequestWrongBatchSizeAutoBinaryInputs) {
     ovms::shape_t shape = {1, 3, 224, 224};
     networkInputs[inputName] = std::make_shared<ovms::TensorInfo>(
         inputName,
-        InferenceEngine::Precision::FP32,
+        ovms::Precision::FP32,
         shape,
         InferenceEngine::Layout::NHWC);
 
@@ -250,34 +245,18 @@ TEST_F(PredictValidation, RequestWrongAndCorrectBatchSizeAuto) {
     // First is incorrect, second is correct
     request = preparePredictRequest({{"im_data", {{3, 3, 800, 1344}, tensorflow::DataType::DT_FLOAT}},
         {"im_info", {{1, 3}, tensorflow::DataType::DT_FLOAT}}});
-    tensors = tensor_desc_map_t{
-        {"im_data", {InferenceEngine::Precision::FP32, {1, 3, 800, 1344}, InferenceEngine::Layout::NCHW}},
-        {"im_info", {InferenceEngine::Precision::FP32, {1, 3}, InferenceEngine::Layout::NC}},
-    };
 
     networkInputs.clear();
-    for (const auto& pair : tensors) {
-        networkInputs[pair.first] = std::make_shared<ovms::TensorInfo>(
-            pair.first,
-            pair.second.getPrecision(),
-            pair.second.getDims(),
-            pair.second.getLayout());
-    }
+    networkInputs = ovms::tensor_map_t{
+        {"im_data", std::make_shared<ovms::TensorInfo>("im_data", ovms::Precision::FP32, ovms::shape_t{1, 3, 800, 1344}, InferenceEngine::Layout::NCHW)},
+        {"im_info", std::make_shared<ovms::TensorInfo>("im_info", ovms::Precision::FP32, ovms::shape_t{1, 3}, InferenceEngine::Layout::NC)},
+    };
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
 
     request = preparePredictRequest({{"im_data", {{1, 3, 800, 1344}, tensorflow::DataType::DT_FLOAT}},
         {"im_info", {{3, 3}, tensorflow::DataType::DT_FLOAT}}});
-
-    networkInputs.clear();
-    for (const auto& pair : tensors) {
-        networkInputs[pair.first] = std::make_shared<ovms::TensorInfo>(
-            pair.first,
-            pair.second.getPrecision(),
-            pair.second.getDims(),
-            pair.second.getLayout());
-    }
 
     status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
@@ -289,19 +268,11 @@ TEST_F(PredictValidation, RequestWrongAndCorrectShapeAuto) {
         {"im_info", {{1, 3}, tensorflow::DataType::DT_FLOAT}}});
 
     // First is incorrect, second is correct
-    tensors = tensor_desc_map_t({
-        {"im_data", {InferenceEngine::Precision::FP32, {1, 3, 800, 1344}, InferenceEngine::Layout::NCHW}},
-        {"im_info", {InferenceEngine::Precision::FP32, {1, 3}, InferenceEngine::Layout::NC}},
-    });
-
     networkInputs.clear();
-    for (const auto& pair : tensors) {
-        networkInputs[pair.first] = std::make_shared<ovms::TensorInfo>(
-            pair.first,
-            pair.second.getPrecision(),
-            pair.second.getDims(),
-            pair.second.getLayout());
-    }
+    networkInputs = ovms::tensor_map_t{
+        {"im_data", std::make_shared<ovms::TensorInfo>("im_data", ovms::Precision::FP32, ovms::shape_t{1, 3, 800, 1344}, InferenceEngine::Layout::NCHW)},
+        {"im_info", std::make_shared<ovms::TensorInfo>("im_info", ovms::Precision::FP32, ovms::shape_t{1, 3}, InferenceEngine::Layout::NC)},
+    };
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
@@ -309,15 +280,6 @@ TEST_F(PredictValidation, RequestWrongAndCorrectShapeAuto) {
     // First is correct, second is incorrect
     request = preparePredictRequest({{"im_data", {{1, 3, 800, 1344}, tensorflow::DataType::DT_FLOAT}},
         {"im_info", {{1, 6}, tensorflow::DataType::DT_FLOAT}}});
-
-    networkInputs.clear();
-    for (const auto& pair : tensors) {
-        networkInputs[pair.first] = std::make_shared<ovms::TensorInfo>(
-            pair.first,
-            pair.second.getPrecision(),
-            pair.second.getDims(),
-            pair.second.getLayout());
-    }
 
     status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);

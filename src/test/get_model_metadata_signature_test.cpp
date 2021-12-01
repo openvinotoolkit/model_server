@@ -23,7 +23,7 @@
 
 class GetModelMetadataSignature : public ::testing::Test {
     struct Info {
-        InferenceEngine::Precision precision;
+        ovms::Precision precision;
         ovms::shape_t shape;
     };
 
@@ -38,11 +38,11 @@ protected:
     void SetUp() override {
         tensors = tensor_desc_map_t{
             {"Input_FP32_1_3_224_224", {
-                                           InferenceEngine::Precision::FP32,
+                                           ovms::Precision::FP32,
                                            {1, 3, 224, 224},
                                        }},
             {"Input_I64_1_6_128_128_16", {
-                                             InferenceEngine::Precision::I64,
+                                             ovms::Precision::I64,
                                              {1, 6, 128, 128, 16},
                                          }},
         };
