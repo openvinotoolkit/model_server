@@ -265,7 +265,7 @@ public:
         status = serializePredictResponse_2(inferRequest_2, getOutputsInfo(), responseProto);
         if (!status.ok())
             return status;
-        
+
         responseProto->Clear();
         timer.start("serialize");
         status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
