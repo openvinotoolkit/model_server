@@ -17,6 +17,7 @@
 import yaml
 import datetime
 import pymongo
+import uuid
 
 class DBExporter(dict):
     data_format = "%d-%b-%Y %H:%M:%S"
@@ -28,7 +29,6 @@ class DBExporter(dict):
             with open(args["db_config"], "r") as fd:
                 config = yaml.load(fd, Loader=yaml.FullLoader)
                 for key, val in config.items(): self[key] = val
-            self.collection = self.connect_to_collection()            
         self.exec_date = datetime.datetime.now()
         self.args = args
 
@@ -42,7 +42,7 @@ class DBExporter(dict):
 
     def upload_results(self, results, return_code):
         # if endpoint is not specified, upload is skipped
-        if self.collection is None: return
+        if self.args["db_config"] is None: return
 
         # internal results are not supported by this tool
         doc = {"internal_results": []}
@@ -67,4 +67,14 @@ class DBExporter(dict):
         prefix = self.get("prefix", "noprefix")
         dlist = prefix, doc["backend"], doc["model"], str(doc["batchsize"]), str(doc["concurr"])
         doc["description"] = "-".join(dlist)
-        self.collection.insert_one(doc)
+
+        try:
+            self.collection = self.connect_to_collection()
+            self.collection.insert_one(doc)
+        except pymongo.errors.ServerSelectionTimeoutError:
+            filename = "/tmp/xcli-" + uuid.uuid4().hex + ".dump"
+            print("dump file:", filename)
+            with open(filename, "w") as fd:
+                fd.write(str(self["endpoint"]))
+                fd.write(f"\n{self.args}")
+                fd.write(f"\n{doc}\n")

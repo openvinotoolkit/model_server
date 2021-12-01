@@ -37,13 +37,11 @@ RUN python3 -m pip install nvidia-pyindex
 RUN python3 -m pip install tritonclient[all]
 
 RUN mkdir -p /ovms_benchmark_client
-COPY VERSION /ovms_benchmark_client
 COPY main.py /ovms_benchmark_client
 COPY client.py /ovms_benchmark_client
 COPY client_ovms.py /ovms_benchmark_client
 COPY metrics.py /ovms_benchmark_client
 COPY db_exporter.py /ovms_benchmark_client
-COPY db_config.yml /ovms_benchmark_client
 COPY __init__.py /ovms_benchmark_client
 COPY entrypoint.sh /
 

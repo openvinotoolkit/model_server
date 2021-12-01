@@ -42,7 +42,7 @@ except ImportError:
     NvTrtClient = None
 
 # Version used for print only...
-INTERNAL_VERSION="1.10"
+INTERNAL_VERSION="1.11"
 
 # client engine - used for single and multiple client configuration
 def run_single_client(xargs, worker_name_or_client, index, json_flag=None):
@@ -110,6 +110,9 @@ def exec_single_client(xargs, db_exporter):
         client.set_flags(xargs["json"], True)
         client.show_server_status()
         client.print_warning("Finished execution. If you want to run inference remove --list_models.")
+        if xargs["model_name"] is not None:
+            tout = int(xargs["metadata_timeout"])
+            client.get_model_metadata(xargs["model_name"], xargs["model_version"], tout)
         return 0
 
     if xargs["model_name"] is None:
@@ -258,13 +261,19 @@ if __name__ == "__main__":
         print(INTERNAL_VERSION)
         sys.exit(0)
 
+        
     # check address is specified
     server_address = xargs["server_address"]
     assert server_address is not None
 
+    # list models cannot be checked when concurrency > 1
+    if xargs["list_models"]:
+        assert xargs["concurrency"] in ("1", 1), "to list models use concurrency eq. to 1"
+    
     # check duration is specified
-    duration_error_flag = xargs["steps_number"] is None and xargs["duration"] is None
-    assert not duration_error_flag, "Steps/duration not set!"
+    if not xargs["list_models"]:
+        duration_error_flag = xargs["steps_number"] is None and xargs["duration"] is None
+        assert not duration_error_flag, "Steps/duration not set!"
 
     # mongo exporter is optional
     db_exporter = DBExporter(xargs)
