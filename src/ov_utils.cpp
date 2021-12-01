@@ -120,4 +120,15 @@ const InferenceEngine::SizeVector& getEffectiveBlobShape(const InferenceEngine::
     return getEffectiveShape(blob->getTensorDesc());
 }
 
+Status tensorClone(std::shared_ptr<ov::runtime::Tensor> destinationTensor, ov::runtime::Tensor& sourceTensor) {
+    destinationTensor = std::make_shared<ov::runtime::Tensor>(sourceTensor.get_element_type(), sourceTensor.get_shape());
+
+    if (destinationTensor->get_byte_size() != sourceTensor.get_byte_size()) {
+        destinationTensor = nullptr;
+        return StatusCode::OV_CLONE_TENSOR_ERROR;
+    }
+    std::memcpy(destinationTensor->data(), sourceTensor.data(), sourceTensor.get_byte_size());
+    return StatusCode::OK;
+}
+
 }  // namespace ovms

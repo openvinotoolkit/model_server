@@ -226,8 +226,9 @@ public:
 
         timer.start("get infer request");
         ovms::ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
-
+        ovms::ExecutingStreamIdGuard_2 executingStreamIdGuard_2(getInferRequestsQueue_2());
         InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+        ov::runtime::InferRequest& inferRequest_2 = executingStreamIdGuard_2.getInferRequest();
         timer.stop("get infer request");
 
         timer.start("preprocess");
@@ -235,12 +236,20 @@ public:
         timer.stop("preprocess");
         if (!status.ok())
             return status;
+        status = preInferenceProcessing_2(inferRequest_2, sequence, sequenceProcessingSpec);
+        if (!status.ok())
+            return status;
 
         timer.start("deserialize");
         ovms::InputSink<InferRequest&> inputSink(inferRequest);
+        ovms::InputSink_2<ov::runtime::InferRequest&> inputSink_2(inferRequest_2);
+        (void)inputSink_2;
         bool isPipeline = false;
         status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
         timer.stop("deserialize");
+        if (!status.ok())
+            return status;
+        status = ovms::deserializePredictRequest_2<ovms::ConcreteTensorProtoDeserializator_2>(*requestProto, getInputsInfo(), inputSink_2, isPipeline);
         if (!status.ok())
             return status;
 
@@ -249,7 +258,15 @@ public:
         timer.stop("prediction");
         if (!status.ok())
             return status;
+        status = performInference_2(inferRequest_2);
+        if (!status.ok())
+            return status;
 
+        status = serializePredictResponse_2(inferRequest_2, getOutputsInfo(), responseProto);
+        if (!status.ok())
+            return status;
+
+        responseProto->Clear();
         timer.start("serialize");
         status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
         timer.stop("serialize");
@@ -258,6 +275,8 @@ public:
 
         timer.start("postprocess");
         status = postInferenceProcessing(responseProto, inferRequest, sequence, sequenceProcessingSpec);
+        responseProto->Clear();
+        status = postInferenceProcessing_2(responseProto, inferRequest_2, sequence, sequenceProcessingSpec);
         timer.stop("postprocess");
         if (!status.ok())
             return status;
