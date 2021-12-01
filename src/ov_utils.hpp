@@ -51,4 +51,6 @@ Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const T sourceBlob
     std::memcpy(InferenceEngine::as<InferenceEngine::MemoryBlob>(destinationBlob)->wmap().as<void*>(), (const void*)InferenceEngine::as<InferenceEngine::MemoryBlob>(sourceBlob)->rmap(), sourceBlob->byteSize());
     return StatusCode::OK;
 }
+
+Status tensorClone(std::shared_ptr<ov::runtime::Tensor> destinationTensor, ov::runtime::Tensor& sourceTensor);
 }  // namespace ovms

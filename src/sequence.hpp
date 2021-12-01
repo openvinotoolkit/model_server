@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
 #include "ov_utils.hpp"
@@ -30,12 +31,15 @@
 namespace ovms {
 
 using sequence_memory_state_t = std::unordered_map<std::string, InferenceEngine::Blob::Ptr>;
+using sequence_memory_state_t_2 = std::unordered_map<std::string, std::shared_ptr<ov::runtime::Tensor>>;
 using model_memory_state_t = std::vector<InferenceEngine::VariableState>;
+using model_memory_state_t_2 = std::vector<ov::runtime::VariableState>;
 
 class Sequence {
 private:
     uint64_t sequenceId;
     sequence_memory_state_t memoryState;
+    sequence_memory_state_t_2 memoryState_2;
     std::mutex mutex;
     bool terminated;
     bool idle;
@@ -46,11 +50,13 @@ public:
         terminated(false),
         idle(false) {}
     const sequence_memory_state_t& getMemoryState() const;
+    const sequence_memory_state_t_2& getMemoryState_2() const;
     const uint64_t getId() const;
     const bool isIdle() const;
     void setIdle(bool idle = true);
     // In case updateMemoryState returns non-OK status code the sequence should be dropped
     Status updateMemoryState(model_memory_state_t& newState);
+    Status updateMemoryState_2(model_memory_state_t_2& newState);
     std::mutex& getMutex();
     bool isTerminated() const;
     void setTerminated();

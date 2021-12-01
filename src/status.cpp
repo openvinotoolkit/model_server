@@ -104,6 +104,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, "Unsupported serialization precision"},
     {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR, "Internal serialization error"},
     {StatusCode::OV_CLONE_BLOB_ERROR, "Error during blob clone"},
+    {StatusCode::OV_CLONE_TENSOR_ERROR, "Error during tensor clone"},
 
     // GetModelStatus
     {StatusCode::INTERNAL_ERROR, "Internal server error"},
