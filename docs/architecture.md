@@ -8,9 +8,7 @@
 
 - Services are designed via set of C++ classes managing AI models in Intermediate Representation format. [OpenVINO&trade; Inference Engine](https://docs.openvinotoolkit.org/2021.4/index.html) component executes the graphs operations.
 
-<p align="center">
-  <img width="548" height="564" src="serving-c.png">
-</p>
+![serving](serving-c.png)
 
 **<div align="center">Figure 1: Docker Container (VM or Bare Metal Host)</div>**
 

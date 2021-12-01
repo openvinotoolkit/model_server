@@ -1,4 +1,4 @@
-# Model Version Policy in OpenVINO&trade; Model Server
+# Model Version Policy {#ovms_docs_model_version_policy}
 
 Model version policy makes it possible to decide which versions of model will be served by OVMS. 
 This parameter allows you to control the memory consumption of the server and decide which versions will be used regardless of what is located 
