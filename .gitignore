@@ -17,3 +17,5 @@ __pycache__
 *user_config*
 *.swp
 dist/
+lib/
+!client/python/lib

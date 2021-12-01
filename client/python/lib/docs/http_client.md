@@ -1,11 +1,11 @@
 
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L34"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/http/serving_client.py#L32"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
-## <kbd>class</kbd> `GrpcClient`
+## <kbd>class</kbd> `HttpClient`
 
 ---
 
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L58"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/http/serving_client.py#L63"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `get_model_metadata`
 
@@ -65,7 +65,7 @@ Request model metadata.
  
 ```python
 import ovmsclient
-client = ovmsclient.make_grpc_client("localhost:9000")
+client = ovmsclient.make_http_client("localhost:9000")
 # request metadata of the specific model version, with timeout set to 2.5 seconds
 model_metadata = client.get_model_metadata(model_name="model", model_version=1, timeout=2.5)
 # request metadata of the latest model version
@@ -75,7 +75,7 @@ model_metadata = client.get_model_metadata(model_name="model")
 
 ---
 
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L75"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/http/serving_client.py#L87"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `get_model_status`
 
@@ -126,7 +126,7 @@ Request model status.
  
 ```python
 import ovmsclient
-client = ovmsclient.make_grpc_client("localhost:9000")
+client = ovmsclient.make_http_client("localhost:9000")
 # request status of the specific model version, with timeout set to 2.5 seconds
 model_status = client.get_model_status(model_name="model", model_version=1, timeout=2.5)
 # request status of all model versions
@@ -136,7 +136,7 @@ model_status = client.get_model_status(model_name="model")
 
 ---
 
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L41"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/http/serving_client.py#L40"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `predict`
 
@@ -201,7 +201,7 @@ Request prediction on provided inputs.
 
 ```python
 import ovmsclient
-client = ovmsclient.make_grpc_client("localhost:9000")
+client = ovmsclient.make_http_client("localhost:9000")
 inputs = {"input": [1, 2, 3]}
 # request prediction on specific model version, with timeout set to 2.5 seconds
 results = client.predict(inputs=inputs, model_name="model", model_version=1, timeout=2.5)

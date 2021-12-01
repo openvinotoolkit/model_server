@@ -15,21 +15,18 @@
 #
 
 from grpc import RpcError, ssl_channel_credentials, secure_channel, insecure_channel
-from validators import ipv4, domain
-import os
 
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 from tensorflow_serving.apis import model_service_pb2_grpc
-from tensorflow_serving.apis.get_model_status_pb2 import GetModelStatusRequest
-from tensorflow_serving.apis.get_model_metadata_pb2 import GetModelMetadataRequest
-from tensorflow_serving.apis.predict_pb2 import PredictRequest
 
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
-from ovmsclient.tfs_compat.grpc.requests import (GrpcModelStatusRequest, GrpcModelMetadataRequest,
-                                                 GrpcPredictRequest)
+from ovmsclient.tfs_compat.grpc.requests import (make_status_request,
+                                                 make_metadata_request,
+                                                 make_predict_request)
 from ovmsclient.tfs_compat.grpc.responses import (GrpcModelStatusResponse,
                                                   GrpcModelMetadataResponse,
                                                   GrpcPredictResponse)
+from ovmsclient.tfs_compat.base.errors import BadResponseError, raise_from_grpc
 
 from ovmsclient.util.ovmsclient_export import ovmsclient_export
 
@@ -41,140 +38,81 @@ class GrpcClient(ServingClient):
         self.prediction_service_stub = prediction_service_stub
         self.model_service_stub = model_service_stub
 
-    def predict(self, request):
-        '''
-        Send GrpcPredictRequest to the server and return response.
+    def predict(self, inputs, model_name, model_version=0, timeout=10.0):
+        self._validate_timeout(timeout)
+        request = make_predict_request(inputs, model_name, model_version)
+        raw_response = None
 
-        Args:
-            request: GrpcPredictRequest object.
+        try:
+            raw_response = self.prediction_service_stub.Predict(request.raw_request, timeout)
+        except RpcError as grpc_error:
+            raise_from_grpc(grpc_error)
 
-        Returns:
-            GrpcPredictResponse object
+        try:
+            response = GrpcPredictResponse(raw_response).to_dict()
+        except Exception as parsing_error:
+            raise BadResponseError("Received response is malformed and could not be parsed."
+                                   f"Details: {str(parsing_error)}")
+        return response["outputs"]
 
-        Raises:
-            TypeError:  if request argument is of wrong type.
-            ValueError: if request argument has invalid contents.
-            ConnectionError: if there was an error while sending request to the server.
-
-        Examples:
-
-            >>> config = {
-            ...     "address": "localhost",
-            ...     "port": 9000
-            ... }
-            >>> client = make_grpc_client(config)
-            >>> request = make_predict_request({"input": [1, 2, 3]}, "model")
-            >>> response = client.predict(request)
-            >>> type(response)
-        '''
-
-        _check_predict_request(request)
-
+    def get_model_metadata(self, model_name, model_version=0, timeout=10.0):
+        self._validate_timeout(timeout)
+        request = make_metadata_request(model_name, model_version)
         raw_response = None
         try:
-            raw_response = self.prediction_service_stub.Predict(request.raw_request, 10.0)
-        except RpcError as e_info:
-            raise ConnectionError('There was an error during sending PredictRequest. '
-                                  f'Grpc exited with: \n{e_info.code().name} - {e_info.details()}')
+            raw_response = self.prediction_service_stub.GetModelMetadata(request.raw_request,
+                                                                         timeout)
+        except RpcError as grpc_error:
+            raise_from_grpc(grpc_error)
 
-        return GrpcPredictResponse(raw_response)
-
-    def get_model_metadata(self, request):
-        '''
-        Send GrpcModelMetadataRequest to the server and return response..
-
-        Args:
-            request: GrpcModelMetadataRequest object.
-
-        Returns:
-            GrpcModelMetadataResponse object
-
-        Raises:
-            TypeError:  if request argument is of wrong type.
-            ValueError: if request argument has invalid contents.
-            ConnectionError: if there was an error while sending request to the server.
-
-        Examples:
-
-            >>> config = {
-            ...     "address": "localhost",
-            ...     "port": 9000
-            ... }
-            >>> client = make_grpc_client(config)
-            >>> request = make_model_metadata_request("model")
-            >>> response = client.get_model_metadata(request)
-            >>> type(response)
-        '''
-
-        _check_model_metadata_request(request)
-
-        raw_response = None
         try:
-            raw_response = self.prediction_service_stub.GetModelMetadata(request.raw_request, 10.0)
-        except RpcError as e_info:
-            raise ConnectionError('There was an error during sending ModelMetadataRequest. '
-                                  f'Grpc exited with: \n{e_info.code().name} - {e_info.details()}')
+            response = GrpcModelMetadataResponse(raw_response).to_dict()
+        except Exception as parsing_error:
+            raise BadResponseError("Received response is malformed and could not be parsed."
+                                   f"Details: {str(parsing_error)}")
+        return response
 
-        return GrpcModelMetadataResponse(raw_response)
-
-    def get_model_status(self, request):
-        '''
-        Send GrpcModelStatusRequest to the server and return response.
-
-        Args:
-            request: GrpcModelStatusRequest object.
-
-        Returns:
-            GrpcModelStatusResponse object
-
-        Raises:
-            TypeError:  if request argument is of wrong type.
-            ValueError: if request argument has invalid contents.
-            ConnectionError: if there was an error while sending request to the server.
-
-        Examples:
-
-            >>> config = {
-            ...     "address": "localhost",
-            ...     "port": 9000
-            ... }
-            >>> client = make_grpc_client(config)
-            >>> request = make_model_status_request("model")
-            >>> response = client.get_model_status(request)
-            >>> type(response)
-        '''
-
-        _check_model_status_request(request)
-
+    def get_model_status(self, model_name, model_version=0, timeout=10.0):
+        self._validate_timeout(timeout)
+        request = make_status_request(model_name, model_version)
         raw_response = None
-        try:
-            raw_response = self.model_service_stub.GetModelStatus(request.raw_request, 10.0)
-        except RpcError as e_info:
-            raise ConnectionError('There was an error during sending ModelStatusRequest. '
-                                  f'Grpc exited with: \n{e_info.code().name} - {e_info.details()}')
 
-        return GrpcModelStatusResponse(raw_response)
+        try:
+            raw_response = self.model_service_stub.GetModelStatus(request.raw_request, timeout)
+        except RpcError as grpc_error:
+            raise_from_grpc(grpc_error)
+
+        try:
+            response = GrpcModelStatusResponse(raw_response).to_dict()
+        except Exception as parsing_error:
+            raise BadResponseError("Received response is malformed and could not be parsed."
+                                   f"Details: {str(parsing_error)}")
+        return response
 
     @classmethod
-    def _build(cls, config):
+    def _build(cls, url, tls_config):
 
-        _check_config(config)
+        ServingClient._check_url(url)
 
-        grpc_address = f"{config['address']}:{config['port']}"
+        # Setting 1 GB max message size.
+        MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
+        channel_options = [
+            ('grpc.max_send_message_length', MAX_MESSAGE_LENGTH),
+            ('grpc.max_receive_message_length', MAX_MESSAGE_LENGTH),
+        ]
 
-        if 'tls_config' in config:
-            server_cert, client_cert, client_key = _prepare_certs(
-                config['tls_config'].get('server_cert_path'),
-                config['tls_config'].get('client_cert_path'),
-                config['tls_config'].get('client_key_path')
+        if tls_config is not None:
+            ServingClient._check_tls_config(tls_config)
+            server_cert, client_cert, client_key = ServingClient._prepare_certs(
+                tls_config.get('server_cert_path'),
+                tls_config.get('client_cert_path'),
+                tls_config.get('client_key_path')
             )
-
             creds = ssl_channel_credentials(root_certificates=server_cert,
                                             private_key=client_key, certificate_chain=client_cert)
-
-            channel = secure_channel(grpc_address, creds)
+            channel = secure_channel(url, creds, channel_options)
         else:
-            channel = insecure_channel(grpc_address)
+            channel = insecure_channel(url, channel_options)
 
         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
         model_service_stub = model_service_pb2_grpc.ModelServiceStub(channel)
@@ -182,170 +120,30 @@ class GrpcClient(ServingClient):
         return cls(channel, prediction_service_stub, model_service_stub)
 
 
-def _check_model_status_request(request):
-
-    if not isinstance(request, GrpcModelStatusRequest):
-        raise TypeError('request type should be GrpcModelStatusRequest, '
-                        f'but is {type(request).__name__}')
-
-    if not isinstance(request.raw_request, GetModelStatusRequest):
-        raise TypeError('request is not valid GrpcModelStatusRequest')
-
-    if request.raw_request.model_spec.name != request.model_name:
-        raise ValueError('request is not valid GrpcModelStatusRequest')
-
-    if request.raw_request.model_spec.version.value != request.model_version:
-        raise ValueError('request is not valid GrpcModelStatusRequest')
-
-
-def _check_model_metadata_request(request):
-
-    if not isinstance(request, GrpcModelMetadataRequest):
-        raise TypeError('request type should be GrpcModelMetadataRequest, '
-                        f'but is {type(request).__name__}')
-
-    if not isinstance(request.raw_request, GetModelMetadataRequest):
-        raise TypeError('request is not valid GrpcModelMetadataRequest')
-
-    if request.raw_request.model_spec.name != request.model_name:
-        raise ValueError('request is not valid GrpcModelMetadataRequest')
-
-    if request.raw_request.model_spec.version.value != request.model_version:
-        raise ValueError('request is not valid GrpcModelMetadataRequest')
-
-    if list(request.raw_request.metadata_field) != ['signature_def']:
-        raise ValueError('request is not valid GrpcModelMetadataRequest')
-
-
-def _check_predict_request(request):
-
-    if not isinstance(request, GrpcPredictRequest):
-        raise TypeError('request type should be GrpcPredictRequest, '
-                        f'but is {type(request).__name__}')
-
-    if not isinstance(request.raw_request, PredictRequest):
-        raise TypeError('request is not valid GrpcPredictRequest')
-
-    if request.raw_request.model_spec.name != request.model_name:
-        raise ValueError('request is not valid GrpcPredictRequest')
-
-    if request.raw_request.model_spec.version.value != request.model_version:
-        raise ValueError('request is not valid GrpcPredictRequest')
-
-    if list(request.inputs.keys()) != list(request.raw_request.inputs.keys()):
-        raise ValueError('request is not valid GrpcPredictRequest')
-
-
-def _prepare_certs(server_cert_path, client_cert_path, client_key_path):
-
-    client_cert, client_key = None, None
-
-    server_cert = _open_certificate(server_cert_path)
-
-    if client_cert_path is not None:
-        client_cert = _open_certificate(client_cert_path)
-
-    if client_key_path is not None:
-        client_key = _open_private_key(client_key_path)
-
-    return server_cert, client_cert, client_key
-
-
-def _open_certificate(certificate_path):
-    with open(certificate_path, 'rb') as f:
-        certificate = f.read()
-        return certificate
-
-
-def _open_private_key(key_path):
-    with open(key_path, 'rb') as f:
-        key = f.read()
-        return key
-
-
-def _check_config(config):
-
-    if 'address' not in config or 'port' not in config:
-        raise ValueError('The minimal config must contain address and port')
-
-    _check_address(config['address'])
-
-    _check_port(config['port'])
-
-    if 'tls_config' in config:
-        _check_tls_config(config['tls_config'])
-
-
-def _check_address(address):
-
-    if not isinstance(address, str):
-        raise TypeError(f'address type should be string, but is {type(address).__name__}')
-
-    if address != "localhost" and not ipv4(address) and not domain(address):
-        raise ValueError('address is not valid')
-
-
-def _check_port(port):
-
-    if not isinstance(port, int):
-        raise TypeError(f'port type should be int, but is type {type(port).__name__}')
-
-    if port.bit_length() > 16 or port < 0:
-        raise ValueError(f'port should be in range <0, {2**16-1}>')
-
-
-def _check_tls_config(tls_config):
-
-    if 'server_cert_path' not in tls_config:
-        raise ValueError('server_cert_path is not defined in tls_config')
-
-    if ('client_key_path' in tls_config) != ('client_cert_path' in tls_config):
-        raise ValueError('none or both client_key_path and client_cert_path '
-                         'are required in tls_config')
-
-    valid_keys = ['server_cert_path', 'client_key_path', 'client_cert_path']
-    for key in tls_config:
-        if key not in valid_keys:
-            raise ValueError(f'{key} is not valid tls_config key')
-        if not isinstance(tls_config[key], str):
-            raise TypeError(f'{key} type should be string but is type '
-                            f'{type(tls_config[key]).__name__}')
-        if not os.path.isfile(tls_config[key]):
-            raise ValueError(f'{tls_config[key]} is not valid path to file')
-
-
 @ovmsclient_export("make_grpc_client", grpcclient="make_client")
-def make_grpc_client(config):
+def make_grpc_client(url, tls_config=None):
     '''
     Create GrpcClient object.
 
     Args:
-        config: Python dictionary with client configuration. The accepted format is:
+        url - Model Server URL as a string in format `<address>:<port>`
+        tls_config (optional): dictionary with TLS configuration. The accepted format is:
 
             .. code-block::
 
                 {
-                    "address": <IP address of the serving>,
-                    "port": <Port number used by the gRPC interface of the server>,
-                        ...more connection options...
-                    "tls_config": {
-                        "client_key_path": <Path to client key file>,
-                        "client_cert_path": <Path to client certificate file>,
-                        "server_cert_path": <Path to server certificate file>
-                    }
+                    "client_key_path": <Path to client key file>,
+                    "client_cert_path": <Path to client certificate file>,
+                    "server_cert_path": <Path to server certificate file>
                 }
 
             With following types accepted:
 
             ==================  ==========
-            address             string
-            port                integer
             client_key_path     string
             client_cert_path    string
             server_cert_path    string
             ==================  ==========
-
-            The minimal config must contain address and port.
 
     Returns:
         GrpcClient object
@@ -355,26 +153,16 @@ def make_grpc_client(config):
 
     Examples:
         Create minimal GrpcClient:
-
-        >>> config = {
-        ...     "address": "localhost",
-        ...     "port": 9000
-        ... }
-        >>> client = make_grpc_client(config)
-        >>> print(client)
+        >>> client = make_grpc_client("localhost:9000")
 
         Create GrpcClient with TLS:
 
-        >>> config = {
-        ...     "address": "localhost",
-        ...     "port": 9000,
-        ...     "tls_config": {
-        ...         "client_key_path": "/opt/tls/client.key",
-        ...         "client_cert_path": "/opt/tls/client.crt",
-        ...         "server_cert_path": "/opt/tls/server.crt"
-        ...      }
+        >>> tls_config = {
+        ...     "client_key_path": "/opt/tls/client.key",
+        ...     "client_cert_path": "/opt/tls/client.crt",
+        ...     "server_cert_path": "/opt/tls/server.crt"
         ... }
-        >>> client = make_grpc_client(config)
-        >>> print(client)
+        >>> client = make_grpc_client("localhost:9000", tls_config)
     '''
-    return GrpcClient._build(config)
+
+    return GrpcClient._build(url, tls_config)

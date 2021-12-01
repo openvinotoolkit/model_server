@@ -15,37 +15,28 @@
 #
 
 import argparse
-from ovmsclient import make_grpc_metadata_request, make_grpc_client
+from ovmsclient import make_grpc_client
 
 parser = argparse.ArgumentParser(description='Get information about the status of served models over gRPC interace')
-parser.add_argument('--grpc_address', required=False, default='localhost',
-                    help='Specify url to grpc service. default:localhost')
-parser.add_argument('--grpc_port', required=False, default=9000, type=int,
-                    help='Specify port to grpc service. default: 9000')
+parser.add_argument('--service_url', required=False, default='localhost:9000',
+                    help='Specify url to grpc service. default:localhost:9000', dest='service_url')
 parser.add_argument('--model_name', default='resnet', help='Model name to query. default: resnet',
                     dest='model_name')
-parser.add_argument('--model_version', default=0, type=int,
-                    help='Model version to query. Lists all versions if omitted',
+parser.add_argument('--model_version', default=0, type=int, help='Model version to query. Lists all versions if omitted',
                     dest='model_version')
+parser.add_argument('--timeout', default=10.0, help='Request timeout. default: 10.0',
+                    dest='timeout')
 args = vars(parser.parse_args())
 
 # configuration
-address = args.get('grpc_address')   # default='localhost'
-port = args.get('grpc_port')  # default=9000
+service_url = args.get('service_url')   # default='localhost:9000'
 model_name = args.get('model_name')  # default='resnet'
 model_version = args.get('model_version')   # default=0
+timeout = args.get('timeout')   # default=10.0
 
 # creating grpc client
-config = {
-    "address": address,
-    "port": port
-}
-client = make_grpc_client(config)
+client = make_grpc_client(service_url)
 
-# creating metadata request
-request = make_grpc_metadata_request(model_name, model_version)
-
-# getting model metadata from the server
-metadata = client.get_model_metadata(request)
-metadata_dict = metadata.to_dict()
-print(metadata_dict)
+# getting model status from the server
+status = client.get_model_status(model_name, model_version, timeout)
+print(status)

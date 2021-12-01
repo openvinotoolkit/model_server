@@ -1,0 +1,54 @@
+#
+# Copyright (c) 2021 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.4
+ARG FINAL_IMAGE=registry.access.redhat.com/ubi8/ubi-minimal:8.4
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+FROM $BASE_IMAGE as base_build
+
+RUN dnf install -y unzip git && \
+    curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.18.0/protoc-3.18.0-linux-x86_64.zip && \
+    unzip protoc-3.18.0-linux-x86_64.zip -d /opt/protoc
+
+ENV PATH=$PATH:/opt/protoc/bin
+
+COPY lib /ovmsclient/lib
+
+RUN dnf install -y python38 make && \
+    cd /ovmsclient/lib && make build
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+FROM $FINAL_IMAGE as final_build
+
+ENV OVMSCLIENT_DIR="/ovmsclient"
+
+RUN microdnf install shadow-utils wget python38 && \
+    groupadd --gid 5001 ovmsclient && \
+    useradd --home-dir /home/ovmsclient --create-home --uid 5001 --gid 5001 --shell /bin/bash --skel /dev/null ovmsclient && \
+    microdnf remove shadow-utils && microdnf clean all
+
+COPY --from=base_build /ovmsclient/lib/dist/ovmsclient-0.2-py3-none-any.whl ${OVMSCLIENT_DIR}/ovmsclient-0.2-py3-none-any.whl
+COPY samples ${OVMSCLIENT_DIR}/samples
+# Remove samples that require heavy dependencies
+RUN rm ${OVMSCLIENT_DIR}/samples/vehicle_detection_predict_binary.py ${OVMSCLIENT_DIR}/samples/requirements.txt && \
+    wget https://github.com/openvinotoolkit/model_server/raw/v2021.4.1/example_client/imgs.npy -O ${OVMSCLIENT_DIR}/samples/imgs.npy
+
+RUN pip3 install ${OVMSCLIENT_DIR}/ovmsclient-0.2-py3-none-any.whl && \
+    rm  ${OVMSCLIENT_DIR}/ovmsclient-0.2-py3-none-any.whl
+
+USER ovmsclient
+WORKDIR ${OVMSCLIENT_DIR}

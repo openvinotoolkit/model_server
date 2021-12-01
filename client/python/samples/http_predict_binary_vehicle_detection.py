@@ -15,42 +15,38 @@
 #
 
 import argparse
-from ovmsclient import make_grpc_client, make_grpc_predict_request
+from ovmsclient import make_http_client
 from utils.common import load_image, read_image_paths, get_model_io_names
 from utils.vehicle_utils import vehicle_postprocess
 
 parser = argparse.ArgumentParser(description='Make vehicle detection prediction using images in binary format')
 parser.add_argument('--images_dir', required=True,
                     help='Path to a directory with images in JPG or PNG format')
-parser.add_argument('--grpc_address', required=False, default='localhost',
-                    help='Specify url to grpc service. default:localhost')
-parser.add_argument('--grpc_port', required=False, default=9000, type=int,
-                    help='Specify port to grpc service. default: 9000')
+parser.add_argument('--service_url', required=False, default='localhost:9000',
+                    help='Specify url to http service. default:localhost:9000', dest='service_url')
 parser.add_argument('--model_name', default='vehicle-detection',
                     help='Model name to query. default: vehicle-detection')
 parser.add_argument('--model_version', default=0, type=int,
                     help='Model version to query. default: latest available')
-parser.add_argument('--output_save_path', required=True,
+parser.add_argument('--output_dir', required=True,
                     help='Path to store output.')
+parser.add_argument('--timeout', default=10.0, help='Request timeout. default: 10.0',
+                    dest='timeout')
 args = vars(parser.parse_args())
 
 # configuration
 images_dir = args.get('images_dir')
-address = args.get('grpc_address')
-port = args.get('grpc_port')
+service_url = args.get('service_url')
 model_name = args.get('model_name')
 model_version = args.get('model_version')
-output_save_path = args.get('output_save_path')
+output_dir = args.get('output_dir')
+timeout = args.get('timeout')
 
 # preparing images
 img_paths = read_image_paths(images_dir)
 
-# creating grpc client
-config = {
-    "address": address,
-    "port": port
-}
-client = make_grpc_client(config)
+# creating http client
+client = make_http_client(service_url)
 
 # receiving metadata from model
 input_name, output_name = get_model_io_names(client, model_name, model_version)
@@ -61,14 +57,13 @@ for img_path in img_paths:
 
     img = load_image(img_path)
 
-    # preparing predict request
+    # preparing inputs
     inputs = {
         input_name: img
     }
-    request = make_grpc_predict_request(inputs, model_name)
 
     # sending predict request and receiving response
-    response = client.predict(request)
+    response = client.predict(inputs, model_name, model_version, timeout)
 
     # output post-processing
-    vehicle_postprocess(response, img_path, output_name, output_save_path)
+    vehicle_postprocess(response, img_path, output_name, output_dir)

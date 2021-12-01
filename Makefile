@@ -336,9 +336,9 @@ test_functional: venv
 # This fact is used in test_client_lib, where make build runs in .venv Python 3 environment
 test_client_lib:
 	@cd client/python/lib && \
-		make style && \
-		. .venv/bin/activate; make build && \
-		make test && \
+		make style || exit 1 && \
+		. .venv/bin/activate; make build || exit 1 && \
+		make test || exit 1 && \
 		make clean
 
 tools_get_deps:

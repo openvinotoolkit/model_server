@@ -13,21 +13,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-import numpy as np
-from imagenet_classes import imagenet_classes
-
-
-def resnet_postprocess(response, output_name):
-    if isinstance(response, dict):
-        output = response[output_name]
-    else:
-        output = response
-    
-    predicted_class = np.argmax(output[0])
-    offset = 0
-    if output.shape[1] == 1001:
-        offset = 1
-    confidence_score = output[0][predicted_class]
-    label = imagenet_classes[predicted_class-offset]
-    return label, confidence_score
