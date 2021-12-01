@@ -78,7 +78,7 @@ ov::runtime::Tensor makeBlob_2(const tensorflow::TensorProto& requestInput,
     for (size_t i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
         shape.push_back(requestInput.tensor_shape().dim(i).size());
     }
-    ov::element::Type precision = TensorInfo::getPrecisionFromDataType(requestInput.dtype());
+    ov::element::Type precision = tensorInfo->getOvPrecision();
     return ov::runtime::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.tensor_content().data())));
 }
 

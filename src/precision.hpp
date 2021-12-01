@@ -16,6 +16,7 @@
 #pragma once
 
 #include <map>  // TODO remove
+#include <string>
 #include <unordered_map>
 
 #include <inference_engine.hpp>
@@ -47,6 +48,36 @@ enum class Precision {
     Q78,
     BIN
 };
+
+inline static std::string toString(Precision precision) {
+    static std::unordered_map<Precision, const char*> precisionMap{
+        {Precision::BF16, "BF16"},
+        {Precision::FP64, "FP64"},
+        {Precision::FP32, "FP32"},
+        {Precision::FP16, "FP16"},
+        {Precision::I64, "I64"},
+        {Precision::I32, "I32"},
+        {Precision::I16, "I16"},
+        {Precision::I8, "I8"},
+        {Precision::I4, "I4"},
+        {Precision::U64, "U64"},
+        {Precision::U32, "U32"},
+        {Precision::U16, "U16"},
+        {Precision::U8, "U8"},
+        {Precision::U4, "U4"},
+        {Precision::U1, "U1"},
+        {Precision::MIXED, "MIXED"},
+        {Precision::Q78, "Q78"},
+        {Precision::BIN, "BIN"},
+        {Precision::BOOL, "BOOL"},
+        {Precision::UNDEFINED, "UNDEFINED"},
+        {Precision::CUSTOM, "CUSTOM"}};
+    auto it = precisionMap.find(precision);
+    if (it == precisionMap.end()) {
+        return "DT_INVALID";  // TODO other way? why translate it to TF equivalent maybe UNDEFINED?
+    }
+    return it->second;
+}
 
 inline static InferenceEngine::Precision ovmsPrecisionToIE1Precision(Precision precision) {
     static std::unordered_map<Precision, InferenceEngine::Precision> precisionMap{

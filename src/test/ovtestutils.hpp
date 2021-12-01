@@ -103,3 +103,19 @@ private:
     std::shared_ptr<IAllocator> _allocator;
     char* to;
 };
+
+class MockBlob_2 : public ov::runtime::Tensor {
+public:
+    MockBlob_2(const std::shared_ptr<ovms::TensorInfo>& info) :
+        ov::runtime::Tensor(info->getOvPrecision(), info->getShape_2()) {
+        to = const_cast<char*>("12345678");
+    }
+
+    // TODO: Those are not virtual methods, therefore mocks do not work.
+    MOCK_METHOD(ov::Shape, get_shape, (), (const));
+    MOCK_METHOD(size_t, get_byte_size, (), (const));
+    MOCK_METHOD(ov::element::Type, get_element_type, (), (const));
+
+private:
+    char* to;
+};

@@ -165,6 +165,7 @@ public:
          * @return const InferenceEngine::Precision
          */
     void setPrecision(const InferenceEngine::Precision& requestedPrecision);
+    void setPrecision(const ovms::Precision& requestedPrecision);
 
     /**
          * @brief Set the Layout object
@@ -182,7 +183,6 @@ public:
 
     static tensorflow::DataType getPrecisionAsDataType(InferenceEngine::Precision precision);
     static tensorflow::DataType getPrecisionAsDataType(Precision precision);
-    static ov::element::Type getPrecisionFromDataType(tensorflow::DataType dataType);
     ov::element::Type getOvPrecision() const;
 
     /**
