@@ -2,19 +2,19 @@
 
 ### Running OpenVINO&trade; Model Server with AI Accelerators NCS, HDDL and GPU <a name="ai"></a>
 
-<details><summary>Using an Intel® Movidius™ Neural Compute Stick</summary>
+<details><summary>Using an Intel Movidius Neural Compute Stick</summary>
 
-#### Prepare to use an Intel® Movidius™ Neural Compute Stick
+#### Prepare to use an Intel Movidius Neural Compute Stick
 
-[Intel® Movidius™ Neural Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick) can be employed by OVMS via a [MYRIAD
+[Intel® Movidius Neural Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick) can be employed by OVMS via a [MYRIAD
 plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_MYRIAD.html). 
 
-The Intel® Movidius™ Neural Compute Stick must be visible and accessible on host machine. 
+The Intel Movidius Neural Compute Stick must be visible and accessible on host machine. 
 
 NCS devices should be reported by `lsusb` command, which should print out `ID 03e7:2485`.<br>
 
 
-#### Start the server with an Intel® Movidius™ Neural Compute Stick
+#### Start the server with an Intel Movidius Neural Compute Stick
 
 To start server with Neural Compute Stick using one of the options below:
 1) More secure without docker privileged mode and mounting only the usb devices:
@@ -61,7 +61,7 @@ the `docker run` command.
 <details><summary>Starting docker container with GPU</summary>
 
 The [GPU plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_GPU.html) uses the Intel® Compute Library for Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. 
-It employs for inference execution Intel® Processor Graphics including Intel® HD Graphics and Intel® Iris® Graphics.
+It employs for inference execution Intel Processor Graphics including Intel® HD Graphics and Intel Iris Graphics.
 
 Before using GPU as OVMS target device, you need to install the required drivers. Refer to [OpenVINO installation steps](https://docs.openvinotoolkit.org/2021.4/openvino_docs_install_guides_installing_openvino_linux.html).
 Next, start the docker container with additional parameter --device /dev/dri to pass the device context and set OVMS parameter --target_device GPU. 
@@ -96,11 +96,11 @@ If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you 
 With Multi-Device Plugin enabled, inference requests will be load balanced between multiple devices. 
 For more detailed information read [OpenVino's Multi-Device plugin documentation](https://docs.openvinotoolkit.org/2021.4/_docs_IE_DG_supported_plugins_MULTI.html).
 
-In order to use this feature in OpenVino™ Model Server, following steps are required:
+In order to use this feature in OpenVino Model Server, following steps are required:
 
 Set target_device for the model in configuration json file to MULTI:<DEVICE_1>,<DEVICE_2> (e.g. MULTI:MYRIAD,CPU, order of the devices defines their priority, so MYRIAD devices will be used first in this example)
 
-Below is exemplary config.json setting up Multi-Device Plugin for resnet model, using Intel® Movidius™ Neural Compute Stick and CPU devices:
+Below is exemplary config.json setting up Multi-Device Plugin for resnet model, using Intel® Movidius Neural Compute Stick and CPU devices:
 
 ```json
 {"model_config_list": [
@@ -112,18 +112,18 @@ Below is exemplary config.json setting up Multi-Device Plugin for resnet model, 
    }]
 }
 ```
-Starting OpenVINO™ Model Server with config.json (placed in ./models/config.json path) defined as above, and with grpc_workers parameter set to match nireq field in config.json:
+Starting OpenVINO Model Server with config.json (placed in ./models/config.json path) defined as above, and with grpc_workers parameter set to match nireq field in config.json:
 ```
 docker run -d --net=host -u root --privileged --rm -v $(pwd)/models/:/opt/ml:ro -v /dev:/dev -p 9001:9001 \
 openvino/model_server:latest --config_path /opt/ml/config.json --port 9001 
 ```
-Or alternatively, when you are using just a single model, start OpenVINO™ Model Server using this command (config.json is not needed in this case):
+Or alternatively, when you are using just a single model, start OpenVINO Model Server using this command (config.json is not needed in this case):
 ```
 docker run -d --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/models/:/opt/ml:ro -v \
  /dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/ml/resnet --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
  ```
-After these steps, deployed model will perform inference on both Intel® Movidius™ Neural Compute Stick and CPU.
-Total throughput will be roughly equal to sum of CPU and Intel® Movidius™ Neural Compute Stick throughput.
+After these steps, deployed model will perform inference on both Intel Movidius Neural Compute Stick and CPU.
+Total throughput will be roughly equal to sum of CPU and Intel® Movidius Neural Compute Stick throughput.
 
 </details>
 
