@@ -47,9 +47,9 @@ public:
         const auto sessionKey = sessionMetadata.getSessionKey();
         InferenceEngine::Blob::Ptr secondOutput;
         EXPECT_EQ(blobClone(secondOutput, intermediateResultBlob), StatusCode::OK);
-        BlobMap blobs{{mockerDemutliplexerNodeOutputName, intermediateResultBlob},
+        TensorMap blobs{{mockerDemutliplexerNodeOutputName, intermediateResultBlob},
             {mockerDemutliplexerNodeOutputName2, secondOutput}};
-        std::pair<NodeSessionMetadata, BlobMap> metaBlobsPair{sessionMetadata, std::move(blobs)};
+        std::pair<NodeSessionMetadata, TensorMap> metaBlobsPair{sessionMetadata, std::move(blobs)};
         nodeSessionOutputs.emplace(sessionKey, std::move(metaBlobsPair));
         return StatusCode::OK;
     }

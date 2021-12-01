@@ -25,11 +25,11 @@
 #include <inference_engine.hpp>
 
 #include "aliases.hpp"
-#include "blobmap.hpp"
 #include "nodesession.hpp"
 #include "nodesessionresult.hpp"
 #include "pipelineeventqueue.hpp"
 #include "status.hpp"
+#include "tensormap.hpp"
 
 namespace ovms {
 
@@ -68,7 +68,7 @@ protected:
     virtual Status createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, const InferenceEngine::TensorDesc& dividedBlobDesc, InferenceEngine::Blob::Ptr blob, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName);
 
 public:
-    Status setInputs(const Node& dependency, BlobMap& inputs, NodeSessionMetadata& metadata);
+    Status setInputs(const Node& dependency, TensorMap& inputs, NodeSessionMetadata& metadata);
     Status setInputs(const Node& dependency, SessionResults& inputs);
 
     virtual void addDependency(Node& node, const Aliases& blobNamesMapping) {

@@ -58,7 +58,7 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
     return status;
 }
 
-Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey) {
+Status DLNode::fetchResults(TensorMap& outputs, InferenceEngine::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey) {
     ReleaseSessionGuard releaseSessionGuard(this->getNodeSession(sessionKey));
     // Wait for blob results
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Waiting for infer request to finish", getName(), sessionKey);

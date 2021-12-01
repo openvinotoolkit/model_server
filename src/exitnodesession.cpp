@@ -30,7 +30,7 @@ ExitNodeSession::~ExitNodeSession() = default;
 
 void ExitNodeSession::release() {}
 
-const BlobMap& ExitNodeSession::getInputBlobs() const {
+const TensorMap& ExitNodeSession::getInputBlobs() const {
     return this->inputHandler->getInputs();
 }
 }  // namespace ovms

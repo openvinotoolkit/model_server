@@ -22,13 +22,13 @@
 
 #include <openvino/openvino.hpp>
 
-#include "blobmap.hpp"
 #include "session_id.hpp"
 #include "status.hpp"
+#include "tensormap.hpp"
 
 namespace ovms {
 
-using TensorMap = std::unordered_map<std::string, std::shared_ptr<ov::runtime::Tensor>>;  // TODO rename to TensorMap
+using TensorMap = std::unordered_map<std::string, std::shared_ptr<ov::runtime::Tensor>>;
 
 class NodeInputHandler {
 protected:

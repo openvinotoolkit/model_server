@@ -19,10 +19,10 @@
 
 #include <inference_engine.hpp>
 
-#include "blobmap.hpp"
 #include "nodesession.hpp"
 #include "nodesessionmetadata.hpp"
 #include "status.hpp"
+#include "tensormap.hpp"
 
 namespace ovms {
 
@@ -35,7 +35,7 @@ public:
     ExitNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
     virtual ~ExitNodeSession();
 
-    const BlobMap& getInputBlobs() const;
+    const TensorMap& getInputBlobs() const;
     void release() override;
 };
 }  // namespace ovms
