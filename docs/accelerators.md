@@ -6,7 +6,7 @@
 
 #### Prepare to use an Intel Movidius Neural Compute Stick
 
-[Intel® Movidius Neural Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick) can be employed by OVMS via a [MYRIAD
+[Intel Movidius Neural Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick) can be employed by OVMS via a [MYRIAD
 plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_MYRIAD.html). 
 
 The Intel Movidius Neural Compute Stick must be visible and accessible on host machine. 
@@ -60,8 +60,8 @@ the `docker run` command.
 
 <details><summary>Starting docker container with GPU</summary>
 
-The [GPU plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_GPU.html) uses the Intel® Compute Library for Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. 
-It employs for inference execution Intel Processor Graphics including Intel® HD Graphics and Intel Iris Graphics.
+The [GPU plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_GPU.html) uses the Intel Compute Library for Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. 
+It employs for inference execution Intel Processor Graphics including Intel HD Graphics and Intel Iris Graphics.
 
 Before using GPU as OVMS target device, you need to install the required drivers. Refer to [OpenVINO installation steps](https://docs.openvinotoolkit.org/2021.4/openvino_docs_install_guides_installing_openvino_linux.html).
 Next, start the docker container with additional parameter --device /dev/dri to pass the device context and set OVMS parameter --target_device GPU. 
@@ -100,7 +100,7 @@ In order to use this feature in OpenVino Model Server, following steps are requi
 
 Set target_device for the model in configuration json file to MULTI:<DEVICE_1>,<DEVICE_2> (e.g. MULTI:MYRIAD,CPU, order of the devices defines their priority, so MYRIAD devices will be used first in this example)
 
-Below is exemplary config.json setting up Multi-Device Plugin for resnet model, using Intel® Movidius Neural Compute Stick and CPU devices:
+Below is exemplary config.json setting up Multi-Device Plugin for resnet model, using Intel Movidius Neural Compute Stick and CPU devices:
 
 ```json
 {"model_config_list": [
@@ -123,7 +123,7 @@ docker run -d --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/m
  /dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/ml/resnet --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
  ```
 After these steps, deployed model will perform inference on both Intel Movidius Neural Compute Stick and CPU.
-Total throughput will be roughly equal to sum of CPU and Intel® Movidius Neural Compute Stick throughput.
+Total throughput will be roughly equal to sum of CPU and Intel Movidius Neural Compute Stick throughput.
 
 </details>
 
