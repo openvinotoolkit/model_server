@@ -459,7 +459,7 @@ TEST_F(TestPredict, SuccesfullReloadForMultipleThreadsDifferentBS) {
 }
 
 // TODO: Enable once Layout Change becomes available using OV 2.0.
-TEST_F(TestPredict, DISABLED_SuccesfullReshapeViaRequestOnDummyModel) {
+TEST_F(TestPredict, LAYOUT_2_0_SuccesfullReshapeViaRequestOnDummyModel) {
     // Prepare model manager with dynamic shaped dummy model, originally loaded with 1x10 shape
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("0");
@@ -501,7 +501,7 @@ TEST_F(TestPredict, DISABLED_SuccesfullReshapeViaRequestOnDummyModel) {
  * 7. Do the inference with (1,12) shape - expect status OK and result (1,12)
  */
 // TODO: Enable once Layout Change becomes available using OV 2.0.
-TEST_F(TestPredict, DISABLED_ReshapeViaRequestAndConfigChange) {
+TEST_F(TestPredict, LAYOUT_2_0_ReshapeViaRequestAndConfigChange) {
     using namespace ovms;
 
     // Prepare model with shape=auto (initially (1,10) shape)
@@ -550,7 +550,7 @@ TEST_F(TestPredict, DISABLED_ReshapeViaRequestAndConfigChange) {
  * 7. Do the inference with (3,10) shape - expect status OK and result (3,10)
  */
 // TODO: Enable once Layout Change becomes available using OV 2.0.
-TEST_F(TestPredict, DISABLED_ChangeBatchSizeViaRequestAndConfigChange) {
+TEST_F(TestPredict, LAYOUT_2_0_ChangeBatchSizeViaRequestAndConfigChange) {
     using namespace ovms;
 
     // Prepare model with shape=auto (initially (1,10) shape)
@@ -598,7 +598,7 @@ TEST_F(TestPredict, DISABLED_ChangeBatchSizeViaRequestAndConfigChange) {
  * 9. Do the inference with (1,4,5,3) shape - expect INVALID_SHAPE
  */
 // TODO: Enable once Layout Change becomes available using OV 2.0.
-TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelInputLayout) {
+TEST_F(TestPredict, LAYOUT_2_0_PerformInferenceChangeModelInputLayout) {
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -654,7 +654,7 @@ TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelInputLayout) {
  * 6. Do the inference with (1,3,4,5) shape - expect status OK and result in NCHW layout
  */
 // TODO: Enable once Layout Change becomes available using OV 2.0.
-TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelOutputLayout) {
+TEST_F(TestPredict, LAYOUT_2_0_PerformInferenceChangeModelOutputLayout) {
     using namespace ovms;
 
     // Prepare model with changed output layout to nhwc (internal layout=nchw)
@@ -713,7 +713,7 @@ TEST_F(TestPredict, NetworkNotLoadedWhenLayoutAndDimsInconsistent) {
  * 6. Do the inference with single binary image tensor - expect status OK and result in NCHW layout
  */
 // TODO: Enable once Layout Change becomes available using OV 2.0.
-TEST_F(TestPredict, DISABLED_PerformInferenceWithBinaryInputChangeModelInputLayout) {
+TEST_F(TestPredict, LAYOUT_2_0_PerformInferenceWithBinaryInputChangeModelInputLayout) {
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -754,7 +754,7 @@ TEST_F(TestPredict, DISABLED_PerformInferenceWithBinaryInputChangeModelInputLayo
  * 2. Do the inference with batch=5 binary image tensor - expect status OK and result in NCHW layout
  */
 // TODO: Enable once Layout Change becomes available using OV 2.0.
-TEST_F(TestPredict, DISABLED_PerformInferenceWithBinaryInputBatchSizeAuto) {
+TEST_F(TestPredict, LAYOUT_2_0_PerformInferenceWithBinaryInputBatchSizeAuto) {
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)

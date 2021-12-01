@@ -97,6 +97,18 @@ TensorInfo::TensorInfo(const std::string& name,
 }
 TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
+    const ovms::Precision& precision,
+    const shape_t& shape,
+    const InferenceEngine::Layout& layout) :
+    name(name),
+    mapping(mapping),
+    precision_2(precision),
+    shape(shape),
+    layout(layout) {
+    this->updateEffectiveShape();
+}
+TensorInfo::TensorInfo(const std::string& name,
+    const std::string& mapping,
     const Precision& precision,
     const shape_t& shape) :
     name(name),

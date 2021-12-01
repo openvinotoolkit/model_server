@@ -63,6 +63,23 @@ void ModelInstance::unsubscribe(PipelineDefinition& pd) {
     subscriptionManager.unsubscribe(pd);
 }
 
+shape_t getRequestedShape(const ModelConfig& config, const DynamicModelParameter& parameter, const std::string& name) {
+    shape_t shape;
+    auto mappedName = config.getMappingInputByKey(name);
+    if (config.getBatchSize() > 0 || parameter.isBatchSizeRequested()) {
+        // leave shape untouched
+    } else if (config.isShapeAuto(name) && parameter.isShapeRequested(name)) {
+        shape = parameter.getShape(name);
+    } else if (mappedName == "" && config.getShapes().count(name) && config.getShapes().at(name).shape.size()) {
+        shape = config.getShapes().at(name).shape;
+    } else if (config.getShapes().count(mappedName) && config.getShapes().at(mappedName).shape.size()) {
+        shape = config.getShapes().at(mappedName).shape;
+    } else if (config.getShapes().count(ANONYMOUS_INPUT_NAME) && config.getShapes().at(ANONYMOUS_INPUT_NAME).shape.size()) {
+        shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
+    }
+    return shape;
+}
+
 Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
     if (config.isShapeAnonymousFixed() && network->getInputsInfo().size() > 1) {
         Status status = StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED;
@@ -74,12 +91,8 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         SPDLOG_WARN(status.string());
         return status;
     }
-    // TODO handling network shapes vs network inputs to be done later
-    auto networkShapes = network->getInputShapes();
-    std::map<std::string, ov::PartialShape> networkShapes_2;
 
     const auto& networkInputs = network->getInputsInfo();
-    bool reshapeRequired = false;
     for (const auto& [name, _] : config.getShapes()) {
         if (name == ANONYMOUS_INPUT_NAME) {
             continue;
@@ -107,57 +120,52 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
 
     this->inputsInfo.clear();
 
-    for (const auto& pair : networkInputs) {
-        const auto& name = pair.first;
-        auto input = pair.second;
-        auto shape = input->getTensorDesc().getDims();
-        auto mappedName = config.getMappingInputByKey(name);
-        if (config.getBatchSize() > 0 || parameter.isBatchSizeRequested()) {
-            // leave shape untouched
-        } else if (config.isShapeAuto(name) && parameter.isShapeRequested(name)) {
-            shape = parameter.getShape(name);
-        } else if (mappedName == "" && config.getShapes().count(name) && config.getShapes().at(name).shape.size()) {
-            shape = config.getShapes().at(name).shape;
-        } else if (config.getShapes().count(mappedName) && config.getShapes().at(mappedName).shape.size()) {
-            shape = config.getShapes().at(mappedName).shape;
-        } else if (config.getShapes().count(ANONYMOUS_INPUT_NAME) && config.getShapes().at(ANONYMOUS_INPUT_NAME).shape.size()) {
-            shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
-        }
+    // TODO handling network shapes vs network inputs to be done later
+    auto networkShapes = network->getInputShapes();
+    std::map<std::string, ov::PartialShape> networkShapes_2;
+    bool reshapeRequired = false;
 
-        SPDLOG_DEBUG("Network shape for input: {} - {}; final shape {}", name,
-            TensorInfo::shapeToString(networkShapes[name]),
-            TensorInfo::shapeToString(shape));
-
-        if (networkShapes[name] != shape) {
-            reshapeRequired = true;
-            networkShapes[name] = shape;
-        }
-
+    // First pass, gather reshape info.
+    for (const ov::Output<ov::Node>& input : this->network_2->inputs()) {
+        std::string name;
         try {
-            ov::Output<ov::Node> input_2 = network_2->input(name);
-            ov::PartialShape ov2NetworkShape = input_2.get_partial_shape();
-            if (ov2NetworkShape != (ov::Shape)shape) {
-                networkShapes_2[name] = (ov::Shape)shape;
-            } else {
-                networkShapes_2[name] = ov2NetworkShape;
+            std::string name = input.get_any_name();
+            ov::Shape shape = input.get_shape();
+
+            shape_t requestedShape = getRequestedShape(config, parameter, name);
+            if (requestedShape.size() > 0)
+                shape = requestedShape;
+
+            networkShapes_2[name] = shape;
+            if (input.get_shape() != shape) {
+                reshapeRequired = true;
             }
+
         } catch (const ov::Exception& e) {
-            SPDLOG_ERROR("Missing input {} in OV 2.0 network: {}", name, e.what());
-            return StatusCode::INVALID_MISSING_INPUT;
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+                getName(),
+                getVersion(),
+                e.what());
+            return StatusCode::UNKNOWN_ERROR;
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+                getName(),
+                getVersion(),
+                e.what());
+            return StatusCode::UNKNOWN_ERROR;
+        } catch (...) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO",
+                getName(),
+                getVersion());
+            return StatusCode::UNKNOWN_ERROR;
         }
     }
 
-    // Update OV model shapes
     if (reshapeRequired) {
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs", getName(), getVersion());
         try {
-            SPDLOG_INFO("Initial network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
-            network->reshape(networkShapes);
+            //SPDLOG_INFO("Initial network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
             network_2->reshape(networkShapes_2);
-        } catch (const InferenceEngine::Exception& e) {
-            SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
-            SPDLOG_DEBUG("Description: {}", e.what());
-            return StatusCode::RESHAPE_ERROR;
         } catch (const ov::Exception& e2) {
             SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
             SPDLOG_DEBUG("Description: {}", e2.what());
@@ -165,6 +173,81 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         }
     } else {
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
+    }
+
+    // Iterating over V1.0 to 
+    // for (const auto& pair : networkInputs) {
+    //     const auto& name = pair.first;
+    //     auto input = pair.second;
+    //     auto shape = input->getTensorDesc().getDims();
+    //     auto mappedName = config.getMappingInputByKey(name);
+    //     if (config.getBatchSize() > 0 || parameter.isBatchSizeRequested()) {
+    //         // leave shape untouched
+    //     } else if (config.isShapeAuto(name) && parameter.isShapeRequested(name)) {
+    //         shape = parameter.getShape(name);
+    //     } else if (mappedName == "" && config.getShapes().count(name) && config.getShapes().at(name).shape.size()) {
+    //         shape = config.getShapes().at(name).shape;
+    //     } else if (config.getShapes().count(mappedName) && config.getShapes().at(mappedName).shape.size()) {
+    //         shape = config.getShapes().at(mappedName).shape;
+    //     } else if (config.getShapes().count(ANONYMOUS_INPUT_NAME) && config.getShapes().at(ANONYMOUS_INPUT_NAME).shape.size()) {
+    //         shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
+    //     }
+
+    //     SPDLOG_DEBUG("Network shape for input: {} - {}; final shape {}", name,
+    //         TensorInfo::shapeToString(networkShapes[name]),
+    //         TensorInfo::shapeToString(shape));
+
+    //     if (networkShapes[name] != shape) {
+    //         reshapeRequired = true;
+    //         networkShapes[name] = shape;
+    //     }
+
+    //     try {
+    //         ov::Output<ov::Node> input_2 = network_2->input(name);
+    //         ov::PartialShape ov2NetworkShape = input_2.get_partial_shape();
+    //         if (ov2NetworkShape != (ov::Shape)shape) {
+    //             networkShapes_2[name] = (ov::Shape)shape;
+    //         } else {
+    //             networkShapes_2[name] = ov2NetworkShape;
+    //         }
+    //     } catch (const ov::Exception& e) {
+    //         SPDLOG_ERROR("Missing input {} in OV 2.0 network: {}", name, e.what());
+    //         return StatusCode::INVALID_MISSING_INPUT;
+    //     }
+    // }
+
+    // // Update OV model shapes
+    // if (reshapeRequired) {
+    //     SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs", getName(), getVersion());
+    //     try {
+    //         SPDLOG_INFO("Initial network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
+    //         network->reshape(networkShapes);
+    //         network_2->reshape(networkShapes_2);
+    //     } catch (const InferenceEngine::Exception& e) {
+    //         SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
+    //         SPDLOG_DEBUG("Description: {}", e.what());
+    //         return StatusCode::RESHAPE_ERROR;
+    //     } catch (const ov::Exception& e2) {
+    //         SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
+    //         SPDLOG_DEBUG("Description: {}", e2.what());
+    //         return StatusCode::RESHAPE_ERROR;
+    //     }
+    // } else {
+    //     SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
+    // }
+
+    if (!config.getLayout().empty()) {
+        ov::preprocess::PrePostProcessor preproc(this->network_2);
+
+        std::string fromLayout = config.getLayout();
+        std::string toLayout = fromLayout == "NCHW" ? "NHWC" : "NCHW";
+        SPDLOG_INFO("------- Adding preprocessing step: {}; from:{}; to:{}", config.getLayout(), fromLayout, toLayout);
+
+        preproc.input().tensor().set_layout(ov::Layout(fromLayout));
+        preproc.input().network().set_layout(ov::Layout(toLayout));
+        this->network_2 = preproc.build();
+    } else if (config.getLayouts().size() > 0) {
+        // TODO
     }
 
     for (const auto& pair : networkInputs) {
@@ -229,20 +312,32 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         }
         input->setLayout(layout);
         */
+        InferenceEngine::Layout layout = InferenceEngine::Layout::ANY;
+        if (!config.getLayout().empty()) {
+            layout = TensorInfo::getLayoutFromString(config.getLayout());
+        } else if (config.getLayouts().size() > 0) {
+            auto mappedName = config.getMappingInputByKey(name);
+            auto it = config.getLayouts().find(mappedName == "" ? name : mappedName);
+            if (it != config.getLayouts().end()) {
+                layout = TensorInfo::getLayoutFromString(it->second);
+            }
+        }
+
+
         auto OVshape = input.get_shape();
         shape_t shape(OVshape.begin(), OVshape.end());
         auto mappingName = config.getMappingInputByKey(name);
-        auto tensorInfo = std::make_shared<TensorInfo>(name, mappingName, precision, shape);
+        auto tensorInfo = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
         std::string precision_str = tensorInfo->getPrecisionAsString();
         this->inputsInfo[tensorInfo->getMappedName()] = std::move(tensorInfo);
         std::stringstream shape_stream;
         std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Input name: {}; mapping name: {}; shape: {}; effective shape; precision: {}; layout: ",
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Input name: {}; mapping name: {}; shape: {}; effective shape; precision: {}; layout: {}",
             name, mappingName,
             shape_stream.str(),
             // effective_shape_stream.str()
-            precision_str);
-        //           TensorInfo::getStringFromLayout(input->getLayout()));
+            precision_str,
+            TensorInfo::getStringFromLayout(layout));
     }
     SPDLOG_INFO("Final network inputs_V1: {}", getNetworkInputsInfoString(networkInputs, config));
     return StatusCode::OK;
@@ -980,10 +1075,10 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     InputSink_2<ov::runtime::InferRequest&> inputSink_2(inferRequest_2);
     (void)inputSink_2;
     bool isPipeline = false;
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
+    //status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
     timer.stop("deserialize");
-    if (!status.ok())
-        return status;
+    //if (!status.ok())
+    //    return status;
     status = deserializePredictRequest_2<ConcreteTensorProtoDeserializator_2>(*requestProto, getInputsInfo(), inputSink_2, isPipeline);
     if (!status.ok())
         return status;
@@ -991,7 +1086,7 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
 
     timer.start("prediction");
-    status = performInference(inferRequest);
+    //status = performInference(inferRequest);
     timer.stop("prediction");
     if (!status.ok())
         return status;
@@ -1001,9 +1096,9 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
 
-    status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
+    //status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
 
-    responseProto->Clear();
+    //responseProto->Clear();
     timer.start("serialize");
     status = serializePredictResponse_2(inferRequest_2, getOutputsInfo(), responseProto);
     timer.stop("serialize");
