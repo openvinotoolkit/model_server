@@ -211,74 +211,53 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     sequenceManagerLock.unlock();
 
     timer.start("get infer request");
-    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
     ExecutingStreamIdGuard_2 executingStreamIdGuard_2(getInferRequestsQueue_2());
-    int executingInferId = executingStreamIdGuard.getId();
     int executingInferId_2 = executingStreamIdGuard_2.getId();
     (void)executingInferId_2;
-    InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     ov::runtime::InferRequest& inferRequest_2 = executingStreamIdGuard_2.getInferRequest();
     timer.stop("get infer request");
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("get infer request") / 1000);
 
     timer.start("preprocess");
-    status = preInferenceProcessing(inferRequest, sequence, sequenceProcessingSpec);
-    if (!status.ok())
-        return status;
     status = preInferenceProcessing_2(inferRequest_2, sequence, sequenceProcessingSpec);
     timer.stop("preprocess");
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Preprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("preprocess") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("preprocess") / 1000);
 
     timer.start("deserialize");
-    InputSink<InferRequest&> inputSink(inferRequest);
     InputSink_2<ov::runtime::InferRequest&> inputSink_2(inferRequest_2);
     (void)inputSink_2;
     bool isPipeline = false;
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
+    status = deserializePredictRequest_2<ConcreteTensorProtoDeserializator_2>(*requestProto, getInputsInfo(), inputSink_2, isPipeline);
     timer.stop("deserialize");
     if (!status.ok())
         return status;
-    status = deserializePredictRequest_2<ConcreteTensorProtoDeserializator_2>(*requestProto, getInputsInfo(), inputSink_2, isPipeline);
-    if (!status.ok())
-        return status;
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("deserialize") / 1000);
 
-    timer.start("prediction");
-    status = performInference(inferRequest);
     timer.stop("prediction");
-    if (!status.ok())
-        return status;
     status = performInference_2(inferRequest_2);
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("prediction") / 1000);
 
-    status = serializePredictResponse_2(inferRequest_2, getOutputsInfo(), responseProto);
-
-    responseProto->Clear();
-    timer.start("serialize");
-    status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
     timer.stop("serialize");
+    status = serializePredictResponse_2(inferRequest_2, getOutputsInfo(), responseProto);
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("serialize") / 1000);
 
     timer.start("postprocess");
     status = postInferenceProcessing_2(responseProto, inferRequest_2, sequence, sequenceProcessingSpec);
-    responseProto->Clear();
-    status = postInferenceProcessing(responseProto, inferRequest, sequence, sequenceProcessingSpec);
-    timer.stop("postprocess");
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Postprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("postprocess") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("postprocess") / 1000);
 
     sequenceLock.unlock();
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
