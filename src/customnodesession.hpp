@@ -18,11 +18,11 @@
 #include <memory>
 #include <string>
 
-#include "blobmap.hpp"
 #include "custom_node_interface.h"  // NOLINT
 #include "nodesession.hpp"
 #include "pipelineeventqueue.hpp"
 #include "status.hpp"
+#include "tensormap.hpp"
 
 namespace ovms {
 
@@ -31,7 +31,7 @@ class Node;
 class NodeLibrary;
 
 class CustomNodeSession : public NodeSession {
-    BlobMap resultBlobs;
+    TensorMap resultBlobs;
 
 public:
     CustomNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);

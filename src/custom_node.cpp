@@ -65,7 +65,7 @@ Status CustomNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSe
         nodeSession.getSessionKey());
 }
 
-Status CustomNode::fetchResults(BlobMap& outputs, session_key_t sessionKey) {
+Status CustomNode::fetchResults(TensorMap& outputs, session_key_t sessionKey) {
     auto& session = static_cast<CustomNodeSession&>(this->getNodeSession(sessionKey));
     session.clearInputs();
 

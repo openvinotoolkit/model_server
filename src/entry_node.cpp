@@ -50,7 +50,7 @@ Status EntryNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEnd
 }
 
 Status EntryNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
-    BlobMap outputs;
+    TensorMap outputs;
     auto status = fetchResults(outputs);
     if (!status.ok()) {
         return status;
@@ -64,18 +64,18 @@ Status EntryNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSes
     return StatusCode::OK;
 }
 
-Status EntryNode::fetchResults(BlobMap& outputs) {
+Status EntryNode::fetchResults(TensorMap& outputs) {
     auto status = validate();
     if (!status.ok()) {
         return status;
     }
-    InputSink<BlobMap&> inputSink(outputs);
+    InputSink<TensorMap&> inputSink(outputs);
     bool isPipeline = true;
     return deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, inputsInfo, inputSink, isPipeline);
 }
 
 template <>
-Status InputSink<BlobMap&>::give(const std::string& name, InferenceEngine::Blob::Ptr blob) {
+Status InputSink<TensorMap&>::give(const std::string& name, InferenceEngine::Blob::Ptr blob) {
     requester[name] = blob;
     return StatusCode::OK;
 }

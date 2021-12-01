@@ -91,7 +91,7 @@ Status Node::setInputs(const Node& dependency, SessionResults& sessionResults) {
     return StatusCode::OK;
 }
 
-Status Node::setInputs(const Node& dependency, BlobMap& inputs, NodeSessionMetadata& metadata) {
+Status Node::setInputs(const Node& dependency, TensorMap& inputs, NodeSessionMetadata& metadata) {
     // mapping for dependency - keeps mapping between dependency output name and this node input name
     const auto& mapping_for_dependency = this->getMappingByDependency(dependency);
     NodeSession* nodeSession = getNodeSession(metadata);
@@ -250,7 +250,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
             auto it = nodeSessionOutputs.find(newSessionMetadatas[i].getSessionKey());
             if (it == nodeSessionOutputs.end()) {
-                nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], BlobMap{{blobName, dividedBlob}}});
+                nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], TensorMap{{blobName, dividedBlob}}});
             } else {
                 it->second.second.emplace(blobName, dividedBlob);
             }
