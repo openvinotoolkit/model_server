@@ -618,6 +618,7 @@ TEST_F(TestPredict, LAYOUT_2_0_PerformInferenceChangeModelInputLayout) {
     // Perform inference with NCHW layout, ensure error
     ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::INVALID_SHAPE);
 
+    // TODO: Functionality gap. How to remove preprocessing (transposition?)
     // Reload model with layout setting removed
     ASSERT_EQ(config.parseLayoutParameter(""), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);

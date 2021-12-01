@@ -333,12 +333,14 @@ void TensorInfo::setLayout(InferenceEngine::Layout layout) {
 }
 
 void TensorInfo::updateEffectiveShape() {
-    this->effectiveShape = this->getTensorDesc().getBlockingDesc().getBlockDims();
-    if (effectiveShape.size() == 0) {
-        this->shape_2 = this->shape;
-    } else {
-        this->shape_2 = effectiveShape;
-    }
+    // TODO: Get rid of this.
+
+    // this->effectiveShape = this->getTensorDesc().getBlockingDesc().getBlockDims();
+    // if (effectiveShape.size() == 0) {
+    //     this->shape_2 = this->shape;
+    // } else {
+    //     this->shape_2 = effectiveShape;
+    // }
 }
 
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const shape_t& shape) const {

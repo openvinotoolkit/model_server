@@ -80,7 +80,7 @@ shape_t getRequestedShape(const ModelConfig& config, const DynamicModelParameter
     return shape;
 }
 
-Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
+Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::unique_ptr<InferenceEngine::CNNNetwork>& network) {
     if (config.isShapeAnonymousFixed() && network->getInputsInfo().size() > 1) {
         Status status = StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED;
         SPDLOG_WARN(status.string());
@@ -117,11 +117,87 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             return StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK;
         }
     }
+    return StatusCode::OK;
+}
+
+bool hasInputWithName(std::shared_ptr<ov::Function>& network, const std::string& name) {
+    try {
+        network->input(name);
+        return true;
+    } catch (ov::Exception& e) {
+        return false;
+    }
+}
+
+bool hasOutputWithName(std::shared_ptr<ov::Function>& network, const std::string& name) {
+    try {
+        network->output(name);
+        return true;
+    } catch (ov::Exception& e) {
+        return false;
+    }
+}
+
+Status validateConfigurationAgainstNetwork_2(const ModelConfig& config, std::shared_ptr<ov::Function>& network) {
+    if (config.isShapeAnonymousFixed() && network->inputs().size() > 1) {
+        Status status = StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED;
+        SPDLOG_WARN(status.string());
+        return status;
+    }
+    if (!config.getLayout().empty() && network->inputs().size() > 1) {
+        Status status = StatusCode::ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED;
+        SPDLOG_WARN(status.string());
+        return status;
+    }
+    for (const auto& [name, _] : config.getShapes()) {
+        if (name == ANONYMOUS_INPUT_NAME) {
+            continue;
+        }
+        if (hasInputWithName(network, name) && config.getMappingInputByKey(name) != "") {
+            SPDLOG_WARN("Config shape - {} is mapped by {}. Changes will not apply", name, config.getMappingInputByKey(name));
+            return StatusCode::CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME;
+        } else if (!hasInputWithName(network, name) && !hasInputWithName(network, config.getRealInputNameByValue(name))) {
+            SPDLOG_WARN("Config shape - {} not found in network", name);
+            return StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK;
+        }
+    }
+    for (const auto& [name, _] : config.getLayouts()) {
+        if (hasInputWithName(network, name) && config.getMappingInputByKey(name) != "") {
+            SPDLOG_WARN("Config layout - {} is mapped by {}. Changes will not apply", name, config.getMappingInputByKey(name));
+            return StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME;
+        } else if (hasOutputWithName(network, name) && config.getMappingOutputByKey(name) != "") {
+            SPDLOG_WARN("Config layout - {} is mapped by {}. Changes will not apply", name, config.getMappingOutputByKey(name));
+            return StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME;
+        } else if (!hasInputWithName(network, name) && !hasOutputWithName(network, name) && !hasInputWithName(network, config.getRealInputNameByValue(name)) && !hasOutputWithName(network, config.getRealOutputNameByValue(name))) {
+            SPDLOG_WARN("Config layout - {} not found in network", name);
+            return StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK;
+        }
+    }
+    return StatusCode::OK;
+}
+
+InferenceEngine::Layout getTensorLayout(const ModelConfig& config, const std::string& name) {
+    InferenceEngine::Layout layout = InferenceEngine::Layout::ANY;
+    if (!config.getLayout().empty()) {
+        layout = TensorInfo::getLayoutFromString(config.getLayout());
+    } else if (config.getLayouts().size() > 0) {
+        auto mappedName = config.getMappingInputByKey(name);
+        auto it = config.getLayouts().find(mappedName == "" ? name : mappedName);
+        if (it != config.getLayouts().end()) {
+            layout = TensorInfo::getLayoutFromString(it->second);
+        }
+    }
+    return layout;
+}
+
+Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
+    Status status = validateConfigurationAgainstNetwork_2(config, this->network_2);
+    if (!status.ok()) {
+        return status;
+    }
 
     this->inputsInfo.clear();
 
-    // TODO handling network shapes vs network inputs to be done later
-    auto networkShapes = network->getInputShapes();
     std::map<std::string, ov::PartialShape> networkShapes_2;
     bool reshapeRequired = false;
 
@@ -175,111 +251,55 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
     }
 
-    // Iterating over V1.0 to 
-    // for (const auto& pair : networkInputs) {
-    //     const auto& name = pair.first;
-    //     auto input = pair.second;
-    //     auto shape = input->getTensorDesc().getDims();
-    //     auto mappedName = config.getMappingInputByKey(name);
-    //     if (config.getBatchSize() > 0 || parameter.isBatchSizeRequested()) {
-    //         // leave shape untouched
-    //     } else if (config.isShapeAuto(name) && parameter.isShapeRequested(name)) {
-    //         shape = parameter.getShape(name);
-    //     } else if (mappedName == "" && config.getShapes().count(name) && config.getShapes().at(name).shape.size()) {
-    //         shape = config.getShapes().at(name).shape;
-    //     } else if (config.getShapes().count(mappedName) && config.getShapes().at(mappedName).shape.size()) {
-    //         shape = config.getShapes().at(mappedName).shape;
-    //     } else if (config.getShapes().count(ANONYMOUS_INPUT_NAME) && config.getShapes().at(ANONYMOUS_INPUT_NAME).shape.size()) {
-    //         shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
-    //     }
-
-    //     SPDLOG_DEBUG("Network shape for input: {} - {}; final shape {}", name,
-    //         TensorInfo::shapeToString(networkShapes[name]),
-    //         TensorInfo::shapeToString(shape));
-
-    //     if (networkShapes[name] != shape) {
-    //         reshapeRequired = true;
-    //         networkShapes[name] = shape;
-    //     }
-
-    //     try {
-    //         ov::Output<ov::Node> input_2 = network_2->input(name);
-    //         ov::PartialShape ov2NetworkShape = input_2.get_partial_shape();
-    //         if (ov2NetworkShape != (ov::Shape)shape) {
-    //             networkShapes_2[name] = (ov::Shape)shape;
-    //         } else {
-    //             networkShapes_2[name] = ov2NetworkShape;
-    //         }
-    //     } catch (const ov::Exception& e) {
-    //         SPDLOG_ERROR("Missing input {} in OV 2.0 network: {}", name, e.what());
-    //         return StatusCode::INVALID_MISSING_INPUT;
-    //     }
-    // }
-
-    // // Update OV model shapes
-    // if (reshapeRequired) {
-    //     SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs", getName(), getVersion());
-    //     try {
-    //         SPDLOG_INFO("Initial network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
-    //         network->reshape(networkShapes);
-    //         network_2->reshape(networkShapes_2);
-    //     } catch (const InferenceEngine::Exception& e) {
-    //         SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
-    //         SPDLOG_DEBUG("Description: {}", e.what());
-    //         return StatusCode::RESHAPE_ERROR;
-    //     } catch (const ov::Exception& e2) {
-    //         SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
-    //         SPDLOG_DEBUG("Description: {}", e2.what());
-    //         return StatusCode::RESHAPE_ERROR;
-    //     }
-    // } else {
-    //     SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
-    // }
-
     if (!config.getLayout().empty()) {
         ov::preprocess::PrePostProcessor preproc(this->network_2);
 
-        std::string fromLayout = config.getLayout();
-        std::string toLayout = fromLayout == "NCHW" ? "NHWC" : "NCHW";
-        SPDLOG_INFO("------- Adding preprocessing step: {}; from:{}; to:{}", config.getLayout(), fromLayout, toLayout);
+        std::string tensorLayout = config.getLayout();
+        std::string networkLayout = tensorLayout == "NCHW" ? "NHWC" : "NCHW";
+        
+        SPDLOG_INFO("------- Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{} ------", config.getLayout(), tensorLayout, networkLayout);
 
-        preproc.input().tensor().set_layout(ov::Layout(fromLayout));
-        preproc.input().network().set_layout(ov::Layout(toLayout));
-        this->network_2 = preproc.build();
-    } else if (config.getLayouts().size() > 0) {
-        // TODO
-    }
+        preproc.input().tensor().set_layout(ov::Layout(tensorLayout));
+        preproc.input().network().set_layout(ov::Layout(networkLayout));
 
-    for (const auto& pair : networkInputs) {
-        const auto& name = pair.first;
-        auto input = pair.second;
-
-        // Data from network
-        auto precision = input->getPrecision();
-        auto layout = input->getLayout();
-        auto shape = input->getTensorDesc().getDims();
-
-        if (!config.getLayout().empty()) {
-            layout = TensorInfo::getLayoutFromString(config.getLayout());
-        } else if (config.getLayouts().size() > 0) {
-            auto mappedName = config.getMappingInputByKey(name);
-            auto it = config.getLayouts().find(mappedName == "" ? name : mappedName);
-            if (it != config.getLayouts().end()) {
-                layout = TensorInfo::getLayoutFromString(it->second);
-            }
+        try {
+            this->network_2 = preproc.build();
+        } catch (std::exception& e) {
+            SPDLOG_ERROR("Cannot change layout to {}", tensorLayout);
+            return StatusCode::NETWORK_NOT_LOADED;
         }
 
-        input->setLayout(layout);
-
-        auto mappingName = config.getMappingInputByKey(name);
-        auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
-        // this->inputsInfo[tensor->getMappedName()] = std::move(tensor);
+    } else if (config.getLayouts().size() > 0) {
+        SPDLOG_DEBUG("model: {}, version: {}; multiple inputs NOT IMPLEMENTED", getName(), getVersion());
+    } else {
+        SPDLOG_DEBUG("model: {}, version: {}; adding preprocessing step is not required", getName(), getVersion());
     }
-    auto inputTensors = this->network_2->inputs();
-    for (const auto& input : inputTensors) {
-        std::string name;
+
+    for (const ov::Output<ov::Node>& input : this->network_2->inputs()) {
         try {
-            name = input.get_any_name();
+            std::string name = input.get_any_name();
+
+            ovms::Precision precision = ovElementTypeToOvmsPrecision(input.get_element_type());
+            shape_t shape = input.get_shape();
+            std::string mappingName = config.getMappingInputByKey(name);
+            InferenceEngine::Layout layout = getTensorLayout(config, name);
+
+            std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
+                name,
+                mappingName,
+                precision,
+                shape,
+                layout);
+
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Input name: {}; mapping name: {}; shape: {}; precision: {}; layout: {}",
+                name,
+                mappingName,
+                TensorInfo::shapeToString(shape),
+                toString(precision),
+                TensorInfo::getStringFromLayout(layout));
+
+            this->inputsInfo[info->getMappedName()] = std::move(info);
+
         } catch (const ov::Exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
                 getName(),
@@ -300,88 +320,40 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
                 getVersion());
             return StatusCode::UNKNOWN_ERROR;
         }
-        auto precision = ovElementTypeToOvmsPrecision(input.get_element_type());
-        // TODO auto layout = input->getLayout();
-        /*
-        if (config.getLayouts().size() > 0) {
-            auto mappedName = config.getMappingOutputByKey(name);
-            auto it = config.getLayouts().find(mappedName == "" ? name : mappedName);
-            if (it != config.getLayouts().end()) {
-                layout = TensorInfo::getLayoutFromString(it->second);
-            }
-        }
-        input->setLayout(layout);
-        */
-        InferenceEngine::Layout layout = InferenceEngine::Layout::ANY;
-        if (!config.getLayout().empty()) {
-            layout = TensorInfo::getLayoutFromString(config.getLayout());
-        } else if (config.getLayouts().size() > 0) {
-            auto mappedName = config.getMappingInputByKey(name);
-            auto it = config.getLayouts().find(mappedName == "" ? name : mappedName);
-            if (it != config.getLayouts().end()) {
-                layout = TensorInfo::getLayoutFromString(it->second);
-            }
-        }
-
-
-        auto OVshape = input.get_shape();
-        shape_t shape(OVshape.begin(), OVshape.end());
-        auto mappingName = config.getMappingInputByKey(name);
-        auto tensorInfo = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
-        std::string precision_str = tensorInfo->getPrecisionAsString();
-        this->inputsInfo[tensorInfo->getMappedName()] = std::move(tensorInfo);
-        std::stringstream shape_stream;
-        std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Input name: {}; mapping name: {}; shape: {}; effective shape; precision: {}; layout: {}",
-            name, mappingName,
-            shape_stream.str(),
-            // effective_shape_stream.str()
-            precision_str,
-            TensorInfo::getStringFromLayout(layout));
     }
-    SPDLOG_INFO("Final network inputs_V1: {}", getNetworkInputsInfoString(networkInputs, config));
     return StatusCode::OK;
 }
 
 Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
     this->outputsInfo.clear();
-    for (const auto& pair : network->getOutputsInfo()) {
-        const auto& name = pair.first;
-        auto output = pair.second;
 
-        // Data from network
-        auto precision = output->getPrecision();
-        auto layout = output->getLayout();
+    // TODO: Add layout postprocessing.
 
-        if (config.getLayouts().size() > 0) {
-            auto mappedName = config.getMappingOutputByKey(name);
-            auto it = config.getLayouts().find(mappedName == "" ? name : mappedName);
-            if (it != config.getLayouts().end()) {
-                layout = TensorInfo::getLayoutFromString(it->second);
-            }
-        }
-
-        output->setLayout(layout);
-
-        auto shape = output->getDims();
-        auto effectiveShape = output->getTensorDesc().getBlockingDesc().getBlockDims();
-        auto mappingName = config.getMappingOutputByKey(name);
-        auto tensor = std::make_shared<TensorInfo>(name, mappingName, precision, shape, layout);
-        std::string precision_str = tensor->getPrecisionAsString();
-        this->outputsInfo[tensor->getMappedName()] = std::move(tensor);
-        std::stringstream shape_stream;
-        std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
-        std::stringstream effective_shape_stream;
-        std::copy(effectiveShape.begin(), effectiveShape.end(), std::ostream_iterator<size_t>(effective_shape_stream, " "));
-        SPDLOG_INFO("Output name: {}; mapping name: {}; shape: {}; effective shape {}; precision: {}; layout: {}",
-            name, mappingName, shape_stream.str(), effective_shape_stream.str(), precision_str,
-            TensorInfo::getStringFromLayout(output->getLayout()));
-    }
-    auto outputTensors = this->network_2->outputs();
-    for (const auto& output : outputTensors) {
-        std::string name;
+    for (const ov::Output<ov::Node>& output : this->network_2->outputs()) {
         try {
-            name = output.get_any_name();
+            std::string name = output.get_any_name();
+
+            ovms::Precision precision = ovElementTypeToOvmsPrecision(output.get_element_type());
+            shape_t shape = output.get_shape();
+            std::string mappingName = config.getMappingOutputByKey(name);
+            InferenceEngine::Layout layout = getTensorLayout(config, name);
+
+            std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
+                name,
+                mappingName,
+                precision,
+                shape,
+                layout);
+
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Output name: {}; mapping name: {}; shape: {}; precision: {}; layout: {}",
+                name,
+                mappingName,
+                TensorInfo::shapeToString(shape),
+                toString(precision),
+                TensorInfo::getStringFromLayout(layout));
+            
+            this->outputsInfo[info->getMappedName()] = std::move(info);
+
         } catch (const ov::Exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get output name for model:{}; version:{}; from OpenVINO with error:{}",
                 getName(),
@@ -402,33 +374,8 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
                 getVersion());
             return StatusCode::UNKNOWN_ERROR;
         }
-        auto precision = ovElementTypeToOvmsPrecision(output.get_element_type());
-        // TODO auto layout = output->getLayout();
-        /*
-        if (config.getLayouts().size() > 0) {
-            auto mappedName = config.getMappingOutputByKey(name);
-            auto it = config.getLayouts().find(mappedName == "" ? name : mappedName);
-            if (it != config.getLayouts().end()) {
-                layout = TensorInfo::getLayoutFromString(it->second);
-            }
-        }
-        output->setLayout(layout);
-        */
-        auto OVshape = output.get_shape();
-        shape_t shape(OVshape.begin(), OVshape.end());
-        auto mappingName = config.getMappingOutputByKey(name);
-        auto tensorInfo = std::make_shared<TensorInfo>(name, mappingName, precision, shape);
-        std::string precision_str = tensorInfo->getPrecisionAsString();
-        this->outputsInfo[tensorInfo->getMappedName()] = std::move(tensorInfo);
-        std::stringstream shape_stream;
-        std::copy(shape.begin(), shape.end(), std::ostream_iterator<size_t>(shape_stream, " "));
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Output name: {}; mapping name: {}; shape: {}; effective shape; precision: {}; layout: ",
-            name, mappingName,
-            shape_stream.str(),
-            // effective_shape_stream.str()
-            precision_str);
-        //           TensorInfo::getStringFromLayout(output->getLayout()));
     }
+
     return StatusCode::OK;
 }
 
@@ -746,9 +693,11 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
         if (!this->config.getCacheDir().empty()) {
             if (this->config.isCachingDisabled()) {
                 this->ieCore.SetConfig({{CONFIG_KEY(CACHE_DIR), ""}});
+                this->ieCore_2.set_config({{CONFIG_KEY(CACHE_DIR), ""}});
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has disabled caching", this->getName());
             } else {
                 this->ieCore.SetConfig({{CONFIG_KEY(CACHE_DIR), config.getCacheDir()}});
+                this->ieCore_2.set_config({{CONFIG_KEY(CACHE_DIR), config.getCacheDir()}});
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has enabled caching", this->getName());
             }
         }
@@ -788,11 +737,15 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
         }
-    } catch (const InferenceEngine::Exception& e) {
+    } catch (const ov::Exception& e) {
         SPDLOG_ERROR("exception occurred while loading network: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return StatusCode::NETWORK_NOT_LOADED;
-    }
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("exception occurred while loading network: {}", e.what());
+        this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
+        return StatusCode::NETWORK_NOT_LOADED;
+    } 
     this->status.setAvailable();
     modelLoadedNotify.notify_all();
     return status;
@@ -1059,21 +1012,19 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     if (!status.ok())
         return status;
     timer.start("get infer request");
-    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+    //ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
     ExecutingStreamIdGuard_2 executingStreamIdGuard_2(getInferRequestsQueue_2());
-    int executingInferId = executingStreamIdGuard.getId();
+    //int executingInferId = executingStreamIdGuard.getId();
     int executingInferId_2 = executingStreamIdGuard_2.getId();
-    (void)executingInferId_2;
-    InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    //InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     ov::runtime::InferRequest& inferRequest_2 = executingStreamIdGuard_2.getInferRequest();
     timer.stop("get infer request");
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("get infer request") / 1000);
 
     timer.start("deserialize");
-    InputSink<InferRequest&> inputSink(inferRequest);
+    //InputSink<InferRequest&> inputSink(inferRequest);
     InputSink_2<ov::runtime::InferRequest&> inputSink_2(inferRequest_2);
-    (void)inputSink_2;
     bool isPipeline = false;
     //status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
     timer.stop("deserialize");
@@ -1083,7 +1034,7 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("deserialize") / 1000);
 
     timer.start("prediction");
     //status = performInference(inferRequest);
@@ -1094,7 +1045,7 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("prediction") / 1000);
 
     //status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
 
@@ -1106,7 +1057,7 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
         return status;
 
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("serialize") / 1000);
 
     return StatusCode::OK;
 }

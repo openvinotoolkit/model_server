@@ -128,7 +128,7 @@ Status serializeBlobToTensorProto_2(
     }
     }
     responseOutput.mutable_tensor_shape()->Clear();
-    auto& effectiveNetworkOutputShape = networkOutput->getEffectiveShape();
+    auto& effectiveNetworkOutputShape = networkOutput->getShape();
     // TODO: getEffectiveBlobShape(blob);
     ov::Shape actualBlobShape = blob.get_shape();
     if (effectiveNetworkOutputShape.size() != actualBlobShape.size()) {
