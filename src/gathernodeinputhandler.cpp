@@ -84,10 +84,10 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
                 std::copy(currentShardShape.begin(), currentShardShape.end(), std::ostream_iterator<size_t>(currentShardShapeStream, " "));
                 SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to consolidate tensor: {}; shards in gather node. First shard has different tensor precision:{};  or shape: {}; than current shard precision: {}; shape:{};",
                     inputName,
-                    precision,
+                    toString(ovElementTypeToOvmsPrecision(precision)),
                     firstShardShapeStream.str(),
-                    tensor->get_element_type(),
-                    currentShardShapeStream.str()); // TODO change precision to toString after MR from Damian
+                    toString(ovElementTypeToOvmsPrecision(tensor->get_element_type())),
+                    currentShardShapeStream.str()); // TODO simplify double conversion?
                 return StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS;
             }
             const auto memstep = tensor->get_byte_size();

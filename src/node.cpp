@@ -199,14 +199,14 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} called demultiplyOutputs but node does not have demultiplexCount set", getName());
         return StatusCode::INTERNAL_ERROR;
     }
-    auto& [metadata, blobMap] = nodeSessionOutputs.begin()->second;
-    auto& tensorDesc = blobMap.begin()->second->getTensorDesc();
-    if (tensorDesc.getDims()[0] > DEMULTIPLY_LIMIT) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} - too large dim[0] size: {} of blob: {}. Maximum allowed is: {}",
-            getName(), tensorDesc.getDims()[0], blobMap.begin()->first, DEMULTIPLY_LIMIT);
+    auto& [metadata, tensorMap] = nodeSessionOutputs.begin()->second;
+    auto shape = tensorMap.begin()->second->get_shape();
+    uint32_t resultsDemultiplyCount = shape[0];
+    if (shape[0] > DEMULTIPLY_LIMIT) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} - too large dim[0] size: {} of tensor: {}. Maximum allowed is: {}",
+            getName(), shape[0], tensorMap.begin()->first, DEMULTIPLY_LIMIT);
         return StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY;
     }
-    uint32_t resultsDemultiplyCount = tensorDesc.getDims()[0];
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), resultsDemultiplyCount);
     std::vector<NodeSessionMetadata> newSessionMetadatas;
     try {
@@ -215,17 +215,15 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} failed to generate subsessions due to error: {}", getName(), e.what());
         return StatusCode::INTERNAL_ERROR;
     }
-    for (auto& [blobName, blob] : blobMap) {
-        auto tensorDesc = blob->getTensorDesc();
-        auto newDims = tensorDesc.getDims();
+    for (auto& [blobName, tensor] : tensorMap) {
+        auto newDims = tensor->get_shape();
         if (newDims.size() < 3) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong number of dimensions: {} to demultiply. Must be at least 3", newDims.size());
             return StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY;
         }
-
         if ((demultiplexCount.value() != 0) &&
             (newDims[0] != demultiplexCount.value())) {
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[0] size: {} of blob: {} expected: {} to demultiply",
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[0] size: {} of tensor: {} expected: {} to demultiply",
                 newDims[0], blobName, demultiplexCount.value());
             return StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY;
         }
@@ -236,17 +234,13 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         }
 
         newDims.erase(newDims.begin());
-        const InferenceEngine::TensorDesc dividedBlobDesc(
-            tensorDesc.getPrecision(),
-            newDims,
-            InferenceEngine::Layout::ANY);
-        const auto step = blob->byteSize() / resultsDemultiplyCount;
+        const auto step = tensor->get_byte_size() / resultsDemultiplyCount;
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
-            InferenceEngine::Blob::Ptr dividedBlob;
-            this->createShardedBlob(dividedBlob, dividedBlobDesc, blob, i, step, metadata, blobName);
+            std::shared_ptr<ov::runtime::Tensor> dividedBlob;
+            this->createShardedBlob(dividedBlob, ovElementTypeToOvmsPrecision(tensor->get_element_type()), newDims, tensor, i, step, metadata, blobName);
             std::stringstream ss;
             ss << "Node: " << getName() << " input demultiplied: " << blobName
-               << "; Actual: " << TensorInfo::shapeToString(dividedBlob->getTensorDesc().getDims());
+               << "; Actual: " << TensorInfo::shapeToString(dividedBlob->get_shape());
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
             auto it = nodeSessionOutputs.find(newSessionMetadatas[i].getSessionKey());
             if (it == nodeSessionOutputs.end()) {
@@ -260,17 +254,17 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     return StatusCode::OK;
 }
 
-Status Node::createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, const InferenceEngine::TensorDesc& dividedBlobDesc, InferenceEngine::Blob::Ptr blob, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName) {
-    auto status = createSharedBlob(dividedBlob, dividedBlobDesc);
+Status Node::createShardedBlob(std::shared_ptr<ov::runtime::Tensor>& dividedBlob, Precision precision, const shape_t& shape, std::shared_ptr<ov::runtime::Tensor> tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName) {
+    auto status = createSharedTensor(dividedBlob, ovmsPrecisionToIE2Precision(precision), shape);
     if (!status.ok()) {
         return status;
     }
-    if (dividedBlob->byteSize() != step) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created blob: {} have wrong byte size: {}, expected: {}",
-            getName(), metadata.getSessionKey(), blobName, dividedBlob->byteSize(), step);
+    if (dividedBlob->get_byte_size() != step) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created tensor: {} have wrong byte size: {}, expected: {}",
+            getName(), metadata.getSessionKey(), blobName, dividedBlob->get_byte_size(), step);
         return StatusCode::UNKNOWN_ERROR;
     }
-    memcpy(InferenceEngine::as<InferenceEngine::MemoryBlob>(dividedBlob)->wmap().as<char*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<char*>() + i * step, step);
+    memcpy(dividedBlob->data(), (char*)(tensor->data()) + i * step, step);
     return StatusCode::OK;
 }
 }  // namespace ovms

@@ -79,15 +79,15 @@ Status CustomNode::fetchResults(TensorMap& outputs, session_key_t sessionKey) {
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Getting custom node output tensor with name: {}",
                 getName(), sessionKey, realOutputName);
 
-            InferenceEngine::Blob::Ptr resultBlob;
-            auto status = session.fetchResult(realOutputName, resultBlob);
+            std::shared_ptr<ov::runtime::Tensor> resultTensor;
+            auto status = session.fetchResult(realOutputName, resultTensor);
             if (!status.ok()) {
                 SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} Custom node output with name {} is missing",
                     getName(), sessionKey, realOutputName);
                 return StatusCode::NODE_LIBRARY_MISSING_OUTPUT;
             }
 
-            outputs.emplace(std::make_pair(output_name, std::move(resultBlob)));
+            outputs.emplace(std::make_pair(output_name, std::move(resultTensor)));
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Blob with name {} has been prepared under alias {}",
                 getName(), sessionKey, realOutputName, output_name);
         }

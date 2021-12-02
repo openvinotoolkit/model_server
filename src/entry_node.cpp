@@ -26,6 +26,7 @@
 #include "binaryutils.hpp"
 #include "deserialization.hpp"
 #include "logging.hpp"
+#include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
 
 #pragma GCC diagnostic push
@@ -69,14 +70,19 @@ Status EntryNode::fetchResults(TensorMap& outputs) {
     if (!status.ok()) {
         return status;
     }
-    InputSink<TensorMap&> inputSink(outputs);
+    InputSink_2<TensorMap&> inputSink(outputs);
     bool isPipeline = true;
-    return deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, inputsInfo, inputSink, isPipeline);
+    return deserializePredictRequest_2<ConcreteTensorProtoDeserializator_2>(*request, inputsInfo, inputSink, isPipeline);
+}
+template <> // TODO remove
+Status InputSink_2<TensorMap&>::give(const std::string& name, ov::runtime::Tensor& blob) {
+    requester[name] = std::make_shared<ov::runtime::Tensor>(blob);
+    return StatusCode::OK;
 }
 
 template <>
-Status InputSink<TensorMap&>::give(const std::string& name, InferenceEngine::Blob::Ptr blob) {
-    requester[name] = blob;
+Status InputSink_2<TensorMap&>::give(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& tensor) {
+    requester[name] = tensor;
     return StatusCode::OK;
 }
 
@@ -90,31 +96,27 @@ Status EntryNode::isInputBinary(const std::string& name, bool& isBinary) const {
     return StatusCode::OK;
 }
 
-Status EntryNode::createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, const InferenceEngine::TensorDesc& dividedBlobDesc, InferenceEngine::Blob::Ptr blob, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName) {
+Status EntryNode::createShardedBlob(std::shared_ptr<ov::runtime::Tensor>& dividedBlob, Precision precision, const shape_t& shape, std::shared_ptr<ov::runtime::Tensor> tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
     bool isBinary = false;
-    auto status = this->isInputBinary(blobName, isBinary);
+    auto status = this->isInputBinary(tensorName, isBinary);
     if (!status.ok()) {
         return status;
     }
     if (isBinary) {
-        return Node::createShardedBlob(dividedBlob, dividedBlobDesc, blob, i, step, metadata, blobName);
+        return Node::createShardedBlob(dividedBlob, precision, shape, tensor, i, step, metadata, tensorName);
     }
 
     // if condition is perf optimization
     // when demultiplying from entry node from tensor content we can skip allocation for sharded blobs
-    // and reuse memory from original blob since its memory is kept for whole duration of predict request
-    if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::FP32) {
-        dividedBlob = InferenceEngine::make_shared_blob<float>(dividedBlobDesc, InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<float*>() + i * step / sizeof(float));
-    } else if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::I32) {
-        dividedBlob = InferenceEngine::make_shared_blob<int32_t>(dividedBlobDesc, InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<int32_t*>() + i * step / sizeof(int32_t));
-    } else if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::I8) {
-        dividedBlob = InferenceEngine::make_shared_blob<int8_t>(dividedBlobDesc, InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<int8_t*>() + i * step / sizeof(int8_t));
-    } else if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::U8) {
-        dividedBlob = InferenceEngine::make_shared_blob<uint8_t>(dividedBlobDesc, InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<uint8_t*>() + i * step / sizeof(uint8_t));
-    } else if (dividedBlobDesc.getPrecision() == InferenceEngine::Precision::I16) {
-        dividedBlob = InferenceEngine::make_shared_blob<int16_t>(dividedBlobDesc, InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<int16_t*>() + i * step / sizeof(int16_t));
+    // and reuse memory from original tensor since its memory is kept for whole duration of predict request
+    if ((precision == Precision::FP32) ||
+        (precision == Precision::I32) ||
+        (precision == Precision::I8) ||
+        (precision == Precision::U8) ||
+        (precision == Precision::I16)) {
+        dividedBlob = createSharedTensor(ovmsPrecisionToIE2Precision(precision), shape, (void*)((char*)(tensor->data()) + step));
     } else {
-        return Node::createShardedBlob(dividedBlob, dividedBlobDesc, blob, i, step, metadata, blobName);
+        return Node::createShardedBlob(dividedBlob, precision, shape, tensor, i, step, metadata, tensorName);
     }
     return StatusCode::OK;
 }
