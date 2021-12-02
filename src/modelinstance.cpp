@@ -190,6 +190,48 @@ InferenceEngine::Layout getTensorLayout(const ModelConfig& config, const std::st
     return layout;
 }
 
+Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::Function>& network, const std::string& modelName, model_version_t modelVersion) {
+    if (!config.getLayout().empty()) {
+        ov::preprocess::PrePostProcessor preproc(network);
+        std::string tensorLayout = config.getLayout();
+        std::string networkLayout = tensorLayout == "NCHW" ? "NHWC" : "NCHW";
+        SPDLOG_INFO("model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{} ------", modelName, modelVersion, config.getLayout(), tensorLayout, networkLayout);
+        preproc.input().tensor().set_layout(ov::Layout(tensorLayout));
+        preproc.input().network().set_layout(ov::Layout(networkLayout));
+        try {
+            network = preproc.build();
+        } catch (std::exception& e) {
+            SPDLOG_ERROR("Cannot change single input layout to {}", tensorLayout);
+            return StatusCode::NETWORK_NOT_LOADED;
+        }
+    } else if (config.getLayouts().size() > 0) {
+        ov::preprocess::PrePostProcessor preproc(network);
+        for (const auto& [name, layout] : config.getLayouts()) {
+            if (hasInputWithName(network, name)) {
+                std::string networkLayout = layout == "NCHW" ? "NHWC" : "NCHW";
+                SPDLOG_INFO("model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{}; input name: {} ------", modelName, modelVersion, layout, layout, networkLayout, name);
+                preproc.input(name).tensor().set_layout(ov::Layout(layout));
+                preproc.input(name).network().set_layout(ov::Layout(networkLayout));
+            }
+            if (hasOutputWithName(network, name)) {
+                std::string networkLayout = layout == "NCHW" ? "NHWC" : "NCHW";
+                SPDLOG_INFO("model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{}; output name: {} ------", modelName, modelVersion, layout, layout, networkLayout, name);
+                preproc.output(name).tensor().set_layout(ov::Layout(layout));
+                preproc.output(name).network().set_layout(ov::Layout(networkLayout));
+            }
+        }
+        try {
+            network = preproc.build();
+        } catch (std::exception& e) {
+            SPDLOG_ERROR("Cannot change layout");
+            return StatusCode::NETWORK_NOT_LOADED;
+        }
+    } else {
+        SPDLOG_DEBUG("model: {}, version: {}; adding preprocessing step is not required", modelName, modelVersion);
+    }
+    return StatusCode::OK;
+}
+
 Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
     Status status = validateConfigurationAgainstNetwork_2(config, this->network_2);
     if (!status.ok()) {
@@ -240,7 +282,6 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     if (reshapeRequired) {
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs", getName(), getVersion());
         try {
-            //SPDLOG_INFO("Initial network inputs: {}", getNetworkInputsInfoString(networkInputs, config));
             network_2->reshape(networkShapes_2);
         } catch (const ov::Exception& e2) {
             SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
@@ -251,28 +292,9 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
     }
 
-    if (!config.getLayout().empty()) {
-        ov::preprocess::PrePostProcessor preproc(this->network_2);
-
-        std::string tensorLayout = config.getLayout();
-        std::string networkLayout = tensorLayout == "NCHW" ? "NHWC" : "NCHW";
-        
-        SPDLOG_INFO("------- Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{} ------", config.getLayout(), tensorLayout, networkLayout);
-
-        preproc.input().tensor().set_layout(ov::Layout(tensorLayout));
-        preproc.input().network().set_layout(ov::Layout(networkLayout));
-
-        try {
-            this->network_2 = preproc.build();
-        } catch (std::exception& e) {
-            SPDLOG_ERROR("Cannot change layout to {}", tensorLayout);
-            return StatusCode::NETWORK_NOT_LOADED;
-        }
-
-    } else if (config.getLayouts().size() > 0) {
-        SPDLOG_DEBUG("model: {}, version: {}; multiple inputs NOT IMPLEMENTED", getName(), getVersion());
-    } else {
-        SPDLOG_DEBUG("model: {}, version: {}; adding preprocessing step is not required", getName(), getVersion());
+    status = addPrePostProcessingSteps(config, this->network_2, getName(), getVersion());
+    if (!status.ok()) {
+        return status;
     }
 
     for (const ov::Output<ov::Node>& input : this->network_2->inputs()) {
@@ -351,7 +373,7 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
                 TensorInfo::shapeToString(shape),
                 toString(precision),
                 TensorInfo::getStringFromLayout(layout));
-            
+
             this->outputsInfo[info->getMappedName()] = std::move(info);
 
         } catch (const ov::Exception& e) {
@@ -745,7 +767,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
         SPDLOG_ERROR("exception occurred while loading network: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
         return StatusCode::NETWORK_NOT_LOADED;
-    } 
+    }
     this->status.setAvailable();
     modelLoadedNotify.notify_all();
     return status;

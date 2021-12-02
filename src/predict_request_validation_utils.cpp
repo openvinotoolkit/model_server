@@ -299,7 +299,6 @@ Status RequestValidator::validate() {
         return status;
 
     for (const auto& [name, inputInfo] : inputsInfo) {
-        SPDLOG_INFO("UUUUUUUUUU {}", name);
         status = validateAndGetInput(request, name, it);
         if (!status.ok())
             return status;
