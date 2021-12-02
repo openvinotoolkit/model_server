@@ -14,7 +14,7 @@ See [API documentation](https://github.com/openvinotoolkit/model_server/blob/mai
 **Note:** The client library requires Python in version >= 3.6.
 
 ```
-pip install ovmsclient
+pip3 install ovmsclient
 ```
 
 ## Usage
