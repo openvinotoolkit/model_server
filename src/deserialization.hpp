@@ -172,7 +172,8 @@ class InputSink_2 {
 public:
     InputSink_2(Requester requester) :
         requester(requester) {}
-    Status give(const std::string& name, ov::runtime::Tensor& blob);
+    Status give(const std::string& name, ov::runtime::Tensor& blob); // TODO replace with one below
+    Status give(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& tensor);
 };
 
 template <class TensorProtoDeserializator, class Sink>
@@ -270,7 +271,7 @@ Status deserializePredictRequest_2(
             const std::string ovBlobName = isPipeline ? name : tensorInfo->getName();
             status = inputSink.give(ovBlobName, blob);
             if (!status.ok()) {
-                SPDLOG_DEBUG("Feeding inputs to inference performer failed:{}", status.string());
+                SPDLOG_DEBUG("Feeding input:{} to inference performer failed:{}", ovBlobName, status.string());
                 return status;
             }
             // OV implementation the InferenceEngine::Exception is not

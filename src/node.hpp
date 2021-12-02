@@ -28,6 +28,8 @@
 #include "nodesession.hpp"
 #include "nodesessionresult.hpp"
 #include "pipelineeventqueue.hpp"
+#include "precision.hpp"
+#include "shapeinfo.hpp"
 #include "status.hpp"
 #include "tensormap.hpp"
 
@@ -65,7 +67,7 @@ public:
 protected:
     virtual Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) = 0;
     Status demultiplyOutputs(SessionResults& nodeSessionOutputs);
-    virtual Status createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, const InferenceEngine::TensorDesc& dividedBlobDesc, InferenceEngine::Blob::Ptr blob, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName);
+    virtual Status createShardedBlob(std::shared_ptr<ov::runtime::Tensor>& dividedBlob, Precision precision, const shape_t& shape, std::shared_ptr<ov::runtime::Tensor> tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName);
 
 public:
     Status setInputs(const Node& dependency, TensorMap& inputs, NodeSessionMetadata& metadata);

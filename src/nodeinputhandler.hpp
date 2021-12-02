@@ -28,8 +28,6 @@
 
 namespace ovms {
 
-using TensorMap = std::unordered_map<std::string, std::shared_ptr<ov::runtime::Tensor>>;
-
 class NodeInputHandler {
 protected:
     TensorMap inputTensors;

@@ -60,7 +60,7 @@ public:
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
 
 private:
-    Status fetchResults(TensorMap& outputs, InferenceEngine::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey);
+    Status fetchResults(TensorMap& outputs, ov::runtime::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey);
 
 public:
     void release(session_key_t sessionId) override;
@@ -86,7 +86,7 @@ private:
         return StatusCode::OK;
     }
 
-    Status executeInference(PipelineEventQueue& notifyEndQueue, InferenceEngine::InferRequest& infer_request);
+    Status executeInference(PipelineEventQueue& notifyEndQueue, ov::runtime::InferRequest& infer_request);
     bool tryDisarm(const session_key_t& sessionKey, const uint microseconds = 1) override;
 
 protected:

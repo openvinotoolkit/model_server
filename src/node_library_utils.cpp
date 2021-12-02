@@ -22,21 +22,21 @@
 
 namespace ovms {
 
-CustomNodeTensorPrecision toCustomNodeTensorPrecision(InferenceEngine::Precision precision) {
+CustomNodeTensorPrecision toCustomNodeTensorPrecision(ov::element::Type_t precision) {
     switch (precision) {
-    case InferenceEngine::Precision::FP32:
+    case ov::element::Type_t::f32:
         return CustomNodeTensorPrecision::FP32;
-    case InferenceEngine::Precision::I32:
+    case ov::element::Type_t::i32:
         return CustomNodeTensorPrecision::I32;
-    case InferenceEngine::Precision::I8:
+    case ov::element::Type_t::i8:
         return CustomNodeTensorPrecision::I8;
-    case InferenceEngine::Precision::U8:
+    case ov::element::Type_t::u8:
         return CustomNodeTensorPrecision::U8;
-    case InferenceEngine::Precision::FP16:
+    case ov::element::Type_t::f16:
         return CustomNodeTensorPrecision::FP16;
-    case InferenceEngine::Precision::I16:
+    case ov::element::Type_t::i16:
         return CustomNodeTensorPrecision::I16;
-    case InferenceEngine::Precision::U16:
+    case ov::element::Type_t::u16:
         return CustomNodeTensorPrecision::U16;
     default:
         return CustomNodeTensorPrecision::UNSPECIFIED;
@@ -44,6 +44,7 @@ CustomNodeTensorPrecision toCustomNodeTensorPrecision(InferenceEngine::Precision
 }
 
 Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision) {
+        // TODO should we add new precisions now into CN header?
     static std::unordered_map<CustomNodeTensorPrecision, Precision> precisionMap{
         {CustomNodeTensorPrecision::FP32, Precision::FP32},
         {CustomNodeTensorPrecision::I32, Precision::I32},
@@ -73,20 +74,20 @@ std::unique_ptr<struct CustomNodeParam[]> createCustomNodeParamArray(const std::
     return libraryParameters;
 }
 
-std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const std::unordered_map<std::string, InferenceEngine::Blob::Ptr>& blobMap) {
+std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const TensorMap& blobMap) {
     if (blobMap.size() == 0) {
         return nullptr;
     }
     auto inputTensors = std::make_unique<struct CustomNodeTensor[]>(blobMap.size());
     int i = 0;
     for (const auto& [name, blob] : blobMap) {
-        const auto& dims = getEffectiveBlobShape(blob);
+        const auto& dims = blob->get_shape();
         inputTensors[i].name = static_cast<const char*>(name.c_str());
-        inputTensors[i].data = static_cast<uint8_t*>(InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rwmap());
-        inputTensors[i].dataBytes = static_cast<uint64_t>(blob->byteSize());
+        inputTensors[i].data = static_cast<uint8_t*>(blob->data());
+        inputTensors[i].dataBytes = static_cast<uint64_t>(blob->get_byte_size());
         inputTensors[i].dims = const_cast<uint64_t*>(dims.data());
         inputTensors[i].dimsCount = static_cast<uint64_t>(dims.size());
-        inputTensors[i].precision = toCustomNodeTensorPrecision(blob->getTensorDesc().getPrecision());
+        inputTensors[i].precision = toCustomNodeTensorPrecision(blob->get_element_type());
         i++;
     }
     return inputTensors;
