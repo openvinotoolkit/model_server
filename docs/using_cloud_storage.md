@@ -19,7 +19,7 @@ AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=azur
 Example command with blob storage `az://<container_name>/<model_path>:`
 ```
 docker run --rm -d -p 9001:9001 \
--e AZURE_STORAGE_CONNECTION_STRING=ì${AZURE_STORAGE_CONNECTION_STRING}î \
+-e AZURE_STORAGE_CONNECTION_STRING=‚Äú${AZURE_STORAGE_CONNECTION_STRING}‚Äù \
 openvino/model_server:latest \
 --model_path az://container/model_path --model_name az_model --port 9001
 ```
@@ -28,7 +28,7 @@ Example command with file storage `azfs://<share>/<model_path>:`
 
 ```
 docker run --rm -d -p 9001:9001 \
--e AZURE_STORAGE_CONNECTION_STRING=ì${AZURE_STORAGE_CONNECTION_STRING}î \
+-e AZURE_STORAGE_CONNECTION_STRING=‚Äú${AZURE_STORAGE_CONNECTION_STRING}‚Äù \
 openvino/model_server:latest \
 --model_path azfs://share/model_path --model_name az_model --port 9001
 ```
@@ -48,7 +48,7 @@ To start a Docker container with support for Google Cloud Storage paths to your 
 Example command with `gs://<bucket>/<model_path>:`
 ```
 docker run --rm -d -p 9001:9001 \
--e GOOGLE_APPLICATION_CREDENTIALS=ì${GOOGLE_APPLICATION_CREDENTIALS}î \
+-e GOOGLE_APPLICATION_CREDENTIALS=‚Äú${GOOGLE_APPLICATION_CREDENTIALS}‚Äù \
 -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
 openvino/model_server:latest \
 --model_path gs://bucket/model_path --model_name gs_model --port 9001
@@ -64,10 +64,10 @@ Example command with `s3://<bucket>/<model_path>:`
 
 ```
 docker run --rm -d -p 9001:9001 \
--e AWS_ACCESS_KEY_ID=ì${AWS_ACCESS_KEY_ID}î \
--e AWS_SECRET_ACCESS_KEY=ì${AWS_SECRET_ACCESS_KEY}î \
--e AWS_REGION=ì${AWS_REGION}î \
--e S3_ENDPOINT=ì${S3_ENDPOINT}î \
+-e AWS_ACCESS_KEY_ID=‚Äú${AWS_ACCESS_KEY_ID}‚Äù \
+-e AWS_SECRET_ACCESS_KEY=‚Äú${AWS_SECRET_ACCESS_KEY}‚Äù \
+-e AWS_REGION=‚Äú${AWS_REGION}‚Äù \
+-e S3_ENDPOINT=‚Äú${S3_ENDPOINT}‚Äù \
 openvino/model_server:latest \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
@@ -89,7 +89,7 @@ Example command with `s3://<bucket>/<model_path>:`
 
 ```
 docker run --rm -d -p 9001:9001 \
--e AWS_PROFILE=ì${AWS_PROFILE}î \
+-e AWS_PROFILE=‚Äú${AWS_PROFILE}‚Äù \
 -v ${HOME}/.aws/credentials:/home/ovms/.aws/credentials \
 openvino/model_server:latest \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001

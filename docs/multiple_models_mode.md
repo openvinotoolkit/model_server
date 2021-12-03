@@ -69,18 +69,18 @@ docker run --rm -d -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 -v <config.j
 
 ```bash
 models/
-??? model1
-?   ??? 1
-?   ?   ??? ir_model.bin
-?   ?   ??? ir_model.xml
-?   ??? 2
-?       ??? ir_model.bin
-?       ??? ir_model.xml
-??? model2
-    ??? 1
-        ??? ir_model.bin
-        ??? ir_model.xml
-        ??? mapping_config.json
+    model1
+        1
+         ir_model.bin
+         ir_model.xml
+        2
+         ir_model.bin
+         ir_model.xml
+    model2
+        1
+         ir_model.bin
+         ir_model.xml
+         mapping_config.json
 ```
 
 Here the numerical values depict the version number of the model.
