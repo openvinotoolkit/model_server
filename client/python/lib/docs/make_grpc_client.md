@@ -1,4 +1,4 @@
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L123"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L124"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `make_grpc_client`
 

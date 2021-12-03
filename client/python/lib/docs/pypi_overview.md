@@ -11,7 +11,7 @@ See [API documentation](https://github.com/openvinotoolkit/model_server/blob/mai
 
 ## Installation
 
-**Note:** The client library requires Python in version >= 3.6.
+**Note:** The package requires Python in version >= 3.6.
 
 ```
 pip3 install ovmsclient
@@ -30,7 +30,7 @@ client = ovmsclient.make_grpc_client("localhost:9000")
 ```python
 model_status = client.get_model_status(model_name="model")
 
-# Examplary status_response:
+# Exemplary model_status:
 #
 # {
 #    "1": {
@@ -46,7 +46,7 @@ model_status = client.get_model_status(model_name="model")
 ```python
 model_metadata = client.get_model_metadata(model_name="model")
 
-# Exemplary metadata_response. Values for model:
+# Exemplary model_metadata. Values for model:
 # https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html
 #
 #{
@@ -77,7 +77,7 @@ with open(<path_to_img>, 'rb') as f:
 inputs = {"map/TensorArrayStack/TensorArrayGatherV3": img}
 results = client.predict(inputs=inputs, model_name="model")
 
-# Examplary results:
+# Exemplary results:
 #
 # [[0.01, 0.03, 0.91, ... , 0.00021]]
 #
