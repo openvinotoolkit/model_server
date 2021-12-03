@@ -195,7 +195,7 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
         ov::preprocess::PrePostProcessor preproc(network);
         std::string tensorLayout = config.getLayout();
         std::string networkLayout = tensorLayout == "NCHW" ? "NHWC" : "NCHW";
-        SPDLOG_INFO("model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{} ------", modelName, modelVersion, config.getLayout(), tensorLayout, networkLayout);
+        SPDLOG_INFO("model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{}", modelName, modelVersion, config.getLayout(), tensorLayout, networkLayout);
         preproc.input().tensor().set_layout(ov::Layout(tensorLayout));
         preproc.input().network().set_layout(ov::Layout(networkLayout));
         try {
@@ -209,13 +209,13 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
         for (const auto& [name, layout] : config.getLayouts()) {
             if (hasInputWithName(network, name)) {
                 std::string networkLayout = layout == "NCHW" ? "NHWC" : "NCHW";
-                SPDLOG_INFO("model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{}; input name: {} ------", modelName, modelVersion, layout, layout, networkLayout, name);
+                SPDLOG_INFO("model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{}; input name: {}", modelName, modelVersion, layout, layout, networkLayout, name);
                 preproc.input(name).tensor().set_layout(ov::Layout(layout));
                 preproc.input(name).network().set_layout(ov::Layout(networkLayout));
             }
             if (hasOutputWithName(network, name)) {
                 std::string networkLayout = layout == "NCHW" ? "NHWC" : "NCHW";
-                SPDLOG_INFO("model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{}; output name: {} ------", modelName, modelVersion, layout, layout, networkLayout, name);
+                SPDLOG_INFO("model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{}; output name: {}", modelName, modelVersion, layout, layout, networkLayout, name);
                 preproc.output(name).tensor().set_layout(ov::Layout(layout));
                 preproc.output(name).network().set_layout(ov::Layout(networkLayout));
             }
@@ -258,7 +258,6 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             if (input.get_shape() != shape) {
                 reshapeRequired = true;
             }
-
         } catch (const ov::Exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
                 getName(),
@@ -279,22 +278,26 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         }
     }
 
+    status = addPrePostProcessingSteps(config, this->network_2, getName(), getVersion());
+    if (!status.ok()) {
+        return status;
+    }
+
     if (reshapeRequired) {
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs", getName(), getVersion());
         try {
             network_2->reshape(networkShapes_2);
-        } catch (const ov::Exception& e2) {
+        } catch (const ov::Exception& e) {
             SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
-            SPDLOG_DEBUG("Description: {}", e2.what());
+            SPDLOG_DEBUG("Description: {}", e.what());
+            return StatusCode::RESHAPE_ERROR;
+        } catch (const std::exception& e) {
+            SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
+            SPDLOG_DEBUG("Description: {}", e.what());
             return StatusCode::RESHAPE_ERROR;
         }
     } else {
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
-    }
-
-    status = addPrePostProcessingSteps(config, this->network_2, getName(), getVersion());
-    if (!status.ok()) {
-        return status;
     }
 
     for (const ov::Output<ov::Node>& input : this->network_2->inputs()) {
@@ -321,7 +324,6 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
                 TensorInfo::getStringFromLayout(layout));
 
             this->inputsInfo[info->getMappedName()] = std::move(info);
-
         } catch (const ov::Exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
                 getName(),
@@ -375,7 +377,6 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
                 TensorInfo::getStringFromLayout(layout));
 
             this->outputsInfo[info->getMappedName()] = std::move(info);
-
         } catch (const ov::Exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get output name for model:{}; version:{}; from OpenVINO with error:{}",
                 getName(),
@@ -1034,44 +1035,31 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     if (!status.ok())
         return status;
     timer.start("get infer request");
-    //ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
     ExecutingStreamIdGuard_2 executingStreamIdGuard_2(getInferRequestsQueue_2());
-    //int executingInferId = executingStreamIdGuard.getId();
     int executingInferId_2 = executingStreamIdGuard_2.getId();
-    //InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     ov::runtime::InferRequest& inferRequest_2 = executingStreamIdGuard_2.getInferRequest();
     timer.stop("get infer request");
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("get infer request") / 1000);
 
     timer.start("deserialize");
-    //InputSink<InferRequest&> inputSink(inferRequest);
     InputSink_2<ov::runtime::InferRequest&> inputSink_2(inferRequest_2);
     bool isPipeline = false;
-    //status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
-    timer.stop("deserialize");
-    //if (!status.ok())
-    //    return status;
     status = deserializePredictRequest_2<ConcreteTensorProtoDeserializator_2>(*requestProto, getInputsInfo(), inputSink_2, isPipeline);
+    timer.stop("deserialize");
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("deserialize") / 1000);
 
     timer.start("prediction");
-    //status = performInference(inferRequest);
-    timer.stop("prediction");
-    if (!status.ok())
-        return status;
     status = performInference_2(inferRequest_2);
+    timer.stop("prediction");
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("prediction") / 1000);
 
-    //status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
-
-    //responseProto->Clear();
     timer.start("serialize");
     status = serializePredictResponse_2(inferRequest_2, getOutputsInfo(), responseProto);
     timer.stop("serialize");
