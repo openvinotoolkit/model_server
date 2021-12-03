@@ -5,7 +5,7 @@
 OVMS supports a range of cloud storage types. In general OVMS requires "read" and "list" permissions on the model repository side.
 Below are specific steps for every storage provider:
 
-<details><summary>Azure Cloud Storage path requirements</summary>
+### Azure Cloud Storage path requirements
 
 Add the Azure Storage path as the model_path and pass the Azure Storage credentials to the Docker container.
 
@@ -36,9 +36,7 @@ Add `-e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy"` to docker run co
 
 By default, the `https_proxy` variable will be used. If you want to use `http_proxy` please set the `AZURE_STORAGE_USE_HTTP_PROXY` environment variable to any value and pass it to the container.
 
-</details>
-
-<details><summary>Google Cloud Storage path requirements</summary>
+### Google Cloud Storage path requirements
 
 Add the Google Cloud Storage path as the model_path and pass the Google Cloud Storage credentials to the Docker container.
 Exception: This is not required if you use GKE kubernetes cluster. GKE kubernetes clusters handle authorization.
@@ -53,9 +51,8 @@ docker run --rm -d -p 9001:9001 \
 openvino/model_server:latest \
 --model_path gs://bucket/model_path --model_name gs_model --port 9001
 ```
-</details>
 
-<details><summary>AWS S3 and Minio storage path requirements</summary>
+### AWS S3 and Minio storage path requirements
 
 Add the S3 path as the model_path and pass the credentials as environment variables to the Docker container.
 S3_ENDPOINT is optional for AWS s3 storage and mandatory for Minio and other s3 compatible storage types.
@@ -94,4 +91,4 @@ docker run --rm -d -p 9001:9001 \
 openvino/model_server:latest \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
-</details>
+

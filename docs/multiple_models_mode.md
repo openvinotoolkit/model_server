@@ -1,4 +1,4 @@
-# Multiple models mode with a config file {#ovms_docs_single_model}
+# Multiple models mode with a config file {#ovms_docs_multiple_models}
 
 ### Starting Docker Container with a Configuration File for **Multiple** Models <a name="configfile"></a>
 

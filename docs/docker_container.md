@@ -1,42 +1,46 @@
 # Using Docker Containers {#ovms_docs_docker_container}
-_
-## Introduction
-
-OpenVINO&trade; Model Server is a serving system for machine learning models. OpenVINO&trade; Model Server makes it easy to deploy new algorithms and experiments, while keeping the same server architecture and APIs. This guide will help you deploy OpenVINO&trade; Model Server through docker containers.
-
-## System Requirements
-
-### Hardware 
-* Required:
-    * 6th to 11th generation Intel® Core™ processors and Intel® Xeon® processors.
-* Optional:
-    * Intel® Neural Compute Stick 2.
-    * Intel® Iris® Pro & Intel® HD Graphics
-    * Intel® Vision Accelerator Design with Intel® Movidius™ VPUs.
 
 ## Overview 
 
 This guide provides step-by-step instructions on how to deploy OpenVINO&trade; Model Server for Linux using Docker Container including a Quick Start guide. Links are provided for different compatible hardwares. Following instructions are covered in this:
 
-- <a href="#quickstart">Quick Start Guide for OpenVINO&trade; Model Server</a>
-- <a href="#sourcecode">Building the OpenVINO&trade; Model Server Image </a>
-- <a href="#singlemodel">Starting Docker Container with a Single Model
-- <a href="#configfile">Starting Docker container with a configuration file for multiple models</a>
-- <a href="#params">Configuration Parameters</a>
-- <a href="#storage">Cloud Storage Requirements</a>
-- <a href="#ai">Running OpenVINO&trade; Model Server with AI Accelerators NCS, HDDL and GPU</a>
-- <a href="#sec">Security Considerations</a>
+## System Requirements
 
+- docker engine installed
+- 6th to 12th generation Intel® Core™ processors and Intel® Xeon® processors
+- AI accelerators [supported by OpenVINO toolkit](https://docs.openvino.ai/2020.3/_docs_IE_DG_supported_plugins_Supported_Devices.html)
+- Linux, MacOS or Windows via WSL 
+
+Note: accelerators are tested only on baremetal Linux OS
 
 ## Quick Start Guide <a name="quickstart"></a>
 
-A quick start guide to download models and run OpenVINO&trade; Model Server is provided below. 
-It allows you to setup OpenVINO&trade; Model Server and run a Face Detection Example.
+Start the docker container with OVMS and a public model from the cloud storage:
+```bash
+docker run -p 5555:5555 -rm openvino/model_server:latest --model_name resnet --model_path gs://public_bucket/resent --rest_port 5555
 
-Refer [Quick Start guide](./ovms_quickstart.md) to set up OpenVINO&trade; Model Server.
+```
+
+Run the predication using a python client
+```python
+import ovmsclient
 
 
-## Detailed steps to deploy OpenVINO&trade; Model Server using Docker container
+```
+
+
+Refer also to [Quick Start guide](./ovms_quickstart.md) to set up OpenVINO&trade; Model Server.
+
+
+## References
+
+Links to other pages
+
+## Demos
+
+Links to container demos
+
+## Detailed steps to pull and build OpenVINO&trade; Model Server docker image
 
 ### Install Docker
 
