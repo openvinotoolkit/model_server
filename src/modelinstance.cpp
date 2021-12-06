@@ -141,12 +141,12 @@ bool hasOutputWithName(std::shared_ptr<ov::Function>& network, const std::string
 Status validateConfigurationAgainstNetwork_2(const ModelConfig& config, std::shared_ptr<ov::Function>& network) {
     if (config.isShapeAnonymousFixed() && network->inputs().size() > 1) {
         Status status = StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED;
-        SPDLOG_WARN(status.string());
+        SPDLOG_LOGGER_WARN(modelmanager_logger, status.string());
         return status;
     }
     if (!config.getLayout().empty() && network->inputs().size() > 1) {
         Status status = StatusCode::ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED;
-        SPDLOG_WARN(status.string());
+        SPDLOG_LOGGER_WARN(modelmanager_logger, status.string());
         return status;
     }
     for (const auto& [name, _] : config.getShapes()) {
@@ -154,22 +154,22 @@ Status validateConfigurationAgainstNetwork_2(const ModelConfig& config, std::sha
             continue;
         }
         if (hasInputWithName(network, name) && config.getMappingInputByKey(name) != "") {
-            SPDLOG_WARN("Config shape - {} is mapped by {}. Changes will not apply", name, config.getMappingInputByKey(name));
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Config shape - {} is mapped by {}. Changes will not apply", name, config.getMappingInputByKey(name));
             return StatusCode::CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME;
         } else if (!hasInputWithName(network, name) && !hasInputWithName(network, config.getRealInputNameByValue(name))) {
-            SPDLOG_WARN("Config shape - {} not found in network", name);
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Config shape - {} not found in network", name);
             return StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK;
         }
     }
     for (const auto& [name, _] : config.getLayouts()) {
         if (hasInputWithName(network, name) && config.getMappingInputByKey(name) != "") {
-            SPDLOG_WARN("Config layout - {} is mapped by {}. Changes will not apply", name, config.getMappingInputByKey(name));
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Config layout - {} is mapped by {}. Changes will not apply", name, config.getMappingInputByKey(name));
             return StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME;
         } else if (hasOutputWithName(network, name) && config.getMappingOutputByKey(name) != "") {
-            SPDLOG_WARN("Config layout - {} is mapped by {}. Changes will not apply", name, config.getMappingOutputByKey(name));
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Config layout - {} is mapped by {}. Changes will not apply", name, config.getMappingOutputByKey(name));
             return StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME;
         } else if (!hasInputWithName(network, name) && !hasOutputWithName(network, name) && !hasInputWithName(network, config.getRealInputNameByValue(name)) && !hasOutputWithName(network, config.getRealOutputNameByValue(name))) {
-            SPDLOG_WARN("Config layout - {} not found in network", name);
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Config layout - {} not found in network", name);
             return StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK;
         }
     }
