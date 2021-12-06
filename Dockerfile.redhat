@@ -133,7 +133,7 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
 
 # install opencv
 #
-RUN cd /opt/intel/openvino && wget http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/centos7.tgz && tar -xzf ubuntu20.tgz
+RUN cd /opt/intel/openvino && curl -s  http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/centos7.tgz | tar -xzf -
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
