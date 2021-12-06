@@ -17,7 +17,7 @@
 
 #include <string>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #include "nodesession.hpp"
 #include "nodesessionmetadata.hpp"

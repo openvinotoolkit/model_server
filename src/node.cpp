@@ -200,11 +200,11 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         return StatusCode::INTERNAL_ERROR;
     }
     auto& [metadata, tensorMap] = nodeSessionOutputs.begin()->second;
-    auto shape = tensorMap.begin()->second->get_shape();
-    uint32_t resultsDemultiplyCount = shape[0];
-    if (shape[0] > DEMULTIPLY_LIMIT) {
+    auto firstTensorShape = tensorMap.begin()->second->get_shape();
+    uint32_t resultsDemultiplyCount = firstTensorShape[0];
+    if (firstTensorShape[0] > DEMULTIPLY_LIMIT) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} - too large dim[0] size: {} of tensor: {}. Maximum allowed is: {}",
-            getName(), shape[0], tensorMap.begin()->first, DEMULTIPLY_LIMIT);
+            getName(), firstTensorShape[0], tensorMap.begin()->first, DEMULTIPLY_LIMIT);
         return StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY;
     }
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), resultsDemultiplyCount);

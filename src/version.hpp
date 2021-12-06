@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#ifndef MODEL_SERVER_SRC_VERSION_HPP_
-#define MODEL_SERVER_SRC_VERSION_HPP_
+#ifndef SRC_VERSION_HPP_
+#define SRC_VERSION_HPP_
 #define PROJECT_NAME "REPLACE_PROJECT_NAME"
 #define OPENVINO_NAME "REPLACE_OPENVINO_NAME"
-#endif  // MODEL_SERVER_SRC_VERSION_HPP_"
+#endif  // SRC_VERSION_HPP_"

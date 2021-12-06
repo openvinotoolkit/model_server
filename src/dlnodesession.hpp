@@ -20,7 +20,7 @@
 #include <string>
 #include <utility>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #include "modelversion.hpp"
 #include "nodesession.hpp"

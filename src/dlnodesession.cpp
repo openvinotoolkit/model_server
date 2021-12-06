@@ -246,17 +246,12 @@ Status DLNodeSession::setInputsForInference(ov::runtime::InferRequest& inferRequ
                     __FUNCTION__, getName(), name);
                 return StatusCode::INTERNAL_ERROR;
             }
-            // TODO adjust for 2.0 reshape methodology
-            // Update tensor layout with model input layout
-            // auto& inputInfo = this->model->getInputsInfo().at(name);
-            // tensor->getTensorDesc().setLayout(inputInfo->getLayout());
-            // tensor->getTensorDesc().reshape(inputInfo->getTensorDesc().getDims());
             inferRequest.set_tensor(realModelInputName, *tensor);
         }
         // OV implementation the InferenceEngine::Exception is not
         // a base class for all other exceptions thrown from OV.
         // OV can throw exceptions derived from std::logic_error.
-    } catch (const InferenceEngine::Exception& e) {
+    } catch (const ov::Exception& e) {
         status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] {}; exception message: {}", getName(), status.string(), e.what());
     } catch (std::logic_error& e) {
@@ -278,12 +273,12 @@ Status DLNodeSession::executeInference(PipelineEventQueue& notifyEndQueue, ov::r
             // After inference is completed, input blobs are not needed anymore
             this->inputHandler->clearInputs();
             notifyEndQueue.push({node, getSessionKey()});
-            inferRequest.set_callback([](std::exception_ptr exception_ptr) {});  // reset callback on infer request // TODO change callback to use exceptions
+            inferRequest.set_callback([](std::exception_ptr exception_ptr) {});  // reset callback on infer request
         });
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Starting infer async for node name: {}", getName());
         this->timer->start("inference");
         inferRequest.start_async();
-    } catch (const InferenceEngine::Exception& e) {
+    } catch (const ov::Exception& e) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception occured when starting async inference or setting completion callback on model: {}, error: {}",
             getName(), getModelName(), e.what());
         return StatusCode::OV_INTERNAL_INFERENCE_ERROR;

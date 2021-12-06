@@ -64,9 +64,9 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Consolidating: {} shards for input: {}", shardsCount, inputName);
         session_id_t firstShardId = 0;
         auto firstShard = shardMap.at(firstShardId);
-        auto shardDims = firstShard->get_shape();
+        auto firstShardDims = firstShard->get_shape();
         auto precision = firstShard->get_element_type();
-        auto newDims = shardDims;
+        auto newDims = firstShardDims;
         newDims.insert(newDims.begin(),
             collapsingDetails->collapsedSessionSizes.begin(),
             collapsingDetails->collapsedSessionSizes.end());
@@ -77,18 +77,18 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
         }
         for (auto& [shardId, tensor] : shardMap) {
             if ((tensor->get_element_type() != precision) ||
-                (tensor->get_shape() != shardDims)) {
+                (tensor->get_shape() != firstShardDims)) {
                 std::stringstream firstShardShapeStream;
-                std::copy(shardDims.begin(), shardDims.end(), std::ostream_iterator<size_t>(firstShardShapeStream, " "));
+                firstShardShapeStream << firstShardDims;
                 auto currentShardShape = tensor->get_shape();
                 std::stringstream currentShardShapeStream;
-                std::copy(currentShardShape.begin(), currentShardShape.end(), std::ostream_iterator<size_t>(currentShardShapeStream, " "));
-                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to consolidate tensor: {}; shards in gather node. First shard has different tensor precision:{};  or shape: {}; than current shard precision: {}; shape:{};",
+                currentShardShapeStream << currentShardShape;
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to consolidate tensor: {}; shards in gather node. First shard has different tensor precision: {}; or shape: {}; than current shard precision: {}; shape: {};",
                     inputName,
                     toString(ovElementTypeToOvmsPrecision(precision)),
                     firstShardShapeStream.str(),
                     toString(ovElementTypeToOvmsPrecision(tensor->get_element_type())),
-                    currentShardShapeStream.str());  // TODO simplify double conversion?
+                    currentShardShapeStream.str());
                 return StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS;
             }
             const auto memstep = tensor->get_byte_size();
