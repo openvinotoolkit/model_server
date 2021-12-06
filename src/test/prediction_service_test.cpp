@@ -610,7 +610,7 @@ TEST_F(TestPredict, PerformInferenceChangeModelInputLayout) {
     checkOutputShape(response, {1, 3, 4, 5}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 
     // Perform inference with NCHW layout, ensure error
-    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}), ovms::StatusCode::INVALID_SHAPE);
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 4, 5}), ovms::StatusCode::INVALID_SHAPE);
 
     // Reload model with layout setting removed, model is still NHWC
     ASSERT_EQ(config.parseLayoutParameter(""), ovms::StatusCode::OK);
