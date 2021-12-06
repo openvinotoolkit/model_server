@@ -232,18 +232,28 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
     return StatusCode::OK;
 }
 
-Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
+Status ModelInstance::loadTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
     Status status = validateConfigurationAgainstNetwork_2(config, this->network_2);
     if (!status.ok()) {
         return status;
     }
-
-    this->inputsInfo.clear();
-
     status = addPrePostProcessingSteps(config, this->network_2, getName(), getVersion());
     if (!status.ok()) {
         return status;
     }
+    status = loadInputTensors(config, parameter);
+    if (!status.ok()) {
+        return status;
+    }
+    status = loadOutputTensors(config);
+    if (!status.ok()) {
+        return status;
+    }
+    return StatusCode::OK;
+}
+
+Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
+    this->inputsInfo.clear();
 
     std::map<std::string, ov::PartialShape> networkShapes_2;
     bool reshapeRequired = false;
@@ -738,12 +748,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
         }
 
         configureBatchSize(this->config, parameter);
-        status = loadInputTensors(this->config, parameter);
-        if (!status.ok()) {
-            this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
-            return status;
-        }
-        status = loadOutputTensors(this->config);
+        status = loadTensors(this->config, parameter);
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
