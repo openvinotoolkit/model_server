@@ -17,6 +17,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <unordered_map>
 #include <utility>
 
 #include "custom_node_output_allocator.hpp"
@@ -38,13 +39,24 @@ CustomNodeSession::CustomNodeSession(const NodeSessionMetadata&& metadata, const
 
 CustomNodeSession::~CustomNodeSession() = default;
 
+std::unordered_map<std::string, shape_t> createOwnedShapesCopy(const TensorMap& tensorMap) {
+    std::unordered_map<std::string, shape_t> tensorsDims;
+    for (auto [name, tensor] : tensorMap) {
+        shape_t tensorDims = tensor->get_shape();
+        tensorsDims.emplace(name, std::move(tensorDims));
+    }
+    return tensorsDims;
+}
+
 Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node, const NodeLibrary& library, std::unique_ptr<struct CustomNodeParam[]>& parameters, int parametersCount, void* customNodeLibraryInternalManager) {
     const auto& blobMap = this->inputHandler->getInputs();
     auto inputTensorsCount = blobMap.size();
-    auto inputTensors = createCustomNodeTensorArray(blobMap);
+    // this is a hack to overcome OV 1.0 -> 2.0 API change where we do not get reference to
+    // tensor shape now but a copy. Hence we have to extend the lifetime of dims vector
+    auto tensorsDims = createOwnedShapesCopy(blobMap);
+    auto inputTensors = createCustomNodeTensorArray(blobMap, tensorsDims);
     struct CustomNodeTensor* outputTensors = nullptr;
     int outputTensorsCount = 0;
-
     this->timer->start("execution");
     int result = library.execute(
         inputTensors.get(),
@@ -179,7 +191,7 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, std:
     InferenceEngine::SizeVector shape(tensor->dims, tensor->dims + tensor->dimsCount);
 
     size_t expectedElementsCount = std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<size_t>());
-    size_t expectedDataLength = expectedElementsCount *= ov::element::Type(precision).size(); // TODO
+    size_t expectedDataLength = expectedElementsCount *= ov::element::Type(precision).size();  // TODO
     if (tensor->data == nullptr || tensor->dataBytes != expectedDataLength) {
         std::stringstream error;
         if (tensor->data == nullptr) {
@@ -205,10 +217,11 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, std:
         case CustomNodeTensorPrecision::I16:
         case CustomNodeTensorPrecision::U16:
             resultBlob = std::make_shared<ov::runtime::Tensor>(ov::element::Type(ovmsPrecisionToIE2Precision(toInferenceEnginePrecision(tensor->precision))), ov::Shape(shape), allocator);
+            break;
         case CustomNodeTensorPrecision::UNSPECIFIED:
             return StatusCode::INTERNAL_ERROR;
         }
-    } catch (const InferenceEngine::Exception& e) { // TODO change exception type
+    } catch (const InferenceEngine::Exception& e) {  // TODO change exception type
         Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "{}: {}", status.string(), e.what());
         return status;

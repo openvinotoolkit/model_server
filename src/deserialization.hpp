@@ -172,7 +172,7 @@ class InputSink_2 {
 public:
     InputSink_2(Requester requester) :
         requester(requester) {}
-    Status give(const std::string& name, ov::runtime::Tensor& blob); // TODO replace with one below
+    Status give(const std::string& name, ov::runtime::Tensor& blob);  // TODO replace with one below
     Status give(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& tensor);
 };
 

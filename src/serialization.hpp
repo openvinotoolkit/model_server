@@ -48,7 +48,7 @@ class OutputGetter_2 {
 public:
     OutputGetter_2(T t) :
         outputSource(t) {}
-    Status get(const std::string& name, ov::runtime::Tensor& blob); // TODO replace with shared_ptr version
+    Status get(const std::string& name, ov::runtime::Tensor& blob);  // TODO replace with shared_ptr version
     Status get(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& tensor);
 
 private:

@@ -79,6 +79,36 @@ inline static std::string toString(Precision precision) {
     return it->second;
 }
 
+inline static Precision fromString(const std::string& s) {
+    static std::unordered_map<std::string, Precision> precisionMap{
+        {"BF16", Precision::BF16},
+        {"FP64", Precision::FP64},
+        {"FP32", Precision::FP32},
+        {"FP16", Precision::FP16},
+        {"I64", Precision::I64},
+        {"I32", Precision::I32},
+        {"I16", Precision::I16},
+        {"I8", Precision::I8},
+        {"I4", Precision::I4},
+        {"U64", Precision::U64},
+        {"U32", Precision::U32},
+        {"U16", Precision::U16},
+        {"U8", Precision::U8},
+        {"U4", Precision::U4},
+        {"U1", Precision::U1},
+        {"MIXED", Precision::MIXED},
+        {"Q78", Precision::Q78},
+        {"BIN", Precision::BIN},
+        {"BOOL", Precision::BOOL},
+        {"UNDEFINED", Precision::UNDEFINED},
+        {"CUSTOM", Precision::CUSTOM}};
+    auto it = precisionMap.find(s);
+    if (it == precisionMap.end()) {
+        return Precision::UNDEFINED;
+    }
+    return it->second;
+}
+
 inline static InferenceEngine::Precision ovmsPrecisionToIE1Precision(Precision precision) {
     static std::unordered_map<Precision, InferenceEngine::Precision> precisionMap{
         {Precision::BF16, InferenceEngine::Precision::BF16},

@@ -25,6 +25,7 @@
 #include "custom_node_interface.h"  // NOLINT
 #include "node_library.hpp"
 #include "precision.hpp"
+#include "shapeinfo.hpp"
 #include "status.hpp"
 #include "tensormap.hpp"
 
@@ -35,7 +36,7 @@ class TensorInfo;
 CustomNodeTensorPrecision toCustomNodeTensorPrecision(ov::element::Type_t precision);
 Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision);
 std::unique_ptr<struct CustomNodeParam[]> createCustomNodeParamArray(const std::unordered_map<std::string, std::string>& paramMap);
-std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const TensorMap& blobMap);
+std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const TensorMap& blobMap, const std::unordered_map<std::string, shape_t>& tensorDims);
 Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std::map<std::string, std::shared_ptr<TensorInfo>>& out, release_fn freeCallback, void* customNodeLibraryInternalManager);
 
 }  // namespace ovms

@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "gathernodeinputhandler.hpp"
 
+#include <algorithm>
 #include <functional>
 
 #include "logging.hpp"
@@ -87,7 +88,7 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
                     toString(ovElementTypeToOvmsPrecision(precision)),
                     firstShardShapeStream.str(),
                     toString(ovElementTypeToOvmsPrecision(tensor->get_element_type())),
-                    currentShardShapeStream.str()); // TODO simplify double conversion?
+                    currentShardShapeStream.str());  // TODO simplify double conversion?
                 return StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS;
             }
             const auto memstep = tensor->get_byte_size();
