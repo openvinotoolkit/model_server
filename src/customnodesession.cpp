@@ -20,6 +20,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include <openvino/openvino.hpp>
+
 #include "custom_node_output_allocator.hpp"
 #include "logging.hpp"
 #include "node.hpp"
@@ -191,7 +193,7 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, std:
     InferenceEngine::SizeVector shape(tensor->dims, tensor->dims + tensor->dimsCount);
 
     size_t expectedElementsCount = std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<size_t>());
-    size_t expectedDataLength = expectedElementsCount *= ov::element::Type(precision).size();  // TODO
+    size_t expectedDataLength = expectedElementsCount *= ov::element::Type(precision).size();
     if (tensor->data == nullptr || tensor->dataBytes != expectedDataLength) {
         std::stringstream error;
         if (tensor->data == nullptr) {
@@ -221,7 +223,7 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, std:
         case CustomNodeTensorPrecision::UNSPECIFIED:
             return StatusCode::INTERNAL_ERROR;
         }
-    } catch (const InferenceEngine::Exception& e) {  // TODO change exception type
+    } catch (const ov::Exception& e) {
         Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "{}: {}", status.string(), e.what());
         return status;

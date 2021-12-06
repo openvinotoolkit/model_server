@@ -18,7 +18,7 @@
 #include <map>
 #include <utility>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #include "dlnodesession.hpp"
 #include "logging.hpp"
@@ -64,7 +64,7 @@ Status DLNode::fetchResults(TensorMap& outputs, ov::runtime::InferRequest& infer
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Waiting for infer request to finish", getName(), sessionKey);
     try {
         inferRequest.wait();
-    } catch (const InferenceEngine::Exception& e) {
+    } catch (const ov::Exception& e) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} IE exception occured during infer request wait: {}", getName(), sessionKey, e.what());
         return StatusCode::INTERNAL_ERROR;
     } catch (std::exception& e) {
@@ -96,7 +96,7 @@ Status DLNode::fetchResults(TensorMap& outputs, ov::runtime::InferRequest& infer
                 }
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Getting tensor from model: {}, inferRequestStreamId: {}, blobName: {}",
                     getName(), sessionKey, modelName, sessionKey, realModelOutputName);
-                const auto tensor = inferRequest.get_tensor(realModelOutputName);  // TODO should be const
+                const auto tensor = inferRequest.get_tensor(realModelOutputName);
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Creating copy of tensor from model: {}, blobName: {}",
                     getName(), sessionKey, modelName, realModelOutputName);
                 std::shared_ptr<ov::runtime::Tensor> copiedTensor;
@@ -109,7 +109,7 @@ Status DLNode::fetchResults(TensorMap& outputs, ov::runtime::InferRequest& infer
                     return status;
                 }
                 outputs.emplace(std::make_pair(output_name, std::move(copiedTensor)));
-            } catch (const InferenceEngine::Exception& e) {
+            } catch (const ov::Exception& e) {
                 Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session:{} Error during getting tensor {}; exception message: {}", getName(), sessionKey, status.string(), e.what());
                 return status;

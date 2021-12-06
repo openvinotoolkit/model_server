@@ -299,7 +299,7 @@ InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images
 }
 
 ov::runtime::Tensor createBlobFromMats_2(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
-    ov::Shape shape = tensorInfo->getShape();
+    ov::Shape shape = !isPipeline ? tensorInfo->getShape() : getShapeFromImages(images, tensorInfo);
     ov::element::Type precision = tensorInfo->getOvPrecision();
     ov::runtime::Tensor tensor(precision, shape);
     char* ptr = (char*)tensor.data();

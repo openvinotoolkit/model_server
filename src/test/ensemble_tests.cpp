@@ -3631,7 +3631,6 @@ static const char* pipelineAmbiguousInputMeta = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,3,1,2) ",
-                "layout": {"input": "nchw"},
                 "nireq": 1
             }
         }
@@ -3785,7 +3784,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1x1 = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,1,1) ",
+                "shape": "(1,1,1,3) ",
                 "layout": "nhwc",
                 "nireq": 1
             }
@@ -3957,7 +3956,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1x1BS5 = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(5,3,1,1) ",
+                "shape": "(5,1,1,3) ",
                 "layout": "nhwc",
                 "nireq": 1
             }
@@ -4016,7 +4015,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC2x2 = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,2,2) ",
+                "shape": "(1,2,2,3) ",
                 "layout": "nhwc",
                 "nireq": 1
             }
@@ -4074,7 +4073,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC2x2BS5 = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(5,3,2,2) ",
+                "shape": "(5,2,2,3) ",
                 "layout": "nhwc",
                 "nireq": 1
             }

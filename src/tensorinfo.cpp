@@ -365,6 +365,7 @@ const InferenceEngine::TensorDesc TensorInfo::getTensorDesc() const {
 
 bool TensorInfo::isTensorSpecEqual(const TensorInfo& other) const {
     return this->getShape_2() == other.getShape_2() &&
+           this->getShape() == other.getShape() &&
            this->getPrecision_2() == other.getPrecision_2();
 }
 

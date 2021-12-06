@@ -72,7 +72,7 @@ TEST(DemultiplexerTest, CheckDemultipliedBlobsMultipleOutputs) {
     std::vector<float> blobDataNonDemultiplexed(blobsData[0].size() * demultiplyCount);
     std::copy(blobsData[0].begin(), blobsData[0].end(), blobDataNonDemultiplexed.begin());
     std::copy(blobsData[1].begin(), blobsData[1].end(), blobDataNonDemultiplexed.begin() + blobsData[0].size());
-    std::shared_ptr<ov::runtime::Tensor> intermediateResultBlob = createSharedTensor(precision, shape, (void*)blobDataNonDemultiplexed.data());  // TODO cast
+    std::shared_ptr<ov::runtime::Tensor> intermediateResultBlob = createSharedTensor(precision, shape, blobDataNonDemultiplexed.data());
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;
@@ -108,7 +108,7 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenWrongOutputDimensions) {
     // imitate (1, 2, 3) but shoudl be (1,3,x1, ..., xN)
     const std::vector<size_t> shape{1, demultiplyCount - 1, 3};
     const auto precision{ov::element::Type_t::f32};
-    std::shared_ptr<ov::runtime::Tensor> intermediateResultBlob = createSharedTensor(precision, shape, (void*)blobData.data());  // TODO cast
+    std::shared_ptr<ov::runtime::Tensor> intermediateResultBlob = createSharedTensor(precision, shape, blobData.data());
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;
@@ -128,7 +128,7 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenNotEnoughDimensionsInOutp
     // imitate (1, 3) but should be at least (1,3,x1, ..., xN) N >= 1
     const std::vector<size_t> shape{1, demultiplyCount};
     const auto precision{ov::element::Type_t::f32};
-    std::shared_ptr<ov::runtime::Tensor> intermediateResultBlob = createSharedTensor(precision, shape, (void*)blobData.data());  // TODO cast
+    std::shared_ptr<ov::runtime::Tensor> intermediateResultBlob = createSharedTensor(precision, shape, blobData.data());
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;

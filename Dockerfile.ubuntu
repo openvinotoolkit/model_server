@@ -205,7 +205,7 @@ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/example/SampleCpuExtension/ && make
 
-#RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all //src:ovms_test
+RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=all --test_filter=-*ChangeBatchSizeViaRequestAndConfigChange:*SuccesfullReloadWhen1InferenceInProgress:*SuccesfullReloadWhen1InferenceAboutToStart:*SuccesfullReloadWhenSeveralInferRequestJustBeforeGettingModelInstance:*SuccesfullReloadWhenSeveralInferRequestAtDifferentStages:*SuccesfullReloadForMultipleThreadsDifferentBS:*PerformInferenceWithBinaryInputBatchSizeAuto //src:ovms_test
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
