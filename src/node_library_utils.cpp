@@ -44,7 +44,7 @@ CustomNodeTensorPrecision toCustomNodeTensorPrecision(ov::element::Type_t precis
 }
 
 Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision) {
-        // TODO should we add new precisions now into CN header?
+    // TODO should we add new precisions now into CN header?
     static std::unordered_map<CustomNodeTensorPrecision, Precision> precisionMap{
         {CustomNodeTensorPrecision::FP32, Precision::FP32},
         {CustomNodeTensorPrecision::I32, Precision::I32},
@@ -74,14 +74,18 @@ std::unique_ptr<struct CustomNodeParam[]> createCustomNodeParamArray(const std::
     return libraryParameters;
 }
 
-std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const TensorMap& blobMap) {
+std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const TensorMap& blobMap, const std::unordered_map<std::string, shape_t>& tensorsDims) {
     if (blobMap.size() == 0) {
         return nullptr;
     }
     auto inputTensors = std::make_unique<struct CustomNodeTensor[]>(blobMap.size());
     int i = 0;
     for (const auto& [name, blob] : blobMap) {
-        const auto& dims = blob->get_shape();
+        auto dimsIt = tensorsDims.find(name);
+        if (dimsIt == tensorsDims.end()) {
+            return nullptr;
+        }
+        const auto& dims = dimsIt->second;  // TODO compile time asser uint64_t == size_t
         inputTensors[i].name = static_cast<const char*>(name.c_str());
         inputTensors[i].data = static_cast<uint8_t*>(blob->data());
         inputTensors[i].dataBytes = static_cast<uint64_t>(blob->get_byte_size());

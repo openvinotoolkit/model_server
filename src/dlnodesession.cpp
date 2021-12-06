@@ -248,9 +248,9 @@ Status DLNodeSession::setInputsForInference(ov::runtime::InferRequest& inferRequ
             }
             // TODO adjust for 2.0 reshape methodology
             // Update tensor layout with model input layout
-            //auto& inputInfo = this->model->getInputsInfo().at(name);
+            // auto& inputInfo = this->model->getInputsInfo().at(name);
             // tensor->getTensorDesc().setLayout(inputInfo->getLayout());
-            //tensor->getTensorDesc().reshape(inputInfo->getTensorDesc().getDims());
+            // tensor->getTensorDesc().reshape(inputInfo->getTensorDesc().getDims());
             inferRequest.set_tensor(realModelInputName, *tensor);
         }
         // OV implementation the InferenceEngine::Exception is not

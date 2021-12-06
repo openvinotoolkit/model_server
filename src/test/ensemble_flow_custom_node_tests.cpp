@@ -31,6 +31,7 @@
 #include "../node_library.hpp"
 #include "../node_library_utils.hpp"
 #include "../pipelinedefinition.hpp"
+#include "../precision.hpp"
 #include "../stringutils.hpp"
 #include "test_utils.hpp"
 
@@ -2148,7 +2149,7 @@ struct LibraryParamControlledMetadata {
         shape_t shape;
         std::transform(tokens.begin(), tokens.end(), std::back_inserter(shape),
             [](const std::string& str) { return std::stoull(str); });
-        CustomNodeTensorPrecision precision = toCustomNodeTensorPrecision(InferenceEngine::Precision::FromStr(precisionStr));
+        CustomNodeTensorPrecision precision = toCustomNodeTensorPrecision(ovmsPrecisionToIE2Precision(ovms::fromString(precisionStr)));
         CustomNodeTensorInfo info;
         info.name = key;
         info.dimsCount = shape.size();
@@ -4410,7 +4411,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     ConstructorEnabledModelManager manager;
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
     config.setBatchingParams("0");
-    ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 

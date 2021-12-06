@@ -74,7 +74,7 @@ Status EntryNode::fetchResults(TensorMap& outputs) {
     bool isPipeline = true;
     return deserializePredictRequest_2<ConcreteTensorProtoDeserializator_2>(*request, inputsInfo, inputSink, isPipeline);
 }
-template <> // TODO remove
+template <>  // TODO remove
 Status InputSink_2<TensorMap&>::give(const std::string& name, ov::runtime::Tensor& blob) {
     requester[name] = std::make_shared<ov::runtime::Tensor>(blob);
     return StatusCode::OK;
@@ -114,7 +114,7 @@ Status EntryNode::createShardedBlob(std::shared_ptr<ov::runtime::Tensor>& divide
         (precision == Precision::I8) ||
         (precision == Precision::U8) ||
         (precision == Precision::I16)) {
-        dividedBlob = createSharedTensor(ovmsPrecisionToIE2Precision(precision), shape, (void*)((char*)(tensor->data()) + step));
+        dividedBlob = createSharedTensor(ovmsPrecisionToIE2Precision(precision), shape, (void*)((char*)(tensor->data()) + i * step));
     } else {
         return Node::createShardedBlob(dividedBlob, precision, shape, tensor, i, step, metadata, tensorName);
     }

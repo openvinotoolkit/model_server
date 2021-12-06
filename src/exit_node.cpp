@@ -59,17 +59,13 @@ Status OutputGetter_2<const TensorMap&>::get(const std::string& name, ov::runtim
         return StatusCode::INTERNAL_ERROR;
     }
     std::shared_ptr<ov::runtime::Tensor> finalTensor;
-    SPDLOG_ERROR("ER");
     auto status = tensorClone(finalTensor, *(it->second));
-    SPDLOG_ERROR("ER");
     blob = *it->second;
-    SPDLOG_ERROR("ER");
     return StatusCode::OK;
 }
 
 Status ExitNode::fetchResults(const TensorMap& inputTensors) {
     OutputGetter_2<const TensorMap&> outputGetter(inputTensors);
-    SPDLOG_ERROR("ER");
     return serializePredictResponse_2(outputGetter, this->outputsInfo, this->response);
 }
 

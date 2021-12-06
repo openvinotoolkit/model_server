@@ -96,7 +96,7 @@ Status DLNode::fetchResults(TensorMap& outputs, ov::runtime::InferRequest& infer
                 }
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Getting tensor from model: {}, inferRequestStreamId: {}, blobName: {}",
                     getName(), sessionKey, modelName, sessionKey, realModelOutputName);
-                const auto tensor = inferRequest.get_tensor(realModelOutputName); // TODO should be const
+                const auto tensor = inferRequest.get_tensor(realModelOutputName);  // TODO should be const
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Creating copy of tensor from model: {}, blobName: {}",
                     getName(), sessionKey, modelName, realModelOutputName);
                 std::shared_ptr<ov::runtime::Tensor> copiedTensor;
