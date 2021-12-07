@@ -170,6 +170,10 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; 
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
 #################### END OF OPENVINO BINARY INSTALL
 
+# install opencv
+#
+RUN cd /opt/intel/openvino && wget http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/ubuntu20.tgz | tar -xzf -
+
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/

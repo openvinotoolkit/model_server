@@ -131,6 +131,10 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
     ln -s /opt/intel/l_openvino_toolkit_runtime_rhel8_p* /opt/intel/openvino
 
+# install opencv
+#
+RUN cd /opt/intel/openvino && curl -s  http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/centos7.tgz | tar -xzf -
+
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/

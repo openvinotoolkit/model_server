@@ -16,12 +16,12 @@
 
 FROM registry.access.redhat.com/ubi8/ubi:8.4
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && yum update -d6 -y && yum install -d6 -y gcc-c++ curl xz
-RUN curl -s https://download.01.org/opencv/master/openvinotoolkit/thirdparty/linux/opencv/opencv_4.5.1-044_centos7.txz | tar --use-compress-program=xz -xvf -
+RUN curl -s http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/ubuntu20.tgz | tar -xzf -
 ARG NODE_NAME=east_ocr
 
 COPY . /custom_nodes/${NODE_NAME}/
 COPY custom_node_interface.h /
 WORKDIR /custom_nodes/${NODE_NAME}/
 RUN mkdir -p /custom_nodes/lib
-RUN g++ -c -std=c++17 ${NODE_NAME}.cpp -fpic  -I/opencv/include/ -Wall -Wno-unknown-pragmas -Werror -fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv -fstack-protector
-RUN g++ -shared -o /custom_nodes/lib/libcustom_node_${NODE_NAME}.so ${NODE_NAME}.o -L/opencv/lib/ -I/opencv/include/ -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+RUN g++ -c -std=c++17 ${NODE_NAME}.cpp -fpic  -I/extras/opencv/include/ -Wall -Wno-unknown-pragmas -Werror -fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv -fstack-protector
+RUN g++ -shared -o /custom_nodes/lib/libcustom_node_${NODE_NAME}.so ${NODE_NAME}.o -L/extras/opencv/lib/ -I/extras/opencv/include/ -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
