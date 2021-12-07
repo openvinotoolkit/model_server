@@ -439,9 +439,9 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     CustomNodeTensor& labelIdsTensor = (*outputs)[3];
     labelIdsTensor.name = OUTPUT_LABEL_IDS_TENSOR_NAME;
     if (!copy_label_ids_into_output(&labelIdsTensor, labelIds)) {
-        cleanup(imagesTensor);
-        cleanup(coordinatesTensor);
-        cleanup(labelIdsTensor);
+        cleanup(imagesTensor, internalManager);
+        cleanup(coordinatesTensor, internalManager);
+        cleanup(labelIdsTensor, internalManager);
         free(*outputs);
         return 1;
     }
