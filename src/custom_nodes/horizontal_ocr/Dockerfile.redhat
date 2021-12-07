@@ -14,14 +14,14 @@
 # limitations under the License.
 #
 
-FROM ubuntu:20.04
-RUN apt update && apt install -y build-essential curl
+FROM registry.access.redhat.com/ubi8/ubi:8.4
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && yum update -d6 -y && yum install -d6 -y gcc-c++ curl xz
 RUN curl -s http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/ubuntu20.tgz | tar -xzf -
-ARG NODE_NAME=east_ocr
+ARG NODE_NAME=horizontal_ocr
 
 COPY . /custom_nodes/${NODE_NAME}/
 COPY custom_node_interface.h /
 WORKDIR /custom_nodes/${NODE_NAME}/
 RUN mkdir -p /custom_nodes/lib
-RUN g++ -c -std=c++17 ${NODE_NAME}.cpp -fpic  -I/extras/opencv/include/ -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare -fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv -fstack-protector
+RUN g++ -c -std=c++17 ${NODE_NAME}.cpp -fpic  -I/extras/opencv/include/ -Wall -Wno-unknown-pragmas -Werror -fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv -fstack-protector
 RUN g++ -shared -o /custom_nodes/lib/libcustom_node_${NODE_NAME}.so ${NODE_NAME}.o -L/extras/opencv/lib/ -I/extras/opencv/include/ -lopencv_core -lopencv_imgproc -lopencv_imgcodecs

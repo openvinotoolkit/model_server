@@ -3263,7 +3263,7 @@ TEST_F(EnsembleFlowTest, PipelineAddSecondPipelineWithSameName) {
     ASSERT_TRUE(std::find_if(nodeInfos.begin(), nodeInfos.end(), [](auto nodeInfo) { return nodeInfo.nodeName == "dummyNode2"; }) == nodeInfos.end());
 }
 
-static const char* pipelineDemultiplexerBatchSize = R"(
+static const char* pipelineDemultiplexerShapeNotEqualToDemultiplyCount = R"(
 {
     "model_config_list": [
         {
@@ -3272,7 +3272,7 @@ static const char* pipelineDemultiplexerBatchSize = R"(
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "batch_size": 2,
+                "shape": "(3, 2, 10) ",
                 "nireq": 1
             }
         }
@@ -3306,19 +3306,19 @@ static const char* pipelineDemultiplexerBatchSize = R"(
     ]
 })";
 
-TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeNotAllowed) {
+TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeWithShapeNotEqualToDemultiplyCountNotAllowed) {
     std::string fileToReload = directoryPath + "/config.json";
-    createConfigFileWithContent(pipelineDemultiplexerBatchSize, fileToReload);
+    createConfigFileWithContent(pipelineDemultiplexerShapeNotEqualToDemultiplyCount, fileToReload);
     ConstructorEnabledModelManager manager;
 
     auto status = manager.loadConfig(fileToReload);
-    ASSERT_EQ(status, StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE);
+    ASSERT_EQ(status, StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT);
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
 
-static const char* pipelineDemultiplexerShape = R"(
+static const char* pipelineDemultiplexerShapeEqualToDemultiplyCount = R"(
 {
     "model_config_list": [
         {
@@ -3327,7 +3327,7 @@ static const char* pipelineDemultiplexerShape = R"(
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(3, 10) ",
+                "shape": "(2, 2, 10) ",
                 "nireq": 1
             }
         }
@@ -3361,16 +3361,16 @@ static const char* pipelineDemultiplexerShape = R"(
     ]
 })";
 
-TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeWithShapeNotAllowed) {
+TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeWithShapeEqualToDemultiplyCountAllowed) {
     std::string fileToReload = directoryPath + "/config.json";
-    createConfigFileWithContent(pipelineDemultiplexerShape, fileToReload);
+    createConfigFileWithContent(pipelineDemultiplexerShapeEqualToDemultiplyCount, fileToReload);
     ConstructorEnabledModelManager manager;
 
     auto status = manager.loadConfig(fileToReload);
-    ASSERT_EQ(status, StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE);
+    ASSERT_EQ(status, StatusCode::OK);
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
-        PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+        PipelineDefinitionStateCode::AVAILABLE);
 }
 
 static const char* pipelineSingleIncrement4DimInputNHWC = R"(

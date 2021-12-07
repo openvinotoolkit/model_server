@@ -17,7 +17,7 @@
 FROM ubuntu:20.04
 RUN apt update && apt install -y build-essential curl
 RUN curl -s http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/ubuntu20.tgz | tar -xzf -
-ARG NODE_NAME=east_ocr
+ARG NODE_NAME=horizontal_ocr
 
 COPY . /custom_nodes/${NODE_NAME}/
 COPY custom_node_interface.h /

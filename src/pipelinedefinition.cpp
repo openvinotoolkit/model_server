@@ -431,25 +431,6 @@ public:
         return StatusCode::OK;
     }
 
-    Status checkForRestrictedBatchSize() {
-        if (!isMultiBatchAllowed) {
-            for (auto& [inputName, tensorInfo] : this->inputsInfo) {
-                if (!tensorInfo->getEffectiveShape().empty() &&
-                    dependantNodeInfo.gatherFromNode.empty() &&
-                    (tensorInfo->getEffectiveShape()[0] >= 2)) {
-                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {}, node: {}, inputName: {}, inputShape: {}. Batch size >= 2 is not allowed for non gathering nodes",
-                        pipelineName, dependantNodeInfo.nodeName, inputName, TensorInfo::shapeToString(tensorInfo->getEffectiveShape()));
-                    return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE;
-                }
-            }
-            if (dependantModelInstance && dependantModelInstance->getBatchSize() >= 2) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Batch size >= 2 is not allowed for pipeline with demultiplexer. Pipeline: {} node: {}", pipelineName, dependantNodeInfo.nodeName);
-                return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE;
-            }
-        }
-        return StatusCode::OK;
-    }
-
     Status validateGatherNode(const NodeInfo& dependantNodeInfo) const {
         for (const auto& gather : dependantNodeInfo.gatherFromNode) {
             auto it = std::find_if(nodeInfos.begin(), nodeInfos.end(), [gather](const NodeInfo& nodeInfo) { return nodeInfo.nodeName == gather; });
@@ -796,11 +777,6 @@ public:
                 return result;
             }
 
-            result = checkForRestrictedBatchSize();
-            if (!result.ok()) {
-                return result;
-            }
-
             prepareRemainingUnconnectedDependantInputsSet();
         }
 
@@ -811,11 +787,6 @@ public:
             }
 
             auto result = retrieveDependantMetadata();
-            if (!result.ok()) {
-                return result;
-            }
-
-            result = checkForRestrictedBatchSize();
             if (!result.ok()) {
                 return result;
             }

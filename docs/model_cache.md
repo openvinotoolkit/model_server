@@ -26,7 +26,7 @@ When using Model Server with configuration file, it is possible to serve more th
 - Models with custom loader (for security reasons explained earlier)
 - Models configured to shape `auto` or batch_size `auto`
 
-In case there are valid reasons to enable the model cache also in those two conditions, it is possible to force enablement with `"force_caching": true` parameter:
+In case there are valid reasons to enable the model cache also for models with auto shape or auto batch, it is possible to force enablement with `"allow_cache": true` parameter:
 ```
 {
     "model_config_list": [
@@ -34,10 +34,11 @@ In case there are valid reasons to enable the model cache also in those two cond
             "name": "face_detection",
             "base_path": "/models/face-detection-retail-0004/",
             "shape": "auto",
-            "force_caching": true}},
+            "allow_cache": true}},
     ],
 }
 ```
+> IMPORTANT: Models imported via the custom loaders never create or use any cache.
 
 ## Use case example
 

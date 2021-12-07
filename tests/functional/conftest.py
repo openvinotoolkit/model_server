@@ -187,6 +187,17 @@ def get_docker_image_os_version_from_container():
     return os_distname
 
 
+def get_ov_and_ovms_version_from_container():
+    client = docker.from_env()
+    output = client.containers.run(image=image,
+                                   entrypoint=["/ovms/bin/ovms", "--version"])
+    output = output.decode("utf-8")
+    _ovms_version = re.search('OpenVINO Model Server (.+)\n', output, re.MULTILINE).group(1)
+    _ov_version = re.search('OpenVINO backend (.+)\n', output, re.MULTILINE).group(1)
+
+    return _ov_version, _ovms_version
+
+
 def devices_not_supported_for_test(not_supported_devices_list):
     """
     Comma separated list of devices not supported for test.
@@ -225,3 +236,7 @@ def pytest_runtest_logfinish(nodeid, location):
 def extra_json_environment(request):
     request.config._json_environment.append(('image', image))
     request.config._json_environment.append(('system', get_docker_image_os_version_from_container()))
+    _ov_version, _ovms_version = get_ov_and_ovms_version_from_container()
+    request.config._json_environment.append(('ov_version', _ov_version))
+    request.config._json_environment.append(('ovms_version', _ovms_version))
+    return

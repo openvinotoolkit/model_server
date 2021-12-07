@@ -11,7 +11,13 @@ See [API documentation](docs/README.md) for details on what the library provides
 
 ## Installation
 
-The client library requires Python in version >= 3.6.
+**Note:** The client library requires Python in version >= 3.6.
+
+Install the `ovmsclient` package with:
+
+`pip3 install ovmsclient`
+
+You can also build the wheel from sources:
 
 ### Linux
 
@@ -32,7 +38,7 @@ Assuming you have TFS API built, you can use `make build-package` target to buil
 
 **To install the package run:**
 
-   `pip install dist/ovmsclient-0.2-py3-none-any.whl`
+   `pip3 install dist/ovmsclient-2021.4.2-py3-none-any.whl`
 
 *Note*: For development purposes you may want to repeatedly reinstall the package.
 For that consider using `pip install` with `--force-reinstall` and `--no-deps` options.
@@ -42,7 +48,7 @@ Apart from `make build`, there are also other targets available:
  - `make build-package` - builds only `ovmsclient` package (requires TFS API protos compiled)
  - `make test` - runs tests on `ovmsclient` package. By default the package located in `dist/` directory is used. To specify custom package path pass `PACKAGE_PATH` option like: 
 
-   `make test PACKAGE_PATH=/opt/packages/ovmsclient-0.2-py3-none-any.whl`
+   `make test PACKAGE_PATH=/opt/packages/ovmsclient-2021.4.2-py3-none-any.whl`
 
  - `make clean` - removes all intermediate files generated while building the package
 
@@ -87,18 +93,17 @@ model_metadata = client.get_model_metadata(model_name="model")
 # https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html
 #
 #{
-#   "1": {
-#       "inputs": {
-#           "map/TensorArrayStack/TensorArrayGatherV3": {
-#               "shape": [1, 224, 224, 3],
-#               "dtype": DT_FLOAT32  
-#           }
-#       },
-#       "outputs" {
-#           "softmax_tensor": {
-#               "shape": [1, 1001],
-#               "dtype": DT_FLOAT32  
-#           }
+#   "model_version": 1,
+#   "inputs": {
+#       "map/TensorArrayStack/TensorArrayGatherV3": {
+#           "shape": [1, 224, 224, 3],
+#           "dtype": DT_FLOAT32  
+#       }
+#   },
+#   "outputs": {
+#       "softmax_tensor": {
+#           "shape": [1, 1001],
+#           "dtype": DT_FLOAT32  
 #       }
 #   }
 #}

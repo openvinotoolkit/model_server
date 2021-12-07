@@ -656,6 +656,198 @@ TEST(ModelConfig, ConfigParseNodeWithValidShapeFormatArray) {
     EXPECT_THAT(shapes["input"].shape, ElementsAre(1, 3, 600, 600));
 }
 
+TEST(ModelConfig, ConfigParseCacheNotDisabledByDefault) {
+    std::string config = R"#(
+        {"model_config_list": [{
+            "config": {
+                "name": "alpha",
+                "base_path": "/tmp/models/alpha"
+            }
+        }]}
+    )#";
+
+    rapidjson::Document configJson;
+    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+    ASSERT_EQ(parsingSucceeded, true);
+
+    const auto modelConfigList = configJson.FindMember("model_config_list");
+    ASSERT_NE(modelConfigList, configJson.MemberEnd());
+    const auto& configs = modelConfigList->value.GetArray();
+    ASSERT_EQ(configs.Size(), 1);
+    ovms::ModelConfig modelConfig;
+    auto status = modelConfig.parseNode(configs[0]["config"]);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_FALSE(modelConfig.isCachingDisabled());
+}
+
+TEST(ModelConfig, ConfigParseCacheDisabledForCustomLoadersByDefault) {
+    std::string config = R"#(
+        {"model_config_list": [{
+            "config": {
+                "name": "alpha",
+                "base_path": "/tmp/models/alpha",
+                "custom_loader_options": {
+                    "loader_name": "sampleloader",
+                    "model_file": "resnet50-binary-0001.xml",
+                    "bin_file": "resnet50-binary-0001.bin"
+                }
+            }
+        }]}
+    )#";
+
+    rapidjson::Document configJson;
+    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+    ASSERT_EQ(parsingSucceeded, true);
+
+    const auto modelConfigList = configJson.FindMember("model_config_list");
+    ASSERT_NE(modelConfigList, configJson.MemberEnd());
+    const auto& configs = modelConfigList->value.GetArray();
+    ASSERT_EQ(configs.Size(), 1);
+    ovms::ModelConfig modelConfig;
+    auto status = modelConfig.parseNode(configs[0]["config"]);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_TRUE(modelConfig.isCachingDisabled());
+}
+
+TEST(ModelConfig, ConfigParseCacheDisabledForBatchAutoByDefault) {
+    std::string config = R"#(
+        {"model_config_list": [{
+            "config": {
+                "name": "alpha",
+                "base_path": "/tmp/models/alpha",
+                "batch_size": "auto"
+            }
+        }]}
+    )#";
+
+    rapidjson::Document configJson;
+    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+    ASSERT_EQ(parsingSucceeded, true);
+
+    const auto modelConfigList = configJson.FindMember("model_config_list");
+    ASSERT_NE(modelConfigList, configJson.MemberEnd());
+    const auto& configs = modelConfigList->value.GetArray();
+    ASSERT_EQ(configs.Size(), 1);
+    ovms::ModelConfig modelConfig;
+    auto status = modelConfig.parseNode(configs[0]["config"]);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_TRUE(modelConfig.isCachingDisabled());
+}
+
+TEST(ModelConfig, ConfigParseCacheDisabledForShapeAutoByDefault) {
+    std::string config = R"#(
+        {"model_config_list": [{
+            "config": {
+                "name": "alpha",
+                "base_path": "/tmp/models/alpha",
+                "shape": "auto"
+            }
+        }]}
+    )#";
+
+    rapidjson::Document configJson;
+    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+    ASSERT_EQ(parsingSucceeded, true);
+
+    const auto modelConfigList = configJson.FindMember("model_config_list");
+    ASSERT_NE(modelConfigList, configJson.MemberEnd());
+    const auto& configs = modelConfigList->value.GetArray();
+    ASSERT_EQ(configs.Size(), 1);
+    ovms::ModelConfig modelConfig;
+    auto status = modelConfig.parseNode(configs[0]["config"]);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_TRUE(modelConfig.isCachingDisabled());
+}
+
+TEST(ModelConfig, ConfigParseCacheCannotForceEnableForCustomLoaders) {
+    std::string config = R"#(
+        {"model_config_list": [{
+            "config": {
+                "name": "alpha",
+                "base_path": "/tmp/models/alpha",
+                "custom_loader_options": {
+                    "loader_name": "sampleloader",
+                    "model_file": "resnet50-binary-0001.xml",
+                    "bin_file": "resnet50-binary-0001.bin"
+                },
+                "allow_cache": true
+            }
+        }]}
+    )#";
+
+    rapidjson::Document configJson;
+    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+    ASSERT_EQ(parsingSucceeded, true);
+
+    const auto modelConfigList = configJson.FindMember("model_config_list");
+    ASSERT_NE(modelConfigList, configJson.MemberEnd());
+    const auto& configs = modelConfigList->value.GetArray();
+    ASSERT_EQ(configs.Size(), 1);
+    ovms::ModelConfig modelConfig;
+    auto status = modelConfig.parseNode(configs[0]["config"]);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_TRUE(modelConfig.isCachingDisabled());
+}
+
+TEST(ModelConfig, ConfigParseCacheCanForceEnableForBatchAuto) {
+    std::string config = R"#(
+        {"model_config_list": [{
+            "config": {
+                "name": "alpha",
+                "base_path": "/tmp/models/alpha",
+                "batch_size": "auto",
+                "allow_cache": true
+            }
+        }]}
+    )#";
+
+    rapidjson::Document configJson;
+    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+    ASSERT_EQ(parsingSucceeded, true);
+
+    const auto modelConfigList = configJson.FindMember("model_config_list");
+    ASSERT_NE(modelConfigList, configJson.MemberEnd());
+    const auto& configs = modelConfigList->value.GetArray();
+    ASSERT_EQ(configs.Size(), 1);
+    ovms::ModelConfig modelConfig;
+    auto status = modelConfig.parseNode(configs[0]["config"]);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_FALSE(modelConfig.isCachingDisabled());
+}
+
+TEST(ModelConfig, ConfigParseCacheCanForceEnableForShapeAuto) {
+    std::string config = R"#(
+        {"model_config_list": [{
+            "config": {
+                "name": "alpha",
+                "base_path": "/tmp/models/alpha",
+                "shape": "auto",
+                "allow_cache": true
+            }
+        }]}
+    )#";
+
+    rapidjson::Document configJson;
+    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+    ASSERT_EQ(parsingSucceeded, true);
+
+    const auto modelConfigList = configJson.FindMember("model_config_list");
+    ASSERT_NE(modelConfigList, configJson.MemberEnd());
+    const auto& configs = modelConfigList->value.GetArray();
+    ASSERT_EQ(configs.Size(), 1);
+    ovms::ModelConfig modelConfig;
+    auto status = modelConfig.parseNode(configs[0]["config"]);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_FALSE(modelConfig.isCachingDisabled());
+}
+
 static std::string config_low_latency_no_stateful = R"#(
     {
     "model_config_list": [

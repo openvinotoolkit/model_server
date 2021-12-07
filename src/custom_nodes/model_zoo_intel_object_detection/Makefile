@@ -25,7 +25,7 @@ docker_build:
 	@cp $(HEADER_FILE_PATH) ./custom_node_interface.h
 	@cp -r ../../queue.hpp ./queue.hpp
 	@cp -r ../common ./common
-	@docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} .
+	@docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} .
 	@rm -Rf lib
 	@docker cp $$(docker create --rm custom_node_build_image:latest):/custom_nodes/lib/ ./lib/
 	@rm -rf ./common
