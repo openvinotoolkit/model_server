@@ -1241,7 +1241,8 @@ TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
 }
 
 TEST_F(StatefulModelInstanceTest, PreprocessingIntermediateRequest) {
-      ov::runtime::InferRequest inferRequest = realModel.createInferRequest_2();;
+    ov::runtime::InferRequest inferRequest = realModel.createInferRequest_2();
+    ;
     for (uint32_t sequenceControlInput : {ovms::NO_CONTROL_INPUT, ovms::SEQUENCE_END}) {
         // Prepare model instance and processing spec
         uint64_t sequenceId = 42;
@@ -1290,7 +1291,8 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
     ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
 
     // Initialize InferRequest with current state and default state
-    ov::runtime::InferRequest inferRequest = realModel.createInferRequest_2();;
+    ov::runtime::InferRequest inferRequest = realModel.createInferRequest_2();
+    ;
     realModel.setVariableState_2(inferRequest, currentState);
 
     // Check if InferRequest has been initialized properly
@@ -1303,7 +1305,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
     EXPECT_EQ(ovms::tensorClone(stateCloneTensor, state), ovms::StatusCode::OK);
 
     std::vector<float> currentTensorIrData;
-    currentTensorIrData.assign(static_cast<float*>(stateCloneTensor->data()), static_cast<float*>(stateCloneTensor->data())+ elementsCount);
+    currentTensorIrData.assign(static_cast<float*>(stateCloneTensor->data()), static_cast<float*>(stateCloneTensor->data()) + elementsCount);
     EXPECT_EQ(currentTensorIrData, currentState);
 
     tensorflow::serving::PredictResponse response;
@@ -1315,12 +1317,13 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
     // Check if InferRequest memory state has been reset to default
     state = irMemoryState[0].get_state();
     EXPECT_EQ(ovms::tensorClone(stateCloneTensor, state), ovms::StatusCode::OK);
-    currentTensorIrData.assign(static_cast<float*>(stateCloneTensor->data()), static_cast<float*>(stateCloneTensor->data())+ elementsCount);
+    currentTensorIrData.assign(static_cast<float*>(stateCloneTensor->data()), static_cast<float*>(stateCloneTensor->data()) + elementsCount);
     EXPECT_EQ(currentTensorIrData, defaultState);
 }
 
 TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
-      ov::runtime::InferRequest inferRequest = realModel.createInferRequest_2();;
+    ov::runtime::InferRequest inferRequest = realModel.createInferRequest_2();
+    ;
     for (uint32_t sequenceControlInput : {ovms::NO_CONTROL_INPUT, ovms::SEQUENCE_START}) {
         // Prepare model instance and processing spec
         uint64_t sequenceId = 33;
@@ -1341,7 +1344,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         EXPECT_EQ(ovms::tensorClone(stateCloneTensor, state), ovms::StatusCode::OK);
 
         std::vector<float> currentTensorIrData;
-        currentTensorIrData.assign(static_cast<float*>(stateCloneTensor->data()), static_cast<float*>(stateCloneTensor->data())+ elementsCount);
+        currentTensorIrData.assign(static_cast<float*>(stateCloneTensor->data()), static_cast<float*>(stateCloneTensor->data()) + elementsCount);
         EXPECT_EQ(currentTensorIrData, newState);
 
         // Inject sequence with current state as the last state written to sequence memory state

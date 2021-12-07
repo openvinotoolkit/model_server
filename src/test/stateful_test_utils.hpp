@@ -21,14 +21,13 @@
 #include <thread>
 #include <vector>
 
-#include "../tensorinfo.hpp"
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <inference_engine.hpp>
 
 #include "../sequence.hpp"
 #include "../sequence_manager.hpp"
+#include "../tensorinfo.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
@@ -135,7 +134,6 @@ public:
         memoryState[0].reset();
     }
 
-
     static void setVariableState(InferenceEngine::InferRequest& inferRequest, std::vector<float> values) {
         DummyStatefulModel::resetVariableState(inferRequest);
         std::vector<size_t> shape{1, 1};
@@ -148,15 +146,14 @@ public:
         inferRequest.Infer();
     }
 
-
     static void setVariableState_2(ov::runtime::InferRequest& inferRequest, std::vector<float> values) {
         DummyStatefulModel::resetVariableState_2(inferRequest);
         std::vector<size_t> shape{1, 1};
 
         ov::runtime::Tensor tensor(
-        ov::element::Type_t::f32,
-        shape,
-        values.data());
+            ov::element::Type_t::f32,
+            shape,
+            values.data());
         inferRequest.set_tensor("input", tensor);
         inferRequest.infer();
     }
