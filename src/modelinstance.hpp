@@ -252,6 +252,13 @@ private:
     std::atomic<uint64_t> predictRequestsHandlesCount = 0;
 
     /**
+         * @brief Internal method for loading tensors
+         *
+         * @param config
+         */
+    Status loadTensors(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
+
+    /**
          * @brief Internal method for loading inputs
          *
          * @param config

@@ -57,7 +57,7 @@ protected:
 
         networkInputs = ovms::tensor_map_t({
             {"Input_FP32_1_3_224_224_NHWC",
-                std::make_shared<ovms::TensorInfo>("Input_FP32_1_3_224_224_NHWC", ovms::Precision::FP32, ovms::shape_t{1, 3, 224, 224}, InferenceEngine::Layout::NHWC)},
+                std::make_shared<ovms::TensorInfo>("Input_FP32_1_3_224_224_NHWC", ovms::Precision::FP32, ovms::shape_t{1, 224, 224, 3}, InferenceEngine::Layout::NHWC)},
             {"Input_U8_1_3_62_62_NCHW",
                 std::make_shared<ovms::TensorInfo>("Input_U8_1_3_62_62_NCHW", ovms::Precision::U8, ovms::shape_t{1, 3, 62, 62}, InferenceEngine::Layout::NCHW)},
             {"Input_I64_1_6_128_128_16_NCDHW",

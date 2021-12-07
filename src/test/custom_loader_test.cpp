@@ -326,7 +326,7 @@ public:
     void deserialize(const std::vector<float>& input, ov::runtime::InferRequest& inferRequest, std::shared_ptr<ovms::ModelInstance> modelInstance) {
         ov::runtime::Tensor tensor(
             modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getOvPrecision(),
-            modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getShape_2(),
+            modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getShape(),
             const_cast<float*>(reinterpret_cast<const float*>(input.data())));
         inferRequest.set_tensor(DUMMY_MODEL_INPUT_NAME, tensor);
     }

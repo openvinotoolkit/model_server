@@ -166,7 +166,7 @@ Status RequestValidator::checkBinaryBatchSizeMismatch(const tensorflow::TensorPr
 }
 
 Status RequestValidator::checkShapeMismatch(const tensorflow::TensorProto& proto, const ovms::TensorInfo& inputInfo, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
-    const auto& shape = inputInfo.getEffectiveShape();
+    const auto& shape = inputInfo.getShape();
     int i = (batchingMode == AUTO) ? 1 : 0;  // If batch size is automatic, omit first dimension
     bool mismatch = false;
     for (; i < proto.tensor_shape().dim_size(); i++) {
@@ -183,7 +183,7 @@ Status RequestValidator::checkShapeMismatch(const tensorflow::TensorProto& proto
         return StatusCode::OK;
     } else {
         std::stringstream ss;
-        ss << "Expected: " << TensorInfo::shapeToString(inputInfo.getEffectiveShape())
+        ss << "Expected: " << TensorInfo::shapeToString(inputInfo.getShape())
            << "; Actual: " << TensorInfo::tensorShapeToString(proto.tensor_shape())
            << "; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
@@ -250,7 +250,7 @@ Status RequestValidator::validateTensorContentSize(const tensorflow::TensorProto
 
 Status RequestValidator::validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const tensorflow::TensorProto& proto) const {
     // Network and request must have the same number of shape dimensions, higher than 0
-    const auto& shape = inputInfo.getEffectiveShape();
+    const auto& shape = inputInfo.getShape();
     if (proto.tensor_shape().dim_size() <= 0 ||
         shape.size() != static_cast<size_t>(proto.tensor_shape().dim_size())) {
         std::stringstream ss;
