@@ -6,6 +6,6 @@ metadata:
 spec:
   channel: alpha
   name: ovms-operator
-  startingCSV: ovms-operator.v0.0.1
+  startingCSV: ovms-operator.v0.2.0
   source: my-test-catalog
   sourceNamespace: olm

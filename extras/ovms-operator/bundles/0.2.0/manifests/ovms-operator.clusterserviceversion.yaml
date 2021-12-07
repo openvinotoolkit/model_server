@@ -6,23 +6,27 @@ metadata:
       [
         {
           "apiVersion": "intel.com/v1alpha1",
-          "kind": "Ovms",
+          "kind": "ModelServer",
           "metadata": {
-            "name": "ovms-sample"
+            "name": "model-server-sample"
           },
           "spec": {
+            "annotations": {},
             "aws_access_key_id": "",
             "aws_region": "",
             "aws_secret_access_key": "",
+            "batch_size": "",
             "config_configmap_name": "",
+            "file_system_poll_wait_seconds": 0,
             "gcp_creds_secret_name": "",
             "grpc_port": 8080,
             "https_proxy": "",
-            "image_name": "registry.connect.redhat.com/intel/openvino-model-server:latest",
+            "image_name": "openvino/model-server:latest",
             "log_level": "INFO",
             "model_name": "resnet",
             "model_path": "gs://ovms-public-eu/resnet50-binary",
             "models_host_path": "",
+            "model_version_policy": "{\\\"latest\\\": { \\\"num_versions\\\":1 }}",
             "models_volume_claim": "",
             "nireq": "",
             "plugin_config": "{\\\"CPU_THROUGHPUT_STREAMS\\\":\\\"1\\\"}",
@@ -37,6 +41,7 @@ metadata:
             "s3_compat_api_endpoint": "",
             "security_context": {},
             "service_type": "ClusterIP",
+            "shape": "",
             "target_device": "CPU"
           }
         }
@@ -45,27 +50,27 @@ metadata:
     categories: "AI/Machine Learning"
     operators.operatorframework.io/builder: operator-sdk-v1.4.0
     operators.operatorframework.io/project_layout: helm.sdk.operatorframework.io/v1
-  name: ovms-operator.v0.1.0
+  name: ovms-operator.v0.2.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - kind: Ovms
-      name: ovms.intel.com
+    - kind: ModelServer
+      name: modelservers.intel.com
       version: v1alpha1
   description: |
     [OpenVINO™ Model Server](https://github.com/openvinotoolkit/model_server) (OVMS) is a scalable, high-performance solution for serving machine learning models optimized for Intel® architectures. The server provides an inference service via gRPC or REST API - making it easy to deploy new algorithms and AI experiments using the same architecture as [TensorFlow Serving](https://github.com/tensorflow/serving) for any models trained in a framework that is supported by [OpenVINO](https://software.intel.com/en-us/openvino-toolkit).
     ## About this Operator
     This Operator is based on a [Helm chart](https://github.com/openvinotoolkit/model_server/tree/main/deploy) for OVMS. It supports all the parameters from the helm chart.
     ## Using the cluster
-    OpenVINO Model Server can be consumed as a `Service` with the name matching the `Ovms` record.
+    OpenVINO Model Server can be consumed as a `Service` with the name matching the `ModelServer` record.
     ```
-    oc get pods
+    kubectl get pods
     NAME                           READY   STATUS    RESTARTS   AGE
     ovms-sample-586f6f76df-dpps4   1/1     Running   0          8h
 
-    oc get services
+    kubectl get services
     NAME          TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
     ovms-sample   ClusterIP   172.25.199.210   <none>        8080/TCP,8081/TCP   8h
     ```
@@ -102,9 +107,9 @@ spec:
         - apiGroups:
           - intel.com
           resources:
-          - ovms
-          - ovms/status
-          - ovms/finalizers
+          - modelservers
+          - modelservers/status
+          - modelservers/finalizers
           verbs:
           - create
           - delete
@@ -149,7 +154,7 @@ spec:
           - subjectaccessreviews
           verbs:
           - create
-        serviceAccountName: default
+        serviceAccountName: ovms-operator-controller-manager
       deployments:
       - name: ovms-operator-controller-manager
         spec:
@@ -169,25 +174,42 @@ spec:
                 - --upstream=http://127.0.0.1:8080/
                 - --logtostderr=true
                 - --v=10
-                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
                 name: kube-rbac-proxy
                 ports:
                 - containerPort: 8443
                   name: https
                 resources: {}
               - args:
-                - --metrics-addr=127.0.0.1:8080
-                - --enable-leader-election
-                - --leader-election-id=ovms-operator
-                image: registry.connect.redhat.com/intel/ovms-operator:0.1.0
+                  - --health-probe-bind-address=:8081
+                  - --metrics-bind-address=127.0.0.1:8080
+                  - --leader-elect
+                  - --leader-election-id=ovms-operator
+                image: quay.io/openvino/ovms-operator:0.2.0
+                livenessProbe:
+                  httpGet:
+                    path: /healthz
+                    port: 8081
+                  initialDelaySeconds: 15
+                  periodSeconds: 20
                 name: manager
+                readinessProbe:
+                  httpGet:
+                    path: /readyz
+                    port: 8081
+                  initialDelaySeconds: 5
+                  periodSeconds: 10                
                 resources:
                   limits:
                     cpu: 100m
-                    memory: 200Mi
                   requests:
                     cpu: 100m
                     memory: 60Mi
+                securityContext:
+                  allowPrivilegeEscalation: false                    
+              securityContext:
+                runAsNonRoot: true              
+              serviceAccountName: ovms-operator-controller-manager
               terminationGracePeriodSeconds: 10
       permissions:
       - rules:
@@ -204,13 +226,25 @@ spec:
           - patch
           - delete
         - apiGroups:
+          - coordination.k8s.io
+          resources:
+          - leases
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
           - ""
           resources:
           - events
           verbs:
           - create
           - patch
-        serviceAccountName: default
+        serviceAccountName: ovms-operator-controller-manager
     strategy: deployment
   installModes:
   - supported: false
@@ -230,4 +264,4 @@ spec:
   provider:
     name: Intel
     url: https://github.com/openvinotoolkit/model_server
-  version: 0.1.0
+  version: 0.2.0

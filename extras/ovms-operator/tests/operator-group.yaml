@@ -4,6 +4,5 @@ metadata:
   name: my-operatorgroup
   namespace: operator
 spec:
-  targetNamespaces:
-    - ovms
-    - default
+
+
