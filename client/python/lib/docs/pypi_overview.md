@@ -1,10 +1,16 @@
 # OpenVINO&trade; Model Server Client
 
-OpenVINO&trade; Model Server Client package contains a set of utilities to simplify interaction with the model server. To make the package as lightweight as possible, only the necessary dependencies have been included, making the total size of the package, along with all dependencies less than 100 MB.
+OpenVINO&trade; Model Server Client package makes the interaction with the model server easy. It is very lightweight thanks to minimal number of included dependencies. The total size of the package, along with all dependencies is less than 100 MB.
 
-The `ovmsclient` package works both with OpenVINO Model Server and TensorFlow Serving on: Predict, GetModelMetadata and GetModelStatus endpoints.
 
-See [API documentation](https://github.com/openvinotoolkit/model_server/blob/main/client/python/lib/docs/README.md) for details on what the `ovmsclient` package provides.
+The `ovmsclient` package works both with OpenVINO&trade; Model Server and TensorFlow Serving. It supports both gRPC and REST API calls: `Predict`, `GetModelMetadata` and `GetModelStatus`.
+
+
+The `ovmsclient` can replace `tensorflow-serving-api` package with reduced footprint and simplified interface.
+
+
+See [API documentation](https://github.com/openvinotoolkit/model_server/blob/main/client/python/lib/docs/README.md) for usage details.
+
 
 ## Usage
 
