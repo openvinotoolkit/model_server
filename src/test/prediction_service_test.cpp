@@ -458,8 +458,7 @@ TEST_F(TestPredict, SuccesfullReloadForMultipleThreadsDifferentBS) {
     testConcurrentBsChanges(initialBatchSize, numberOfThreads);
 }
 
-// TODO: Enable once Layout Change becomes available using OV 2.0.
-TEST_F(TestPredict, DISABLED_SuccesfullReshapeViaRequestOnDummyModel) {
+TEST_F(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     // Prepare model manager with dynamic shaped dummy model, originally loaded with 1x10 shape
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("0");
@@ -500,8 +499,7 @@ TEST_F(TestPredict, DISABLED_SuccesfullReshapeViaRequestOnDummyModel) {
  * 6. Reshape model back to shape=auto, initial internal shape (1,10)
  * 7. Do the inference with (1,12) shape - expect status OK and result (1,12)
  */
-// TODO: Enable once Layout Change becomes available using OV 2.0.
-TEST_F(TestPredict, DISABLED_ReshapeViaRequestAndConfigChange) {
+TEST_F(TestPredict, ReshapeViaRequestAndConfigChange) {
     using namespace ovms;
 
     // Prepare model with shape=auto (initially (1,10) shape)
@@ -549,8 +547,7 @@ TEST_F(TestPredict, DISABLED_ReshapeViaRequestAndConfigChange) {
  * 6. Reshape model back to batchsize=auto, initial internal shape (1,10)
  * 7. Do the inference with (3,10) shape - expect status OK and result (3,10)
  */
-// TODO: Enable once Layout Change becomes available using OV 2.0.
-TEST_F(TestPredict, DISABLED_ChangeBatchSizeViaRequestAndConfigChange) {
+TEST_F(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
     using namespace ovms;
 
     // Prepare model with shape=auto (initially (1,10) shape)
@@ -587,24 +584,78 @@ TEST_F(TestPredict, DISABLED_ChangeBatchSizeViaRequestAndConfigChange) {
 /**
  * Scenario - perform inference with NHWC input layout changed via config.json.
  * 
- * 1. Load model with layout=nhwc, initial internal layout: nchw
+ * 1. Load model with layout=nhwc, initial internal layout: nchw, initial shape=(1,3,4,5)
  * 2. Do the inference with (1,4,5,3) shape - expect status OK and result (1,3,4,5)
  * 3. Do the inference with (1,3,4,5) shape - expect INVALID_SHAPE
  * 4. Remove layout setting
- * 5. Do the inference with (1,4,5,3) shape - expect status OK and result (1,3,4,5): model keeps old nhwc setting
+ * 5. Do the inference with (1,4,5,3) shape - expect status OK and result (1,3,4,5)
  * 6. Do the inference with (1,3,4,5) shape - expect INVALID_SHAPE
- * 7. Add layout setting to nchw
- * 8. Do the inference with (1,3,4,5) shape - expect status OK and result (1,3,4,5):
+ * 7. Adding layout setting to nchw
+ * 8. Do the inference with (1,3,4,5) shape - expect status OK and result (1,3,4,5)
  * 9. Do the inference with (1,4,5,3) shape - expect INVALID_SHAPE
  */
-// TODO: Enable once Layout Change becomes available using OV 2.0.
-TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelInputLayout) {
+TEST_F(TestPredict, PerformInferenceChangeModelInputLayout) {
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
     config.setBatchingParams("0");
-    ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    tensorflow::serving::PredictResponse response;
+
+    // Perform inference with NHWC layout, ensure status OK and correct results
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 4, 5, 3}), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 3, 4, 5}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+
+    // Perform inference with NCHW layout, ensure error
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 4, 5}), ovms::StatusCode::INVALID_SHAPE);
+
+    // Reload model with layout setting removed, model is still NHWC
+    ASSERT_EQ(config.parseLayoutParameter(""), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Perform inference with NHWC layout, ensure status OK and correct results
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 4, 5, 3}), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 3, 4, 5}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+
+    // Perform inference with NCHW layout, ensure error
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 4, 5}), ovms::StatusCode::INVALID_SHAPE);
+
+    // Prepare model with layout changed back to nchw
+    ASSERT_EQ(config.parseLayoutParameter("nchw"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Perform inference with NCHW layout, ensure OK
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 4, 5}), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 3, 4, 5}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+
+    // Perform inference with NHWC layout, ensure error
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 4, 5, 3}), ovms::StatusCode::INVALID_SHAPE);
+}
+
+/**
+ * Scenario - perform inference with NHWC input layout changed and shape changed via config.json.
+ * 
+ * 1. Load model with layout=nhwc and shape=(1,1,2,3), initial internal layout: nchw, initial shape=(1,3,4,5)
+ * 2. Do the inference with (1,1,2,3) shape - expect status OK and result (1,3,1,2)
+ * 3. Do the inference with (1,3,1,2) shape - expect INVALID_SHAPE
+ * 4. Remove layout setting
+ * 5. Do the inference with (1,1,2,3) shape - expect status OK and result (1,3,1,2)
+ * 6. Do the inference with (1,3,1,2) shape - expect INVALID_SHAPE
+ * 7. Adding layout setting to nchw
+ * 8. Do the inference with (1,3,1,2) shape - expect status OK and result (1,3,1,2)
+ * 9. Do the inference with (1,1,2,3) shape - expect INVALID_SHAPE
+ */
+
+TEST_F(TestPredict, PerformInferenceChangeModelInputLayoutAndShape) {
+    using namespace ovms;
+
+    // Prepare model with changed layout to nhwc (internal layout=nchw)
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -618,7 +669,8 @@ TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelInputLayout) {
     // Perform inference with NCHW layout, ensure error
     ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::INVALID_SHAPE);
 
-    // Reload model with layout setting removed
+    // Reload model with layout setting removed, model is still NHWC
+    ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter(""), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -631,10 +683,11 @@ TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelInputLayout) {
     ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::INVALID_SHAPE);
 
     // Prepare model with layout changed back to nchw
+    ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
-    // Perform inference with NCHW layout, ensure status OK and correct results
+    // Perform inference with NCHW layout, ensure OK
     ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
     checkOutputShape(response, {1, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
     checkOutputValues(response, {2.0, 3.0, 4.0, 5.0, 6.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
@@ -653,8 +706,7 @@ TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelInputLayout) {
  * 5. Roll back layout setting to internal nchw
  * 6. Do the inference with (1,3,4,5) shape - expect status OK and result in NCHW layout
  */
-// TODO: Enable once Layout Change becomes available using OV 2.0.
-TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelOutputLayout) {
+TEST_F(TestPredict, PerformInferenceChangeModelOutputLayout) {
     using namespace ovms;
 
     // Prepare model with changed output layout to nhwc (internal layout=nchw)
@@ -712,14 +764,13 @@ TEST_F(TestPredict, NetworkNotLoadedWhenLayoutAndDimsInconsistent) {
  * 5. Set back layout setting to nhwc
  * 6. Do the inference with single binary image tensor - expect status OK and result in NCHW layout
  */
-// TODO: Enable once Layout Change becomes available using OV 2.0.
-TEST_F(TestPredict, DISABLED_PerformInferenceWithBinaryInputChangeModelInputLayout) {
+TEST_F(TestPredict, PerformInferenceWithBinaryInputChangeModelInputLayout) {
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
     config.setBatchingParams("0");
-    ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -732,6 +783,7 @@ TEST_F(TestPredict, DISABLED_PerformInferenceWithBinaryInputChangeModelInputLayo
 
     // Reload model with layout setting removed
     ASSERT_EQ(config.parseLayoutParameter("nchw"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     // Perform inference with binary input, ensure validation rejects the request due to NCHW setting
@@ -739,6 +791,7 @@ TEST_F(TestPredict, DISABLED_PerformInferenceWithBinaryInputChangeModelInputLayo
 
     // Switch back to nhwc
     ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     // Perform inference with binary input, ensure status OK after switching layout and correct results
@@ -753,14 +806,13 @@ TEST_F(TestPredict, DISABLED_PerformInferenceWithBinaryInputChangeModelInputLayo
  * 1. Load model with input layout=nhwc, batch_size=auto, initial internal layout: nchw, batch_size=1
  * 2. Do the inference with batch=5 binary image tensor - expect status OK and result in NCHW layout
  */
-// TODO: Enable once Layout Change becomes available using OV 2.0.
-TEST_F(TestPredict, DISABLED_PerformInferenceWithBinaryInputBatchSizeAuto) {
+TEST_F(TestPredict, PerformInferenceWithBinaryInputBatchSizeAuto) {
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
     config.setBatchingParams("auto");
-    ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -786,7 +838,7 @@ TEST_F(TestPredict, PerformInferenceWithBinaryInputNoInputShape) {
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
     config.setBatchingParams("auto");
-    ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 

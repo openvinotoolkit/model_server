@@ -199,7 +199,7 @@ TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
         shape_t{1, 10},
         InferenceEngine::Layout::NC);
     tenMap[DUMMY_MODEL_OUTPUT_NAME] = tensorInfo;
-    ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), tensorInfo->getShape_2());
+    ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), tensorInfo->getShape());
     inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
     auto status = serializePredictResponse_2(inferRequest, tenMap, &response);
     EXPECT_TRUE(status.ok());
