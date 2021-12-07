@@ -172,7 +172,7 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 
 # install opencv
 #
-RUN cd /opt/intel/openvino && wget http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/ubuntu20.tgz | tar -xzf -
+RUN cd /opt/intel/openvino && curl -s http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/ubuntu20.tgz | tar -xzf -
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
