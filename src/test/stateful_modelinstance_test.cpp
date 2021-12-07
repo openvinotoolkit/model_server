@@ -1242,7 +1242,6 @@ TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
 
 TEST_F(StatefulModelInstanceTest, PreprocessingIntermediateRequest) {
     ov::runtime::InferRequest inferRequest = realModel.createInferRequest_2();
-    ;
     for (uint32_t sequenceControlInput : {ovms::NO_CONTROL_INPUT, ovms::SEQUENCE_END}) {
         // Prepare model instance and processing spec
         uint64_t sequenceId = 42;
@@ -1292,7 +1291,6 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
 
     // Initialize InferRequest with current state and default state
     ov::runtime::InferRequest inferRequest = realModel.createInferRequest_2();
-    ;
     realModel.setVariableState_2(inferRequest, currentState);
 
     // Check if InferRequest has been initialized properly
@@ -1323,7 +1321,6 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
 
 TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
     ov::runtime::InferRequest inferRequest = realModel.createInferRequest_2();
-    ;
     for (uint32_t sequenceControlInput : {ovms::NO_CONTROL_INPUT, ovms::SEQUENCE_START}) {
         // Prepare model instance and processing spec
         uint64_t sequenceId = 33;
