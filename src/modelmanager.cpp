@@ -33,7 +33,6 @@
 #include <rapidjson/prettywriter.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "openssl/md5.h"
 
 #include "azurefilesystem.hpp"
 #include "config.hpp"
@@ -46,6 +45,7 @@
 #include "localfilesystem.hpp"
 #include "logging.hpp"
 #include "node_library.hpp"
+#include "openssl/md5.h"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
 #include "pipelinedefinition.hpp"
