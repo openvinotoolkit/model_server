@@ -784,8 +784,7 @@ std::string ModelManager::getConfigFileMD5() {
 
     unsigned char result[MD5_DIGEST_LENGTH];
     MD5((unsigned char*)str.c_str(), str.size(), result);
-    std::string md5sum(reinterpret_cast<char*>(result),MD5_DIGEST_LENGTH);
-
+    std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
     return (md5sum);
 }
 
