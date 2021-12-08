@@ -33,6 +33,7 @@
 #include <rapidjson/prettywriter.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "openssl/md5.h"
 
 #include "azurefilesystem.hpp"
 #include "config.hpp"
@@ -645,9 +646,7 @@ public:
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     configFilename = jsonFilename;
-    struct stat statTime;
-    stat(configFilename.c_str(), &statTime);
-    lastConfigChangeTime = statTime.st_ctim;
+    lastConfigFileMD5 = getConfigFileMD5();
     rapidjson::Document configJson;
 
     uint16_t counter = 0;
@@ -775,16 +774,35 @@ Status ModelManager::updateConfigurationWithoutConfigFile() {
     }
 }
 
+std::string ModelManager::getConfigFileMD5() {
+    std::ifstream ifs;
+    ifs.open(configFilename);
+    std::stringstream strStream;
+    strStream << ifs.rdbuf();
+    std::string str = strStream.str();
+    ifs.close();
+
+    unsigned char result[MD5_DIGEST_LENGTH];
+    MD5((unsigned char*)str.c_str(), str.size(), result);
+    std::string md5sum(reinterpret_cast<char*>(result),MD5_DIGEST_LENGTH);
+
+    return (md5sum);
+}
+
 Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
-    struct stat statTime;
 
-    if (stat(configFilename.c_str(), &statTime) != 0) {
+    if (!std::ifstream(configFilename)) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Config file not found or cannot open.");
         isNeeded = false;
         return StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED;
     }
-    bool configFileModified = !(lastConfigChangeTime.tv_sec == statTime.st_ctim.tv_sec && lastConfigChangeTime.tv_nsec == statTime.st_ctim.tv_nsec);
+
+    std::string newmd5 = getConfigFileMD5();
+    bool configFileModified = false;
+    if (lastConfigFileMD5 != newmd5) {
+        configFileModified = true;
+    }
 
     if (configFilename == "" || !configFileModified) {
         isNeeded = false;

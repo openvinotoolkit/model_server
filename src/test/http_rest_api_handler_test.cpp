@@ -35,6 +35,19 @@ static const char* configWith1Dummy = R"(
     ]
 })";
 
+static const char* configWith1DummyNew = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+		"batch_size": "16"
+            }
+        }
+    ]
+})";
+
 class ModelManagerTest : public ovms::ModelManager {};
 
 class ConfigApi : public TestWithTempDir {
@@ -158,7 +171,7 @@ TEST_F(ConfigReload, startWith1DummyThenReload) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     LoadConfig(manager);
     RemoveConfig();
-    SetUpConfig(configWith1Dummy);
+    SetUpConfig(configWith1DummyNew);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     const char* expectedJson = R"({
@@ -495,6 +508,46 @@ static const char* configWith1DummyPipeline = R"(
     ]
 })";
 
+static const char* configWith1DummyPipelineNew = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "batch_size": "16"
+
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                            "data_item": "custom_dummy_input"}}
+                    ], 
+                    "outputs": [
+                        {"data_item": "a",
+                        "alias": "new_dummy_output"}
+                    ] 
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode",
+                                        "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
 TEST_F(ConfigReload, StartWith1DummyThenReloadToAddPipeline) {
     ModelManagerTest manager;
     SetUpConfig(configWith1Dummy);
@@ -782,7 +835,7 @@ TEST_F(ConfigReload, StartWith1DummyPipelineThenReloadToAddPipeline) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     LoadConfig(manager);
     RemoveConfig();
-    SetUpConfig(configWith1DummyPipeline);
+    SetUpConfig(configWith1DummyPipelineNew);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     const char* expectedJson_1 = R"({
