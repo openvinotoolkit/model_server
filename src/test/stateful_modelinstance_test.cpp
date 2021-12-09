@@ -245,10 +245,10 @@ public:
         ovms::InputSink_2<ov::runtime::InferRequest&> inputSink_2(inferRequest_2);
         (void)inputSink_2;
         bool isPipeline = false;
-        timer.stop("deserialize");
         status = ovms::deserializePredictRequest_2<ovms::ConcreteTensorProtoDeserializator_2>(*requestProto, getInputsInfo(), inputSink_2, isPipeline);
         if (!status.ok())
             return status;
+        timer.stop("deserialize");
 
         timer.start("prediction");
         status = performInference_2(inferRequest_2);
