@@ -26,4 +26,13 @@ bool NodeLibrary::isValid() const {
            deinitialize != nullptr;
 }
 
+NodeLibraryExecutor::NodeLibraryExecutor(std::unique_ptr<NodeLibraryBase>&& ptr) :
+    nodeLibrary(std::move(ptr)) {
+    //    auto v2Ptr = dynamic_cast<NodeLibraryV2*>(nodeLibrary.get());
+}
+
+bool NodeLibraryBase::isValid() const {
+    return true;
+}
+
 }  // namespace ovms

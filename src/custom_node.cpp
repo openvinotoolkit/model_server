@@ -28,6 +28,7 @@ namespace ovms {
 CustomNode::CustomNode(
     const std::string& nodeName,
     const NodeLibrary& library,
+    std::shared_ptr<NodeLibraryExecutor> libraryExecutor,
     const parameters_t& parameters,
     const std::unordered_map<std::string, std::string>& nodeOutputNameAlias,
     std::optional<uint32_t> demultiplyCount,
@@ -35,6 +36,7 @@ CustomNode::CustomNode(
     void* customNodeLibraryInternalManager) :
     Node(nodeName, demultiplyCount, gatherFromNode),
     library(library),
+    libraryExecutor(libraryExecutor),
     parameters(parameters),
     nodeOutputNameAlias(nodeOutputNameAlias),
     libraryParameters(createCustomNodeParamArray(this->parameters)),

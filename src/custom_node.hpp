@@ -28,9 +28,11 @@
 namespace ovms {
 
 class NodeLibrary;
+class NodeLibraryExecutor;
 
 class CustomNode : public Node {
     NodeLibrary library;
+    std::shared_ptr<NodeLibraryExecutor> libraryExecutor;
     parameters_t parameters;
     std::unordered_map<std::string, std::string> nodeOutputNameAlias;
 
@@ -42,6 +44,7 @@ public:
     CustomNode(
         const std::string& nodeName,
         const NodeLibrary& library,
+        std::shared_ptr<NodeLibraryExecutor> libraryExecutor,
         const parameters_t& parameters,
         const std::unordered_map<std::string, std::string>& nodeOutputNameAlias = {},
         std::optional<uint32_t> demultiplyCount = std::nullopt,

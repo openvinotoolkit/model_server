@@ -304,7 +304,7 @@ void processDLNodeConfig(const rapidjson::Value& nodeConfig, DLNodeInfo& info) {
 
 Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, CustomNodeInfo& info, const std::string& pipelineName, ModelManager& manager) {
     std::string libraryName = nodeConfig["library_name"].GetString();
-    auto status = manager.getCustomNodeLibraryManager().getLibrary(libraryName, info.library);
+    auto status = manager.getCustomNodeLibraryManager().getLibrary(libraryName, info.library, info.libraryExecutor);
     if (!status.ok()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} refers to non existing custom node library: {}", pipelineName, libraryName);
     }
@@ -397,6 +397,7 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
             demultiplyCount,
             gatherFromNode,
             customNodeInfo.library,
+            customNodeInfo.libraryExecutor,
             customNodeInfo.parameters);
         auto nodeInputItr = nodeConfig.FindMember("inputs");
         processNodeInputs(nodeName, nodeInputItr, connections);
@@ -411,7 +412,7 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
     info.emplace_back(std::move(NodeInfo(NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, nonGatheredDemultiplexerNodes)));
     if (!factory.definitionExists(pipelineName)) {
         SPDLOG_DEBUG("Pipeline:{} was not loaded so far. Triggering load", pipelineName);
-        auto status = factory.createDefinition(pipelineName, info, connections, manager);
+        auto status = factory.createDefinition(pipelineName, std::move(info), std::move(connections), manager);
         pipelinesInConfigFile.insert(pipelineName);
         return status;
     }

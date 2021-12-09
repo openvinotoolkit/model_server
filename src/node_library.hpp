@@ -42,4 +42,36 @@ struct NodeLibrary {
     bool isValid() const;
 };
 
+struct NodeLibraryBase {
+    NodeLibraryBase(const std::string& basePath) :
+        basePath(basePath) {}
+    std::string basePath = "";
+    virtual bool isValid() const;
+    virtual ~NodeLibraryBase() = default;
+};
+
+class NodeLibraryExecutor {
+public:
+    bool isValid() const {
+        return nodeLibrary->isValid();
+    }
+    std::string getBasePath() const {
+        return nodeLibrary->basePath;
+    }
+    NodeLibraryExecutor(NodeLibraryExecutor&& rhs) :
+        nodeLibrary(std::move(rhs.nodeLibrary)) {}
+    NodeLibraryExecutor(const ovms::NodeLibraryExecutor&) = delete;
+    NodeLibraryExecutor& operator=(NodeLibraryExecutor&& rhs) {
+        if (this == &rhs) {
+            return *this;
+        }
+        this->nodeLibrary = std::move(rhs.nodeLibrary);
+    }
+    NodeLibraryExecutor(std::unique_ptr<NodeLibraryBase>&& ptr);
+    NodeLibraryExecutor() {}
+    //private: // TODO
+    std::unique_ptr<NodeLibraryBase> nodeLibrary;
+    ~NodeLibraryExecutor() = default;
+};
+
 }  // namespace ovms

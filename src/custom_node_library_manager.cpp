@@ -103,18 +103,30 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
         release,
         basePath};
 
+    std::unique_ptr<NodeLibraryBase> nodeLibrary = std::make_unique<NodeLibraryBase>(
+        basePath
+    );
+    libraryExecutors[name] = std::make_unique<NodeLibraryExecutor>(std::move(nodeLibrary));
+
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Successfully loaded custom node library name: {}; base_path: {}", name, basePath);
     return StatusCode::OK;
 }
 
-Status CustomNodeLibraryManager::getLibrary(const std::string& name, NodeLibrary& library) const {
-    auto it = libraries.find(name);
-    if (it == libraries.end()) {
+Status CustomNodeLibraryManager::getLibrary(const std::string& name, NodeLibrary& library, std::shared_ptr<NodeLibraryExecutor>& libraryExecutor) const {
+    auto library_it = libraries.find(name);
+    if (library_it == libraries.end()) {
         return StatusCode::NODE_LIBRARY_MISSING;
     } else {
-        library = it->second;
-        return StatusCode::OK;
+        library = library_it->second;
     }
+    auto executor_it = libraryExecutors.find(name);
+    if (executor_it == libraryExecutors.end()) {
+        return StatusCode::NODE_LIBRARY_MISSING;
+    } else {
+        libraryExecutor = executor_it->second;
+    }
+
+    return StatusCode::OK;
 }
 
 void CustomNodeLibraryManager::unloadLibrariesRemovedFromConfig(const std::set<std::string>& librariesInConfig) {

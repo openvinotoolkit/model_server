@@ -62,6 +62,7 @@ struct DLNodeInfo {
 
 struct CustomNodeInfo {
     NodeLibrary library;
+    std::shared_ptr<NodeLibraryExecutor> libraryExecutor;
     parameters_t parameters;
 };
 
@@ -74,8 +75,10 @@ struct NodeInfo {
     std::optional<size_t> demultiplyCount;
     std::set<std::string> gatherFromNode;
     NodeLibrary library;
+    std::shared_ptr<NodeLibraryExecutor> libraryExecutor;
     parameters_t parameters;
-
+    
+    NodeInfo(const NodeInfo&) = default; //TODO;
     NodeInfo(NodeKind kind,
         const std::string& nodeName,
         const std::string& modelName = "",
@@ -84,6 +87,7 @@ struct NodeInfo {
         std::optional<size_t> demultiplyCount = std::nullopt,
         const std::set<std::string>& gatherFromNode = {},
         const NodeLibrary& library = {},
+        std::shared_ptr<NodeLibraryExecutor> libraryExecutor = nullptr,
         const parameters_t& parameters = {}) :
         kind(kind),
         nodeName(nodeName),
@@ -93,6 +97,18 @@ struct NodeInfo {
         demultiplyCount(demultiplyCount),
         gatherFromNode(gatherFromNode),
         library(library),
+        libraryExecutor(std::move(libraryExecutor)),
         parameters(parameters) {}
+    NodeInfo(NodeInfo&& rhs) :
+        kind(std::move(rhs.kind)),
+        nodeName(std::move(rhs.nodeName)),
+        modelName(std::move(rhs.modelName)),
+        modelVersion(std::move(rhs.modelVersion)),
+        outputNameAliases(std::move(rhs.outputNameAliases)),
+        demultiplyCount(std::move(rhs.demultiplyCount)),
+        gatherFromNode(std::move(rhs.gatherFromNode)),
+        library(std::move(rhs.library)),    //TODO
+        libraryExecutor(std::move(rhs.libraryExecutor)),
+        parameters(std::move(rhs.parameters)) {}
 };
 }  // namespace ovms

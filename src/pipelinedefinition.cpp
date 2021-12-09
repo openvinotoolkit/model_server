@@ -116,9 +116,9 @@ Status PipelineDefinition::initializeNodeResources() {
 }
 
 // returns NodeInfos that are in PipelineDefinition, but are not in nodeInfos(std::vector argument)
-std::vector<NodeInfo> PipelineDefinition::calculateNodeInfosDiff(const std::vector<NodeInfo>& nodeInfos) {
+std::vector<NodeInfo> PipelineDefinition::calculateNodeInfosDiff(std::vector<NodeInfo>& nodeInfos) {
     std::vector<NodeInfo> diff;
-    for (const auto& nodeInfo : this->nodeInfos) {
+    for (auto& nodeInfo : this->nodeInfos) {
         auto it = std::find_if(nodeInfos.begin(), nodeInfos.end(),
             [&nodeInfo](const auto& x) { return x.nodeName == nodeInfo.nodeName; });
         if (it == nodeInfos.end()) {
@@ -146,7 +146,7 @@ void PipelineDefinition::deinitializeNodeResources(const std::vector<NodeInfo>& 
     }
 }
 
-Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections) {
+Status PipelineDefinition::reload(ModelManager& manager, std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections) {
     // block creating new unloadGuards
     this->status.handle(ReloadEvent());
     resetSubscriptions(manager);
@@ -259,6 +259,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
             nodes.emplace(info.nodeName, std::make_unique<CustomNode>(
                                              info.nodeName,
                                              info.library,
+                                             info.libraryExecutor,
                                              info.parameters,
                                              info.outputNameAliases,
                                              info.demultiplyCount,
@@ -1023,7 +1024,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
 
     const bool isMultiBatchAllowed = !std::any_of(nodeInfos.begin(), nodeInfos.end(), [](const auto& node) { return node.demultiplyCount; });
     for (const auto& node : nodeInfos) {
-        auto findByName = [node](const NodeInfo& nodeInfo) {
+        auto findByName = [&node](const NodeInfo& nodeInfo) {
             return nodeInfo.nodeName == node.nodeName;
         };
 
@@ -1302,7 +1303,7 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
             return;
         }
         if (info.gatherFromNode.count(nodeName) > 0) {
-            auto someNodeInfo = this->findNodeByName(nodeName);
+            auto& someNodeInfo = this->findNodeByName(nodeName);
             uint32_t demultiplyCount = someNodeInfo.demultiplyCount.value_or(0);
             if (demultiplyCount == 0) {
                 tensor_map_t nodeOutputsInfo;
