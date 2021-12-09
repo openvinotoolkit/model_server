@@ -72,6 +72,7 @@ static bool CheckSequenceIdResponse(tensorflow::serving::PredictResponse& respon
 
 class DummyStatefulModel {
 private:
+    ov::runtime::Core ieCore_2;
     const std::string MODEL_PATH = std::filesystem::current_path().u8string() + "/src/test/summator/1/summator.xml";
 
     std::shared_ptr<InferenceEngine::CNNNetwork> cnnNetworkPtr;
@@ -94,7 +95,6 @@ public:
         cnnNetworkPtr = std::make_shared<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(MODEL_PATH));
         execNetworkPtr = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*cnnNetworkPtr, "CPU"));
 
-        ov::runtime::Core ieCore_2;
         network_2 = ieCore_2.read_model(MODEL_PATH);
         execNetwork_2 = std::make_shared<ov::runtime::ExecutableNetwork>(ieCore_2.compile_model(network_2, "CPU"));
     }
