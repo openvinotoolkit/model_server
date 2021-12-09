@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"""Inference client for benchmarks for Open Vino Model Server"""
+"""Inference client for benchmarks for OpenVINO Model Server"""
 
 import sys
 import json

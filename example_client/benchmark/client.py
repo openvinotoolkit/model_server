@@ -383,7 +383,7 @@ class BaseClient(metaclass=abc.ABCMeta):
                 request_time = end_step - start_step
                 current_status = True
 
-                # TODO: validate response
+                # no response validation to save time
 
             except Exception:
                 end_step = time.time()

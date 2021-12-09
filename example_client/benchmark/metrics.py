@@ -80,7 +80,8 @@ class XMetrics(dict):
         self.calc_mean(other, f"{prefix}pass_mean_latency")
         self.calc_mean(other, f"{prefix}fail_mean_latency")
 
-        N = self["submetrics"]
+        N = int(self["submetrics"])
+        assert N > 1, "need at least 1 client/concurrency"
         if f"{prefix}mean_latency" not in self: self[f"{prefix}mean_latency"] = 0.0
         if f"{prefix}mean_latency2" not in self: self[f"{prefix}mean_latency2"] = 0.0
         if f"{prefix}mean_latency" not in other: other[f"{prefix}mean_latency"] = 0.0
@@ -141,7 +142,8 @@ class XMetrics(dict):
 
     def calc_quantile_value(self, latlist, total, quantile):
         assert quantile >= 0 and quantile <= 1
-        if (1 - quantile) * total < 6:
+        minimal_samples_number = 6
+        if (1 - quantile) * total < minimal_samples_number:
             return None, 0
 
         gen = reversed(sorted(latlist))
