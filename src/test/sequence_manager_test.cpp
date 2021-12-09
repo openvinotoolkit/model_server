@@ -232,13 +232,13 @@ TEST(SequenceManager, ProcessSpecSequenceEnd) {
 }
 
 TEST(SequenceManager, RemoveOneIdleSequence) {
-    ovms::model_memory_state_t newState;
+    ovms::model_memory_state_t_2 newState;
     DummyStatefulModel realModel;
     std::vector<float> state{10};
 
-    InferenceEngine::InferRequest auxInferRequest = realModel.createInferRequest();
-    realModel.setVariableState(auxInferRequest, state);
-    InferenceEngine::VariableState memoryState = realModel.getVariableState(auxInferRequest);
+    ov::runtime::InferRequest auxInferRequest = realModel.createInferRequest_2();
+    realModel.setVariableState_2(auxInferRequest, state);
+    ov::runtime::VariableState memoryState = realModel.getVariableState_2(auxInferRequest);
     newState.push_back(memoryState);
 
     MockedSequenceManager sequenceManager(24, "dummy", 1);
@@ -256,7 +256,7 @@ TEST(SequenceManager, RemoveOneIdleSequence) {
     ASSERT_TRUE(sequenceManager.sequenceExists(sequenceId1));
     ASSERT_TRUE(sequenceManager.sequenceExists(sequenceId2));
 
-    sequenceManager.getSequence(sequenceId1).updateMemoryState(newState);
+    sequenceManager.getSequence(sequenceId1).updateMemoryState_2(newState);
 
     sequenceManager.removeIdleSequences();
     ASSERT_TRUE(sequenceManager.sequenceExists(sequenceId1));

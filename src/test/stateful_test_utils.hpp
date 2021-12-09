@@ -27,6 +27,7 @@
 
 #include "../sequence.hpp"
 #include "../sequence_manager.hpp"
+#include "../tensorinfo.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
@@ -71,11 +72,15 @@ static bool CheckSequenceIdResponse(tensorflow::serving::PredictResponse& respon
 
 class DummyStatefulModel {
 private:
+    ov::runtime::Core ieCore_2;
     const std::string MODEL_PATH = std::filesystem::current_path().u8string() + "/src/test/summator/1/summator.xml";
 
     std::shared_ptr<InferenceEngine::CNNNetwork> cnnNetworkPtr;
     std::shared_ptr<InferenceEngine::ExecutableNetwork> execNetworkPtr;
     std::shared_ptr<InferenceEngine::InferRequest> inferRequestPtr;
+
+    std::shared_ptr<ov::Function> network_2;
+    std::shared_ptr<ov::runtime::ExecutableNetwork> execNetwork_2;
 
     const Precision statePrecision{Precision::FP32};
     const std::vector<size_t> stateShape{1, 1};
@@ -89,10 +94,17 @@ public:
         InferenceEngine::Core ieCore;
         cnnNetworkPtr = std::make_shared<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(MODEL_PATH));
         execNetworkPtr = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*cnnNetworkPtr, "CPU"));
+
+        network_2 = ieCore_2.read_model(MODEL_PATH);
+        execNetwork_2 = std::make_shared<ov::runtime::ExecutableNetwork>(ieCore_2.compile_model(network_2, "CPU"));
     }
 
     InferenceEngine::InferRequest createInferRequest() {
         return execNetworkPtr->CreateInferRequest();
+    }
+
+    ov::runtime::InferRequest createInferRequest_2() {
+        return execNetwork_2->create_infer_request();
     }
 
     const std::string getStateName() {
@@ -104,9 +116,19 @@ public:
         return memoryState[0];
     }
 
+    static ov::runtime::VariableState getVariableState_2(ov::runtime::InferRequest& inferRequest) {
+        std::vector<ov::runtime::VariableState> memoryState = inferRequest.query_state();
+        return memoryState[0];
+    }
+
     static void resetVariableState(InferenceEngine::InferRequest& inferRequest) {
         std::vector<InferenceEngine::VariableState> memoryState = inferRequest.QueryState();
         memoryState[0].Reset();
+    }
+
+    static void resetVariableState_2(ov::runtime::InferRequest& inferRequest) {
+        std::vector<ov::runtime::VariableState> memoryState = inferRequest.query_state();
+        memoryState[0].reset();
     }
 
     static void setVariableState(InferenceEngine::InferRequest& inferRequest, std::vector<float> values) {
@@ -119,6 +141,19 @@ public:
         Blob::Ptr inputBlob = make_shared_blob<float>(desc, values.data());
         inferRequest.SetBlob("input", inputBlob);
         inferRequest.Infer();
+    }
+
+    static void setVariableState_2(ov::runtime::InferRequest& inferRequest, std::vector<float> values) {
+        DummyStatefulModel::resetVariableState_2(inferRequest);
+        std::vector<size_t> shape{1, 1};
+
+        ov::runtime::Tensor tensor(
+            ov::element::Type_t::f32,
+            shape,
+            values.data());
+
+        inferRequest.set_tensor("input", tensor);
+        inferRequest.infer();
     }
 };
 

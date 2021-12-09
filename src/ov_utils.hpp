@@ -52,5 +52,5 @@ Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const T sourceBlob
     return StatusCode::OK;
 }
 
-Status tensorClone(std::shared_ptr<ov::runtime::Tensor> destinationTensor, ov::runtime::Tensor& sourceTensor);
+Status tensorClone(std::shared_ptr<ov::runtime::Tensor>& destinationTensor, ov::runtime::Tensor& sourceTensor);
 }  // namespace ovms
