@@ -235,10 +235,11 @@ public:
         ov::runtime::InferRequest& inferRequest_2 = executingStreamIdGuard_2.getInferRequest();
         timer.stop("get infer request");
 
-        timer.stop("preprocess");
+        timer.start("preprocess");
         status = preInferenceProcessing_2(inferRequest_2, sequence, sequenceProcessingSpec);
         if (!status.ok())
             return status;
+        timer.stop("preprocess");
 
         timer.start("deserialize");
         ovms::InputSink_2<ov::runtime::InferRequest&> inputSink_2(inferRequest_2);
@@ -249,11 +250,13 @@ public:
         if (!status.ok())
             return status;
 
-        timer.stop("prediction");
+        timer.start("prediction");
         status = performInference_2(inferRequest_2);
         if (!status.ok())
             return status;
+        timer.stop("prediction");
 
+        timer.start("serialize");
         status = serializePredictResponse_2(inferRequest_2, getOutputsInfo(), responseProto);
         timer.stop("serialize");
         if (!status.ok())
