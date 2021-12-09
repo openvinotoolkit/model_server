@@ -27,7 +27,6 @@ namespace ovms {
 
 CustomNode::CustomNode(
     const std::string& nodeName,
-    const NodeLibrary& library,
     std::shared_ptr<NodeLibraryExecutor> libraryExecutor,
     const parameters_t& parameters,
     const std::unordered_map<std::string, std::string>& nodeOutputNameAlias,
@@ -35,7 +34,6 @@ CustomNode::CustomNode(
     std::set<std::string> gatherFromNode,
     void* customNodeLibraryInternalManager) :
     Node(nodeName, demultiplyCount, gatherFromNode),
-    library(library),
     libraryExecutor(libraryExecutor),
     parameters(parameters),
     nodeOutputNameAlias(nodeOutputNameAlias),
@@ -46,7 +44,7 @@ CustomNode::CustomNode(
 Status CustomNode::execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) {
     auto& nodeSession = getNodeSession(sessionKey);
     auto& customNodeSession = static_cast<CustomNodeSession&>(nodeSession);
-    return customNodeSession.execute(notifyEndQueue, *this, this->library, this->libraryParameters, this->parameters.size(), customNodeLibraryInternalManager);
+    return customNodeSession.execute(notifyEndQueue, *this, this->libraryExecutor, this->libraryParameters, this->parameters.size(), customNodeLibraryInternalManager);
 }
 
 Status CustomNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {

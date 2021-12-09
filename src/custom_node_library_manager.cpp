@@ -31,8 +31,8 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
         return StatusCode::PATH_INVALID;
     }
 
-    auto it = libraries.find(name);
-    if (it != libraries.end() && it->second.basePath == basePath) {
+    auto it = libraryExecutors.find(name);
+    if (it != libraryExecutors.end() && it->second->getBasePath() == basePath) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Custom node library name: {} is already loaded", name);
         return StatusCode::NODE_LIBRARY_ALREADY_LOADED;
     }
@@ -94,36 +94,27 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
 
-    libraries[name] = NodeLibrary{
+    std::unique_ptr<NodeLibrary> nodeLibrary = std::make_unique<NodeLibrary>(
+        basePath,
         initialize,
         deinitialize,
         execute,
         getInputsInfo,
         getOutputsInfo,
-        release,
-        basePath};
+        release);
 
-    std::unique_ptr<NodeLibraryBase> nodeLibrary = std::make_unique<NodeLibraryBase>(
-        basePath
-    );
     libraryExecutors[name] = std::make_unique<NodeLibraryExecutor>(std::move(nodeLibrary));
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Successfully loaded custom node library name: {}; base_path: {}", name, basePath);
     return StatusCode::OK;
 }
 
-Status CustomNodeLibraryManager::getLibrary(const std::string& name, NodeLibrary& library, std::shared_ptr<NodeLibraryExecutor>& libraryExecutor) const {
-    auto library_it = libraries.find(name);
-    if (library_it == libraries.end()) {
+Status CustomNodeLibraryManager::getLibrary(const std::string& name, std::shared_ptr<NodeLibraryExecutor>& libraryExecutor) const {
+    auto it = libraryExecutors.find(name);
+    if (it == libraryExecutors.end()) {
         return StatusCode::NODE_LIBRARY_MISSING;
     } else {
-        library = library_it->second;
-    }
-    auto executor_it = libraryExecutors.find(name);
-    if (executor_it == libraryExecutors.end()) {
-        return StatusCode::NODE_LIBRARY_MISSING;
-    } else {
-        libraryExecutor = executor_it->second;
+        libraryExecutor = it->second;
     }
 
     return StatusCode::OK;
@@ -131,16 +122,16 @@ Status CustomNodeLibraryManager::getLibrary(const std::string& name, NodeLibrary
 
 void CustomNodeLibraryManager::unloadLibrariesRemovedFromConfig(const std::set<std::string>& librariesInConfig) {
     std::set<std::string> librariesCurrentlyLoaded;
-    for (auto& library : libraries) {
-        librariesCurrentlyLoaded.emplace(library.first);
+    for (auto& libraryExecutor : libraryExecutors) {
+        librariesCurrentlyLoaded.emplace(libraryExecutor.first);
     }
     std::set<std::string> librariesToUnload;
     std::set_difference(
         librariesCurrentlyLoaded.begin(), librariesCurrentlyLoaded.end(),
         librariesInConfig.begin(), librariesInConfig.end(),
         std::inserter(librariesToUnload, librariesToUnload.end()));
-    for (auto& library : librariesToUnload) {
-        libraries.erase(library);
+    for (auto& libraryExecutor : librariesToUnload) {
+        libraryExecutors.erase(libraryExecutor);
     }
 }
 

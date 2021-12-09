@@ -30,6 +30,7 @@ typedef int (*metadata_fn)(struct CustomNodeTensorInfo**, int*, const struct Cus
 typedef int (*release_fn)(void*, void*);
 
 struct NodeLibrary {
+    std::string basePath = "";
     initialize_fn initialize = nullptr;
     deinitialize_fn deinitialize = nullptr;
     execute_fn execute = nullptr;
@@ -37,21 +38,34 @@ struct NodeLibrary {
     metadata_fn getOutputsInfo = nullptr;
     release_fn release = nullptr;
 
-    std::string basePath = "";
+    NodeLibrary(const std::string& basePath,
+        initialize_fn initialize,
+        deinitialize_fn deinitialize,
+        execute_fn execute,
+        metadata_fn getInputsInfo,
+        metadata_fn getOutputsInfo,
+        release_fn release) :
+        basePath(basePath),
+        initialize(initialize),
+        deinitialize(deinitialize),
+        execute(execute),
+        getInputsInfo(getInputsInfo),
+        getOutputsInfo(getOutputsInfo),
+        release(release) {}
 
     bool isValid() const;
-};
-
-struct NodeLibraryBase {
-    NodeLibraryBase(const std::string& basePath) :
-        basePath(basePath) {}
-    std::string basePath = "";
-    virtual bool isValid() const;
-    virtual ~NodeLibraryBase() = default;
+    virtual ~NodeLibrary() = default;
 };
 
 class NodeLibraryExecutor {
 public:
+    virtual int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount);
+    virtual int deinitialize(void* customNodeLibraryInternalManager);
+    virtual int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
+    virtual int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
+    virtual int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
+    virtual int release(void* ptr, void* customNodeLibraryInternalManager);
+    
     bool isValid() const {
         return nodeLibrary->isValid();
     }
@@ -67,10 +81,10 @@ public:
         }
         this->nodeLibrary = std::move(rhs.nodeLibrary);
     }
-    NodeLibraryExecutor(std::unique_ptr<NodeLibraryBase>&& ptr);
+    NodeLibraryExecutor(std::unique_ptr<NodeLibrary>&& ptr);
     NodeLibraryExecutor() {}
     //private: // TODO
-    std::unique_ptr<NodeLibraryBase> nodeLibrary;
+    std::unique_ptr<NodeLibrary> nodeLibrary;
     ~NodeLibraryExecutor() = default;
 };
 

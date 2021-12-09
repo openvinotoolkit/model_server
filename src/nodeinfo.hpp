@@ -61,7 +61,6 @@ struct DLNodeInfo {
 };
 
 struct CustomNodeInfo {
-    NodeLibrary library;
     std::shared_ptr<NodeLibraryExecutor> libraryExecutor;
     parameters_t parameters;
 };
@@ -74,7 +73,6 @@ struct NodeInfo {
     std::unordered_map<std::string, std::string> outputNameAliases;
     std::optional<size_t> demultiplyCount;
     std::set<std::string> gatherFromNode;
-    NodeLibrary library;
     std::shared_ptr<NodeLibraryExecutor> libraryExecutor;
     parameters_t parameters;
     
@@ -86,7 +84,6 @@ struct NodeInfo {
         std::unordered_map<std::string, std::string> outputNameAliases = {},
         std::optional<size_t> demultiplyCount = std::nullopt,
         const std::set<std::string>& gatherFromNode = {},
-        const NodeLibrary& library = {},
         std::shared_ptr<NodeLibraryExecutor> libraryExecutor = nullptr,
         const parameters_t& parameters = {}) :
         kind(kind),
@@ -96,7 +93,6 @@ struct NodeInfo {
         outputNameAliases(outputNameAliases),
         demultiplyCount(demultiplyCount),
         gatherFromNode(gatherFromNode),
-        library(library),
         libraryExecutor(std::move(libraryExecutor)),
         parameters(parameters) {}
     NodeInfo(NodeInfo&& rhs) :
@@ -107,7 +103,6 @@ struct NodeInfo {
         outputNameAliases(std::move(rhs.outputNameAliases)),
         demultiplyCount(std::move(rhs.demultiplyCount)),
         gatherFromNode(std::move(rhs.gatherFromNode)),
-        library(std::move(rhs.library)),    //TODO
         libraryExecutor(std::move(rhs.libraryExecutor)),
         parameters(std::move(rhs.parameters)) {}
 };

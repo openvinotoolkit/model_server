@@ -25,12 +25,11 @@
 namespace ovms {
 
 class CustomNodeLibraryManager {
-    std::unordered_map<std::string, NodeLibrary> libraries;
     std::unordered_map<std::string, std::shared_ptr<NodeLibraryExecutor>> libraryExecutors;
 
 public:
     Status loadLibrary(const std::string& name, const std::string& basePath);
-    Status getLibrary(const std::string& name, NodeLibrary& library, std::shared_ptr<NodeLibraryExecutor>& libraryExecutor) const;
+    Status getLibrary(const std::string& name, std::shared_ptr<NodeLibraryExecutor>& libraryExecutor) const;
     void unloadLibrariesRemovedFromConfig(const std::set<std::string>& librariesInConfig);
 };
 

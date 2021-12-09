@@ -26,13 +26,58 @@ bool NodeLibrary::isValid() const {
            deinitialize != nullptr;
 }
 
-NodeLibraryExecutor::NodeLibraryExecutor(std::unique_ptr<NodeLibraryBase>&& ptr) :
+NodeLibraryExecutor::NodeLibraryExecutor(std::unique_ptr<NodeLibrary>&& ptr) :
     nodeLibrary(std::move(ptr)) {
-    //    auto v2Ptr = dynamic_cast<NodeLibraryV2*>(nodeLibrary.get());
+    //    auto libPtr = dynamic_cast<NodeLibraryV2*>(nodeLibrary.get());
 }
 
-bool NodeLibraryBase::isValid() const {
-    return true;
+int NodeLibraryExecutor::initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+    auto libPtr = dynamic_cast<NodeLibrary*>(nodeLibrary.get());
+    if (libPtr != nullptr) {
+        return libPtr->initialize(customNodeLibraryInternalManager, params, paramsCount);
+    } else {
+        return 999;
+    }
+}
+int NodeLibraryExecutor::deinitialize(void* customNodeLibraryInternalManager) {
+    auto libPtr = dynamic_cast<NodeLibrary*>(nodeLibrary.get());
+    if (libPtr != nullptr) {
+        return libPtr->deinitialize(customNodeLibraryInternalManager);
+    } else {
+        return 999;
+    }
+}
+int NodeLibraryExecutor::execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+    auto libPtr = dynamic_cast<NodeLibrary*>(nodeLibrary.get());
+    if (libPtr != nullptr) {
+        return libPtr->execute(inputs, inputsCount, outputs, outputsCount, params, paramsCount, customNodeLibraryInternalManager);
+    } else {
+        return 999;
+    }
+}
+int NodeLibraryExecutor::getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+    auto libPtr = dynamic_cast<NodeLibrary*>(nodeLibrary.get());
+    if (libPtr != nullptr) {
+        return libPtr->getInputsInfo(info, infoCount, params, paramsCount, customNodeLibraryInternalManager);
+    } else {
+        return 999;
+    }
+}
+int NodeLibraryExecutor::getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+    auto libPtr = dynamic_cast<NodeLibrary*>(nodeLibrary.get());
+    if (libPtr != nullptr) {
+        return libPtr->getOutputsInfo(info, infoCount, params, paramsCount, customNodeLibraryInternalManager);
+    } else {
+        return 999;
+    }
+}
+int NodeLibraryExecutor::release(void* ptr, void* customNodeLibraryInternalManager) {
+    auto libPtr = dynamic_cast<NodeLibrary*>(nodeLibrary.get());
+    if (libPtr != nullptr) {
+        return libPtr->release(ptr, customNodeLibraryInternalManager);
+    } else {
+        return 999;
+    }
 }
 
 }  // namespace ovms

@@ -24,13 +24,13 @@ namespace ovms {
 
 class CustomNodeOutputAllocator : public InferenceEngine::IAllocator {
     struct CustomNodeTensor tensor;
-    NodeLibrary nodeLibrary;
+    NodeLibraryExecutor& nodeLibraryExecutor;
     void* customNodeLibraryInternalManager;
 
 public:
-    CustomNodeOutputAllocator(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, void* customNodeLibraryInternalManager) :
+    CustomNodeOutputAllocator(struct CustomNodeTensor tensor, NodeLibraryExecutor& nodeLibraryExecutor, void* customNodeLibraryInternalManager) :
         tensor(tensor),
-        nodeLibrary(nodeLibrary),
+        nodeLibraryExecutor(nodeLibraryExecutor),
         customNodeLibraryInternalManager(customNodeLibraryInternalManager) {}
 
     void* lock(void* handle, InferenceEngine::LockOp = InferenceEngine::LOCK_FOR_WRITE) noexcept override {
@@ -44,7 +44,7 @@ public:
     }
 
     bool free(void* handle) noexcept override {
-        return nodeLibrary.release(tensor.data, customNodeLibraryInternalManager) == 0;
+        return nodeLibraryExecutor.release(tensor.data, customNodeLibraryInternalManager) == 0;
     }
 };
 

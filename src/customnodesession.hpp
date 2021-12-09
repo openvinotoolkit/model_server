@@ -28,7 +28,7 @@ namespace ovms {
 
 class ModelManager;
 class Node;
-class NodeLibrary;
+class NodeLibraryExecutor;
 
 class CustomNodeSession : public NodeSession {
     BlobMap resultBlobs;
@@ -41,7 +41,7 @@ public:
     Status execute(
         PipelineEventQueue& notifyEndQueue,
         Node& node,
-        const NodeLibrary& library,
+        std::shared_ptr<NodeLibraryExecutor> libraryExecutor,
         std::unique_ptr<struct CustomNodeParam[]>& parameters,
         int parametersCount,
         void* customNodeLibraryInternalManager);
@@ -52,7 +52,7 @@ public:
     void release() override;
 
 private:
-    static void releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibrary& library, void* customNodeLibraryInternalManager);
-    Status createBlob(const struct CustomNodeTensor* tensor, InferenceEngine::Blob::Ptr& resultBlob, const NodeLibrary& library, void* customNodeLibraryInternalManager);
+    static void releaseTensorResources(const struct CustomNodeTensor* tensor, NodeLibraryExecutor& libraryExecutor, void* customNodeLibraryInternalManager);
+    Status createBlob(const struct CustomNodeTensor* tensor, InferenceEngine::Blob::Ptr& resultBlob, NodeLibraryExecutor& libraryExecutor, void* customNodeLibraryInternalManager);
 };
 }  // namespace ovms

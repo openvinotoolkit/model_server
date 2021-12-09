@@ -304,7 +304,7 @@ void processDLNodeConfig(const rapidjson::Value& nodeConfig, DLNodeInfo& info) {
 
 Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, CustomNodeInfo& info, const std::string& pipelineName, ModelManager& manager) {
     std::string libraryName = nodeConfig["library_name"].GetString();
-    auto status = manager.getCustomNodeLibraryManager().getLibrary(libraryName, info.library, info.libraryExecutor);
+    auto status = manager.getCustomNodeLibraryManager().getLibrary(libraryName, info.libraryExecutor);
     if (!status.ok()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} refers to non existing custom node library: {}", pipelineName, libraryName);
     }
@@ -396,7 +396,6 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
             nodeOutputNameAlias,
             demultiplyCount,
             gatherFromNode,
-            customNodeInfo.library,
             customNodeInfo.libraryExecutor,
             customNodeInfo.parameters);
         auto nodeInputItr = nodeConfig.FindMember("inputs");
