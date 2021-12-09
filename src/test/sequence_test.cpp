@@ -53,6 +53,7 @@ TEST(Sequence, UpdateSequenceState) {
     ASSERT_TRUE(sequenceMemoryState.count(stateName));
 
     std::vector<float> stateBlobSequenceData;
-    stateBlobSequenceData.assign(static_cast<float*>(sequenceMemoryState.at(stateName)->data()), static_cast<float*>(sequenceMemoryState.at(stateName)->data()) + 1);
+    auto state = static_cast<float*>(sequenceMemoryState.at(stateName)->data());
+    stateBlobSequenceData.assign(state, state + 1);
     EXPECT_EQ(stateBlobSequenceData, expectedState);
 }

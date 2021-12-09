@@ -151,12 +151,8 @@ public:
             ov::element::Type_t::f32,
             shape,
             values.data());
-        try{
-            inferRequest.set_tensor("input", tensor);
-        }
-        catch(const ov::Exception& e){
-            std::cout << "infer_request.set_tensor failed with message: " << e.what() << std::endl;
-        }
+
+        inferRequest.set_tensor("input", tensor);
         inferRequest.infer();
     }
 };
