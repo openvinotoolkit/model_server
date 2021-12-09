@@ -52,7 +52,7 @@ TEST(Sequence, UpdateSequenceState) {
     const std::string stateName = model.getStateName();
     ASSERT_TRUE(sequenceMemoryState.count(stateName));
 
-    // std::vector<float> stateBlobSequenceData;
-    // stateBlobSequenceData.assign(InferenceEngine::as<ov::runtime::Tensor>(sequenceMemoryState.at(stateName))->rmap().as<float*>(), InferenceEngine::as<ov::runtime::Tensor>(sequenceMemoryState.at(stateName))->rmap().as<float*>() + 1);
-    // EXPECT_EQ(stateBlobSequenceData, expectedState);
+    std::vector<float> stateBlobSequenceData;
+    stateBlobSequenceData.assign(static_cast<float*>(sequenceMemoryState.at(stateName)->data()), static_cast<float*>(sequenceMemoryState.at(stateName)->data()) + 1);
+    EXPECT_EQ(stateBlobSequenceData, expectedState);
 }
