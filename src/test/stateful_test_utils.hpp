@@ -104,10 +104,7 @@ public:
     }
 
     ov::runtime::InferRequest createInferRequest_2() {
-        ov::runtime::Core ieCore;
-        std::shared_ptr<ov::Function> network = ieCore.read_model(MODEL_PATH);
-        ov::runtime::ExecutableNetwork execNetwork = ieCore.compile_model(network, "CPU");
-        return execNetwork.create_infer_request();
+        return execNetwork_2->create_infer_request();
     }
 
     const std::string getStateName() {
@@ -154,7 +151,12 @@ public:
             ov::element::Type_t::f32,
             shape,
             values.data());
-        inferRequest.set_tensor("input", tensor);
+        try{
+            inferRequest.set_tensor("input", tensor);
+        }
+        catch(const ov::Exception& e){
+            std::cout << "infer_request.set_tensor failed with message: " << e.what() << std::endl;
+        }
         inferRequest.infer();
     }
 };
