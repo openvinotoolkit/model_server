@@ -141,7 +141,7 @@ class OVmsClient(BaseClient):
         del config["name"]
 
     # override
-    def prepare_batch_requests(self):        
+    def prepare_batch_requests(self):
         for key, values in self.xdata.items():
             assert len(values) == self.dataset_length, f"{key} data has wrong length"
 
@@ -151,7 +151,7 @@ class OVmsClient(BaseClient):
             for input_name, xbatches in self.xdata.items():
                 tensor = make_tensor_proto(xbatches[index][0], **xbatches[index][1])
                 request.inputs[input_name].CopyFrom(tensor)
- 
+
             if self.stateful_length > 0:
                 tensor_id = make_tensor_proto([numpy.uint64(self.stateful_id)], dtype="uint64")
                 if self.stateful_counter == 0:
@@ -160,7 +160,7 @@ class OVmsClient(BaseClient):
                     tensor_ctrl = make_tensor_proto([self.STATEFUL_STOP], dtype="uint32")
                     self.stateful_id += self.stateful_hop
                     self.stateful_counter = -1
-                else: tensor_ctrl = make_tensor_proto([self.STATEFUL_WIP], dtype="uint32")                
+                else: tensor_ctrl = make_tensor_proto([self.STATEFUL_WIP], dtype="uint32")
                 request.inputs["sequence_control_input"].CopyFrom(tensor_ctrl)
                 request.inputs["sequence_id"].CopyFrom(tensor_id)
                 self.stateful_counter += 1

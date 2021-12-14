@@ -24,10 +24,11 @@ RUN apt-get install -y curl
 
 RUN curl https://bootstrap.pypa.io/get-pip.py | python3
 
+RUN python3 -m pip install --upgrade pip
 RUN python3 -m pip install numpy
 RUN python3 -m pip install grpcio
 RUN python3 -m pip install requests
-RUN python3 -m pip install tensorflow==2.*
+RUN python3 -m pip install tensorflow==2.0.0
 RUN python3 -m pip install tensorflow-serving-api
 RUN python3 -m pip install pymongo
 RUN python3 -m pip install retry
@@ -35,6 +36,8 @@ RUN python3 -m pip install PyYAML
 RUN python3 -m pip install pypng
 RUN python3 -m pip install nvidia-pyindex
 RUN python3 -m pip install tritonclient[all]
+
+ENV TF_CPP_MIN_LOG_LEVEL=2
 
 RUN mkdir -p /ovms_benchmark_client
 COPY main.py /ovms_benchmark_client

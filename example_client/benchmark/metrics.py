@@ -81,7 +81,7 @@ class XMetrics(dict):
         self.calc_mean(other, f"{prefix}fail_mean_latency")
 
         N = int(self["submetrics"])
-        assert N > 1, "need at least 1 client/concurrency"
+        assert N >= 1, "need at least 1 client/concurrency"
         if f"{prefix}mean_latency" not in self: self[f"{prefix}mean_latency"] = 0.0
         if f"{prefix}mean_latency2" not in self: self[f"{prefix}mean_latency2"] = 0.0
         if f"{prefix}mean_latency" not in other: other[f"{prefix}mean_latency"] = 0.0
@@ -157,7 +157,7 @@ class XMetrics(dict):
         delta = error * float(offset) / val
         return fval_o + delta, error
 
-    
+
     def recalculate_quantiles(self, prefix, base, factor, quantile_list):
         total = 0
         latlist = []
@@ -165,7 +165,7 @@ class XMetrics(dict):
             if re.search(f"^{prefix}hist_latency_", key):
                 num = int(key.replace(f"{prefix}hist_latency_", ""))
                 fval_e = ((num+1) ** (1/base)) / factor
-                fval_o = (num ** (1/base)) / factor 
+                fval_o = (num ** (1/base)) / factor
                 latlist.append((num, val, fval_o, fval_e))
                 total += int(val)
 
@@ -174,7 +174,7 @@ class XMetrics(dict):
             if re.search(f"^{prefix}hist_latency_", key):
                 keys_to_rm.append(key)
         for key in keys_to_rm: del self[key]
-                
+
         for index, quantile in enumerate(quantile_list):
             latency, error = self.calc_quantile_value(latlist, total, float(quantile))
             if latency is None: latency = ""
@@ -182,7 +182,7 @@ class XMetrics(dict):
             self[f"qos_latency_{index}"] = latency
             self[f"qos_error_{index}"] = error
 
-    
+
 class XSeries:
     def __init__(self, prefix, hist_base=None, hist_factor=None):
         self.start_timestamp = None
@@ -192,7 +192,7 @@ class XSeries:
         self.hist_register = {}
         if hist_factor is not None:
             self.hist_factor = float(hist_factor)
-        else: self.hist_factor = None        
+        else: self.hist_factor = None
         if hist_base is not None:
             self.hist_base = float(hist_base)
         else: self.hist_base = None
@@ -207,11 +207,11 @@ class XSeries:
 
         self.pass_latency_sum = 0.0
         self.fail_latency_sum = 0.0
-        self.latency_sum = 0.0 
+        self.latency_sum = 0.0
 
         self.pass_latency_sum2 = 0.0
         self.fail_latency_sum2 = 0.0
-        self.latency_sum2 = 0.0 
+        self.latency_sum2 = 0.0
 
         self.pass_latency_max = 0.0
         self.fail_latency_max = 0.0
@@ -227,7 +227,7 @@ class XSeries:
 
     def add(self, status, lat, bs):
         self.add_to_hist(lat, bs)
-        self.latency_sum += float(lat) 
+        self.latency_sum += float(lat)
         self.latency_sum2 += float(lat) ** 2
         self.xcounter += int(bs)
         self.counter += 1
@@ -237,14 +237,14 @@ class XSeries:
                 self.pass_latency_max = lat
             self.pass_counter += 1
             self.pass_xcounter += int(bs)
-            self.pass_latency_sum += float(lat) 
+            self.pass_latency_sum += float(lat)
             self.pass_latency_sum2 += float(lat) ** 2
         else:
             if self.fail_latency_max < lat:
                 self.fail_latency_max = lat
             self.fail_counter += 1
             self.fail_xcounter += int(bs)
-            self.fail_latency_sum += float(lat) 
+            self.fail_latency_sum += float(lat)
             self.fail_latency_sum2 += float(lat) ** 2
 
     def start(self):
@@ -260,7 +260,7 @@ class XSeries:
         if self.stop_timestamp is None: self.stop()
         if self.prefix: prefix = f"{self.prefix}_"
         else: prefix = ""
-            
+
         stats = {}
         duration = self.stop_timestamp - self.start_timestamp
         stats[f"{prefix}total_duration"] = duration
@@ -268,7 +268,7 @@ class XSeries:
         stats[f"{prefix}total_frames"] = self.xcounter
         stats[f"{prefix}start_timestamp"] = self.start_timestamp
         stats[f"{prefix}stop_timestamp"] = self.stop_timestamp
-        
+
         stats[f"{prefix}pass_batches"] = self.pass_counter
         stats[f"{prefix}fail_batches"] = self.fail_counter
         stats[f"{prefix}pass_frames"] = self.pass_xcounter
@@ -292,7 +292,7 @@ class XSeries:
         if self.xcounter > 0:
             stats[f"{prefix}frame_passrate"] = float(self.pass_xcounter) / self.xcounter
         else: stats[f"{prefix}frame_passrate"] = 0.0
-        
+
         if self.counter > 0:
             stats[f"{prefix}batch_passrate"] = float(self.pass_counter) / self.counter
             latency_mean2 = self.latency_sum2 / self.counter
@@ -324,13 +324,13 @@ class XSeries:
             stats[f"{prefix}pass_mean_latency"] = pass_latency_mean
             stats[f"{prefix}pass_mean_latency2"] = pass_latency_mean2
             stats[f"{prefix}pass_stdev_latency"] = pass_latency_stdev
-            stats[f"{prefix}pass_cv_latency"] = pass_latency_cv            
+            stats[f"{prefix}pass_cv_latency"] = pass_latency_cv
         else:
             stats[f"{prefix}pass_mean_latency"] = 0.0
             stats[f"{prefix}pass_mean_latency2"] = 0.0
             stats[f"{prefix}pass_stdev_latency"] = 0.0
             stats[f"{prefix}pass_cv_latency"] = 0.0
-        
+
         if self.fail_counter > 0:
             fail_latency_mean2 = self.fail_latency_sum2 / self.fail_counter
             fail_latency_mean = self.fail_latency_sum / self.fail_counter
@@ -339,7 +339,7 @@ class XSeries:
             except: fail_latency_stdev = 0.0
             try: fail_latency_cv = fail_latency_stdev / fail_latency_mean
             except: fail_latency_cv = 0.0
-            stats[f"{prefix}fail_mean_latency"] = fail_latency_mean 
+            stats[f"{prefix}fail_mean_latency"] = fail_latency_mean
             stats[f"{prefix}fail_mean_latency2"] = fail_latency_mean2
             stats[f"{prefix}fail_stdev_latency"] = fail_latency_stdev
             stats[f"{prefix}fail_cv_latency"] = fail_latency_cv
@@ -350,5 +350,5 @@ class XSeries:
             stats[f"{prefix}fail_cv_latency"] = 0.0
 
         for key, val in self.hist_register.items():
-            stats[f"{prefix}hist_latency_{key}"] = val 
+            stats[f"{prefix}hist_latency_{key}"] = val
         return stats
