@@ -6,21 +6,21 @@ under the path given when the server is started. model_version_policy parameter 
 By default server serves only the latest version for the model. Accepted format for parameter in CLI and in config is json.
 
 Accepted values :
-
+```
 {"all": {}}
 
 {"latest": { "num_versions": Integer}}
 
 {"specific": { "versions": List }}
-
+```
 Examples:
-
+```
 {"latest": { "num_versions": 2 }} # server will serve only 2 latest versions of model
 
 {"specific": { "versions": [1, 3] }} # server will serve only 1 and 3 versions of given model
 
 {"all": {}} # server will serve all available versions of given model
-
+```
 ## Updating model versions
 - Served versions are updated online by monitoring file system changes in the model storage. OpenVINO Model Server will add new version to the serving list when new numerical subfolder with the model files is added. The default served version will be switched to the one with the highest number. 
 

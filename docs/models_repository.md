@@ -4,10 +4,10 @@
 This guide will help you to create a models repository for serving with the OpenVINO&trade; Model Server. This will help you to serve any model with the OpenVINO&trade; Model Server.
 
 
-## Creating Repository for Models in **Intermediate Representation (IR)** format
+## Creating Repository
 The AI models to be served with OpenVINO&trade; Model Server should be in Intermediate Representation (IR) format (where the graph is represented in .bin and .xml format) or in [ONNX](https://onnx.ai/) format. 
 
-Tensorflow, Caffe and MXNet trained models can be converted to IR format using Model_Optimizer from  OpenVINO&trade; toolkit. Follow the steps from  [model optimizer documentation](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) to convert your model.
+Tensorflow, Caffe and MXNet trained models can be converted to IR format using Model Optimizer from OpenVINO&trade; toolkit. Follow the steps from  [model optimizer documentation](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) to convert your model.
 
 ONNX model format can be also converted from other frameworks using [converters](https://onnx.ai/supported-tools.html). 
 
@@ -38,7 +38,7 @@ representing its versions (1,2, etc). The versions and the sub-folder names shou
 - Every version folder _must_ include model files. IR model files must be with .bin and .xml extensions. ONNX model must have .onnx extension. The file name can be arbitrary.
 
 - Each model defines input and output tensors in the AI graph. The client passes data to model input tensors by filling appropriate entries in the request inputs map.
-  Prediction results can be read from response outputs map. By default OpenVINO™ model server is using model
+  Prediction results can be read from response outputs map. By default OpenVINO™ Model Server is using model
   tensors names as inputs and outputs names in prediction requests and responses. The client passes the input values to the request and 
   reads the results by referring to the correspondent output names. 
 
@@ -58,11 +58,12 @@ which can map the input and output keys to the appropriate tensors.
 
 ```json
 {
-       "inputs": 
-           { "tensor_name":"grpc_custom_input_name"},
+       "inputs":{ 
+          "tensor_name":"grpc_custom_input_name"
+       },
        "outputs":{
-        "tensor_name1":"grpc_output_key_name1",
-        "tensor_name2":"grpc_output_key_name2"
+          "tensor_name1":"grpc_output_key_name1",
+          "tensor_name2":"grpc_output_key_name2"
        }
 }
 ```

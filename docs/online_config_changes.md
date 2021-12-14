@@ -1,4 +1,4 @@
-# Online_config file updates {#ovms_docs_online_config_changes}
+# Online config file updates {#ovms_docs_online_config_changes}
 
 ### Updating Configuration File
 OpenVINO Model Server monitors the changes in its configuration and applies required modifications in runtime in two ways:
