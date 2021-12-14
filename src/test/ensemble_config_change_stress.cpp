@@ -1544,7 +1544,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCust
         allowedLoadResults);
 }
 
-TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCustomLibraryDuringPredictLoad) {
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_RenameCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
@@ -1557,7 +1557,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCust
         allowedLoadResults);
 }
 
-TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangeParamCustomLibraryDuringPredictLoad) {
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_ChangeParamCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
@@ -1600,7 +1600,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_I
         allowedLoadResults);
 }
 
-TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCustomLibraryDuringGetMetadataLoad) {
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_RemoveCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuouity of operation
@@ -1614,7 +1614,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCust
         allowedLoadResults);
 }
 
-TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCustomLibraryDuringGetMetadataLoad) {
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_RenameCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
@@ -1627,7 +1627,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCust
         allowedLoadResults);
 }
 
-TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangeParamCustomLibraryDuringGetMetadataLoad) {
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_ChangeParamCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation

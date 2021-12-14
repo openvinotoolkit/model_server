@@ -954,6 +954,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeInitialize) 
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::NODE_LIBRARY_INITIALIZE_FAILED);
 }
 
+// TODO in cleanup mechanism
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeDeinitialize) {
     // Nodes
     // request   custom    response
@@ -4755,6 +4756,7 @@ struct LibraryCountDeinitialize {
     }
 };
 
+// TODO in cleanup mechanism
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnRetire) {
     // Nodes
     // request   custom    custom_2   custom_3    response
@@ -4809,6 +4811,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnR
     ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 3);
 }
 
+// TODO in cleanup mechanism
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SingleDeinitializeCallOnReload) {
     // Nodes
     // request   custom    custom_2   custom_3    response

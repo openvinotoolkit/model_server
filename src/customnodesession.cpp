@@ -50,7 +50,7 @@ std::unordered_map<std::string, shape_t> createOwnedShapesCopy(const TensorMap& 
     return tensorsDims;
 }
 
-Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node, const NodeLibrary& library, std::unique_ptr<struct CustomNodeParam[]>& parameters, int parametersCount, void* customNodeLibraryInternalManager) {
+Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node, const NodeLibrary& library, std::unique_ptr<struct CustomNodeParam[]>& parameters, int parametersCount, std::shared_ptr<void*>& customNodeLibraryInternalManager) {
     const auto& blobMap = this->inputHandler->getInputs();
     auto inputTensorsCount = blobMap.size();
     // this is a hack to overcome OV 1.0 -> 2.0 API change where we do not get reference to
@@ -67,7 +67,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         &outputTensorsCount,
         parameters.get(),
         parametersCount,
-        customNodeLibraryInternalManager);
+        customNodeLibraryInternalManager.get());
     this->timer->stop("execution");
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Custom node execution processing time for node {}; session: {} - {} ms",
         this->getName(),
@@ -90,7 +90,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
 
     if (outputTensorsCount <= 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; has corrupted number of outputs", getName(), getSessionKey());
-        library.release(outputTensors, customNodeLibraryInternalManager);
+        library.release(outputTensors, customNodeLibraryInternalManager.get());
         notifyEndQueue.push({node, getSessionKey()});
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT;
     }
@@ -117,7 +117,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         this->resultBlobs.emplace(std::string(outputTensors[i].name), std::move(resultBlob));
     }
 
-    library.release(outputTensors, customNodeLibraryInternalManager);
+    library.release(outputTensors, customNodeLibraryInternalManager.get());
     notifyEndQueue.push({node, getSessionKey()});
     return status;
 }
@@ -131,12 +131,12 @@ Status CustomNodeSession::fetchResult(const std::string& name, std::shared_ptr<o
     return StatusCode::OK;
 }
 
-void CustomNodeSession::releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibrary& library, void* customNodeLibraryInternalManager) {
+void CustomNodeSession::releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibrary& library, std::shared_ptr<void*>& customNodeLibraryInternalManager) {
     if (tensor->data) {
-        library.release(tensor->data, customNodeLibraryInternalManager);
+        library.release(tensor->data, customNodeLibraryInternalManager.get());
     }
     if (tensor->dims) {
-        library.release(tensor->dims, customNodeLibraryInternalManager);
+        library.release(tensor->dims, customNodeLibraryInternalManager.get());
     }
 }
 
@@ -144,19 +144,19 @@ class TensorResourcesGuard {
     const struct CustomNodeTensor* tensor;
     const NodeLibrary& library;
     bool persistData = false;
-    void* customNodeLibraryInternalManager;
+    std::shared_ptr<void*>& customNodeLibraryInternalManager;
 
 public:
-    TensorResourcesGuard(const struct CustomNodeTensor* tensor, const NodeLibrary& library, void* customNodeLibraryInternalManager) :
+    TensorResourcesGuard(const struct CustomNodeTensor* tensor, const NodeLibrary& library, std::shared_ptr<void*>& customNodeLibraryInternalManager) :
         tensor(tensor),
         library(library),
         customNodeLibraryInternalManager(customNodeLibraryInternalManager) {}
     ~TensorResourcesGuard() {
         if (tensor->data && !persistData) {
-            library.release(tensor->data, customNodeLibraryInternalManager);
+            library.release(tensor->data, customNodeLibraryInternalManager.get());
         }
         if (tensor->dims) {
-            library.release(tensor->dims, customNodeLibraryInternalManager);
+            library.release(tensor->dims, customNodeLibraryInternalManager.get());
         }
     }
     void setPersistData() {
@@ -164,7 +164,7 @@ public:
     }
 };
 
-Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, std::shared_ptr<ov::runtime::Tensor>& resultBlob, const NodeLibrary& library, void* customNodeLibraryInternalManager) {
+Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, std::shared_ptr<ov::runtime::Tensor>& resultBlob, const NodeLibrary& library, std::shared_ptr<void*>& customNodeLibraryInternalManager) {
     TensorResourcesGuard tensorResourcesGuard(tensor, library, customNodeLibraryInternalManager);
 
     auto precision = ovmsPrecisionToIE2Precision(toInferenceEnginePrecision(tensor->precision));

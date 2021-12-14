@@ -72,7 +72,7 @@ class PipelineDefinition {
 
     const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
-    std::map<std::string, void*> nodeResources = {};
+    std::map<std::string, std::shared_ptr<void*>> nodeResources = {};
     pipeline_connections_t connections;
 
 protected:
@@ -152,7 +152,7 @@ public:
     const tensor_map_t getOutputsInfo() const;
 
 private:
-    static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName, void* customNodeLibraryInternalManager);
+    static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName, const std::shared_ptr<void*>& customNodeLibraryInternalManager);
 
     Status populateOutputsInfoWithDLModelOutputs(
         const NodeInfo& dependencyNodeInfo,
