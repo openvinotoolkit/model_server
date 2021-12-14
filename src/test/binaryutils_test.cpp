@@ -44,7 +44,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonMatchingBatchsize) {
     stringValDummy.add_string_val("dummy");
     ov::runtime::Tensor tensor;
     auto tensorInfo = std::make_shared<TensorInfo>();
-    tensorInfo->setShape({5, 1, 1, 1});
+    tensorInfo->setShape_2({5, 1, 1, 1});
     tensorInfo->setLayout(InferenceEngine::Layout::NHWC);
 
     EXPECT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::INVALID_BATCH_SIZE);

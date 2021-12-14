@@ -27,6 +27,7 @@
 #include <rapidjson/document.h>
 
 #include "model_version_policy.hpp"
+#include "shape.hpp"
 #include "shapeinfo.hpp"
 #include "status.hpp"
 
@@ -134,7 +135,7 @@ private:
     /**
          * @brief Map of shapes
          */
-    shapes_map_t shapes;
+    shapes_info_map_2_t shapes_2;
 
     /**
          * @brief Map of layouts
@@ -226,7 +227,7 @@ public:
         version(version),
         pluginConfig({}),
         layout(""),
-        shapes({}),
+        shapes_2({}),
         layouts({}),
         mappingInputs({}),
         mappingOutputs({}) {
@@ -668,7 +669,7 @@ public:
          * @return bool
          */
     bool anyShapeSetToAuto() const {
-        for (const auto& [name, shapeInfo] : getShapes()) {
+        for (const auto& [name, shapeInfo] : getShapes_2()) {
             if (shapeInfo.shapeMode == AUTO)
                 return true;
         }
@@ -680,8 +681,8 @@ public:
          * 
          * @return const shapes_map_t& 
          */
-    const shapes_map_t& getShapes() const {
-        return this->shapes;
+    const shapes_info_map_2_t& getShapes_2() const {
+        return this->shapes_2;
     }
 
     /**
@@ -689,8 +690,8 @@ public:
          * 
          * @param shapes 
          */
-    void setShapes(const shapes_map_t& shapes) {
-        this->shapes = shapes;
+    void setShapes(const shapes_info_map_2_t& shapes) {
+        this->shapes_2 = shapes;
     }
 
     /**
@@ -699,18 +700,18 @@ public:
          * @return bool
          */
     bool isShapeAuto(const std::string& name) const {
-        auto it = getShapes().find(name);
-        if (it == getShapes().end()) {
-            it = getShapes().find(ANONYMOUS_INPUT_NAME);
+        auto it = getShapes_2().find(name);
+        if (it == getShapes_2().end()) {
+            it = getShapes_2().find(ANONYMOUS_INPUT_NAME);
         }
-        if (it == getShapes().end()) {
+        if (it == getShapes_2().end()) {
             return false;
         }
         return it->second.shapeMode == Mode::AUTO;
     }
 
     bool isShapeAnonymous() const {
-        return getShapes().size() == 1 && getShapes().begin()->first == ANONYMOUS_INPUT_NAME;
+        return getShapes_2().size() == 1 && getShapes_2().begin()->first == ANONYMOUS_INPUT_NAME;
     }
 
     bool isShapeAnonymousFixed() const {
@@ -728,7 +729,7 @@ public:
          * @param str
          * @return Status
          */
-    static Status parseShape(ShapeInfo& shapeInfo, const std::string& str);
+    static Status parseShape(ShapeInfo_2& shapeInfo, const std::string& str);
 
     /**
          * @brief Add a single named shape
@@ -736,12 +737,12 @@ public:
          * @param name 
          * @param shape 
          */
-    void addShape(const std::string& name, const ShapeInfo& shapeInfo) {
-        this->shapes[name] = shapeInfo;
+    void addShape(const std::string& name, const ShapeInfo_2& shapeInfo) {
+        this->shapes_2[name] = shapeInfo;
     }
 
     void removeShape(const std::string& name) {
-        this->shapes.erase(name);
+        this->shapes_2.erase(name);
     }
 
     /**

@@ -38,6 +38,7 @@
 #include "predict_request_validation_utils.hpp"
 #include "prediction_service_utils.hpp"
 #include "serialization.hpp"
+#include "shape.hpp"
 #include "stringutils.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
@@ -63,21 +64,25 @@ void ModelInstance::unsubscribe(PipelineDefinition& pd) {
     subscriptionManager.unsubscribe(pd);
 }
 
-shape_t getRequestedShape(const ModelConfig& config, const DynamicModelParameter& parameter, const std::string& name) {
-    shape_t shape;
+Status getRequestedShape_2(const ModelConfig& config, const DynamicModelParameter& parameter, const std::string& name, Shape& shapeOut) {
+    Shape shape;
     auto mappedName = config.getMappingInputByKey(name);
     if (config.getBatchSize() > 0 || parameter.isBatchSizeRequested()) {
         // leave shape untouched
     } else if (config.isShapeAuto(name) && parameter.isShapeRequested(name)) {
-        shape = parameter.getShape(name);
-    } else if (mappedName == "" && config.getShapes().count(name) && config.getShapes().at(name).shape.size()) {
-        shape = config.getShapes().at(name).shape;
-    } else if (config.getShapes().count(mappedName) && config.getShapes().at(mappedName).shape.size()) {
-        shape = config.getShapes().at(mappedName).shape;
-    } else if (config.getShapes().count(ANONYMOUS_INPUT_NAME) && config.getShapes().at(ANONYMOUS_INPUT_NAME).shape.size()) {
-        shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
+        auto status = Shape::fromFlatShape(parameter.getShape(name), shape);
+        if (!status.ok()) {
+            return status;
+        }
+    } else if (mappedName == "" && config.getShapes_2().count(name) && config.getShapes_2().at(name).shape.getSize()) {
+        shape = config.getShapes_2().at(name).shape;
+    } else if (config.getShapes_2().count(mappedName) && config.getShapes_2().at(mappedName).shape.getSize()) {
+        shape = config.getShapes_2().at(mappedName).shape;
+    } else if (config.getShapes_2().count(ANONYMOUS_INPUT_NAME) && config.getShapes_2().at(ANONYMOUS_INPUT_NAME).shape.getSize()) {
+        shape = config.getShapes_2().at(ANONYMOUS_INPUT_NAME).shape;
     }
-    return shape;
+    shapeOut = shape;
+    return StatusCode::OK;
 }
 
 Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::unique_ptr<InferenceEngine::CNNNetwork>& network) {
@@ -93,7 +98,7 @@ Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::uniqu
     }
 
     const auto& networkInputs = network->getInputsInfo();
-    for (const auto& [name, _] : config.getShapes()) {
+    for (const auto& [name, _] : config.getShapes_2()) {
         if (name == ANONYMOUS_INPUT_NAME) {
             continue;
         }
@@ -149,7 +154,7 @@ Status validateConfigurationAgainstNetwork_2(const ModelConfig& config, std::sha
         SPDLOG_LOGGER_WARN(modelmanager_logger, status.string());
         return status;
     }
-    for (const auto& [name, _] : config.getShapes()) {
+    for (const auto& [name, _] : config.getShapes_2()) {
         if (name == ANONYMOUS_INPUT_NAME) {
             continue;
         }
@@ -197,7 +202,7 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
         std::string networkLayout = tensorLayout == "NCHW" ? "NHWC" : "NCHW";
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{}", modelName, modelVersion, config.getLayout(), tensorLayout, networkLayout);
         preproc.input().tensor().set_layout(ov::Layout(tensorLayout));
-        preproc.input().network().set_layout(ov::Layout(networkLayout));
+        preproc.input().model().set_layout(ov::Layout(networkLayout));
         try {
             network = preproc.build();
         } catch (std::exception& e) {
@@ -211,13 +216,13 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
                 std::string networkLayout = layout == "NCHW" ? "NHWC" : "NCHW";
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{}; input name: {}", modelName, modelVersion, layout, layout, networkLayout, name);
                 preproc.input(name).tensor().set_layout(ov::Layout(layout));
-                preproc.input(name).network().set_layout(ov::Layout(networkLayout));
+                preproc.input(name).model().set_layout(ov::Layout(networkLayout));
             }
             if (hasOutputWithName(network, name)) {
                 std::string networkLayout = layout == "NCHW" ? "NHWC" : "NCHW";
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{}; output name: {}", modelName, modelVersion, layout, layout, networkLayout, name);
                 preproc.output(name).tensor().set_layout(ov::Layout(layout));
-                preproc.output(name).network().set_layout(ov::Layout(networkLayout));
+                preproc.output(name).model().set_layout(ov::Layout(networkLayout));
             }
         }
         try {
@@ -263,14 +268,19 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
         std::string name;
         try {
             std::string name = input.get_any_name();
-            ov::Shape shape = input.get_shape();
+            ov::PartialShape shape = input.get_partial_shape();
 
-            shape_t requestedShape = getRequestedShape(config, parameter, name);
-            if (requestedShape.size() > 0)
-                shape = requestedShape;
+            Shape requestedShape;
+            auto status = getRequestedShape_2(config, parameter, name, requestedShape);
+            if (!status.ok()) {
+                return status;
+            }
+            if (requestedShape.getSize() > 0) {
+                shape = requestedShape.createPartialShape();
+            }
 
             networkShapes_2[name] = shape;
-            if (input.get_shape() != shape) {
+            if (input.get_partial_shape() != shape) {
                 reshapeRequired = true;
             }
         } catch (const ov::Exception& e) {
@@ -315,7 +325,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             std::string name = input.get_any_name();
 
             ovms::Precision precision = ovElementTypeToOvmsPrecision(input.get_element_type());
-            shape_t shape = input.get_shape();
+            Shape shape(input.get_partial_shape());
             std::string mappingName = config.getMappingInputByKey(name);
             InferenceEngine::Layout layout = getTensorLayout(config, name);
 
@@ -326,12 +336,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
                 shape,
                 layout);
 
-            SPDLOG_LOGGER_INFO(modelmanager_logger, "Input name: {}; mapping name: {}; shape: {}; precision: {}; layout: {}",
-                name,
-                mappingName,
-                TensorInfo::shapeToString(shape),
-                toString(precision),
-                TensorInfo::getStringFromLayout(layout));
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Input {}", info->asString());
 
             this->inputsInfo[info->getMappedName()] = std::move(info);
         } catch (const ov::Exception& e) {
@@ -366,7 +371,7 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
             std::string name = output.get_any_name();
 
             ovms::Precision precision = ovElementTypeToOvmsPrecision(output.get_element_type());
-            shape_t shape = output.get_shape();
+            Shape shape(output.get_partial_shape());
             std::string mappingName = config.getMappingOutputByKey(name);
             InferenceEngine::Layout layout = getTensorLayout(config, name);
 
@@ -377,12 +382,7 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
                 shape,
                 layout);
 
-            SPDLOG_LOGGER_INFO(modelmanager_logger, "Output name: {}; mapping name: {}; shape: {}; precision: {}; layout: {}",
-                name,
-                mappingName,
-                TensorInfo::shapeToString(shape),
-                toString(precision),
-                TensorInfo::getStringFromLayout(layout));
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Output {}", info->asString());
 
             this->outputsInfo[info->getMappedName()] = std::move(info);
         } catch (const ov::Exception& e) {
@@ -995,7 +995,7 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         getVersion(),
         optionalInputNames,
         getModelConfig().getBatchingMode(),
-        getModelConfig().getShapes());
+        getModelConfig().getShapes_2());
 }
 
 Status ModelInstance::performInference(InferenceEngine::InferRequest& inferRequest) {

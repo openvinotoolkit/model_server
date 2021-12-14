@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <limits>
 #include <set>
 #include <sstream>
 
@@ -122,17 +123,16 @@ bool ModelConfig::isCustomLoaderConfigChanged(const ModelConfig& rhs) const {
 }
 
 bool ModelConfig::isShapeConfigurationEqual(const ModelConfig& rhs) const {
-    if (this->shapes.size() != rhs.shapes.size()) {
+    if (this->shapes_2.size() != rhs.shapes_2.size()) {
         return false;
     }
-    if (this->shapes.size() > 1) {
-        return this->shapes == rhs.shapes;
-    }
-    if (this->shapes.size() == 1) {
-        if (this->shapes.begin()->first != rhs.shapes.begin()->first) {
+    for (const auto& [name, shape] : this->shapes_2) {
+        auto it = rhs.shapes_2.find(name);
+        if (it == rhs.shapes_2.end()) {
             return false;
-        } else {
-            return this->shapes.begin()->second == rhs.shapes.begin()->second;
+        }
+        if (shape != it->second) {
+            return false;
         }
     }
     return true;
@@ -247,25 +247,25 @@ Status ModelConfig::parseShapeParameter(const rapidjson::Value& node) {
         return StatusCode::SHAPE_WRONG_FORMAT;
     }
 
-    shapes_map_t shapes;
+    shapes_info_map_2_t shapes;
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
         if (!it->value.IsString()) {
             return StatusCode::SHAPE_WRONG_FORMAT;
         }
-        ShapeInfo shapeInfo;
+        ShapeInfo_2 shapeInfo;
         auto status = parseShape(shapeInfo, it->value.GetString());
         if (!status.ok()) {
             return status;
         }
         shapes[it->name.GetString()] = shapeInfo;
     }
-    setShapes(shapes);
+    this->shapes_2 = shapes;
 
     return StatusCode::OK;
 }
 
 Status ModelConfig::parseShapeParameter(const std::string& command) {
-    this->shapes.clear();
+    this->shapes_2.clear();
 
     if (command.empty()) {
         return StatusCode::OK;
@@ -273,7 +273,7 @@ Status ModelConfig::parseShapeParameter(const std::string& command) {
 
     // parse as string
     if (command.front() == shapeLeft || command == "auto") {
-        ShapeInfo shapeInfo;
+        ShapeInfo_2 shapeInfo;
         auto status = parseShape(shapeInfo, command);
         if (!status.ok()) {
             return status;
@@ -290,7 +290,6 @@ Status ModelConfig::parseShapeParameter(const std::string& command) {
     if (node.Parse(command.c_str()).HasParseError()) {
         return StatusCode::SHAPE_WRONG_FORMAT;
     }
-
     return parseShapeParameter(node);
 }
 
@@ -342,40 +341,15 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
     return parseLayoutParameter(node);
 }
 
-Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
+Status ModelConfig::parseShape(ShapeInfo_2& shapeInfo, const std::string& str) {
     if (str == "auto") {
         shapeInfo.shapeMode = AUTO;
         return StatusCode::OK;
     }
 
-    std::string s = str;
-    erase_spaces(s);
-
-    // quick validation of valid characters
-    if (s.find_first_not_of("0123456789(),") != std::string::npos)
-        return StatusCode::SHAPE_WRONG_FORMAT;
-
-    if (s.front() != shapeLeft || s.back() != shapeRight)
-        return StatusCode::SHAPE_WRONG_FORMAT;
-
-    s.pop_back();
-    s.erase(s.begin());
-
-    auto tokens = tokenize(s, shapeDelimeter);
-    shapeInfo.shape.clear();
-    try {
-        std::transform(tokens.begin(), tokens.end(), std::back_inserter(shapeInfo.shape),
-            [](const std::string& str) { return std::stoi(str); });
-    } catch (const std::out_of_range& e) {
-        SPDLOG_ERROR("Parsing model shape string out of range: {}, error: {}", str, e.what());
-        return StatusCode::INVALID_SHAPE;
-    } catch (...) {
-        SPDLOG_ERROR("Parsing model shape string: {}", str);
-        return StatusCode::INVALID_SHAPE;
-    }
-
     shapeInfo.shapeMode = FIXED;
-    return StatusCode::OK;
+    shapeInfo.shape = Shape();
+    return Shape::fromString(str, shapeInfo.shape);
 }
 
 Status ModelConfig::parseModelMapping() {
@@ -448,7 +422,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     if (v.HasMember("shape")) {
         // Legacy format as string
         if (v["shape"].IsString()) {
-            ShapeInfo shapeInfo;
+            ShapeInfo_2 shapeInfo;
             auto status = parseShape(shapeInfo, v["shape"].GetString());
             if (!status.ok()) {
                 if (!firstErrorStatus.ok()) {
@@ -461,7 +435,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         } else {
             // Map of shapes
             for (auto& s : v["shape"].GetObject()) {
-                ShapeInfo shapeInfo;
+                ShapeInfo_2 shapeInfo;
                 bool valid = true;
                 // check if legacy format is used
                 if (s.value.IsString()) {
@@ -476,7 +450,16 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                 } else {
                     for (auto& sh : s.value.GetArray()) {
                         if (sh.IsUint64()) {
-                            shapeInfo.shape.push_back(sh.GetUint64());
+                            size_t dim = sh.GetUint64();
+                            if (dim > std::numeric_limits<dimension_value_t>::max()) {
+                                SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
+                                if (!firstErrorStatus.ok()) {
+                                    firstErrorStatus = StatusCode::SHAPE_WRONG_FORMAT;
+                                }
+                                valid = false;
+                                break;
+                            }
+                            shapeInfo.shape.add(Dimension{static_cast<dimension_value_t>(dim)});
                         } else {
                             SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
                             if (!firstErrorStatus.ok()) {
@@ -575,10 +558,10 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     SPDLOG_DEBUG("model_name: {}", getName());
     SPDLOG_DEBUG("batch_size: {}", getBatchSize());
     if (isShapeAnonymous()) {
-        SPDLOG_DEBUG("shape: {}", std::string(getShapes().begin()->second));
+        SPDLOG_DEBUG("shape: {}", std::string(getShapes_2().begin()->second));
     } else {
         SPDLOG_DEBUG("shape:");
-        for (auto& [shapeInput, shapeValue] : getShapes()) {
+        for (auto& [shapeInput, shapeValue] : getShapes_2()) {
             SPDLOG_DEBUG("  {}: {}", shapeInput, std::string(shapeValue));
         }
     }
@@ -593,7 +576,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     }
 
     bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize() != 0);
-    bool shapeSet = (getShapes().size() > 0);
+    bool shapeSet = (getShapes_2().size() > 0);
 
     SPDLOG_DEBUG("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
     if (batchSizeSet && shapeSet) {
