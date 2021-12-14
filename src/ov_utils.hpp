@@ -20,6 +20,7 @@
 #include <string>
 
 #include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
 #include "modelconfig.hpp"
@@ -30,6 +31,11 @@ namespace ovms {
 class TensorInfo;
 
 Status createSharedBlob(InferenceEngine::Blob::Ptr& destinationBlob, InferenceEngine::TensorDesc tensorDesc);
+Status createSharedTensor(std::shared_ptr<ov::runtime::Tensor>& destinationBlob, ov::element::Type_t precision, const ov::Shape& shape);
+/**
+ *  Creates new tensor that copies data and owns the copy
+ **/
+std::shared_ptr<ov::runtime::Tensor> createSharedTensor(ov::element::Type_t precision, const shape_t& shape, void* data);
 
 std::string getNetworkInputsInfoString(const InferenceEngine::InputsDataMap& inputsInfo, const ModelConfig& config);
 std::string getTensorMapString(const std::map<std::string, std::shared_ptr<TensorInfo>>& tensorMap);
@@ -51,4 +57,6 @@ Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const T sourceBlob
     std::memcpy(InferenceEngine::as<InferenceEngine::MemoryBlob>(destinationBlob)->wmap().as<void*>(), (const void*)InferenceEngine::as<InferenceEngine::MemoryBlob>(sourceBlob)->rmap(), sourceBlob->byteSize());
     return StatusCode::OK;
 }
+
+Status tensorClone(std::shared_ptr<ov::runtime::Tensor>& destinationTensor, const ov::runtime::Tensor& sourceTensor);
 }  // namespace ovms

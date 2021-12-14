@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "ov_utils.hpp"
 
+#include <functional>
 #include <memory>
 #include <sstream>
 
@@ -24,7 +25,16 @@
 #include "tensorinfo.hpp"
 
 namespace ovms {
+std::shared_ptr<ov::runtime::Tensor> createSharedTensor(ov::element::Type_t precision, const shape_t& shape, void* data) {
+    auto tensor = std::make_shared<ov::runtime::Tensor>(precision, shape);
+    std::memcpy(tensor->data(), data, std::accumulate(shape.begin(), shape.end(), ov::element::Type(precision).size(), std::multiplies<size_t>()));
+    return tensor;
+}
 
+Status createSharedTensor(std::shared_ptr<ov::runtime::Tensor>& destinationBlob, ov::element::Type_t precision, const ov::Shape& shape) {
+    destinationBlob = std::make_shared<ov::runtime::Tensor>(precision, shape);
+    return StatusCode::OK;
+}
 Status createSharedBlob(InferenceEngine::Blob::Ptr& destinationBlob, InferenceEngine::TensorDesc tensorDesc) {
     try {
         switch (tensorDesc.getPrecision()) {
@@ -118,6 +128,18 @@ const InferenceEngine::SizeVector& getEffectiveShape(InferenceEngine::TensorDesc
 
 const InferenceEngine::SizeVector& getEffectiveBlobShape(const InferenceEngine::Blob::Ptr& blob) {
     return getEffectiveShape(blob->getTensorDesc());
+}
+
+Status tensorClone(std::shared_ptr<ov::runtime::Tensor>& destinationTensor, const ov::runtime::Tensor& sourceTensor) {
+    destinationTensor = std::make_shared<ov::runtime::Tensor>(sourceTensor.get_element_type(), sourceTensor.get_shape());
+
+    if (destinationTensor->get_byte_size() != sourceTensor.get_byte_size()) {
+        destinationTensor = nullptr;
+        return StatusCode::OV_CLONE_TENSOR_ERROR;
+    }
+    SPDLOG_ERROR("tensorClone byte_size:{}", sourceTensor.get_byte_size());
+    std::memcpy(destinationTensor->data(), sourceTensor.data(), sourceTensor.get_byte_size());
+    return StatusCode::OK;
 }
 
 }  // namespace ovms

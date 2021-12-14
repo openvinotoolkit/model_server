@@ -23,22 +23,22 @@ NodeInputHandler::NodeInputHandler(uint32_t inputsMissingCount) :
     remainingDependencies(inputsMissingCount) {
 }
 
-Status NodeInputHandler::setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& ptr, session_id_t shardId) {
+Status NodeInputHandler::setInput(const std::string& inputName, std::shared_ptr<ov::runtime::Tensor>& ptr, session_id_t shardId) {
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Setting input: {}, shardId: {}", inputName, shardId);
     if (shardId > 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to set input: {}, with shardId: {} >0 in NodeInputHandler.", inputName, shardId);
         return StatusCode::PIPELINE_TRIED_TO_SET_INPUT_SHARD_FOR_ORDINARY_INPUT_HANDLER;
     }
-    if (inputBlobs.find(inputName) != inputBlobs.end()) {
+    if (inputTensors.find(inputName) != inputTensors.end()) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to set the same input: {}, shardId: {} twice for the NodeInputHandler.", inputName, shardId);
         return StatusCode::PIPELINE_TRIED_TO_SET_THE_SAME_INPUT_TWICE;
     }
-    inputBlobs.emplace(inputName, ptr);
+    inputTensors.emplace(inputName, ptr);
     return StatusCode::OK;
 }
 
 void NodeInputHandler::clearInputs() {
-    inputBlobs.clear();
+    inputTensors.clear();
 }
 
 bool NodeInputHandler::isReady() {

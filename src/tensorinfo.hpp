@@ -28,6 +28,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "precision.hpp"
 #include "shapeinfo.hpp"
 
 namespace ovms {
@@ -51,15 +52,13 @@ protected:
          */
     std::string mapping;
 
-    /**
-         * @brief Tensor precision data type
-         */
-    InferenceEngine::Precision precision;
+    Precision precision_2;
 
     /**
          * @brief Model input shape
          */
     shape_t shape;
+    shape_t shape_2;
 
     /**
         * @brief Model input effective shape
@@ -75,11 +74,6 @@ protected:
          * @brief Information if influenced by demultiplexer
          */
     bool influencedByDemultiplexer = false;
-
-    /**
-         * @brief TensorDesc
-         */
-    InferenceEngine::TensorDesc tensorDesc;
 
 public:
     /**
@@ -99,6 +93,9 @@ public:
     TensorInfo(const std::string& name,
         const InferenceEngine::Precision& precision,
         const shape_t& shape);
+    TensorInfo(const std::string& name,
+        const Precision& precision,
+        const shape_t& shape);
 
     /**
          * @brief Construct a new Tensor Info object
@@ -110,6 +107,10 @@ public:
          */
     TensorInfo(const std::string& name,
         const InferenceEngine::Precision& precision,
+        const shape_t& shape,
+        const InferenceEngine::Layout& layout);
+    TensorInfo(const std::string& name,
+        const Precision& precision,
         const shape_t& shape,
         const InferenceEngine::Layout& layout);
 
@@ -129,6 +130,16 @@ public:
         const InferenceEngine::Precision& precision,
         const shape_t& shape,
         const InferenceEngine::Layout& layout);
+    TensorInfo(const std::string& name,
+        const std::string& mapping,
+        const ovms::Precision& precision,
+        const shape_t& shape,
+        const InferenceEngine::Layout& layout);
+    TensorInfo(const std::string& name,
+        const std::string& mapping,
+        const Precision& precision,
+        const shape_t& shape);
+    //        const InferenceEngine::Layout& layout);
 
     /**
          * @brief Get the Name object
@@ -151,6 +162,7 @@ public:
          * @return const InferenceEngine::Precision
          */
     const InferenceEngine::Precision getPrecision() const;
+    const Precision getPrecision_2() const;
 
     /**
          * @brief Set the Precision object
@@ -158,6 +170,7 @@ public:
          * @return const InferenceEngine::Precision
          */
     void setPrecision(const InferenceEngine::Precision& requestedPrecision);
+    void setPrecision(const ovms::Precision& requestedPrecision);
 
     /**
          * @brief Set the Layout object
@@ -171,18 +184,21 @@ public:
          * 
          * @return const tensorflow::DataType
          */
-    const tensorflow::DataType getPrecisionAsDataType() const;
+    tensorflow::DataType getPrecisionAsDataType() const;
 
-    static const tensorflow::DataType getPrecisionAsDataType(InferenceEngine::Precision precision);
+    static tensorflow::DataType getPrecisionAsDataType(InferenceEngine::Precision precision);
+    static tensorflow::DataType getPrecisionAsDataType(Precision precision);
+    ov::element::Type getOvPrecision() const;
 
     /**
         * @brief Get the Precision As String object
         *
         * @return const std::string
         */
-    const std::string getPrecisionAsString() const;
+    std::string getPrecisionAsString() const;
 
-    static const std::string getPrecisionAsString(const InferenceEngine::Precision precision);
+    static std::string getPrecisionAsString(const InferenceEngine::Precision precision);
+    static std::string getPrecisionAsString(Precision precision);
 
     static const std::string getDataTypeAsString(tensorflow::DataType dataType);
 
@@ -215,6 +231,7 @@ public:
          * @return shape
          */
     const shape_t& getShape() const;
+    const shape_t& getShape_2() const;
 
     /**
          * @brief Gets input effective shape

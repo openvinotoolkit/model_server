@@ -114,7 +114,7 @@ Status Pipeline::execute() {
                 finishedNode.release(sessionKey);
             }
             IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
-            BlobMap finishedNodeOutputBlobMap;
+            TensorMap finishedNodeOutputTensorMap;
             SessionResults sessionResults;
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Fetching results of pipeline: {} node: {} session: {}", getName(), finishedNode.getName(), sessionKey);
             status = finishedNode.fetchResults(sessionKey, sessionResults);
@@ -130,7 +130,7 @@ Status Pipeline::execute() {
                     break;
                 }
             }
-            finishedNodeOutputBlobMap.clear();
+            finishedNodeOutputTensorMap.clear();
             for (auto& nextNode : nextNodesFromFinished) {
                 auto readySessions = nextNode.get().getReadySessions();
                 for (auto sessionKey : readySessions) {

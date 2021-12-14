@@ -18,7 +18,7 @@
 #include <map>
 #include <utility>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #include "dlnodesession.hpp"
 #include "logging.hpp"
@@ -58,14 +58,13 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
     return status;
 }
 
-Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey) {
+Status DLNode::fetchResults(TensorMap& outputs, ov::runtime::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey) {
     ReleaseSessionGuard releaseSessionGuard(this->getNodeSession(sessionKey));
     // Wait for blob results
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Waiting for infer request to finish", getName(), sessionKey);
-    InferenceEngine::StatusCode ov_status;
     try {
-        ov_status = inferRequest.Wait(InferenceEngine::IInferRequest::RESULT_READY);
-    } catch (const InferenceEngine::Exception& e) {
+        inferRequest.wait();
+    } catch (const ov::Exception& e) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} IE exception occured during infer request wait: {}", getName(), sessionKey, e.what());
         return StatusCode::INTERNAL_ERROR;
     } catch (std::exception& e) {
@@ -80,11 +79,6 @@ Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inf
         this->getNodeSession(sessionKey).getTimer().elapsed<std::chrono::microseconds>("inference") / 1000);
 
     static_cast<DLNodeSession&>(this->getNodeSession(sessionKey)).clearInputs();
-    if (ov_status != InferenceEngine::StatusCode::OK) {
-        Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Async infer failed: {}; OV StatusCode: {}", getName(), sessionKey, status.string(), ov_status);
-        return status;
-    }
 
     // Fill outputs map with result blobs. Fetch only those that are required in following nodes.
     for (const auto& node : this->next) {
@@ -100,24 +94,24 @@ Status DLNode::fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inf
                     SPDLOG_LOGGER_WARN(dag_executor_logger, "Node: {} session: {} Cannot find real model output name for alias: {}", getName(), sessionKey, output_name);
                     return StatusCode::INTERNAL_ERROR;
                 }
-                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Getting blob from model: {}, inferRequestStreamId: {}, blobName: {}",
+                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Getting tensor from model: {}, inferRequestStreamId: {}, blobName: {}",
                     getName(), sessionKey, modelName, sessionKey, realModelOutputName);
-                const auto blob = inferRequest.GetBlob(realModelOutputName);
-                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Creating copy of blob from model: {}, blobName: {}",
+                const auto tensor = inferRequest.get_tensor(realModelOutputName);
+                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Creating copy of tensor from model: {}, blobName: {}",
                     getName(), sessionKey, modelName, realModelOutputName);
-                InferenceEngine::Blob::Ptr copiedBlob;
-                auto status = blobClone(copiedBlob, blob);
+                std::shared_ptr<ov::runtime::Tensor> copiedTensor;
+                auto status = tensorClone(copiedTensor, tensor);
                 if (!status.ok()) {
-                    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Could not clone result blob; node: {}; session: {}; model name: {}; output: {}",
+                    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Could not clone result tensor; node: {}; session: {}; model name: {}; output: {}",
                         getName(),
                         this->modelName,
                         realModelOutputName);
                     return status;
                 }
-                outputs.emplace(std::make_pair(output_name, std::move(copiedBlob)));
-            } catch (const InferenceEngine::Exception& e) {
+                outputs.emplace(std::make_pair(output_name, std::move(copiedTensor)));
+            } catch (const ov::Exception& e) {
                 Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
-                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session:{} Error during getting blob {}; exception message: {}", getName(), sessionKey, status.string(), e.what());
+                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session:{} Error during getting tensor {}; exception message: {}", getName(), sessionKey, status.string(), e.what());
                 return status;
             }
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Blob with name {} has been prepared", getName(), sessionKey, output_name);

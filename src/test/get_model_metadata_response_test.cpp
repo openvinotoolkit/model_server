@@ -31,7 +31,7 @@ using namespace rapidjson;
 
 class GetModelMetadataResponse : public ::testing::Test {
     struct Info {
-        InferenceEngine::Precision precision;
+        ovms::Precision precision;
         ovms::shape_t shape;
     };
 
@@ -39,8 +39,8 @@ class GetModelMetadataResponse : public ::testing::Test {
 
     class MockModelInstance : public MockModelInstanceChangingStates {
     public:
-        MockModelInstance(InferenceEngine::Core& ieCore) :
-            MockModelInstanceChangingStates("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
+        MockModelInstance(InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2) :
+            MockModelInstanceChangingStates("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore, ieCore_2) {
             status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_MODEL_VERSION, ovms::ModelVersionState::AVAILABLE);
         }
 
@@ -68,28 +68,29 @@ protected:
     std::shared_ptr<NiceMock<MockModelInstance>> instance;
     tensorflow::serving::GetModelMetadataResponse response;
     std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::runtime::Core> ieCore_2;
 
     virtual void prepare() {
-        instance = std::make_shared<NiceMock<MockModelInstance>>(*ieCore);
+        instance = std::make_shared<NiceMock<MockModelInstance>>(*ieCore, *ieCore_2);
 
         inputTensors = tensor_desc_map_t({
             {"Input_FP32_1_3_224_224", {
-                                           InferenceEngine::Precision::FP32,
+                                           ovms::Precision::FP32,
                                            {1, 3, 224, 224},
                                        }},
             {"Input_U8_1_3_62_62", {
-                                       InferenceEngine::Precision::U8,
+                                       ovms::Precision::U8,
                                        {1, 3, 62, 62},
                                    }},
         });
 
         outputTensors = tensor_desc_map_t({
             {"Output_I32_1_2000", {
-                                      InferenceEngine::Precision::I32,
+                                      ovms::Precision::I32,
                                       {1, 2000},
                                   }},
             {"Output_FP32_2_20_3", {
-                                       InferenceEngine::Precision::FP32,
+                                       ovms::Precision::FP32,
                                        {2, 20, 3},
                                    }},
         });
@@ -119,10 +120,12 @@ protected:
 
     void SetUp() override {
         ieCore = std::make_unique<InferenceEngine::Core>();
+        ieCore_2 = std::make_unique<ov::runtime::Core>();
         this->prepare();
     }
     void TearDown() override {
         ieCore.reset();
+        ieCore_2.reset();
     }
 };
 

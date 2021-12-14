@@ -36,23 +36,24 @@ TEST(Sequence, SequenceDisabled) {
 }
 
 TEST(Sequence, UpdateSequenceState) {
-    ovms::model_memory_state_t newState;
+    ovms::model_memory_state_t_2 newState;
     DummyStatefulModel model;
     std::vector<float> expectedState{10};
-    InferenceEngine::InferRequest auxInferRequest = model.createInferRequest();
+    ov::runtime::InferRequest auxInferRequest = model.createInferRequest_2();
 
-    model.setVariableState(auxInferRequest, expectedState);
-    InferenceEngine::VariableState memoryState = model.getVariableState(auxInferRequest);
+    model.setVariableState_2(auxInferRequest, expectedState);
+    ov::runtime::VariableState memoryState = model.getVariableState_2(auxInferRequest);
     newState.push_back(memoryState);
     uint64_t sequenceId = 3;
     ovms::Sequence sequence(sequenceId);
-    sequence.updateMemoryState(newState);
+    sequence.updateMemoryState_2(newState);
 
-    const ovms::sequence_memory_state_t& sequenceMemoryState = sequence.getMemoryState();
+    const ovms::sequence_memory_state_t_2& sequenceMemoryState = sequence.getMemoryState_2();
     const std::string stateName = model.getStateName();
     ASSERT_TRUE(sequenceMemoryState.count(stateName));
 
     std::vector<float> stateBlobSequenceData;
-    stateBlobSequenceData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(sequenceMemoryState.at(stateName))->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(sequenceMemoryState.at(stateName))->rmap().as<float*>() + 1);
+    auto state = static_cast<float*>(sequenceMemoryState.at(stateName)->data());
+    stateBlobSequenceData.assign(state, state + 1);
     EXPECT_EQ(stateBlobSequenceData, expectedState);
 }

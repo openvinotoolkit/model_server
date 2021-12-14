@@ -41,7 +41,7 @@ Status ExitNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQ
 }
 
 template <>
-Status OutputGetter<const BlobMap&>::get(const std::string& name, InferenceEngine::Blob::Ptr& blob) {
+Status OutputGetter_2<const TensorMap&>::get(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& blob) {
     auto it = outputSource.find(name);
     if (it == outputSource.end()) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Failed to find expected pipeline output when serializing response: {}", name);
@@ -51,9 +51,22 @@ Status OutputGetter<const BlobMap&>::get(const std::string& name, InferenceEngin
     return StatusCode::OK;
 }
 
-Status ExitNode::fetchResults(const BlobMap& inputBlobs) {
-    OutputGetter<const BlobMap&> outputGetter(inputBlobs);
-    return serializePredictResponse(outputGetter, this->outputsInfo, this->response);
+template <>
+Status OutputGetter_2<const TensorMap&>::get(const std::string& name, ov::runtime::Tensor& blob) {
+    auto it = outputSource.find(name);
+    if (it == outputSource.end()) {
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Failed to find expected pipeline output when serializing response: {}", name);
+        return StatusCode::INTERNAL_ERROR;
+    }
+    std::shared_ptr<ov::runtime::Tensor> finalTensor;
+    auto status = tensorClone(finalTensor, *(it->second));
+    blob = *it->second;
+    return StatusCode::OK;
+}
+
+Status ExitNode::fetchResults(const TensorMap& inputTensors) {
+    OutputGetter_2<const TensorMap&> outputGetter(inputTensors);
+    return serializePredictResponse_2(outputGetter, this->outputsInfo, this->response);
 }
 
 std::unique_ptr<NodeSession> ExitNode::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {

@@ -46,7 +46,7 @@ public:
     Status execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) override;
 
 protected:
-    Status fetchResults(const BlobMap& outputs);
+    Status fetchResults(const TensorMap& outputs);
 
 public:
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;

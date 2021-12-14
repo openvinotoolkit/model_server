@@ -15,13 +15,14 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 namespace ovms {
 
-using BlobMap = std::unordered_map<std::string, InferenceEngine::Blob::Ptr>;
+using TensorMap = std::unordered_map<std::string, std::shared_ptr<ov::runtime::Tensor>>;
 
 }  // namespace ovms

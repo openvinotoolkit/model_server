@@ -3382,7 +3382,7 @@ static const char* pipelineSingleIncrement4DimInputNHWC = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,1,2) ",
+                "shape": "(1,1,2,3) ",
                 "layout": "nhwc",
                 "nireq": 1
             }
@@ -3440,7 +3440,7 @@ static const char* pipelineSingleIncrement4DimInputNHWCDynamicBatch = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,1,2) ",
+                "shape": "(1,1,2,3) ",
                 "layout": "nhwc",
                 "nireq": 1
             }
@@ -3619,7 +3619,7 @@ static const char* pipelineAmbiguousInputMeta = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,1,2) ",
+                "shape": "(1,1,2,3) ",
                 "layout": {"input": "nhwc"},
                 "nireq": 1
             }
@@ -3631,7 +3631,6 @@ static const char* pipelineAmbiguousInputMeta = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,3,1,2) ",
-                "layout": {"input": "nchw"},
                 "nireq": 1
             }
         }
@@ -3707,7 +3706,7 @@ static const char* pipelineInnerConnectedNhwc = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,1,2) ",
+                "shape": "(1,1,2,3) ",
                 "layout": {"input": "nhwc"},
                 "nireq": 1
             }
@@ -3785,7 +3784,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1x1 = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,1,1) ",
+                "shape": "(1,1,1,3) ",
                 "layout": "nhwc",
                 "nireq": 1
             }
@@ -3886,8 +3885,8 @@ TEST_F(EnsembleFlowTestBinaryInput, NchwEntryNotSupported) {
 
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
-
-    ASSERT_EQ(pipeline->execute(), StatusCode::UNSUPPORTED_LAYOUT);
+    auto status = pipeline->execute();
+    ASSERT_EQ(status, StatusCode::INVALID_NO_OF_CHANNELS) << status.string();
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC1x1Grayscale = R"(
@@ -3957,7 +3956,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1x1BS5 = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(5,3,1,1) ",
+                "shape": "(5,1,1,3) ",
                 "layout": "nhwc",
                 "nireq": 1
             }
@@ -4016,7 +4015,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC2x2 = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,2,2) ",
+                "shape": "(1,2,2,3) ",
                 "layout": "nhwc",
                 "nireq": 1
             }
@@ -4074,7 +4073,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC2x2BS5 = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(5,3,2,2) ",
+                "shape": "(5,2,2,3) ",
                 "layout": "nhwc",
                 "nireq": 1
             }
@@ -4209,7 +4208,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1x1EntryDemultiplexer = 
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,1,1) ",
+                "shape": "(1,1,1,3) ",
                 "layout": "nhwc",
                 "nireq": 1
             }

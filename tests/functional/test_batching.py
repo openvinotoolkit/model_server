@@ -80,6 +80,7 @@ class TestBatchModelInference:
         assert output[ResnetBS8.output_name].shape == ResnetBS8.output_shape, ERROR_SHAPE
 
     @devices_not_supported_for_test([TARGET_DEVICE_MYRIAD])
+    @pytest.mark.skipif(True, reason="CVS-73762 Setting batchsize is not supported")
     def test_run_inference_bs4(self, start_server_batch_model_bs4):
 
         _, ports = start_server_batch_model_bs4
@@ -96,6 +97,7 @@ class TestBatchModelInference:
         assert output[ResnetBS8.output_name].shape == (4,) + ResnetBS8.output_shape[1:], ERROR_SHAPE
 
     @devices_not_supported_for_test([TARGET_DEVICE_HDDL, TARGET_DEVICE_MYRIAD])
+    @pytest.mark.skipif(True, reason="CVS-73762 Setting batchsize is not supported")
     def test_run_inference_auto(self, start_server_batch_model_auto):
 
         _, ports = start_server_batch_model_auto
@@ -171,6 +173,7 @@ class TestBatchModelInference:
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
+    @pytest.mark.skipif(True, reason="CVS-73762 Setting batchsize is not supported")
     def test_run_inference_bs4_rest(self, start_server_batch_model_auto_bs4_2out,
                                     mapping_names,
                                     request_format):
@@ -212,6 +215,7 @@ class TestBatchModelInference:
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
+    @pytest.mark.skipif(True, reason="CVS-73762 Setting batchsize is not supported")
     def test_run_inference_rest_auto(self, start_server_batch_model_auto_2out,
                                      mapping_names,
                                      request_format):

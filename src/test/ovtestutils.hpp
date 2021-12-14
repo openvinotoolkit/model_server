@@ -47,27 +47,27 @@ using testing::_;
 using testing::NiceMock;
 using testing::Throw;
 
-inline tensorflow::DataType fromInferenceEnginePrecision(Precision precision) {
+inline tensorflow::DataType fromInferenceEnginePrecision(InferenceEngine::Precision precision) {
     switch (precision) {
-    case Precision::FP32:
+    case InferenceEngine::Precision::FP32:
         return tensorflow::DataType::DT_FLOAT;
-    case Precision::FP16:
+    case InferenceEngine::Precision::FP16:
         return tensorflow::DataType::DT_HALF;
-    // case Precision::Q78:   return tensorflow::DataType::
-    case Precision::I16:
+    // case InferenceEngine::Precision::Q78:   return tensorflow::DataType::
+    case InferenceEngine::Precision::I16:
         return tensorflow::DataType::DT_INT16;
-    case Precision::U8:
+    case InferenceEngine::Precision::U8:
         return tensorflow::DataType::DT_UINT8;
-    case Precision::I8:
+    case InferenceEngine::Precision::I8:
         return tensorflow::DataType::DT_INT8;
-    case Precision::U16:
+    case InferenceEngine::Precision::U16:
         return tensorflow::DataType::DT_UINT16;
-    case Precision::I32:
+    case InferenceEngine::Precision::I32:
         return tensorflow::DataType::DT_INT32;
-    case Precision::I64:
+    case InferenceEngine::Precision::I64:
         return tensorflow::DataType::DT_INT64;
-    // case Precision::BIN:   return tensorflow::DataType::
-    case Precision::BOOL:
+    // case InferenceEngine::Precision::BIN:   return tensorflow::DataType::
+    case InferenceEngine::Precision::BOOL:
         return tensorflow::DataType::DT_BOOL;
     default:
         throw "Not all types mapped yet";
@@ -101,5 +101,21 @@ public:
 
 private:
     std::shared_ptr<IAllocator> _allocator;
+    char* to;
+};
+
+class MockBlob_2 : public ov::runtime::Tensor {
+public:
+    MockBlob_2(const std::shared_ptr<ovms::TensorInfo>& info) :
+        ov::runtime::Tensor(info->getOvPrecision(), info->getShape()) {
+        to = const_cast<char*>("12345678");
+    }
+
+    // TODO: Those are not virtual methods, therefore mocks do not work.
+    // MOCK_METHOD(ov::Shape, get_shape, (), (const));
+    // MOCK_METHOD(size_t, get_byte_size, (), (const));
+    // MOCK_METHOD(ov::element::Type, get_element_type, (), (const));
+
+private:
     char* to;
 };
