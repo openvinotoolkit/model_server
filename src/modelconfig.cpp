@@ -305,12 +305,17 @@ Status ModelConfig::parseLayoutParameter(const rapidjson::Value& node) {
         }
         std::string layout = it->value.GetString();
         std::transform(layout.begin(), layout.end(), layout.begin(), ::toupper);
-        if (configAllowedLayouts.count(layout) > 0) {
-            layouts[it->name.GetString()] = layout;
-        } else {
-            SPDLOG_ERROR("Setting {} layout is not supported", layout);
-            return StatusCode::LAYOUT_WRONG_FORMAT;
-        }
+
+        
+
+        // TODO: Possibly validate the string in some way? If possible to construct ov::Layout out of it?
+        // if (configAllowedLayouts.count(layout) > 0) {
+        //     layouts[it->name.GetString()] = layout;
+        // } else {
+        //     SPDLOG_ERROR("Setting {} layout is not supported", layout);
+        //     return StatusCode::LAYOUT_WRONG_FORMAT;
+        // }
+        layouts[it->name.GetString()] = layout;
     }
     setLayouts(layouts);
 
@@ -325,13 +330,17 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
         return StatusCode::OK;
     }
 
+    // TODO: Clean up from white spaces
+
     std::string upperCaseCommand;
     std::transform(command.begin(), command.end(), std::back_inserter(upperCaseCommand), ::toupper);
 
-    if (configAllowedLayouts.count(upperCaseCommand) > 0) {
+    //if (configAllowedLayouts.count(upperCaseCommand) > 0) {
+    if (*upperCaseCommand.begin() != '{') {
         setLayout(upperCaseCommand);
         return StatusCode::OK;
     }
+    //}
 
     // parse as json
     rapidjson::Document node;

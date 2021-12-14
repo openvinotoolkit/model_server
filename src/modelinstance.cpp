@@ -23,6 +23,7 @@
 #include <string>
 #include <thread>
 #include <utility>
+#include <tuple>
 
 #include <dirent.h>
 #include <spdlog/spdlog.h>
@@ -195,18 +196,48 @@ InferenceEngine::Layout getTensorLayout(const ModelConfig& config, const std::st
     return layout;
 }
 
+Status extractLayout(const std::string& layoutSetting, std::tuple<std::string, std::string>& ret) {
+    size_t delimCount = std::count(layoutSetting.begin(), layoutSetting.end(), ':');
+    if (delimCount > 1) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Layout wrong format: {}, too many :", layoutSetting);
+        return StatusCode::LAYOUT_WRONG_FORMAT;
+    } else if (delimCount == 1) {
+        std::vector<std::string> tokens = tokenize(layoutSetting, ':');
+        if (tokens.size() == 2) {
+            ret = std::tuple<std::string, std::string>{tokens[0], tokens[1]};
+        } else if (tokens.size() == 1) {
+            ret = std::tuple<std::string, std::string>{tokens[0], ""};
+        }
+    } else {
+        ret = std::tuple<std::string, std::string>{"", ""};
+    }
+    return StatusCode::OK;
+}
+
 Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::Function>& network, const std::string& modelName, model_version_t modelVersion) {
     if (!config.getLayout().empty()) {
         ov::preprocess::PrePostProcessor preproc(network);
-        std::string tensorLayout = config.getLayout();
-        std::string networkLayout = tensorLayout == "NCHW" ? "NHWC" : "NCHW";
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{}", modelName, modelVersion, config.getLayout(), tensorLayout, networkLayout);
-        preproc.input().tensor().set_layout(ov::Layout(tensorLayout));
-        preproc.input().model().set_layout(ov::Layout(networkLayout));
+
+        std::tuple<std::string, std::string> layout;
+        auto status = extractLayout(config.getLayout(), layout);
+        if (!status.ok())
+            return status;
+
+        if (!std::get<0>(layout).empty()) {
+            preproc.input().tensor().set_layout(ov::Layout(std::get<0>(layout)));
+        } else if (!std::get<1>(layout).empty()) {
+            preproc.input().model().set_layout(ov::Layout(std::get<1>(layout)));
+        }
+
+        // std::string tensorLayout = config.getLayout();
+        // std::string networkLayout = tensorLayout == "NCHW" ? "NHWC" : "NCHW";
+        // SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{}", modelName, modelVersion, config.getLayout(), tensorLayout, networkLayout);
+        //preproc.input().tensor().set_layout(ov::Layout(tensorLayout));
+        //preproc.input().model().set_layout(ov::Layout(networkLayout));
         try {
             network = preproc.build();
         } catch (std::exception& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot change single input layout to {}", tensorLayout);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot change single input layout");
             return StatusCode::NETWORK_NOT_LOADED;
         }
     } else if (config.getLayouts().size() > 0) {
@@ -319,6 +350,8 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     } else {
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
     }
+
+    configureBatchSize(this->config, parameter);
 
     for (const ov::Output<ov::Node>& input : this->network_2->inputs()) {
         try {
@@ -704,8 +737,10 @@ Status ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
 void ModelInstance::configureBatchSize(const ModelConfig& config, const DynamicModelParameter& parameter) {
     if (parameter.isBatchSizeRequested()) {
         network->setBatchSize(parameter.getBatchSize());
+        ov::set_batch(network_2, parameter.getBatchSize());
     } else if (config.getBatchSize() > 0) {
         network->setBatchSize(config.getBatchSize());
+        ov::set_batch(network_2, config.getBatchSize());
     }
 }
 
@@ -747,7 +782,6 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             return status;
         }
 
-        configureBatchSize(this->config, parameter);
         status = loadTensors(this->config, parameter);
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
