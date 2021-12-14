@@ -63,6 +63,7 @@ enum class StatusCode {
     CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME, /*!< Using old name of input/output in config layout when mapped in mapping_config.json*/
     CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE,  /*!< Cannot load network into target device */
     REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL,
+    CANNOT_CONVERT_FLAT_SHAPE,
 
     // Model management
     MODEL_MISSING,                                     /*!< Model with such name and/or version does not exist */

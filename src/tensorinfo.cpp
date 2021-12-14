@@ -109,6 +109,19 @@ TensorInfo::TensorInfo(const std::string& name,
 }
 TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
+    const ovms::Precision& precision,
+    const Shape& shape,
+    const InferenceEngine::Layout& layout) :
+    name(name),
+    mapping(mapping),
+    precision_2(precision),
+    shape(shape.getFlatShape()),
+    shape_3(shape),
+    layout(layout) {
+    this->updateEffectiveShape();
+}
+TensorInfo::TensorInfo(const std::string& name,
+    const std::string& mapping,
     const Precision& precision,
     const shape_t& shape) :
     name(name),
@@ -322,9 +335,17 @@ const shape_t& TensorInfo::getEffectiveShape() const {
     return effectiveShape.size() > 0 ? effectiveShape : shape;
 }
 
-void TensorInfo::setShape(const shape_t& shape) {
+void TensorInfo::setShape_2(const shape_t& shape) {
     this->shape = shape;
     this->updateEffectiveShape();
+}
+
+void TensorInfo::setShape(const Shape& shape) {
+    this->shape_3 = shape;
+}
+
+const Shape& TensorInfo::getShape_3() const {
+    return this->shape_3;
 }
 
 void TensorInfo::setLayout(InferenceEngine::Layout layout) {
@@ -419,6 +440,18 @@ std::string TensorInfo::tensorDescToString(const InferenceEngine::TensorDesc& de
 
 const size_t TensorInfo::getBatchSize() const {
     return getEffectiveShape()[0];
+}
+
+std::string TensorInfo::asString() const {
+    std::stringstream ss;
+    ss
+        << "Name: " << getName() << "; "
+        << "Mapping: " << getMappedName() << "; "
+        << "Shape: " << shapeToString(getShape()) << "; "
+        << "Shape_3: " << getShape_3().toString() << "; "
+        << "Precision: " << getPrecisionAsString() << "; "
+        << "Layout: " << getStringFromLayout(getLayout());
+    return ss.str();
 }
 
 }  // namespace ovms

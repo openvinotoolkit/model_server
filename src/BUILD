@@ -166,6 +166,8 @@ cc_library(
         "sequence_manager.cpp",
         "sequence_manager.hpp",
         "sequence_processing_spec.hpp",
+        "shape.cpp",
+        "shape.hpp",
         "shapeinfo.hpp",
         "statefulmodelinstance.cpp",
         "statefulmodelinstance.hpp",
