@@ -7,7 +7,7 @@ rules:
 - apiGroups:
   - intel.com
   resources:
-  - ovms
+  - modelserver
   verbs:
   - get
   - list
@@ -15,6 +15,6 @@ rules:
 - apiGroups:
   - intel.com
   resources:
-  - ovms/status
+  - modelserver/status
   verbs:
   - get

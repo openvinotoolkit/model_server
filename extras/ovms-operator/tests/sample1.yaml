@@ -1,5 +1,5 @@
 apiVersion: intel.com/v1alpha1
-kind: Ovms
+kind: ModelServer
 metadata:
   name: ovms-resnet1
   namespace: ovms

@@ -32,6 +32,8 @@ spec:
   replicas: {{ .Values.replicas }}
   template:
     metadata:
+      annotations:
+{{ toYaml .Values.annotations | indent 8 }}
       labels:
         heritage: {{ .Release.Service | quote }}
         release: {{ .Release.Name | quote }}
@@ -115,8 +117,26 @@ spec:
                {{- if .Values.plugin_config }}
                "--plugin_config", "{{ .Values.plugin_config }}",
                {{- end }}
+               {{- if .Values.batch_size }}
+               "--batch_size", "{{ .Values.batch_size }}",
+               {{- end }}
+               {{- if .Values.layout }}
+                "--layout", "{{ .Values.layout }}",
+               {{- end }}
+               {{- if .Values.shape }}
+               "--shape", "{{ .Values.shape }}",
+               {{- end }}
+               {{- if .Values.model_version_policy }}
+               "--model_version_policy", "{{ .Values.model_version_policy }}",
+               {{- end }}
+               {{- if .Values.stateful }}
+               "--stateful",
+               {{- end }}
         {{- end }}
                "--log_level", "{{ .Values.log_level }}",
+               {{- if .Values.file_system_poll_wait_seconds }}
+               "--file_system_poll_wait_seconds", "{{ .Values.file_system_poll_wait_seconds }}",
+               {{- end }}
                "--port", "8080",
                "--rest_port", "8081"]
         {{- if or .Values.gcp_creds_secret_name .Values.config_configmap_name .Values.models_host_path .Values.models_volume_claim}}
@@ -139,6 +159,10 @@ spec:
         {{- end }}
         resources:
 {{ toYaml .Values.resources | indent 10}}
+      {{- if .Values.node_selector }}
+      nodeSelector:
+{{ toYaml .Values.node_selector | indent 8 }}
+      {{- end }}
       {{- if or .Values.gcp_creds_secret_name .Values.config_configmap_name .Values.models_volume_claim .Values.models_host_path }}
       volumes:
       {{- end }}

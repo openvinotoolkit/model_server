@@ -7,7 +7,7 @@ rules:
 - apiGroups:
   - intel.com
   resources:
-  - ovms
+  - modelserver
   verbs:
   - create
   - delete
@@ -19,6 +19,6 @@ rules:
 - apiGroups:
   - intel.com
   resources:
-  - ovms/status
+  - modelserver/status
   verbs:
   - get

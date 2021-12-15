@@ -31,12 +31,12 @@ cd community-operators/upstream-community-operators/ovms-operator/0.1.0
 
 # edit manifests/ovms-operator.clusterserviceversion.yaml and set image: to point to the test operator image
 
-podman build -t $IMG_BUNDLE .
-podman push $IMG_BUNDLE
-opm index add --bundles $IMG_BUNDLE --from-index quay.io/operatorhubio/catalog:latest --tag $IMG_CATALOG
+docker build -t $IMG_BUNDLE .
+docker push $IMG_BUNDLE
+sudo opm index add --bundles $IMG_BUNDLE --from-index quay.io/operatorhubio/catalog:latest -c docker --tag $IMG_CATALOG
 or
 opm index add --bundles $IMG_BUNDLE --from-index registry.redhat.io/redhat/community-operator-index:v4.7 -p podman --tag $IMG_CATALOG
-podman push $IMG_CATALOG
+docker push $IMG_CATALOG
 ```
 
 ## Setting up test k8s cluster

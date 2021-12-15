@@ -5,4 +5,4 @@ metadata:
   namespace: olm
 spec:
   sourceType: grpc
-  image: ger-registry-pre.caas.intel.com/ovms/test-catalog:latest
+  image: registry.toolbox.iotg.sclab.intel.com/cpp/test-catalog:0.2.0

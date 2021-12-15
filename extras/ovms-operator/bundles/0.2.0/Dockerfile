@@ -27,7 +27,7 @@ LABEL operators.operatorframework.io.metrics.project_layout=helm.sdk.operatorfra
 LABEL operators.operatorframework.io.test.config.v1=tests/scorecard/
 LABEL operators.operatorframework.io.test.mediatype.v1=scorecard+v1
 LABEL operators.operatorframework.io.bundle.channel.default.v1=alpha
-LABEL com.redhat.openshift.versions="v4.6,v4.7"
+
 COPY manifests /manifests/
 COPY metadata /metadata/
 COPY tests/scorecard /tests/scorecard/
