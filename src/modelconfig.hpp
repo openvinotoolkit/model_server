@@ -254,6 +254,15 @@ public:
     bool isCustomLoaderConfigChanged(const ModelConfig& rhs) const;
 
     /**
+         * @brief Compares two ModelConfig instances for layout configuration
+         * 
+         * @param rhs
+         *  
+         * @return true if configurations are equal false otherwise
+         */
+    bool isLayoutConfigurationEqual(const ModelConfig& rhs) const;
+
+    /**
          * @brief Compares two ModelConfig instances for shape configuration
          * 
          * @param rhs
@@ -967,5 +976,7 @@ public:
          * @return status
          */
     Status parseCustomLoaderOptionsConfig(const rapidjson::Value& node);
+
+    std::string layoutConfigurationToString() const;
 };
 }  // namespace ovms

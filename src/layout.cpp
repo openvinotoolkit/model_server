@@ -16,6 +16,7 @@
 #include "layout.hpp"
 
 #include <algorithm>
+#include <sstream>
 
 #include "stringutils.hpp"
 
@@ -67,6 +68,16 @@ Status LayoutConfiguration::fromString(const std::string& configuration, LayoutC
             return StatusCode::LAYOUT_WRONG_FORMAT;
     }
     return StatusCode::OK;
+}
+
+std::string LayoutConfiguration::toString() const {
+    std::stringstream ss;
+    if (tensor.empty()) {
+        ss << model;
+    } else {
+        ss << tensor << ":" << model;
+    }
+    return ss.str();
 }
 
 const std::string& LayoutConfiguration::getTensorLayout() const {

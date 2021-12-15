@@ -105,10 +105,17 @@ TEST(ModelConfig, layout_multi) {
     EXPECT_EQ(l2.find("B")->second.getModelLayout(), "NC");
 
     config.setLayout_2("NHWC");
+    l1 = config.getLayout_2();
     l2 = config.getLayouts_2();
+    EXPECT_EQ(l1.isSet(), true);
+    EXPECT_EQ(l1.getTensorLayout(), "");
+    EXPECT_EQ(l1.getModelLayout(), "NHWC");
     EXPECT_EQ(l2.size(), 0);
 
     config.setLayouts_2(layouts);
+    l1 = config.getLayout_2();
+    l2 = config.getLayouts_2();
+    EXPECT_EQ(l1.isSet(), false);
     EXPECT_EQ(l2.size(), 2);
 }
 

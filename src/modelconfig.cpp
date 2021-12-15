@@ -87,11 +87,7 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to plugin config mismatch", this->name);
         return true;
     }
-    if (this->layout != rhs.layout) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to no named layout mismatch", this->name);
-        return true;
-    }
-    if (this->layouts_2 != rhs.layouts_2) {
+    if (!isLayoutConfigurationEqual(rhs)) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to named layout mismatch", this->name);
         return true;
     }
@@ -120,6 +116,26 @@ bool ModelConfig::isCustomLoaderConfigChanged(const ModelConfig& rhs) const {
         }
     }
     return false;
+}
+
+bool ModelConfig::isLayoutConfigurationEqual(const ModelConfig& rhs) const {
+    if (this->layout_2 != rhs.layout_2) {
+        return false;
+    }
+
+    if (this->layouts_2.size() != rhs.layouts_2.size()) {
+        return false;
+    }
+    for (const auto& [name, layoutConfig] : this->layouts_2) {
+        auto it = rhs.layouts_2.find(name);
+        if (it == rhs.layouts_2.end()) {
+            return false;
+        }
+        if (layoutConfig != it->second) {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool ModelConfig::isShapeConfigurationEqual(const ModelConfig& rhs) const {
@@ -640,6 +656,17 @@ Status ModelConfig::parseCustomLoaderOptionsConfig(const rapidjson::Value& node)
     customLoaderOptionsStr = buffer.GetString();
 
     return StatusCode::OK;
+}
+
+std::string ModelConfig::layoutConfigurationToString() const {
+    if (getLayout_2().isSet()) {
+        return getLayout_2().toString();
+    }
+    std::stringstream ss;
+    for (const auto& [name, layoutCfg] : getLayouts_2()) {
+        ss << name << " " << layoutCfg.toString() << "; ";
+    }
+    return ss.str();  
 }
 
 }  // namespace ovms

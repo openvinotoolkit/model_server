@@ -41,6 +41,8 @@ public:
     bool operator!=(const LayoutConfiguration& rhs) const;
 
     static Status fromString(const std::string& configuration, LayoutConfiguration& configOut);
+    std::string toString() const;
+
 };
 
 using layouts_map_2_t = std::unordered_map<std::string, LayoutConfiguration>;

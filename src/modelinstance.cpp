@@ -178,6 +178,8 @@ Status extractLayout(const std::string& layoutSetting, std::tuple<std::string, s
 Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::Function>& network, const std::string& modelName, model_version_t modelVersion, bool forceBatchFirstPosition = true) { // TODO: Change to false.
     ov::preprocess::PrePostProcessor preproc(network);
 
+    SPDLOG_INFO("Applying layout: {}", config.layoutConfigurationToString());
+
     for (const ov::Output<ov::Node>& input : network->inputs()) {
         try {
             std::string name = input.get_any_name();
@@ -189,8 +191,10 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
                     modelVersion,
                     config.getLayout_2().getTensorLayout(),
                     config.getLayout_2().getModelLayout());
-                preproc.input().tensor().set_layout(ov::Layout(config.getLayout_2().getTensorLayout()));
-                preproc.input().model().set_layout(ov::Layout(config.getLayout_2().getModelLayout()));
+                const std::string& tensorLayout = config.getLayout_2().getTensorLayout().empty() ? config.getLayout_2().getModelLayout() : config.getLayout_2().getTensorLayout();
+                const std::string& modelLayout = config.getLayout_2().getModelLayout();
+                preproc.input().tensor().set_layout(ov::Layout(tensorLayout));
+                preproc.input().model().set_layout(ov::Layout(modelLayout));
             } else if (config.getLayouts_2().count(name) > 0) {
                 auto& layout = config.getLayouts_2().at(name);
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: Tensor Layout:{}; Network Layout:{}; input name: {}",
@@ -203,8 +207,9 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
                 preproc.input(name).model().set_layout(ov::Layout(layout.getModelLayout()));
             } else if (forceBatchFirstPosition) {
                 size_t rank = input.get_partial_shape().size(); // TODO: Check if rank > 0
-                std::string guessedModelLayout(rank, '?');
+                std::string guessedModelLayout(rank, '.');
                 guessedModelLayout[0] = 'N';
+                preproc.input(name).tensor().set_layout(ov::Layout(guessedModelLayout));
                 preproc.input(name).model().set_layout(ov::Layout(guessedModelLayout));
             }
         } catch (const ov::Exception& e) {
