@@ -25,6 +25,9 @@ ARG KLOCWORK_LTOKEN=/ovms/ltoken
 RUN http_proxy=${HTTP_PROXY} yum install -y glibc.i686 libgcc.x86_64 libgcc.i686 redhat-lsb-core.i686
 ADD ./kwbuildtools /tmp/kwbuildtools
 
+RUN mkdir -p /opt/intel/openvino/extras/opencv/ && ln -sf /usr/lib/x86_64-linux-gnu /opt/intel/openvino/extras/opencv/lib
+RUN mkdir -p /opt/intel/openvino/extras/opencv/include && ln -sf /usr/include/opencv4/opencv2 /opt/intel/openvino/extras/opencv/include
+
 WORKDIR /example_cpp_client/cpp
 RUN /tmp/kwbuildtools/bin/kwinject --output /tmp/out.out bazel build //src:all
 
