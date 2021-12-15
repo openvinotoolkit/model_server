@@ -90,9 +90,6 @@ COPY .bazelrc WORKSPACE /build/
 COPY external /build/external/
 COPY third_party /build/third_party/
 
-RUN mkdir -p /opt/intel/openvino/extras/opencv/ && ln -sf /usr/lib/x86_64-linux-gnu /opt/intel/openvino/extras/opencv/lib
-RUN mkdir -p /opt/intel/openvino/extras/opencv/include && ln -sf /usr/include/opencv4/opencv2 /opt/intel/openvino/extras/opencv/include
-
 RUN bazel build \
     @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
     @com_github_grpc_grpc//:grpc++ \
