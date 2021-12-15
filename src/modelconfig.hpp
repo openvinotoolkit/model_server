@@ -27,13 +27,13 @@
 #include <rapidjson/document.h>
 
 #include "model_version_policy.hpp"
+#include "layout.hpp"
 #include "shape.hpp"
 #include "shapeinfo.hpp"
 #include "status.hpp"
 
 namespace ovms {
 
-using layouts_map_t = std::unordered_map<std::string, std::string>;
 using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, std::string>;
 using custom_loader_options_config_t = std::map<std::string, std::string>;
@@ -131,6 +131,7 @@ private:
          * @brief Layout for single input
          */
     std::string layout;
+    LayoutConfiguration layout_2;
 
     /**
          * @brief Map of shapes
@@ -140,7 +141,7 @@ private:
     /**
          * @brief Map of layouts
          */
-    layouts_map_t layouts;
+    layouts_map_2_t layouts_2;
 
     /**
          * @brief Input mapping configuration
@@ -228,7 +229,7 @@ public:
         pluginConfig({}),
         layout(""),
         shapes_2({}),
-        layouts({}),
+        layouts_2({}),
         mappingInputs({}),
         mappingOutputs({}) {
         setBatchingParams(configBatchSize);
@@ -750,8 +751,8 @@ public:
          * 
          * @return const std::string& 
          */
-    const std::string& getLayout() const {
-        return this->layout;
+    const LayoutConfiguration& getLayout_2() const {
+        return this->layout_2;
     }
 
     /**
@@ -759,9 +760,9 @@ public:
          * 
          * @param layout
          */
-    void setLayout(const std::string& layout) {
-        this->layout = layout;
-        this->layouts.clear();
+    void setLayout_2(const LayoutConfiguration& layout) {
+        this->layout_2 = layout;
+        this->layouts_2.clear();
     }
 
     /**
@@ -769,8 +770,8 @@ public:
          * 
          * @return const layouts_map_t& 
          */
-    const layouts_map_t& getLayouts() const {
-        return this->layouts;
+    const layouts_map_2_t& getLayouts_2() const {
+        return this->layouts_2;
     }
 
     /**
@@ -778,20 +779,9 @@ public:
          * 
          * @param layouts 
          */
-    void setLayouts(const layouts_map_t& layouts) {
-        this->layouts = layouts;
-        this->layout = "";
-    }
-
-    /**
-         * @brief Add a named layout
-         * 
-         * @param name 
-         * @param layout 
-         */
-    void addLayout(const std::string& name, const std::string& layout) {
-        this->layouts[name] = layout;
-        this->layout = "";
+    void setLayouts_2(const layouts_map_2_t& layouts) {
+        this->layouts_2 = layouts;
+        this->layout_2 = LayoutConfiguration();
     }
 
     /**

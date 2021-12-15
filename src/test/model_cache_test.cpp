@@ -227,7 +227,7 @@ TEST_F(ModelCacheTest, LayoutChangeDoesImpactCache) {
     size_t currentCacheFileCount = this->getCachedFileCount();
 
     ModelConfig config = imageModelConfigWithCache;
-    config.setLayout("nhwc");
+    config.parseLayoutParameter("nhwc:nchw");
 
     auto manager = std::make_unique<ConstructorEnabledModelManager>(modelCacheDirectory);
     ASSERT_EQ(manager->reloadModelWithVersions(config), StatusCode::OK_RELOADED);

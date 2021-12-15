@@ -73,43 +73,43 @@ TEST(ModelConfig, getters_setters) {
 TEST(ModelConfig, layout_single) {
     ovms::ModelConfig config;
 
-    config.setLayout("NHWC");
-    auto l1 = config.getLayout();
-    auto l2 = config.getLayouts();
-    EXPECT_EQ(l1, "NHWC");
+    config.setLayout_2(ovms::LayoutConfiguration{"NCHW", "NHWC"});
+    auto l1 = config.getLayout_2();
+    auto l2 = config.getLayouts_2();
+    EXPECT_EQ(l1.getTensorLayout(), "NCHW");
+    EXPECT_EQ(l1.getModelLayout(), "NHWC");
     EXPECT_EQ(l2.size(), 0);
 }
 
 TEST(ModelConfig, layout_multi) {
     ovms::ModelConfig config;
 
-    ovms::layouts_map_t layouts;
-    layouts["A"] = "layout_A";
-    layouts["B"] = "layout_B";
+    ovms::layouts_map_2_t layouts;
+    layouts["A"] = ovms::LayoutConfiguration{"NCHW", "NHWC"};
+    layouts["B"] = ovms::LayoutConfiguration{"CN", "NC"};
 
-    config.setLayout("NHWC");
-    config.setLayouts(layouts);
+    config.setLayout_2("NHWC");
+    config.setLayouts_2(layouts);
 
-    auto l1 = config.getLayout();
-    auto l2 = config.getLayouts();
-    EXPECT_EQ(l1, "");
-    EXPECT_THAT(l2, UnorderedElementsAre(
-                        Pair("A", "layout_A"),
-                        Pair("B", "layout_B")));
+    auto l1 = config.getLayout_2();
+    auto l2 = config.getLayouts_2();
+    EXPECT_EQ(l1.isSet(), false);
+    // EXPECT_THAT(l2, UnorderedElementsAre(
+    //                     Pair("A", "layout_A"),
+    //                     Pair("B", "layout_B")));
+    ASSERT_EQ(l2.count("A"), 1);
+    ASSERT_EQ(l2.count("B"), 1);
+    EXPECT_EQ(l2.find("A")->second.getTensorLayout(), "NCHW");
+    EXPECT_EQ(l2.find("A")->second.getModelLayout(), "NHWC");
+    EXPECT_EQ(l2.find("B")->second.getTensorLayout(), "CN");
+    EXPECT_EQ(l2.find("B")->second.getModelLayout(), "NC");
 
-    config.setLayout("NHWC");
-    l2 = config.getLayouts();
+    config.setLayout_2("NHWC");
+    l2 = config.getLayouts_2();
     EXPECT_EQ(l2.size(), 0);
 
-    config.setLayouts(layouts);
-    config.addLayout("C", "layout_C");
-    l1 = config.getLayout();
-    l2 = config.getLayouts();
-    EXPECT_EQ(l1, "");
-    EXPECT_THAT(l2, UnorderedElementsAre(
-                        Pair("A", "layout_A"),
-                        Pair("B", "layout_B"),
-                        Pair("C", "layout_C")));
+    config.setLayouts_2(layouts);
+    EXPECT_EQ(l2.size(), 2);
 }
 
 TEST(ModelConfig, shape) {

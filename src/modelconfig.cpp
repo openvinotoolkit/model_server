@@ -91,7 +91,7 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to no named layout mismatch", this->name);
         return true;
     }
-    if (this->layouts != rhs.layouts) {
+    if (this->layouts_2 != rhs.layouts_2) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to named layout mismatch", this->name);
         return true;
     }
@@ -298,46 +298,48 @@ Status ModelConfig::parseLayoutParameter(const rapidjson::Value& node) {
         return StatusCode::LAYOUT_WRONG_FORMAT;
     }
 
-    layouts_map_t layouts;
+    layouts_map_2_t layouts;
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
         if (!it->value.IsString()) {
             return StatusCode::LAYOUT_WRONG_FORMAT;
         }
-        std::string layout = it->value.GetString();
-        std::transform(layout.begin(), layout.end(), layout.begin(), ::toupper);
+        std::string layoutStr = it->value.GetString();
+        std::transform(layoutStr.begin(), layoutStr.end(), layoutStr.begin(), ::toupper);
 
-        
+        LayoutConfiguration layout;
+        auto status = LayoutConfiguration::fromString(layoutStr, layout);
+        if (!status.ok()) {
+            return status;
+        }
 
-        // TODO: Possibly validate the string in some way? If possible to construct ov::Layout out of it?
-        // if (configAllowedLayouts.count(layout) > 0) {
-        //     layouts[it->name.GetString()] = layout;
-        // } else {
-        //     SPDLOG_ERROR("Setting {} layout is not supported", layout);
-        //     return StatusCode::LAYOUT_WRONG_FORMAT;
-        // }
-        layouts[it->name.GetString()] = layout;
+        layouts_2[it->name.GetString()] = layout;
     }
-    setLayouts(layouts);
+    setLayouts_2(layouts);
 
     return StatusCode::OK;
 }
 
 Status ModelConfig::parseLayoutParameter(const std::string& command) {
-    this->layouts.clear();
-    this->layout = std::string();
+    this->layouts_2.clear();
+    this->layout_2 = LayoutConfiguration();
 
     if (command.empty()) {
         return StatusCode::OK;
     }
 
-    // TODO: Clean up from white spaces
-
     std::string upperCaseCommand;
     std::transform(command.begin(), command.end(), std::back_inserter(upperCaseCommand), ::toupper);
 
+    erase_spaces(upperCaseCommand);
+
     //if (configAllowedLayouts.count(upperCaseCommand) > 0) {
     if (*upperCaseCommand.begin() != '{') {
-        setLayout(upperCaseCommand);
+        LayoutConfiguration layout;
+        auto status = LayoutConfiguration::fromString(upperCaseCommand, layout);
+        if (!status.ok()) {
+            return status;
+        }
+        setLayout_2(layout);
         return StatusCode::OK;
     }
     //}

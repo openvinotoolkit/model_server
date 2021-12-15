@@ -88,6 +88,8 @@ cc_library(
         "http_rest_api_handler.hpp",
         "http_server.cpp",
         "http_server.hpp",
+        "layout.cpp",
+        "layout.hpp",
         "localfilesystem.cpp",
         "localfilesystem.hpp",
         "gathernodeinputhandler.cpp",

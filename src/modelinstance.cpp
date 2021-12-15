@@ -34,6 +34,7 @@
 #include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
 #include "filesystem.hpp"
+#include "layout.hpp"
 #include "logging.hpp"
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
@@ -86,46 +87,6 @@ Status getRequestedShape_2(const ModelConfig& config, const DynamicModelParamete
     return StatusCode::OK;
 }
 
-Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::unique_ptr<InferenceEngine::CNNNetwork>& network) {
-    if (config.isShapeAnonymousFixed() && network->getInputsInfo().size() > 1) {
-        Status status = StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED;
-        SPDLOG_WARN(status.string());
-        return status;
-    }
-    if (!config.getLayout().empty() && network->getInputsInfo().size() > 1) {
-        Status status = StatusCode::ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED;
-        SPDLOG_WARN(status.string());
-        return status;
-    }
-
-    const auto& networkInputs = network->getInputsInfo();
-    for (const auto& [name, _] : config.getShapes_2()) {
-        if (name == ANONYMOUS_INPUT_NAME) {
-            continue;
-        }
-        if (networkInputs.count(name) == 1 && config.getMappingInputByKey(name) != "") {
-            SPDLOG_WARN("Config shape - {} is mapped by {}. Changes will not apply", name, config.getMappingInputByKey(name));
-            return StatusCode::CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME;
-        } else if (networkInputs.count(name) == 0 && networkInputs.count(config.getRealInputNameByValue(name)) == 0) {
-            SPDLOG_WARN("Config shape - {} not found in network", name);
-            return StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK;
-        }
-    }
-    for (const auto& [name, _] : config.getLayouts()) {
-        if (networkInputs.count(name) == 1 && config.getMappingInputByKey(name) != "") {
-            SPDLOG_WARN("Config layout - {} is mapped by {}. Changes will not apply", name, config.getMappingInputByKey(name));
-            return StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME;
-        } else if (network->getOutputsInfo().count(name) == 1 && config.getMappingOutputByKey(name) != "") {
-            SPDLOG_WARN("Config layout - {} is mapped by {}. Changes will not apply", name, config.getMappingOutputByKey(name));
-            return StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME;
-        } else if (networkInputs.count(name) == 0 && network->getOutputsInfo().count(name) == 0 && networkInputs.count(config.getRealInputNameByValue(name)) == 0 && network->getOutputsInfo().count(config.getRealOutputNameByValue(name)) == 0) {
-            SPDLOG_WARN("Config layout - {} not found in network", name);
-            return StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK;
-        }
-    }
-    return StatusCode::OK;
-}
-
 bool hasInputWithName(std::shared_ptr<ov::Function>& network, const std::string& name) {
     try {
         network->input(name);
@@ -150,7 +111,7 @@ Status validateConfigurationAgainstNetwork_2(const ModelConfig& config, std::sha
         SPDLOG_LOGGER_WARN(modelmanager_logger, status.string());
         return status;
     }
-    if (!config.getLayout().empty() && network->inputs().size() > 1) {
+    if (config.getLayout_2().isSet() && network->inputs().size() > 1) {
         Status status = StatusCode::ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED;
         SPDLOG_LOGGER_WARN(modelmanager_logger, status.string());
         return status;
@@ -167,7 +128,7 @@ Status validateConfigurationAgainstNetwork_2(const ModelConfig& config, std::sha
             return StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK;
         }
     }
-    for (const auto& [name, _] : config.getLayouts()) {
+    for (const auto& [name, _] : config.getLayouts_2()) {
         if (hasInputWithName(network, name) && config.getMappingInputByKey(name) != "") {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Config layout - {} is mapped by {}. Changes will not apply", name, config.getMappingInputByKey(name));
             return StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME;
@@ -184,13 +145,13 @@ Status validateConfigurationAgainstNetwork_2(const ModelConfig& config, std::sha
 
 InferenceEngine::Layout getTensorLayout(const ModelConfig& config, const std::string& name) {
     InferenceEngine::Layout layout = InferenceEngine::Layout::ANY;
-    if (!config.getLayout().empty()) {
-        layout = TensorInfo::getLayoutFromString(config.getLayout());
-    } else if (config.getLayouts().size() > 0) {
+    if (config.getLayout_2().isSet()) {
+        layout = TensorInfo::getLayoutFromString(config.getLayout_2().getModelLayout());
+    } else if (config.getLayouts_2().size() > 0) {
         auto mappedName = config.getMappingInputByKey(name);
-        auto it = config.getLayouts().find(mappedName == "" ? name : mappedName);
-        if (it != config.getLayouts().end()) {
-            layout = TensorInfo::getLayoutFromString(it->second);
+        auto it = config.getLayouts_2().find(mappedName == "" ? name : mappedName);
+        if (it != config.getLayouts_2().end()) {
+            layout = TensorInfo::getLayoutFromString(it->second.getModelLayout());
         }
     }
     return layout;
@@ -214,56 +175,105 @@ Status extractLayout(const std::string& layoutSetting, std::tuple<std::string, s
     return StatusCode::OK;
 }
 
-Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::Function>& network, const std::string& modelName, model_version_t modelVersion) {
-    if (!config.getLayout().empty()) {
-        ov::preprocess::PrePostProcessor preproc(network);
+Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::Function>& network, const std::string& modelName, model_version_t modelVersion, bool forceBatchFirstPosition = true) { // TODO: Change to false.
+    ov::preprocess::PrePostProcessor preproc(network);
 
-        std::tuple<std::string, std::string> layout;
-        auto status = extractLayout(config.getLayout(), layout);
-        if (!status.ok())
-            return status;
-
-        if (!std::get<0>(layout).empty()) {
-            preproc.input().tensor().set_layout(ov::Layout(std::get<0>(layout)));
-        } else if (!std::get<1>(layout).empty()) {
-            preproc.input().model().set_layout(ov::Layout(std::get<1>(layout)));
-        }
-
-        // std::string tensorLayout = config.getLayout();
-        // std::string networkLayout = tensorLayout == "NCHW" ? "NHWC" : "NCHW";
-        // SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{}", modelName, modelVersion, config.getLayout(), tensorLayout, networkLayout);
-        //preproc.input().tensor().set_layout(ov::Layout(tensorLayout));
-        //preproc.input().model().set_layout(ov::Layout(networkLayout));
+    for (const ov::Output<ov::Node>& input : network->inputs()) {
         try {
-            network = preproc.build();
-        } catch (std::exception& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot change single input layout");
-            return StatusCode::NETWORK_NOT_LOADED;
-        }
-    } else if (config.getLayouts().size() > 0) {
-        ov::preprocess::PrePostProcessor preproc(network);
-        for (const auto& [name, layout] : config.getLayouts()) {
-            if (hasInputWithName(network, name)) {
-                std::string networkLayout = layout == "NCHW" ? "NHWC" : "NCHW";
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{}; input name: {}", modelName, modelVersion, layout, layout, networkLayout, name);
-                preproc.input(name).tensor().set_layout(ov::Layout(layout));
-                preproc.input(name).model().set_layout(ov::Layout(networkLayout));
+            std::string name = input.get_any_name();
+            Shape shape(input.get_partial_shape());
+
+            if (config.getLayout_2().isSet()) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: Tensor Layout:{}; Network Layout:{}; single input",
+                    modelName,
+                    modelVersion,
+                    config.getLayout_2().getTensorLayout(),
+                    config.getLayout_2().getModelLayout());
+                preproc.input().tensor().set_layout(ov::Layout(config.getLayout_2().getTensorLayout()));
+                preproc.input().model().set_layout(ov::Layout(config.getLayout_2().getModelLayout()));
+            } else if (config.getLayouts_2().count(name) > 0) {
+                auto& layout = config.getLayouts_2().at(name);
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: Tensor Layout:{}; Network Layout:{}; input name: {}",
+                    modelName,
+                    modelVersion,
+                    layout.getTensorLayout(),
+                    layout.getModelLayout(),
+                    name);
+                preproc.input(name).tensor().set_layout(ov::Layout(layout.getTensorLayout()));
+                preproc.input(name).model().set_layout(ov::Layout(layout.getModelLayout()));
+            } else if (forceBatchFirstPosition) {
+                size_t rank = input.get_partial_shape().size(); // TODO: Check if rank > 0
+                std::string guessedModelLayout(rank, '?');
+                guessedModelLayout[0] = 'N';
+                preproc.input(name).model().set_layout(ov::Layout(guessedModelLayout));
             }
-            if (hasOutputWithName(network, name)) {
-                std::string networkLayout = layout == "NCHW" ? "NHWC" : "NCHW";
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: {}; Tensor Layout:{}; Network Layout:{}; output name: {}", modelName, modelVersion, layout, layout, networkLayout, name);
-                preproc.output(name).tensor().set_layout(ov::Layout(layout));
-                preproc.output(name).model().set_layout(ov::Layout(networkLayout));
-            }
+        } catch (const ov::Exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+                modelName,
+                modelVersion,
+                e.what());
+            // TODO potentially allow for empty names if OV will load such model. Then potentially use empty string as input/output names
+            // and adjust validation, metadata, dags for that
+            return StatusCode::UNKNOWN_ERROR;
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+                modelName,
+                modelVersion,
+                e.what());
+            return StatusCode::UNKNOWN_ERROR;
+        } catch (...) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO",
+                modelName,
+                modelVersion);
+            return StatusCode::UNKNOWN_ERROR;
         }
+    }
+
+    for (const ov::Output<ov::Node>& input : network->outputs()) {
         try {
-            network = preproc.build();
-        } catch (std::exception& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot change layout");
-            return StatusCode::NETWORK_NOT_LOADED;
+            std::string name = input.get_any_name();
+            Shape shape(input.get_partial_shape());
+
+            if (config.getLayouts_2().count(name) > 0) {
+                auto& layout = config.getLayouts_2().at(name);
+                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: Tensor Layout:{}; Network Layout:{}; input name: {}",
+                    modelName,
+                    modelVersion,
+                    layout.getTensorLayout(),
+                    layout.getModelLayout(),
+                    name);
+                preproc.output(name).tensor().set_layout(ov::Layout(layout.getTensorLayout()));
+                preproc.output(name).model().set_layout(ov::Layout(layout.getModelLayout()));
+            }
+
+        } catch (const ov::Exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+                modelName,
+                modelVersion,
+                e.what());
+            // TODO potentially allow for empty names if OV will load such model. Then potentially use empty string as input/output names
+            // and adjust validation, metadata, dags for that
+            return StatusCode::UNKNOWN_ERROR;
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+                modelName,
+                modelVersion,
+                e.what());
+            return StatusCode::UNKNOWN_ERROR;
+        } catch (...) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO",
+                modelName,
+                modelVersion);
+            return StatusCode::UNKNOWN_ERROR;
         }
-    } else {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; adding preprocessing step is not required", modelName, modelVersion);
+    }
+
+    // TODO: Possibly only do it if the change is required.
+    try {
+        network = preproc.build();
+    } catch (std::exception& e) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot change layout");
+        return StatusCode::NETWORK_NOT_LOADED;
     }
     return StatusCode::OK;
 }
