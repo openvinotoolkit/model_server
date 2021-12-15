@@ -1,6 +1,6 @@
-# Dynamic batch size with OpenVINO&trade; Model Server Demultiplexer {#ovms_docs_demo_dynamic_batch_demuliplexer}
+# Dynamic batch size with OpenVINO&trade; Model Server Demultiplexer {#ovms_docs_dynamic_bs_demultiplexer}
 
-## Intoduction
+## Introduction
 This document guides how to configure DAG Scheduler pipeline to be able to send predict request with arbitrary batch size without model reloading.
 
 With OpenVINO&trade; Model Server Demultiplexing infer request sent from client application can have various batch sizes and changing batch size does not require model reload.

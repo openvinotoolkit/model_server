@@ -3,7 +3,7 @@
 @sphinxdirective
 .. raw:: html
 
-    <div id="switcher-cpp" class="switcher-anchor">Python</div>
+    <div id="switcher-python" class="switcher-anchor">Python</div>
 @endsphinxdirective
 
 ## Python client
@@ -54,9 +54,7 @@ Creating client application in Python is probably the simplest due to existance 
 
         status_request = get_model_status_pb2.GetModelStatusRequest()
         status_request.model_spec.name = "my_model"
-        status_response = model_service_stub. GetModelStatus(
-            status_request, 10.0
-        )
+        status_response = model_service_stub. GetModelStatus(status_request, 10.0)
      
 @endsphinxdirective
 
@@ -86,9 +84,7 @@ Creating client application in Python is probably the simplest due to existance 
 
         metadata_request = get_model_metadata_pb2.GetModelMetadataRequest()
         metadata_request.model_spec.name = "my_model"
-        metadata_response = prediction_service_stub.GetModelMetadata(
-            metadata_request, 10.0
-        )
+        metadata_response = prediction_service_stub.GetModelMetadata(metadata_request, 10.0)
      
 @endsphinxdirective
 
@@ -142,7 +138,7 @@ Creating client application in Python is probably the simplest due to existance 
 
         client = make_grpc_client(service_url="10.20.30.40:9000")
         data = np.array([1.0, 2.0, ..., 1000.0])
-        inputs = {"input_name": data}    
+        inputs = {"input_name": data}
         results = client.predict(inputs=inputs, model_name="my_model")
    
 .. tab:: tensorflow-serving-api  
@@ -182,7 +178,7 @@ See https://github.com/openvinotoolkit/model_server/tree/main/example_client/cpp
 @sphinxdirective
 .. raw:: html
 
-    <div id="switcher-cpp" class="switcher-anchor">Go</div>
+    <div id="switcher-go" class="switcher-anchor">Go</div>
 @endsphinxdirective
 
 ## Go client
