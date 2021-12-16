@@ -28,8 +28,8 @@ class LayoutConfiguration {
 
 public:
     LayoutConfiguration() = default;
-    LayoutConfiguration(const char* modelLayout);
-    LayoutConfiguration(const std::string& modelLayout);
+    LayoutConfiguration(const char* Layout);
+    LayoutConfiguration(const std::string& Layout);
     LayoutConfiguration(const std::string& tensorLayout, const std::string& modelLayout);
 
     const std::string& getTensorLayout() const;

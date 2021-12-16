@@ -145,14 +145,12 @@ Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::share
 InferenceEngine::Layout getReportedTensorLayout(const ModelConfig& config, const std::string& name) {
     InferenceEngine::Layout layout = InferenceEngine::Layout::ANY;
     if (config.getLayout_2().isSet()) {
-        const std::string& tensorLayout = config.getLayout_2().getTensorLayout().empty() ? config.getLayout_2().getModelLayout() : config.getLayout_2().getTensorLayout();
-        layout = TensorInfo::getLayoutFromString(tensorLayout);
+        layout = TensorInfo::getLayoutFromString(config.getLayout_2().getTensorLayout());
     } else if (config.getLayouts_2().size() > 0) {
         auto mappedName = config.getMappingInputByKey(name);
         auto it = config.getLayouts_2().find(mappedName == "" ? name : mappedName);
         if (it != config.getLayouts_2().end()) {
-            const std::string& tensorLayout = it->second.getTensorLayout().empty() ? it->second.getModelLayout() : it->second.getTensorLayout();
-            layout = TensorInfo::getLayoutFromString(tensorLayout);
+            layout = TensorInfo::getLayoutFromString(it->second.getTensorLayout());
         }
     }
     return layout;
@@ -175,11 +173,8 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::F
                     config.getLayout_2().getModelLayout());
 
                 // TODO: Validate rank vs layout string len?
-                const std::string& tensorLayout = !config.getLayout_2().getTensorLayout().empty() ? config.getLayout_2().getTensorLayout() : config.getLayout_2().getModelLayout();
-                const std::string& modelLayout = config.getLayout_2().getModelLayout();
-
-                preproc.input().tensor().set_layout(ov::Layout(tensorLayout));
-                preproc.input().model().set_layout(ov::Layout(modelLayout));
+                preproc.input().tensor().set_layout(ov::Layout(config.getLayout_2().getTensorLayout()));
+                preproc.input().model().set_layout(ov::Layout(config.getLayout_2().getModelLayout()));
             } else if (config.getLayouts_2().count(name) > 0) {
                 auto& layout = config.getLayouts_2().at(name);
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: Tensor Layout:{}; Network Layout:{}; input name: {}",
@@ -189,9 +184,8 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::F
                     layout.getModelLayout(),
                     name);
 
-                const std::string& tensorLayout = !layout.getTensorLayout().empty() ? layout.getTensorLayout() : layout.getModelLayout();
-
-                preproc.input(name).tensor().set_layout(ov::Layout(tensorLayout));
+                // TODO: Validate rank vs layout string len?
+                preproc.input(name).tensor().set_layout(ov::Layout(layout.getTensorLayout()));
                 preproc.input(name).model().set_layout(ov::Layout(layout.getModelLayout()));
             } else {
                 std::string guessedModelLayout{"N..."};
@@ -225,7 +219,6 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::F
     for (const ov::Output<ov::Node>& input : network->outputs()) {
         try {
             std::string name = input.get_any_name();
-            Shape shape(input.get_partial_shape());
 
             if (config.getLayouts_2().count(name) > 0) {
                 auto& layout = config.getLayouts_2().at(name);
@@ -235,10 +228,7 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::F
                     layout.getTensorLayout(),
                     layout.getModelLayout(),
                     name);
-
-                const std::string& tensorLayout = !layout.getTensorLayout().empty() ? layout.getTensorLayout() : layout.getModelLayout();
-
-                preproc.output(name).tensor().set_layout(ov::Layout(tensorLayout));
+                preproc.output(name).tensor().set_layout(ov::Layout(layout.getTensorLayout()));
                 preproc.output(name).model().set_layout(ov::Layout(layout.getModelLayout()));
             }
         } catch (const ov::Exception& e) {

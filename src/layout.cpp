@@ -23,12 +23,12 @@
 
 namespace ovms {
 
-LayoutConfiguration::LayoutConfiguration(const char* modelLayout) :
-    model(modelLayout) {
+LayoutConfiguration::LayoutConfiguration(const char* layout) :
+    LayoutConfiguration(std::string(layout)) {
 }
 
-LayoutConfiguration::LayoutConfiguration(const std::string& modelLayout) :
-    model(modelLayout) {
+LayoutConfiguration::LayoutConfiguration(const std::string& layout) :
+    LayoutConfiguration(layout, layout) {
 }
 
 LayoutConfiguration::LayoutConfiguration(const std::string& tensorLayout, const std::string& modelLayout) :
@@ -40,7 +40,6 @@ bool LayoutConfiguration::isSet() const {
     return !tensor.empty() || !model.empty();
 }
 
-// TODO: isConfigurationEqual layout comparision
 // TODO: Reading from parameter.
 // TODO: Unit tests
 Status LayoutConfiguration::fromString(const std::string& configuration, LayoutConfiguration& configOut) {
@@ -57,7 +56,7 @@ Status LayoutConfiguration::fromString(const std::string& configuration, LayoutC
         return StatusCode::LAYOUT_WRONG_FORMAT;
 
     if (delimCount == 0) {
-        configOut = LayoutConfiguration("", configurationCopy);
+        configOut = LayoutConfiguration(configurationCopy);
     } else {
         std::vector<std::string> tokens = tokenize(configurationCopy, ':');
         if (tokens.size() > 2)
@@ -65,7 +64,7 @@ Status LayoutConfiguration::fromString(const std::string& configuration, LayoutC
         else if (tokens.size() == 2)
             configOut = LayoutConfiguration(tokens[0], tokens[1]);
         else if (tokens.size() == 1)
-            configOut = LayoutConfiguration("", tokens[0]);
+            configOut = LayoutConfiguration(tokens[0]);
         else
             return StatusCode::LAYOUT_WRONG_FORMAT;
     }

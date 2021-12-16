@@ -94,9 +94,6 @@ TEST(ModelConfig, layout_multi) {
     auto l1 = config.getLayout_2();
     auto l2 = config.getLayouts_2();
     EXPECT_EQ(l1.isSet(), false);
-    // EXPECT_THAT(l2, UnorderedElementsAre(
-    //                     Pair("A", "layout_A"),
-    //                     Pair("B", "layout_B")));
     ASSERT_EQ(l2.count("A"), 1);
     ASSERT_EQ(l2.count("B"), 1);
     EXPECT_EQ(l2.find("A")->second.getTensorLayout(), "NCHW");
@@ -108,7 +105,7 @@ TEST(ModelConfig, layout_multi) {
     l1 = config.getLayout_2();
     l2 = config.getLayouts_2();
     EXPECT_EQ(l1.isSet(), true);
-    EXPECT_EQ(l1.getTensorLayout(), "");
+    EXPECT_EQ(l1.getTensorLayout(), "NHWC");
     EXPECT_EQ(l1.getModelLayout(), "NHWC");
     EXPECT_EQ(l2.size(), 0);
 
@@ -117,6 +114,58 @@ TEST(ModelConfig, layout_multi) {
     l2 = config.getLayouts_2();
     EXPECT_EQ(l1.isSet(), false);
     EXPECT_EQ(l2.size(), 2);
+}
+
+TEST(ModelConfig, parseLayoutParam_single) {
+    using namespace ovms;
+    ModelConfig config;
+    // Valid
+    std::string valid_str1 = "";
+    std::string valid_str2 = "nchw";
+    std::string valid_str3 = "Nhwc:ncHW";
+    std::string valid_str4 = "nC";
+
+    ASSERT_EQ(config.parseLayoutParameter(valid_str1), StatusCode::OK);
+    EXPECT_EQ(config.getLayouts_2().size(), 0);
+    EXPECT_EQ(config.getLayout_2().getTensorLayout(), "");
+    EXPECT_EQ(config.getLayout_2().getModelLayout(), "");
+
+    ASSERT_EQ(config.parseLayoutParameter(valid_str2), StatusCode::OK);
+    EXPECT_EQ(config.getLayouts_2().size(), 0);
+    EXPECT_EQ(config.getLayout_2().getTensorLayout(), "NCHW");
+    EXPECT_EQ(config.getLayout_2().getModelLayout(), "NCHW");
+
+    ASSERT_EQ(config.parseLayoutParameter(valid_str3), StatusCode::OK);
+    EXPECT_EQ(config.getLayouts_2().size(), 0);
+    EXPECT_EQ(config.getLayout_2().getTensorLayout(), "NHWC");
+    EXPECT_EQ(config.getLayout_2().getModelLayout(), "NCHW");
+
+    ASSERT_EQ(config.parseLayoutParameter(valid_str4), StatusCode::OK);
+    EXPECT_EQ(config.getLayouts_2().size(), 0);
+    EXPECT_EQ(config.getLayout_2().getTensorLayout(), "NC");
+    EXPECT_EQ(config.getLayout_2().getModelLayout(), "NC");
+
+    // Invalid
+
+    // std::vector<std::string> invalid_str{
+    //     std::string{"[1:50, 300]"},
+    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(9:10,,50)\"}"},
+    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(:9,20,50)\"}"},
+    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(9:,20,50)\"}"},
+    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(9-30,20,50)\"}"},
+    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(9..30,20,50)\"}"},
+    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(0,20,50)\"}"},
+    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(9::30,20,50)\"}"},
+    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(-90:10,20,50)\"}"},
+    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(?,20,50)\"}"},
+    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(2.5:3,20,50)\"}"},
+    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(1,20,500000000000000000)\"}"},
+    // };
+
+    // for (std::string str : invalid_str) {
+    //     auto status = config.parseLayoutParameter(str);
+    //     EXPECT_EQ(status, ovms::StatusCode::LAYOUT_WRONG_FORMAT);
+    // }
 }
 
 TEST(ModelConfig, shape) {
