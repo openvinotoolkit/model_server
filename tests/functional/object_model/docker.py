@@ -109,12 +109,9 @@ class Docker:
 
         ports = {'{}/tcp'.format(self.grpc_port): self.grpc_port, '{}/tcp'.format(self.rest_port): self.rest_port}
         device_cfg = TARGET_DEVICE_CONFIGURATION[config.target_device]
-
         volumes_dict = {config.path_to_mount: {'bind': '/opt/ml', 'mode': 'ro'}}
         device_cfg['volumes'].update(volumes_dict)
-        #for vol in device_cfg["volumes"]:
-        #    volumes_dict.update(vol)
-        import pdb; pdb.set_trace()
+
         self.container = self.client.containers.run(image=self.image, detach=True,
                                                     name=self.container_name,
                                                     ports=ports,
