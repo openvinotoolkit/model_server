@@ -138,8 +138,9 @@ class BaseClient(metaclass=abc.ABCMeta):
         self.full_grpc_address = f"{address}:{grpc_port}"
         self.worker_id = worker_id
         self.final_status = True
-        self.printall = False
         self.jsonout = False
+        self.printall = False
+
         if certs_dir is None:
             func = grpc.insecure_channel
             cargs = (self.full_grpc_address, self.grpc_options)
@@ -184,6 +185,8 @@ class BaseClient(metaclass=abc.ABCMeta):
     def set_flags(self, jsonout=False, printall=False):
         self.printall = printall
         self.jsonout = jsonout
+        if self.printall:
+            os.environ["TF_CPP_MIN_LOG_LEVEL"] = "0"
 
     def set_stateful(self, stateful_id, stateful_length=0, stateful_hop=0):
         self.stateful_length = int(stateful_length)
@@ -203,6 +206,8 @@ class BaseClient(metaclass=abc.ABCMeta):
         for batch_size in bs_list:
             assert int(batch_size) > 0
             self.batchsizes.append(int(batch_size))
+        if dataset_length is None:
+            dataset_length = sum(self.batchsizes)
         assert self.batchsizes, "batchsize has to be defined!"
         self.print_info(f"batchsize sequence: {self.batchsizes}")
         super_method_name, parsed_data_description = None, {}
@@ -228,6 +233,14 @@ class BaseClient(metaclass=abc.ABCMeta):
                 self.set_random_range(0, 255)
                 self.print_warning("Forced random range (0, 255) for methods png-random / png-urandom / png")
                 self.generate_png_urandom_data(input_name, dataset_length)
+            elif method_name in ("png5-random", "png5-urandom", "png5"):
+                self.set_random_range(0, 255)
+                self.print_warning("Forced random range (0, 255) for methods png5-random / png5-urandom / png5")
+                self.generate_png_urandom_data(input_name, dataset_length, 5)
+            elif method_name in ("png8-random", "png8-urandom", "png8"):
+                self.set_random_range(0, 255)
+                self.print_warning("Forced random range (0, 255) for methods png8-random / png8-urandom / png8")
+                self.generate_png_urandom_data(input_name, dataset_length, 8)
             elif method_name in ("vehicle-jpeg", "vehicle-jpg"):
                 self.load_vehicle_jpeg_data(input_name, dataset_length)
             else: raise ValueError(f"unknown method: {method_name}")
@@ -272,7 +285,7 @@ class BaseClient(metaclass=abc.ABCMeta):
             raise ValueError(f"not supported type: {dtype}")
         return shape, dtype
 
-    def __rand_single_png(self, width, height):
+    def __rand_single_png(self, width, height, radius):
         png_image = []
         for _ in range(height):
             row = ()
@@ -282,10 +295,32 @@ class BaseClient(metaclass=abc.ABCMeta):
                 blue = random.randint(self.min_value, self.max_value)
                 row = row + (red, green, blue)
             png_image.append(row)
+        for _ in range(radius):
+            png_tmp = []
+            for y in range(height):
+                row = ()
+                yn = (y + 1) % height
+                yp = (y - 1) % height
+                for x in range(width):
+                    xo = 3 * x
+                    xn = (xo + 3) % (3*width)
+                    xp = (xo - 3) % (3*width)
+                    rsum = png_image[y][xo] + png_image[yp][xo] + png_image[yn][xo] + png_image[y][xn] + png_image[y][xp]
+                    gsum = png_image[y][xo+1] + png_image[yp][xo+1] + png_image[yn][xo+1] + png_image[y][xn+1] + png_image[y][xp+1]
+                    bsum = png_image[y][xo+2] + png_image[yp][xo+2] + png_image[yn][xo+2] + png_image[y][xn+2] + png_image[y][xp+2]
+                    row = row + (int(rsum/5), int(gsum/5), int(bsum/5))
+                png_tmp.append(row)
+            png_image = png_tmp
+
         writ = png.Writer(width, height, greyscale=False)
         with io.BytesIO() as bytes_file:
             writ.write(bytes_file, png_image)
             binary_png = bytes_file.getvalue()
+        ### uncomment to dump this png file
+        # import uuid
+        # filename = "/tmp/xcli-" + uuid.uuid4().hex + ".png"
+        # with open(filename, "wb") as fd:
+        #     writ.write(fd, png_image)
         return binary_png
 
     def load_vehicle_jpeg_data(self, input_name, dataset_length):
@@ -294,7 +329,7 @@ class BaseClient(metaclass=abc.ABCMeta):
         shape, _ = self.__fix_shape_and_type(input_name)
 
         counter = 0
-        self.xdata[input_name] = [] 
+        self.xdata[input_name] = []
         for index in range(self.dataset_length):
             batch_index = index % len(self.batchsizes)
             batch_length = self.batchsizes[batch_index]
@@ -307,28 +342,28 @@ class BaseClient(metaclass=abc.ABCMeta):
                 counter += 1
             xargs = batch, {"shape": [batch_length]}
             self.xdata[input_name].append(xargs)
-        
-    def generate_png_urandom_data(self, input_name, dataset_length): 
+
+    def generate_png_urandom_data(self, input_name, dataset_length, radius=0):
         self.__fix_dataset_length(input_name, dataset_length)
         shape, dtype = self.__fix_shape_and_type(input_name)
-        assert shape[-1] == 3, "PNG has to be RGB at last shape position"
+        assert shape[-1] == 3, f"PNG has to have RGB channel - set NHWC - (now: {shape})"
         width, height = shape[-3], shape[-2]
-       
-        self.xdata[input_name] = [] 
+
+        self.xdata[input_name] = []
         for index in range(self.dataset_length):
             batch_index = index % len(self.batchsizes)
             batch_length = self.batchsizes[batch_index]
             batch = []
             for _ in range(batch_length):
-               batch.append(self.__rand_single_png(width, height))
+               batch.append(self.__rand_single_png(width, height, radius))
             xargs = batch, {"shape": [batch_length]}
             self.xdata[input_name].append(xargs)
 
     def generate_urandom_data(self, input_name, dataset_length):
         self.__fix_dataset_length(input_name, dataset_length)
         shape, dtype = self.__fix_shape_and_type(input_name)
-        
-        self.xdata[input_name] = [] 
+
+        self.xdata[input_name] = []
         for index in range(self.dataset_length):
             batch_index = index % len(self.batchsizes)
             batch_length = self.batchsizes[batch_index]
@@ -343,7 +378,7 @@ class BaseClient(metaclass=abc.ABCMeta):
                 self.print_warning(f"data cannot be generated! shape: {xshape}")
                 raise ValueError(err)
             xargs = batch, {"dtype": dtype, "shape": batch.shape}
-            self.xdata[input_name].append(xargs)       
+            self.xdata[input_name].append(xargs)
 
     def run_workload(self, steps_number, duration, timeout=30, errors_limits=(0,0),
                      warmup=0, window=None, hist_base=10, hist_factor=1000):
@@ -423,7 +458,7 @@ class BaseClient(metaclass=abc.ABCMeta):
                     warmup_ts = warmup_series.stop_timestamp
                     self.print_info(f"Warmup stopped: {warmup_ts}")
                     window_series.start()
-                    window_ts = window_series.start_timestamp                
+                    window_ts = window_series.start_timestamp
                     self.print_info(f"Window start: {window_ts}")
                 if window_series.stop():
                     window_ts = window_series.stop_timestamp
@@ -432,16 +467,16 @@ class BaseClient(metaclass=abc.ABCMeta):
             warmup_ts = warmup_series.stop_timestamp
             self.print_info(f"Warmup unnormally stopped: {warmup_ts}")
             window_series.start()
-            window_ts = window_series.start_timestamp                
+            window_ts = window_series.start_timestamp
             self.print_info(f"Window unnormally start: {window_ts}")
         if window_series.stop():
             window_ts = window_series.stop_timestamp
             self.print_info(f"Window stopped: {window_ts}")
         total_series.stop()
 
-        total_stats = total_series.analyze() 
-        window_stats = window_series.analyze() 
-        warmup_stats = warmup_series.analyze() 
+        total_stats = total_series.analyze()
+        window_stats = window_series.analyze()
+        warmup_stats = warmup_series.analyze()
         workload_statistics = {}
         workload_statistics.update(total_stats)
         workload_statistics.update(window_stats)

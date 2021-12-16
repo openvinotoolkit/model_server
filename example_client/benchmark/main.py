@@ -28,6 +28,7 @@ import json
 import argparse
 import multiprocessing
 import time
+import os
 
 from ovms_benchmark_client.metrics import XMetrics
 from ovms_benchmark_client.db_exporter import DBExporter
@@ -42,7 +43,8 @@ except ImportError:
     NvTrtClient = None
 
 # Version used for print only...
-INTERNAL_VERSION="1.11"
+INTERNAL_VERSION="1.12"
+
 
 # client engine - used for single and multiple client configuration
 def run_single_client(xargs, worker_name_or_client, index, json_flag=None):
@@ -73,14 +75,16 @@ def run_single_client(xargs, worker_name_or_client, index, json_flag=None):
     client.set_random_range(xargs["min_value"], xargs["max_value"])
     bs_list = [int(b) for bs in xargs["bs"] for b in str(bs).split("-")]
 
-    if xargs["stateful_length"] is not None:
+    if xargs["stateful_length"] is not None and int(xargs["stateful_length"]) > 0:
         if xargs["dataset_length"] is not None:
             factor = int(xargs["dataset_length"]) // int(xargs["stateful_length"])
             dataset_length = (factor + 1) * int(xargs["stateful_length"])
         else: dataset_length = int(xargs["stateful_length"])
-    else: dataset_length = int(xargs["dataset_length"])
-    client.prepare_data(xargs["data"], bs_list, dataset_length, xargs["shape"])
+    elif xargs["dataset_length"] is not None and int(xargs["dataset_length"]) > 0:
+        dataset_length = int(xargs["dataset_length"])
+    else: dataset_length = None
 
+    client.prepare_data(xargs["data"], bs_list, dataset_length, xargs["shape"])
     error_limits = xargs["error_limit"], xargs["error_exposition"]
     results = client.run_workload(xargs["steps_number"],
                                   xargs["duration"],
@@ -261,7 +265,6 @@ if __name__ == "__main__":
         print(INTERNAL_VERSION)
         sys.exit(0)
 
-        
     # check address is specified
     server_address = xargs["server_address"]
     assert server_address is not None
@@ -269,7 +272,7 @@ if __name__ == "__main__":
     # list models cannot be checked when concurrency > 1
     if xargs["list_models"]:
         assert xargs["concurrency"] in ("1", 1), "to list models use concurrency eq. to 1"
-    
+
     # check duration is specified
     if not xargs["list_models"]:
         duration_error_flag = xargs["steps_number"] is None and xargs["duration"] is None
@@ -277,7 +280,7 @@ if __name__ == "__main__":
 
     # mongo exporter is optional
     db_exporter = DBExporter(xargs)
- 
+
     worker_id = xargs.get("id", "worker")
     if xargs["concurrency"] in ("1", 1):
         return_code = exec_single_client(xargs, db_exporter)
