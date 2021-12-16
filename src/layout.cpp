@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <sstream>
+#include <vector>
 
 #include "stringutils.hpp"
 
@@ -31,7 +32,8 @@ LayoutConfiguration::LayoutConfiguration(const std::string& modelLayout) :
 }
 
 LayoutConfiguration::LayoutConfiguration(const std::string& tensorLayout, const std::string& modelLayout) :
-    tensor(tensorLayout), model(modelLayout) {
+    tensor(tensorLayout),
+    model(modelLayout) {
 }
 
 bool LayoutConfiguration::isSet() const {
@@ -53,7 +55,7 @@ Status LayoutConfiguration::fromString(const std::string& configuration, LayoutC
     size_t delimCount = std::count(configurationCopy.begin(), configurationCopy.end(), ':');
     if (delimCount > 1)
         return StatusCode::LAYOUT_WRONG_FORMAT;
-    
+
     if (delimCount == 0) {
         configOut = LayoutConfiguration("", configurationCopy);
     } else {

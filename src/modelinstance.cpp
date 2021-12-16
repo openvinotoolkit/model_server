@@ -22,8 +22,8 @@
 #include <set>
 #include <string>
 #include <thread>
-#include <utility>
 #include <tuple>
+#include <utility>
 
 #include <dirent.h>
 #include <spdlog/spdlog.h>
@@ -146,12 +146,14 @@ Status validateConfigurationAgainstNetwork_2(const ModelConfig& config, std::sha
 InferenceEngine::Layout getTensorLayout(const ModelConfig& config, const std::string& name) {
     InferenceEngine::Layout layout = InferenceEngine::Layout::ANY;
     if (config.getLayout_2().isSet()) {
-        layout = TensorInfo::getLayoutFromString(config.getLayout_2().getModelLayout());
+        const std::string& tensorLayout = config.getLayout_2().getTensorLayout().empty() ? config.getLayout_2().getModelLayout() : config.getLayout_2().getTensorLayout();
+        layout = TensorInfo::getLayoutFromString(tensorLayout);
     } else if (config.getLayouts_2().size() > 0) {
         auto mappedName = config.getMappingInputByKey(name);
         auto it = config.getLayouts_2().find(mappedName == "" ? name : mappedName);
         if (it != config.getLayouts_2().end()) {
-            layout = TensorInfo::getLayoutFromString(it->second.getModelLayout());
+            const std::string& tensorLayout = it->second.getTensorLayout().empty() ? it->second.getModelLayout() : it->second.getTensorLayout();
+            layout = TensorInfo::getLayoutFromString(tensorLayout);
         }
     }
     return layout;
@@ -175,15 +177,14 @@ Status extractLayout(const std::string& layoutSetting, std::tuple<std::string, s
     return StatusCode::OK;
 }
 
-Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::Function>& network, const std::string& modelName, model_version_t modelVersion, bool forceBatchFirstPosition = true) { // TODO: Change to false.
+Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::Function>& network, const std::string& modelName, model_version_t modelVersion) {  // TODO: Change to false.
     ov::preprocess::PrePostProcessor preproc(network);
 
-    SPDLOG_INFO("Applying layout: {}", config.layoutConfigurationToString());
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying layout configuration: {}", config.layoutConfigurationToString());
 
     for (const ov::Output<ov::Node>& input : network->inputs()) {
         try {
             std::string name = input.get_any_name();
-            Shape shape(input.get_partial_shape());
 
             if (config.getLayout_2().isSet()) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: Tensor Layout:{}; Network Layout:{}; single input",
@@ -191,8 +192,11 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
                     modelVersion,
                     config.getLayout_2().getTensorLayout(),
                     config.getLayout_2().getModelLayout());
-                const std::string& tensorLayout = config.getLayout_2().getTensorLayout().empty() ? config.getLayout_2().getModelLayout() : config.getLayout_2().getTensorLayout();
+
+                // TODO: Validate rank vs layout string len?
+                const std::string& tensorLayout = !config.getLayout_2().getTensorLayout().empty() ? config.getLayout_2().getTensorLayout() : config.getLayout_2().getModelLayout();
                 const std::string& modelLayout = config.getLayout_2().getModelLayout();
+
                 preproc.input().tensor().set_layout(ov::Layout(tensorLayout));
                 preproc.input().model().set_layout(ov::Layout(modelLayout));
             } else if (config.getLayouts_2().count(name) > 0) {
@@ -203,13 +207,20 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
                     layout.getTensorLayout(),
                     layout.getModelLayout(),
                     name);
-                preproc.input(name).tensor().set_layout(ov::Layout(layout.getTensorLayout()));
+
+                const std::string& tensorLayout = !layout.getTensorLayout().empty() ? layout.getTensorLayout() : layout.getModelLayout();
+
+                preproc.input(name).tensor().set_layout(ov::Layout(tensorLayout));
                 preproc.input(name).model().set_layout(ov::Layout(layout.getModelLayout()));
-            } else if (forceBatchFirstPosition) {
-                size_t rank = input.get_partial_shape().size(); // TODO: Check if rank > 0
-                std::string guessedModelLayout(rank, '.');
+            } else {
+                size_t rank = input.get_partial_shape().size();  // TODO: Check if rank > 0
+                std::string guessedModelLayout(rank, '?');
                 guessedModelLayout[0] = 'N';
-                preproc.input(name).tensor().set_layout(ov::Layout(guessedModelLayout));
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding auto preprocessing step: Tensor Layout:; Network Layout:{}; input name: {}",
+                    modelName,
+                    modelVersion,
+                    guessedModelLayout,
+                    name);
                 preproc.input(name).model().set_layout(ov::Layout(guessedModelLayout));
             }
         } catch (const ov::Exception& e) {
@@ -241,16 +252,18 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
 
             if (config.getLayouts_2().count(name) > 0) {
                 auto& layout = config.getLayouts_2().at(name);
-                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: Tensor Layout:{}; Network Layout:{}; input name: {}",
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding postprocessing step: Tensor Layout:{}; Network Layout:{}; output name: {}",
                     modelName,
                     modelVersion,
                     layout.getTensorLayout(),
                     layout.getModelLayout(),
                     name);
-                preproc.output(name).tensor().set_layout(ov::Layout(layout.getTensorLayout()));
+
+                const std::string& tensorLayout = !layout.getTensorLayout().empty() ? layout.getTensorLayout() : layout.getModelLayout();
+
+                preproc.output(name).tensor().set_layout(ov::Layout(tensorLayout));
                 preproc.output(name).model().set_layout(ov::Layout(layout.getModelLayout()));
             }
-
         } catch (const ov::Exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
                 modelName,
@@ -286,18 +299,22 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
 Status ModelInstance::loadTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
     Status status = validateConfigurationAgainstNetwork_2(config, this->network_2);
     if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during configuration validation against network");
         return status;
     }
     status = addPrePostProcessingSteps(config, this->network_2, getName(), getVersion());
     if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during layout configuration");
         return status;
     }
     status = loadInputTensors(config, parameter);
     if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during loading input tensors");
         return status;
     }
     status = loadOutputTensors(config);
     if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during loading output tensors");
         return status;
     }
     return StatusCode::OK;

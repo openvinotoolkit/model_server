@@ -313,7 +313,6 @@ Status ModelConfig::parseLayoutParameter(const rapidjson::Value& node) {
     if (!node.IsObject()) {
         return StatusCode::LAYOUT_WRONG_FORMAT;
     }
-
     layouts_map_2_t layouts;
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
         if (!it->value.IsString()) {
@@ -327,8 +326,7 @@ Status ModelConfig::parseLayoutParameter(const rapidjson::Value& node) {
         if (!status.ok()) {
             return status;
         }
-
-        layouts_2[it->name.GetString()] = layout;
+        layouts[it->name.GetString()] = layout;
     }
     setLayouts_2(layouts);
 
@@ -338,7 +336,6 @@ Status ModelConfig::parseLayoutParameter(const rapidjson::Value& node) {
 Status ModelConfig::parseLayoutParameter(const std::string& command) {
     this->layouts_2.clear();
     this->layout_2 = LayoutConfiguration();
-
     if (command.empty()) {
         return StatusCode::OK;
     }
@@ -348,7 +345,6 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
 
     erase_spaces(upperCaseCommand);
 
-    //if (configAllowedLayouts.count(upperCaseCommand) > 0) {
     if (*upperCaseCommand.begin() != '{') {
         LayoutConfiguration layout;
         auto status = LayoutConfiguration::fromString(upperCaseCommand, layout);
@@ -358,7 +354,6 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
         setLayout_2(layout);
         return StatusCode::OK;
     }
-    //}
 
     // parse as json
     rapidjson::Document node;
@@ -666,7 +661,7 @@ std::string ModelConfig::layoutConfigurationToString() const {
     for (const auto& [name, layoutCfg] : getLayouts_2()) {
         ss << name << " " << layoutCfg.toString() << "; ";
     }
-    return ss.str();  
+    return ss.str();
 }
 
 }  // namespace ovms

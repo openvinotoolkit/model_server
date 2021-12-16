@@ -3383,7 +3383,7 @@ static const char* pipelineSingleIncrement4DimInputNHWC = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,1,2,3) ",
-                "layout": "nhwc",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -3441,7 +3441,7 @@ static const char* pipelineSingleIncrement4DimInputNHWCDynamicBatch = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,1,2,3) ",
-                "layout": "nhwc",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -3501,7 +3501,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,3,1,2) ",
-                "layout": {"output": "nhwc"},
+                "layout": {"output": "nhwc:nchw"},
                 "nireq": 1
             }
         }
@@ -3559,7 +3559,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWCDynamicBatch = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,3,1,2) ",
-                "layout": {"output": "nhwc"},
+                "layout": {"output": "nhwc:nchw"},
                 "nireq": 1
             }
         }
@@ -3620,7 +3620,7 @@ static const char* pipelineAmbiguousInputMeta = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,1,2,3) ",
-                "layout": {"input": "nhwc"},
+                "layout": {"input": "nhwc:nchw"},
                 "nireq": 1
             }
         },
@@ -3696,7 +3696,7 @@ static const char* pipelineInnerConnectedNhwc = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,3,1,2) ",
-                "layout": {"output": "nhwc"},
+                "layout": {"output": "nhwc:nchw"},
                 "nireq": 1
             }
         },
@@ -3707,7 +3707,7 @@ static const char* pipelineInnerConnectedNhwc = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,1,2,3) ",
-                "layout": {"input": "nhwc"},
+                "layout": {"input": "nhwc:nchw"},
                 "nireq": 1
             }
         }
@@ -3785,7 +3785,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1x1 = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,1,1,3) ",
-                "layout": "nhwc",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -3899,7 +3899,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1x1Grayscale = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,1,1,1) ",
-                "layout": "nhwc",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -3957,7 +3957,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1x1BS5 = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(5,1,1,3) ",
-                "layout": "nhwc",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -4016,7 +4016,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC2x2 = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,2,2,3) ",
-                "layout": "nhwc",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -4074,7 +4074,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC2x2BS5 = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(5,2,2,3) ",
-                "layout": "nhwc",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -4134,7 +4134,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1Channel = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,1,1,1) ",
-                "layout": "nhwc",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -4209,7 +4209,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1x1EntryDemultiplexer = 
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,1,1,3) ",
-                "layout": "nhwc",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
