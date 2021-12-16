@@ -129,7 +129,6 @@ private:
     /**
          * @brief Layout for single input
          */
-    std::string layout;
     LayoutConfiguration layout_2;
 
     /**
@@ -226,7 +225,7 @@ public:
         cacheDir(cacheDir),
         version(version),
         pluginConfig({}),
-        layout(""),
+        layout_2(""),
         shapes_2({}),
         layouts_2({}),
         mappingInputs({}),

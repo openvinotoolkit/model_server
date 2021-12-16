@@ -216,9 +216,9 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::F
         }
     }
 
-    for (const ov::Output<ov::Node>& input : network->outputs()) {
+    for (const ov::Output<ov::Node>& output : network->outputs()) {
         try {
-            std::string name = input.get_any_name();
+            std::string name = output.get_any_name();
 
             if (config.getLayouts_2().count(name) > 0) {
                 auto& layout = config.getLayouts_2().at(name);
@@ -253,7 +253,6 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::F
         }
     }
 
-    // TODO: Possibly only do it if the change is required.
     try {
         network = preproc.build();
     } catch (std::exception& e) {

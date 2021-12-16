@@ -122,7 +122,7 @@ TEST(ModelConfig, parseLayoutParam_single) {
     // Valid
     std::string valid_str1 = "";
     std::string valid_str2 = "nchw";
-    std::string valid_str3 = "Nhwc:ncHW";
+    std::string valid_str3 = " Nhwc : ncHW ";
     std::string valid_str4 = "nC";
 
     ASSERT_EQ(config.parseLayoutParameter(valid_str1), StatusCode::OK);
@@ -146,26 +146,49 @@ TEST(ModelConfig, parseLayoutParam_single) {
     EXPECT_EQ(config.getLayout_2().getModelLayout(), "NC");
 
     // Invalid
+    std::vector<std::string> invalid_str{
+        std::string{"nc::nc"},
+        std::string{":nc:nc"},
+        std::string{"nc>nc"},
+    };
 
-    // std::vector<std::string> invalid_str{
-    //     std::string{"[1:50, 300]"},
-    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(9:10,,50)\"}"},
-    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(:9,20,50)\"}"},
-    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(9:,20,50)\"}"},
-    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(9-30,20,50)\"}"},
-    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(9..30,20,50)\"}"},
-    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(0,20,50)\"}"},
-    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(9::30,20,50)\"}"},
-    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(-90:10,20,50)\"}"},
-    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(?,20,50)\"}"},
-    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(2.5:3,20,50)\"}"},
-    //     std::string{"{\"input\": \"auto\", \"extra_input\": \"(1,20,500000000000000000)\"}"},
-    // };
+    for (std::string str : invalid_str) {
+        auto status = config.parseLayoutParameter(str);
+        EXPECT_EQ(status, ovms::StatusCode::LAYOUT_WRONG_FORMAT) << " Failed for: " << str;
+        EXPECT_EQ(config.getLayout_2().getTensorLayout(), "");
+        EXPECT_EQ(config.getLayout_2().getModelLayout(), "");
+        EXPECT_EQ(config.getLayouts_2().size(), 0);
+    }
+}
 
-    // for (std::string str : invalid_str) {
-    //     auto status = config.parseLayoutParameter(str);
-    //     EXPECT_EQ(status, ovms::StatusCode::LAYOUT_WRONG_FORMAT);
-    // }
+TEST(ModelConfig, parseLayoutParam_multi) {
+    using namespace ovms;
+    ModelConfig config;
+    // Valid
+    std::string valid_str1 = " { \"input\": \"nchw:nhwc\", \"output\": \"nc\" } ";
+
+    ASSERT_EQ(config.parseLayoutParameter(valid_str1), StatusCode::OK);
+    EXPECT_EQ(config.getLayouts_2().size(), 2);
+    ASSERT_EQ(config.getLayouts_2().count("input"), 1);
+    ASSERT_EQ(config.getLayouts_2().count("output"), 1);
+    EXPECT_EQ(config.getLayouts_2().find("input")->second.getTensorLayout(), "NCHW");
+    EXPECT_EQ(config.getLayouts_2().find("input")->second.getModelLayout(), "NHWC");
+    EXPECT_EQ(config.getLayouts_2().find("output")->second.getTensorLayout(), "NC");
+    EXPECT_EQ(config.getLayouts_2().find("output")->second.getModelLayout(), "NC");
+
+    // Invalid
+    std::vector<std::string> invalid_str{
+        std::string{" { \"input\": \"nchw>nhwc\", \"output\": \"nc\" } "},
+        std::string{" { \"input\": \"nchw:nhwc:nchw\", \"output\": \"nc\" } "},
+    };
+
+    for (std::string str : invalid_str) {
+        auto status = config.parseLayoutParameter(str);
+        EXPECT_EQ(status, ovms::StatusCode::LAYOUT_WRONG_FORMAT) << " Failed for: " << str;
+        EXPECT_EQ(config.getLayout_2().getTensorLayout(), "");
+        EXPECT_EQ(config.getLayout_2().getModelLayout(), "");
+        EXPECT_EQ(config.getLayouts_2().size(), 0);
+    }
 }
 
 TEST(ModelConfig, shape) {

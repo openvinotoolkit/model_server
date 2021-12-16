@@ -40,8 +40,6 @@ bool LayoutConfiguration::isSet() const {
     return !tensor.empty() || !model.empty();
 }
 
-// TODO: Reading from parameter.
-// TODO: Unit tests
 Status LayoutConfiguration::fromString(const std::string& configuration, LayoutConfiguration& configOut) {
     std::string configurationCopy = configuration;
     erase_spaces(configurationCopy);
