@@ -2,7 +2,7 @@
 
 ### Running OpenVINO&trade; Model Server with AI Accelerators NCS, HDDL and GPU <a name="ai"></a>
 
-#### Start the server with an Intel Movidius Neural Compute Stick
+### Start the server with an Intel Movidius Neural Compute Stick
 @sphinxdirective
 .. raw:: html
 
