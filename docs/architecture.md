@@ -10,7 +10,7 @@
 
 ![serving](serving-c.png)
 
-<div align="center"><b>Figure 1: Docker Container (VM or Bare Metal Host)</b></div>
+<div align="center" text-align="center"><b>Figure 1: Docker Container (VM or Bare Metal Host)</b></div>
 
 - OpenVINO&trade; Model Server requires the models to be present in the local file system or they could be hosted remotely on object storage services. Google Cloud, S3 and Azure compatible storage is supported. Refer to [Preparing the Models Repository](./models_repository.md) for more details.
 

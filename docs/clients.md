@@ -33,7 +33,7 @@ Creating client application in Python is probably the simplest due to existance 
 
 @sphinxdirective
 
-.. tab:: ovmsclient  
+.. tab:: ovmsclient
 
    .. code-block:: python
 
@@ -42,10 +42,10 @@ Creating client application in Python is probably the simplest due to existance 
         client = make_grpc_client(service_url="10.20.30.40:9000")
         model_status = client.get_model_status(model_name="my_model")
    
-.. tab:: tensorflow-serving-api  
+.. tab:: tensorflow-serving-api
 
-   .. code-block:: python  
-   
+   .. code-block:: python
+
         import grpc
         from tensorflow_serving.apis import model_service_pb2_grpc, get_model_status_pb2
 
@@ -62,7 +62,7 @@ Creating client application in Python is probably the simplest due to existance 
 
 @sphinxdirective
 
-.. tab:: ovmsclient  
+.. tab:: ovmsclient
 
    .. code-block:: python
 
@@ -73,7 +73,7 @@ Creating client application in Python is probably the simplest due to existance 
 
 .. tab:: tensorflow-serving-api  
 
-   .. code-block:: python  
+   .. code-block:: python
 
         import grpc
         from tensorflow_serving.apis import prediction_service_pb2_grpc, get_model_metadata_pb2
@@ -105,8 +105,8 @@ Creating client application in Python is probably the simplest due to existance 
    
 .. tab:: tensorflow-serving-api  
 
-   .. code-block:: python  
-   
+   .. code-block:: python
+
         import grpc
         from tensorflow_serving.apis import prediction_service_pb2_grpc, predict_pb2
         from tensorflow import make_tensor_proto
@@ -141,8 +141,8 @@ Creating client application in Python is probably the simplest due to existance 
    
 .. tab:: tensorflow-serving-api  
 
-   .. code-block:: python  
-   
+   .. code-block:: python
+
         import grpc
         from tensorflow_serving.apis import prediction_service_pb2_grpc, predict_pb2
         from tensorflow import make_tensor_proto
@@ -156,7 +156,6 @@ Creating client application in Python is probably the simplest due to existance 
         predict_request.inputs["input_name"].CopyFrom(make_tensor_proto(data))
         predict_response = prediction_service_stub.Predict(predict_request, 10.0)
 
-     
 @endsphinxdirective
 
 ## C++ client

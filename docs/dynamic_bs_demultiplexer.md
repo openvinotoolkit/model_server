@@ -5,7 +5,7 @@ This document guides how to configure DAG Scheduler pipeline to be able to send 
 
 With OpenVINO&trade; Model Server Demultiplexing infer request sent from client application can have various batch sizes and changing batch size does not require model reload.
 
-More information about this feature can be found in [dynamic batch size in demultiplexing](./demultiplexing.md#dynamic-batch-handling-with-demultiplexing)
+More information about this feature can be found in [dynamic batch size in demultiplexing](./demultiplexing.md)
 
 *Note:* When using `demultiply_count` parameters, only one demultiplexer can exist in pipeline.
 
