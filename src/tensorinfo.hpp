@@ -30,7 +30,6 @@
 
 #include "precision.hpp"
 #include "shape.hpp"
-#include "shapeinfo.hpp"
 
 namespace ovms {
 

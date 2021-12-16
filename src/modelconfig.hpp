@@ -29,7 +29,6 @@
 #include "layout.hpp"
 #include "model_version_policy.hpp"
 #include "shape.hpp"
-#include "shapeinfo.hpp"
 #include "status.hpp"
 
 namespace ovms {

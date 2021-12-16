@@ -25,7 +25,7 @@
 #include "custom_node_interface.h"  // NOLINT
 #include "node_library.hpp"
 #include "precision.hpp"
-#include "shapeinfo.hpp"
+#include "shape.hpp"
 #include "status.hpp"
 #include "tensormap.hpp"
 

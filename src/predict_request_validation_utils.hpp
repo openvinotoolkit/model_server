@@ -26,7 +26,7 @@
 #include <google/protobuf/map.h>
 
 #include "modelversion.hpp"
-#include "shapeinfo.hpp"
+#include "shape.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 

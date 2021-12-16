@@ -170,7 +170,6 @@ cc_library(
         "sequence_processing_spec.hpp",
         "shape.cpp",
         "shape.hpp",
-        "shapeinfo.hpp",
         "statefulmodelinstance.cpp",
         "statefulmodelinstance.hpp",
         "status.cpp",

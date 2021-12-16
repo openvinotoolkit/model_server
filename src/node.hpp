@@ -29,7 +29,7 @@
 #include "nodesessionresult.hpp"
 #include "pipelineeventqueue.hpp"
 #include "precision.hpp"
-#include "shapeinfo.hpp"
+#include "shape.hpp"
 #include "status.hpp"
 #include "tensormap.hpp"
 

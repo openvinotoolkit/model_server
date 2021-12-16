@@ -21,7 +21,6 @@
 
 #include <openvino/openvino.hpp>
 
-#include "shapeinfo.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -29,6 +28,10 @@ namespace ovms {
 using dimension_value_t = std::int64_t;
 
 constexpr dimension_value_t DYNAMIC_DIMENSION = -1;
+
+enum Mode { FIXED,
+    AUTO };
+using shape_t = std::vector<size_t>;
 
 class Dimension {
     dimension_value_t minimum, maximum;

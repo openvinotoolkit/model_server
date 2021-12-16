@@ -18,7 +18,7 @@
 
 #include "../custom_node_output_allocator.hpp"
 #include "../precision.hpp"
-#include "../shapeinfo.hpp"
+#include "../shape.hpp"
 
 using namespace ovms;
 

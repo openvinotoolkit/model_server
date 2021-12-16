@@ -32,16 +32,6 @@
 
 namespace ovms {
 
-const std::set<std::string> ModelConfig::configAllowedLayouts{"NCHW", "NHWC"};
-
-ShapeInfo::operator std::string() const {
-    if (shapeMode == Mode::AUTO)
-        return std::string("auto");
-    std::stringstream shapeStream;
-    std::copy(this->shape.begin(), this->shape.end(), std::ostream_iterator<size_t>(shapeStream, " "));
-    return shapeStream.str();
-}
-
 bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
     if (this->name != rhs.name) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to name mismatch", this->name);

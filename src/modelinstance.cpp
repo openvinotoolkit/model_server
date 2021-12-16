@@ -22,7 +22,6 @@
 #include <set>
 #include <string>
 #include <thread>
-#include <tuple>
 #include <utility>
 
 #include <dirent.h>
@@ -66,7 +65,7 @@ void ModelInstance::unsubscribe(PipelineDefinition& pd) {
     subscriptionManager.unsubscribe(pd);
 }
 
-Status getRequestedShape_2(const ModelConfig& config, const DynamicModelParameter& parameter, const std::string& name, Shape& shapeOut) {
+Status getRequestedShape(const ModelConfig& config, const DynamicModelParameter& parameter, const std::string& name, Shape& shapeOut) {
     Shape shape;
     auto mappedName = config.getMappingInputByKey(name);
     if (config.getBatchSize() > 0 || parameter.isBatchSizeRequested()) {
@@ -105,7 +104,7 @@ bool hasOutputWithName(std::shared_ptr<ov::Function>& network, const std::string
     }
 }
 
-Status validateConfigurationAgainstNetwork_2(const ModelConfig& config, std::shared_ptr<ov::Function>& network) {
+Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::shared_ptr<ov::Function>& network) {
     if (config.isShapeAnonymousFixed() && network->inputs().size() > 1) {
         Status status = StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED;
         SPDLOG_LOGGER_WARN(modelmanager_logger, status.string());
@@ -143,7 +142,7 @@ Status validateConfigurationAgainstNetwork_2(const ModelConfig& config, std::sha
     return StatusCode::OK;
 }
 
-InferenceEngine::Layout getTensorLayout(const ModelConfig& config, const std::string& name) {
+InferenceEngine::Layout getReportedTensorLayout(const ModelConfig& config, const std::string& name) {
     InferenceEngine::Layout layout = InferenceEngine::Layout::ANY;
     if (config.getLayout_2().isSet()) {
         const std::string& tensorLayout = config.getLayout_2().getTensorLayout().empty() ? config.getLayout_2().getModelLayout() : config.getLayout_2().getTensorLayout();
@@ -159,25 +158,7 @@ InferenceEngine::Layout getTensorLayout(const ModelConfig& config, const std::st
     return layout;
 }
 
-Status extractLayout(const std::string& layoutSetting, std::tuple<std::string, std::string>& ret) {
-    size_t delimCount = std::count(layoutSetting.begin(), layoutSetting.end(), ':');
-    if (delimCount > 1) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Layout wrong format: {}, too many :", layoutSetting);
-        return StatusCode::LAYOUT_WRONG_FORMAT;
-    } else if (delimCount == 1) {
-        std::vector<std::string> tokens = tokenize(layoutSetting, ':');
-        if (tokens.size() == 2) {
-            ret = std::tuple<std::string, std::string>{tokens[0], tokens[1]};
-        } else if (tokens.size() == 1) {
-            ret = std::tuple<std::string, std::string>{tokens[0], ""};
-        }
-    } else {
-        ret = std::tuple<std::string, std::string>{"", ""};
-    }
-    return StatusCode::OK;
-}
-
-Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::Function>& network, const std::string& modelName, model_version_t modelVersion) {  // TODO: Change to false.
+Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::Function>& network, const std::string& modelName, model_version_t modelVersion) {
     ov::preprocess::PrePostProcessor preproc(network);
 
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying layout configuration: {}", config.layoutConfigurationToString());
@@ -213,9 +194,7 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
                 preproc.input(name).tensor().set_layout(ov::Layout(tensorLayout));
                 preproc.input(name).model().set_layout(ov::Layout(layout.getModelLayout()));
             } else {
-                size_t rank = input.get_partial_shape().size();  // TODO: Check if rank > 0
-                std::string guessedModelLayout(rank, '?');
-                guessedModelLayout[0] = 'N';
+                std::string guessedModelLayout{"N..."};
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding auto preprocessing step: Tensor Layout:; Network Layout:{}; input name: {}",
                     modelName,
                     modelVersion,
@@ -224,21 +203,19 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
                 preproc.input(name).model().set_layout(ov::Layout(guessedModelLayout));
             }
         } catch (const ov::Exception& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input layout for model:{}; version:{}; from OpenVINO with error:{}",
                 modelName,
                 modelVersion,
                 e.what());
-            // TODO potentially allow for empty names if OV will load such model. Then potentially use empty string as input/output names
-            // and adjust validation, metadata, dags for that
             return StatusCode::UNKNOWN_ERROR;
         } catch (const std::exception& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input layout for model:{}; version:{}; from OpenVINO with error:{}",
                 modelName,
                 modelVersion,
                 e.what());
             return StatusCode::UNKNOWN_ERROR;
         } catch (...) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO",
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input layout for model:{}; version:{}; from OpenVINO",
                 modelName,
                 modelVersion);
             return StatusCode::UNKNOWN_ERROR;
@@ -265,7 +242,7 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
                 preproc.output(name).model().set_layout(ov::Layout(layout.getModelLayout()));
             }
         } catch (const ov::Exception& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure output layout for model:{}; version:{}; from OpenVINO with error:{}",
                 modelName,
                 modelVersion,
                 e.what());
@@ -273,13 +250,13 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
             // and adjust validation, metadata, dags for that
             return StatusCode::UNKNOWN_ERROR;
         } catch (const std::exception& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure output layout for model:{}; version:{}; from OpenVINO with error:{}",
                 modelName,
                 modelVersion,
                 e.what());
             return StatusCode::UNKNOWN_ERROR;
         } catch (...) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO",
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure output layout for model:{}; version:{}; from OpenVINO",
                 modelName,
                 modelVersion);
             return StatusCode::UNKNOWN_ERROR;
@@ -297,12 +274,12 @@ Status addPrePostProcessingSteps(const ModelConfig& config, std::shared_ptr<ov::
 }
 
 Status ModelInstance::loadTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
-    Status status = validateConfigurationAgainstNetwork_2(config, this->network_2);
+    Status status = validateConfigurationAgainstNetwork(config, this->network_2);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during configuration validation against network");
         return status;
     }
-    status = addPrePostProcessingSteps(config, this->network_2, getName(), getVersion());
+    status = applyLayoutConfiguration(config, this->network_2, getName(), getVersion());
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during layout configuration");
         return status;
@@ -334,7 +311,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             ov::PartialShape shape = input.get_partial_shape();
 
             Shape requestedShape;
-            auto status = getRequestedShape_2(config, parameter, name, requestedShape);
+            auto status = getRequestedShape(config, parameter, name, requestedShape);
             if (!status.ok()) {
                 return status;
             }
@@ -392,7 +369,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             ovms::Precision precision = ovElementTypeToOvmsPrecision(input.get_element_type());
             Shape shape(input.get_partial_shape());
             std::string mappingName = config.getMappingInputByKey(name);
-            InferenceEngine::Layout layout = getTensorLayout(config, name);
+            InferenceEngine::Layout layout = getReportedTensorLayout(config, name);
 
             std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
                 name,
@@ -438,7 +415,7 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
             ovms::Precision precision = ovElementTypeToOvmsPrecision(output.get_element_type());
             Shape shape(output.get_partial_shape());
             std::string mappingName = config.getMappingOutputByKey(name);
-            InferenceEngine::Layout layout = getTensorLayout(config, name);
+            InferenceEngine::Layout layout = getReportedTensorLayout(config, name);
 
             std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
                 name,
