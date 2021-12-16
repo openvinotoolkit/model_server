@@ -41,7 +41,8 @@ Creating client application in Python is probably the simplest due to existance 
 
         client = make_grpc_client(service_url="10.20.30.40:9000")
         model_status = client.get_model_status(model_name="my_model")
-   
+
+
 .. tab:: tensorflow-serving-api
 
    .. code-block:: python
@@ -71,7 +72,8 @@ Creating client application in Python is probably the simplest due to existance 
         client = make_grpc_client(service_url="10.20.30.40:9000")
         model_metadata = client.get_model_metadata(model_name="my_model")
 
-.. tab:: tensorflow-serving-api  
+
+.. tab:: tensorflow-serving-api
 
    .. code-block:: python
 
@@ -91,7 +93,7 @@ Creating client application in Python is probably the simplest due to existance 
 
 @sphinxdirective
 
-.. tab:: ovmsclient  
+.. tab:: ovmsclient
 
    .. code-block:: python
 
@@ -102,8 +104,9 @@ Creating client application in Python is probably the simplest due to existance 
             data = f.read()
         inputs = {"input_name": data}    
         results = client.predict(inputs=inputs, model_name="my_model")
-   
-.. tab:: tensorflow-serving-api  
+
+
+.. tab:: tensorflow-serving-api
 
    .. code-block:: python
 
@@ -127,7 +130,7 @@ Creating client application in Python is probably the simplest due to existance 
 
 @sphinxdirective
 
-.. tab:: ovmsclient  
+.. tab:: ovmsclient
 
    .. code-block:: python
 
@@ -138,7 +141,8 @@ Creating client application in Python is probably the simplest due to existance 
         data = np.array([1.0, 2.0, ..., 1000.0])
         inputs = {"input_name": data}
         results = client.predict(inputs=inputs, model_name="my_model")
-   
+
+
 .. tab:: tensorflow-serving-api  
 
    .. code-block:: python
