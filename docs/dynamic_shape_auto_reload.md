@@ -13,6 +13,10 @@ The enabling of dynamic shape via model reload is as simple as setting `shape` p
 
 ## Steps
 Clone OpenVINO&trade; Model Server github repository and enter `model_server` directory.
+```
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+```
 #### Download the pretrained model
 Download model files and store it in `models` directory
 ```Bash
@@ -29,7 +33,7 @@ docker pull openvino/model_server:latest
 #### Start ovms docker container with downloaded model and dynamic batch size
 Start ovms container with image pulled in previous step and mount `models` directory :
 ```Bash
-docker run --rm -d -v $(pwd)/models:/models -v $(pwd)/config.json:/config.json -p 9000:9000 openvino/model_server:latest --model_name face_detection --model_path /models/face_detection --shape auto --port 9000
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name face_detection --model_path /models/face_detection --shape auto --port 9000
 ```
 
 #### Run the client

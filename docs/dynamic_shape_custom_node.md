@@ -16,11 +16,15 @@ To show inference running on such setup let's take adventage of:
 
 ## Steps
 Clone OpenVINO&trade; Model Server github repository and enter `model_server` directory.
+```
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+```
 
 #### Download the pretrained model
-Download model files and store it in <models_dir> directory
+Download model files and store it in `models` directory
 ```Bash
-mkdir -p <models_dir>/face_detection/1
+mkdir -p models/face_detection/1
 curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml -o models/face_detection/1/face-detection-retail-0004.bin -o models/face_detection/1/face-detection-retail-0004.xml
 ```
 
@@ -31,14 +35,10 @@ docker pull openvino/model_server:latest
 ```
 
 ### Build the custom node
-1. Clone model server repository  
-    ```
-    git clone https://github.com/openvinotoolkit/model_server.git
-    ```
 
-2. Go to custom node directory
+1. Go to custom node directory
     ```
-    cd model_server/src/custom_nodes/image_transformation/
+    cd src/custom_nodes/image_transformation/
     ``` 
 
 3. Build the custom node
@@ -46,13 +46,18 @@ docker pull openvino/model_server:latest
     make build
     ```
 
-4. Copy the custom node to models repository
+4. Copy the custom node to `models` repository
     ```
-    cp lib/libcustom_node_image_transformation.so <models_dir>
+    cp lib/libcustom_node_image_transformation.so ../../../models
     ```
 
 #### OVMS configuration file
-Create new file named `config.json` in <models_dir> :
+Go to `models` directory:
+```
+cd ../../../models
+```
+
+Create new file named `config.json` there:
 ```json
 {
     "model_config_list": [
@@ -133,7 +138,7 @@ docker run --rm -d -v <models_dir>:/models -p 9000:9000 openvino/model_server:la
 
 #### Run the client
 ```Bash
-cd example_client
+cd ../example_client
 virtualenv .venv
 . .venv/bin/activate
 pip install -r client_requirements.txt

@@ -13,6 +13,10 @@ The enabling of dynamic batch size via model reload is as simple as setting `bat
 
 ## Steps
 Clone OpenVINO&trade; Model Server github repository and enter `model_server` directory.
+```
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+```
 #### Download the pretrained model
 Download model files and store it in `models` directory
 ```Bash
@@ -29,11 +33,16 @@ docker pull openvino/model_server:latest
 #### Start ovms docker container with downloaded model and dynamic batch size
 Start ovms container with image pulled in previous step and mount `models` directory :
 ```Bash
-docker run --rm -d -v $(pwd)/models:/models -v $(pwd)/config.json:/config.json -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9000
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9000
 ```
 
 #### Run the client
 ```Bash
+cd example_client
+virtualenv .venv
+. .venv/bin/activate
+pip install -r client_requirements.txt
+
 python grpc_serving_client.py --grpc_port 9000 --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --batchsize 1 > b1.txt && python grpc_serving_client.py --grpc_port 9000 --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --batchsize 8 > b8.txt;
 ```
 *Note:* Results of running the client will be available in .txt files in current directory.

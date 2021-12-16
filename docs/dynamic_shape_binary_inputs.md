@@ -8,7 +8,7 @@ To run inference on binary encoded data make sure your model accepts NHWC layout
 Learn more about [binary inputs feature](binary_input.md).
 
 ## Steps
-Clone OpenVINO&trade; Model Server github repository and enter `model_server` directory.
+
 #### Download the pretrained model
 Download model files and store it in `models` directory
 ```Bash
@@ -25,7 +25,7 @@ docker pull openvino/model_server:latest
 #### Start ovms docker container with downloaded model
 Start ovms container with image pulled in previous step and mount `models` directory :
 ```Bash
-docker run --rm -d -v $(pwd)/models:/models -v $(pwd)/config.json:/config.json -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --layout NHWC --port 9000
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --layout NHWC --port 9000
 ```
 
 ### Download ovmsclient package
@@ -43,7 +43,7 @@ wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example
 
 ### Run inference and see the result
 
-```
+```python
 import numpy as np 
 from classes import imagenet_classes 
 from ovmsclient import make_grpc_client 
