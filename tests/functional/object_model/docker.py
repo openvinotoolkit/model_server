@@ -13,26 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from docker.types import DeviceRequest
 from grp import getgrnam
 from os import getuid
 import os
 import time
 from typing import List
-
 from datetime import datetime
 
 import docker
-from utils.files_operation import get_path_friendly_test_name
-
+from docker.types import DeviceRequest
+import logging
 from retry.api import retry_call
+from utils.files_operation import get_path_friendly_test_name
 
 import config
 from utils.grpc import port_manager_grpc
 from utils.rest import port_manager_rest
-import logging
-
 from constants import TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA, TARGET_DEVICE_CPU, TARGET_DEVICE_MYRIAD
+
 
 logger = logging.getLogger(__name__)
 CONTAINER_STATUS_RUNNING = "running"
@@ -112,12 +110,18 @@ class Docker:
         volumes_dict = {config.path_to_mount: {'bind': '/opt/ml', 'mode': 'ro'}}
         device_cfg['volumes'].update(volumes_dict)
 
+        logger.info(f"Start docker parameters: img: {self.image}; name: {self.container_name}; ports: {ports}")
+        logger.info(f"Docker start cmd: {self.start_container_command}")
+        logger.info(f"Docker start env: {self.env_vars_container}")
+        logger.info(f"Device settings: {device_cfg}")
         self.container = self.client.containers.run(image=self.image, detach=True,
                                                     name=self.container_name,
                                                     ports=ports,
                                                     command=self.start_container_command,
                                                     environment=self.env_vars_container,
                                                     **device_cfg)
+        logs = self.container.logs().decode()
+        logger.info(f"OVMS logs: {logs}")
         self.ensure_container_status(status=CONTAINER_STATUS_RUNNING, terminal_statuses=TERMINAL_STATUSES)
         self.ensure_logs_contains()
         logger.info(f"Container started grpc_port:{self.grpc_port}\trest_port:{self.rest_port}")
