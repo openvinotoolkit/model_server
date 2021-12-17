@@ -16,7 +16,7 @@
 
 import pytest
 import numpy as np
-from constants import MODEL_SERVICE, ERROR_SHAPE, TARGET_DEVICE_MYRIAD, NOT_TO_BE_REPORTED_IF_SKIPPED
+from constants import MODEL_SERVICE, ERROR_SHAPE, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_CUDA, NOT_TO_BE_REPORTED_IF_SKIPPED
 from config import target_device, skip_nginx_test
 from conftest import devices_not_supported_for_test
 from model.models_information import Resnet
@@ -28,7 +28,7 @@ from utils.models_utils import ModelVersionState, ErrorCode, ERROR_MESSAGE
 logger = logging.getLogger(__name__)
 
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
-@devices_not_supported_for_test(TARGET_DEVICE_MYRIAD)
+@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_CUDA])
 class TestSingleModelInferenceS3:
 
     def test_run_inference(self, start_server_single_model_from_minio):

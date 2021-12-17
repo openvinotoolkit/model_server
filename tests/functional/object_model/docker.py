@@ -13,23 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from grp import getgrnam
+from os import getuid
 import os
 import time
 from typing import List
-
 from datetime import datetime
 
 import docker
-from utils.files_operation import get_path_friendly_test_name
-
+from docker.types import DeviceRequest
+import logging
 from retry.api import retry_call
+from utils.files_operation import get_path_friendly_test_name
 
 import config
 from utils.grpc import port_manager_grpc
 from utils.rest import port_manager_rest
-import logging
+from constants import TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA, TARGET_DEVICE_CPU, TARGET_DEVICE_MYRIAD
 
-from constants import TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_CPU, TARGET_DEVICE_MYRIAD
 
 logger = logging.getLogger(__name__)
 CONTAINER_STATUS_RUNNING = "running"
@@ -37,35 +38,35 @@ TERMINAL_STATUSES = ["exited"]
 
 TARGET_DEVICE_CONFIGURATION = {
     TARGET_DEVICE_CPU: {
-        "VOLUMES": [],
-        "DEVICES": [],
-        "NETWORK": None,
-        "PRIVILEGED": False,
-        "USER": None,
+        'volumes': {},
+        "privileged": False,
     },
 
     TARGET_DEVICE_GPU: {
-        "VOLUMES": [],
-        "DEVICES": ["/dev/dri:/dev/dri:mrw"],
-        "NETWORK": None,
-        "PRIVILEGED": False,
-        "USER": None,
+        'volumes': {},
+        "devices": ["/dev/dri:/dev/dri:mrw"],
+        "privileged": False,
+        "user": None,
+    },
+
+    TARGET_DEVICE_CUDA: {
+        'volumes': {},
+        "privileged": False,
+        'device_requests':  [DeviceRequest(count=-1, capabilities=[['gpu']])]
     },
 
     TARGET_DEVICE_MYRIAD: {
-        "VOLUMES": [{"/dev": {'bind': "/dev", 'mode': 'ro'}}, ],
-        "DEVICES": [],
-        "NETWORK": "host",
-        "PRIVILEGED": True,
-        "USER": None
+        'volumes': {"/dev/bus/usb": {'bind': "/dev/bus/usb", 'mode': 'ro'}},
+        'privileged': False,
+        "user": f"{getuid()}:{getgrnam('users').gr_gid}",
+        "device_cgroup_rules": ["c 189:* rmw"]
     },
 
     TARGET_DEVICE_HDDL: {
-        "VOLUMES": [{"/var/tmp": {"bind": "/var/tmp", "mode": "rw"}}],
-        "DEVICES": ["/dev/ion:/dev/ion:mrw"],
-        "NETWORK": None,
-        "PRIVILEGED": False,
-        "USER": "root"
+        "volumes": {"/var/tmp": {"bind": "/var/tmp", "mode": "rw"}},
+        "devices": ["/dev/ion:/dev/ion:mrw"],
+        "privileged": False,
+        "user": "root"
     },
 }
 
@@ -106,22 +107,15 @@ class Docker:
 
         ports = {'{}/tcp'.format(self.grpc_port): self.grpc_port, '{}/tcp'.format(self.rest_port): self.rest_port}
         device_cfg = TARGET_DEVICE_CONFIGURATION[config.target_device]
-
-        volumes_dict = {'{}'.format(config.path_to_mount): {'bind': '/opt/ml',
-                                                            'mode': 'ro'}}
-        for vol in device_cfg["VOLUMES"]:
-            volumes_dict.update(vol)
+        volumes_dict = {config.path_to_mount: {'bind': '/opt/ml', 'mode': 'ro'}}
+        device_cfg['volumes'].update(volumes_dict)
 
         self.container = self.client.containers.run(image=self.image, detach=True,
                                                     name=self.container_name,
                                                     ports=ports,
-                                                    volumes=volumes_dict,
-                                                    devices=device_cfg["DEVICES"],
-                                                    network=device_cfg["NETWORK"],
                                                     command=self.start_container_command,
                                                     environment=self.env_vars_container,
-                                                    privileged=device_cfg["PRIVILEGED"],
-                                                    user=device_cfg["USER"])
+                                                    **device_cfg)
         self.ensure_container_status(status=CONTAINER_STATUS_RUNNING, terminal_statuses=TERMINAL_STATUSES)
         self.ensure_logs_contains()
         logger.info(f"Container started grpc_port:{self.grpc_port}\trest_port:{self.rest_port}")
