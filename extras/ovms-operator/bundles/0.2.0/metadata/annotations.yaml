@@ -10,4 +10,4 @@ annotations:
   operators.operatorframework.io.metrics.project_layout: helm.sdk.operatorframework.io/v1
   operators.operatorframework.io.test.config.v1: tests/scorecard/
   operators.operatorframework.io.test.mediatype.v1: scorecard+v1
-
+  containerImage: quay.io/openvino/ovms-operator:0.2.0

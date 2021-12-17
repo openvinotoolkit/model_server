@@ -48,11 +48,16 @@ metadata:
       ]
     capabilities: Basic Install
     categories: "AI/Machine Learning"
+    containerImage: quay.io/openvino/ovms-operator:0.2.0
+    description: OpenVINO operator
+    repository: https://github.com/openvinotoolkit/model_server/tree/main/extras/ovms-operator
     operators.operatorframework.io/builder: operator-sdk-v1.4.0
     operators.operatorframework.io/project_layout: helm.sdk.operatorframework.io/v1
   name: ovms-operator.v0.2.0
   namespace: placeholder
 spec:
+  version: 0.2.0
+  replaces: ovms-operator.v0.1.0
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
@@ -258,7 +263,7 @@ spec:
   keywords:
   - AI Inference OpenVINO
   links:
-  - name: Ovms Operator
+  - name: OpenVINO Operator
     url: https://github.com/openvinotoolkit/model_server/tree/main/extras/ovms-operator
   maturity: alpha
   provider:
