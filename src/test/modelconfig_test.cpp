@@ -255,6 +255,51 @@ TEST(ModelConfig, parseShapeFromString) {
     EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
 }
 
+TEST(ModelConfig, parseDimParam) {
+    // ovms::ModelConfig config;
+    // // Valid
+    // std::string auto_str = "auto";
+    // std::string valid_str1 = "(64,128,256,300)";
+    // std::string valid_str2 = "{\"input\": \"(1, 3, 3, 200)\"}";
+    // std::string valid_str3 = "{\"input\": \"auto\", \"extra_input\": \"(10)\"}";
+
+    // config.parseShapeParameter(auto_str);
+    // auto shapes = config.getShapes_2();
+    // EXPECT_EQ(shapes[ovms::ANONYMOUS_INPUT_NAME].shapeMode, ovms::AUTO);
+
+    // config.parseShapeParameter(valid_str1);
+    // shapes = config.getShapes_2();
+    // EXPECT_EQ(shapes[ovms::ANONYMOUS_INPUT_NAME].shapeMode, ovms::FIXED);
+    // EXPECT_EQ(shapes[ovms::ANONYMOUS_INPUT_NAME].shape, (ovms::Shape{64, 128, 256, 300}));
+
+    // config.parseShapeParameter(valid_str2);
+    // shapes = config.getShapes_2();
+    // EXPECT_EQ(shapes["input"].shapeMode, ovms::FIXED);
+    // EXPECT_EQ(shapes["input"].shape, (ovms::Shape{1, 3, 3, 200}));
+
+    // config.parseShapeParameter(valid_str3);
+    // shapes = config.getShapes_2();
+    // EXPECT_EQ(shapes["input"].shapeMode, ovms::AUTO);
+    // EXPECT_EQ(shapes["input"].shape.getSize(), 0);
+    // EXPECT_EQ(shapes["extra_input"].shapeMode, ovms::FIXED);
+    // EXPECT_EQ(shapes["extra_input"].shape, (ovms::Shape{10}));
+
+    // // Invalid
+
+    // std::string invalid_str1 = "string";
+    // std::string invalid_str2 = "[1, 3, 43]";
+    // std::string invalid_str3 = "{\"input\": \"auto\", \"extra_input\": \"10\"}";
+
+    // auto status = config.parseShapeParameter(invalid_str1);
+    // EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
+
+    // status = config.parseShapeParameter(invalid_str2);
+    // EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
+
+    // status = config.parseShapeParameter(invalid_str3);
+    // EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
+}
+
 TEST(ModelConfig, parseShapeParam) {
     ovms::ModelConfig config;
     // Valid

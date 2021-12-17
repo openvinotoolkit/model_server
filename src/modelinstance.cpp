@@ -68,7 +68,7 @@ void ModelInstance::unsubscribe(PipelineDefinition& pd) {
 Status getRequestedShape(const ModelConfig& config, const DynamicModelParameter& parameter, const std::string& name, Shape& shapeOut) {
     Shape shape;
     auto mappedName = config.getMappingInputByKey(name);
-    if (config.getBatchSize() > 0 || parameter.isBatchSizeRequested()) {
+    if (config.getBatchSize().has_value() || parameter.isBatchSizeRequested()) {
         // leave shape untouched
     } else if (config.isShapeAuto(name) && parameter.isShapeRequested(name)) {
         auto status = Shape::fromFlatShape(parameter.getShape(name), shape);
@@ -736,9 +736,9 @@ void ModelInstance::configureBatchSize(const ModelConfig& config, const DynamicM
     if (parameter.isBatchSizeRequested()) {
         network->setBatchSize(parameter.getBatchSize());
         ov::set_batch(network_2, parameter.getBatchSize());
-    } else if (config.getBatchSize() > 0) {
-        network->setBatchSize(config.getBatchSize());
-        ov::set_batch(network_2, config.getBatchSize());
+    } else if (config.getBatchSize().has_value()) {
+        //network->setBatchSize(config.getBatchSize());
+        ov::set_batch(network_2, config.getBatchSize().value().createPartialDimension());
     }
 }
 
@@ -867,7 +867,7 @@ Status ModelInstance::reshapeWithFullReload(const Status& status, const DynamicM
     return recoveryStatus;
 }
 
-Status ModelInstance::reloadModel(size_t batchSize, std::map<std::string, shape_t> requestShapes, std::unique_ptr<ModelInstanceUnloadGuard>& unloadGuard) {
+Status ModelInstance::reloadModel(std::optional<Dimension> batchSize, std::map<std::string, shape_t> requestShapes, std::unique_ptr<ModelInstanceUnloadGuard>& unloadGuard) {
     // temporarily release current predictRequest lock on model loading
     unloadGuard.reset();
     // block concurrent requests for reloading/unloading - assure that after reload predict request
@@ -876,8 +876,8 @@ Status ModelInstance::reloadModel(size_t batchSize, std::map<std::string, shape_
     SPDLOG_INFO("Will reload model: {} version: {}", getName(), getVersion());
 
     DynamicModelParameter parameter;
-    if (batchSize > 0) {
-        parameter = DynamicModelParameter(batchSize);
+    if (batchSize.has_value() && batchSize.value().isStatic()) {
+        parameter = DynamicModelParameter(batchSize.value().getStaticValue());
     } else if (requestShapes.size() > 0) {
         parameter = DynamicModelParameter(requestShapes);
     } else {
@@ -908,7 +908,7 @@ Status ModelInstance::reloadModelIfRequired(
                 getName(), getVersion(), status.getCode(), status.string());
         }
     } else if (status.reshapeRequired()) {
-        status = reloadModel(0, getRequestShapes(requestProto), modelUnloadGuardPtr);
+        status = reloadModel(std::nullopt, getRequestShapes(requestProto), modelUnloadGuardPtr);
         if (!status.ok() && status != StatusCode::RESHAPE_ERROR) {
             SPDLOG_ERROR("Model: {}, version: {} reload (reshape) failed. Status Code: {}, Error: {}",
                 getName(), getVersion(), status.getCode(), status.string());

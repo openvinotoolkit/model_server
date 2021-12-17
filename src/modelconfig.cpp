@@ -65,7 +65,7 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to batching mode mismatch", this->name);
         return true;
     }
-    if (this->batchSize != rhs.batchSize) {
+    if (!isBatchSizeConfigurationEqual(rhs)) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to batch size mismatch", this->name);
         return true;
     }
@@ -108,6 +108,16 @@ bool ModelConfig::isCustomLoaderConfigChanged(const ModelConfig& rhs) const {
     return false;
 }
 
+bool ModelConfig::isBatchSizeConfigurationEqual(const ModelConfig& rhs) const {
+    if (this->batchSize.has_value() != rhs.batchSize.has_value()) {
+        return false;
+    }
+    if (this->batchSize.has_value() && this->batchSize.value() != rhs.batchSize.value()) {
+        return false;
+    }
+    return true;
+}
+
 bool ModelConfig::isLayoutConfigurationEqual(const ModelConfig& rhs) const {
     if (this->layout_2 != rhs.layout_2) {
         return false;
@@ -144,25 +154,21 @@ bool ModelConfig::isShapeConfigurationEqual(const ModelConfig& rhs) const {
     return true;
 }
 
-std::tuple<Mode, size_t> ModelConfig::extractBatchingParams(std::string configBatchSize) {
+std::tuple<Mode, std::optional<Dimension>> ModelConfig::extractBatchingParams(std::string configBatchSize) {
     Mode batchingMode = FIXED;
-    size_t effectiveBatchSize = 0;
+    std::optional<Dimension> effectiveBatchSize = std::nullopt;
     if (configBatchSize == "auto") {
         batchingMode = AUTO;
     } else {
-        if (configBatchSize.find_first_not_of("0123456789") != std::string::npos) {
+        Dimension dim;
+        auto status = Dimension::fromString(configBatchSize, dim);
+        if (!status.ok()) {
             SPDLOG_WARN("Wrong batch size parameter provided. Model batch size will be set to default.");
-            return std::tuple<Mode, size_t>{batchingMode, effectiveBatchSize};
-        }
-        try {
-            effectiveBatchSize = std::stoi(configBatchSize);
-        } catch (const std::invalid_argument& e) {
-            SPDLOG_WARN("Wrong batch size parameter provided. Model batch size will be set to default.");
-        } catch (const std::out_of_range& e) {
-            SPDLOG_WARN("Out of range batch size parameter provided. Model batch size will be set to default.");
+        } else {
+            effectiveBatchSize = dim;
         }
     }
-    return std::tuple<Mode, size_t>{batchingMode, effectiveBatchSize};
+    return std::tuple<Mode, std::optional<Dimension>>{batchingMode, effectiveBatchSize};
 }
 
 Status ModelConfig::parseModelVersionPolicy(std::string command) {
@@ -568,7 +574,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     SPDLOG_DEBUG("Specified model parameters:");
     SPDLOG_DEBUG("model_basepath: {}", getBasePath());
     SPDLOG_DEBUG("model_name: {}", getName());
-    SPDLOG_DEBUG("batch_size: {}", getBatchSize());
+    SPDLOG_DEBUG("batch_size: {}", getBatchSize().has_value() ? getBatchSize().value().toString() : "not configured");
     if (isShapeAnonymous()) {
         SPDLOG_DEBUG("shape: {}", std::string(getShapes_2().begin()->second));
     } else {
@@ -587,7 +593,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         SPDLOG_DEBUG("  {}: {}", pluginParameter, pluginValue);
     }
 
-    bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize() != 0);
+    bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize().has_value());
     bool shapeSet = (getShapes_2().size() > 0);
 
     SPDLOG_DEBUG("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);

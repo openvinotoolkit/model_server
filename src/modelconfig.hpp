@@ -74,7 +74,7 @@ private:
     /**
          * @brief Batch size
          */
-    size_t batchSize;
+    std::optional<Dimension> batchSize;
 
     /**
          * @brief Model version policy
@@ -252,6 +252,15 @@ public:
     bool isCustomLoaderConfigChanged(const ModelConfig& rhs) const;
 
     /**
+         * @brief Compares two ModelConfig instances for batch size configuration
+         * 
+         * @param rhs
+         *  
+         * @return true if configurations are equal false otherwise
+         */
+    bool isBatchSizeConfigurationEqual(const ModelConfig& rhs) const;
+
+    /**
          * @brief Compares two ModelConfig instances for layout configuration
          * 
          * @param rhs
@@ -422,7 +431,7 @@ public:
          * 
          * @return size_t 
          */
-    size_t getBatchSize() const {
+    std::optional<Dimension> getBatchSize() const {
         return this->batchSize;
     }
 
@@ -440,7 +449,7 @@ public:
          * 
          * @param batchSize 
          */
-    void setBatchSize(size_t batchSize) {
+    void setBatchSize(std::optional<Dimension> batchSize) {
         this->batchSize = batchSize;
     }
 
@@ -470,7 +479,7 @@ public:
          * 
          * @param configBatchSize 
          */
-    static std::tuple<Mode, size_t> extractBatchingParams(std::string configBatchSize);
+    static std::tuple<Mode, std::optional<Dimension>> extractBatchingParams(std::string configBatchSize);
 
     /**
          * @brief Get the model version policy

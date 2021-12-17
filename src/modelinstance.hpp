@@ -477,7 +477,7 @@ public:
          * 
          * @return Status
          */
-    virtual Status reloadModel(size_t batchSize, std::map<std::string, shape_t> shape, std::unique_ptr<ModelInstanceUnloadGuard>& unloadGuardPtr);
+    virtual Status reloadModel(std::optional<Dimension> batchSize, std::map<std::string, shape_t> shape, std::unique_ptr<ModelInstanceUnloadGuard>& unloadGuardPtr);
 
     /**
          * @brief Reloads model version if status of request validation indicates there's a need for reshape or batch size change

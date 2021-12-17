@@ -51,6 +51,16 @@ bool Dimension::isStatic() const {
     return !this->isDynamic();
 }
 
+ov::Dimension Dimension::createPartialDimension() const {
+    if (this->isStatic()) {
+        return ov::Dimension(this->getStaticValue());
+    }
+    if (this->minimum == DYNAMIC_DIMENSION) {
+        return ov::Dimension::dynamic();
+    }
+    return ov::Dimension(this->minimum, this->maximum);
+}
+
 dimension_value_t Dimension::getAnyValue() const {
     return this->maximum;
 }
@@ -79,6 +89,77 @@ bool Dimension::operator==(const Dimension& rhs) const {
 
 bool Dimension::operator!=(const Dimension& rhs) const {
     return !(this->operator==(rhs));
+}
+
+Status Dimension::fromString(const std::string& str, Dimension& dimOut) {
+    Dimension dim;
+
+    std::string strCopy = str;
+    erase_spaces(strCopy);
+    if (strCopy.find(':') != std::string::npos) {
+        // Range
+        if (strCopy.find_first_not_of("0123456789:") != std::string::npos) {
+            SPDLOG_ERROR("Parsing dimension string not a range: {}", strCopy);
+            return StatusCode::DIM_WRONG_FORMAT;
+        }
+        size_t delimCount = std::count(strCopy.begin(), strCopy.end(), ':');
+        if (delimCount != 1) {
+            SPDLOG_ERROR("Parsing dimension string, wrong amount of ':' - {}; {}", delimCount, strCopy);
+            return StatusCode::DIM_WRONG_FORMAT;
+        } else {
+            std::vector<std::string> tokens = tokenize(strCopy, ':');
+            if (tokens.size() == 2) {
+                try {
+                    int dimNumberMin = std::stoi(tokens[0]);
+                    int dimNumberMax = std::stoi(tokens[1]);
+                    if (dimNumberMin > 0 && dimNumberMax > 0) {
+                        dim = Dimension(dimNumberMin, dimNumberMax);
+                    } else if (dimNumberMin >= dimNumberMax) {
+                        SPDLOG_ERROR("Parsing dimension string range max must be higher than min: {}", strCopy);
+                        return StatusCode::DIM_WRONG_FORMAT;
+                    } else {
+                        SPDLOG_ERROR("Parsing dimension string range must be lager than 0: {}", strCopy);
+                        return StatusCode::DIM_WRONG_FORMAT;
+                    }
+                } catch (const std::out_of_range& e) {
+                    SPDLOG_ERROR("Parsing dimension string out of range: {}, error: {}", strCopy, e.what());
+                    return StatusCode::DIM_WRONG_FORMAT;
+                } catch (...) {
+                    SPDLOG_ERROR("Parsing dimension string: {}", strCopy);
+                    return StatusCode::DIM_WRONG_FORMAT;
+                }
+            } else {
+                SPDLOG_ERROR("Parsing dimension string, not a number between ':' - {}", strCopy);
+                return StatusCode::DIM_WRONG_FORMAT;
+            }
+        }
+    } else {
+        // Number
+        if (strCopy.find_first_not_of("0123456789-") != std::string::npos) {
+            SPDLOG_ERROR("Parsing dimension string not a number: {}", strCopy);
+            return StatusCode::DIM_WRONG_FORMAT;
+        }
+        try {
+            int dimNumber = std::stoi(strCopy);
+            if (dimNumber == DYNAMIC_DIMENSION) {
+                dim = Dimension::any();
+            } else if (dimNumber > 0) {
+                dim = Dimension(dimNumber);
+            } else {
+                SPDLOG_ERROR("Parsing dimension string out of range: {}", strCopy);
+                return StatusCode::DIM_WRONG_FORMAT;
+            }
+        } catch (const std::out_of_range& e) {
+            SPDLOG_ERROR("Parsing dimension string out of range: {}, error: {}", strCopy, e.what());
+            return StatusCode::DIM_WRONG_FORMAT;
+        } catch (...) {
+            SPDLOG_ERROR("Parsing dimension string: {}", strCopy);
+            return StatusCode::DIM_WRONG_FORMAT;
+        }
+    }
+
+    dimOut = dim;
+    return StatusCode::OK;
 }
 
 std::string Dimension::toString() const {

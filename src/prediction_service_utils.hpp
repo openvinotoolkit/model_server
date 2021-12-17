@@ -28,7 +28,7 @@
 
 namespace ovms {
 
-size_t getRequestBatchSize(const tensorflow::serving::PredictRequest* request);
+std::optional<Dimension> getRequestBatchSize(const tensorflow::serving::PredictRequest* request);
 std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request);
 
 }  // namespace ovms
