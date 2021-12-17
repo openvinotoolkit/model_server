@@ -110,18 +110,12 @@ class Docker:
         volumes_dict = {config.path_to_mount: {'bind': '/opt/ml', 'mode': 'ro'}}
         device_cfg['volumes'].update(volumes_dict)
 
-        logger.info(f"Start docker parameters: img: {self.image}; name: {self.container_name}; ports: {ports}")
-        logger.info(f"Docker start cmd: {self.start_container_command}")
-        logger.info(f"Docker start env: {self.env_vars_container}")
-        logger.info(f"Device settings: {device_cfg}")
         self.container = self.client.containers.run(image=self.image, detach=True,
                                                     name=self.container_name,
                                                     ports=ports,
                                                     command=self.start_container_command,
                                                     environment=self.env_vars_container,
                                                     **device_cfg)
-        logs = self.container.logs().decode()
-        logger.info(f"OVMS logs: {logs}")
         self.ensure_container_status(status=CONTAINER_STATUS_RUNNING, terminal_statuses=TERMINAL_STATUSES)
         self.ensure_logs_contains()
         logger.info(f"Container started grpc_port:{self.grpc_port}\trest_port:{self.rest_port}")
