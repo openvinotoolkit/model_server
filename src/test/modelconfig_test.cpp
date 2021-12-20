@@ -227,7 +227,7 @@ TEST(ModelConfig, parseShapeFromString) {
 
     config.parseShape(shapeInfo, auto_str);
     EXPECT_EQ(shapeInfo.shapeMode, ovms::AUTO);
-    EXPECT_EQ(shapeInfo.shape.getSize(), 0);
+    EXPECT_EQ(shapeInfo.shape.size(), 0);
 
     config.parseShape(shapeInfo, valid_str1);
     EXPECT_EQ(shapeInfo.shapeMode, ovms::FIXED);
@@ -327,7 +327,7 @@ TEST(ModelConfig, parseShapeParam) {
     config.parseShapeParameter(valid_str3);
     shapes = config.getShapes_2();
     EXPECT_EQ(shapes["input"].shapeMode, ovms::AUTO);
-    EXPECT_EQ(shapes["input"].shape.getSize(), 0);
+    EXPECT_EQ(shapes["input"].shape.size(), 0);
     EXPECT_EQ(shapes["extra_input"].shapeMode, ovms::FIXED);
     EXPECT_EQ(shapes["extra_input"].shape, (ovms::Shape{10}));
 
@@ -370,7 +370,7 @@ TEST(ModelConfig, parseShapeDynamicParam) {
     ASSERT_EQ(config.parseShapeParameter(valid_str3), StatusCode::OK);
     shapes = config.getShapes_2();
     EXPECT_EQ(shapes["input"].shapeMode, ovms::AUTO);
-    EXPECT_EQ(shapes["input"].shape.getSize(), 0);
+    EXPECT_EQ(shapes["input"].shape.size(), 0);
     EXPECT_EQ(shapes["extra_input"].shapeMode, ovms::FIXED);
     EXPECT_EQ(shapes["extra_input"].shape, (ovms::Shape{{10, 20}}));
 
@@ -426,7 +426,7 @@ TEST(ModelConfig, parseShapeAnyDimParam) {
     ASSERT_EQ(config.parseShapeParameter(valid_str3), StatusCode::OK);
     shapes = config.getShapes_2();
     EXPECT_EQ(shapes["input"].shapeMode, ovms::AUTO);
-    EXPECT_EQ(shapes["input"].shape.getSize(), 0);
+    EXPECT_EQ(shapes["input"].shape.size(), 0);
     EXPECT_EQ(shapes["extra_input"].shapeMode, ovms::FIXED);
     EXPECT_EQ(shapes["extra_input"].shape, (Shape{{10, 20}, Dimension::any()}));
 
