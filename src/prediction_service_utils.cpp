@@ -37,7 +37,6 @@ std::optional<Dimension> getRequestBatchSize(const tensorflow::serving::PredictR
         return std::nullopt;
     }
     auto& requestInput = requestInputItr->second;  // assuming same batch size for all inputs
-    //return static_cast<size_t>(requestInput.tensor_shape().dim(0).size());
     return Dimension(requestInput.tensor_shape().dim(0).size());
 }
 

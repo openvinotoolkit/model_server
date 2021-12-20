@@ -159,6 +159,8 @@ std::tuple<Mode, std::optional<Dimension>> ModelConfig::extractBatchingParams(st
     std::optional<Dimension> effectiveBatchSize = std::nullopt;
     if (configBatchSize == "auto") {
         batchingMode = AUTO;
+    } else if (configBatchSize == "0") {
+        // do nothing
     } else {
         Dimension dim;
         auto status = Dimension::fromString(configBatchSize, dim);
@@ -600,7 +602,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     if (batchSizeSet && shapeSet) {
         SPDLOG_WARN("Both shape and batch size have been defined. Batch size parameter will be ignored.");
         setBatchingMode(FIXED);
-        setBatchSize(0);
+        setBatchSize(std::nullopt);
     }
 
     SPDLOG_DEBUG("stateful: {}", isStateful());

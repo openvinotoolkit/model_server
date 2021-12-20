@@ -32,10 +32,10 @@ protected:
         modelCacheDirectory = this->directoryPath;
         dummyModelConfigWithCache = DUMMY_MODEL_CONFIG;
         dummyModelConfigWithCache.setCacheDir(modelCacheDirectory);
-        dummyModelConfigWithCache.setBatchSize(0);
+        dummyModelConfigWithCache.setBatchSize(std::nullopt);
         imageModelConfigWithCache = INCREMENT_1x3x4x5_MODEL_CONFIG;
         imageModelConfigWithCache.setCacheDir(modelCacheDirectory);
-        imageModelConfigWithCache.setBatchSize(0);
+        imageModelConfigWithCache.setBatchSize(std::nullopt);
     }
 
     size_t getCachedFileCount() {
@@ -190,7 +190,7 @@ TEST_F(ModelCacheTest, ShapeChangeImpactsCache) {
     size_t currentCacheFileCount = this->getCachedFileCount();
 
     ModelConfig config = dummyModelConfigWithCache;
-    config.setBatchSize(0);
+    config.setBatchSize(std::nullopt);
     config.parseShapeParameter("(1,100)");
 
     auto manager = std::make_unique<ConstructorEnabledModelManager>(modelCacheDirectory);

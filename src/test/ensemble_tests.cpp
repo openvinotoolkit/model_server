@@ -531,7 +531,7 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicShape) {
     };
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
-    config.setBatchSize(0);  // = not specified in --batch_size parameter
+    config.setBatchSize(std::nullopt);  // = not specified in --batch_size parameter
     config.parseShapeParameter("auto");
     ConstructorEnabledModelManager managerWithDynamicShapeDummyModel;
     managerWithDynamicShapeDummyModel.reloadModelWithVersions(config);
@@ -605,7 +605,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchAndShape) {
     }
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
-    config.setBatchSize(0);  // simulate --batch_size parameter not set
+    config.setBatchSize(std::nullopt);  // simulate --batch_size parameter not set
     config.parseShapeParameter("auto");
     ConstructorEnabledModelManager manager;
     manager.reloadModelWithVersions(config);
@@ -686,7 +686,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape_RequestHasDifferentDim0
     }
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
-    config.setBatchSize(0);  // simulate --batch_size parameter not set
+    config.setBatchSize(std::nullopt);  // simulate --batch_size parameter not set
     config.parseShapeParameter("auto");
     ConstructorEnabledModelManager manager;
     manager.reloadModelWithVersions(config);
@@ -1151,8 +1151,8 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionShapesNotMatchBetweenDLModelTensorsVa
     ModelConfig dummy_1x20 = config;
     dummy_1x10.setName("dummy_1x10");
     dummy_1x20.setName("dummy_1x20");
-    dummy_1x10.setBatchSize(0);
-    dummy_1x20.setBatchSize(0);
+    dummy_1x10.setBatchSize(std::nullopt);
+    dummy_1x20.setBatchSize(std::nullopt);
     ASSERT_EQ(dummy_1x10.parseShapeParameter("(1,10)"), StatusCode::OK);
     ASSERT_EQ(dummy_1x20.parseShapeParameter("(1,20)"), StatusCode::OK);
 

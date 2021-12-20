@@ -734,10 +734,8 @@ Status ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
 
 void ModelInstance::configureBatchSize(const ModelConfig& config, const DynamicModelParameter& parameter) {
     if (parameter.isBatchSizeRequested()) {
-        network->setBatchSize(parameter.getBatchSize());
         ov::set_batch(network_2, parameter.getBatchSize());
     } else if (config.getBatchSize().has_value()) {
-        //network->setBatchSize(config.getBatchSize());
         ov::set_batch(network_2, config.getBatchSize().value().createPartialDimension());
     }
 }
@@ -756,11 +754,9 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     try {
         if (!this->config.getCacheDir().empty()) {
             if (this->config.isCachingDisabled()) {
-                this->ieCore.SetConfig({{CONFIG_KEY(CACHE_DIR), ""}});
                 this->ieCore_2.set_config({{CONFIG_KEY(CACHE_DIR), ""}});
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has disabled caching", this->getName());
             } else {
-                this->ieCore.SetConfig({{CONFIG_KEY(CACHE_DIR), config.getCacheDir()}});
                 this->ieCore_2.set_config({{CONFIG_KEY(CACHE_DIR), config.getCacheDir()}});
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has enabled caching", this->getName());
             }
