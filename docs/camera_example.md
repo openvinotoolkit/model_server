@@ -1,6 +1,5 @@
-# Processing frames from camera {#ovms_docs_demo_camera_example}
+# Horizontal text detection in real-time {#ovms_docs_demo_camera_example}
 
-## Horizontal text detection in real-time
 This demo presents a use case with a client written in python which captures camera frames and performs text spotting analysis via gRPC requests to OVMS. The client visualizes the results as a boxes depicted on the original image frames using OpenCV in real-time.
 The client can work efficiently also over slow internet connection with long latency thanks to image data compression and parallel execution for multiple frames.
 
