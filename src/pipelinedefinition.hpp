@@ -72,7 +72,7 @@ class PipelineDefinition {
 
     const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
-    std::map<std::string, void*> nodeResources = {};
+    std::map<std::string, std::shared_ptr<void*>> nodeResources = {};
     pipeline_connections_t connections;
 
 protected:
