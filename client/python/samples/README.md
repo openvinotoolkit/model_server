@@ -18,8 +18,6 @@ It covers following topics:
 
 ## Requirement
 
-Build and install [Model Server Client Library](../lib)
-
 Install samples dependencies using the command below:
 ```
 pip3 install -r requirements.txt
