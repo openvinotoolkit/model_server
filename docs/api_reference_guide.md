@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server API References {#server_api}
+# OpenVINO&trade; Model Server API References {#ovms_docs_server_api}
 
 @sphinxdirective
 

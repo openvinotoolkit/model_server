@@ -61,7 +61,7 @@ Depending on what models OVMS serves, what are performance requirements and traf
 
 ## Hold your models in remote storage
 
-Levrage remote storages such as Azure Blob Storage, Google Cloud Storage or AWS S3 compatible to create more elastic model repositories, that are easy to use and manage for example in Kubernetes deployments.
+Leverage remote storages such as Azure Blob Storage, Google Cloud Storage or AWS S3 compatible to create more elastic model repositories, that are easy to use and manage for example in Kubernetes deployments.
 
 [Learn more](using_cloud_storage.md)
 
