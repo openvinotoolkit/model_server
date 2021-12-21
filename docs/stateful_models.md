@@ -1,18 +1,5 @@
 # Serving Stateful Models {#ovms_docs_stateful_models}
 
-## Table of Contents
-
-* [Stateless vs Stateful Models](#stateful_models)
-* [Load and Serve Stateful Model](#stateful_serve)
-   * [Run Model Server with Stateful Model](#stateful_run)
-   * [Configuration Options for Stateful Models](#stateful_params)
-* [Run Inference on Stateful Model](#stateful_inference)
-    * [Special Inputs for Sequence Handling](#stateful_inputs)
-    * [Inference via gRPC](#stateful_grpc)
-    * [Inference via HTTP](#stateful_http)
-* [Idle Sequence Cleanup](#stateful_cleanup)
-* [Known Limitations](#stateful_limitations)
-
 ## Stateless vs Stateful Models <a name="stateful_models"></a>
 
 ### Stateless model

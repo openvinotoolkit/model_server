@@ -3,7 +3,7 @@
 ### Starting Docker Container with a Configuration File for **Multiple** Models <a name="configfile"></a>
 
 To use a container that has several models, you must use a model server configuration file that defines each model. The configuration file is in JSON format.
-In the configuration file, provide an array, model_config_list, that includes a collection of config objects for each served model. For each config object include, at a minimum, values for the model name and the base_path attributes.
+In the configuration file, provide an array, `model_config_list`, that includes a collection of config objects for each served model. For each config object include, at a minimum, values for the model name and the base_path attributes.
 
 Example configuration file:
 ```json
@@ -65,7 +65,7 @@ docker run --rm -d -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 -v <config.j
 
 ```
 
-*Note:* Follow the below model repository structure for multiple models:
+>Note: Follow the below model repository structure for multiple models:
 
 ```bash
 models/

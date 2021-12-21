@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server RESTful API Documentation {#ovms_docs_rest_api}
+# RESTful API {#ovms_docs_rest_api}
 
 ## Introduction
 In addition with [gRPC APIs](./model_server_grpc_api.md) OpenVINO&trade; model server also supports RESTful APIs which follows the documentation from [tensorflow serving REST API](https://www.tensorflow.org/tfx/serving/api_rest). Both row and column format of the request are implemented in these APIs. REST API is recommended when the primary goal is in reducing the number of client side python dependencies and simpler application code.
@@ -16,18 +16,19 @@ This document covers following API:
 > **Note** : The implementations for Predict, GetModelMetadata and GetModelStatus function calls are currently available. These are the most generic function calls and should address most of the usage scenarios.
 
 ## Model Status API <a name="model-status"></a>
-* Description
+**Description**
 
 Get information about the status of served models
 
-* URL 
+**URL**
 
 ```Bash
 GET http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VERSION}
 ```
+
 > **Note** : Including /versions/${MODEL_VERSION} is optional. If omitted status for all versions is returned in the response.
 
-* Response format
+**Response format**
 
 If successful, returns a JSON of following format :
 ```Bash
@@ -45,7 +46,7 @@ If successful, returns a JSON of following format :
 }
 ```
 
-* Usage Example
+**Usage Example**
 ```Bash
 $ curl http://localhost:8001/v1/models/person-detection/versions/1
 {
@@ -61,24 +62,25 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1
   ]
 }
 ```
-Read more about *Get Model Status API* usage [here](./../example_client/README.md#model-status-api-1)
+Read more about [Get Model Status API usage](../example_client/README.md#model-status-api-1)
 
 ## Model Metadata API <a name="model-metadata"></a>
-* Description 
+**Description**
 
 Get the metadata of a model in the model server.
 
-* URL 
+**URL**
 ```Bash
 GET http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VERSION}/metadata
 ```
+
 > **Note** :Including ${MODEL_VERSION} is optional. If omitted the model metadata for the latest version is returned in the response.
 
-* Response format
+**Response format**
 
 If successful, returns a JSON representation of [GetModelMetadataResponse](https://github.com/tensorflow/serving/blob/5369880e9143aa00d586ee536c12b04e945a977c/tensorflow_serving/apis/get_model_metadata.proto#L23) protobuf.
 
-* Usage example
+**Usage example**
 ```Bash
 $ curl http://localhost:8001/v1/models/person-detection/versions/1/metadata
 {
@@ -142,18 +144,20 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1/metadata
   }
 }
 ```
-Read more about *Get Model Metadata API* usage [here](./../example_client/README.md#model-metadata-api-1)
+
+Read more about [Get Model Metadata API usage](./../example_client/README.md#model-metadata-api-1)
 
 ## Predict API <a name="predict"></a>
-* Description
+**Description**
 
 Sends requests via TensorFlow Serving RESTful API using images in numpy array or binary format. It displays performance statistics and optionally the model accuracy.
 
-* URL
+**URL**
 ```
 POST http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VERSION}:predict
 ```
-* Request Header
+
+**Request Header**
 ```
 {
   // (Optional) Serving signature to use.
@@ -166,18 +170,20 @@ POST http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VE
   "inputs": <value>|<(nested)list>|<object>
 }
 ``` 
-> **Note**
-Read [How to specify input tensors in row format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_row_format) and [How to specify input tensors in column format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_column_format) for more details.
 
-* Response
+> Note: Read [How to specify input tensors in row format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_row_format) and [How to specify input tensors in column format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_column_format) for more details.
+
+**Response**
 
 A request in [row format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_row_format) has response formatted as follows :
+
 ```
 {
   "predictions": <value>|<(nested)list>|<list-of-objects>
 }
 ```
 A request in [column format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_column_format) has response formatted as follows :
+
 ```
 {
   "outputs": <value>|<(nested)list>|<object>
@@ -185,6 +191,7 @@ A request in [column format](https://www.tensorflow.org/tfx/serving/api_rest#spe
 ```
 
 Beside numerical values, it is possible to pass binary inputs. They must be Base64 encoded in passed in `b64` key like below:
+
 ```
 {
   "instances": [
@@ -197,21 +204,23 @@ Beside numerical values, it is possible to pass binary inputs. They must be Base
   ]
 }
 ```
+
 Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
 
-Read more about *Predict API* usage examples [here](./../example_client/README.md#predict-api-1)
+Read more about [Predict API usage](./../example_client/README.md#predict-api-1)
 
 ## Config Reload API <a name="config-reload"></a>
-* Description  
+**Description**
 
 Sends requests via RESTful API to trigger config reloading and gets models and [DAGs](./dag_scheduler.md) statuses as a response.This endpoint can be used with disabled automatic config reload to ensure changes in configuration are applied in a specific time and also to get confirmation about reload operation status. Typically this option is to be used when OVMS is started with a parameter `--file_system_poll_wait_seconds 0`.
 Reload operation does not pass new configuration to OVMS server. The configuration file changes needs to be applied by the OVMS administrator. The REST API call just initiate applying the configuration file which is already present.
 
-* URL  
+**URL** 
 ```
 POST http://${REST_URL}:${REST_PORT}/v1/config/reload
 ```
-* FLOW  
+
+**Flow**
 
 Flow after receiving request:
 1) If config file was changed - reload config.
@@ -219,13 +228,16 @@ Flow after receiving request:
 3) If any model that is part of a DAG was changed or new version was added - reload this pipeline.
 4) In case there are no errors in the reload operation, the response includes the status of all models and DAGs, otherwise error message is returned.
 
-* Request  
+**Request**
+
 To trigger reload, HTTP POST request with empty body should be sent on given URL. Example `curl` command:
 
 ```Bash
 curl --request POST http://${REST_URL}:${REST_PORT}/v1/config/reload
 ```
-* Response  
+
+**Response**
+
 In case of config reload success, response contains JSON with aggregation of getModelStatus responses for all models and DAGs after reload is finished, along with operation status: 
 ```JSON
 { 
@@ -236,13 +248,13 @@ In case of config reload success, response contains JSON with aggregation of get
      "version": <model version>|<string>,
      "state": <model state>|<string>, 
      "status":
-{ 
-  "error_code": <error code>|<string>, 
-  "error_message": <error message>|<string>       
-} 
+      { 
+        "error_code": <error code>|<string>, 
+        "error_message": <error message>|<string>       
+      } 
   }, 
   ...  
-] 
+  ] 
 }, 
 ... 
 } 
@@ -298,23 +310,24 @@ Possible messages returned on error:
 Even if one of models reload failed other may be working properly. To check state of loaded models use [Config Status API](./model_server_rest_api.md#config-status). To detect exact cause of errors described above analyzing sever logs may be necessary.
 
 ## Config Status API <a name="config-status"></a>
-* Description
+**Description**
 
 Sends requests via RESTful API to get response that contains aggregation of getModelStatus responses for all models and [DAGs](./dag_scheduler.md).
 
-* URL  
+**URL** 
 ```
 GET http://${REST_URL}:${REST_PORT}/v1/config
 ```
-* Request  
+**Request**  
 To trigger this API HTTP GET request should be sent on given URL.Example `curl` command:
 
 ```Bash
 curl --request GET http://${REST_URL}:${REST_PORT}/v1/config
 ```
 
-* Response  
+**Response**  
 In case of success, response contains JSON with aggregation of getModelStatus responses for all models and DAGs, along with operation status: 
+
 ```JSON
 { 
 "<model name>": 
@@ -324,13 +337,13 @@ In case of success, response contains JSON with aggregation of getModelStatus re
      "version": <model version>|<string>,
      "state": <model state>|<string>, 
      "status":
-{ 
-  "error_code": <error code>|<string>, 
-  "error_message": <error message>|<string>       
-} 
+      { 
+        "error_code": <error code>|<string>, 
+        "error_message": <error message>|<string>       
+      } 
   }, 
   ...  
-] 
+  ] 
 }, 
 ... 
 } 

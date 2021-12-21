@@ -1,22 +1,22 @@
-# Dynamic batch size with OpenVINO&trade; Model Server Demultiplexer {#ovms_docs_demo_dynamic_batch_demuliplexer}
+# Dynamic batch size with automatic model reloading{#ovms_docs_dynamic_bs_auto_reload}
 
-## Intoduction
-This document guides how to configure DAG Scheduler pipeline to be able to send predict request with arbitrary batch size without model reloading.
+## Introduction
+This document guides how to configure model to accept input data in different batch sizes. In this case it's done by reloading the model with new batch size every time it receives the request with batch size different than the one currently set. 
 
-With OpenVINO&trade; Model Server Demultiplexing infer request sent from client application can have various batch sizes and changing batch size does not require model reload.
+The enabling of dynamic batch size via model reload is as simple as setting `batch_size` parameter to `auto`. To show how to configure dynamic batch size and make use of it let's take adventage of:
 
-More information about this feature can be found in [dynamic batch size in demultiplexing](demultiplexing.md#dynamic-batch-handling-with-demultiplexing)
+- Example client in python [grpc_serving_client.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/grpc_serving_client.py), that can be used to request inference on desired batch size.
 
-*Note:* When using `demultiply_count` parameters, only one demultiplexer can exist in pipeline.
+- The example model [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/resnet50-binary-0001/README.md).
 
-- Example client in python grpc_serving_client.py can be used to request the pipeline. Use `--dag-batch-size-auto` flag to add additional dimension to the input shape which is required for demultiplexing feature.
-
-- The example uses model [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/resnet50-binary-0001/README.md).
-
-- While using resnet model with grpc_serving_client.py the script processes the output from the server and displays the inference results using previously prepared file with labels. Inside this file each image has assigned number, which indicates the correct recognition answer.  
+- While using resnet model with grpc_serving_client.py the script processes the output from the server and displays the inference results using previously prepared file with labels. Inside this file each image has assigned number, which indicates the correct classification result.  
 
 ## Steps
 Clone OpenVINO&trade; Model Server github repository and enter `model_server` directory.
+```
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+```
 #### Download the pretrained model
 Download model files and store it in `models` directory
 ```Bash
@@ -30,89 +30,20 @@ Pull the latest version of OpenVINO&trade; Model Server from Dockerhub :
 docker pull openvino/model_server:latest
 ```
 
-#### OVMS configuration file
-Create new file named `config.json` :
-```json
-{
-   "model_config_list": [
-       {
-           "config": {
-               "name": "resnet",
-               "base_path": "/models/resnet",
-               "plugin_config": {
-                   "CPU_THROUGHPUT_STREAMS" : "1"
-               }
-           }
-       }
-   ],
-   "pipeline_config_list": [
-       {
-           "name": "resnet50DAG",
-           "inputs": [
-               "0"
-           ],
-           "demultiply_count" : 0,
-           "nodes": [
-               {
-                   "name": "resnetNode",
-                   "model_name": "resnet",
-                   "type": "DL model",
-                   "inputs": [
-                       {
-                           "0": {
-                               "node_name": "request",
-                               "data_item": "0"
-                           }
-                       }
-                   ],
-                   "outputs": [
-                       {
-                           "data_item": "1463",
-                           "alias": "1463"
-                       }
-                   ]
-               }
-           ],
-           "outputs": [
-               {"1463": {
-                       "node_name": "resnetNode",
-                       "data_item": "1463"}}
-           ]
-       }
-   ]
-}
-```
-
-#### Start ovms docker container with downloaded model
+#### Start ovms docker container with downloaded model and dynamic batch size
 Start ovms container with image pulled in previous step and mount `models` directory :
 ```Bash
-docker run --rm -d -v $(pwd)/models:/models -v $(pwd)/config.json:/config.json -p 9000:9000 openvino/model_server:latest --config_path config.json --port 9000
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9000
 ```
 
-#### Checking metadata
+#### Run the client
 ```Bash
 cd example_client
 virtualenv .venv
 . .venv/bin/activate
 pip install -r client_requirements.txt
 
-python get_serving_meta.py --grpc_port 9000 --model_name resnet50DAG
-```
-
-```Bash
-...
-Getting model metadata for model: resnet50DAG
-Inputs metadata:
-        Input name: 0; shape: [-1, 1, 3, 224, 224]; dtype: DT_FLOAT
-Outputs metadata:
-        Output name: 1463; shape: [-1, 1, 1000]; dtype: DT_FLOAT
-```
-
-*Note:* While using dynamic batching feature both input and output shape has an additional dimension, which represents split batch size. Setting batch size parameter to `--batchsize 8` would set input shape to `[8,1,3,244,244]` and output shape to `[8,1,1000]`.
-
-#### Run the client
-```Bash
-python grpc_serving_client.py --grpc_port 9000 --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet50DAG --dag-batch-size-auto --transpose_input False --batchsize 1 > b1.txt && python grpc_serving_client.py --grpc_port 9000 --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet50DAG --dag-batch-size-auto --transpose_input False --batchsize 8 > b8.txt;
+python grpc_serving_client.py --grpc_port 9000 --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --batchsize 1 > b1.txt && python grpc_serving_client.py --grpc_port 9000 --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --batchsize 8 > b8.txt;
 ```
 *Note:* Results of running the client will be available in .txt files in current directory.
 
@@ -203,4 +134,4 @@ Classification accuracy: 100.00
 ```
 Each iteration presents the results of each infer request and details for each image in batch.
 
-With this feature we were able to successfully run client simultaneously with different batch size parameters without performance impact from the model reloading.
+> Note that reloading the model takes time and during the reload new requests get queued up. Therefore, frequent model reloading may negatively affect overall performance. 

@@ -1,4 +1,10 @@
-# Sample of securing Model Server with NGINX
+# Sample of securing Model Server with NGINX {#ovms_extras_nginx-mtls-auth-readme}
+
+Clone model server repository and enter NGINX directory:
+```
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/extras/nginx-mtls-auth
+```
 
 Dockerfile and scripts in this directory are an example of using NGINX mTLS module to implement authentication and authorization of OpenVINO Model Server.
 

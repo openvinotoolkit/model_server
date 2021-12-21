@@ -1,6 +1,13 @@
-# Example clients in C++
+# Running Predictions using C++ {#ovms_example_client_cpp_readme}
 
-To build examplary clients, run `make` command in this directory. It will build docker image named `ovms_cpp_clients` with all dependencies.
+To build examplary C++ clients run:
+```Bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd example_client/cpp
+make
+``` 
+ 
+ It will build docker image named `ovms_cpp_clients` with all dependencies.
 
 There are 3 clients:
 - _classification_client_sync_ - simple client using synchronous gRPC API, testing accurracy of classification models

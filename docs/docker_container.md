@@ -15,30 +15,39 @@ Note: accelerators are tested only on baremetal Linux OS
 
 ## Quick Start Guide <a name="quickstart"></a>
 
-Start the docker container with OVMS and a public model from the cloud storage:
+Start the docker container with OVMS and a public ResNet50 model from the cloud storage:
 ```bash
-docker run -p 5555:5555 -rm openvino/model_server:latest --model_name resnet --model_path gs://public_bucket/resent --rest_port 5555
-
+docker run -p 9000:9000 openvino/model_server:latest \ 
+--model_name resnet --model_path gs://ovms-public-eu/resnet50-binary \ 
+--layout NHWC --port 9000 
 ```
-
-Run the predication using a python client
+Download image to classify and file with labels mapping:
+```
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/images/zebra.jpeg 
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/classes.py 
+```
+Install Python client package:
+```
+pip3 install ovmsclient
+```
+Run the predication using ovmsclient
 ```python
-import ovmsclient
+import numpy as np
+from classes import imagenet_classes
+from ovmsclient import make_grpc_client
 
+client = make_grpc_client("localhost:9000")
 
+with open("path/to/img.jpeg", "rb") as f:
+   img = f.read()
+
+output = client.predict({"0": img}, "resnet")
+result_index = np.argmax(output[0])
+predicted_class = imagenet_classes[result_index]
 ```
 
 
 Refer also to [Quick Start guide](./ovms_quickstart.md) to set up OpenVINO&trade; Model Server.
-
-
-## References
-
-Links to other pages
-
-## Demos
-
-Links to container demos
 
 ## Detailed steps to pull and build OpenVINO&trade; Model Server docker image
 
@@ -63,9 +72,6 @@ docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
 
 ###  Building the OpenVINO&trade; Model Server Docker Image<a name="sourcecode"></a>
 
-<details><summary>Building a Docker image</summary>
-
-
 To build your own image, use the following command in the [git repository root folder](https://github.com/openvinotoolkit/model_server), 
 
 ```bash
@@ -78,7 +84,6 @@ It will generate the images, tagged as:
 - openvino/model_server-gpu:latest - with CPU, NCS, HDDL and iGPU support,
 - openvino/model_server:latest-nginx-mtls - with CPU, NCS and HDDL support and a reference nginx setup of mTLS integration,
 as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
-</details>
 
 *Note:* Latest images include OpenVINO 2021.4 release.
 
@@ -92,15 +97,3 @@ Additionally you can set version of GPU driver used by the produced image. Curre
 Provide version from the list above as INSTALL_DRIVER_VERSION argument in make command to build image with specific version of the driver like 
 `make docker_build INSTALL_DRIVER_VERSION=19.41.14441`. 
 If not provided, version 20.35.17767 is used.
-
-
-
-
-
-
-
-
-
-
-
-

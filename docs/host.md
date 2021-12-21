@@ -1,7 +1,7 @@
 # Bare Metal and Virtual Hosts {#ovms_docs_baremetal}
 
 ## Introduction
-OpenVINO&trade; Model Server includes a C++ implementation of gRPC and RESTful API interfaces defined by Tensorflow serving. 
+OpenVINO&trade; Model Server includes a C++ implementation of gRPC and RESTful API interfaces defined by TensorFlow Serving. 
 In the backend it uses Inference Engine libraries from OpenVINO&trade; toolkit, which speeds up the execution on CPU, and enables it on iGPU and Movidius devices.
 
 OpenVINO&trade; Model Server can be hosted on a bare metal server, virtual machine or inside a docker container. It is also suitable for landing in Kubernetes environment.
@@ -36,7 +36,7 @@ Look at VPU Plugins to see if your model is supported and use [OpenVINO Model Op
 3. To install Model Server, you could use precompiled version or built it on your own inside a docker container. Build a docker container with automated steps using the command :
    ```Bash
    make docker_build
-   ````
+   ```
 4. The `make docker_build` target will also make a copy of the binary package in a dist subfolder in the model server root directory.
 
 5. Navigate to the folder containing binary package and unpack the included tar.gz file using the command :

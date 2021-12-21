@@ -10,7 +10,7 @@
    ovms_docs_architecture
    ovms_docs_models_repository
    ovms_docs_starting_server
-   ovms_docs_api
+   ovms_docs_server_api
    ovms_docs_clients
    ovms_docs_dag
    ovms_docs_binary_input
@@ -82,56 +82,12 @@ More detailed guides to using Model Server in various scenarios can be found her
 
 * [Serving stateful models](docs/stateful_models.md)
 
-* [Deployment in Kubernetes using helm chart](deploy)
+* [Deployment in Kubernetes using helm chart](deploy/README.md)
 
 * [Deployment using Kubernetes Operator](https://operatorhub.io/operator/ovms-operator)
 
 * [Using binary input data](docs/binary_input.md)
 
-
-## API documentation
-
-### GRPC 
-
-Learn more about [GRPC API](docs/model_server_grpc_api.md)
-
-Refer to the [GRPC example client code](example_client/README.md#grpc-api-client-examples) to learn how to use and submit the requests using the gRPC interface.
-
-### REST
-
-Learn more about [REST API](docs/model_server_rest_api.md)
-
-Refer to the [REST API example client code](./example_client/README.md#rest-api-client-examples) to learn how to use REST API 
-
-### OVMS Python Client Library
-
-For simplified interaction with the model server API, the [Python client library](client/python/lib) has been introduced. It's a set of Python functions and objects that wrap things like:
-- setting connection with the server
-- creating `TensorProto` from data
-- creating requests for model status, model metadata and prediction
-- sending requests to appropriate endpoints
-
-## Testing
-
-Learn more about tests in the [developer guide](docs/developer_guide.md)
-
-
-## Known Limitations
-
-* Currently, `Predict`, `GetModelMetadata` and `GetModelStatus` calls are implemented using Tensorflow Serving API. 
-* `Classify`, `Regress` and `MultiInference` are not included.
-* Output_filter is not effective in the Predict call. All outputs defined in the model are returned to the clients. 
-
-
-## OpenVINO Model Server Contribution Policy
-
-* All contributed code must be compatible with the [Apache 2](https://www.apache.org/licenses/LICENSE-2.0) license.
-
-* All changes have to have pass style, unit and functional tests.
-
-* All new features need to be covered by tests.
-
-Follow a [contributor guide](docs/contributing.md) and a [developer guide](docs/developer_guide.md).
 
 
 ## References

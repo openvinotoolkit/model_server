@@ -1,4 +1,4 @@
-## About this Operator
+## Kubernetes Operator {#ovms_extras_ovms-operator-readme}
 This Operator is based on a [Helm chart](https://github.com/openvinotoolkit/model_server/tree/v2021.3/deploy) for OVMS. 
 It supports all the parameters from the helm chart.
 

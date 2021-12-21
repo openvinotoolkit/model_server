@@ -1,10 +1,6 @@
 # Using AI accelerators {#ovms_docs_target_devices}
 
-### Running OpenVINO&trade; Model Server with AI Accelerators NCS, HDDL and GPU <a name="ai"></a>
-
-<details><summary>Using an Intel Movidius Neural Compute Stick</summary>
-
-#### Prepare to use an Intel Movidius Neural Compute Stick
+## Start the server with an Intel Movidius Neural Compute Stick
 
 [Intel Movidius Neural Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick) can be employed by OVMS via a [MYRIAD
 plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_MYRIAD.html). 
@@ -13,24 +9,21 @@ The Intel Movidius Neural Compute Stick must be visible and accessible on host m
 
 NCS devices should be reported by `lsusb` command, which should print out `ID 03e7:2485`.<br>
 
-
-#### Start the server with an Intel Movidius Neural Compute Stick
-
 To start server with Neural Compute Stick using one of the options below:
+
 1) More secure without docker privileged mode and mounting only the usb devices:
-```
-docker run --rm -it -u 0 --device-cgroup-rule='c 189:* rmw' -v /opt/model:/opt/model -v /dev/bus/usb:/dev/bus/usb -p 9001:9001 openvino/model_server \
---model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
-```
+   ```
+   docker run --rm -it -u 0 --device-cgroup-rule='c 189:* rmw' -v /opt/model:/opt/model -v /dev/bus/usb:/dev/bus/usb -p 9001:9001 openvino/model_server \
+   --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
+   ```
+
 2) less secure in docker privileged mode wth mounted all devices:
-```
-docker run --rm -it --net=host -u root --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 openvino/model_server \
---model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
-```
+   ```
+   docker run --rm -it --net=host -u root --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 openvino/model_server \
+   --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
+   ```
 
-</details>
-
-<details><summary>Starting docker container with HDDL</summary>
+## Starting docker container with HDDL
 
 In order to run container that is using HDDL accelerator, _hddldaemon_ must
  run on host machine. It's required to set up environment 
@@ -51,14 +44,12 @@ docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/mode
 
 Check out our recommendations for [throughput optimization on HDDL](performance_tuning.md#hddl-accelerators)
 
-*Note:* OpenVINO Model Server process in the container communicates with hddldaemon via unix sockets in /var/tmp folder.
+>Note: OpenVINO Model Server process in the container communicates with hddldaemon via unix sockets in /var/tmp folder.
 It requires RW permissions in the docker container security context. It is recommended to start docker container in the
 same context like the account starting hddldaemon. For example if you start the hddldaemon as root, add `--user root` to 
 the `docker run` command.
 
-</details>
-
-<details><summary>Starting docker container with GPU</summary>
+## Starting docker container with GPU
 
 The [GPU plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_GPU.html) uses the Intel Compute Library for Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. 
 It employs for inference execution Intel Processor Graphics including Intel HD Graphics and Intel Iris Graphics.
@@ -88,9 +79,8 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 *Note:* The public docker image includes the OpenCL drivers for GPU in version 20.35.17767. Older version could be used 
 via building the image with a parameter INSTALL_DRIVER_VERSION:
 `make docker_build INSTALL_DRIVER_VERSION=19.41.14441`. The older GPU driver will not support the latest Intel GPU platforms like TigerLake or newer.
-</details>
 
-<details><summary>Using Multi-Device Plugin</summary>
+## Using Multi-Device Plugin
 
 If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
 With Multi-Device Plugin enabled, inference requests will be load balanced between multiple devices. 
@@ -125,9 +115,7 @@ docker run -d --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/m
 After these steps, deployed model will perform inference on both Intel Movidius Neural Compute Stick and CPU.
 Total throughput will be roughly equal to sum of CPU and Intel Movidius Neural Compute Stick throughput.
 
-</details>
-
-<details><summary>Using Heterogeneous Plugin</summary>
+## Using Heterogeneous Plugin
 
 [HETERO plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_HETERO.html) makes it possible to distribute a single inference processing and model between several AI accelerators.
 That way different parts of the DL network can split and executed on optimized devices.
@@ -147,5 +135,3 @@ Below is a config example using heterogeneous plugin with GPU as a primary devic
    }]
 }
 ```
-</details>
-
