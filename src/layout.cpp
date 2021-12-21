@@ -95,6 +95,4 @@ bool LayoutConfiguration::operator!=(const LayoutConfiguration& rhs) const {
     return !(this->operator==(rhs));
 }
 
-// TODO: toString
-
 }  // namespace ovms

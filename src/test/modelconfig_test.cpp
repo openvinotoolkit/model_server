@@ -256,48 +256,50 @@ TEST(ModelConfig, parseShapeFromString) {
 }
 
 TEST(ModelConfig, parseDimParam) {
-    // ovms::ModelConfig config;
-    // // Valid
-    // std::string auto_str = "auto";
-    // std::string valid_str1 = "(64,128,256,300)";
-    // std::string valid_str2 = "{\"input\": \"(1, 3, 3, 200)\"}";
-    // std::string valid_str3 = "{\"input\": \"auto\", \"extra_input\": \"(10)\"}";
+    ovms::ModelConfig config;
+    // Valid
+    std::string auto_str = "auto";
+    std::string valid_str1 = " 24 ";
+    std::string valid_str2 = " 30:32 ";
+    std::string valid_str3 = " -1 ";
 
-    // config.parseShapeParameter(auto_str);
-    // auto shapes = config.getShapes_2();
-    // EXPECT_EQ(shapes[ovms::ANONYMOUS_INPUT_NAME].shapeMode, ovms::AUTO);
+    config.setBatchingParams(auto_str);
+    EXPECT_EQ(config.getBatchingMode(), ovms::AUTO);
+    EXPECT_EQ(config.getBatchSize(), std::nullopt);
 
-    // config.parseShapeParameter(valid_str1);
-    // shapes = config.getShapes_2();
-    // EXPECT_EQ(shapes[ovms::ANONYMOUS_INPUT_NAME].shapeMode, ovms::FIXED);
-    // EXPECT_EQ(shapes[ovms::ANONYMOUS_INPUT_NAME].shape, (ovms::Shape{64, 128, 256, 300}));
+    config.setBatchingParams(valid_str1);
+    EXPECT_EQ(config.getBatchingMode(), ovms::FIXED);
+    EXPECT_EQ(config.getBatchSize(), ovms::Dimension{24});
 
-    // config.parseShapeParameter(valid_str2);
-    // shapes = config.getShapes_2();
-    // EXPECT_EQ(shapes["input"].shapeMode, ovms::FIXED);
-    // EXPECT_EQ(shapes["input"].shape, (ovms::Shape{1, 3, 3, 200}));
+    config.setBatchingParams(valid_str2);
+    EXPECT_EQ(config.getBatchingMode(), ovms::FIXED);
+    EXPECT_EQ(config.getBatchSize(), ovms::Dimension(30, 32));
 
-    // config.parseShapeParameter(valid_str3);
-    // shapes = config.getShapes_2();
-    // EXPECT_EQ(shapes["input"].shapeMode, ovms::AUTO);
-    // EXPECT_EQ(shapes["input"].shape.getSize(), 0);
-    // EXPECT_EQ(shapes["extra_input"].shapeMode, ovms::FIXED);
-    // EXPECT_EQ(shapes["extra_input"].shape, (ovms::Shape{10}));
+    config.setBatchingParams(valid_str3);
+    EXPECT_EQ(config.getBatchingMode(), ovms::FIXED);
+    EXPECT_EQ(config.getBatchSize(), ovms::Dimension::any());
 
-    // // Invalid
+    // Invalid
 
-    // std::string invalid_str1 = "string";
-    // std::string invalid_str2 = "[1, 3, 43]";
-    // std::string invalid_str3 = "{\"input\": \"auto\", \"extra_input\": \"10\"}";
+    std::vector<std::string> invalid_str{
+        std::string{"word"},
+        std::string{":9"},
+        std::string{"9:"},
+        std::string{"9-30"},
+        std::string{"9..30"},
+        std::string{"0"},
+        std::string{"9::30"},
+        std::string{"-90:10"},
+        std::string{"?"},
+        std::string{"2.5:3"},
+        std::string{"500000000000000000"},
+    };
 
-    // auto status = config.parseShapeParameter(invalid_str1);
-    // EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
-
-    // status = config.parseShapeParameter(invalid_str2);
-    // EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
-
-    // status = config.parseShapeParameter(invalid_str3);
-    // EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
+    for (std::string str : invalid_str) {
+        config.setBatchingParams(str);
+        EXPECT_EQ(config.getBatchingMode(), ovms::FIXED) << " invalid for str " << str;
+        EXPECT_EQ(config.getBatchSize(), std::nullopt) << " invalid for str " << str;
+    }
 }
 
 TEST(ModelConfig, parseShapeParam) {

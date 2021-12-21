@@ -134,6 +134,14 @@ Status Dimension::fromString(const std::string& str, Dimension& dimOut) {
             }
         }
     } else {
+        size_t count = std::count(strCopy.begin(), strCopy.end(), '-');
+        if (count > 1) {
+            SPDLOG_ERROR("Parsing dimension string: {}; too many '-' characters", strCopy);
+            return StatusCode::DIM_WRONG_FORMAT;
+        } else if (count == 1 && !strCopy.empty() && *strCopy.begin() != '-') {
+            SPDLOG_ERROR("Parsing dimension string: {}; invalid '-' position", strCopy);
+            return StatusCode::DIM_WRONG_FORMAT;
+        }
         // Number
         if (strCopy.find_first_not_of("0123456789-") != std::string::npos) {
             SPDLOG_ERROR("Parsing dimension string not a number: {}", strCopy);
