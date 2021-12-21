@@ -18,6 +18,8 @@
    ovms_docs_demo_tensorflow_conversion
    ovms_docs_demo_vehicle_analysis
    ovms_example_client_bert_readme
+   ovms_example_client_cpp_readme
+   ovms_example_client_go_readme
 
 @endsphinxdirective
 
@@ -40,6 +42,10 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 
 - [Preparing TensorFlow Model For Serving](tf_model_binary_input.md) - download and convert original TensorFlow model to the format accepted by OpenVINO Model Server.
 
-- [Vehicle Analysis Pipeline](vehicle_analysis.md) - detect vehicles and recognize their attributes using a pipeline of vehicle detection and vehicle attributes recognition models with a custom node for intermediate results processing via gRPC API.
+- [Vehicle Analysis Pipeline](vehicle_analysis_dag.md) - detect vehicles and recognize their attributes using a pipeline of vehicle detection and vehicle attributes recognition models with a custom node for intermediate results processing via gRPC API.
 
 - [Natural Language Processing with BERT](../example_client/bert/README.md) - provide a knowledge source and a query and use BERT model for question answering use case via gRPC API.
+
+- [Run Predictions with C++ application](../example_client/cpp/README.md) - build C++ client application in Docker and use it to run predictions via gRPC API. 
+
+- [Run Predictions with Go application](../example_client/go/README.md) - build Go client application in Docker and use it to run predictions via gRPC API.

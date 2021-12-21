@@ -207,8 +207,6 @@ version parameter is ignored. Pipelines are not versioned. Though, they can refe
 
 ## Pipelines examples <a name="pipeline-examples"></a>
 
-[Models ensemble](ensemble_scheduler.md)
-
 [Single face analysis with combined models](combined_model_dag.md)
 
 [Multiple vehicles analysis using demultiplexer and custom node](vehicles_analysis_dag.md)

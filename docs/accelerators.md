@@ -10,16 +10,18 @@ The Intel Movidius Neural Compute Stick must be visible and accessible on host m
 NCS devices should be reported by `lsusb` command, which should print out `ID 03e7:2485`.<br>
 
 To start server with Neural Compute Stick using one of the options below:
+
 1) More secure without docker privileged mode and mounting only the usb devices:
-```
-docker run --rm -it -u 0 --device-cgroup-rule='c 189:* rmw' -v /opt/model:/opt/model -v /dev/bus/usb:/dev/bus/usb -p 9001:9001 openvino/model_server \
---model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
-```
+   ```
+   docker run --rm -it -u 0 --device-cgroup-rule='c 189:* rmw' -v /opt/model:/opt/model -v /dev/bus/usb:/dev/bus/usb -p 9001:9001 openvino/model_server \
+   --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
+   ```
+
 2) less secure in docker privileged mode wth mounted all devices:
-```
-docker run --rm -it --net=host -u root --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 openvino/model_server \
---model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
-```
+   ```
+   docker run --rm -it --net=host -u root --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 openvino/model_server \
+   --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
+   ```
 
 ## Starting docker container with HDDL
 
@@ -42,7 +44,7 @@ docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/mode
 
 Check out our recommendations for [throughput optimization on HDDL](performance_tuning.md#hddl-accelerators)
 
-*Note:* OpenVINO Model Server process in the container communicates with hddldaemon via unix sockets in /var/tmp folder.
+>Note: OpenVINO Model Server process in the container communicates with hddldaemon via unix sockets in /var/tmp folder.
 It requires RW permissions in the docker container security context. It is recommended to start docker container in the
 same context like the account starting hddldaemon. For example if you start the hddldaemon as root, add `--user root` to 
 the `docker run` command.

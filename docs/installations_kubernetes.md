@@ -1,8 +1,8 @@
 # OpenVINO Model Server in Kubernetes {#ovms_docs_kubernetes}
 
 There are two recommended deployment methods of the OpenVINO Model Server in Kubernetes:
-- [helm chart](../deploy) - deploys OVMS instances using [helm](https://helm.sh) package manager for Kubernetes
-- Kubernetes Operator - manages OVMS using the [Operator](../extras/ovms-operator).  
+- [helm chart](../deploy/README.md) - deploys OVMS instances using [helm](https://helm.sh) package manager for Kubernetes
+- OpenShift Operator - manages OVMS using the [Operator](../extras/openvino-operator-openshift/README.md).  
 
 @sphinxdirective
 

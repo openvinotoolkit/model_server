@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server gRPC API Documentation {#ovms_docs_grpc_api}
+# gRPC API {#ovms_docs_grpc_api}
 
 ## Introduction 
 This documents gives information about OpenVINO&trade; Model Server gRPC API. It is documented in the proto buffer files in [tensorflow_serving_api](https://github.com/tensorflow/serving/tree/r1.14/tensorflow_serving/apis). 
@@ -6,13 +6,12 @@ Using the gRPC interface is recommended for optimal performance due to its faste
 
 This document covers following API:
 * <a href="#model-status">Model Status API</a>
-* <a href="#model-metadata">Model MetaData API </a>
+* <a href="#model-metadata">Model Metadata API </a>
 * <a href="#predict">Predict API </a>
 
 
 > **Note:** The implementations for *Predict*, *GetModelMetadata* and *GetModelStatus* function calls are currently available. 
 These are the most generic function calls and should address most of the usage scenarios.
-
 
 
 ## Model Status API <a name="model-status"></a>
@@ -23,22 +22,19 @@ Gets information about the status of served models including Model Version
 
  [Get Model Status proto](https://github.com/tensorflow/serving/blob/master/tensorflow_serving/apis/get_model_status.proto) defines three message definitions used while calling Status endpoint: *GetModelStatusRequest*, *ModelVersionStatus*, *GetModelStatusResponse* that are used to report all exposed versions including their state in their lifecycle.
 
- Read more about [*Get Model Status API* usage](./../example_client/README.md#model-status-api).     
+ Read more about [Get Model Status API usage](../example_client/README.md#model-status-api).
 
-## Model MetaData API <a name="model-metadata"></a>
 
-- Description
+## Model Metadata API <a name="model-metadata"></a>
 
 Gets information about the served models. A function call GetModelMetadata accepts model spec information as input and returns Signature Definition content in the format similar to TensorFlow Serving.
  
 [Get Model Metadata proto](https://github.com/tensorflow/serving/blob/master/tensorflow_serving/apis/get_model_metadata.proto) has three message definitions: *SignatureDefMap*, *GetModelMetadataRequest*, *GetModelMetadataResponse*. 
 
-Read more about [*Get Model Metadata API* usage](./../example_client/README.md#model-metadata-api).     
+Read more about [Get Model Metadata API usage](../example_client/README.md#model-metadata-api).     
 
 
 ## Predict API <a name="predict"></a>
-
-- Description
 
 Sends requests via TFS gRPC API using images in base64 encoded string or numpy format. It displays performance statistics and optionally the model accuracy.
 To send images in binary format data should be placed in dt_string field of tensor.proto.
@@ -49,13 +45,14 @@ To send images in binary format data should be placed in dt_string field of tens
  * *PredictResponse* includes a map of outputs serialized by 
 [TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) and information about the used model spec.
 
-Read more about *Predict API* usage [here](./../example_client/README.md#predict-api)
+Read more about [Predict API usage](../example_client/README.md#predict-api)
 
 Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
 
+
 ## See Also
 
-- [Example client code](./../example_client/README.md) shows how to use GRPC API and REST API.
+- [Example client code](../example_client/README.md) shows how to use GRPC API and REST API.
 - [TensorFlow Serving](https://github.com/tensorflow/serving)
 - [gRPC](https://grpc.io/)
 

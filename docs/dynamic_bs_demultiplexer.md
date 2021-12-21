@@ -7,7 +7,7 @@ With OpenVINO&trade; Model Server Demultiplexing infer request sent from client 
 
 More information about this feature can be found in [dynamic batch size in demultiplexing](./demultiplexing.md)
 
-*Note:* When using `demultiply_count` parameters, only one demultiplexer can exist in pipeline.
+> Note: When using `demultiply_count` parameters, only one demultiplexer can exist in pipeline.
 
 - Example client in python grpc_serving_client.py can be used to request the pipeline. Use `--dag-batch-size-auto` flag to add additional dimension to the input shape which is required for demultiplexing feature.
 
