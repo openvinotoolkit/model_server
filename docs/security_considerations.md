@@ -11,3 +11,7 @@ docker run --rm -d --user $(id -u):$(id -g) --read-only --tmpfs /tmp -v ${pwd}/m
 
 ``` 
 OpenVINO Model Server currently doesn't provide access restrictions and traffic encryption on gRPC and REST API endpoints. The endpoints can be secured using network settings like docker network settings or network firewall on the host. The recommended configuration is to place OpenVINO Model Server behind any reverse proxy component or load balancer, which provides traffic encryption and user authorization.
+
+See also:
+- [Securing OVMS with NGINX](../extras/nginx-mtls-auth/README.md)
+- [Securing models with OVSA](ovsa_get_started)

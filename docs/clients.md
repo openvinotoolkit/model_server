@@ -185,8 +185,6 @@ Creating client application in Python is probably the simplest due to existance 
         inputs = {"input_name": data}
         results = client.predict(inputs=inputs, model_name="my_model")
 
-    For complete usage examples see [ovmsclient samples](../client/python/samples/README.md)
-
 
 .. tab:: tensorflow-serving-api  
 
@@ -207,6 +205,8 @@ Creating client application in Python is probably the simplest due to existance 
         results = make_ndarray(predict_response.outputs["output_name"])
 
 @endsphinxdirective
+
+For complete usage examples see [ovmsclient samples](../client/python/samples/README.md)
 
 ## C++ client
 
