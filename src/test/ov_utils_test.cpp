@@ -25,83 +25,81 @@ using testing::ElementsAre;
 
 TEST(OVUtils, CopyBlob) {
     const std::vector<size_t> shape{2, 3, 4, 5};
-    const InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
-    const InferenceEngine::Layout layout{InferenceEngine::Layout::NCHW};
+    const auto elementType = ov::element::Type_t::f32;
     const size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-    const size_t totalByteSize = elementsCount * precision.size();
-
-    const InferenceEngine::TensorDesc desc{precision, shape, layout};
+    const size_t f32_size = 4;
+    const size_t totalByteSize = elementsCount * f32_size;
 
     std::vector<float> data(elementsCount);
     std::iota(data.begin(), data.end(), 0);
 
-    InferenceEngine::Blob::Ptr originalBlob = InferenceEngine::make_shared_blob<float>(desc, data.data());
-    InferenceEngine::Blob::Ptr copyBlob = nullptr;
-    ASSERT_EQ(ovms::blobClone(copyBlob, originalBlob), ovms::StatusCode::OK);
+    ov::runtime::Tensor originalTensor(elementType, shape, data.data());
+    std::shared_ptr<ov::runtime::Tensor> copyTensor = nullptr;
 
-    ASSERT_EQ(originalBlob->getTensorDesc().getDims(), shape);
-    ASSERT_EQ(copyBlob->getTensorDesc().getDims(), shape);
+    ASSERT_EQ(ovms::tensorClone(copyTensor, originalTensor), ovms::StatusCode::OK);
 
-    ASSERT_EQ(originalBlob->getTensorDesc().getLayout(), layout);
-    ASSERT_EQ(copyBlob->getTensorDesc().getLayout(), layout);
+    ASSERT_EQ(originalTensor.get_shape(), shape);
+    ASSERT_EQ(copyTensor->get_shape(), shape);
 
-    ASSERT_EQ(originalBlob->getTensorDesc().getPrecision(), precision);
-    ASSERT_EQ(copyBlob->getTensorDesc().getPrecision(), precision);
+    ASSERT_EQ(originalTensor.get_element_type(), elementType);
+    ASSERT_EQ(copyTensor->get_element_type(), elementType);
+    
+    ASSERT_EQ(originalTensor.get_byte_size(), totalByteSize);
+    ASSERT_EQ(copyTensor->get_byte_size(), totalByteSize);
 
-    ASSERT_EQ(originalBlob->byteSize(), totalByteSize);
-    ASSERT_EQ(copyBlob->byteSize(), totalByteSize);
+    ASSERT_EQ(copyTensor->get_strides(), originalTensor.get_strides());
 
-    std::vector<float> originalBlobActualData;
-    originalBlobActualData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(originalBlob)->rmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(originalBlob)->rmap().as<float*>() + elementsCount);
 
-    std::vector<float> copyBlobActualData;
-    copyBlobActualData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(copyBlob)->rwmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(copyBlob)->rwmap().as<float*>() + elementsCount);
+    std::vector<float> originalTensorActualData;
+    originalTensorActualData.assign(static_cast<float*>(originalTensor.data()), static_cast<float*>(originalTensor.data()) + elementsCount);
 
-    EXPECT_EQ(originalBlobActualData, data);
-    EXPECT_EQ(copyBlobActualData, data);
+    std::vector<float> copyTensorActualData;
+    copyTensorActualData.assign(static_cast<float*>(copyTensor->data()), static_cast<float*>(copyTensor->data()) + elementsCount);
+
+    EXPECT_EQ(originalTensorActualData, data);
+    EXPECT_EQ(copyTensorActualData, data);
 
     // Expect memory addresses to differ since cloning should allocate new memory space for the cloned blob
-    EXPECT_NE(InferenceEngine::as<InferenceEngine::MemoryBlob>(copyBlob)->rwmap().as<float*>(), InferenceEngine::as<InferenceEngine::MemoryBlob>(originalBlob)->rwmap().as<float*>());
+    EXPECT_NE(originalTensor.data(), copyTensor->data());
 }
 
 TEST(OVUtils, ConstCopyBlob) {
     const std::vector<size_t> shape{2, 3, 4, 5};
-    const InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
-    const InferenceEngine::Layout layout{InferenceEngine::Layout::NCHW};
+    const auto elementType = ov::element::Type_t::f32;
     const size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-    const size_t totalByteSize = elementsCount * precision.size();
-
-    const InferenceEngine::TensorDesc desc{precision, shape, layout};
+    const size_t f32_size = 4;
+    const size_t totalByteSize = elementsCount * f32_size;
 
     std::vector<float> data(elementsCount);
     std::iota(data.begin(), data.end(), 0);
 
-    InferenceEngine::Blob::CPtr originalBlob = InferenceEngine::make_shared_blob<float>(desc, data.data());
-    InferenceEngine::Blob::Ptr copyBlob = nullptr;
-    ASSERT_EQ(ovms::blobClone(copyBlob, originalBlob), ovms::StatusCode::OK);
+    ov::runtime::Tensor originalTensor(elementType, shape, data.data());
+    std::shared_ptr<ov::runtime::Tensor> copyTensor = nullptr;
 
-    ASSERT_EQ(originalBlob->getTensorDesc().getDims(), shape);
-    ASSERT_EQ(copyBlob->getTensorDesc().getDims(), shape);
+    ASSERT_EQ(ovms::tensorClone(copyTensor, originalTensor), ovms::StatusCode::OK);
 
-    ASSERT_EQ(originalBlob->getTensorDesc().getLayout(), layout);
-    ASSERT_EQ(copyBlob->getTensorDesc().getLayout(), layout);
+    ASSERT_EQ(originalTensor.get_shape(), shape);
+    ASSERT_EQ(copyTensor->get_shape(), shape);
 
-    ASSERT_EQ(originalBlob->getTensorDesc().getPrecision(), precision);
-    ASSERT_EQ(copyBlob->getTensorDesc().getPrecision(), precision);
+    ASSERT_EQ(originalTensor.get_element_type(), elementType);
+    ASSERT_EQ(copyTensor->get_element_type(), elementType);
+    
+    ASSERT_EQ(originalTensor.get_byte_size(), totalByteSize);
+    ASSERT_EQ(copyTensor->get_byte_size(), totalByteSize);
 
-    ASSERT_EQ(originalBlob->byteSize(), totalByteSize);
-    ASSERT_EQ(copyBlob->byteSize(), totalByteSize);
+    ASSERT_EQ(copyTensor->get_strides(), originalTensor.get_strides());
 
-    std::vector<float> originalBlobActualData;
-    const void* start = (const void*)(InferenceEngine::as<InferenceEngine::MemoryBlob>(originalBlob)->rmap());
-    originalBlobActualData.assign((float*)start, (float*)start + elementsCount);
 
-    std::vector<float> copyBlobActualData;
-    copyBlobActualData.assign(InferenceEngine::as<InferenceEngine::MemoryBlob>(copyBlob)->rmap().as<float*>(), (InferenceEngine::as<InferenceEngine::MemoryBlob>(copyBlob)->rmap().as<float*>()) + elementsCount);
+    std::vector<float> originalTensorActualData;
+    const void* start = (const void*)(originalTensor.data());
+    originalTensorActualData.assign((float*)start, (float*)start + elementsCount);
 
-    EXPECT_EQ(originalBlobActualData, data);
-    EXPECT_EQ(copyBlobActualData, data);
+    std::vector<float> copyTensorActualData;
+    copyTensorActualData.assign(static_cast<float*>(copyTensor->data()), static_cast<float*>(copyTensor->data()) + elementsCount);
+
+    EXPECT_EQ(originalTensorActualData, data);
+    EXPECT_EQ(copyTensorActualData, data);
 
     // Expect memory addresses to differ since cloning should allocate new memory space for the cloned blob
-    EXPECT_NE(InferenceEngine::as<InferenceEngine::MemoryBlob>(copyBlob)->rwmap().as<void*>(), (const void*)InferenceEngine::as<InferenceEngine::MemoryBlob>(originalBlob)->rmap());
+    EXPECT_NE(originalTensor.data(), copyTensor->data());
 }
