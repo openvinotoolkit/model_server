@@ -97,12 +97,12 @@ std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const Ten
     return inputTensors;
 }
 
-Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std::map<std::string, std::shared_ptr<TensorInfo>>& out, release_fn freeCallback, void* customNodeLibraryInternalManager) {
+Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std::map<std::string, std::shared_ptr<TensorInfo>>& out, release_fn freeCallback, std::shared_ptr<void*>& customNodeLibraryInternalManager) {
     if (info == nullptr) {
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED;
     }
     if (infoCount <= 0) {
-        freeCallback(info, customNodeLibraryInternalManager);
+        freeCallback(info, *customNodeLibraryInternalManager.get());
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT;
     }
     // At this point it is important to not exit before we iterate over every info object.
@@ -112,7 +112,7 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std
             continue;
         }
         if (info[i].dimsCount == 0) {
-            freeCallback(info[i].dims, customNodeLibraryInternalManager);
+            freeCallback(info[i].dims, *customNodeLibraryInternalManager.get());
             continue;
         }
         if (info[i].name == nullptr) {
@@ -127,10 +127,10 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std
             shape.add(dim ? Dimension(dim) : Dimension::any());
         }
 
-        freeCallback(info[i].dims, customNodeLibraryInternalManager);
+        freeCallback(info[i].dims, *customNodeLibraryInternalManager.get());
         out.emplace(name, std::make_shared<TensorInfo>(name, precision, std::move(shape)));
     }
-    freeCallback(info, customNodeLibraryInternalManager);
+    freeCallback(info, *customNodeLibraryInternalManager.get());
     return StatusCode::OK;
 }
 

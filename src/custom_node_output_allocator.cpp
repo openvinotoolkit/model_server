@@ -34,13 +34,13 @@ void* CustomNodeOutputAllocator_2::allocate(const size_t bytes, const size_t ali
     return (void*)tensor.data;
 }
 void CustomNodeOutputAllocator_2::deallocate(void* handle, const size_t bytes, size_t alignment) {
-    bool succeeded = nodeLibrary.release(tensor.data, customNodeLibraryInternalManager.get()) == 0;
+    bool succeeded = nodeLibrary.release(tensor.data, *customNodeLibraryInternalManager.get()) == 0;
     if (false == succeeded) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to release custom node tensor:{} buffer using library:{}", tensor.name, nodeLibrary.basePath);
     }
 }
 bool CustomNodeOutputAllocator_2::is_equal(const CustomNodeOutputAllocator_2& other) const {
-    return (customNodeLibraryInternalManager.get() == other.customNodeLibraryInternalManager.get()) &&
+    return (*customNodeLibraryInternalManager.get() == *other.customNodeLibraryInternalManager.get()) &&
            (nodeLibrary == other.nodeLibrary) &&
            (tensor == other.tensor);
 }

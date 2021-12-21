@@ -102,7 +102,9 @@ Status PipelineDefinition::initializeNodeResources() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Initialization of library with base path: {} failed", nodeInfo.library.basePath);
                 return StatusCode::NODE_LIBRARY_INITIALIZE_FAILED;
             }
-            std::shared_ptr<void*> sharedCustomNodeLibraryInternalManager(&customNodeLibraryInternalManager, [](void** ptr) { std::cout << "deinit of shared ptr" << std::endl; });
+            // std::shared_ptr<void*> sharedCustomNodeLibraryInternalManager(&customNodeLibraryInternalManager, [](void** ptr) { std::cout << "deinit of shared ptr" << std::endl; });
+            // std::shared_ptr<void*> sharedCustomNodeLibraryInternalManager(&customNodeLibraryInternalManager);
+            std::shared_ptr<void*> sharedCustomNodeLibraryInternalManager = std::make_shared<void*>(customNodeLibraryInternalManager);
             nodeResources.insert({nodeInfo.nodeName, sharedCustomNodeLibraryInternalManager});
         }
     }
@@ -705,7 +707,7 @@ public:
                 this->inputsInfo,
                 dependantNodeInfo.library.getInputsInfo,
                 this->pipelineName,
-                nodeResources.at(dependantNodeInfo.nodeName).get());
+                nodeResources.at(dependantNodeInfo.nodeName));
             if (!result.ok()) {
                 return result;
             }
@@ -714,7 +716,7 @@ public:
                 this->outputsInfo,
                 dependantNodeInfo.library.getOutputsInfo,
                 this->pipelineName,
-                nodeResources.at(dependantNodeInfo.nodeName).get());
+                nodeResources.at(dependantNodeInfo.nodeName));
             if (!result.ok()) {
                 return result;
             }
@@ -733,7 +735,7 @@ public:
             this->dependencyInputsInfo,
             dependencyNodeInfo.library.getInputsInfo,
             this->pipelineName,
-            nodeResources.at(dependencyNodeInfo.nodeName).get());
+            nodeResources.at(dependencyNodeInfo.nodeName));
         if (!result.ok()) {
             return result;
         }
@@ -742,7 +744,7 @@ public:
             this->dependencyOutputsInfo,
             dependencyNodeInfo.library.getOutputsInfo,
             this->pipelineName,
-            nodeResources.at(dependencyNodeInfo.nodeName).get());
+            nodeResources.at(dependencyNodeInfo.nodeName));
         if (!result.ok()) {
             return result;
         }
@@ -1123,7 +1125,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
 
                 tensor_map_t info;
                 auto status = getCustomNodeMetadata(*dependantNodeInfo, info, dependantNodeInfo->library.getInputsInfo, this->getName(),
-                    nodeResources.at(dependantNodeInfo->nodeName).get());
+                    nodeResources.at(dependantNodeInfo->nodeName));
                 if (!status.ok()) {
                     return status;
                 }
@@ -1191,7 +1193,7 @@ Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeIn
     }
     tensor_map_t info;
     auto status = getCustomNodeMetadata(dependencyNodeInfo, info, dependencyNodeInfo.library.getOutputsInfo, this->getName(),
-        nodeResources.at(dependencyNodeInfo.nodeName).get());
+        nodeResources.at(dependencyNodeInfo.nodeName));
     if (!status.ok()) {
         return status;
     }
@@ -1256,14 +1258,13 @@ Status PipelineDefinition::updateOutputsInfo(const ModelManager& manager) {
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName, void* customNodeLibraryInternalManager) {
+Status PipelineDefinition::getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName, std::shared_ptr<void*>& customNodeLibraryInternalManager) {
     struct CustomNodeTensorInfo* info = nullptr;
     int infoCount = 0;
     auto paramArray = createCustomNodeParamArray(customNodeInfo.parameters);
     int paramArrayLength = customNodeInfo.parameters.size();
     std::cout << "ALASKA" << std::endl;
-    std::cout << customNodeLibraryInternalManager << std::endl;
-    int result = callback(&info, &infoCount, paramArray.get(), paramArrayLength, customNodeLibraryInternalManager);
+    int result = callback(&info, &infoCount, paramArray.get(), paramArrayLength, *customNodeLibraryInternalManager.get());
     if (result != 0) {
         SPDLOG_ERROR("Metadata call to custom node: {} in pipeline: {} returned error code: {}",
             customNodeInfo.nodeName, pipelineName, result);
@@ -1302,7 +1303,7 @@ Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
                         nodeOutputsInfo,
                         someNodeInfo.library.getOutputsInfo,
                         this->pipelineName,
-                        nodeResources.at(someNodeInfo.nodeName).get());
+                        nodeResources.at(someNodeInfo.nodeName));
                     if (!result.ok()) {
                         SPDLOG_ERROR("Failed to read node: {} library metadata with error: {}", nodeName, result.string());
                         return;

@@ -67,7 +67,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         &outputTensorsCount,
         parameters.get(),
         parametersCount,
-        customNodeLibraryInternalManager.get());
+        *customNodeLibraryInternalManager.get());
     this->timer->stop("execution");
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Custom node execution processing time for node {}; session: {} - {} ms",
         this->getName(),
@@ -90,7 +90,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
 
     if (outputTensorsCount <= 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; has corrupted number of outputs", getName(), getSessionKey());
-        library.release(outputTensors, customNodeLibraryInternalManager.get());
+        library.release(outputTensors, *customNodeLibraryInternalManager.get());
         notifyEndQueue.push({node, getSessionKey()});
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT;
     }
@@ -117,7 +117,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         this->resultBlobs.emplace(std::string(outputTensors[i].name), std::move(resultBlob));
     }
 
-    library.release(outputTensors, customNodeLibraryInternalManager.get());
+    library.release(outputTensors, *customNodeLibraryInternalManager.get());
     notifyEndQueue.push({node, getSessionKey()});
     return status;
 }
@@ -153,10 +153,10 @@ public:
         customNodeLibraryInternalManager(customNodeLibraryInternalManager) {}
     ~TensorResourcesGuard() {
         if (tensor->data && !persistData) {
-            library.release(tensor->data, customNodeLibraryInternalManager.get());
+            library.release(tensor->data, *customNodeLibraryInternalManager.get());
         }
         if (tensor->dims) {
-            library.release(tensor->dims, customNodeLibraryInternalManager.get());
+            library.release(tensor->dims, *customNodeLibraryInternalManager.get());
         }
     }
     void setPersistData() {
