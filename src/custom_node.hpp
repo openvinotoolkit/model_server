@@ -46,7 +46,7 @@ public:
         const std::unordered_map<std::string, std::string>& nodeOutputNameAlias = {},
         std::optional<uint32_t> demultiplyCount = std::nullopt,
         std::set<std::string> gatherFromNode = {},
-        std::shared_ptr<void*> customNodeLibraryInternalManager = nullptr);
+        std::shared_ptr<void*> customNodeLibraryInternalManager = std::make_shared<void*>(nullptr));
 
     Status execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) override;
 

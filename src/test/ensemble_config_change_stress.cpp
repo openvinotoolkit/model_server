@@ -1570,9 +1570,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangePara
         allowedLoadResults);
 }
 
-// Disabled with new CN API with option to reinitialize during execution/metadata operations. In order for this test to work
-// adjustments regarding to CustomNodeLibraryInternalManager and ovms(pipelinedefinition) behavior during reload need to be made.
-TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_ReduceQueueSizeCustomLibraryDuringPredictLoad) {
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ReduceQueueSizeCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
@@ -1585,9 +1583,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_R
         allowedLoadResults);
 }
 
-// Disabled with new CN API with option to reinitialize during execution/metadata operations. In order for this test to work
-// adjustments regarding to CustomNodeLibraryInternalManager and ovms(pipelinedefinition) behavior during reload need to be made.
-TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_IncreaseQueueSizeCustomLibraryDuringPredictLoad) {
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, IncreaseQueueSizeCustomLibraryDuringPredictLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
@@ -1640,9 +1636,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangePara
         allowedLoadResults);
 }
 
-// Disabled with new CN API with option to reinitialize during execution/metadata operations. In order for this test to work
-// adjustments regarding to CustomNodeLibraryInternalManager and ovms(pipelinedefinition) behavior during reload need to be made.
-TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_ReduceQueueSizeCustomLibraryDuringGetMetadataLoad) {
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ReduceQueueSizeCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation
@@ -1655,9 +1649,7 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_R
         allowedLoadResults);
 }
 
-// Disabled with new CN API with option to reinitialize during execution/metadata operations. In order for this test to work
-// adjustments regarding to CustomNodeLibraryInternalManager and ovms(pipelinedefinition) behavior during reload need to be made.
-TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, DISABLED_IncreaseQueueSizeCustomLibraryDuringGetMetadataLoad) {
+TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, IncreaseQueueSizeCustomLibraryDuringGetMetadataLoad) {
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuouity of operation

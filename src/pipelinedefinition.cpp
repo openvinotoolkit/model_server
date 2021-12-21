@@ -103,7 +103,7 @@ Status PipelineDefinition::initializeNodeResources() {
                 return StatusCode::NODE_LIBRARY_INITIALIZE_FAILED;
             }
             // std::shared_ptr<void*> sharedCustomNodeLibraryInternalManager(&customNodeLibraryInternalManager, [](void** ptr) { std::cout << "deinit of shared ptr" << std::endl; });
-            // std::shared_ptr<void*> sharedCustomNodeLibraryInternalManager(&customNodeLibraryInternalManager);
+            // std::shared_ptr<void*> sharedCustomNodeLibraryInternalManager(customNodeLibraryInternalManager);
             std::shared_ptr<void*> sharedCustomNodeLibraryInternalManager = std::make_shared<void*>(customNodeLibraryInternalManager);
             nodeResources.insert({nodeInfo.nodeName, sharedCustomNodeLibraryInternalManager});
         }
@@ -1263,14 +1263,12 @@ Status PipelineDefinition::getCustomNodeMetadata(const NodeInfo& customNodeInfo,
     int infoCount = 0;
     auto paramArray = createCustomNodeParamArray(customNodeInfo.parameters);
     int paramArrayLength = customNodeInfo.parameters.size();
-    std::cout << "ALASKA" << std::endl;
     int result = callback(&info, &infoCount, paramArray.get(), paramArrayLength, *customNodeLibraryInternalManager.get());
     if (result != 0) {
         SPDLOG_ERROR("Metadata call to custom node: {} in pipeline: {} returned error code: {}",
             customNodeInfo.nodeName, pipelineName, result);
         return StatusCode::NODE_LIBRARY_METADATA_FAILED;
     }
-    std::cout << "TEXAS" << std::endl;
     return createTensorInfoMap(info, infoCount, inputsInfo, customNodeInfo.library.release, customNodeLibraryInternalManager);
 }
 
