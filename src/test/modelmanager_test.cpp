@@ -63,6 +63,27 @@ const char* config_2_models = R"({
     }]
 })";
 
+const char* config_2_models_new = R"({
+   "model_config_list": [
+    {
+      "config": {
+        "name": "resnet",
+        "base_path": "/tmp/models/dummy1",
+        "target_device": "CPU",
+        "model_version_policy": {"all": {}}
+      }
+    },
+    {
+      "config": {
+        "name": "alpha",
+        "base_path": "/tmp/models/dummy2",
+        "target_device": "CPU",
+	"batch_size": "auto",
+        "model_version_policy": {"all": {}}
+      }
+    }]
+})";
+
 const std::string FIRST_MODEL_NAME = "resnet";
 const std::string SECOND_MODEL_NAME = "alpha";
 
@@ -265,7 +286,7 @@ TEST(ModelManager, configRelodNeededManyThreads) {
 
     manager.configFileReloadNeeded(isNeeded);
     EXPECT_EQ(isNeeded, false);
-    createConfigFileWithContent(config_2_models, configFile);
+    createConfigFileWithContent(config_2_models_new, configFile);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     for (int i = 0; i < numberOfThreads; i++) {
@@ -293,7 +314,7 @@ TEST(ModelManager, configReloadNeededChange) {
     manager.configFileReloadNeeded(isNeeded);
     EXPECT_EQ(isNeeded, false);
 
-    createConfigFileWithContent(config_2_models, configFile);
+    createConfigFileWithContent(config_2_models_new, configFile);
     std::this_thread::sleep_for(std::chrono::seconds(1));
     manager.configFileReloadNeeded(isNeeded);
     EXPECT_EQ(isNeeded, true);
@@ -345,7 +366,7 @@ TEST(ModelManager, configReloadNeededBeforeConfigLoad) {
     manager.configFileReloadNeeded(isNeeded);
     EXPECT_EQ(isNeeded, false);
 
-    createConfigFileWithContent(config_2_models, configFile);
+    createConfigFileWithContent(config_2_models_new, configFile);
     std::this_thread::sleep_for(std::chrono::seconds(1));
     manager.configFileReloadNeeded(isNeeded);
     EXPECT_EQ(isNeeded, true);
