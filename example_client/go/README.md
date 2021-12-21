@@ -1,4 +1,4 @@
-# Go client for prediction
+# Go client for prediction{#ovms_example_client_go_readme}
 
 This client has been created to demostrate how to interact with OpenVINO Model Server prediction endpoint from Go application. Presented example demonstrates end to end flow for running classification on JPG/PNG image using ResNet50 model. For simplicity of the environment setup, the example is run in the Docker container.
 
