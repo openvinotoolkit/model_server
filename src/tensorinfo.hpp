@@ -97,6 +97,9 @@ public:
     TensorInfo(const std::string& name,
         const Precision& precision,
         const shape_t& shape);
+    TensorInfo(const std::string& name,
+        const Precision& precision,
+        const Shape& shape);
 
     /**
          * @brief Construct a new Tensor Info object
@@ -259,9 +262,10 @@ public:
 
     bool isInfluencedByDemultiplexer() const;
 
-    std::shared_ptr<TensorInfo> createCopyWithNewShape(const shape_t& shape) const;
+    std::shared_ptr<TensorInfo> createCopyWithNewShape(const Shape& shape) const;
 
-    std::shared_ptr<TensorInfo> createCopyWithEffectiveDimensionPrefix(size_t dim) const;
+    std::shared_ptr<TensorInfo> createCopyWithEffectiveDimensionPrefix(const Dimension& dim) const;
+    std::shared_ptr<TensorInfo> createCopyWithEffectiveDimensionPrefix(dimension_value_t dim) const;
 
     /**
          * @brief Get the Tensor Desc object

@@ -62,14 +62,15 @@ public:
     std::string toString() const;
 
     static Dimension any();
+
+    bool match(dimension_value_t value) const;
+    bool isAny() const;
 };
 
-class Shape {
-    std::vector<Dimension> dimensions;
-
+class Shape : public std::vector<Dimension> {
 public:
     Shape();
-
+    Shape(const shape_t& s);
     // Create shape out of ovms::Shape{1, 5, 100, 100}
     Shape(std::initializer_list<Dimension> list);
 
@@ -79,9 +80,10 @@ public:
     // Create ovms::Shape out of ov::PartialShape.
     Shape(const ov::PartialShape& shape);
 
+    Shape& add(const Dimension& dim, size_t pos);
     Shape& add(const Dimension& dim);
 
-    size_t getSize() const;
+    //    size_t getSize() const;
 
     bool isStatic() const;
     bool isDynamic() const;

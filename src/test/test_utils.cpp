@@ -101,6 +101,7 @@ void checkIncrement4DimResponse(const std::string outputName,
 }
 
 bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vector<int64_t>&& expected) {
+    bool same = true;
     if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
         SPDLOG_ERROR("Unexpected dim_size. Got: {}, Expect: {}", actual.dim_size(), expected.size());
         return false;
@@ -108,8 +109,19 @@ bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vecto
     for (int i = 0; i < actual.dim_size(); i++) {
         if (actual.dim(i).size() != expected[i]) {
             SPDLOG_ERROR("Unexpected dim[{}]. Got: {}, Expect: {}", i, actual.dim(i).size(), expected[i]);
-            return false;
+            same = false;
         }
+    }
+    if (same == false) {
+        std::stringstream ss;
+        for (int i = 0; i < actual.dim_size(); i++) {
+            ss << "dim["
+               << i
+               << "] got:"
+               << actual.dim(i).size()
+               << " expect:" << expected[i];
+        }
+        SPDLOG_ERROR("Shape mismatch: {}", ss.str());
     }
     return true;
 }

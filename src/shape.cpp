@@ -170,6 +170,27 @@ Status Dimension::fromString(const std::string& str, Dimension& dimOut) {
     return StatusCode::OK;
 }
 
+bool Dimension::isAny() const {
+    return (this->maximum == DYNAMIC_DIMENSION) &&
+           (this->minimum == DYNAMIC_DIMENSION);
+}
+
+bool Dimension::match(dimension_value_t value) const {
+    if (isAny()) {
+        return true;
+    }
+    if (isStatic()) {
+        return getStaticValue() == value;
+    }
+    if (value < getMinValue()) {
+        return false;
+    }
+    if (value > getMaxValue()) {
+        return false;
+    }
+    return true;
+}
+
 std::string Dimension::toString() const {
     std::stringstream ss;
 
@@ -193,10 +214,13 @@ Dimension Dimension::any() {
 Shape::Shape() {
 }
 
-Shape::Shape(std::initializer_list<Dimension> list) {
-    this->dimensions.reserve(list.size());
-    for (const Dimension& dim : list) {
-        this->dimensions.emplace_back(dim);
+Shape::Shape(std::initializer_list<Dimension> list) :
+    std::vector<Dimension>(list) {}
+
+Shape::Shape(const shape_t& s) {
+    auto status = fromFlatShape(s, *this);
+    if (!status.ok()) {
+        throw 42;  // TODO this constructor is to be removed during 1.0 API cleanup
     }
 }
 
@@ -214,32 +238,36 @@ Status Shape::fromFlatShape(const shape_t& shapeIn, Shape& shapeOut) {
 }
 
 Shape::Shape(const ov::PartialShape& shape) {
-    this->dimensions.reserve(shape.size());
+    this->reserve(shape.size());
     for (const ov::Dimension& dim : shape) {
         if (dim.is_static()) {
-            this->dimensions.emplace_back(Dimension{dim.get_length()});
+            this->emplace_back(Dimension{dim.get_length()});
         } else if (!dim.get_interval().has_upper_bound()) {
-            this->dimensions.emplace_back(Dimension::any());
+            this->emplace_back(Dimension::any());
         } else {
-            this->dimensions.emplace_back(Dimension{dim.get_min_length(), dim.get_max_length()});
+            this->emplace_back(Dimension{dim.get_min_length(), dim.get_max_length()});
         }
     }
 }
 
 Shape& Shape::add(const Dimension& dim) {
-    this->dimensions.emplace_back(dim);
+    return this->add(dim, this->size());
+}
+Shape& Shape::add(const Dimension& dim, size_t pos) {
+    this->emplace(this->begin() + pos, dim);
     return *this;
 }
 
-size_t Shape::getSize() const {
-    return this->dimensions.size();
-}
+/*size_t Shape::getSize() const {
+    // TODO dispose
+    return this->size();
+}*/
 
 ov::PartialShape Shape::createPartialShape() const {
     ov::PartialShape shape;
 
-    shape.reserve(this->dimensions.size());
-    for (const Dimension& dim : this->dimensions) {
+    shape.reserve(this->size());
+    for (const Dimension& dim : *this) {
         if (dim.isStatic()) {
             shape.push_back(ov::Dimension(dim.getStaticValue()));
         } else {
@@ -252,9 +280,9 @@ ov::PartialShape Shape::createPartialShape() const {
 
 shape_t Shape::getFlatShape() const {
     shape_t shape;
-    shape.reserve(this->dimensions.size());
+    shape.reserve(this->size());
 
-    for (const Dimension& dim : this->dimensions) {
+    for (const Dimension& dim : *this) {
         if (dim.getAnyValue() <= 0)
             shape.emplace_back(0);
         else
@@ -265,11 +293,11 @@ shape_t Shape::getFlatShape() const {
 }
 
 bool Shape::operator==(const Shape& rhs) const {
-    if (this->dimensions.size() != rhs.dimensions.size())
+    if (this->size() != rhs.size())
         return false;
 
-    for (size_t i = 0; i < this->dimensions.size(); i++) {
-        if (this->dimensions[i] != rhs.dimensions[i]) {
+    for (size_t i = 0; i < this->size(); i++) {
+        if ((*this)[i] != rhs[i]) {
             return false;
         }
     }
@@ -285,12 +313,12 @@ std::string Shape::toString() const {
 
     ss << "(";
 
-    size_t dimensionCount = this->dimensions.size();
+    size_t dimensionCount = this->size();
     if (dimensionCount > 0) {
         for (size_t i = 0; i < dimensionCount - 1; i++) {
-            ss << this->dimensions[i].toString() << ",";
+            ss << (*this)[i].toString() << ",";
         }
-        ss << this->dimensions[dimensionCount - 1].toString();
+        ss << (*this)[dimensionCount - 1].toString();
     }
 
     ss << ")";
