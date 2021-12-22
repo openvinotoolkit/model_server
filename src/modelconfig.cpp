@@ -32,16 +32,6 @@
 
 namespace ovms {
 
-const std::set<std::string> ModelConfig::configAllowedLayouts{"NCHW", "NHWC"};
-
-ShapeInfo::operator std::string() const {
-    if (shapeMode == Mode::AUTO)
-        return std::string("auto");
-    std::stringstream shapeStream;
-    std::copy(this->shape.begin(), this->shape.end(), std::ostream_iterator<size_t>(shapeStream, " "));
-    return shapeStream.str();
-}
-
 bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
     if (this->name != rhs.name) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to name mismatch", this->name);
@@ -75,7 +65,7 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to batching mode mismatch", this->name);
         return true;
     }
-    if (this->batchSize != rhs.batchSize) {
+    if (!isBatchSizeConfigurationEqual(rhs)) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to batch size mismatch", this->name);
         return true;
     }
@@ -87,11 +77,7 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to plugin config mismatch", this->name);
         return true;
     }
-    if (this->layout != rhs.layout) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to no named layout mismatch", this->name);
-        return true;
-    }
-    if (this->layouts != rhs.layouts) {
+    if (!isLayoutConfigurationEqual(rhs)) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to named layout mismatch", this->name);
         return true;
     }
@@ -122,6 +108,36 @@ bool ModelConfig::isCustomLoaderConfigChanged(const ModelConfig& rhs) const {
     return false;
 }
 
+bool ModelConfig::isBatchSizeConfigurationEqual(const ModelConfig& rhs) const {
+    if (this->batchSize.has_value() != rhs.batchSize.has_value()) {
+        return false;
+    }
+    if (this->batchSize.has_value() && this->batchSize.value() != rhs.batchSize.value()) {
+        return false;
+    }
+    return true;
+}
+
+bool ModelConfig::isLayoutConfigurationEqual(const ModelConfig& rhs) const {
+    if (this->layout_2 != rhs.layout_2) {
+        return false;
+    }
+
+    if (this->layouts_2.size() != rhs.layouts_2.size()) {
+        return false;
+    }
+    for (const auto& [name, layoutConfig] : this->layouts_2) {
+        auto it = rhs.layouts_2.find(name);
+        if (it == rhs.layouts_2.end()) {
+            return false;
+        }
+        if (layoutConfig != it->second) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool ModelConfig::isShapeConfigurationEqual(const ModelConfig& rhs) const {
     if (this->shapes_2.size() != rhs.shapes_2.size()) {
         return false;
@@ -138,25 +154,23 @@ bool ModelConfig::isShapeConfigurationEqual(const ModelConfig& rhs) const {
     return true;
 }
 
-std::tuple<Mode, size_t> ModelConfig::extractBatchingParams(std::string configBatchSize) {
+std::tuple<Mode, std::optional<Dimension>> ModelConfig::extractBatchingParams(std::string configBatchSize) {
     Mode batchingMode = FIXED;
-    size_t effectiveBatchSize = 0;
+    std::optional<Dimension> effectiveBatchSize = std::nullopt;
     if (configBatchSize == "auto") {
         batchingMode = AUTO;
+    } else if (configBatchSize == "0") {
+        // do nothing
     } else {
-        if (configBatchSize.find_first_not_of("0123456789") != std::string::npos) {
+        Dimension dim;
+        auto status = Dimension::fromString(configBatchSize, dim);
+        if (!status.ok()) {
             SPDLOG_WARN("Wrong batch size parameter provided. Model batch size will be set to default.");
-            return std::tuple<Mode, size_t>{batchingMode, effectiveBatchSize};
-        }
-        try {
-            effectiveBatchSize = std::stoi(configBatchSize);
-        } catch (const std::invalid_argument& e) {
-            SPDLOG_WARN("Wrong batch size parameter provided. Model batch size will be set to default.");
-        } catch (const std::out_of_range& e) {
-            SPDLOG_WARN("Out of range batch size parameter provided. Model batch size will be set to default.");
+        } else {
+            effectiveBatchSize = dim;
         }
     }
-    return std::tuple<Mode, size_t>{batchingMode, effectiveBatchSize};
+    return std::tuple<Mode, std::optional<Dimension>>{batchingMode, effectiveBatchSize};
 }
 
 Status ModelConfig::parseModelVersionPolicy(std::string command) {
@@ -297,30 +311,29 @@ Status ModelConfig::parseLayoutParameter(const rapidjson::Value& node) {
     if (!node.IsObject()) {
         return StatusCode::LAYOUT_WRONG_FORMAT;
     }
-
-    layouts_map_t layouts;
+    layouts_map_2_t layouts;
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
         if (!it->value.IsString()) {
             return StatusCode::LAYOUT_WRONG_FORMAT;
         }
-        std::string layout = it->value.GetString();
-        std::transform(layout.begin(), layout.end(), layout.begin(), ::toupper);
-        if (configAllowedLayouts.count(layout) > 0) {
-            layouts[it->name.GetString()] = layout;
-        } else {
-            SPDLOG_ERROR("Setting {} layout is not supported", layout);
-            return StatusCode::LAYOUT_WRONG_FORMAT;
+        std::string layoutStr = it->value.GetString();
+        std::transform(layoutStr.begin(), layoutStr.end(), layoutStr.begin(), ::toupper);
+
+        LayoutConfiguration layout;
+        auto status = LayoutConfiguration::fromString(layoutStr, layout);
+        if (!status.ok()) {
+            return status;
         }
+        layouts[it->name.GetString()] = layout;
     }
-    setLayouts(layouts);
+    setLayouts_2(layouts);
 
     return StatusCode::OK;
 }
 
 Status ModelConfig::parseLayoutParameter(const std::string& command) {
-    this->layouts.clear();
-    this->layout = std::string();
-
+    this->layouts_2.clear();
+    this->layout_2 = LayoutConfiguration();
     if (command.empty()) {
         return StatusCode::OK;
     }
@@ -328,8 +341,15 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
     std::string upperCaseCommand;
     std::transform(command.begin(), command.end(), std::back_inserter(upperCaseCommand), ::toupper);
 
-    if (configAllowedLayouts.count(upperCaseCommand) > 0) {
-        setLayout(upperCaseCommand);
+    erase_spaces(upperCaseCommand);
+
+    if (*upperCaseCommand.begin() != '{') {
+        LayoutConfiguration layout;
+        auto status = LayoutConfiguration::fromString(upperCaseCommand, layout);
+        if (!status.ok()) {
+            return status;
+        }
+        setLayout_2(layout);
         return StatusCode::OK;
     }
 
@@ -556,7 +576,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     SPDLOG_DEBUG("Specified model parameters:");
     SPDLOG_DEBUG("model_basepath: {}", getBasePath());
     SPDLOG_DEBUG("model_name: {}", getName());
-    SPDLOG_DEBUG("batch_size: {}", getBatchSize());
+    SPDLOG_DEBUG("batch_size: {}", getBatchSize().has_value() ? getBatchSize().value().toString() : "not configured");
     if (isShapeAnonymous()) {
         SPDLOG_DEBUG("shape: {}", std::string(getShapes_2().begin()->second));
     } else {
@@ -575,14 +595,14 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         SPDLOG_DEBUG("  {}: {}", pluginParameter, pluginValue);
     }
 
-    bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize() != 0);
+    bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize().has_value());
     bool shapeSet = (getShapes_2().size() > 0);
 
     SPDLOG_DEBUG("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
     if (batchSizeSet && shapeSet) {
         SPDLOG_WARN("Both shape and batch size have been defined. Batch size parameter will be ignored.");
         setBatchingMode(FIXED);
-        setBatchSize(0);
+        setBatchSize(std::nullopt);
     }
 
     SPDLOG_DEBUG("stateful: {}", isStateful());
@@ -629,6 +649,17 @@ Status ModelConfig::parseCustomLoaderOptionsConfig(const rapidjson::Value& node)
     customLoaderOptionsStr = buffer.GetString();
 
     return StatusCode::OK;
+}
+
+std::string ModelConfig::layoutConfigurationToString() const {
+    if (getLayout_2().isSet()) {
+        return getLayout_2().toString();
+    }
+    std::stringstream ss;
+    for (const auto& [name, layoutCfg] : getLayouts_2()) {
+        ss << name << " " << layoutCfg.toString() << "; ";
+    }
+    return ss.str();
 }
 
 }  // namespace ovms

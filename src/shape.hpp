@@ -21,7 +21,6 @@
 
 #include <openvino/openvino.hpp>
 
-#include "shapeinfo.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -30,18 +29,24 @@ using dimension_value_t = std::int64_t;
 
 constexpr dimension_value_t DYNAMIC_DIMENSION = -1;
 
+enum Mode { FIXED,
+    AUTO };
+using shape_t = std::vector<size_t>;
+
 class Dimension {
     dimension_value_t minimum, maximum;
 
+public:
     Dimension();
 
-public:
     Dimension(dimension_value_t dim);
 
     Dimension(dimension_value_t minimum, dimension_value_t maximum);
 
     bool isStatic() const;
     bool isDynamic() const;
+
+    ov::Dimension createPartialDimension() const;
 
     // TODO: Remove. For OV API 1.0 compatibility purposes only.
     dimension_value_t getAnyValue() const;
@@ -53,6 +58,7 @@ public:
     bool operator==(const Dimension& rhs) const;
     bool operator!=(const Dimension& rhs) const;
 
+    static Status fromString(const std::string& str, Dimension& dimOut);
     std::string toString() const;
 
     static Dimension any();

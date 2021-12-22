@@ -45,6 +45,7 @@ enum class StatusCode {
     MODELINSTANCE_NOT_FOUND,
     SHAPE_WRONG_FORMAT,                   /*!< The provided shape param is in wrong format */
     LAYOUT_WRONG_FORMAT,                  /*!< The provided layout param is in wrong format */
+    DIM_WRONG_FORMAT,                     /*!< The provided dimension param is in wrong format */
     PLUGIN_CONFIG_WRONG_FORMAT,           /*!< Plugin config is in wrong format */
     MODEL_VERSION_POLICY_WRONG_FORMAT,    /*!< Model version policy is in wrong format */
     MODEL_VERSION_POLICY_UNSUPPORTED_KEY, /*!< Model version policy contains invalid key */
