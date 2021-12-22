@@ -37,6 +37,13 @@ static constexpr const char* OUTPUT_TENSOR_NAME = "output";
 static constexpr const char* OUTPUT_IMAGES_TENSOR_NAME = "images";
 static constexpr const char* OUTPUT_COORDINATES_TENSOR_NAME = "coordinates";
 static constexpr const char* OUTPUT_CONFIDENCES_TENSOR_NAME = "confidences";
+static constexpr const char* OUTPUT_IMAGES_DIMS_NAME = "images_dims";
+static constexpr const char* OUTPUT_COORDINATES_DIMS_NAME = "coordinates_dims";
+static constexpr const char* OUTPUT_CONFIDENCES_DIMS_NAME = "confidences_dims";
+static constexpr const char* OUTPUT_TENSOR_INFO_NAME = "output_info";
+static constexpr const char* OUTPUT_COORDINATES_INFO_DIMS_NAME = "coordinates_info_dims";
+static constexpr const char* OUTPUT_IMAGES_INFO_DIMS_NAME = "images_info_dims";
+static constexpr const char* OUTPUT_CONFIDENCES_INFO_DIMS_NAME = "confidences_info_dims";
 static constexpr const char* OUTPUT_LABEL_IDS_TENSOR_NAME = "label_ids";
 static constexpr const char* OUTPUT_LABEL_IDS_DIMS_NAME = "label_ids_dims";
 static constexpr const char* OUTPUT_LABEL_IDS_INFO_DIMS_NAME = "label_ids_info_dims";
@@ -193,21 +200,20 @@ int initializeInternalManager(void** customNodeLibraryInternalManager, const str
     std::unique_ptr<CustomNodeLibraryInternalManager> internalManager = std::make_unique<CustomNodeLibraryInternalManager>();
     NODE_ASSERT(internalManager != nullptr, "internalManager allocation failed");
 
-    float* buffer = (float*)malloc(byteSize);
-    NODE_ASSERT(buffer != nullptr, "malloc has failed");
-    std::memcpy(buffer, labelIds.data(), byteSize);
+    // reading parameters to determine size of pre-allocated buffers
+    uint64_t maxOutputBatch = get_int_parameter("max_output_batch", params, paramsCount, 100);
+    NODE_ASSERT(maxOutputBatch > 0, "max output batch must be larger than 0");
+    bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
+    int targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
+    int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
+    NODE_ASSERT(targetImageHeight > 0, "target image height must be larger than 0");
+    NODE_ASSERT(targetImageWidth > 0, "target image width must be larger than 0");
 
-    output->data = reinterpret_cast<uint8_t*>(buffer);
-    output->dataBytes = byteSize;
-    output->dimsCount = 3;
-    output->dims = (uint64_t*)malloc(output->dimsCount * sizeof(uint64_t));
-    NODE_ASSERT(output->dims != nullptr, "malloc has failed");
-    output->dims[0] = outputBatch;
-    output->dims[1] = 1;
-    output->dims[2] = 1;
-    output->precision = I32;
-    return true;
-}
+    // creating BuffersQueues for output: images
+    int channels = convertToGrayScale ? 1 : 3;
+    uint64_t imagesByteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * maxOutputBatch;
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_IMAGES_TENSOR_NAME, imagesByteSize, QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_IMAGES_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
 
     // creating BuffersQueues for output: coordinates
     uint64_t coordinatesByteSize = sizeof(int32_t) * 4 * maxOutputBatch;
@@ -436,19 +442,9 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     CustomNodeTensor& confidencesTensor = (*outputs)[2];
     confidencesTensor.name = OUTPUT_CONFIDENCES_TENSOR_NAME;
-    if (!copy_confidences_into_output(&confidencesTensor, confidences)) {
-        cleanup(imagesTensor);
-        cleanup(coordinatesTensor);
-        free(*outputs);
-        return 1;
-    }
-
-    CustomNodeTensor& labelIdsTensor = (*outputs)[3];
-    labelIdsTensor.name = OUTPUT_LABEL_IDS_TENSOR_NAME;
-    if (!copy_label_ids_into_output(&labelIdsTensor, labelIds)) {
-        cleanup(imagesTensor);
-        cleanup(coordinatesTensor);
-        cleanup(labelIdsTensor);
+    if (!copy_confidences_into_output(&confidencesTensor, confidences, internalManager)) {
+        cleanup(imagesTensor, internalManager);
+        cleanup(coordinatesTensor, internalManager);
         free(*outputs);
         return 1;
     }
@@ -456,10 +452,10 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     CustomNodeTensor& labelIdsTensor = (*outputs)[3];
     labelIdsTensor.name = OUTPUT_LABEL_IDS_TENSOR_NAME;
     if (!copy_label_ids_into_output(&labelIdsTensor, labelIds, internalManager)) {
-        cleanup(confidencesTensor, internalManager);
-        cleanup(coordinatesTensor, internalManager);
         cleanup(imagesTensor, internalManager);
-        release(*outputs, internalManager);
+        cleanup(coordinatesTensor, internalManager);
+        cleanup(labelIdsTensor, internalManager);
+        free(*outputs);
         return 1;
     }
 

@@ -19,6 +19,10 @@ FROM ubuntu:20.04 as base_build
 ENV DEBIAN_FRONTEND=noninteractive 
 
 RUN apt update && apt install -y --no-install-recommends \
+        libopencv-dev \
+        libtbb-dev
+
+RUN apt update && apt install -y --no-install-recommends \
         automake \
         build-essential \
         ca-certificates \
@@ -63,10 +67,6 @@ RUN pip3 --no-cache-dir install \
     --ignore-installed setuptools \
     --ignore-installed six
 
-RUN apt update && apt install -y --no-install-recommends \
-        libopencv-dev \
-        libtbb-dev
-
 # Set up Bazel
 ENV BAZEL_VERSION 3.7.2
 WORKDIR /
@@ -90,8 +90,8 @@ COPY .bazelrc WORKSPACE /build/
 COPY external /build/external/
 COPY third_party /build/third_party/
 
-RUN mkdir -p /opt/intel/openvino/opencv/ && ln -sf /usr/lib/x86_64-linux-gnu /opt/intel/openvino/opencv/lib
-RUN mkdir -p /opt/intel/openvino/opencv/include && ln -sf /usr/include/opencv4/opencv2 /opt/intel/openvino/opencv/include
+RUN mkdir -p /opt/intel/openvino/extras/opencv/ && ln -sf /usr/lib/x86_64-linux-gnu /opt/intel/openvino/extras/opencv/lib
+RUN mkdir -p /opt/intel/openvino/extras/opencv/include && ln -sf /usr/include/opencv4/opencv2 /opt/intel/openvino/extras/opencv/include
 
 RUN bazel build \
     @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
@@ -102,12 +102,15 @@ RUN bazel build \
     @opencv//:opencv
 
 COPY src/ /build/src/
+
 RUN bazel build //src:all
 
 FROM ubuntu:20.04 as release
 ENV DEBIAN_FRONTEND=noninteractive 
-RUN apt update && apt install -y --no-install-recommends libopencv-core4.2 libopencv-imgcodecs4.2 libtbb-dev && \
-    apt clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+RUN apt update && apt install -y --no-install-recommends \
+        libopencv-core4.2 \
+        libopencv-imgcodecs4.2 \
+        libtbb-dev
 
 WORKDIR /clients/
 RUN mkdir -p /clients/libs/ && mkdir -p /clients/images
