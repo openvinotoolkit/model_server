@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,28 +17,33 @@
 
 #include <string>
 #include <unordered_map>
-#include <vector>
+
+#include "status.hpp"
 
 namespace ovms {
 
-enum Mode { FIXED,
-    AUTO };
-using shape_t = std::vector<size_t>;
+class LayoutConfiguration {
+    std::string tensor;
+    std::string model;
 
-struct ShapeInfo {
-    Mode shapeMode = FIXED;
-    shape_t shape;
+public:
+    LayoutConfiguration() = default;
+    LayoutConfiguration(const char* Layout);
+    LayoutConfiguration(const std::string& Layout);
+    LayoutConfiguration(const std::string& tensorLayout, const std::string& modelLayout);
 
-    operator std::string() const;
+    const std::string& getTensorLayout() const;
+    const std::string& getModelLayout() const;
 
-    bool operator==(const ShapeInfo& rhs) const {
-        return this->shapeMode == rhs.shapeMode && this->shape == rhs.shape;
-    }
+    bool isSet() const;
 
-    bool operator!=(const ShapeInfo& rhs) const {
-        return !(*this == rhs);
-    }
+    bool operator==(const LayoutConfiguration& rhs) const;
+    bool operator!=(const LayoutConfiguration& rhs) const;
+
+    static Status fromString(const std::string& configuration, LayoutConfiguration& configOut);
+    std::string toString() const;
 };
 
-using shapes_map_t = std::unordered_map<std::string, ShapeInfo>;
+using layouts_map_2_t = std::unordered_map<std::string, LayoutConfiguration>;
+
 }  // namespace ovms

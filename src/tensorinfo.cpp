@@ -445,12 +445,11 @@ const size_t TensorInfo::getBatchSize() const {
 std::string TensorInfo::asString() const {
     std::stringstream ss;
     ss
-        << "Name: " << getName() << "; "
-        << "Mapping: " << getMappedName() << "; "
-        << "Shape: " << shapeToString(getShape()) << "; "
-        << "Shape_3: " << getShape_3().toString() << "; "
-        << "Precision: " << getPrecisionAsString() << "; "
-        << "Layout: " << getStringFromLayout(getLayout());
+        << "name: " << getName() << "; "
+        << "mapping_name: " << getMappedName() << "; "
+        << "shape: " << getShape_3().toString() << "; "
+        << "precision: " << getPrecisionAsString() << "; "
+        << "layout: " << getStringFromLayout(getLayout());
     return ss.str();
 }
 

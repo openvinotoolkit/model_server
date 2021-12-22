@@ -231,7 +231,7 @@ Status ModelManager::startFromConfig() {
     if (batchSizeSet && shapeSet) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Both shape and batch size have been defined. Batch size parameter will be ignored.");
         modelConfig.setBatchingMode(FIXED);
-        modelConfig.setBatchSize(0);
+        modelConfig.setBatchSize(std::nullopt);
     }
 
     return reloadModelWithVersions(modelConfig);
