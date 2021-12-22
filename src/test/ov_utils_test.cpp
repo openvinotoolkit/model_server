@@ -25,10 +25,9 @@ using testing::ElementsAre;
 
 TEST(OVUtils, CopyBlob) {
     const std::vector<size_t> shape{2, 3, 4, 5};
-    const auto elementType = ov::element::Type_t::f32;
+    const auto elementType = ov::element::Type(ov::element::Type_t::f32);
     const size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-    const size_t f32_size = 4;
-    const size_t totalByteSize = elementsCount * f32_size;
+    const size_t totalByteSize = elementsCount * elementType.size();
 
     std::vector<float> data(elementsCount);
     std::iota(data.begin(), data.end(), 0);
@@ -65,10 +64,9 @@ TEST(OVUtils, CopyBlob) {
 
 TEST(OVUtils, ConstCopyBlob) {
     const std::vector<size_t> shape{2, 3, 4, 5};
-    const auto elementType = ov::element::Type_t::f32;
+    const auto elementType = ov::element::Type(ov::element::Type_t::f32);
     const size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-    const size_t f32_size = 4;
-    const size_t totalByteSize = elementsCount * f32_size;
+    const size_t totalByteSize = elementsCount * elementType.size();
 
     std::vector<float> data(elementsCount);
     std::iota(data.begin(), data.end(), 0);
