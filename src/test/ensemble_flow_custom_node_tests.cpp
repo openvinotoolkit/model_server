@@ -1627,11 +1627,11 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, JustDiff
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(differentOpsInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape_3(), Shape({1, 10}));
     const auto& input_B = inputs.at(differentOpsFactorsName);
-    EXPECT_EQ(input_B->getEffectiveShape(), shape_t({1, 4}));
+    EXPECT_EQ(input_B->getShape_3(), Shape({1, 4}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({4, 1, 10}));
+    EXPECT_EQ(output->getShape_3(), Shape({4, 1, 10}));
 }
 
 static const char* pipelineCustomNodeDifferentOperationsThenDummyConfig = R"(
@@ -1719,9 +1719,9 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape_3(), Shape({1, 10}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({4, 1, 10}));
+    EXPECT_EQ(output->getShape_3(), Shape({4, 1, 10}));
 }
 
 static const char* pipelineCustomNodeDifferentOperations2OutputsConfig = R"(
@@ -1800,13 +1800,13 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(differentOpsInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape_3(), Shape({1, 10}));
     const auto& input_B = inputs.at(differentOpsFactorsName);
-    EXPECT_EQ(input_B->getEffectiveShape(), shape_t({1, 4}));
+    EXPECT_EQ(input_B->getShape_3(), Shape({1, 4}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({4, 1, 10}));
+    EXPECT_EQ(output->getShape_3(), Shape({4, 1, 10}));
     const auto& outputFactors = outputs.at("pipeline_factors");
-    EXPECT_EQ(outputFactors->getEffectiveShape(), shape_t({4, 1, 4}));
+    EXPECT_EQ(outputFactors->getShape_3(), Shape({4, 1, 4}));
 }
 
 static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig = R"(
@@ -2790,9 +2790,9 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape_3(), Shape({1, 10}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({12, 1, 10}));
+    EXPECT_EQ(output->getShape_3(), Shape({12, 1, 10}));
 }
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationFixedDemultiplexerDynamicLibraryFirstMetadataCheckShouldAlsoWarnInLog) {
@@ -2826,9 +2826,9 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape_3(), Shape({1, 10}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({12, 1, 10}));
+    EXPECT_EQ(output->getShape_3(), Shape({12, 1, 10}));
 }
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationDynamicLibraryShapesMetadataCheckShouldAlsoWarnInLog) {
@@ -2857,9 +2857,9 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 0, 0, 0}));
+    EXPECT_EQ(input_A->getShape_3(), Shape({1, Dimension::any(), Dimension::any(), Dimension::any()}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({0, 1, 0}));
+    EXPECT_EQ(output->getShape_3(), Shape({Dimension::any(), 1, Dimension::any()}));
 }
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleDynamicDemultiplexerLast) {
     std::optional<uint32_t> demultiplyCount = 0;
@@ -3003,9 +3003,9 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape_3(), Shape({1, 10}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({12, 1, 10}));
+    EXPECT_EQ(output->getShape_3(), Shape({12, 1, 10}));
 }
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationMultipleDemultiplexers) {
     const size_t demultiplyCount1 = 11;
@@ -4137,9 +4137,9 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
     auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape_3(), Shape({1, 10}));
     auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({0, 1, 10}));
+    EXPECT_EQ(output->getShape_3(), Shape({Dimension::any(), 1, 10}));
 
     std::shared_ptr<ModelInstance> modelInstance;
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
@@ -4150,9 +4150,9 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     ASSERT_NE(modelInputs.find("b"), modelInputs.end());
     ASSERT_NE(modelOutputs.find("a"), modelOutputs.end());
     auto inputDummy = modelInputs.at("b");
-    EXPECT_EQ(inputDummy->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(inputDummy->getShape_3(), Shape({1, 10}));
     auto outputDummy = modelOutputs.at("a");
-    EXPECT_EQ(outputDummy->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(outputDummy->getShape_3(), Shape({1, 10}));
 
     modelInputs.clear();
     modelOutputs.clear();
@@ -4162,9 +4162,9 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     ASSERT_NE(inputs2.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs2.find(pipelineOutputName), outputs.end());
     auto input_A2 = inputs2.at(pipelineInputName);
-    EXPECT_EQ(input_A2->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A2->getShape_3(), Shape({1, 10}));
     auto output2 = outputs2.at(pipelineOutputName);
-    EXPECT_EQ(output2->getEffectiveShape(), shape_t({0, 1, 10}));
+    EXPECT_EQ(output2->getShape_3(), Shape({Dimension::any(), 1, 10}));
 
     status = manager.getModelInstance("dummy", 1, modelInstance, modelInstanceUnloadGuardPtr);
     ASSERT_EQ(status, StatusCode::OK) << status.string();
@@ -4173,9 +4173,9 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     ASSERT_NE(modelInputs.find("b"), modelInputs.end());
     ASSERT_NE(modelOutputs.find("a"), modelOutputs.end());
     auto inputDummy2 = modelInputs.at("b");
-    EXPECT_EQ(inputDummy2->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(inputDummy2->getShape_3(), Shape({1, 10}));
     auto outputDummy2 = modelOutputs.at("a");
-    EXPECT_EQ(outputDummy2->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(outputDummy2->getShape_3(), Shape({1, 10}));
 }
 
 static const char* pipelineCustomNodeDynamicDemultiplexThenDummyDemultiplexerConnectedToExitConfig = R"(
@@ -4251,11 +4251,11 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
     const auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape_3(), Shape({1, 10}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({0, 1, 10}));
+    EXPECT_EQ(output->getShape_3(), Shape({Dimension::any(), 1, 10}));
     const auto& output2 = outputs.at(pipelineOutputName + "2");
-    EXPECT_EQ(output2->getEffectiveShape(), shape_t({0, 1, 10}));
+    EXPECT_EQ(output2->getShape_3(), Shape({Dimension::any(), 1, 10}));
 }
 
 static const char* pipelineEntryNodeDynamicDemultiplexThenDummyConfig = R"(
@@ -4333,9 +4333,9 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, D
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({0, 1, 10}));
+    EXPECT_EQ(input_A->getShape_3(), Shape({Dimension::any(), 1, 10}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({0, 1, 10}));
+    EXPECT_EQ(output->getShape_3(), Shape({Dimension::any(), 1, 10}));
 }
 
 static const char* pipelineEntryNodeDemultiplexThenDummyConfig = R"(
@@ -4407,9 +4407,9 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, D
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input = inputs.at(pipelineInputName);
-    EXPECT_EQ(input->getEffectiveShape(), shape_t({3, 5, DUMMY_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(input->getShape_3(), Shape({3, 5, DUMMY_MODEL_INPUT_SIZE}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({3, 5, DUMMY_MODEL_OUTPUT_SIZE}));
+    EXPECT_EQ(output->getShape_3(), Shape({3, 5, DUMMY_MODEL_OUTPUT_SIZE}));
 }
 
 TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DynamicDemultiplexerHittingLimitShouldReturnError) {
@@ -4698,15 +4698,13 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     std::unordered_map<std::string, std::string> aliases{{"custom_node_output", "custom_node_output"}};
 
     auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{0, 3, 1, 2},
-        InferenceEngine::Layout::ANY);
+        Precision::FP32,
+        Shape{Dimension::any(), 3, 1, 2});
     const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{0, 1, 3, 1, 2},
-        InferenceEngine::Layout::ANY);
+        Precision::FP32,
+        Shape{Dimension::any(), 1, 3, 1, 2});
     const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo, gather);
     auto custom_node = std::make_unique<CustomNode>(

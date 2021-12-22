@@ -546,8 +546,8 @@ public:
         // Affect shape by demultiplexer/gather if applies.
         const auto& tensorInput = this->inputsInfo.at(modelInputName);
         const auto& tensorOutput = this->dependencyOutputsInfo.at(modelOutputName);
-        shape_t tensorInputShape = tensorInput->getShape();
-        shape_t tensorOutputShape = tensorOutput->getShape();
+        shape_t tensorInputShape = tensorInput->getShape_3().getFlatShape();
+        shape_t tensorOutputShape = tensorOutput->getShape_3().getFlatShape();
         if (dependencyNodeInfo.demultiplyCount) {
             auto result = influenceShapeWithDemultiplexer(tensorOutputShape, dependencyNodeInfo);
             if (!result.ok()) {
@@ -796,7 +796,7 @@ public:
 
         if (dependantNodeInfo.kind == NodeKind::DL || dependantNodeInfo.kind == NodeKind::CUSTOM) {
             for (const auto& [name, tensorOutput] : outputsInfo) {
-                auto result = validateShapeWithDemultiplexer(tensorOutput->getShape(), dependantNodeInfo);
+                auto result = validateShapeWithDemultiplexer(tensorOutput->getShape_3().getFlatShape(), dependantNodeInfo);
                 if (!result.ok()) {
                     return result;
                 }
@@ -1053,17 +1053,17 @@ const tensor_map_t PipelineDefinition::getOutputsInfo() const {
 }
 
 std::shared_ptr<TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, uint32_t demultiplyCount) {
-    return tensorInfo->createCopyWithEffectiveDimensionPrefix(demultiplyCount);
+    return tensorInfo->createCopyWithEffectiveDimensionPrefix(demultiplyCount ? Dimension(demultiplyCount) : Dimension::any());
 }
 
-std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string& mappedName, const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape, bool isConnectionFromDemultiplexer) {
+std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string& mappedName, const std::shared_ptr<TensorInfo>& tensorInfo, const Shape& gatherShape, bool isConnectionFromDemultiplexer) {
     std::shared_ptr<TensorInfo> newOwnedTensorInfo;
     if (gatherShape.size() == 0) {
         newOwnedTensorInfo = std::make_shared<TensorInfo>(*tensorInfo);
         newOwnedTensorInfo->setMappedName(mappedName);
         return newOwnedTensorInfo;
     }
-    shape_t newShape = tensorInfo->getShape();
+    Shape newShape = tensorInfo->getShape_3();
     if (isConnectionFromDemultiplexer) {
         newShape.erase(newShape.begin());
     }
@@ -1179,7 +1179,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const shape_t& gatherShape) const {
+Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const Shape& gatherShape) const {
     auto instance = manager.findModelInstance(dependencyNodeInfo.modelName, dependencyNodeInfo.modelVersion.value_or(0));
     if (!instance) {
         SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} outputs info fetching", dependencyNodeInfo.modelName, this->getName());
@@ -1198,7 +1198,7 @@ Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo&
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const shape_t& gatherShape) const {
+Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const Shape& gatherShape) const {
     if (!dependencyNodeInfo.library.isValid()) {
         return StatusCode::NODE_LIBRARY_MISSING;
     }
@@ -1289,11 +1289,11 @@ const NodeInfo& PipelineDefinition::findNodeByName(const std::string& name) cons
     });
 }
 
-shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
+Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
     if (info.gatherFromNode.size() == 0) {
         return {};
     }
-    shape_t shape;
+    Shape shape;
     shape.reserve(info.gatherFromNode.size());
 
     std::function<void(const std::string&)> search;
@@ -1303,7 +1303,7 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
         }
         if (info.gatherFromNode.count(nodeName) > 0) {
             auto someNodeInfo = this->findNodeByName(nodeName);
-            uint32_t demultiplyCount = someNodeInfo.demultiplyCount.value_or(0);
+            dimension_value_t demultiplyCount = static_cast<dimension_value_t>(someNodeInfo.demultiplyCount.value_or(DYNAMIC_DIMENSION));
             if (demultiplyCount == 0) {
                 tensor_map_t nodeOutputsInfo;
                 if (someNodeInfo.kind == NodeKind::CUSTOM) {
@@ -1320,16 +1320,16 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
                     if (nodeOutputsInfo.size() == 0) {
                         SPDLOG_ERROR("Node: {} library metadata reports no outputs", nodeName);
                         return;
-                    } else if (nodeOutputsInfo.begin()->second->getShape().size() < 3) {
+                    } else if (nodeOutputsInfo.begin()->second->getShape_3().size() < 3) {
                         SPDLOG_ERROR("Node: {} library metadata reports output with too small number of dimensions", nodeName);
                         return;
                     }
-                    demultiplyCount = nodeOutputsInfo.begin()->second->getShape()[0];
+                    demultiplyCount = nodeOutputsInfo.begin()->second->getShape_3().getFlatShape()[0];  // TODO DAG with dynamic shapes
                 } else if (someNodeInfo.kind == NodeKind::ENTRY) {
-                    demultiplyCount = 0;
+                    demultiplyCount = DYNAMIC_DIMENSION;
                 }
             }
-            shape.emplace_back(demultiplyCount);
+            shape.emplace_back(demultiplyCount ? Dimension(demultiplyCount) : Dimension::any());
         }
 
         if (this->connections.at(nodeName).size() > 0) {

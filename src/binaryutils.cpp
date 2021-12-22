@@ -151,18 +151,18 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     }
 
     // At this point we can either have nhwc format or pretendant to be nhwc but with ANY layout in pipeline info
-    size_t numberOfChannels = 0;
-    if (tensorInfo->getEffectiveShape().size() == 4) {
-        numberOfChannels = tensorInfo->getEffectiveShape()[3];
-    } else if (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getEffectiveShape().size() == 5) {
-        numberOfChannels = tensorInfo->getEffectiveShape()[4];
+    dimension_value_t numberOfChannels = DYNAMIC_DIMENSION;
+    if (tensorInfo->getShape_3().size() == 4) {
+        numberOfChannels = tensorInfo->getShape_3()[3].getAnyValue();
+    } else if (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape_3().size() == 5) {
+        numberOfChannels = tensorInfo->getShape_3()[4].getAnyValue();
     } else {
         return StatusCode::INVALID_NO_OF_CHANNELS;
     }
-    if (numberOfChannels == 0 && firstBatchImage) {
+    if (numberOfChannels == DYNAMIC_DIMENSION && firstBatchImage) {
         numberOfChannels = firstBatchImage->channels();
     }
-    if (numberOfChannels == 0) {
+    if (numberOfChannels == DYNAMIC_DIMENSION) {
         return StatusCode::OK;
     }
     if ((unsigned int)(input.channels()) != numberOfChannels) {
@@ -186,14 +186,8 @@ Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* fi
 
 bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     const int batchSize) {
-    if (batchSize <= 0)
-        return true;
-    if (tensorInfo->getEffectiveShape()[0] == 0) {
-        return false;
-    }
-    if (static_cast<size_t>(batchSize) != tensorInfo->getEffectiveShape()[0])
-        return true;
-    return false;
+    size_t d = tensorInfo->getBatchSize();  // TODO change getBatchSize() to return Dimension
+    return !Dimension(d ? d : DYNAMIC_DIMENSION).match(batchSize);
 }
 
 Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage) {
@@ -217,14 +211,14 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     }
 
     // 4 for default pipelines, 5 for pipelines with demultiplication at entry
-    bool isShapeDimensionValid = tensorInfo->getEffectiveShape().size() == 4 ||
-                                 (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getEffectiveShape().size() == 5);
+    bool isShapeDimensionValid = tensorInfo->getShape_3().size() == 4 ||
+                                 (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape_3().size() == 5);
     if (!isShapeDimensionValid) {
         return StatusCode::INVALID_SHAPE;
     }
 
     if (checkBatchSizeMismatch(tensorInfo, src.string_val_size())) {
-        SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getEffectiveShape()[0], src.string_val_size());
+        SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getBatchSize(), src.string_val_size());
         return StatusCode::INVALID_BATCH_SIZE;
     }
 
@@ -286,7 +280,7 @@ InferenceEngine::SizeVector getShapeFromImages(const std::vector<cv::Mat>& image
 
 template <typename T>
 InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
-    auto dims = !isPipeline ? tensorInfo->getShape() : getShapeFromImages(images, tensorInfo);
+    auto dims = !isPipeline ? tensorInfo->getShape_3().getFlatShape() : getShapeFromImages(images, tensorInfo);
     InferenceEngine::TensorDesc desc{tensorInfo->getPrecision(), dims, InferenceEngine::Layout::ANY};
     InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<T>(desc);
     blob->allocate();
@@ -299,7 +293,8 @@ InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images
 }
 
 ov::runtime::Tensor createBlobFromMats_2(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
-    ov::Shape shape = !isPipeline ? tensorInfo->getShape() : getShapeFromImages(images, tensorInfo);
+    // TODO binary inputs support for dynamic shapes - probably we should have here just getShapeFromImages
+    ov::Shape shape = !isPipeline ? tensorInfo->getShape_3().getFlatShape() : getShapeFromImages(images, tensorInfo);
     ov::element::Type precision = tensorInfo->getOvPrecision();
     ov::runtime::Tensor tensor(precision, shape);
     char* ptr = (char*)tensor.data();

@@ -44,10 +44,10 @@ TEST_F(BinaryUtilsTest, tensorWithNonMatchingBatchsize) {
     stringValDummy.add_string_val("dummy");
     InferenceEngine::Blob::Ptr blob;
     auto tensorInfo = std::make_shared<TensorInfo>();
-    tensorInfo->setShape_2({5, 1, 1, 1});
+    tensorInfo->setShape({5, 1, 1, 1});
     tensorInfo->setLayout(InferenceEngine::Layout::NHWC);
-
-    EXPECT_EQ(convertStringValToBlob(stringVal, blob, tensorInfo, false), ovms::StatusCode::INVALID_BATCH_SIZE);
+    auto status = convertStringValToBlob(stringVal, blob, tensorInfo, false);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE) << status.string();
 }
 
 TEST_F(BinaryUtilsTest, tensorWithInvalidImage) {

@@ -75,11 +75,11 @@ Status getRequestedShape(const ModelConfig& config, const DynamicModelParameter&
         if (!status.ok()) {
             return status;
         }
-    } else if (mappedName == "" && config.getShapes_2().count(name) && config.getShapes_2().at(name).shape.getSize()) {
+    } else if (mappedName == "" && config.getShapes_2().count(name) && config.getShapes_2().at(name).shape.size()) {
         shape = config.getShapes_2().at(name).shape;
-    } else if (config.getShapes_2().count(mappedName) && config.getShapes_2().at(mappedName).shape.getSize()) {
+    } else if (config.getShapes_2().count(mappedName) && config.getShapes_2().at(mappedName).shape.size()) {
         shape = config.getShapes_2().at(mappedName).shape;
-    } else if (config.getShapes_2().count(ANONYMOUS_INPUT_NAME) && config.getShapes_2().at(ANONYMOUS_INPUT_NAME).shape.getSize()) {
+    } else if (config.getShapes_2().count(ANONYMOUS_INPUT_NAME) && config.getShapes_2().at(ANONYMOUS_INPUT_NAME).shape.size()) {
         shape = config.getShapes_2().at(ANONYMOUS_INPUT_NAME).shape;
     }
     shapeOut = shape;
@@ -304,7 +304,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             if (!status.ok()) {
                 return status;
             }
-            if (requestedShape.getSize() > 0) {
+            if (requestedShape.size() > 0) {
                 shape = requestedShape.createPartialShape();
             }
 

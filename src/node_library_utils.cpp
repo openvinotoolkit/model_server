@@ -121,7 +121,11 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std
 
         std::string name = std::string(info[i].name);
         auto precision = toInferenceEnginePrecision(info[i].precision);
-        shape_t shape(info[i].dims, info[i].dims + info[i].dimsCount);
+        ovms::Shape shape;
+        for (int j = 0; j < info[i].dimsCount; ++j) {
+            auto dim = info[i].dims[j];
+            shape.add(dim ? Dimension(dim) : Dimension::any());
+        }
 
         freeCallback(info[i].dims, customNodeLibraryInternalManager);
         out.emplace(name, std::make_shared<TensorInfo>(name, precision, std::move(shape)));
