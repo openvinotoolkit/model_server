@@ -42,12 +42,11 @@ TEST(OVUtils, CopyBlob) {
 
     ASSERT_EQ(originalTensor.get_element_type(), elementType);
     ASSERT_EQ(copyTensor->get_element_type(), elementType);
-    
+
     ASSERT_EQ(originalTensor.get_byte_size(), totalByteSize);
     ASSERT_EQ(copyTensor->get_byte_size(), totalByteSize);
 
     ASSERT_EQ(copyTensor->get_strides(), originalTensor.get_strides());
-
 
     std::vector<float> originalTensorActualData;
     originalTensorActualData.assign(static_cast<float*>(originalTensor.data()), static_cast<float*>(originalTensor.data()) + elementsCount);
@@ -81,12 +80,11 @@ TEST(OVUtils, ConstCopyBlob) {
 
     ASSERT_EQ(originalTensor.get_element_type(), elementType);
     ASSERT_EQ(copyTensor->get_element_type(), elementType);
-    
+
     ASSERT_EQ(originalTensor.get_byte_size(), totalByteSize);
     ASSERT_EQ(copyTensor->get_byte_size(), totalByteSize);
 
     ASSERT_EQ(copyTensor->get_strides(), originalTensor.get_strides());
-
 
     std::vector<float> originalTensorActualData;
     const void* start = (const void*)(originalTensor.data());
