@@ -37,7 +37,7 @@ TEST(Dimension, Match) {
     EXPECT_FALSE(Dimension(10, 20).match(-1));
 }
 
-TEST(Dimension, FitsInto) {
+TEST(Dimension, PartiallyFitsInto) {
     EXPECT_TRUE(Dimension(1, 2).partiallyFitsInto(Dimension::any()));
     EXPECT_TRUE(Dimension(1, 1).partiallyFitsInto(Dimension::any()));
     EXPECT_TRUE(Dimension::any().partiallyFitsInto(Dimension::any()));
