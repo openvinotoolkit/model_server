@@ -45,6 +45,7 @@ enum class StatusCode {
     MODELINSTANCE_NOT_FOUND,
     SHAPE_WRONG_FORMAT,                   /*!< The provided shape param is in wrong format */
     LAYOUT_WRONG_FORMAT,                  /*!< The provided layout param is in wrong format */
+    DIM_WRONG_FORMAT,                     /*!< The provided dimension param is in wrong format */
     PLUGIN_CONFIG_WRONG_FORMAT,           /*!< Plugin config is in wrong format */
     MODEL_VERSION_POLICY_WRONG_FORMAT,    /*!< Model version policy is in wrong format */
     MODEL_VERSION_POLICY_UNSUPPORTED_KEY, /*!< Model version policy contains invalid key */
@@ -63,6 +64,7 @@ enum class StatusCode {
     CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME, /*!< Using old name of input/output in config layout when mapped in mapping_config.json*/
     CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE,  /*!< Cannot load network into target device */
     REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL,
+    CANNOT_CONVERT_FLAT_SHAPE,
 
     // Model management
     MODEL_MISSING,                                     /*!< Model with such name and/or version does not exist */

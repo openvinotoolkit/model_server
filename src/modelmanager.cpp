@@ -225,13 +225,13 @@ Status ModelManager::startFromConfig() {
     }
 
     bool batchSizeSet = (modelConfig.getBatchingMode() != FIXED || modelConfig.getBatchSize() != 0);
-    bool shapeSet = (modelConfig.getShapes().size() > 0);
+    bool shapeSet = (modelConfig.getShapes_2().size() > 0);
 
     SPDLOG_DEBUG("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
     if (batchSizeSet && shapeSet) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Both shape and batch size have been defined. Batch size parameter will be ignored.");
         modelConfig.setBatchingMode(FIXED);
-        modelConfig.setBatchSize(0);
+        modelConfig.setBatchSize(std::nullopt);
     }
 
     return reloadModelWithVersions(modelConfig);
@@ -1116,7 +1116,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             return StatusCode::OK;
         }
     }
-
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     bool reloadNeeded = false;
     if (versionsToStart->size() > 0 || versionsToReload->size() > 0 || versionsToRetire->size() > 0) {

@@ -88,6 +88,8 @@ cc_library(
         "http_rest_api_handler.hpp",
         "http_server.cpp",
         "http_server.hpp",
+        "layout.cpp",
+        "layout.hpp",
         "localfilesystem.cpp",
         "localfilesystem.hpp",
         "gathernodeinputhandler.cpp",
@@ -166,7 +168,8 @@ cc_library(
         "sequence_manager.cpp",
         "sequence_manager.hpp",
         "sequence_processing_spec.hpp",
-        "shapeinfo.hpp",
+        "shape.cpp",
+        "shape.hpp",
         "statefulmodelinstance.cpp",
         "statefulmodelinstance.hpp",
         "status.cpp",
@@ -452,6 +455,7 @@ cc_test(
         "test/schema_test.cpp",
         "test/environment.hpp",
         "test/http_rest_api_handler_test.cpp",
+        "test/shape_test.cpp",
         "test/status_test.cpp"
     ],
     data = [

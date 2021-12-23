@@ -33,6 +33,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::MODELINSTANCE_NOT_FOUND, "ModelInstance not found"},
     {StatusCode::SHAPE_WRONG_FORMAT, "The provided shape is in wrong format"},
     {StatusCode::LAYOUT_WRONG_FORMAT, "The provided layout is in wrong format"},
+    {StatusCode::DIM_WRONG_FORMAT, "The provided dimension is in wrong format"},
     {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, "Plugin config is in wrong format"},
     {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT, "Model version policy is in wrong format"},
     {StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY, "Model version policy contains unsupported key"},
@@ -68,6 +69,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::REQUESTED_MODEL_TYPE_CHANGE, "Model type cannot be changed after it is loaded"},
     {StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER, "Stateful model config parameter used for non stateful model"},
     {StatusCode::INVALID_MAX_SEQUENCE_NUMBER, "Sequence max number parameter too high"},
+    {StatusCode::CANNOT_CONVERT_FLAT_SHAPE, "Cannot convert flat shape to Shape object"},
     {StatusCode::UNKNOWN_ERROR, "Unknown error"},
 
     // Sequence management

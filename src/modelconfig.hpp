@@ -26,13 +26,13 @@
 
 #include <rapidjson/document.h>
 
+#include "layout.hpp"
 #include "model_version_policy.hpp"
-#include "shapeinfo.hpp"
+#include "shape.hpp"
 #include "status.hpp"
 
 namespace ovms {
 
-using layouts_map_t = std::unordered_map<std::string, std::string>;
 using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, std::string>;
 using custom_loader_options_config_t = std::map<std::string, std::string>;
@@ -74,7 +74,7 @@ private:
     /**
          * @brief Batch size
          */
-    size_t batchSize;
+    std::optional<Dimension> batchSize;
 
     /**
          * @brief Model version policy
@@ -129,17 +129,17 @@ private:
     /**
          * @brief Layout for single input
          */
-    std::string layout;
+    LayoutConfiguration layout_2;
 
     /**
          * @brief Map of shapes
          */
-    shapes_map_t shapes;
+    shapes_info_map_2_t shapes_2;
 
     /**
          * @brief Map of layouts
          */
-    layouts_map_t layouts;
+    layouts_map_2_t layouts_2;
 
     /**
          * @brief Input mapping configuration
@@ -225,9 +225,9 @@ public:
         cacheDir(cacheDir),
         version(version),
         pluginConfig({}),
-        layout(""),
-        shapes({}),
-        layouts({}),
+        layout_2(""),
+        shapes_2({}),
+        layouts_2({}),
         mappingInputs({}),
         mappingOutputs({}) {
         setBatchingParams(configBatchSize);
@@ -250,6 +250,24 @@ public:
          * @return true if customloader configuration has changed
          */
     bool isCustomLoaderConfigChanged(const ModelConfig& rhs) const;
+
+    /**
+         * @brief Compares two ModelConfig instances for batch size configuration
+         * 
+         * @param rhs
+         *  
+         * @return true if configurations are equal false otherwise
+         */
+    bool isBatchSizeConfigurationEqual(const ModelConfig& rhs) const;
+
+    /**
+         * @brief Compares two ModelConfig instances for layout configuration
+         * 
+         * @param rhs
+         *  
+         * @return true if configurations are equal false otherwise
+         */
+    bool isLayoutConfigurationEqual(const ModelConfig& rhs) const;
 
     /**
          * @brief Compares two ModelConfig instances for shape configuration
@@ -413,7 +431,7 @@ public:
          * 
          * @return size_t 
          */
-    size_t getBatchSize() const {
+    std::optional<Dimension> getBatchSize() const {
         return this->batchSize;
     }
 
@@ -431,7 +449,7 @@ public:
          * 
          * @param batchSize 
          */
-    void setBatchSize(size_t batchSize) {
+    void setBatchSize(std::optional<Dimension> batchSize) {
         this->batchSize = batchSize;
     }
 
@@ -461,7 +479,7 @@ public:
          * 
          * @param configBatchSize 
          */
-    static std::tuple<Mode, size_t> extractBatchingParams(std::string configBatchSize);
+    static std::tuple<Mode, std::optional<Dimension>> extractBatchingParams(std::string configBatchSize);
 
     /**
          * @brief Get the model version policy
@@ -668,7 +686,7 @@ public:
          * @return bool
          */
     bool anyShapeSetToAuto() const {
-        for (const auto& [name, shapeInfo] : getShapes()) {
+        for (const auto& [name, shapeInfo] : getShapes_2()) {
             if (shapeInfo.shapeMode == AUTO)
                 return true;
         }
@@ -680,8 +698,8 @@ public:
          * 
          * @return const shapes_map_t& 
          */
-    const shapes_map_t& getShapes() const {
-        return this->shapes;
+    const shapes_info_map_2_t& getShapes_2() const {
+        return this->shapes_2;
     }
 
     /**
@@ -689,8 +707,8 @@ public:
          * 
          * @param shapes 
          */
-    void setShapes(const shapes_map_t& shapes) {
-        this->shapes = shapes;
+    void setShapes(const shapes_info_map_2_t& shapes) {
+        this->shapes_2 = shapes;
     }
 
     /**
@@ -699,18 +717,18 @@ public:
          * @return bool
          */
     bool isShapeAuto(const std::string& name) const {
-        auto it = getShapes().find(name);
-        if (it == getShapes().end()) {
-            it = getShapes().find(ANONYMOUS_INPUT_NAME);
+        auto it = getShapes_2().find(name);
+        if (it == getShapes_2().end()) {
+            it = getShapes_2().find(ANONYMOUS_INPUT_NAME);
         }
-        if (it == getShapes().end()) {
+        if (it == getShapes_2().end()) {
             return false;
         }
         return it->second.shapeMode == Mode::AUTO;
     }
 
     bool isShapeAnonymous() const {
-        return getShapes().size() == 1 && getShapes().begin()->first == ANONYMOUS_INPUT_NAME;
+        return getShapes_2().size() == 1 && getShapes_2().begin()->first == ANONYMOUS_INPUT_NAME;
     }
 
     bool isShapeAnonymousFixed() const {
@@ -728,7 +746,7 @@ public:
          * @param str
          * @return Status
          */
-    static Status parseShape(ShapeInfo& shapeInfo, const std::string& str);
+    static Status parseShape(ShapeInfo_2& shapeInfo, const std::string& str);
 
     /**
          * @brief Add a single named shape
@@ -736,12 +754,12 @@ public:
          * @param name 
          * @param shape 
          */
-    void addShape(const std::string& name, const ShapeInfo& shapeInfo) {
-        this->shapes[name] = shapeInfo;
+    void addShape(const std::string& name, const ShapeInfo_2& shapeInfo) {
+        this->shapes_2[name] = shapeInfo;
     }
 
     void removeShape(const std::string& name) {
-        this->shapes.erase(name);
+        this->shapes_2.erase(name);
     }
 
     /**
@@ -749,8 +767,8 @@ public:
          * 
          * @return const std::string& 
          */
-    const std::string& getLayout() const {
-        return this->layout;
+    const LayoutConfiguration& getLayout_2() const {
+        return this->layout_2;
     }
 
     /**
@@ -758,9 +776,9 @@ public:
          * 
          * @param layout
          */
-    void setLayout(const std::string& layout) {
-        this->layout = layout;
-        this->layouts.clear();
+    void setLayout_2(const LayoutConfiguration& layout) {
+        this->layout_2 = layout;
+        this->layouts_2.clear();
     }
 
     /**
@@ -768,8 +786,8 @@ public:
          * 
          * @return const layouts_map_t& 
          */
-    const layouts_map_t& getLayouts() const {
-        return this->layouts;
+    const layouts_map_2_t& getLayouts_2() const {
+        return this->layouts_2;
     }
 
     /**
@@ -777,20 +795,9 @@ public:
          * 
          * @param layouts 
          */
-    void setLayouts(const layouts_map_t& layouts) {
-        this->layouts = layouts;
-        this->layout = "";
-    }
-
-    /**
-         * @brief Add a named layout
-         * 
-         * @param name 
-         * @param layout 
-         */
-    void addLayout(const std::string& name, const std::string& layout) {
-        this->layouts[name] = layout;
-        this->layout = "";
+    void setLayouts_2(const layouts_map_2_t& layouts) {
+        this->layouts_2 = layouts;
+        this->layout_2 = LayoutConfiguration();
     }
 
     /**
@@ -976,5 +983,7 @@ public:
          * @return status
          */
     Status parseCustomLoaderOptionsConfig(const rapidjson::Value& node);
+
+    std::string layoutConfigurationToString() const;
 };
 }  // namespace ovms

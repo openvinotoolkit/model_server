@@ -98,7 +98,7 @@ private:
     Status validateNode(ModelManager& manager, const NodeInfo& node, const bool isMultiBatchAllowed);
 
     const NodeInfo& findNodeByName(const std::string& name) const;
-    shape_t getNodeGatherShape(const NodeInfo& info) const;
+    Shape getNodeGatherShape(const NodeInfo& info) const;
 
 public:
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 10000;
@@ -159,14 +159,14 @@ private:
         const ModelManager& manager,
         tensor_map_t& outputsInfo,
         const Aliases& aliases,
-        const shape_t& gatherShape) const;
+        const Shape& gatherShape) const;
 
     Status populateOutputsInfoWithCustomNodeOutputs(
         const NodeInfo& dependencyNodeInfo,
         const ModelManager& manager,
         tensor_map_t& outputsInfo,
         const Aliases& aliases,
-        const shape_t& gatherShape) const;
+        const Shape& gatherShape) const;
 
     void increaseRequestsHandlesCount() {
         ++requestsHandlesCounter;

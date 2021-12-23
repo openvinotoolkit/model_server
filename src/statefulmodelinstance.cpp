@@ -185,7 +185,7 @@ const Status StatefulModelInstance::validate(const tensorflow::serving::PredictR
         getVersion(),
         SPECIAL_INPUT_NAMES,
         getModelConfig().getBatchingMode(),
-        getModelConfig().getShapes());
+        getModelConfig().getShapes_2());
 }
 
 Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,

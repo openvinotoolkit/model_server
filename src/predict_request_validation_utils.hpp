@@ -26,7 +26,7 @@
 #include <google/protobuf/map.h>
 
 #include "modelversion.hpp"
-#include "shapeinfo.hpp"
+#include "shape.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -40,7 +40,7 @@ Status validate(
     const model_version_t servableVersion,
     const std::set<const char*>& optionalAllowedInputNames = {},
     const Mode batchingMode = Mode::FIXED,
-    const shapes_map_t& shapeInfo = shapes_map_t());
+    const shapes_info_map_2_t& shapeInfo = shapes_info_map_2_t());
 
 }  // namespace request_validation_utils
 }  // namespace ovms

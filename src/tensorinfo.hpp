@@ -29,7 +29,7 @@
 #pragma GCC diagnostic pop
 
 #include "precision.hpp"
-#include "shapeinfo.hpp"
+#include "shape.hpp"
 
 namespace ovms {
 
@@ -59,6 +59,7 @@ protected:
          */
     shape_t shape;
     shape_t shape_2;
+    Shape shape_3;
 
     /**
         * @brief Model input effective shape
@@ -96,6 +97,9 @@ public:
     TensorInfo(const std::string& name,
         const Precision& precision,
         const shape_t& shape);
+    TensorInfo(const std::string& name,
+        const Precision& precision,
+        const Shape& shape);
 
     /**
          * @brief Construct a new Tensor Info object
@@ -134,6 +138,11 @@ public:
         const std::string& mapping,
         const ovms::Precision& precision,
         const shape_t& shape,
+        const InferenceEngine::Layout& layout);
+    TensorInfo(const std::string& name,
+        const std::string& mapping,
+        const ovms::Precision& precision,
+        const Shape& shape,
         const InferenceEngine::Layout& layout);
     TensorInfo(const std::string& name,
         const std::string& mapping,
@@ -197,6 +206,13 @@ public:
         */
     std::string getPrecisionAsString() const;
 
+    /**
+        * @brief Get the string representation of TensorInfo object
+        *
+        * @return String representation
+        */
+    std::string asString() const;
+
     static std::string getPrecisionAsString(const InferenceEngine::Precision precision);
     static std::string getPrecisionAsString(Precision precision);
 
@@ -240,13 +256,16 @@ public:
          */
     const shape_t& getEffectiveShape() const;
 
-    void setShape(const shape_t& shape);
+    void setShape_2(const shape_t& shape);
+    void setShape(const Shape& shape);
+    const Shape& getShape_3() const;
 
     bool isInfluencedByDemultiplexer() const;
 
-    std::shared_ptr<TensorInfo> createCopyWithNewShape(const shape_t& shape) const;
+    std::shared_ptr<TensorInfo> createCopyWithNewShape(const Shape& shape) const;
 
-    std::shared_ptr<TensorInfo> createCopyWithEffectiveDimensionPrefix(size_t dim) const;
+    std::shared_ptr<TensorInfo> createCopyWithEffectiveDimensionPrefix(const Dimension& dim) const;
+    std::shared_ptr<TensorInfo> createCopyWithEffectiveDimensionPrefix(dimension_value_t dim) const;
 
     /**
          * @brief Get the Tensor Desc object

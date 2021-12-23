@@ -476,11 +476,10 @@ public:
                 return StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL_OUTPUT;
             }
         }
-
         return StatusCode::OK;
     }
 
-    Status validateShapeWithDemultiplexer(const shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) const {
+    Status validateShapeWithDemultiplexer(const Shape& shape, const NodeInfo& demultiplicatorNodeInfo) const {
         if (!demultiplicatorNodeInfo.demultiplyCount) {
             return StatusCode::OK;
         }
@@ -492,33 +491,35 @@ public:
             return StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY;
         }
         if (demultiplicatorNodeInfo.demultiplyCount.value() != 0) {
+            // TODO -1 vs 0 as demultiplexing value
             if (shape[0] != 0) {
-                // 0 means that node accepts dynamic shape
-                if (shape[0] != demultiplicatorNodeInfo.demultiplyCount.value()) {
+                auto demultiplyDimension = Dimension(demultiplicatorNodeInfo.demultiplyCount.value());
+                if (!shape[0].partiallyFitsInto(demultiplyDimension)) {
                     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of node: {} does not match tensor first dimension value: {}",
                         this->pipelineName,
                         demultiplicatorNodeInfo.demultiplyCount.value(),
                         demultiplicatorNodeInfo.nodeName,
-                        shape[0]);
+                        shape[0].toString());
                     return StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT;
                 }
             } else {
-                SPDLOG_LOGGER_WARN(modelmanager_logger, "Demultiply count: {} of node: {} is fixed while first dimenson value of node library is not: {}. This pipeline may fail at execution stage.",
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {}; Demultiply count: {} of node: {} is fixed while first dimenson value of node library is not: {}. This pipeline may fail at execution stage.",
+                    this->pipelineName,
                     demultiplicatorNodeInfo.demultiplyCount.value(),
                     demultiplicatorNodeInfo.nodeName,
-                    shape[0]);
+                    shape[0].toString());
             }
-        } else if (shape[0] != 0) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Demultiply count: {} of node: {} is dynamic while first dimenson value of gather node is not: {}. This pipeline may fail at execution stage.",
+        } else if (!shape[0].isAny() && shape[0] != 0) {  // TODO we probably should remove part after && since dynamic demultiplexer should be -1 in follow up tasks
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {}; Demultiply count: {} of node: {} is dynamic while first dimenson value of gather node is not: {}. This pipeline may fail at execution stage.",
                 this->pipelineName,
                 demultiplicatorNodeInfo.demultiplyCount.value(),
                 demultiplicatorNodeInfo.nodeName,
-                shape[0]);
+                shape[0].toString());
         }
         return StatusCode::OK;
     }
 
-    Status influenceShapeWithDemultiplexer(shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) {
+    Status influenceShapeWithDemultiplexer(Shape& shape, const NodeInfo& demultiplicatorNodeInfo) {
         auto result = validateShapeWithDemultiplexer(shape, demultiplicatorNodeInfo);
         if (!result.ok()) {
             return result;
@@ -527,13 +528,13 @@ public:
         return StatusCode::OK;
     }
 
-    bool areShapesMatching(const shape_t& tensorInputShape, const shape_t& tensorOutputShape) {
+    bool areShapesMatching(const Shape& tensorInputShape, const Shape& tensorOutputShape) {
         if (tensorInputShape.size() != tensorOutputShape.size()) {
             return false;
         }
 
         for (size_t i = 0; i < tensorInputShape.size(); i++) {
-            if (tensorInputShape[i] != tensorOutputShape[i] && (tensorInputShape[i] != 0 && tensorOutputShape[i] != 0)) {
+            if (!tensorInputShape[i].partiallyFitsInto(tensorOutputShape[i])) {
                 return false;
             }
         }
@@ -546,8 +547,8 @@ public:
         // Affect shape by demultiplexer/gather if applies.
         const auto& tensorInput = this->inputsInfo.at(modelInputName);
         const auto& tensorOutput = this->dependencyOutputsInfo.at(modelOutputName);
-        shape_t tensorInputShape = tensorInput->getShape();
-        shape_t tensorOutputShape = tensorOutput->getShape();
+        Shape tensorInputShape = tensorInput->getShape_3();
+        Shape tensorOutputShape = tensorOutput->getShape_3();
         if (dependencyNodeInfo.demultiplyCount) {
             auto result = influenceShapeWithDemultiplexer(tensorOutputShape, dependencyNodeInfo);
             if (!result.ok()) {
@@ -566,7 +567,7 @@ public:
                     this->pipelineName,
                     demultiplicatorNode->demultiplyCount.value(),
                     demultiplicatorNode->nodeName,
-                    tensorInputShape[1],
+                    tensorInputShape[1].toString(),
                     dependencyNodeInfo.nodeName);
                 return result;
             }
@@ -581,10 +582,10 @@ public:
                 pipelineName,
                 dependantNodeInfo.nodeName,
                 modelInputName,
-                TensorInfo::shapeToString(tensorInputShape),
+                tensorInputShape.toString(),
                 dependencyNodeInfo.nodeName,
                 modelOutputName,
-                TensorInfo::shapeToString(tensorOutputShape));
+                tensorOutputShape.toString());
             return StatusCode::INVALID_SHAPE;
         }
         if (tensorInput->getPrecision() != tensorOutput->getPrecision()) {
@@ -796,7 +797,7 @@ public:
 
         if (dependantNodeInfo.kind == NodeKind::DL || dependantNodeInfo.kind == NodeKind::CUSTOM) {
             for (const auto& [name, tensorOutput] : outputsInfo) {
-                auto result = validateShapeWithDemultiplexer(tensorOutput->getShape(), dependantNodeInfo);
+                auto result = validateShapeWithDemultiplexer(tensorOutput->getShape_3(), dependantNodeInfo);
                 if (!result.ok()) {
                     return result;
                 }
@@ -1053,17 +1054,17 @@ const tensor_map_t PipelineDefinition::getOutputsInfo() const {
 }
 
 std::shared_ptr<TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, uint32_t demultiplyCount) {
-    return tensorInfo->createCopyWithEffectiveDimensionPrefix(demultiplyCount);
+    return tensorInfo->createCopyWithEffectiveDimensionPrefix(demultiplyCount ? Dimension(demultiplyCount) : Dimension::any());
 }
 
-std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string& mappedName, const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape, bool isConnectionFromDemultiplexer) {
+std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string& mappedName, const std::shared_ptr<TensorInfo>& tensorInfo, const Shape& gatherShape, bool isConnectionFromDemultiplexer) {
     std::shared_ptr<TensorInfo> newOwnedTensorInfo;
     if (gatherShape.size() == 0) {
         newOwnedTensorInfo = std::make_shared<TensorInfo>(*tensorInfo);
         newOwnedTensorInfo->setMappedName(mappedName);
         return newOwnedTensorInfo;
     }
-    shape_t newShape = tensorInfo->getShape();
+    Shape newShape = tensorInfo->getShape_3();
     if (isConnectionFromDemultiplexer) {
         newShape.erase(newShape.begin());
     }
@@ -1120,9 +1121,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                         }
                         if (!it->second->isTensorSpecEqual(*tensorInfo) &&
                             !it->second->isTensorUnspecified()) {
-                            Status result = StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA;
-                            SPDLOG_ERROR(result.string());
-                            return result;
+                            return StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA;
                         }
                     }
                     inputsInfo[alias] = tensorInfo;
@@ -1179,7 +1178,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const shape_t& gatherShape) const {
+Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const Shape& gatherShape) const {
     auto instance = manager.findModelInstance(dependencyNodeInfo.modelName, dependencyNodeInfo.modelVersion.value_or(0));
     if (!instance) {
         SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} outputs info fetching", dependencyNodeInfo.modelName, this->getName());
@@ -1198,7 +1197,7 @@ Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo&
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const shape_t& gatherShape) const {
+Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const Shape& gatherShape) const {
     if (!dependencyNodeInfo.library.isValid()) {
         return StatusCode::NODE_LIBRARY_MISSING;
     }
@@ -1289,11 +1288,11 @@ const NodeInfo& PipelineDefinition::findNodeByName(const std::string& name) cons
     });
 }
 
-shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
+Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
     if (info.gatherFromNode.size() == 0) {
         return {};
     }
-    shape_t shape;
+    Shape shape;
     shape.reserve(info.gatherFromNode.size());
 
     std::function<void(const std::string&)> search;
@@ -1303,7 +1302,7 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
         }
         if (info.gatherFromNode.count(nodeName) > 0) {
             auto someNodeInfo = this->findNodeByName(nodeName);
-            uint32_t demultiplyCount = someNodeInfo.demultiplyCount.value_or(0);
+            dimension_value_t demultiplyCount = static_cast<dimension_value_t>(someNodeInfo.demultiplyCount.value_or(0));
             if (demultiplyCount == 0) {
                 tensor_map_t nodeOutputsInfo;
                 if (someNodeInfo.kind == NodeKind::CUSTOM) {
@@ -1320,16 +1319,16 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
                     if (nodeOutputsInfo.size() == 0) {
                         SPDLOG_ERROR("Node: {} library metadata reports no outputs", nodeName);
                         return;
-                    } else if (nodeOutputsInfo.begin()->second->getShape().size() < 3) {
+                    } else if (nodeOutputsInfo.begin()->second->getShape_3().size() < 3) {
                         SPDLOG_ERROR("Node: {} library metadata reports output with too small number of dimensions", nodeName);
                         return;
                     }
-                    demultiplyCount = nodeOutputsInfo.begin()->second->getShape()[0];
+                    demultiplyCount = nodeOutputsInfo.begin()->second->getShape_3().getFlatShape()[0];  // TODO DAG with dynamic shapes
                 } else if (someNodeInfo.kind == NodeKind::ENTRY) {
-                    demultiplyCount = 0;
+                    demultiplyCount = DYNAMIC_DIMENSION;
                 }
             }
-            shape.emplace_back(demultiplyCount);
+            shape.emplace_back(demultiplyCount ? Dimension(demultiplyCount) : Dimension::any());
         }
 
         if (this->connections.at(nodeName).size() > 0) {

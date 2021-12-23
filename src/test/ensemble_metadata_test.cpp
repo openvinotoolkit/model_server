@@ -63,11 +63,11 @@ TEST(EnsembleMetadata, OneNode) {
     ASSERT_NE(outputs.find("request_output_name"), outputs.end());
 
     const auto& input = inputs.at("request_input_name");
-    EXPECT_EQ(input->getEffectiveShape(), shape_t({1, DUMMY_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(input->getShape_3(), Shape({1, DUMMY_MODEL_INPUT_SIZE}));
     EXPECT_EQ(input->getPrecision(), InferenceEngine::Precision::FP32);
 
     const auto& output = outputs.at("request_output_name");
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({1, DUMMY_MODEL_OUTPUT_SIZE}));
+    EXPECT_EQ(output->getShape_3(), Shape({1, DUMMY_MODEL_OUTPUT_SIZE}));
     EXPECT_EQ(output->getPrecision(), InferenceEngine::Precision::FP32);
 }
 
@@ -132,23 +132,23 @@ TEST(EnsembleMetadata, MultipleNodesOnDifferentLevelsUsingTheSamePipelineInputs)
     ASSERT_NE(outputs.find("original_input_for_N2"), outputs.end());
 
     const auto& request_input_for_N1 = inputs.at("request_input_for_N1");
-    EXPECT_EQ(request_input_for_N1->getEffectiveShape(), shape_t({1, INCREMENT_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(request_input_for_N1->getShape_3(), Shape({1, INCREMENT_MODEL_INPUT_SIZE}));
     EXPECT_EQ(request_input_for_N1->getPrecision(), InferenceEngine::Precision::FP32);
 
     const auto& request_input_for_N2_and_exit = inputs.at("request_input_for_N2_and_exit");
-    EXPECT_EQ(request_input_for_N2_and_exit->getEffectiveShape(), shape_t({1, SUM_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(request_input_for_N2_and_exit->getShape_3(), Shape({1, SUM_MODEL_INPUT_SIZE}));
     EXPECT_EQ(request_input_for_N2_and_exit->getPrecision(), InferenceEngine::Precision::FP32);
 
     const auto& intermediate_result_from_increment = outputs.at("intermediate_result_from_increment");
-    EXPECT_EQ(intermediate_result_from_increment->getEffectiveShape(), shape_t({1, INCREMENT_MODEL_OUTPUT_SIZE}));
+    EXPECT_EQ(intermediate_result_from_increment->getShape_3(), Shape({1, INCREMENT_MODEL_OUTPUT_SIZE}));
     EXPECT_EQ(intermediate_result_from_increment->getPrecision(), InferenceEngine::Precision::FP32);
 
     const auto& intermediate_result_from_sum = outputs.at("intermediate_result_from_sum");
-    EXPECT_EQ(intermediate_result_from_sum->getEffectiveShape(), shape_t({1, SUM_MODEL_OUTPUT_SIZE}));
+    EXPECT_EQ(intermediate_result_from_sum->getShape_3(), Shape({1, SUM_MODEL_OUTPUT_SIZE}));
     EXPECT_EQ(intermediate_result_from_sum->getPrecision(), InferenceEngine::Precision::FP32);
 
     const auto& original_input_for_N2 = outputs.at("original_input_for_N2");
-    EXPECT_EQ(original_input_for_N2->getEffectiveShape(), shape_t({}));
+    EXPECT_EQ(original_input_for_N2->getShape_3(), Shape({}));
     EXPECT_EQ(original_input_for_N2->getPrecision(), InferenceEngine::Precision::UNSPECIFIED);
 }
 
@@ -184,11 +184,11 @@ TEST(EnsembleMetadata, EmptyPipelineReturnsCorrectInputAndOutputInfo) {
     ASSERT_NE(outputs.find("name_for_response"), outputs.end());
 
     const auto& name_from_entry = inputs.at("name_from_entry");
-    EXPECT_EQ(name_from_entry->getEffectiveShape(), shape_t({}));
+    EXPECT_EQ(name_from_entry->getShape_3(), Shape({}));
     EXPECT_EQ(name_from_entry->getPrecision(), InferenceEngine::Precision::UNSPECIFIED);
 
     const auto& name_for_response = outputs.at("name_for_response");
-    EXPECT_EQ(name_for_response->getEffectiveShape(), shape_t({}));
+    EXPECT_EQ(name_for_response->getShape_3(), Shape({}));
     EXPECT_EQ(name_for_response->getPrecision(), InferenceEngine::Precision::UNSPECIFIED);
 }
 
@@ -276,15 +276,15 @@ TEST(EnsembleMetadata, ParallelDLModelNodesReferingToManyPipelineInputs) {
         ASSERT_NE(inputs.find(name_a), inputs.end());
         ASSERT_NE(inputs.find(name_b), inputs.end());
 
-        EXPECT_EQ(inputs.find(name_a)->second->getEffectiveShape(), shape_t({1, SUM_MODEL_INPUT_SIZE}));
+        EXPECT_EQ(inputs.find(name_a)->second->getShape_3(), Shape({1, SUM_MODEL_INPUT_SIZE}));
         EXPECT_EQ(inputs.find(name_a)->second->getPrecision(), InferenceEngine::Precision::FP32);
-        EXPECT_EQ(inputs.find(name_b)->second->getEffectiveShape(), shape_t({1, SUM_MODEL_INPUT_SIZE}));
+        EXPECT_EQ(inputs.find(name_b)->second->getShape_3(), Shape({1, SUM_MODEL_INPUT_SIZE}));
         EXPECT_EQ(inputs.find(name_b)->second->getPrecision(), InferenceEngine::Precision::FP32);
     }
 
     ASSERT_EQ(outputs.size(), 1);
     ASSERT_NE(outputs.find("final_sum"), outputs.end());
-    EXPECT_EQ(outputs.find("final_sum")->second->getEffectiveShape(), shape_t({1, SUM_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(outputs.find("final_sum")->second->getShape_3(), Shape({1, SUM_MODEL_INPUT_SIZE}));
     EXPECT_EQ(outputs.find("final_sum")->second->getPrecision(), InferenceEngine::Precision::FP32);
 }
 
@@ -392,11 +392,11 @@ TEST(EnsembleMetadata, OneCustomNode) {
     ASSERT_NE(outputs.find("request_output_name"), outputs.end());
 
     const auto& input = inputs.at("request_input_name");
-    EXPECT_EQ(input->getEffectiveShape(), shape_t({1, 0}));
+    EXPECT_EQ(input->getShape_3(), Shape({1, -1}));
     EXPECT_EQ(input->getPrecision(), InferenceEngine::Precision::FP32);
 
     const auto& output = outputs.at("request_output_name");
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({1, 0}));
+    EXPECT_EQ(output->getShape_3(), Shape({1, -1}));
     EXPECT_EQ(output->getPrecision(), InferenceEngine::Precision::FP32);
 }
 
@@ -450,12 +450,12 @@ TEST(EnsembleMetadata, ParallelCustomNodes) {
     ASSERT_NE(outputs.find("request_output_name_2"), outputs.end());
 
     const auto& input = inputs.at("request_input_name");
-    EXPECT_EQ(input->getEffectiveShape(), shape_t({1, 0}));
+    EXPECT_EQ(input->getShape_3(), Shape({1, -1}));
     EXPECT_EQ(input->getPrecision(), InferenceEngine::Precision::FP32);
 
     for (int i = 0; i < 3; i++) {
         const auto& output = outputs.at("request_output_name_" + std::to_string(i));
-        EXPECT_EQ(output->getEffectiveShape(), shape_t({1, 0}));
+        EXPECT_EQ(output->getShape_3(), Shape({1, -1}));
         EXPECT_EQ(output->getPrecision(), InferenceEngine::Precision::FP32);
     }
 }
@@ -627,15 +627,15 @@ TEST(EnsembleMetadata, CustomNodeMultipleDemultiplexers) {
     ASSERT_NE(outputs.find("request_output_name"), outputs.end());
 
     const auto& input_A = inputs.at("request_input_name_A");
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 1000}));
+    EXPECT_EQ(input_A->getShape_3(), Shape({1, 1000}));
     EXPECT_EQ(input_A->getPrecision(), InferenceEngine::Precision::FP32);
 
     const auto& input_B = inputs.at("request_input_name_B");
-    EXPECT_EQ(input_B->getEffectiveShape(), shape_t({1, 400}));
+    EXPECT_EQ(input_B->getShape_3(), Shape({1, 400}));
     EXPECT_EQ(input_B->getPrecision(), InferenceEngine::Precision::FP32);
 
     const auto& output = outputs.at("request_output_name");
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({3, 4, 1, 10}));
+    EXPECT_EQ(output->getShape_3(), Shape({3, 4, 1, 10}));
     EXPECT_EQ(output->getPrecision(), InferenceEngine::Precision::FP32);
 }
 

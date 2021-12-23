@@ -27,6 +27,7 @@
 #include "nodeoutputhandler.hpp"
 #include "nodestreamidguard.hpp"
 #include "ov_utils.hpp"
+#include "shape.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
 
@@ -84,7 +85,7 @@ Status DLNodeSession::requestExecuteRequiredResources() {
 }
 
 Status DLNodeSession::prepareInputsAndModelForInference() {
-    size_t requestedBatchSize = 0;
+    std::optional<Dimension> requestedBatchSize = std::nullopt;
     std::map<std::string, shape_t> requestedReshapes;
 
     // Validate each tensor against its OV tensor info
@@ -132,12 +133,11 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
         }
     }
     if (requestedReshapes.size() > 0) {
-        size_t bs = 0;
-        auto status = this->model->reloadModel(bs, requestedReshapes, this->modelUnloadGuard);
+        auto status = this->model->reloadModel(std::nullopt, requestedReshapes, this->modelUnloadGuard);
         if (!status.ok()) {
             return status;
         }
-    } else if (requestedBatchSize > 0) {
+    } else if (requestedBatchSize.has_value()) {
         auto status = this->model->reloadModel(requestedBatchSize, {}, this->modelUnloadGuard);
         if (!status.ok()) {
             return status;

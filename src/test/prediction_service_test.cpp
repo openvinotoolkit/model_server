@@ -353,7 +353,7 @@ TEST_F(TestPredict, SuccesfullReloadFromAlreadyLoadedWithNewBatchSize) {
         {{DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 10}, tensorflow::DataType::DT_FLOAT}}});
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    const int initialBatchSize = config.getBatchSize();
+    const auto initialBatchSize = config.getBatchSize();
     config.setBatchSize(initialBatchSize);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     performPredict(config.getName(), config.getVersion(), request);
@@ -584,23 +584,24 @@ TEST_F(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
 /**
  * Scenario - perform inference with NHWC input layout changed via config.json.
  * 
- * 1. Load model with layout=nhwc, initial internal layout: nchw, initial shape=(1,3,4,5)
+ * 1. Load model with layout=nhwc:nchw, initial internal layout: nchw, initial shape=(1,3,4,5)
  * 2. Do the inference with (1,4,5,3) shape - expect status OK and result (1,3,4,5)
  * 3. Do the inference with (1,3,4,5) shape - expect INVALID_SHAPE
  * 4. Remove layout setting
- * 5. Do the inference with (1,4,5,3) shape - expect status OK and result (1,3,4,5)
- * 6. Do the inference with (1,3,4,5) shape - expect INVALID_SHAPE
+ * 5. Do the inference with (1,3,4,5) shape - expect status OK and result (1,3,4,5)
+ * 6. Do the inference with (1,4,5,3) shape - expect INVALID_SHAPE
  * 7. Adding layout setting to nchw
  * 8. Do the inference with (1,3,4,5) shape - expect status OK and result (1,3,4,5)
  * 9. Do the inference with (1,4,5,3) shape - expect INVALID_SHAPE
  */
-TEST_F(TestPredict, PerformInferenceChangeModelInputLayout) {
+// TODO: Enable when https://jira.devtools.intel.com/browse/CVS-74065 is resolved by OpenVINO.
+TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelInputLayout) {
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
     config.setBatchingParams("0");
-    ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     tensorflow::serving::PredictResponse response;
@@ -612,16 +613,16 @@ TEST_F(TestPredict, PerformInferenceChangeModelInputLayout) {
     // Perform inference with NCHW layout, ensure error
     ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 4, 5}), ovms::StatusCode::INVALID_SHAPE);
 
-    // Reload model with layout setting removed, model is still NHWC
+    // Reload model with layout setting removed, model is back to NCHW
     ASSERT_EQ(config.parseLayoutParameter(""), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
-    // Perform inference with NHWC layout, ensure status OK and correct results
-    ASSERT_EQ(performInferenceWithImageInput(response, {1, 4, 5, 3}), ovms::StatusCode::OK);
+    // Perform inference with NCHW layout, ensure status OK and correct results
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 4, 5}), ovms::StatusCode::OK);
     checkOutputShape(response, {1, 3, 4, 5}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 
-    // Perform inference with NCHW layout, ensure error
-    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 4, 5}), ovms::StatusCode::INVALID_SHAPE);
+    // Perform inference with NHWC layout, ensure error
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 4, 5, 3}), ovms::StatusCode::INVALID_SHAPE);
 
     // Prepare model with layout changed back to nchw
     ASSERT_EQ(config.parseLayoutParameter("nchw"), ovms::StatusCode::OK);
@@ -638,7 +639,7 @@ TEST_F(TestPredict, PerformInferenceChangeModelInputLayout) {
 /**
  * Scenario - perform inference with NHWC input layout changed and shape changed via config.json.
  * 
- * 1. Load model with layout=nhwc and shape=(1,1,2,3), initial internal layout: nchw, initial shape=(1,3,4,5)
+ * 1. Load model with layout=nchw:nhwc and shape=(1,1,2,3), initial internal layout: nchw, initial shape=(1,3,4,5)
  * 2. Do the inference with (1,1,2,3) shape - expect status OK and result (1,3,1,2)
  * 3. Do the inference with (1,3,1,2) shape - expect INVALID_SHAPE
  * 4. Remove layout setting
@@ -648,15 +649,15 @@ TEST_F(TestPredict, PerformInferenceChangeModelInputLayout) {
  * 8. Do the inference with (1,3,1,2) shape - expect status OK and result (1,3,1,2)
  * 9. Do the inference with (1,1,2,3) shape - expect INVALID_SHAPE
  */
-
-TEST_F(TestPredict, PerformInferenceChangeModelInputLayoutAndShape) {
+// TODO: Enable when https://jira.devtools.intel.com/browse/CVS-74065 is resolved by OpenVINO.
+TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelInputLayoutAndShape) {
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
     config.setBatchingParams("0");
     ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
-    ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     tensorflow::serving::PredictResponse response;
@@ -670,17 +671,17 @@ TEST_F(TestPredict, PerformInferenceChangeModelInputLayoutAndShape) {
     ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::INVALID_SHAPE);
 
     // Reload model with layout setting removed, model is still NHWC
-    ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter(""), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
-    // Perform inference with NHWC layout, ensure status OK and correct results
-    ASSERT_EQ(performInferenceWithImageInput(response, {1, 1, 2, 3}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
+    // Perform inference with NCHW layout, ensure status OK and correct results
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
     checkOutputShape(response, {1, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
     checkOutputValues(response, {2.0, 5.0, 3.0, 6.0, 4.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 
-    // Perform inference with NCHW layout, ensure error
-    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::INVALID_SHAPE);
+    // Perform inference with NHWC layout, ensure error
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 1, 2, 3}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::INVALID_SHAPE);
 
     // Prepare model with layout changed back to nchw
     ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
@@ -706,14 +707,15 @@ TEST_F(TestPredict, PerformInferenceChangeModelInputLayoutAndShape) {
  * 5. Roll back layout setting to internal nchw
  * 6. Do the inference with (1,3,4,5) shape - expect status OK and result in NCHW layout
  */
-TEST_F(TestPredict, PerformInferenceChangeModelOutputLayout) {
+// TODO: Enable when https://jira.devtools.intel.com/browse/CVS-74065 is resolved by OpenVINO.
+TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelOutputLayout) {
     using namespace ovms;
 
     // Prepare model with changed output layout to nhwc (internal layout=nchw)
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
     config.setBatchingParams("0");
     ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
-    ASSERT_EQ(config.parseLayoutParameter(std::string("{\"") + INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME + std::string("\":\"nhwc\"}")), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter(std::string("{\"") + INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME + std::string("\":\"nhwc:nchw\"}")), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     tensorflow::serving::PredictResponse response;
@@ -729,7 +731,7 @@ TEST_F(TestPredict, PerformInferenceChangeModelOutputLayout) {
 
     // Perform inference with NCHW layout, ensure status OK and results still in NHWC order
     ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
-    checkOutputShape(response, {1, 1, 2, 3}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+    checkOutputShape(response, {1, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
     checkOutputValues(response, {2.0, 4.0, 6.0, 3.0, 5.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 
     // Change output layout back to original nchw.
@@ -750,7 +752,7 @@ TEST_F(TestPredict, ErrorWhenLayoutSetForMissingTensor) {
 TEST_F(TestPredict, NetworkNotLoadedWhenLayoutAndDimsInconsistent) {
     // Dummy has 2 dimensions: (1,10), changing layout to NHWC should fail
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::NETWORK_NOT_LOADED);
 }
 
@@ -771,7 +773,7 @@ TEST_F(TestPredict, PerformInferenceWithBinaryInputChangeModelInputLayout) {
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
     config.setBatchingParams("0");
     ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
-    ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     tensorflow::serving::PredictResponse response;
@@ -790,7 +792,7 @@ TEST_F(TestPredict, PerformInferenceWithBinaryInputChangeModelInputLayout) {
     ASSERT_EQ(performInferenceWithBinaryImageInput(response, INCREMENT_1x3x4x5_MODEL_INPUT_NAME), ovms::StatusCode::UNSUPPORTED_LAYOUT);
 
     // Switch back to nhwc
-    ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
@@ -813,7 +815,7 @@ TEST_F(TestPredict, PerformInferenceWithBinaryInputBatchSizeAuto) {
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
     config.setBatchingParams("auto");
     ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
-    ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     tensorflow::serving::PredictResponse response;
