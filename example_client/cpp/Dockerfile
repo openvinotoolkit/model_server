@@ -19,6 +19,10 @@ FROM ubuntu:20.04 as base_build
 ENV DEBIAN_FRONTEND=noninteractive 
 
 RUN apt update && apt install -y --no-install-recommends \
+        libopencv-dev \
+        libtbb-dev
+
+RUN apt update && apt install -y --no-install-recommends \
         automake \
         build-essential \
         ca-certificates \
@@ -63,10 +67,6 @@ RUN pip3 --no-cache-dir install \
     --ignore-installed setuptools \
     --ignore-installed six
 
-RUN apt update && apt install -y --no-install-recommends \
-        libopencv-dev \
-        libtbb-dev
-
 # Set up Bazel
 ENV BAZEL_VERSION 3.7.2
 WORKDIR /
@@ -107,8 +107,10 @@ RUN bazel build //src:all
 
 FROM ubuntu:20.04 as release
 ENV DEBIAN_FRONTEND=noninteractive 
-RUN apt update && apt install -y --no-install-recommends libopencv-core4.2 libopencv-imgcodecs4.2 libtbb-dev && \
-    apt clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+RUN apt update && apt install -y --no-install-recommends \
+        libopencv-core4.2 \
+        libopencv-imgcodecs4.2 \
+        libtbb-dev
 
 WORKDIR /clients/
 RUN mkdir -p /clients/libs/ && mkdir -p /clients/images
