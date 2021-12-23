@@ -494,7 +494,7 @@ public:
             // TODO -1 vs 0 as demultiplexing value
             if (shape[0] != 0) {
                 auto demultiplyDimension = Dimension(demultiplicatorNodeInfo.demultiplyCount.value());
-                if (!shape[0].fitsInto(demultiplyDimension)) {
+                if (!shape[0].partiallyFitsInto(demultiplyDimension)) {
                     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of node: {} does not match tensor first dimension value: {}",
                         this->pipelineName,
                         demultiplicatorNodeInfo.demultiplyCount.value(),
@@ -534,7 +534,7 @@ public:
         }
 
         for (size_t i = 0; i < tensorInputShape.size(); i++) {
-            if (!tensorInputShape[i].fitsInto(tensorOutputShape[i])) {
+            if (!tensorInputShape[i].partiallyFitsInto(tensorOutputShape[i])) {
                 return false;
             }
         }

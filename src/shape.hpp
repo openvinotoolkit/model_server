@@ -64,7 +64,7 @@ public:
     static Dimension any();
 
     bool match(dimension_value_t value) const;
-    bool fitsInto(const Dimension& value) const;
+    bool partiallyFitsInto(const Dimension& value) const;
     bool isAny() const;
 };
 

@@ -35,6 +35,8 @@ Dimension::Dimension(dimension_value_t dim) :
 }
 
 Dimension::Dimension(dimension_value_t minimum, dimension_value_t maximum) {
+    // TODO we should either throw or make separate factory to disallo
+    // calling with eg (10,9) or (-2,-1) etc
     this->minimum = minimum;
     this->maximum = maximum;
 }
@@ -176,8 +178,8 @@ bool Dimension::isAny() const {
 }
 
 // TODO decide during DAG task how it should look like & potentially fix
-bool Dimension::fitsInto(const Dimension& next) const {
-    if (next.isAny()) {
+bool Dimension::partiallyFitsInto(const Dimension& next) const {
+    if (next.isAny() || isAny()) {
         return true;
     }
     if (isStatic()) {
@@ -190,7 +192,7 @@ bool Dimension::fitsInto(const Dimension& next) const {
     if (next.getMinValue() > getMaxValue()) {
         return false;
     }
-    if (next.getMaxValue() > getMinValue()) {
+    if (next.getMaxValue() < getMinValue()) {
         return false;
     }
     return true;
