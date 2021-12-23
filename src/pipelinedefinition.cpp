@@ -476,7 +476,6 @@ public:
                 return StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL_OUTPUT;
             }
         }
-
         return StatusCode::OK;
     }
 
@@ -494,7 +493,7 @@ public:
         if (demultiplicatorNodeInfo.demultiplyCount.value() != 0) {
             // TODO -1 vs 0 as demultiplexing value
             if (shape[0] != 0) {
-                auto demultiplyDimension = demultiplicatorNodeInfo.demultiplyCount.value() ? Dimension(demultiplicatorNodeInfo.demultiplyCount.value()) : Dimension::any();
+                auto demultiplyDimension = Dimension(demultiplicatorNodeInfo.demultiplyCount.value());
                 if (!shape[0].fitsInto(demultiplyDimension)) {
                     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of node: {} does not match tensor first dimension value: {}",
                         this->pipelineName,
@@ -504,13 +503,14 @@ public:
                     return StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT;
                 }
             } else {
-                SPDLOG_LOGGER_WARN(modelmanager_logger, "Demultiply count: {} of node: {} is fixed while first dimenson value of node library is not: {}. This pipeline may fail at execution stage.",
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {}; Demultiply count: {} of node: {} is fixed while first dimenson value of node library is not: {}. This pipeline may fail at execution stage.",
+                    this->pipelineName,
                     demultiplicatorNodeInfo.demultiplyCount.value(),
                     demultiplicatorNodeInfo.nodeName,
                     shape[0].toString());
             }
-        } else if (!shape[0].isAny() && shape[0] != 0) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "DAG: {}; Demultiply count: {} of node: {} is dynamic while first dimenson value of gather node is not: {}. This pipeline may fail at execution stage.",
+        } else if (!shape[0].isAny() && shape[0] != 0) {  // TODO we probably should remove part after && since dynamic demultiplexer should be -1 in follow up tasks
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {}; Demultiply count: {} of node: {} is dynamic while first dimenson value of gather node is not: {}. This pipeline may fail at execution stage.",
                 this->pipelineName,
                 demultiplicatorNodeInfo.demultiplyCount.value(),
                 demultiplicatorNodeInfo.nodeName,
