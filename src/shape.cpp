@@ -35,6 +35,8 @@ Dimension::Dimension(dimension_value_t dim) :
 }
 
 Dimension::Dimension(dimension_value_t minimum, dimension_value_t maximum) {
+    // TODO we should either throw or make separate factory to disallo
+    // calling with eg (10,9) or (-2,-1) etc
     this->minimum = minimum;
     this->maximum = maximum;
 }
@@ -175,6 +177,27 @@ bool Dimension::isAny() const {
            (this->minimum == DYNAMIC_DIMENSION);
 }
 
+// TODO decide during DAG task how it should look like & potentially fix
+bool Dimension::partiallyFitsInto(const Dimension& next) const {
+    if (next.isAny() || isAny()) {
+        return true;
+    }
+    if (isStatic()) {
+        return next.match(getStaticValue());
+    }
+    if (next.isStatic()) {
+        return this->match(next.getStaticValue());
+    }
+    // both are dynamic
+    if (next.getMinValue() > getMaxValue()) {
+        return false;
+    }
+    if (next.getMaxValue() < getMinValue()) {
+        return false;
+    }
+    return true;
+}
+
 bool Dimension::match(dimension_value_t value) const {
     if (isAny()) {
         return true;
@@ -257,11 +280,6 @@ Shape& Shape::add(const Dimension& dim, size_t pos) {
     this->emplace(this->begin() + pos, dim);
     return *this;
 }
-
-/*size_t Shape::getSize() const {
-    // TODO dispose
-    return this->size();
-}*/
 
 ov::PartialShape Shape::createPartialShape() const {
     ov::PartialShape shape;
