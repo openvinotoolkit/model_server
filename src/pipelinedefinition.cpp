@@ -480,7 +480,7 @@ public:
         return StatusCode::OK;
     }
 
-    Status validateShapeWithDemultiplexer(const shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) const {
+    Status validateShapeWithDemultiplexer(const Shape& shape, const NodeInfo& demultiplicatorNodeInfo) const {
         if (!demultiplicatorNodeInfo.demultiplyCount) {
             return StatusCode::OK;
         }
@@ -492,33 +492,34 @@ public:
             return StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY;
         }
         if (demultiplicatorNodeInfo.demultiplyCount.value() != 0) {
+            // TODO -1 vs 0 as demultiplexing value
             if (shape[0] != 0) {
                 // 0 means that node accepts dynamic shape
-                if (shape[0] != demultiplicatorNodeInfo.demultiplyCount.value()) {
+                if (!shape[0].match(demultiplicatorNodeInfo.demultiplyCount.value())) {
                     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of node: {} does not match tensor first dimension value: {}",
                         this->pipelineName,
                         demultiplicatorNodeInfo.demultiplyCount.value(),
                         demultiplicatorNodeInfo.nodeName,
-                        shape[0]);
+                        shape[0].toString());
                     return StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT;
                 }
             } else {
                 SPDLOG_LOGGER_WARN(modelmanager_logger, "Demultiply count: {} of node: {} is fixed while first dimenson value of node library is not: {}. This pipeline may fail at execution stage.",
                     demultiplicatorNodeInfo.demultiplyCount.value(),
                     demultiplicatorNodeInfo.nodeName,
-                    shape[0]);
+                    shape[0].toString());
             }
-        } else if (shape[0] != 0) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Demultiply count: {} of node: {} is dynamic while first dimenson value of gather node is not: {}. This pipeline may fail at execution stage.",
+        } else if (!shape[0].isAny() && shape[0] != 0) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "DAG: {}; Demultiply count: {} of node: {} is dynamic while first dimenson value of gather node is not: {}. This pipeline may fail at execution stage.",
                 this->pipelineName,
                 demultiplicatorNodeInfo.demultiplyCount.value(),
                 demultiplicatorNodeInfo.nodeName,
-                shape[0]);
+                shape[0].toString());
         }
         return StatusCode::OK;
     }
 
-    Status influenceShapeWithDemultiplexer(shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) {
+    Status influenceShapeWithDemultiplexer(Shape& shape, const NodeInfo& demultiplicatorNodeInfo) {
         auto result = validateShapeWithDemultiplexer(shape, demultiplicatorNodeInfo);
         if (!result.ok()) {
             return result;
@@ -527,13 +528,13 @@ public:
         return StatusCode::OK;
     }
 
-    bool areShapesMatching(const shape_t& tensorInputShape, const shape_t& tensorOutputShape) {
+    bool areShapesMatching(const Shape& tensorInputShape, const Shape& tensorOutputShape) {
         if (tensorInputShape.size() != tensorOutputShape.size()) {
             return false;
         }
 
         for (size_t i = 0; i < tensorInputShape.size(); i++) {
-            if (tensorInputShape[i] != tensorOutputShape[i] && (tensorInputShape[i] != 0 && tensorOutputShape[i] != 0)) {
+            if (!tensorInputShape[i].fitsInto(tensorOutputShape[i])) {
                 return false;
             }
         }
@@ -546,8 +547,8 @@ public:
         // Affect shape by demultiplexer/gather if applies.
         const auto& tensorInput = this->inputsInfo.at(modelInputName);
         const auto& tensorOutput = this->dependencyOutputsInfo.at(modelOutputName);
-        shape_t tensorInputShape = tensorInput->getShape_3().getFlatShape();
-        shape_t tensorOutputShape = tensorOutput->getShape_3().getFlatShape();
+        Shape tensorInputShape = tensorInput->getShape_3();
+        Shape tensorOutputShape = tensorOutput->getShape_3();
         if (dependencyNodeInfo.demultiplyCount) {
             auto result = influenceShapeWithDemultiplexer(tensorOutputShape, dependencyNodeInfo);
             if (!result.ok()) {
@@ -566,7 +567,7 @@ public:
                     this->pipelineName,
                     demultiplicatorNode->demultiplyCount.value(),
                     demultiplicatorNode->nodeName,
-                    tensorInputShape[1],
+                    tensorInputShape[1].toString(),
                     dependencyNodeInfo.nodeName);
                 return result;
             }
@@ -581,10 +582,10 @@ public:
                 pipelineName,
                 dependantNodeInfo.nodeName,
                 modelInputName,
-                TensorInfo::shapeToString(tensorInputShape),
+                tensorInputShape.toString(),
                 dependencyNodeInfo.nodeName,
                 modelOutputName,
-                TensorInfo::shapeToString(tensorOutputShape));
+                tensorOutputShape.toString());
             return StatusCode::INVALID_SHAPE;
         }
         if (tensorInput->getPrecision() != tensorOutput->getPrecision()) {
@@ -796,7 +797,7 @@ public:
 
         if (dependantNodeInfo.kind == NodeKind::DL || dependantNodeInfo.kind == NodeKind::CUSTOM) {
             for (const auto& [name, tensorOutput] : outputsInfo) {
-                auto result = validateShapeWithDemultiplexer(tensorOutput->getShape_3().getFlatShape(), dependantNodeInfo);
+                auto result = validateShapeWithDemultiplexer(tensorOutput->getShape_3(), dependantNodeInfo);
                 if (!result.ok()) {
                     return result;
                 }
@@ -1120,9 +1121,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                         }
                         if (!it->second->isTensorSpecEqual(*tensorInfo) &&
                             !it->second->isTensorUnspecified()) {
-                            Status result = StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA;
-                            SPDLOG_ERROR(result.string());
-                            return result;
+                            return StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA;
                         }
                     }
                     inputsInfo[alias] = tensorInfo;
@@ -1303,7 +1302,7 @@ Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
         }
         if (info.gatherFromNode.count(nodeName) > 0) {
             auto someNodeInfo = this->findNodeByName(nodeName);
-            dimension_value_t demultiplyCount = static_cast<dimension_value_t>(someNodeInfo.demultiplyCount.value_or(DYNAMIC_DIMENSION));
+            dimension_value_t demultiplyCount = static_cast<dimension_value_t>(someNodeInfo.demultiplyCount.value_or(0));
             if (demultiplyCount == 0) {
                 tensor_map_t nodeOutputsInfo;
                 if (someNodeInfo.kind == NodeKind::CUSTOM) {

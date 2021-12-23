@@ -407,10 +407,8 @@ const InferenceEngine::TensorDesc TensorInfo::getTensorDesc() const {
 }
 
 bool TensorInfo::isTensorSpecEqual(const TensorInfo& other) const {
-    return this->getShape_2() == other.getShape_2() &&
-           this->getShape() == other.getShape() &&
-           this->getShape_3() == other.getShape_3() &&
-           this->getPrecision_2() == other.getPrecision_2();
+    return (this->getShape_3() == other.getShape_3()) &&
+           (this->getPrecision_2() == other.getPrecision_2());
 }
 
 bool TensorInfo::isTensorUnspecified() const {

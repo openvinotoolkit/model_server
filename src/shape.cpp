@@ -175,12 +175,35 @@ bool Dimension::isAny() const {
            (this->minimum == DYNAMIC_DIMENSION);
 }
 
+// TODO decide during DAG task how it should look like & potentially fix
+bool Dimension::fitsInto(const Dimension& next) const {
+    if (next.isAny()) {
+        return true;
+    }
+    if (isStatic()) {
+        bool b = next.match(getStaticValue());
+        return b;
+    }
+    if (next.isStatic()) {
+        return this->match(next.getStaticValue());
+    }
+    // both are dynamic
+    if (next.getMinValue() > getMaxValue()) {
+        return false;
+    }
+    if (next.getMaxValue() > getMinValue()) {
+        return false;
+    }
+    return true;
+}
+
 bool Dimension::match(dimension_value_t value) const {
     if (isAny()) {
         return true;
     }
     if (isStatic()) {
-        return getStaticValue() == value;
+        return (getStaticValue() == value) ||
+               (getStaticValue() == 0);
     }
     if (value < getMinValue()) {
         return false;
@@ -257,11 +280,6 @@ Shape& Shape::add(const Dimension& dim, size_t pos) {
     this->emplace(this->begin() + pos, dim);
     return *this;
 }
-
-/*size_t Shape::getSize() const {
-    // TODO dispose
-    return this->size();
-}*/
 
 ov::PartialShape Shape::createPartialShape() const {
     ov::PartialShape shape;
