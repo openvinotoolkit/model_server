@@ -17,11 +17,6 @@
 FROM ubuntu:20.04 as base_build
 
 ENV DEBIAN_FRONTEND=noninteractive 
-SHELL ["/bin/bash", "-c"]
-
-RUN apt update && apt install -y --no-install-recommends \
-        libopencv-dev \
-        libtbb-dev
 
 RUN apt update && apt install -y --no-install-recommends \
         automake \
@@ -33,6 +28,7 @@ RUN apt update && apt install -y --no-install-recommends \
         libcurl3-dev \
         libfreetype6-dev \
         libpng-dev \
+        libtbb-dev \
         libtool \
         libzmq3-dev \
         mlocate \
@@ -120,5 +116,4 @@ COPY --from=base_build \
     /clients/
 COPY --from=base_build /input/images/*.jpeg /clients/images/
 COPY --from=base_build /input/input_images.txt /clients/
-
-ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/clients/libs
+COPY --from=base_build /opt/intel/openvino/extras/opencv/lib/* /lib/x86_64-linux-gnu/
