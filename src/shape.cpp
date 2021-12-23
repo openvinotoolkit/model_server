@@ -181,8 +181,7 @@ bool Dimension::fitsInto(const Dimension& next) const {
         return true;
     }
     if (isStatic()) {
-        bool b = next.match(getStaticValue());
-        return b;
+        return next.match(getStaticValue());
     }
     if (next.isStatic()) {
         return this->match(next.getStaticValue());
@@ -202,8 +201,7 @@ bool Dimension::match(dimension_value_t value) const {
         return true;
     }
     if (isStatic()) {
-        return (getStaticValue() == value) ||
-               (getStaticValue() == 0);
+        return getStaticValue() == value;
     }
     if (value < getMinValue()) {
         return false;
