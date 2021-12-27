@@ -31,12 +31,18 @@
 
 namespace ovms {
 
+struct CNLIMWrapper {
+    void* ptr;
+    CNLIMWrapper(void* CNLIM) : 
+        ptr(CNLIM) {}
+};
+
 class TensorInfo;
 
 CustomNodeTensorPrecision toCustomNodeTensorPrecision(ov::element::Type_t precision);
 Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision);
 std::unique_ptr<struct CustomNodeParam[]> createCustomNodeParamArray(const std::unordered_map<std::string, std::string>& paramMap);
 std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const TensorMap& blobMap, const std::unordered_map<std::string, shape_t>& tensorDims);
-Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std::map<std::string, std::shared_ptr<TensorInfo>>& out, release_fn freeCallback, std::shared_ptr<void*>& customNodeLibraryInternalManager);
+Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std::map<std::string, std::shared_ptr<TensorInfo>>& out, release_fn freeCallback, std::shared_ptr<CNLIMWrapper>& customNodeLibraryInternalManager);
 
 }  // namespace ovms

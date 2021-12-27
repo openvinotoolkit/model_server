@@ -102,9 +102,9 @@ Status PipelineDefinition::initializeNodeResources() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Initialization of library with base path: {} failed", nodeInfo.library.basePath);
                 return StatusCode::NODE_LIBRARY_INITIALIZE_FAILED;
             }
-            // std::shared_ptr<void*> sharedCustomNodeLibraryInternalManager(&customNodeLibraryInternalManager, [](void** ptr) { std::cout << "deinit of shared ptr" << std::endl; });
-            // std::shared_ptr<void*> sharedCustomNodeLibraryInternalManager(customNodeLibraryInternalManager);
-            std::shared_ptr<void*> sharedCustomNodeLibraryInternalManager = std::make_shared<void*>(customNodeLibraryInternalManager);
+            std::shared_ptr<CNLIMWrapper> sharedCustomNodeLibraryInternalManager(new CNLIMWrapper{customNodeLibraryInternalManager}, [&, nodeInfo](CNLIMWrapper* wrapper) { 
+                nodeInfo.library.deinitialize(wrapper->ptr);
+                });
             nodeResources.insert({nodeInfo.nodeName, sharedCustomNodeLibraryInternalManager});
         }
     }
@@ -338,7 +338,7 @@ class NodeValidator {
     const NodeInfo& dependantNodeInfo;
     const pipeline_connections_t& connections;
     const std::vector<NodeInfo>& nodeInfos;
-    std::map<std::string, std::shared_ptr<void*>>& nodeResources;
+    std::map<std::string, std::shared_ptr<CNLIMWrapper>>& nodeResources;
     const bool isMultiBatchAllowed;
 
     std::unique_ptr<ModelInstanceUnloadGuard> dependantModelUnloadGuard;
@@ -355,7 +355,7 @@ public:
         const NodeInfo& dependantNodeInfo,
         const pipeline_connections_t& connections,
         const std::vector<NodeInfo>& nodeInfos,
-        std::map<std::string, std::shared_ptr<void*>>& nodeResources,
+        std::map<std::string, std::shared_ptr<CNLIMWrapper>>& nodeResources,
         const bool isMultiBatchAllowed = true) :
         pipelineName(pipelineName),
         manager(manager),
@@ -1258,12 +1258,12 @@ Status PipelineDefinition::updateOutputsInfo(const ModelManager& manager) {
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName, std::shared_ptr<void*>& customNodeLibraryInternalManager) {
+Status PipelineDefinition::getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName, std::shared_ptr<CNLIMWrapper>& customNodeLibraryInternalManager) {
     struct CustomNodeTensorInfo* info = nullptr;
     int infoCount = 0;
     auto paramArray = createCustomNodeParamArray(customNodeInfo.parameters);
     int paramArrayLength = customNodeInfo.parameters.size();
-    int result = callback(&info, &infoCount, paramArray.get(), paramArrayLength, *customNodeLibraryInternalManager.get());
+    int result = callback(&info, &infoCount, paramArray.get(), paramArrayLength, customNodeLibraryInternalManager->ptr);
     if (result != 0) {
         SPDLOG_ERROR("Metadata call to custom node: {} in pipeline: {} returned error code: {}",
             customNodeInfo.nodeName, pipelineName, result);

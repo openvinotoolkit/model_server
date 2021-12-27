@@ -26,7 +26,7 @@ bool operator==(const CustomNodeTensor& t1, const CustomNodeTensor& t2) {
            (t1.dimsCount == t2.dimsCount) &&
            (t1.precision == t2.precision);
 }
-CustomNodeOutputAllocator_2::CustomNodeOutputAllocator_2(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, std::shared_ptr<void*>& customNodeLibraryInternalManager) :
+CustomNodeOutputAllocator_2::CustomNodeOutputAllocator_2(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, std::shared_ptr<CNLIMWrapper>& customNodeLibraryInternalManager) :
     tensor(tensor),
     nodeLibrary(nodeLibrary),
     customNodeLibraryInternalManager(customNodeLibraryInternalManager) {}
@@ -34,13 +34,13 @@ void* CustomNodeOutputAllocator_2::allocate(const size_t bytes, const size_t ali
     return (void*)tensor.data;
 }
 void CustomNodeOutputAllocator_2::deallocate(void* handle, const size_t bytes, size_t alignment) {
-    bool succeeded = nodeLibrary.release(tensor.data, *customNodeLibraryInternalManager.get()) == 0;
+    bool succeeded = nodeLibrary.release(tensor.data, customNodeLibraryInternalManager->ptr) == 0;
     if (false == succeeded) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to release custom node tensor:{} buffer using library:{}", tensor.name, nodeLibrary.basePath);
     }
 }
 bool CustomNodeOutputAllocator_2::is_equal(const CustomNodeOutputAllocator_2& other) const {
-    return (*customNodeLibraryInternalManager.get() == *other.customNodeLibraryInternalManager.get()) &&
+    return (customNodeLibraryInternalManager->ptr == other.customNodeLibraryInternalManager->ptr) &&
            (nodeLibrary == other.nodeLibrary) &&
            (tensor == other.tensor);
 }

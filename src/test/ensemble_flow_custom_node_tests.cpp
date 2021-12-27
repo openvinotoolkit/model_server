@@ -4807,7 +4807,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnR
     ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 3);
 }
 
-TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SingleDeinitializeCallOnReload) {
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDeinitializeAllCustomNodes) {
     // Nodes
     // request   custom    custom_2   custom_3    response
     //  O--------->O--------->O--------->O---------->O
@@ -4866,5 +4866,5 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SingleDeinitializeCallOnRelo
     ASSERT_EQ(factory.reloadDefinition("my_new_pipeline", std::move(info), std::move(connections), manager), StatusCode::OK);
     // Each custom node has effectively 1 internalManager initialized, because they use same library instance
     // in order to count whether deinitialize has been called expected number of times
-    ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 1);
+    ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 3);
 }

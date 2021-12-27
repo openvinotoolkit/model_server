@@ -38,6 +38,7 @@
 #include "pipelinedefinitionunloadguard.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
+#include "node_library_utils.hpp"
 
 namespace ovms {
 
@@ -72,7 +73,7 @@ class PipelineDefinition {
 
     const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
-    std::map<std::string, std::shared_ptr<void*>> nodeResources = {};
+    std::map<std::string, std::shared_ptr<CNLIMWrapper>> nodeResources = {};
     pipeline_connections_t connections;
 
 protected:
@@ -152,7 +153,7 @@ public:
     const tensor_map_t getOutputsInfo() const;
 
 private:
-    static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName, std::shared_ptr<void*>& customNodeLibraryInternalManager);
+    static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName, std::shared_ptr<CNLIMWrapper>& customNodeLibraryInternalManager);
 
     Status populateOutputsInfoWithDLModelOutputs(
         const NodeInfo& dependencyNodeInfo,

@@ -32,7 +32,7 @@ CustomNode::CustomNode(
     const std::unordered_map<std::string, std::string>& nodeOutputNameAlias,
     std::optional<uint32_t> demultiplyCount,
     std::set<std::string> gatherFromNode,
-    std::shared_ptr<void*> customNodeLibraryInternalManager) :
+    std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager) :
     Node(nodeName, demultiplyCount, gatherFromNode),
     library(library),
     parameters(parameters),

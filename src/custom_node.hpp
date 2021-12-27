@@ -24,6 +24,7 @@
 #include "node.hpp"
 #include "nodeinfo.hpp"
 #include "pipelineeventqueue.hpp"
+#include "node_library_utils.hpp"
 
 namespace ovms {
 
@@ -36,7 +37,7 @@ class CustomNode : public Node {
 
     std::unique_ptr<struct CustomNodeParam[]> libraryParameters = nullptr;
 
-    std::shared_ptr<void*> customNodeLibraryInternalManager;
+    std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager;
 
 public:
     CustomNode(
@@ -46,7 +47,7 @@ public:
         const std::unordered_map<std::string, std::string>& nodeOutputNameAlias = {},
         std::optional<uint32_t> demultiplyCount = std::nullopt,
         std::set<std::string> gatherFromNode = {},
-        std::shared_ptr<void*> customNodeLibraryInternalManager = std::make_shared<void*>(nullptr));
+        std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager = std::make_shared<CNLIMWrapper>(nullptr));
 
     Status execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) override;
 
