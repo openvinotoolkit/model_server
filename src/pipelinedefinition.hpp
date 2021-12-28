@@ -33,12 +33,12 @@
 
 #include "aliases.hpp"
 #include "modelversion.hpp"
+#include "node_library_utils.hpp"
 #include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"
 #include "pipelinedefinitionunloadguard.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
-#include "node_library_utils.hpp"
 
 namespace ovms {
 

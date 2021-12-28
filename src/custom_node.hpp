@@ -22,9 +22,9 @@
 
 #include "custom_node_interface.h"  // NOLINT
 #include "node.hpp"
+#include "node_library_utils.hpp"
 #include "nodeinfo.hpp"
 #include "pipelineeventqueue.hpp"
-#include "node_library_utils.hpp"
 
 namespace ovms {
 

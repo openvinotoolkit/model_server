@@ -19,11 +19,11 @@
 #include <string>
 
 #include "custom_node_interface.h"  // NOLINT
+#include "node_library_utils.hpp"
 #include "nodesession.hpp"
 #include "pipelineeventqueue.hpp"
 #include "status.hpp"
 #include "tensormap.hpp"
-#include "node_library_utils.hpp"
 
 namespace ovms {
 
