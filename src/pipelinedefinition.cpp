@@ -103,7 +103,7 @@ Status PipelineDefinition::initializeNodeResources() {
                 return StatusCode::NODE_LIBRARY_INITIALIZE_FAILED;
             }
             std::shared_ptr<CNLIMWrapper> sharedCustomNodeLibraryInternalManager(new CNLIMWrapper{customNodeLibraryInternalManager, nodeInfo.library.deinitialize});
-            nodeResources.insert({nodeInfo.nodeName, sharedCustomNodeLibraryInternalManager});
+            nodeResources.emplace(std::make_pair(nodeInfo.nodeName, std::move(sharedCustomNodeLibraryInternalManager)));
         }
     }
     return StatusCode::OK;
