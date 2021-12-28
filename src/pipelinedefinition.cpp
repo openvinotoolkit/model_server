@@ -102,9 +102,7 @@ Status PipelineDefinition::initializeNodeResources() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Initialization of library with base path: {} failed", nodeInfo.library.basePath);
                 return StatusCode::NODE_LIBRARY_INITIALIZE_FAILED;
             }
-            std::shared_ptr<CNLIMWrapper> sharedCustomNodeLibraryInternalManager(new CNLIMWrapper{customNodeLibraryInternalManager}, [&, nodeInfo](CNLIMWrapper* wrapper) { 
-                nodeInfo.library.deinitialize(wrapper->ptr);
-                });
+            std::shared_ptr<CNLIMWrapper> sharedCustomNodeLibraryInternalManager(new CNLIMWrapper{customNodeLibraryInternalManager, nodeInfo.library.deinitialize});
             nodeResources.insert({nodeInfo.nodeName, sharedCustomNodeLibraryInternalManager});
         }
     }

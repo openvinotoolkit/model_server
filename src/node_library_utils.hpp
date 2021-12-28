@@ -31,10 +31,19 @@
 
 namespace ovms {
 
+typedef int (*deinitialize_fn)(void*);
+
 struct CNLIMWrapper {
     void* ptr;
-    CNLIMWrapper(void* CNLIM) : 
-        ptr(CNLIM) {}
+    deinitialize_fn deinitialize = nullptr;
+
+    CNLIMWrapper(void* CNLIM, deinitialize_fn deinitialize) : 
+        ptr(CNLIM),
+        deinitialize(deinitialize) {}
+
+    ~CNLIMWrapper() {
+        deinitialize(ptr);
+    }
 };
 
 class TensorInfo;

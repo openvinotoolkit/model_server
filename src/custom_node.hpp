@@ -47,7 +47,7 @@ public:
         const std::unordered_map<std::string, std::string>& nodeOutputNameAlias = {},
         std::optional<uint32_t> demultiplyCount = std::nullopt,
         std::set<std::string> gatherFromNode = {},
-        std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager = std::make_shared<CNLIMWrapper>(nullptr));
+        std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager = std::make_shared<CNLIMWrapper>(nullptr, [](void* ptr) -> int { return 0; }));
 
     Status execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) override;
 
