@@ -109,6 +109,6 @@ grpc_extra_deps()
 new_local_repository(
     name = "opencv",
     build_file = "@//third_party/opencv:BUILD",
-    path = "/opt/intel/openvino/opencv",
+    path = "/opt/intel/openvino/extras/opencv",
 )
 ################## END OF OPENCV DEPENDENCY ##########
