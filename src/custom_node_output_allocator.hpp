@@ -17,6 +17,7 @@
 
 #include <inference_engine.hpp>
 #include <openvino/openvino.hpp>
+#include <memory>
 
 #include "custom_node_interface.h"  // NOLINT
 #include "node_library.hpp"
