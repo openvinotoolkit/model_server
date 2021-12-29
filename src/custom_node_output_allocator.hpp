@@ -15,14 +15,11 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
-
 #include <inference_engine.hpp>
 #include <openvino/openvino.hpp>
 
 #include "custom_node_interface.h"  // NOLINT
 #include "node_library.hpp"
-#include "node_library_utils.hpp"
 
 namespace ovms {
 

@@ -33,7 +33,7 @@
 
 #include "aliases.hpp"
 #include "modelversion.hpp"
-#include "node_library_utils.hpp"
+#include "customNodeLibraryInternalManagerWrapper.hpp"
 #include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"
 #include "pipelinedefinitionunloadguard.hpp"

@@ -60,6 +60,8 @@ cc_library(
         "custom_node_library_manager.hpp",
         "custom_node_output_allocator.cpp",
         "custom_node_output_allocator.hpp",
+        "customNodeLibraryInternalManagerWrapper.hpp",
+        "customNodeLibraryInternalManagerWrapper.cpp",
         "customnodesession.cpp",
         "customnodesession.hpp",
         "customloaderconfig.hpp",

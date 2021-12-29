@@ -22,7 +22,7 @@
 
 #include "custom_node_interface.h"  // NOLINT
 #include "node.hpp"
-#include "node_library_utils.hpp"
+#include "customNodeLibraryInternalManagerWrapper.hpp"
 #include "nodeinfo.hpp"
 #include "pipelineeventqueue.hpp"
 
@@ -47,7 +47,7 @@ public:
         const std::unordered_map<std::string, std::string>& nodeOutputNameAlias = {},
         std::optional<uint32_t> demultiplyCount = std::nullopt,
         std::set<std::string> gatherFromNode = {},
-        std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager = std::make_shared<CNLIMWrapper>(nullptr, [](void* ptr) -> int { return 0; }));
+        std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager = nullptr);
 
     Status execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) override;
 

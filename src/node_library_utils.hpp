@@ -31,19 +31,6 @@
 
 namespace ovms {
 
-struct CNLIMWrapper {
-    void* ptr;
-    deinitialize_fn deinitialize = nullptr;
-
-    CNLIMWrapper(void* CNLIM, deinitialize_fn deinitialize) :
-        ptr(CNLIM),
-        deinitialize(deinitialize) {}
-
-    ~CNLIMWrapper() {
-        deinitialize(ptr);
-    }
-};
-
 class TensorInfo;
 
 CustomNodeTensorPrecision toCustomNodeTensorPrecision(ov::element::Type_t precision);
