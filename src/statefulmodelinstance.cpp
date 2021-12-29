@@ -229,7 +229,6 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
 
     timer.start("deserialize");
     InputSink_2<ov::runtime::InferRequest&> inputSink_2(inferRequest_2);
-    (void)inputSink_2;
     bool isPipeline = false;
     status = deserializePredictRequest_2<ConcreteTensorProtoDeserializator_2>(*requestProto, getInputsInfo(), inputSink_2, isPipeline);
     timer.stop("deserialize");
@@ -238,15 +237,17 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("deserialize") / 1000);
 
-    timer.stop("prediction");
+    timer.start("prediction");
     status = performInference_2(inferRequest_2);
+    timer.stop("prediction");
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("prediction") / 1000);
 
-    timer.stop("serialize");
+    timer.start("serialize");
     status = serializePredictResponse_2(inferRequest_2, getOutputsInfo(), responseProto);
+    timer.stop("serialize");
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
@@ -254,6 +255,7 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
 
     timer.start("postprocess");
     status = postInferenceProcessing_2(responseProto, inferRequest_2, sequence, sequenceProcessingSpec);
+    timer.stop("postprocess");
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Postprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
@@ -266,48 +268,6 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
         if (!status.ok())
             return status;
     }
-
-    return StatusCode::OK;
-}
-
-const Status StatefulModelInstance::preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, Sequence& sequence,
-    SequenceProcessingSpec& sequenceProcessingSpec) {
-    if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_START) {
-        // On SEQUENCE_START reset memory state of infer request to default
-        for (auto&& state : inferRequest.QueryState()) {
-            state.Reset();
-        }
-    } else {
-        // For next requests in the sequence set infer request memory state to the last state saved by the sequence
-        const sequence_memory_state_t& sequenceMemoryState = sequence.getMemoryState();
-        for (auto&& state : inferRequest.QueryState()) {
-            auto stateName = state.GetName();
-            if (!sequenceMemoryState.count(stateName))
-                return StatusCode::INTERNAL_ERROR;
-            state.SetState(sequenceMemoryState.at(stateName));
-        }
-    }
-    return StatusCode::OK;
-}
-
-const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving::PredictResponse* response,
-    InferenceEngine::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec) {
-    // Reset inferRequest states on SEQUENCE_END
-    if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
-        spdlog::debug("Received SEQUENCE_END signal. Reseting model state and removing sequence");
-        for (auto&& state : inferRequest.QueryState()) {
-            state.Reset();
-        }
-    } else {
-        auto modelState = inferRequest.QueryState();
-        sequence.updateMemoryState(modelState);
-    }
-
-    // Include sequence_id in server response
-    auto& tensorProto = (*response->mutable_outputs())["sequence_id"];
-    tensorProto.mutable_tensor_shape()->add_dim()->set_size(1);
-    tensorProto.set_dtype(tensorflow::DataType::DT_UINT64);
-    tensorProto.add_uint64_val(sequenceProcessingSpec.getSequenceId());
 
     return StatusCode::OK;
 }

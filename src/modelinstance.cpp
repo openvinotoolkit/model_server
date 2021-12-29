@@ -500,7 +500,7 @@ uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& mo
     }
     std::string key = METRIC_KEY(OPTIMAL_NUMBER_OF_INFER_REQUESTS);
     try {
-        numberOfParallelInferRequests = execNetwork->GetMetric(key).as<unsigned int>();
+        numberOfParallelInferRequests = execNetwork_2->get_metric(key).as<unsigned int>();
     } catch (const InferenceEngine::Exception& ex) {
         SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
         numberOfParallelInferRequests = 1u;
@@ -597,7 +597,6 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 }
 
 void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
-    execNetwork = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*network, targetDevice, pluginConfig));
     execNetwork_2 = std::make_shared<ov::runtime::ExecutableNetwork>(ieCore_2.compile_model(network_2, targetDevice, pluginConfig));
 }
 
@@ -650,7 +649,7 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
     const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
     std::vector<std::string> supportedConfigKeys;
     try {
-        std::vector<std::string> supportedConfigKeys2 = execNetwork->GetMetric(supportedConfigKey);
+        std::vector<std::string> supportedConfigKeys2 = execNetwork_2->get_metric(supportedConfigKey);
         supportedConfigKeys = std::move(supportedConfigKeys2);
     } catch (std::exception& e) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, ExecutableNetwork metric key: {}; Error: {}", targetDevice, supportedConfigKey, e.what());
@@ -663,7 +662,7 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
     for (auto& key : supportedConfigKeys) {
         std::string value;
         try {
-            auto paramValue = execNetwork->GetConfig(key);
+            auto paramValue = execNetwork_2->get_config(key);
             value = paramValue.as<std::string>();
         } catch (std::exception& e) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, ExecutableNetwork config key: {}; Error: {}", targetDevice, key, e.what());
@@ -722,12 +721,11 @@ Status ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
     if (numberOfParallelInferRequests == 0) {
         return Status(StatusCode::INVALID_NIREQ, "Exceeded allowed nireq value");
     }
-    inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(*execNetwork, numberOfParallelInferRequests);
     inferRequestsQueue_2 = std::make_unique<OVInferRequestsQueue_2>(*execNetwork_2, numberOfParallelInferRequests);
     SPDLOG_INFO("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
         getName(),
         getVersion(),
-        getBatchSize(),
+        getBatchSize().toString(),
         numberOfParallelInferRequests);
     return StatusCode::OK;
 }
@@ -741,6 +739,9 @@ void ModelInstance::configureBatchSize(const ModelConfig& config, const DynamicM
 }
 
 Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
+    bool isLayoutConfigurationChanged = !config.isLayoutConfigurationEqual(this->config);
+    SPDLOG_INFO("IS LAYOUT CONFIGURATION CHANGED: {}", isLayoutConfigurationChanged);
+
     subscriptionManager.notifySubscribers();
     this->path = config.getPath();
     this->targetDevice = config.getTargetDevice();
@@ -762,7 +763,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             }
         }
 
-        if (!this->network) {
+        if (!this->network || isLayoutConfigurationChanged) {
             if (this->config.isCustomLoaderRequiredToLoadModel()) {
                 // loading the model using the custom loader
                 status = loadOVCNNNetworkUsingCustomLoader();
@@ -993,8 +994,10 @@ void ModelInstance::unloadModelComponents() {
         std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }
     inferRequestsQueue.reset();
-    execNetwork.reset();
+    inferRequestsQueue_2.reset();
+    execNetwork_2.reset();
     network.reset();
+    network_2.reset();
     outputsInfo.clear();
     inputsInfo.clear();
     modelFiles.clear();

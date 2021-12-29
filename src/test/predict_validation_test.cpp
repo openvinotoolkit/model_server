@@ -35,7 +35,7 @@ class PredictValidation : public ::testing::Test {
         MockModelInstance(InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2) :
             ModelInstance("UNUSED_NAME", 42, ieCore, ieCore_2) {}
         MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
-        MOCK_METHOD(size_t, getBatchSize, (), (const, override));
+        MOCK_METHOD(ovms::Dimension, getBatchSize, (), (const, override));
         MOCK_METHOD(const ovms::ModelConfig&, getModelConfig, (), (const, override));
         const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
             return validate(request);

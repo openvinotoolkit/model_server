@@ -18,27 +18,6 @@
 namespace ovms {
 
 template <>
-Status InputSink<InferenceEngine::InferRequest&>::give(const std::string& name, InferenceEngine::Blob::Ptr blob) {
-    Status status;
-    try {
-        requester.SetBlob(name, blob);
-        // OV implementation the InferenceEngine::Exception is not
-        // a base class for all other exceptions thrown from OV.
-        // OV can throw exceptions derived from std::logic_error.
-    } catch (const InferenceEngine::Exception& e) {
-        status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-        SPDLOG_DEBUG("{}: {}", status.string(), e.what());
-        return status;
-    } catch (std::logic_error& e) {
-        status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-        SPDLOG_DEBUG("{}: {}", status.string(), e.what());
-        return status;
-    }
-
-    return status;
-}
-
-template <>
 Status InputSink_2<ov::runtime::InferRequest&>::give(const std::string& name, ov::runtime::Tensor& blob) {
     Status status;
     try {
@@ -57,18 +36,6 @@ Status InputSink_2<ov::runtime::InferRequest&>::give(const std::string& name, ov
     }
 
     return status;
-}
-
-InferenceEngine::TensorDesc getFinalTensorDesc(const ovms::TensorInfo& servableInfo, const tensorflow::TensorProto& requestInput, bool isPipeline) {
-    InferenceEngine::Precision precision = servableInfo.getPrecision();
-    if (!isPipeline) {
-        return InferenceEngine::TensorDesc(precision, servableInfo.getShape(), servableInfo.getLayout());
-    }
-    InferenceEngine::SizeVector shape;
-    for (size_t i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
-        shape.push_back(requestInput.tensor_shape().dim(i).size());
-    }
-    return InferenceEngine::TensorDesc(precision, shape, InferenceEngine::Layout::ANY);
 }
 
 ov::runtime::Tensor makeBlob_2(const tensorflow::TensorProto& requestInput,

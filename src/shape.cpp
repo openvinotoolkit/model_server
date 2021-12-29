@@ -30,6 +30,19 @@ Dimension::Dimension() :
     Dimension(DYNAMIC_DIMENSION) {
 }
 
+Dimension::Dimension(const ov::Dimension& dim) {
+    if (dim.is_static()) {
+        this->minimum = dim.get_length();
+        this->maximum = dim.get_length();
+    } else if (!dim.get_interval().has_upper_bound()) {
+        this->minimum = DYNAMIC_DIMENSION;
+        this->maximum = DYNAMIC_DIMENSION;
+    } else {
+        this->minimum = dim.get_min_length();
+        this->maximum = dim.get_max_length();
+    }
+}
+
 Dimension::Dimension(dimension_value_t dim) :
     Dimension(dim, dim) {
 }
@@ -324,6 +337,21 @@ bool Shape::operator==(const Shape& rhs) const {
 
 bool Shape::operator!=(const Shape& rhs) const {
     return !(this->operator==(rhs));
+}
+
+bool Shape::match(const ov::Shape& ovShape, size_t startingPosition) const {
+    if (this->size() != ovShape.size()) {
+        return false;
+    }
+    if (this->size() <= startingPosition) {
+        return true;
+    }
+    for (size_t i = startingPosition; i < this->size(); i++) {
+        if (!(*this)[i].match(ovShape[i])) {
+            return false;
+        }
+    }
+    return true;
 }
 
 std::string Shape::toString() const {

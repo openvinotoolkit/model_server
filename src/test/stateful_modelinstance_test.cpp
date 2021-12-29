@@ -179,12 +179,6 @@ public:
         return static_cast<MockedGlobalSequencesViewer*>(this->globalSequencesViewer);
     }
 
-    void injectSequence(uint64_t sequenceId, ovms::model_memory_state_t state) {
-        ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, sequenceId);
-        getMockedSequenceManager()->mockCreateSequence(spec);
-        getMockedSequenceManager()->getSequence(sequenceId).updateMemoryState(state);
-    }
-
     void injectSequence_2(uint64_t sequenceId, ovms::model_memory_state_t_2 state) {
         ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, sequenceId);
         getMockedSequenceManager()->mockCreateSequence(spec);

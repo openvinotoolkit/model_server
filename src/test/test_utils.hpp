@@ -111,8 +111,8 @@ constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to t
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 ovms::tensor_map_t prepareTensors(
-    const std::unordered_map<std::string, ovms::shape_t>&& tensors,
-    InferenceEngine::Precision precision = InferenceEngine::Precision::FP32);
+    const std::unordered_map<std::string, ovms::Shape>&& tensors,
+    ovms::Precision precision = ovms::Precision::FP32);
 
 static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t requestInputs, const std::vector<float>& data = {}) {
     tensorflow::serving::PredictRequest request;

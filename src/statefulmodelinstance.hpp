@@ -53,7 +53,6 @@ public:
 
         Always returns StatusCode::OK
     */
-    const Status preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
     const Status preInferenceProcessing_2(ov::runtime::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
 
     /*
@@ -64,8 +63,6 @@ public:
 
         Always returns StatusCode::OK
     */
-    const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response,
-        InferenceEngine::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
     const Status postInferenceProcessing_2(tensorflow::serving::PredictResponse* response,
         ov::runtime::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
 

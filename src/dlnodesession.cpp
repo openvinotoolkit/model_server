@@ -80,7 +80,7 @@ Status DLNodeSession::requestExecuteRequiredResources() {
     if (!status.ok()) {
         return status;
     }
-    this->nodeStreamIdGuard = std::make_unique<NodeStreamIdGuard>(model->getInferRequestsQueue());
+    this->nodeStreamIdGuard = std::make_unique<NodeStreamIdGuard_2>(model->getInferRequestsQueue_2());
     return status;
 }
 
@@ -160,13 +160,14 @@ Status DLNodeSession::validate(const std::shared_ptr<ov::runtime::Tensor>& tenso
 
     // If batch size differs, check if remaining dimensions are equal
     const auto& dims = tensor->get_shape();
-    if (tensorInfo.getEffectiveShape()[0] != dims[0]) {
+    if (!tensorInfo.getShape_3()[0].match(dims[0])) {
         // If remaining dimensions are equal, it is invalid batch size
         std::stringstream ss;
-        if (std::equal(tensorInfo.getEffectiveShape().begin() + 1, tensorInfo.getEffectiveShape().end(), dims.begin() + 1)) {
+        size_t batchSkippedPosition = 1;
+        if (!tensorInfo.getShape_3().match(dims, batchSkippedPosition)) {
             ss << "Node: " << getName() << " input: " << tensorInfo.getName()
                << " Invalid batch size -"
-               << " Expected: " << tensorInfo.getEffectiveShape()[0]
+               << " Expected: " << tensorInfo.getShape_3()[0].toString()
                << "; Actual: " << dims[0];
             const std::string details = ss.str();
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
@@ -175,7 +176,7 @@ Status DLNodeSession::validate(const std::shared_ptr<ov::runtime::Tensor>& tenso
             // Otherwise whole shape is incorrect
             ss << "Node: " << getName() << " input: " << tensorInfo.getName()
                << " Invalid shape -"
-               << " Expected: " << TensorInfo::shapeToString(tensorInfo.getEffectiveShape())
+               << " Expected: " << tensorInfo.getShape_3().toString()
                << "; Actual: " << TensorInfo::shapeToString(dims);
             const std::string details = ss.str();
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
@@ -183,11 +184,11 @@ Status DLNodeSession::validate(const std::shared_ptr<ov::runtime::Tensor>& tenso
         }
     }
 
-    if (tensorInfo.getEffectiveShape() != dims) {
+    if (!tensorInfo.getShape_3().match(dims)) {
         std::stringstream ss;
         ss << "Node: " << getName() << " input: " << tensorInfo.getName()
            << " Invalid shape -"
-           << " Expected: " << TensorInfo::shapeToString(tensorInfo.getEffectiveShape())
+           << " Expected: " << tensorInfo.getShape_3().toString()
            << "; Actual: " << TensorInfo::shapeToString(dims);
         const std::string details = ss.str();
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);

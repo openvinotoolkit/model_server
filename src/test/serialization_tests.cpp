@@ -29,7 +29,6 @@
 #pragma GCC diagnostic pop
 
 #include "../serialization.hpp"
-#include "ovtestutils.hpp"
 #include "test_utils.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>
@@ -114,15 +113,16 @@ class SerializeTFTensorProto_2 : public TensorflowGRPCPredict_2 {
 public:
     std::tuple<
         std::shared_ptr<ovms::TensorInfo>,
-        std::shared_ptr<MockBlob_2>>
+        std::shared_ptr<ov::runtime::Tensor>>
     getInputs(ovms::Precision precision) {
         std::shared_ptr<ovms::TensorInfo> networkOutput =
             std::make_shared<ovms::TensorInfo>(
                 std::string("2_values_C_layout"),
                 precision,
-                shape_t{2},
+                ovms::Shape{2},
                 InferenceEngine::Layout::C);
-        std::shared_ptr<MockBlob_2> mockBlob = std::make_shared<MockBlob_2>(networkOutput);
+        std::shared_ptr<ov::runtime::Tensor> mockBlob = std::make_shared<ov::runtime::Tensor>(
+            ovmsPrecisionToIE2Precision(precision), ov::Shape{2});
         return std::make_tuple(networkOutput, mockBlob);
     }
 };
@@ -160,7 +160,7 @@ TEST_P(SerializeTFTensorProto_2, SerializeTensorProtoShouldSucceedForPrecision) 
     ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
-    std::shared_ptr<MockBlob_2> mockBlob = std::get<1>(inputs);
+    std::shared_ptr<ov::runtime::Tensor> mockBlob = std::get<1>(inputs);
     // EXPECT_CALL(*mockBlob, get_byte_size()); // TODO: Mock it properly with templates
     auto status = serializeBlobToTensorProto_2(responseOutput,
         std::get<0>(inputs),
@@ -196,10 +196,10 @@ TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
         DUMMY_MODEL_INPUT_NAME,
         ovms::Precision::FP32,
-        shape_t{1, 10},
+        ovms::Shape{1, 10},
         InferenceEngine::Layout::NC);
     tenMap[DUMMY_MODEL_OUTPUT_NAME] = tensorInfo;
-    ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), tensorInfo->getShape());
+    ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), ov::Shape{1, 10});
     inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
     auto status = serializePredictResponse_2(inferRequest, tenMap, &response);
     EXPECT_TRUE(status.ok());
