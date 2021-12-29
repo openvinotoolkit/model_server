@@ -705,7 +705,7 @@ public:
                 this->inputsInfo,
                 dependantNodeInfo.library.getInputsInfo,
                 this->pipelineName,
-                nodeResources.at(dependantNodeInfo.nodeName));
+                nodeResources.at(dependantNodeInfo.nodeName)->ptr);
             if (!result.ok()) {
                 return result;
             }
@@ -714,7 +714,7 @@ public:
                 this->outputsInfo,
                 dependantNodeInfo.library.getOutputsInfo,
                 this->pipelineName,
-                nodeResources.at(dependantNodeInfo.nodeName));
+                nodeResources.at(dependantNodeInfo.nodeName)->ptr);
             if (!result.ok()) {
                 return result;
             }
@@ -733,7 +733,7 @@ public:
             this->dependencyInputsInfo,
             dependencyNodeInfo.library.getInputsInfo,
             this->pipelineName,
-            nodeResources.at(dependencyNodeInfo.nodeName));
+            nodeResources.at(dependencyNodeInfo.nodeName)->ptr);
         if (!result.ok()) {
             return result;
         }
@@ -742,7 +742,7 @@ public:
             this->dependencyOutputsInfo,
             dependencyNodeInfo.library.getOutputsInfo,
             this->pipelineName,
-            nodeResources.at(dependencyNodeInfo.nodeName));
+            nodeResources.at(dependencyNodeInfo.nodeName)->ptr);
         if (!result.ok()) {
             return result;
         }
@@ -1123,7 +1123,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
 
                 tensor_map_t info;
                 auto status = getCustomNodeMetadata(*dependantNodeInfo, info, dependantNodeInfo->library.getInputsInfo, this->getName(),
-                    nodeResources.at(dependantNodeInfo->nodeName));
+                    nodeResources.at(dependantNodeInfo->nodeName)->ptr);
                 if (!status.ok()) {
                     return status;
                 }
@@ -1191,7 +1191,7 @@ Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeIn
     }
     tensor_map_t info;
     auto status = getCustomNodeMetadata(dependencyNodeInfo, info, dependencyNodeInfo.library.getOutputsInfo, this->getName(),
-        nodeResources.at(dependencyNodeInfo.nodeName));
+        nodeResources.at(dependencyNodeInfo.nodeName)->ptr);
     if (!status.ok()) {
         return status;
     }
@@ -1256,12 +1256,12 @@ Status PipelineDefinition::updateOutputsInfo(const ModelManager& manager) {
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName, std::shared_ptr<CNLIMWrapper>& customNodeLibraryInternalManager) {
+Status PipelineDefinition::getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName, void* customNodeLibraryInternalManager) {
     struct CustomNodeTensorInfo* info = nullptr;
     int infoCount = 0;
     auto paramArray = createCustomNodeParamArray(customNodeInfo.parameters);
     int paramArrayLength = customNodeInfo.parameters.size();
-    int result = callback(&info, &infoCount, paramArray.get(), paramArrayLength, customNodeLibraryInternalManager->ptr);
+    int result = callback(&info, &infoCount, paramArray.get(), paramArrayLength, customNodeLibraryInternalManager);
     if (result != 0) {
         SPDLOG_ERROR("Metadata call to custom node: {} in pipeline: {} returned error code: {}",
             customNodeInfo.nodeName, pipelineName, result);
@@ -1299,7 +1299,7 @@ Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
                         nodeOutputsInfo,
                         someNodeInfo.library.getOutputsInfo,
                         this->pipelineName,
-                        nodeResources.at(someNodeInfo.nodeName));
+                        nodeResources.at(someNodeInfo.nodeName)->ptr);
                     if (!result.ok()) {
                         SPDLOG_ERROR("Failed to read node: {} library metadata with error: {}", nodeName, result.string());
                         return;

@@ -64,7 +64,7 @@ class CustomNodeOutputAllocatorCheckingFreeCalled : public CustomNodeOutputAlloc
     bool freeCalled = false;
 
 public:
-    CustomNodeOutputAllocatorCheckingFreeCalled(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, std::shared_ptr<CNLIMWrapper>& customNodeLibraryInternalManager) :
+    CustomNodeOutputAllocatorCheckingFreeCalled(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, void* customNodeLibraryInternalManager) :
         CustomNodeOutputAllocator_2(tensor, nodeLibrary, customNodeLibraryInternalManager) {
     }
 
@@ -95,7 +95,7 @@ TEST(CustomNodeOutputAllocator, BlobDeallocationCallsReleaseBuffer) {
         NodeLibraryCheckingReleaseCalled::getInputsInfo,
         NodeLibraryCheckingReleaseCalled::getOutputsInfo,
         NodeLibraryCheckingReleaseCalled::release};
-    std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager = std::make_shared<CNLIMWrapper>(nullptr, NodeLibraryCheckingReleaseCalled::deinitialize);
+    void* customNodeLibraryInternalManager = nullptr;
     std::shared_ptr<CustomNodeOutputAllocator_2> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocatorCheckingFreeCalled>(tensor, library, customNodeLibraryInternalManager);
     ov::runtime::Allocator alloc(customNodeOutputAllocator);
     EXPECT_FALSE(NodeLibraryCheckingReleaseCalled::releaseBufferCalled);
@@ -148,7 +148,7 @@ TEST(CustomNodeOutputAllocator, BlobReturnsCorrectPointer) {
         getInputsInfo,
         getOutputsInfo,
         release};
-    std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager = std::make_shared<CNLIMWrapper>(nullptr, deinitialize);
+    void* customNodeLibraryInternalManager = nullptr;
     std::shared_ptr<CustomNodeOutputAllocator_2> customNodeOutputAllocator_2 = std::make_shared<CustomNodeOutputAllocator_2>(tensor, library, customNodeLibraryInternalManager);
     ov::runtime::Allocator alloc(customNodeOutputAllocator_2);
     auto elemType = ovmsPrecisionToIE2Precision(Precision::FP32);

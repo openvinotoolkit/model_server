@@ -45,7 +45,7 @@ public:
         const NodeLibrary& library,
         std::unique_ptr<struct CustomNodeParam[]>& parameters,
         int parametersCount,
-        std::shared_ptr<CNLIMWrapper>& customNodeLibraryInternalManager);
+        void* customNodeLibraryInternalManager);
 
     Status fetchResult(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& resultBlob);
 
@@ -54,6 +54,6 @@ public:
 
 private:
     static void releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibrary& library, void* customNodeLibraryInternalManager);
-    Status createBlob(const struct CustomNodeTensor* tensor, std::shared_ptr<ov::runtime::Tensor>& resultBlob, const NodeLibrary& library, std::shared_ptr<CNLIMWrapper>& customNodeLibraryInternalManager);
+    Status createBlob(const struct CustomNodeTensor* tensor, std::shared_ptr<ov::runtime::Tensor>& resultBlob, const NodeLibrary& library, void* customNodeLibraryInternalManager);
 };
 }  // namespace ovms
