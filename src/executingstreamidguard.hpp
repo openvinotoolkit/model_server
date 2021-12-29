@@ -19,23 +19,6 @@
 
 namespace ovms {
 
-struct ExecutingStreamIdGuard {
-    ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
-        inferRequestsQueue_(inferRequestsQueue),
-        id_(inferRequestsQueue_.getIdleStream().get()),
-        inferRequest(inferRequestsQueue.getInferRequest(id_)) {}
-    ~ExecutingStreamIdGuard() {
-        inferRequestsQueue_.returnStream(id_);
-    }
-    int getId() { return id_; }
-    InferenceEngine::InferRequest& getInferRequest() { return inferRequest; }
-
-private:
-    ovms::OVInferRequestsQueue& inferRequestsQueue_;
-    const int id_;
-    InferenceEngine::InferRequest& inferRequest;
-};
-
 struct ExecutingStreamIdGuard_2 {
     ExecutingStreamIdGuard_2(ovms::OVInferRequestsQueue_2& inferRequestsQueue) :
         inferRequestsQueue_(inferRequestsQueue),

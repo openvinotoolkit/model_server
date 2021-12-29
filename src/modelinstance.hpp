@@ -99,7 +99,6 @@ protected:
     /**
          * @brief Inference Engine device network
          */
-    std::shared_ptr<InferenceEngine::ExecutableNetwork> execNetwork;
     std::shared_ptr<ov::runtime::ExecutableNetwork> execNetwork_2;
 
     /**
@@ -391,8 +390,8 @@ public:
          *
          * @return batch size
          */
-    virtual size_t getBatchSize() const {
-        return network->getBatchSize();
+    virtual Dimension getBatchSize() const {
+        return Dimension(ov::get_batch(network_2));  // TODO: Use layout info
     }
 
     /**
@@ -436,9 +435,6 @@ public:
          * 
          * @return OVStreamsQueue
          */
-    OVInferRequestsQueue& getInferRequestsQueue() {
-        return *inferRequestsQueue;
-    }
     OVInferRequestsQueue_2& getInferRequestsQueue_2() {
         return *inferRequestsQueue_2;
     }

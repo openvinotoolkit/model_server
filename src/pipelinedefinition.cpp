@@ -588,7 +588,7 @@ public:
                 tensorOutputShape.toString());
             return StatusCode::INVALID_SHAPE;
         }
-        if (tensorInput->getPrecision() != tensorOutput->getPrecision()) {
+        if (tensorInput->getPrecision_2() != tensorOutput->getPrecision_2()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Precision mismatch between: dependant node: {}; input: {}; precision: {} vs dependency node: {}; output: {}; precision: {}",
                 pipelineName,
                 dependantNodeInfo.nodeName,

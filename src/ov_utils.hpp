@@ -37,10 +37,7 @@ Status createSharedTensor(std::shared_ptr<ov::runtime::Tensor>& destinationBlob,
  **/
 std::shared_ptr<ov::runtime::Tensor> createSharedTensor(ov::element::Type_t precision, const shape_t& shape, void* data);
 
-std::string getNetworkInputsInfoString(const InferenceEngine::InputsDataMap& inputsInfo, const ModelConfig& config);
 std::string getTensorMapString(const std::map<std::string, std::shared_ptr<TensorInfo>>& tensorMap);
-const InferenceEngine::SizeVector& getEffectiveShape(InferenceEngine::TensorDesc& desc);
-const InferenceEngine::SizeVector& getEffectiveBlobShape(const InferenceEngine::Blob::Ptr& blob);
 
 template <typename T>
 Status blobClone(InferenceEngine::Blob::Ptr& destinationBlob, const T sourceBlob) {

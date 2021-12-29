@@ -26,14 +26,26 @@ RestParser::RestParser(const tensor_map_t& tensors) {
     for (const auto& kv : tensors) {
         const auto& name = kv.first;
         const auto& tensor = kv.second;
-        tensorPrecisionMap[name] = tensor->getPrecision();
+        tensorPrecisionMap[name] = tensor->getPrecision_2();
         auto& input = (*requestProto.mutable_inputs())[name];
         input.set_dtype(tensor->getPrecisionAsDataType());
+
+        auto fold = [](size_t a, const Dimension& b) {
+            if (b.isDynamic()) {
+                if (b.isAny()) {
+                    return static_cast<size_t>(0);
+                } else {
+                    return static_cast<size_t>(b.getMaxValue());
+                }
+            } else {
+                return a * static_cast<size_t>(b.getStaticValue());
+            }
+        };
         input.mutable_tensor_content()->reserve(std::accumulate(
-                                                    tensor->getEffectiveShape().begin(),
-                                                    tensor->getEffectiveShape().end(),
+                                                    tensor->getShape_3().cbegin(),
+                                                    tensor->getShape_3().cend(),
                                                     1,
-                                                    std::multiplies<size_t>()) *
+                                                    fold) *
                                                 DataTypeSize(tensor->getPrecisionAsDataType()));
     }
 }
@@ -442,9 +454,9 @@ bool RestParser::setDTypeIfNotSet(const rapidjson::Value& value, tensorflow::Ten
         return true;
 
     if (value.IsInt())
-        tensorPrecisionMap[tensorName] = InferenceEngine::Precision::I32;
+        tensorPrecisionMap[tensorName] = ovms::Precision::I32;
     else if (value.IsDouble())
-        tensorPrecisionMap[tensorName] = InferenceEngine::Precision::FP32;
+        tensorPrecisionMap[tensorName] = ovms::Precision::FP32;
     else
         return false;
 

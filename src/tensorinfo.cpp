@@ -34,11 +34,6 @@
 namespace ovms {
 
 TensorInfo::TensorInfo(const std::string& name,
-    const InferenceEngine::Precision& precision,
-    const shape_t& shape) :
-    TensorInfo(name, IE1PrecisionToOvmsPrecision(precision), shape) {}
-
-TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
     const Shape& shape) :
     name(name),
@@ -53,23 +48,8 @@ TensorInfo::TensorInfo(const std::string& name,
     name(name),
     mapping(""),
     precision_2(precision),
-    shape(shape),
     shape_3(shape),
     layout(InferenceEngine::Layout::ANY) {
-    this->updateEffectiveShape();
-}
-
-TensorInfo::TensorInfo(const std::string& name,
-    const InferenceEngine::Precision& precision,
-    const shape_t& shape,
-    const InferenceEngine::Layout& layout) :
-    name(name),
-    mapping(""),
-    precision_2(IE1PrecisionToOvmsPrecision(precision)),
-    shape(shape),
-    shape_3(shape),
-    layout(layout) {
-    this->updateEffectiveShape();
 }
 
 TensorInfo::TensorInfo(const std::string& name,
@@ -79,36 +59,21 @@ TensorInfo::TensorInfo(const std::string& name,
     name(name),
     mapping(""),
     precision_2(precision),
-    shape(shape),
     shape_3(shape),
     layout(layout) {
-    this->updateEffectiveShape();
 }
 
 TensorInfo::TensorInfo(const std::string& name,
-    const InferenceEngine::TensorDesc& tensorDesc) :
-    name(name),
-    mapping(""),
-    precision_2(IE1PrecisionToOvmsPrecision(tensorDesc.getPrecision())),
-    shape(tensorDesc.getDims()),
-    shape_3(shape),
-    layout(tensorDesc.getLayout()) {
-    this->updateEffectiveShape();
-}
-
-TensorInfo::TensorInfo(const std::string& name,
-    const std::string& mapping,
-    const InferenceEngine::Precision& precision,
-    const shape_t& shape,
+    const ovms::Precision& precision,
+    const Shape& shape,
     const InferenceEngine::Layout& layout) :
     name(name),
-    mapping(mapping),
-    precision_2(IE1PrecisionToOvmsPrecision(precision)),
-    shape(shape),
+    mapping(""),
+    precision_2(precision),
     shape_3(shape),
     layout(layout) {
-    this->updateEffectiveShape();
 }
+
 TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
     const ovms::Precision& precision,
@@ -117,10 +82,8 @@ TensorInfo::TensorInfo(const std::string& name,
     name(name),
     mapping(mapping),
     precision_2(precision),
-    shape(shape),
     shape_3(shape),
     layout(layout) {
-    this->updateEffectiveShape();
 }
 TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
@@ -130,10 +93,8 @@ TensorInfo::TensorInfo(const std::string& name,
     name(name),
     mapping(mapping),
     precision_2(precision),
-    shape(shape.getFlatShape()),
     shape_3(shape),
     layout(layout) {
-    this->updateEffectiveShape();
 }
 TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
@@ -142,10 +103,8 @@ TensorInfo::TensorInfo(const std::string& name,
     name(name),
     mapping(mapping),
     precision_2(precision),
-    shape(shape),
     shape_3(shape),
     layout(InferenceEngine::Layout::ANY) {
-    this->updateEffectiveShape();
 }
 
 const std::string& TensorInfo::getName() const {
@@ -160,26 +119,16 @@ void TensorInfo::setMappedName(const std::string& mappedName) {
     mapping = mappedName;
 }
 
-const InferenceEngine::Precision TensorInfo::getPrecision() const {
-    return ovmsPrecisionToIE1Precision(precision_2);
-}
 const Precision TensorInfo::getPrecision_2() const {
     return precision_2;
 }
 
-void TensorInfo::setPrecision(const InferenceEngine::Precision& requestedPrecision) {
-    precision_2 = IE1PrecisionToOvmsPrecision(requestedPrecision);
-}
 void TensorInfo::setPrecision(const ovms::Precision& requestedPrecision) {
     precision_2 = requestedPrecision;
 }
 
 tensorflow::DataType TensorInfo::getPrecisionAsDataType() const {
     return getPrecisionAsDataType(precision_2);
-}
-
-tensorflow::DataType TensorInfo::getPrecisionAsDataType(InferenceEngine::Precision precision) {
-    return getPrecisionAsDataType(IE1PrecisionToOvmsPrecision(precision));
 }
 
 tensorflow::DataType TensorInfo::getPrecisionAsDataType(Precision precision) {
@@ -217,10 +166,6 @@ ov::element::Type TensorInfo::getOvPrecision() const {
 
 std::string TensorInfo::getPrecisionAsString() const {
     return getPrecisionAsString(precision_2);
-}
-
-std::string TensorInfo::getPrecisionAsString(InferenceEngine::Precision precision) {
-    return getPrecisionAsString(IE1PrecisionToOvmsPrecision(precision));
 }
 
 const std::string TensorInfo::getDataTypeAsString(tensorflow::DataType dataType) {
@@ -335,25 +280,8 @@ const InferenceEngine::Layout& TensorInfo::getLayout() const {
     return layout;
 }
 
-const shape_t& TensorInfo::getShape() const {
-    return shape;
-}
-
-const shape_t& TensorInfo::getShape_2() const {
-    return shape_2;
-}
-
 bool TensorInfo::isInfluencedByDemultiplexer() const {
     return influencedByDemultiplexer;
-}
-
-const shape_t& TensorInfo::getEffectiveShape() const {
-    return effectiveShape.size() > 0 ? effectiveShape : shape;
-}
-
-void TensorInfo::setShape_2(const shape_t& shape) {
-    this->shape = shape;
-    this->updateEffectiveShape();
 }
 
 void TensorInfo::setShape(const Shape& shape) {
@@ -366,44 +294,20 @@ const Shape& TensorInfo::getShape_3() const {
 
 void TensorInfo::setLayout(InferenceEngine::Layout layout) {
     this->layout = layout;
-    this->updateEffectiveShape();
-}
-
-void TensorInfo::updateEffectiveShape() {
-    // TODO: Get rid of this.
-
-    // this->effectiveShape = this->getTensorDesc().getBlockingDesc().getBlockDims();
-    // if (effectiveShape.size() == 0) {
-    //     this->shape_2 = this->shape;
-    // } else {
-    //     this->shape_2 = effectiveShape;
-    // }
 }
 
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const Shape& shape) const {
     auto copy = std::make_shared<TensorInfo>(*this);
-    copy->shape = shape.getFlatShape();
     copy->shape_3 = shape;
     copy->layout = InferenceEngine::Layout::ANY;
-    copy->updateEffectiveShape();
     return copy;
-}
-
-std::shared_ptr<TensorInfo> TensorInfo::createCopyWithEffectiveDimensionPrefix(dimension_value_t dim) const {
-    return createCopyWithEffectiveDimensionPrefix(dim ? dim : DYNAMIC_DIMENSION);
 }
 
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithEffectiveDimensionPrefix(const Dimension& dim) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->influencedByDemultiplexer = true;
-    copy->shape.insert(copy->shape.begin(), dim.getAnyValue());
     copy->shape_3.emplace(copy->shape_3.begin(), dim);  // TODO check together with pipeline definiton apply demultiplexer to shape
     return copy;
-}
-
-const InferenceEngine::TensorDesc TensorInfo::getTensorDesc() const {
-    // TODO how to
-    return InferenceEngine::TensorDesc{ovmsPrecisionToIE1Precision(precision_2), shape, layout};
 }
 
 bool TensorInfo::isTensorSpecEqual(const TensorInfo& other) const {
@@ -446,21 +350,11 @@ std::string TensorInfo::tensorShapeToString(const tensorflow::TensorShapeProto& 
 }
 
 std::shared_ptr<TensorInfo> TensorInfo::getUnspecifiedTensorInfo() {
-    std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>("", InferenceEngine::Precision::UNSPECIFIED, shape_t{});
-    return info;
+    return std::make_shared<TensorInfo>("", Precision::UNDEFINED, Shape{});
 }
 
-std::string TensorInfo::tensorDescToString(const InferenceEngine::TensorDesc& desc) {
-    std::stringstream ss;
-    ss << "shape: " << shapeToString(desc.getDims())
-       << " effective shape: " << shapeToString(desc.getBlockingDesc().getBlockDims())
-       << " precision: " << getPrecisionAsString(desc.getPrecision())
-       << " layout: " << getStringFromLayout(desc.getLayout());
-    return ss.str();
-}
-
-const size_t TensorInfo::getBatchSize() const {
-    return getShape_3().getFlatShape()[0];  // TODO use layout
+const Dimension& TensorInfo::getBatchSize() const {
+    return getShape_3()[0];  // TODO use layout
 }
 
 std::string TensorInfo::asString() const {

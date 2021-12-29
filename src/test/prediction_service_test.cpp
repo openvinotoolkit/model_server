@@ -595,7 +595,7 @@ TEST_F(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
  * 9. Do the inference with (1,4,5,3) shape - expect INVALID_SHAPE
  */
 // TODO: Enable when https://jira.devtools.intel.com/browse/CVS-74065 is resolved by OpenVINO.
-TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelInputLayout) {
+TEST_F(TestPredict, PerformInferenceChangeModelInputLayout) {
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -650,7 +650,7 @@ TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelInputLayout) {
  * 9. Do the inference with (1,1,2,3) shape - expect INVALID_SHAPE
  */
 // TODO: Enable when https://jira.devtools.intel.com/browse/CVS-74065 is resolved by OpenVINO.
-TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelInputLayoutAndShape) {
+TEST_F(TestPredict, PerformInferenceChangeModelInputLayoutAndShape) {
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -670,7 +670,7 @@ TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelInputLayoutAndShape) {
     // Perform inference with NCHW layout, ensure error
     ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::INVALID_SHAPE);
 
-    // Reload model with layout setting removed, model is still NHWC
+    // Reload model with layout setting removed, model is back to NCHW
     ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
     ASSERT_EQ(config.parseLayoutParameter(""), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -678,7 +678,7 @@ TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelInputLayoutAndShape) {
     // Perform inference with NCHW layout, ensure status OK and correct results
     ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
     checkOutputShape(response, {1, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
-    checkOutputValues(response, {2.0, 5.0, 3.0, 6.0, 4.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+    checkOutputValues(response, {2.0, 3.0, 4.0, 5.0, 6.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 
     // Perform inference with NHWC layout, ensure error
     ASSERT_EQ(performInferenceWithImageInput(response, {1, 1, 2, 3}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::INVALID_SHAPE);
@@ -698,17 +698,59 @@ TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelInputLayoutAndShape) {
 }
 
 /**
- * Scenario - change output layout of model and perform inference. Check results if in correct order.
+ * Scenario - change output layout of model and perform inference.
  *
- * 1. Load model with output layout=nhwc, initial internal layout: nchw
+ * 1. Load model with output layout=nhwc:nchw, initial internal layout: nchw
  * 2. Do the inference with (1,3,4,5) shape - expect status OK and result in NHWC layout
  * 3. Remove layout setting
- * 4. Do the inference with (1,3,4,5) shape - expect status OK and result in NHWC layout
+ * 4. Do the inference with (1,3,4,5) shape - expect status OK and result in NCHW layout
  * 5. Roll back layout setting to internal nchw
  * 6. Do the inference with (1,3,4,5) shape - expect status OK and result in NCHW layout
  */
 // TODO: Enable when https://jira.devtools.intel.com/browse/CVS-74065 is resolved by OpenVINO.
-TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelOutputLayout) {
+TEST_F(TestPredict, PerformInferenceChangeModelOutputLayout) {
+    using namespace ovms;
+
+    // Prepare model with changed output layout to nhwc (internal layout=nchw)
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    ASSERT_EQ(config.parseLayoutParameter(std::string("{\"") + INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME + std::string("\":\"nhwc:nchw\"}")), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    tensorflow::serving::PredictResponse response;
+
+    // Perform inference with NCHW layout, ensure status OK and results in NHWC order
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 4, 5}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 4, 5, 3}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+
+    // Reload model with layout setting removed
+    ASSERT_EQ(config.parseLayoutParameter(""), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Perform inference with NCHW layout, ensure status OK and results still in NHWC order
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 4, 5}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 3, 4, 5}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+
+    // Change output layout back to original nchw.
+    ASSERT_EQ(config.parseLayoutParameter(std::string("{\"") + INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME + std::string("\":\"nchw\"}")), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 4, 5}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 3, 4, 5}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+}
+
+/**
+ * Scenario - change output layout of model, modify shape and perform inference. Check results if in correct order.
+ *
+ * 1. Load model with output layout=nhwc:nchw, shape (1,1,2,3) initial internal layout: nchw
+ * 2. Do the inference with (1,3,4,5) shape - expect status OK and result in NHWC layout
+ * 3. Remove layout setting
+ * 4. Do the inference with (1,3,4,5) shape - expect status OK and result in NCHW layout
+ * 5. Roll back layout setting to internal nchw
+ * 6. Do the inference with (1,3,4,5) shape - expect status OK and result in NCHW layout
+ */
+// TODO: Enable when https://jira.devtools.intel.com/browse/CVS-74065 is resolved by OpenVINO.
+TEST_F(TestPredict, PerformInferenceChangeModelOutputLayoutAndShape) {
     using namespace ovms;
 
     // Prepare model with changed output layout to nhwc (internal layout=nchw)
@@ -732,7 +774,7 @@ TEST_F(TestPredict, DISABLED_PerformInferenceChangeModelOutputLayout) {
     // Perform inference with NCHW layout, ensure status OK and results still in NHWC order
     ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
     checkOutputShape(response, {1, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
-    checkOutputValues(response, {2.0, 4.0, 6.0, 3.0, 5.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+    checkOutputValues(response, {2.0, 3.0, 4.0, 5.0, 6.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 
     // Change output layout back to original nchw.
     ASSERT_EQ(config.parseLayoutParameter(std::string("{\"") + INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME + std::string("\":\"nchw\"}")), ovms::StatusCode::OK);

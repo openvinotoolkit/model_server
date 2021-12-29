@@ -25,10 +25,6 @@ const uint64_t Sequence::getId() const {
     return sequenceId;
 }
 
-const sequence_memory_state_t& Sequence::getMemoryState() const {
-    return memoryState;
-}
-
 const sequence_memory_state_t_2& Sequence::getMemoryState_2() const {
     return memoryState_2;
 }
@@ -39,21 +35,6 @@ const bool Sequence::isIdle() const {
 
 void Sequence::setIdle(bool idle) {
     this->idle = idle;
-}
-
-Status Sequence::updateMemoryState(model_memory_state_t& newState) {
-    for (auto&& state : newState) {
-        auto stateName = state.GetName();
-        Blob::CPtr originalBlobPtr = state.GetState();
-        Blob::Ptr copyBlobPtr;
-        auto status = blobClone<InferenceEngine::Blob::CPtr>(copyBlobPtr, originalBlobPtr);
-        if (!status.ok()) {
-            return status;
-        }
-        memoryState[stateName] = copyBlobPtr;
-    }
-    setIdle(false);
-    return StatusCode::OK;
 }
 
 Status Sequence::updateMemoryState_2(model_memory_state_t_2& newState) {

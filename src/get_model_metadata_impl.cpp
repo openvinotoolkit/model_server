@@ -104,7 +104,15 @@ void GetModelMetadataImpl::convert(
         *input.mutable_tensor_shape() = tensorflow::TensorShapeProto();
 
         for (auto dim : tensor->getShape_3()) {
-            input.mutable_tensor_shape()->add_dim()->set_size(dim.getAnyValue() ? dim.getAnyValue() : DYNAMIC_DIMENSION);
+            if (dim.isStatic()) {
+                input.mutable_tensor_shape()->add_dim()->set_size(dim.getStaticValue());
+            } else {
+                // TODO: Add more detailed information about dimension.
+                // Possible range and name of dimension.
+                // Use TensorShapeProto_Dim::name string field.
+                // JIRA: https://jira.devtools.intel.com/browse/CVS-74881
+                input.mutable_tensor_shape()->add_dim()->set_size(DYNAMIC_DIMENSION);
+            }
         }
     }
 }

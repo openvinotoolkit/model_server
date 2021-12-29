@@ -44,8 +44,8 @@ std::string createConfigFileWithContent(const std::string& content, std::string 
 }
 
 ovms::tensor_map_t prepareTensors(
-    const std::unordered_map<std::string, ovms::shape_t>&& tensors,
-    InferenceEngine::Precision precision) {
+    const std::unordered_map<std::string, ovms::Shape>&& tensors,
+    ovms::Precision precision) {
     ovms::tensor_map_t result;
     for (const auto& kv : tensors) {
         result[kv.first] = std::make_shared<ovms::TensorInfo>(

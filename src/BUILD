@@ -428,7 +428,6 @@ cc_test(
         "test/gcsfilesystem_test.cpp",
         "test/azurefilesystem_test.cpp",
         "test/nodesessionmetadata_test.cpp",
-        "test/ovtestutils.hpp",
         "test/ovinferrequestqueue_test.cpp",
         "test/ov_utils_test.cpp",
         "test/pipelinedefinitionstatus_test.cpp",

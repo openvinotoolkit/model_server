@@ -59,15 +59,15 @@ protected:
 
     virtual void prepare() {
         pipelineDefinition.mockMetadata({{"Input_FP32_1_3_224_224",
-                                             std::make_shared<TensorInfo>("Input_FP32_1_3_224_224", InferenceEngine::Precision::FP32, shape_t{1, 3, 224, 224})},
+                                             std::make_shared<TensorInfo>("Input_FP32_1_3_224_224", ovms::Precision::FP32, ovms::Shape{1, 3, 224, 224})},
                                             {"Input_U8_1_3_62_62",
-                                                std::make_shared<TensorInfo>("Input_U8_1_3_62_62", InferenceEngine::Precision::U8, shape_t{1, 3, 62, 62})},
+                                                std::make_shared<TensorInfo>("Input_U8_1_3_62_62", ovms::Precision::U8, ovms::Shape{1, 3, 62, 62})},
                                             {"Input_Unspecified",
                                                 TensorInfo::getUnspecifiedTensorInfo()}},
             {{"Output_I32_1_2000",
-                 std::make_shared<TensorInfo>("Output_I32_1_2000", InferenceEngine::Precision::I32, shape_t{1, 2000})},
+                 std::make_shared<TensorInfo>("Output_I32_1_2000", ovms::Precision::I32, ovms::Shape{1, 2000})},
                 {"Output_FP32_2_20_3",
-                    std::make_shared<TensorInfo>("Output_FP32_2_20_3", InferenceEngine::Precision::FP32, shape_t{2, 20, 3})},
+                    std::make_shared<TensorInfo>("Output_FP32_2_20_3", ovms::Precision::FP32, ovms::Shape{2, 20, 3})},
                 {"Output_Unspecified",
                     TensorInfo::getUnspecifiedTensorInfo()}});
     }
@@ -260,13 +260,13 @@ protected:
         GetPipelineMetadataResponse::prepare();
         pipelineDefinition.mockMetadata(
             {{"Input_FP32_1_-1_224_224",
-                 std::make_shared<TensorInfo>("Input_FP32_1_-1_224_224", InferenceEngine::Precision::FP32, shape_t{1, 0, 224, 224})},
+                 std::make_shared<TensorInfo>("Input_FP32_1_-1_224_224", ovms::Precision::FP32, ovms::Shape{1, ovms::Dimension::any(), 224, 224})},
                 {"Input_U8_1_3_-1_-1",
-                    std::make_shared<TensorInfo>("Input_U8_1_3_-1_-1", InferenceEngine::Precision::U8, shape_t{1, 3, 0, 0})}},
+                    std::make_shared<TensorInfo>("Input_U8_1_3_-1_-1", ovms::Precision::U8, ovms::Shape{1, 3, ovms::Dimension::any(), ovms::Dimension::any()})}},
             {{"Output_I32_1_-1",
-                 std::make_shared<TensorInfo>("Output_I32_1_-1", InferenceEngine::Precision::I32, shape_t{1, 0})},
+                 std::make_shared<TensorInfo>("Output_I32_1_-1", ovms::Precision::I32, ovms::Shape{1, ovms::Dimension::any()})},
                 {"Output_FP32_1_-1_-1_3",
-                    std::make_shared<TensorInfo>("Output_FP32_1_-1_-1_3", InferenceEngine::Precision::FP32, shape_t{1, 0, 0, 3})}});
+                    std::make_shared<TensorInfo>("Output_FP32_1_-1_-1_3", ovms::Precision::FP32, ovms::Shape{1, ovms::Dimension::any(), ovms::Dimension::any(), 3})}});
         ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
     }
 };

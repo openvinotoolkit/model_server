@@ -29,7 +29,6 @@
 #pragma GCC diagnostic pop
 
 #include "../deserialization.hpp"
-#include "ovtestutils.hpp"
 #include "test_utils.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>

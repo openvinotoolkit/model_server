@@ -49,3 +49,10 @@ TEST(Dimension, PartiallyFitsInto) {
     EXPECT_FALSE(Dimension(1, 2).partiallyFitsInto(Dimension(3, 3)));
     EXPECT_FALSE(Dimension(1, 2).partiallyFitsInto(Dimension(3, 4)));
 }
+
+TEST(Shape, OvShapeMatch) {
+    EXPECT_TRUE(ovms::Shape({1, 6, 8}).match(ov::Shape({1, 6, 8})));
+    EXPECT_TRUE(ovms::Shape({{1, 2}, {6, 12}, Dimension::any()}).match(ov::Shape({1, 8, 100})));
+    size_t startingPosition = 2;
+    EXPECT_TRUE(ovms::Shape({{3, 5}, {7, 10}, {11, 19}}).match(ov::Shape({1000, 1000, 12}), startingPosition));
+}

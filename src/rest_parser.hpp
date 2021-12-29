@@ -71,7 +71,7 @@ class RestParser {
     /**
      * @brief Request content precision
      */
-    std::map<std::string, InferenceEngine::Precision> tensorPrecisionMap;
+    std::map<std::string, ovms::Precision> tensorPrecisionMap;
 
     void removeUnusedInputs();
 

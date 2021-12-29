@@ -36,28 +36,28 @@
 
 namespace ovms {
 
-int getMatTypeFromTensorPrecision(InferenceEngine::Precision tensorPrecision) {
+int getMatTypeFromTensorPrecision(ovms::Precision tensorPrecision) {
     switch (tensorPrecision) {
-    case InferenceEngine::Precision::FP32:
+    case ovms::Precision::FP32:
         return CV_32F;
-    case InferenceEngine::Precision::FP16:
+    case ovms::Precision::FP16:
         return CV_16F;
-    case InferenceEngine::Precision::I16:
+    case ovms::Precision::I16:
         return CV_16S;
-    case InferenceEngine::Precision::U8:
+    case ovms::Precision::U8:
         return CV_8U;
-    case InferenceEngine::Precision::I8:
+    case ovms::Precision::I8:
         return CV_8S;
-    case InferenceEngine::Precision::U16:
+    case ovms::Precision::U16:
         return CV_16U;
-    case InferenceEngine::Precision::I32:
+    case ovms::Precision::I32:
         return CV_32S;
     default:
         return -1;
     }
 }
 
-bool isPrecisionEqual(int matPrecision, InferenceEngine::Precision tensorPrecision) {
+bool isPrecisionEqual(int matPrecision, ovms::Precision tensorPrecision) {
     int convertedTensorPrecision = getMatTypeFromTensorPrecision(tensorPrecision);
     if (convertedTensorPrecision == matPrecision) {
         return true;
@@ -77,7 +77,7 @@ cv::Mat convertStringValToMat(const std::string& stringVal) {
     }
 }
 
-Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const InferenceEngine::Precision requestedPrecision) {
+Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision requestedPrecision) {
     int type = getMatTypeFromTensorPrecision(requestedPrecision);
     if (type == -1) {
         return StatusCode::INVALID_PRECISION;
@@ -91,26 +91,26 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
     if (tensorInfo->getLayout() != InferenceEngine::Layout::NHWC && tensorInfo->getLayout() != InferenceEngine::Layout::ANY) {
         return false;
     }
-    int cols = 0;
-    int rows = 0;
-    if (tensorInfo->getEffectiveShape().size() == 4) {
-        cols = tensorInfo->getEffectiveShape()[2];
-        rows = tensorInfo->getEffectiveShape()[1];
-    } else if (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getEffectiveShape().size() == 5) {
-        cols = tensorInfo->getEffectiveShape()[3];
-        rows = tensorInfo->getEffectiveShape()[2];
+    Dimension cols = Dimension::any();
+    Dimension rows = Dimension::any();
+    if (tensorInfo->getShape_3().size() == 4) {
+        cols = tensorInfo->getShape_3()[2];
+        rows = tensorInfo->getShape_3()[1];
+    } else if (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape_3().size() == 5) {
+        cols = tensorInfo->getShape_3()[3];
+        rows = tensorInfo->getShape_3()[2];
     } else {
         return false;
     }
     if (tensorInfo->getLayout() == InferenceEngine::Layout::ANY) {
-        if (cols == 0) {
+        if (cols == Dimension::any()) {
             cols = image.cols;
         }
-        if (rows == 0) {
+        if (rows == Dimension::any()) {
             rows = image.rows;
         }
     }
-    if (cols != image.cols || rows != image.rows) {
+    if (cols != Dimension(image.cols) || rows != Dimension(image.rows)) {
         return true;
     }
     return false;
@@ -120,26 +120,26 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
     if (tensorInfo->getLayout() != InferenceEngine::Layout::NHWC && tensorInfo->getLayout() != InferenceEngine::Layout::ANY) {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
-    int cols = 0;
-    int rows = 0;
-    if (tensorInfo->getEffectiveShape().size() == 4) {
-        cols = tensorInfo->getEffectiveShape()[2];
-        rows = tensorInfo->getEffectiveShape()[1];
-    } else if (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getEffectiveShape().size() == 5) {
-        cols = tensorInfo->getEffectiveShape()[3];
-        rows = tensorInfo->getEffectiveShape()[2];
+    Dimension cols = Dimension::any();
+    Dimension rows = Dimension::any();
+    if (tensorInfo->getShape_3().size() == 4) {
+        cols = tensorInfo->getShape_3()[2];
+        rows = tensorInfo->getShape_3()[1];
+    } else if (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape_3().size() == 5) {
+        cols = tensorInfo->getShape_3()[3];
+        rows = tensorInfo->getShape_3()[2];
     } else {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
     if (tensorInfo->getLayout() == InferenceEngine::Layout::ANY) {
-        if (cols == 0) {
+        if (cols == Dimension::any()) {
             cols = src.cols;
         }
-        if (rows == 0) {
+        if (rows == Dimension::any()) {
             rows = src.rows;
         }
     }
-    cv::resize(src, dst, cv::Size(cols, rows));
+    cv::resize(src, dst, cv::Size(cols.getStaticValue(), rows.getStaticValue()));
     return StatusCode::OK;
 }
 
@@ -186,8 +186,7 @@ Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* fi
 
 bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     const int batchSize) {
-    size_t d = tensorInfo->getBatchSize();  // TODO change getBatchSize() to return Dimension
-    return !Dimension(d ? d : DYNAMIC_DIMENSION).match(batchSize);
+    return !tensorInfo->getBatchSize().match(batchSize);
 }
 
 Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage) {
@@ -218,7 +217,10 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     }
 
     if (checkBatchSizeMismatch(tensorInfo, src.string_val_size())) {
-        SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}", tensorInfo->getMappedName(), tensorInfo->getBatchSize(), src.string_val_size());
+        SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}",
+            tensorInfo->getMappedName(),
+            tensorInfo->getBatchSize().toString(),
+            src.string_val_size());
         return StatusCode::INVALID_BATCH_SIZE;
     }
 
@@ -243,9 +245,9 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
             return status;
         }
 
-        if (!isPrecisionEqual(image.depth(), tensorInfo->getPrecision())) {
+        if (!isPrecisionEqual(image.depth(), tensorInfo->getPrecision_2())) {
             cv::Mat imageCorrectPrecision;
-            status = convertPrecision(image, imageCorrectPrecision, tensorInfo->getPrecision());
+            status = convertPrecision(image, imageCorrectPrecision, tensorInfo->getPrecision_2());
 
             if (status != StatusCode::OK) {
                 return status;
@@ -278,20 +280,6 @@ InferenceEngine::SizeVector getShapeFromImages(const std::vector<cv::Mat>& image
     return dims;
 }
 
-template <typename T>
-InferenceEngine::Blob::Ptr createBlobFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
-    auto dims = !isPipeline ? tensorInfo->getShape_3().getFlatShape() : getShapeFromImages(images, tensorInfo);
-    InferenceEngine::TensorDesc desc{tensorInfo->getPrecision(), dims, InferenceEngine::Layout::ANY};
-    InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<T>(desc);
-    blob->allocate();
-    char* ptr = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap().as<char*>();
-    for (cv::Mat image : images) {
-        memcpy(ptr, (char*)image.data, image.total() * image.elemSize());
-        ptr += (image.total() * image.elemSize());
-    }
-    return blob;
-}
-
 ov::runtime::Tensor createBlobFromMats_2(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     // TODO binary inputs support for dynamic shapes - probably we should have here just getShapeFromImages
     ov::Shape shape = !isPipeline ? tensorInfo->getShape_3().getFlatShape() : getShapeFromImages(images, tensorInfo);
@@ -305,69 +293,25 @@ ov::runtime::Tensor createBlobFromMats_2(const std::vector<cv::Mat>& images, con
     return tensor;
 }
 
-InferenceEngine::Blob::Ptr convertMatsToBlob(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
-    switch (tensorInfo->getPrecision()) {
-    case InferenceEngine::Precision::FP32:
-        return createBlobFromMats<float>(images, tensorInfo, isPipeline);
-    case InferenceEngine::Precision::I32:
-        return createBlobFromMats<int32_t>(images, tensorInfo, isPipeline);
-    case InferenceEngine::Precision::I8:
-        return createBlobFromMats<int8_t>(images, tensorInfo, isPipeline);
-    case InferenceEngine::Precision::U8:
-        return createBlobFromMats<uint8_t>(images, tensorInfo, isPipeline);
-    case InferenceEngine::Precision::FP16:
-        return createBlobFromMats<uint16_t>(images, tensorInfo, isPipeline);
-    case InferenceEngine::Precision::U16:
-        return createBlobFromMats<uint16_t>(images, tensorInfo, isPipeline);
-    case InferenceEngine::Precision::I16:
-        return createBlobFromMats<int16_t>(images, tensorInfo, isPipeline);
-    case InferenceEngine::Precision::I64:
-    case InferenceEngine::Precision::MIXED:
-    case InferenceEngine::Precision::Q78:
-    case InferenceEngine::Precision::BIN:
-    case InferenceEngine::Precision::BOOL:
-    case InferenceEngine::Precision::CUSTOM:
-    default:
-        return nullptr;
-    }
-}
-
 ov::runtime::Tensor convertMatsToBlob_2(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
-    switch (tensorInfo->getPrecision()) {
-    case InferenceEngine::Precision::FP32:
-    case InferenceEngine::Precision::I32:
-    case InferenceEngine::Precision::I8:
-    case InferenceEngine::Precision::U8:
-    case InferenceEngine::Precision::FP16:
-    case InferenceEngine::Precision::U16:
-    case InferenceEngine::Precision::I16:
+    switch (tensorInfo->getPrecision_2()) {
+    case ovms::Precision::FP32:
+    case ovms::Precision::I32:
+    case ovms::Precision::I8:
+    case ovms::Precision::U8:
+    case ovms::Precision::FP16:
+    case ovms::Precision::U16:
+    case ovms::Precision::I16:
         return createBlobFromMats_2(images, tensorInfo, isPipeline);
-    case InferenceEngine::Precision::I64:
-    case InferenceEngine::Precision::MIXED:
-    case InferenceEngine::Precision::Q78:
-    case InferenceEngine::Precision::BIN:
-    case InferenceEngine::Precision::BOOL:
-    case InferenceEngine::Precision::CUSTOM:
+    case ovms::Precision::I64:
+    case ovms::Precision::MIXED:
+    case ovms::Precision::Q78:
+    case ovms::Precision::BIN:
+    case ovms::Precision::BOOL:
+    case ovms::Precision::CUSTOM:
     default:
         return ov::runtime::Tensor();
     }
-}
-
-Status convertStringValToBlob(const tensorflow::TensorProto& src, InferenceEngine::Blob::Ptr& blob, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
-    auto status = validateTensor(tensorInfo, src);
-    if (status != StatusCode::OK) {
-        return status;
-    }
-
-    std::vector<cv::Mat> images;
-
-    status = convertTensorToMatsMatchingTensorInfo(src, images, tensorInfo);
-    if (!status.ok()) {
-        return status;
-    }
-
-    blob = convertMatsToBlob(images, tensorInfo, isPipeline);
-    return StatusCode::OK;
 }
 
 Status convertStringValToBlob_2(const tensorflow::TensorProto& src, ov::runtime::Tensor& blob, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {

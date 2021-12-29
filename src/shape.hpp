@@ -39,6 +39,8 @@ class Dimension {
 public:
     Dimension();
 
+    Dimension(const ov::Dimension& dim);
+
     Dimension(dimension_value_t dim);
 
     Dimension(dimension_value_t minimum, dimension_value_t maximum);
@@ -84,8 +86,6 @@ public:
     Shape& add(const Dimension& dim, size_t pos);
     Shape& add(const Dimension& dim);
 
-    //    size_t getSize() const;
-
     bool isStatic() const;
     bool isDynamic() const;
 
@@ -96,6 +96,8 @@ public:
 
     bool operator==(const Shape& rhs) const;
     bool operator!=(const Shape& rhs) const;
+
+    bool match(const ov::Shape& rhs, size_t startingPosition = 0) const;
 
     std::string toString() const;
 

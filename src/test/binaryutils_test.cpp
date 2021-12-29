@@ -57,7 +57,7 @@ TEST_F(BinaryUtilsTest, tensorWithInvalidImage) {
     std::string invalidImage = "INVALID_IMAGE";
     stringValInvalidImage.add_string_val(invalidImage);
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, InferenceEngine::Layout::NHWC);
 
     EXPECT_EQ(convertStringValToBlob_2(stringValInvalidImage, tensor, tensorInfo, false), ovms::StatusCode::IMAGE_PARSING_FAILED);
 }
@@ -69,7 +69,7 @@ TEST_F(BinaryUtilsTest, tensorWithEmptyStringVal) {
     std::string invalidImage = "";
     stringValEmptyImage.add_string_val(invalidImage);
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, InferenceEngine::Layout::NHWC);
 
     EXPECT_EQ(convertStringValToBlob_2(stringValEmptyImage, tensor, tensorInfo, false), ovms::StatusCode::STRING_VAL_EMPTY);
 }
@@ -77,7 +77,7 @@ TEST_F(BinaryUtilsTest, tensorWithEmptyStringVal) {
 TEST_F(BinaryUtilsTest, tensorWithNonSupportedLayout) {
     ov::runtime::Tensor tensor;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 3}, InferenceEngine::Layout::NCHW);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, InferenceEngine::Layout::NCHW);
 
     EXPECT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::UNSUPPORTED_LAYOUT);
 }
@@ -85,7 +85,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonSupportedLayout) {
 TEST_F(BinaryUtilsTest, tensorWithNonSupportedPrecision) {
     ov::runtime::Tensor tensor;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::MIXED, shape_t{1, 1, 1, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::MIXED, ovms::Shape{1, 1, 1, 3}, InferenceEngine::Layout::NHWC);
 
     EXPECT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::INVALID_PRECISION);
 }
@@ -93,7 +93,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonSupportedPrecision) {
 TEST_F(BinaryUtilsTest, tensorWithNonMatchingShapeSize) {
     ov::runtime::Tensor tensor;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1}, InferenceEngine::Layout::NC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1}, InferenceEngine::Layout::NC);
 
     EXPECT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::UNSUPPORTED_LAYOUT);
 }
@@ -101,7 +101,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonMatchingShapeSize) {
 TEST_F(BinaryUtilsTest, tensorWithNonMatchingNumberOfChannelsNHWC) {
     ov::runtime::Tensor tensor;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 1}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 1}, InferenceEngine::Layout::NHWC);
 
     EXPECT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::INVALID_NO_OF_CHANNELS);
 }
@@ -111,7 +111,7 @@ TEST_F(BinaryUtilsTest, positive_rgb) {
 
     ov::runtime::Tensor tensor;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, InferenceEngine::Layout::NHWC);
 
     ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_size(), 3);
@@ -135,7 +135,7 @@ TEST_F(BinaryUtilsTest, positive_grayscale) {
     grayscaleStringVal.set_dtype(tensorflow::DataType::DT_STRING);
     grayscaleStringVal.add_string_val(grayscale_image_bytes.get(), grayscale_filesize);
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 1}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 1}, InferenceEngine::Layout::NHWC);
 
     ASSERT_EQ(convertStringValToBlob_2(grayscaleStringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_size(), 1);
@@ -149,7 +149,7 @@ TEST_F(BinaryUtilsTest, positive_batch_size_2) {
     ov::runtime::Tensor tensor;
     stringVal.add_string_val(image_bytes.get(), filesize);
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{2, 1, 1, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{2, 1, 1, 3}, InferenceEngine::Layout::NHWC);
 
     ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_size(), 6);
@@ -162,7 +162,7 @@ TEST_F(BinaryUtilsTest, positive_precision_changed) {
 
     ov::runtime::Tensor tensor;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::I32, shape_t{1, 1, 1, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::I32, ovms::Shape{1, 1, 1, 3}, InferenceEngine::Layout::NHWC);
 
     ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_size(), 3);
@@ -176,7 +176,7 @@ TEST_F(BinaryUtilsTest, positive_nhwc_layout) {
 
     ov::runtime::Tensor tensor;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 1, 1, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, InferenceEngine::Layout::NHWC);
 
     ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_size(), 3);
@@ -190,7 +190,7 @@ TEST_F(BinaryUtilsTest, positive_resizing) {
 
     ov::runtime::Tensor tensor;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", InferenceEngine::Precision::U8, shape_t{1, 2, 2, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 2, 2, 3}, InferenceEngine::Layout::NHWC);
 
     ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_size(), 12);

@@ -54,11 +54,11 @@ protected:
                       this->library),
             StatusCode::OK);
         dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
-            InferenceEngine::Precision::FP32,
+            ovms::Precision::FP32,
             DUMMY_MODEL_SHAPE,
             InferenceEngine::Layout::NC);
         dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
-            InferenceEngine::Precision::FP32,
+            ovms::Precision::FP32,
             DUMMY_MODEL_SHAPE,
             InferenceEngine::Layout::NC);
     }
@@ -87,8 +87,8 @@ protected:
     std::unique_ptr<Pipeline> prepareSingleNodePipelineWithLibraryMock() {
         const std::vector<float> inputValues{3.5, 2.1, -0.2};
         auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
-            InferenceEngine::Precision::FP32,
-            shape_t{1, 3},
+            ovms::Precision::FP32,
+            ovms::Shape{1, 3},
             InferenceEngine::Layout::NC);
         const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
         this->prepareRequest(inputValues);
@@ -185,14 +185,14 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AddSubCustomNode) {
     const float subValue = 4.8;
 
     auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{1, 3},
+        ovms::Precision::FP32,
+        ovms::Shape{1, 3},
         InferenceEngine::Layout::NC);
     const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{1, 3},
+        ovms::Precision::FP32,
+        ovms::Shape{1, 3},
         InferenceEngine::Layout::NC);
     const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
@@ -267,11 +267,11 @@ protected:
                       chooseMaxLibrary),
             StatusCode::OK);
         dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
-            InferenceEngine::Precision::FP32,
+            ovms::Precision::FP32,
             DUMMY_MODEL_SHAPE,
             InferenceEngine::Layout::NC);
         dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
-            InferenceEngine::Precision::FP32,
+            ovms::Precision::FP32,
             DUMMY_MODEL_SHAPE,
             InferenceEngine::Layout::NC);
     }
@@ -310,8 +310,8 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
     std::vector<std::unique_ptr<Node>> nodes(2 + 3 * demultiplicationLayersCount);  // entry + exit + (choose + differentOps + dummy) * layerCount
     const tensor_map_t inputsInfo{{pipelineInputName, dagDummyModelInputTensorInfo}, {pipelineFactorsName,
                                                                                          std::make_shared<ovms::TensorInfo>(pipelineFactorsName,
-                                                                                             InferenceEngine::Precision::FP32,
-                                                                                             shape_t{1, 4},
+                                                                                             ovms::Precision::FP32,
+                                                                                             ovms::Shape{1, 4},
                                                                                              InferenceEngine::Layout::NC)}};
     nodes[0] = std::make_unique<EntryNode>(&predictRequest, inputsInfo);
     const tensor_map_t outputsInfo{{pipelineOutputName, dagDummyModelOutputTensorInfo}};
@@ -383,8 +383,8 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
     std::vector<std::unique_ptr<Node>> nodes(nodesCount);
     const tensor_map_t inputsInfo{{pipelineInputName, dagDummyModelInputTensorInfo}, {pipelineFactorsName,
                                                                                          std::make_shared<ovms::TensorInfo>(pipelineFactorsName,
-                                                                                             InferenceEngine::Precision::FP32,
-                                                                                             shape_t{1, 4},
+                                                                                             ovms::Precision::FP32,
+                                                                                             ovms::Shape{1, 4},
                                                                                              InferenceEngine::Layout::NC)}};
     nodes[0] = std::make_unique<EntryNode>(&predictRequest, inputsInfo);
     const tensor_map_t outputsInfo{{pipelineOutputName, dagDummyModelOutputTensorInfo}};
@@ -447,14 +447,14 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SeriesOfCustomNodes) {
     const std::array<float, PARAMETERS_PAIRS_COUNT> subValues{-5.1, 1.9};
 
     auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{1, 3},
+        ovms::Precision::FP32,
+        ovms::Shape{1, 3},
         InferenceEngine::Layout::NC);
     const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{1, 3},
+        ovms::Precision::FP32,
+        ovms::Shape{1, 3},
         InferenceEngine::Layout::NC);
     const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
@@ -511,8 +511,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ParallelCustomNodes) {
     const std::array<float, PARAMETERS_PAIRS_COUNT> subValues{8.5, -3.2, 10.0, -0.5, 2.4};
 
     auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{1, 3},
+        ovms::Precision::FP32,
+        ovms::Shape{1, 3},
         InferenceEngine::Layout::NC);
     const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
@@ -521,8 +521,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ParallelCustomNodes) {
         const std::string outputName = pipelineOutputName + std::to_string(i);
         outputsInfo.emplace(outputName,
             std::make_shared<ovms::TensorInfo>(outputName,
-                InferenceEngine::Precision::FP32,
-                shape_t{1, 3},
+                ovms::Precision::FP32,
+                ovms::Shape{1, 3},
                 InferenceEngine::Layout::NC));
     }
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
@@ -3125,7 +3125,7 @@ public:
         mockedInputsInfo(inputsInfo),
         mockedOutputsInfo(outputsInfo) {}
 
-    size_t getBatchSize() const override {
+    ovms::Dimension getBatchSize() const override {
         return 1;
     }
 
@@ -3267,13 +3267,13 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, CustomNodeWithDemultipl
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
-                                         InferenceEngine::Precision::FP32,
-                                         shape_t{5, 10})}},
+                                         ovms::Precision::FP32,
+                                         ovms::Shape{5, 10})}},
         tensor_map_t{
             {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                           DUMMY_MODEL_OUTPUT_NAME,
-                                          InferenceEngine::Precision::FP32,
-                                          shape_t{5, 10})}});
+                                          ovms::Precision::FP32,
+                                          ovms::Shape{5, 10})}});
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -3307,14 +3307,14 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DISABLED_CustomNodeWithDemul
     std::unordered_map<std::string, std::string> aliases{{"out", "out"}};
 
     auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{7, 5, 10},
+        ovms::Precision::FP32,
+        ovms::Shape{7, 5, 10},
         InferenceEngine::Layout::ANY);
     const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{7, 5, 10},
+        ovms::Precision::FP32,
+        ovms::Shape{7, 5, 10},
         InferenceEngine::Layout::ANY);
     const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo, gather);
@@ -3377,13 +3377,13 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenDL
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
-                                         InferenceEngine::Precision::FP32,
-                                         shape_t{1, 10})}},
+                                         ovms::Precision::FP32,
+                                         ovms::Shape{1, 10})}},
         tensor_map_t{
             {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                           DUMMY_MODEL_OUTPUT_NAME,
-                                          InferenceEngine::Precision::FP32,
-                                          shape_t{demultiplyCount, 1, 11})}});  // demultiplyCount, 1, 10 is correct
+                                          ovms::Precision::FP32,
+                                          ovms::Shape{demultiplyCount, 1, 11})}});  // demultiplyCount, 1, 10 is correct
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -3603,13 +3603,13 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
-                                         InferenceEngine::Precision::FP32,
-                                         shape_t{1, demultiplyCount, 10})}},
+                                         ovms::Precision::FP32,
+                                         ovms::Shape{1, demultiplyCount, 10})}},
         tensor_map_t{
             {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                           DUMMY_MODEL_OUTPUT_NAME,
-                                          InferenceEngine::Precision::FP32,
-                                          shape_t{demultiplyCount, 1, 10})}});
+                                          ovms::Precision::FP32,
+                                          ovms::Shape{demultiplyCount, 1, 10})}});
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -3658,13 +3658,13 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
-                                         InferenceEngine::Precision::FP32,
-                                         shape_t{demultiplyCount, 1, 10})}},
+                                         ovms::Precision::FP32,
+                                         ovms::Shape{demultiplyCount, 1, 10})}},
         tensor_map_t{
             {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                           DUMMY_MODEL_OUTPUT_NAME,
-                                          InferenceEngine::Precision::FP32,
-                                          shape_t{1, demultiplyCount, 10})}});
+                                          ovms::Precision::FP32,
+                                          ovms::Shape{1, demultiplyCount, 10})}});
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -3756,13 +3756,13 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenDLModelAn
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
-                                         InferenceEngine::Precision::FP32,
-                                         shape_t{1, demultiplyCount, 10})}},
+                                         ovms::Precision::FP32,
+                                         ovms::Shape{1, demultiplyCount, 10})}},
         tensor_map_t{
             {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                           DUMMY_MODEL_OUTPUT_NAME,
-                                          InferenceEngine::Precision::FP32,
-                                          shape_t{demultiplyCount, 1, 11})}});  // demultiplyCount, 1, 10 is correct
+                                          ovms::Precision::FP32,
+                                          ovms::Shape{demultiplyCount, 1, 11})}});  // demultiplyCount, 1, 10 is correct
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -3811,13 +3811,13 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenCustomNod
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
-                                         InferenceEngine::Precision::FP32,
-                                         shape_t{demultiplyCount, 1, 11})}},  // 1, demultiplyCount, 10 is correct
+                                         ovms::Precision::FP32,
+                                         ovms::Shape{demultiplyCount, 1, 11})}},  // 1, demultiplyCount, 10 is correct
         tensor_map_t{
             {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                           DUMMY_MODEL_OUTPUT_NAME,
-                                          InferenceEngine::Precision::FP32,
-                                          shape_t{1, demultiplyCount, 10})}});
+                                          ovms::Precision::FP32,
+                                          ovms::Shape{1, demultiplyCount, 10})}});
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
