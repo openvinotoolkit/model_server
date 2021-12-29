@@ -15,8 +15,8 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
 #include <iostream>
+#include <memory>
 
 namespace ovms {
 
@@ -36,5 +36,5 @@ struct CNLIMWrapper {
 };
 
 void* getCLIMWrapperPtr(const std::shared_ptr<CNLIMWrapper>& wrapper);
-    
+
 }  // namespace ovms

@@ -23,5 +23,5 @@ void* getCLIMWrapperPtr(const std::shared_ptr<CNLIMWrapper>& wrapper) {
     }
     return wrapper->ptr;
 }
-    
+
 }  // namespace ovms
