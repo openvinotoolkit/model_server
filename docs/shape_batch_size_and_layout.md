@@ -31,6 +31,8 @@ In case the model can't be reshaped, it will remain in the original parameters a
 will get an error. The model server will also report such problem in the logs.
 
 # Changing model input/output layout
+**DEPRECATED** TODO: Suggest converting model to NHWC model (possible with Model Optimizer in 2022.1).
+
 OpenVINO models which process image data are generated via the model optimizer with NCHW layout. Image transformation libraries like OpenCV or Pillow use NHWC layout. This makes it required to transpose the data in the client application before it can be sent to OVMS. Custom node example implementations internally also use NHWC format to perform image transformations. Transposition operations increase the overall processing latency. Layout parameter reduces the latency by changing the model in runtime to accept NHWC layout instead of NCHW. That way the whole processing cycle is more effective by avoiding unnecessary data transpositions. That is especially beneficial for models with high resolution images, where data transposition could be more expensive in processing.<br><br>
 
 Layout parameter is optional. By default layout is inherited from OpenVINO™ model. You can specify layout during conversion to IR format via Model Optimizer. You can also use this parameter for ONNX models.<br>

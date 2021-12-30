@@ -18,7 +18,7 @@ It will also be resized to the model or pipeline node resolution.
 Processing the binary image requests requires the model or the custom nodes to accept NHWC layout in BGR color 
 format with data with the data range from 0-255. Original layout of the input data can be changed in the 
 OVMS configuration in runtime. For example when the orignal model has input shape [1,3,224,224] add a parameter
-in the OVMS configuration "layout": "NHWC" or the command line parameter `--layout NHWC`. In result, the model will
+in the OVMS configuration "layout": "NHWC:NCHW" or the command line parameter `--layout NHWC:NCHW`. In result, the model will
 have effective shape [1,224,224,3].
 
 In case the model was trained with color format RGB and range other then 0-255, the 
@@ -43,7 +43,7 @@ Examples below assumes OVMS has been started with ResNet50 binary model:
 
 ```bash
 docker run -d --rm -p 8000:8000 -p 9000:9000 openvino/model_server:latest \
---model_name resnet --model_path gs://ovms-public-eu/resnet50-binary --layout NHWC --batch_size 2 --plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}' \
+--model_name resnet --model_path gs://ovms-public-eu/resnet50-binary --layout NHWC:NCHW --batch_size 2 --plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}' \
 --port 9000 --rest_port 8000
 ```
 
