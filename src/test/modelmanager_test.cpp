@@ -528,7 +528,6 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
 }
 
 struct CNLIMWrapperMock : public ovms::CNLIMWrapper {
-
     inline static int deinitializeSum = 0;
 
 public:
