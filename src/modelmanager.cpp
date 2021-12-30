@@ -822,10 +822,20 @@ void ModelManager::watcher(std::future<void> exitSignal) {
             loadConfig(configFilename);
         }
         updateConfigurationWithoutConfigFile();
+        cleanupResources();
 
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Models configuration and filesystem check cycle end");
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
+}
+
+void ModelManager::cleanupResources() {
+    resources.erase(
+        std::remove_if(
+            resources.begin(),
+            resources.end(),
+            [](auto& resource) { return resource.use_count() == 1; }),
+        resources.end());
 }
 
 void ModelManager::join() {

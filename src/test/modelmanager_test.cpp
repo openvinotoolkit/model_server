@@ -23,6 +23,7 @@
 #include "../prediction_service_utils.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
+#include "../node_library.hpp"
 
 using testing::_;
 using testing::ContainerEq;
@@ -524,6 +525,60 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
     EXPECT_EQ(models, 2);
     manager.join();
     modelMock.reset();
+}
+
+struct CNLIMWrapperMock : public ovms::CNLIMWrapper {
+
+    inline static int deinitializeSum = 0;
+
+public:
+    CNLIMWrapperMock(void* CNLIM, ovms::deinitialize_fn deinitialize):
+        ovms::CNLIMWrapper(CNLIM, deinitialize) {}
+
+    ~CNLIMWrapperMock() {
+        deinitializeSum += deinitialize(ptr);
+    }
+};
+
+TEST(ModelManager, ConfigReloadShouldCleanupResources) {
+    ResourcesAccessModelManager manager;
+    manager.startWatcher();
+    ASSERT_EQ(manager.getResourcesSize(), 0);
+
+    // Reset mocked wrapper deinitializeSum
+    CNLIMWrapperMock::deinitializeSum = 0;
+
+    int num1 = 1;
+    int num2 = 19;
+    int num3 = 11;
+    {
+        std::shared_ptr<CNLIMWrapperMock> ptr1 = std::make_shared<CNLIMWrapperMock>(&num1, [](void* ptr) { 
+            int* number = static_cast<int*>(ptr);
+            return *number;
+        });
+        std::shared_ptr<CNLIMWrapperMock> ptr2 = std::make_shared<CNLIMWrapperMock>(&num2, [](void* ptr) { 
+            int* number = static_cast<int*>(ptr);
+            return *number;
+        });
+        std::shared_ptr<CNLIMWrapperMock> ptr3 = std::make_shared<CNLIMWrapperMock>(&num3, [](void* ptr) { 
+            int* number = static_cast<int*>(ptr);
+            return *number;
+        });
+
+        manager.addResourceToWatcher(ptr1);
+        manager.addResourceToWatcher(ptr2);
+        manager.addResourceToWatcher(std::move(ptr3));
+        ASSERT_EQ(manager.getResourcesSize(), 3);
+
+        waitForOVMSConfigReload(manager);
+        ASSERT_EQ(manager.getResourcesSize(), 2);
+        ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, num3);
+    }
+    waitForOVMSConfigReload(manager);
+    ASSERT_EQ(manager.getResourcesSize(), 0);
+    ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, (num1 + num2 + num3));
+
+    manager.join();
 }
 
 TEST(ModelManager, ConfigReloadingWithWrongInputName) {

@@ -24,6 +24,7 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+#include <utility>
 
 #include <openvino/openvino.hpp>
 #include <rapidjson/document.h>
@@ -33,6 +34,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
 #include "customloaders.hpp"
+#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "filesystem.hpp"
 #include "global_sequences_viewer.hpp"
 #include "model.hpp"
@@ -72,6 +74,8 @@ protected:
     PipelineFactory pipelineFactory;
 
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
+
+    std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
 
     GlobalSequencesViewer globalSequencesViewer;
     uint32_t waitForModelLoadedTimeoutMs;
@@ -176,6 +180,13 @@ public:
      */
     uint getWatcherIntervalSec() {
         return watcherIntervalSec;
+    }
+
+    /**
+     *  @brief Adds new resource to watch by the watcher thread
+     */
+    void addResourceToWatcher(std::shared_ptr<CNLIMWrapper> resource) {
+        resources.emplace(resources.end(), std::move(resource));
     }
 
     /**
@@ -367,6 +378,11 @@ public:
      * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions
      */
     Status updateConfigurationWithoutConfigFile();
+
+    /**
+     * @brief Watcher thread procedure to cleanup resources that are not used
+     */
+    void cleanupResources();
 };
 
 }  // namespace ovms

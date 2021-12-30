@@ -4856,56 +4856,24 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     checkIncrement4DimResponse(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
 }
 
-struct LibraryCountDeinitialize {
-    inline static int deinitializeCounter;
-
-    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
-        return 0;
-    }
-    static int deinitialize(void* customNodeLibraryInternalManager) {
-        deinitializeCounter += 1;
-        return 0;
-    }
-    static int execute(const struct CustomNodeTensor* inputs, int, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
-        return 0;
-    }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
-        return 0;
-    }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
-        return 0;
-    }
-    static int release(void* ptr, void* customNodeLibraryInternalManager) {
-        free(ptr);
-        return 0;
-    }
-};
-
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnRetire) {
     // Nodes
     // request   custom    custom_2   custom_3    response
     //  O--------->O--------->O--------->O---------->O
     //          add-sub    add-sub    add-sub
-    ConstructorEnabledModelManager manager;
+    ResourcesAccessModelManager manager;
+    manager.startWatcher();
+    ASSERT_EQ(manager.getResourcesSize(), 0);
     PipelineFactory factory;
-
-    // mocking custom node library and copying crucial functions from add_sub_lib in order to
-    // create pipeline definition
-    auto mockedLibrary = createLibraryMock<LibraryCountDeinitialize>();
-    mockedLibrary.getInputsInfo = library.getInputsInfo;
-    mockedLibrary.getOutputsInfo = library.getOutputsInfo;
-
-    // setting global deinitialize call counter to 0
-    LibraryCountDeinitialize::deinitializeCounter = 0;
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
         {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, {}, mockedLibrary, parameters_t{}},
+            std::nullopt, {}, library, parameters_t{}},
         {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, {}, mockedLibrary, parameters_t{}},
+            std::nullopt, {}, library, parameters_t{}},
         {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, {}, mockedLibrary, parameters_t{}},
+            std::nullopt, {}, library, parameters_t{}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
@@ -4928,11 +4896,13 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnR
         {"custom_node_3", {{customNodeOutputName, pipelineOutputName}}}};
 
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
+    waitForOVMSConfigReload(manager);
+    ASSERT_EQ(manager.getResourcesSize(), 3);
 
     factory.retireOtherThan({}, manager);
-    // Each custom node has effectively 1 internalManager initialized, because they use same library instance
-    // in order to count whether deinitialize has been called expected number of times
-    ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 3);
+    waitForOVMSConfigReload(manager);
+    ASSERT_EQ(manager.getResourcesSize(), 0);
+    manager.join();
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDeinitializeAllCustomNodes) {
@@ -4940,26 +4910,19 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
     // request   custom    custom_2   custom_3    response
     //  O--------->O--------->O--------->O---------->O
     //          add-sub    add-sub    add-sub
-    ConstructorEnabledModelManager manager;
+    ResourcesAccessModelManager manager;
+    manager.startWatcher();
+    ASSERT_EQ(manager.getResourcesSize(), 0);
     PipelineFactory factory;
-
-    // mocking custom node library and copying crucial functions from add_sub_lib in order to
-    // create pipeline definition
-    auto mockedLibrary = createLibraryMock<LibraryCountDeinitialize>();
-    mockedLibrary.getInputsInfo = library.getInputsInfo;
-    mockedLibrary.getOutputsInfo = library.getOutputsInfo;
-
-    // setting global deinitialize call counter to 0
-    LibraryCountDeinitialize::deinitializeCounter = 0;
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
         {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, {}, mockedLibrary, parameters_t{}},
+            std::nullopt, {}, library, parameters_t{}},
         {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, {}, mockedLibrary, parameters_t{}},
+            std::nullopt, {}, library, parameters_t{}},
         {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, {}, mockedLibrary, parameters_t{}},
+            std::nullopt, {}, library, parameters_t{}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
@@ -4982,6 +4945,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
         {"custom_node_3", {{customNodeOutputName, pipelineOutputName}}}};
 
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
+    waitForOVMSConfigReload(manager);
+    ASSERT_EQ(manager.getResourcesSize(), 3);
 
     // Nodes
     // request   custom    custom_2    response
@@ -4992,7 +4957,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{customNodeOutputName, pipelineOutputName}}}};
     ASSERT_EQ(factory.reloadDefinition("my_new_pipeline", std::move(info), std::move(connections), manager), StatusCode::OK);
-    // Each custom node has effectively 1 internalManager initialized, because they use same library instance
-    // in order to count whether deinitialize has been called expected number of times
-    ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 3);
+    waitForOVMSConfigReload(manager);
+    ASSERT_EQ(manager.getResourcesSize(), 2);
+    manager.join();
 }

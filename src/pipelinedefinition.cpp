@@ -54,7 +54,7 @@ Status PipelineDefinition::validate(ModelManager& manager) {
         return StatusCode::PIPELINE_NAME_OCCUPIED;
     }
 
-    Status validationResult = initializeNodeResources();
+    Status validationResult = initializeNodeResources(manager);
     if (!validationResult.ok()) {
         return validationResult;
     }
@@ -87,7 +87,7 @@ Status PipelineDefinition::validate(ModelManager& manager) {
     return validationResult;
 }
 
-Status PipelineDefinition::initializeNodeResources() {
+Status PipelineDefinition::initializeNodeResources(ModelManager& manager) {
     for (const auto& nodeInfo : nodeInfos) {
         if (nodeInfo.kind == NodeKind::CUSTOM) {
             void* customNodeLibraryInternalManager = nullptr;
@@ -103,6 +103,7 @@ Status PipelineDefinition::initializeNodeResources() {
                 return StatusCode::NODE_LIBRARY_INITIALIZE_FAILED;
             }
             std::shared_ptr<CNLIMWrapper> sharedCustomNodeLibraryInternalManager(new CNLIMWrapper{customNodeLibraryInternalManager, nodeInfo.library.deinitialize});
+            manager.addResourceToWatcher(sharedCustomNodeLibraryInternalManager);
             nodeResources.emplace(std::make_pair(nodeInfo.nodeName, std::move(sharedCustomNodeLibraryInternalManager)));
         }
     }

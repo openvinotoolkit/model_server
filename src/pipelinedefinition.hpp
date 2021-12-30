@@ -121,7 +121,7 @@ public:
     Status validateNodes(ModelManager& manager);
     Status validateForCycles();
     Status validateDemultiplexerGatherNodesOrder();
-    Status initializeNodeResources();
+    Status initializeNodeResources(ModelManager& manager);
     std::vector<NodeInfo> calculateNodeInfosDiff(const std::vector<NodeInfo>& nodeInfos);
     void deinitializeNodeResources(const std::vector<NodeInfo>& nodeInfosDiff);
 

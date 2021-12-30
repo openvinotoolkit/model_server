@@ -626,7 +626,7 @@ TEST(EnsembleMetadata, OneCustomNode) {
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
-    ASSERT_EQ(def->initializeNodeResources(), StatusCode::OK);
+    ASSERT_EQ(def->initializeNodeResources(manager), StatusCode::OK);
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
     ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
     ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
@@ -682,7 +682,7 @@ TEST(EnsembleMetadata, ParallelCustomNodes) {
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
-    ASSERT_EQ(def->initializeNodeResources(), StatusCode::OK);
+    ASSERT_EQ(def->initializeNodeResources(manager), StatusCode::OK);
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
     ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
     ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
@@ -860,7 +860,7 @@ TEST(EnsembleMetadata, CustomNodeMultipleDemultiplexers) {
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
-    ASSERT_EQ(def->initializeNodeResources(), StatusCode::OK);
+    ASSERT_EQ(def->initializeNodeResources(manager), StatusCode::OK);
     ASSERT_EQ(def->validateNodes(manager), StatusCode::OK);
     ASSERT_EQ(def->validateForCycles(), StatusCode::OK);
     ASSERT_EQ(def->validateDemultiplexerGatherNodesOrder(), StatusCode::OK);
