@@ -705,7 +705,7 @@ public:
                 this->inputsInfo,
                 dependantNodeInfo.library.getInputsInfo,
                 this->pipelineName,
-                getCLIMWrapperPtr(nodeResources.at(dependantNodeInfo.nodeName)));
+                getCNLIMWrapperPtr(nodeResources.at(dependantNodeInfo.nodeName)));
             if (!result.ok()) {
                 return result;
             }
@@ -714,7 +714,7 @@ public:
                 this->outputsInfo,
                 dependantNodeInfo.library.getOutputsInfo,
                 this->pipelineName,
-                getCLIMWrapperPtr(nodeResources.at(dependantNodeInfo.nodeName)));
+                getCNLIMWrapperPtr(nodeResources.at(dependantNodeInfo.nodeName)));
             if (!result.ok()) {
                 return result;
             }
@@ -733,7 +733,7 @@ public:
             this->dependencyInputsInfo,
             dependencyNodeInfo.library.getInputsInfo,
             this->pipelineName,
-            getCLIMWrapperPtr(nodeResources.at(dependencyNodeInfo.nodeName)));
+            getCNLIMWrapperPtr(nodeResources.at(dependencyNodeInfo.nodeName)));
         if (!result.ok()) {
             return result;
         }
@@ -742,7 +742,7 @@ public:
             this->dependencyOutputsInfo,
             dependencyNodeInfo.library.getOutputsInfo,
             this->pipelineName,
-            getCLIMWrapperPtr(nodeResources.at(dependencyNodeInfo.nodeName)));
+            getCNLIMWrapperPtr(nodeResources.at(dependencyNodeInfo.nodeName)));
         if (!result.ok()) {
             return result;
         }
@@ -1123,7 +1123,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
 
                 tensor_map_t info;
                 auto status = getCustomNodeMetadata(*dependantNodeInfo, info, dependantNodeInfo->library.getInputsInfo, this->getName(),
-                    getCLIMWrapperPtr(nodeResources.at(dependantNodeInfo->nodeName)));
+                    getCNLIMWrapperPtr(nodeResources.at(dependantNodeInfo->nodeName)));
                 if (!status.ok()) {
                     return status;
                 }
@@ -1191,7 +1191,7 @@ Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeIn
     }
     tensor_map_t info;
     auto status = getCustomNodeMetadata(dependencyNodeInfo, info, dependencyNodeInfo.library.getOutputsInfo, this->getName(),
-        getCLIMWrapperPtr(nodeResources.at(dependencyNodeInfo.nodeName)));
+        getCNLIMWrapperPtr(nodeResources.at(dependencyNodeInfo.nodeName)));
     if (!status.ok()) {
         return status;
     }
@@ -1299,7 +1299,7 @@ Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
                         nodeOutputsInfo,
                         someNodeInfo.library.getOutputsInfo,
                         this->pipelineName,
-                        getCLIMWrapperPtr(nodeResources.at(someNodeInfo.nodeName)));
+                        getCNLIMWrapperPtr(nodeResources.at(someNodeInfo.nodeName)));
                     if (!result.ok()) {
                         SPDLOG_ERROR("Failed to read node: {} library metadata with error: {}", nodeName, result.string());
                         return;

@@ -44,7 +44,7 @@ CustomNode::CustomNode(
 Status CustomNode::execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) {
     auto& nodeSession = getNodeSession(sessionKey);
     auto& customNodeSession = static_cast<CustomNodeSession&>(nodeSession);
-    return customNodeSession.execute(notifyEndQueue, *this, this->library, this->libraryParameters, this->parameters.size(), getCLIMWrapperPtr(customNodeLibraryInternalManager));
+    return customNodeSession.execute(notifyEndQueue, *this, this->library, this->libraryParameters, this->parameters.size(), getCNLIMWrapperPtr(customNodeLibraryInternalManager));
 }
 
 Status CustomNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
