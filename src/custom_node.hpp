@@ -21,6 +21,7 @@
 #include <unordered_map>
 
 #include "custom_node_interface.h"  // NOLINT
+#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "node.hpp"
 #include "nodeinfo.hpp"
 #include "pipelineeventqueue.hpp"
@@ -36,7 +37,7 @@ class CustomNode : public Node {
 
     std::unique_ptr<struct CustomNodeParam[]> libraryParameters = nullptr;
 
-    void* customNodeLibraryInternalManager;
+    std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager;
 
 public:
     CustomNode(
@@ -46,7 +47,7 @@ public:
         const std::unordered_map<std::string, std::string>& nodeOutputNameAlias = {},
         std::optional<uint32_t> demultiplyCount = std::nullopt,
         std::set<std::string> gatherFromNode = {},
-        void* customNodeLibraryInternalManager = nullptr);
+        std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager = nullptr);
 
     Status execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) override;
 

@@ -32,6 +32,7 @@
 #pragma GCC diagnostic pop
 
 #include "aliases.hpp"
+#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "modelversion.hpp"
 #include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"
@@ -72,7 +73,7 @@ class PipelineDefinition {
 
     const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
-    std::map<std::string, void*> nodeResources = {};
+    std::map<std::string, std::shared_ptr<CNLIMWrapper>> nodeResources = {};
     pipeline_connections_t connections;
 
 protected:

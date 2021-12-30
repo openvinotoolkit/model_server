@@ -32,7 +32,7 @@ CustomNode::CustomNode(
     const std::unordered_map<std::string, std::string>& nodeOutputNameAlias,
     std::optional<uint32_t> demultiplyCount,
     std::set<std::string> gatherFromNode,
-    void* customNodeLibraryInternalManager) :
+    std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager) :
     Node(nodeName, demultiplyCount, gatherFromNode),
     library(library),
     parameters(parameters),
@@ -44,7 +44,7 @@ CustomNode::CustomNode(
 Status CustomNode::execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) {
     auto& nodeSession = getNodeSession(sessionKey);
     auto& customNodeSession = static_cast<CustomNodeSession&>(nodeSession);
-    return customNodeSession.execute(notifyEndQueue, *this, this->library, this->libraryParameters, this->parameters.size(), customNodeLibraryInternalManager);
+    return customNodeSession.execute(notifyEndQueue, *this, this->library, this->libraryParameters, this->parameters.size(), getCNLIMWrapperPtr(customNodeLibraryInternalManager));
 }
 
 Status CustomNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
