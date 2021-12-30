@@ -1198,7 +1198,7 @@ struct LibraryAddSubWithInternalManager {
         output->precision = input->precision;
 
         for (uint64_t i = 0; i < output->dataBytes; i += sizeof(float)) {
-            *(float*)(output->data + i) = internalManager->mockedOutput[i/sizeof(float)];
+            *(float*)(output->data + i) = internalManager->mockedOutput[i / sizeof(float)];
         }
 
         return 0;
