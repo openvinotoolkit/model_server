@@ -1250,16 +1250,13 @@ TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, PipelineFactoryCreati
     const std::vector<float> inputValues{7.8, -2.4, 1.9, 8.7, -2.4, 3.5, 2.5, 1.2, -2.5, 10.0};
     this->prepareRequest(inputValues);
 
-    const float addValue = 0.9;
-    const float subValue = 7.3;
-
     NodeLibrary libraryAddSubWithInternalManager = createLibraryMock<LibraryAddSubWithInternalManager>();
     ASSERT_TRUE(libraryAddSubWithInternalManager.isValid());
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
         {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
-            std::nullopt, {}, libraryAddSubWithInternalManager, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+            std::nullopt, {}, libraryAddSubWithInternalManager},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
