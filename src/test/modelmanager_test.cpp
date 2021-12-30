@@ -20,10 +20,10 @@
 #include "../logging.hpp"
 #include "../model.hpp"
 #include "../modelmanager.hpp"
+#include "../node_library.hpp"
 #include "../prediction_service_utils.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
-#include "../node_library.hpp"
 
 using testing::_;
 using testing::ContainerEq;
@@ -532,7 +532,7 @@ struct CNLIMWrapperMock : public ovms::CNLIMWrapper {
     inline static int deinitializeSum = 0;
 
 public:
-    CNLIMWrapperMock(void* CNLIM, ovms::deinitialize_fn deinitialize):
+    CNLIMWrapperMock(void* CNLIM, ovms::deinitialize_fn deinitialize) :
         ovms::CNLIMWrapper(CNLIM, deinitialize) {}
 
     ~CNLIMWrapperMock() {
@@ -552,15 +552,15 @@ TEST(ModelManager, ConfigReloadShouldCleanupResources) {
     int num2 = 19;
     int num3 = 11;
     {
-        std::shared_ptr<CNLIMWrapperMock> ptr1 = std::make_shared<CNLIMWrapperMock>(&num1, [](void* ptr) { 
+        std::shared_ptr<CNLIMWrapperMock> ptr1 = std::make_shared<CNLIMWrapperMock>(&num1, [](void* ptr) {
             int* number = static_cast<int*>(ptr);
             return *number;
         });
-        std::shared_ptr<CNLIMWrapperMock> ptr2 = std::make_shared<CNLIMWrapperMock>(&num2, [](void* ptr) { 
+        std::shared_ptr<CNLIMWrapperMock> ptr2 = std::make_shared<CNLIMWrapperMock>(&num2, [](void* ptr) {
             int* number = static_cast<int*>(ptr);
             return *number;
         });
-        std::shared_ptr<CNLIMWrapperMock> ptr3 = std::make_shared<CNLIMWrapperMock>(&num3, [](void* ptr) { 
+        std::shared_ptr<CNLIMWrapperMock> ptr3 = std::make_shared<CNLIMWrapperMock>(&num3, [](void* ptr) {
             int* number = static_cast<int*>(ptr);
             return *number;
         });
