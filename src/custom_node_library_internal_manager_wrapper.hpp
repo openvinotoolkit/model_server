@@ -13,15 +13,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "customNodeLibraryInternalManagerWrapper.hpp"
+#pragma once
+
+#include <iostream>
+#include <memory>
+
+#include "node_library.hpp"
 
 namespace ovms {
 
-void* getCLIMWrapperPtr(const std::shared_ptr<CNLIMWrapper>& wrapper) {
-    if (wrapper.get() == nullptr) {
-        return nullptr;
+struct CNLIMWrapper {
+    void* ptr;
+    deinitialize_fn deinitialize = nullptr;
+
+    CNLIMWrapper(void* CNLIM, deinitialize_fn deinitialize) :
+        ptr(CNLIM),
+        deinitialize(deinitialize) {}
+
+    ~CNLIMWrapper() {
+        deinitialize(ptr);
     }
-    return wrapper->ptr;
-}
+};
+
+void* getCLIMWrapperPtr(const std::shared_ptr<CNLIMWrapper>& wrapper);
 
 }  // namespace ovms

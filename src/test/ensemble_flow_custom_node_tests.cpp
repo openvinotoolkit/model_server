@@ -1140,6 +1140,177 @@ TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, ParallelPipelineFacto
     }
 }
 
+struct AddSubInternalManager {
+    uint64_t* inputDims;
+    uint64_t* outputDims;
+    struct CustomNodeTensorInfo* inputInfo;
+    struct CustomNodeTensorInfo* outputInfo;
+    struct CustomNodeTensor* outputTensor;
+    uint8_t* outputTensorData;
+    uint64_t* outputTensorDims;
+
+    AddSubInternalManager() {
+        inputDims = (uint64_t*)malloc(2 * sizeof(uint64_t));
+        outputDims = (uint64_t*)malloc(2 * sizeof(uint64_t));
+        inputInfo = (struct CustomNodeTensorInfo*)malloc(1 * sizeof(struct CustomNodeTensorInfo));
+        outputInfo = (struct CustomNodeTensorInfo*)malloc(1 * sizeof(struct CustomNodeTensorInfo));
+        outputTensor = (struct CustomNodeTensor*)malloc(1 * sizeof(struct CustomNodeTensor));
+        outputTensorData = (uint8_t*)malloc(10 * 4 * sizeof(uint8_t));
+        outputTensorDims = (uint64_t*)malloc(2 * sizeof(uint64_t));
+    }
+
+    bool isPtrOwnedByManager(void* ptr) {
+        return (ptr == inputDims || ptr == outputDims || ptr == inputInfo || ptr == outputInfo || ptr == outputTensor || ptr == outputTensorData || ptr == outputTensorDims);
+    }
+};
+
+struct LibraryAddSubWithInternalManager {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        std::unique_ptr<AddSubInternalManager> internalManager = std::make_unique<AddSubInternalManager>();
+        *customNodeLibraryInternalManager = internalManager.release();
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        if (customNodeLibraryInternalManager != nullptr) {
+            AddSubInternalManager* internalManager = static_cast<AddSubInternalManager*>(customNodeLibraryInternalManager);
+            delete internalManager;
+        }
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        AddSubInternalManager* internalManager = static_cast<AddSubInternalManager*>(customNodeLibraryInternalManager);
+        if (internalManager == nullptr)
+            return 1;
+
+        if (paramsCount != 2) {
+            return 1;
+        }
+
+        if (inputsCount != 1) {
+            return 2;
+        }
+
+        if (strcmp(inputs[0].name, "input_numbers") != 0) {
+            return 3;
+        }
+
+        const struct CustomNodeTensor* input = &inputs[0];
+
+        if (input->precision != FP32) {
+            return 4;
+        }
+
+        float addValue = 0.0f;
+        float subValue = 0.0f;
+
+        for (int i = 0; i < paramsCount; i++) {
+            if (strcmp(params[i].key, "add_value") == 0) {
+                addValue = atof(params[i].value);
+            }
+            if (strcmp(params[i].key, "sub_value") == 0) {
+                subValue = atof(params[i].value);
+            }
+        }
+
+        *outputsCount = 1;
+        *outputs = internalManager->outputTensor;
+        struct CustomNodeTensor* output = (&(*outputs))[0];
+
+        output->name = "output_numbers";
+        std::cout << input->dataBytes << std::endl;
+        output->data = internalManager->outputTensorData;
+        output->dataBytes = input->dataBytes;
+        output->dims = internalManager->outputTensorDims;
+        output->dimsCount = input->dimsCount;
+        memcpy((void*)output->dims, (void*)input->dims, input->dimsCount * sizeof(uint64_t));
+        output->precision = input->precision;
+
+        for (uint64_t i = 0; i < output->dataBytes; i += sizeof(float)) {
+            *(float*)(output->data + i) = *(float*)(input->data + i) + addValue - subValue;
+        }
+
+        return 0;
+    }
+
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        AddSubInternalManager* internalManager = static_cast<AddSubInternalManager*>(customNodeLibraryInternalManager);
+        if (internalManager == nullptr)
+            return 1;
+        *infoCount = 1;
+        *info = internalManager->inputInfo;
+        (*info)->name = "input_numbers";
+        (*info)->dimsCount = 2;
+        (*info)->dims = internalManager->inputDims;
+        (*info)->dims[0] = 1;
+        (*info)->dims[1] = 10;
+        (*info)->precision = FP32;
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        AddSubInternalManager* internalManager = static_cast<AddSubInternalManager*>(customNodeLibraryInternalManager);
+        if (internalManager == nullptr)
+            return 1;
+        *infoCount = 1;
+        *info = internalManager->outputInfo;
+        (*info)->name = "output_numbers";
+        (*info)->dimsCount = 2;
+        (*info)->dims = internalManager->outputDims;
+        (*info)->dims[0] = 1;
+        (*info)->dims[1] = 10;
+        (*info)->precision = FP32;
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        AddSubInternalManager* internalManager = static_cast<AddSubInternalManager*>(customNodeLibraryInternalManager);
+        if (internalManager == nullptr)
+            return 1;
+        if (!internalManager->isPtrOwnedByManager(ptr)) {
+            free(ptr);
+        }
+        return 0;
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, PipelineFactoryCreationAndExecuteWithCustomNodeUsingInternalManager) {
+    ConstructorEnabledModelManager manager;
+    PipelineFactory factory;
+
+    const std::vector<float> inputValues{7.8, -2.4, 1.9, 8.7, -2.4, 3.5, 2.5, 1.2, -2.5, 10.0};
+    this->prepareRequest(inputValues);
+
+    const float addValue = 0.9;
+    const float subValue = 7.3;
+
+    NodeLibrary libraryAddSubWithInternalManager = createLibraryMock<LibraryAddSubWithInternalManager>();
+    ASSERT_TRUE(libraryAddSubWithInternalManager.isValid());
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, libraryAddSubWithInternalManager, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    // request (pipelineInputName) O--------->O custom node (customNodeInputName)
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O response (pipelineOutputName)
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node", {{customNodeOutputName, pipelineOutputName}}}};
+
+    std::unique_ptr<Pipeline> pipeline;
+    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
+    ASSERT_EQ(factory.create(pipeline, "my_new_pipeline", &request, &response, manager), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    this->checkResponse<float>(inputValues, [addValue, subValue](float value) -> float {
+        return value + addValue - subValue;
+    });
+}
+
 static const char* pipelineCustomNodeConfig = R"(
 {
     "model_config_list": [],

@@ -20,8 +20,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "customNodeLibraryInternalManagerWrapper.hpp"
 #include "custom_node_interface.h"  // NOLINT
+#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "node.hpp"
 #include "nodeinfo.hpp"
 #include "pipelineeventqueue.hpp"

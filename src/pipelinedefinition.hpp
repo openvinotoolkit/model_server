@@ -32,7 +32,7 @@
 #pragma GCC diagnostic pop
 
 #include "aliases.hpp"
-#include "customNodeLibraryInternalManagerWrapper.hpp"
+#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "modelversion.hpp"
 #include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"
