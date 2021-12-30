@@ -139,28 +139,26 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
             rows = src.rows;
         }
     }
-    if(cols.isDynamic())
-    {   
+    if (cols.isDynamic()) {
         dimension_value_t value = src.cols;
-        if(src.cols < cols.getMinValue())
+        if (src.cols < cols.getMinValue())
             value = cols.getMinValue();
 
-        if(src.cols > cols.getMaxValue())
+        if (src.cols > cols.getMaxValue())
             value = cols.getMaxValue();
 
-        if(value != src.cols)
+        if (value != src.cols)
             cols = Dimension(value);
     }
-    if(rows.isDynamic())
-    {
+    if (rows.isDynamic()) {
         dimension_value_t value = src.rows;
-        if(src.rows < rows.getMinValue())
+        if (src.rows < rows.getMinValue())
             value = rows.getMinValue();
 
-        if(src.rows > rows.getMaxValue())
+        if (src.rows > rows.getMaxValue())
             value = rows.getMaxValue();
 
-        if(value != src.rows)
+        if (value != src.rows)
             rows = Dimension(value);
     }
     cv::resize(src, dst, cv::Size(cols.getStaticValue(), rows.getStaticValue()));
@@ -262,7 +260,7 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
         cv::Mat image = convertStringValToMat(src.string_val(i));
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
-    
+
         cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
         auto status = validateInput(tensorInfo, image, firstImage);
         if (status != StatusCode::OK) {

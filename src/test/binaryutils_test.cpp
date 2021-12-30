@@ -203,7 +203,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_smaller) {
 
     ov::runtime::Tensor tensor;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, {2,5}, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, {2, 5}, 3}, InferenceEngine::Layout::NHWC);
 
     ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
@@ -215,7 +215,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_smaller) {
 }
 
 TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_bigger) {
-     uint8_t rgb_expected_blob[] = {0x96, 0x8f, 0xf3, 0x98, 0x9a, 0x81, 0x9d, 0xa9, 0x12};
+    uint8_t rgb_expected_blob[] = {0x96, 0x8f, 0xf3, 0x98, 0x9a, 0x81, 0x9d, 0xa9, 0x12};
 
     std::ifstream DataFile;
     DataFile.open("/ovms/src/test/binaryutils/rgb4x4.jpg", std::ios::binary);
@@ -231,7 +231,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_bigger) {
 
     ov::runtime::Tensor tensor;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, {1,3}, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, {1, 3}, 3}, InferenceEngine::Layout::NHWC);
 
     ASSERT_EQ(convertStringValToBlob_2(stringVal2x2, tensor, tensorInfo, false), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
@@ -247,7 +247,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_in_range) {
 
     ov::runtime::Tensor tensor;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, {1,3}, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, {1, 3}, 3}, InferenceEngine::Layout::NHWC);
 
     ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
@@ -263,7 +263,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_smaller) {
 
     ov::runtime::Tensor tensor;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, {2,5}, 1, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, {2, 5}, 1, 3}, InferenceEngine::Layout::NHWC);
 
     ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
@@ -291,7 +291,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_bigger) {
 
     ov::runtime::Tensor tensor;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, {1,3}, 1, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, {1, 3}, 1, 3}, InferenceEngine::Layout::NHWC);
 
     ASSERT_EQ(convertStringValToBlob_2(stringVal2x2, tensor, tensorInfo, false), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
@@ -307,7 +307,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_in_range) {
 
     ov::runtime::Tensor tensor;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, {1,3}, 1, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, {1, 3}, 1, 3}, InferenceEngine::Layout::NHWC);
 
     ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
