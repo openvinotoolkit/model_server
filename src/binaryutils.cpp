@@ -110,7 +110,7 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
             rows = image.rows;
         }
     }
-    if (cols != Dimension(image.cols) || rows != Dimension(image.rows)) {
+    if ((!cols.match(Dimension(image.cols).getStaticValue())) || (!rows.match(Dimension(image.rows).getStaticValue()))) {
         return true;
     }
     return false;
@@ -138,6 +138,30 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
         if (rows == Dimension::any()) {
             rows = src.rows;
         }
+    }
+    if(cols.isDynamic())
+    {   
+        dimension_value_t value = src.cols;
+        if(src.cols < cols.getMinValue())
+            value = cols.getMinValue();
+
+        if(src.cols > cols.getMaxValue())
+            value = cols.getMaxValue();
+
+        if(value != src.cols)
+            cols = Dimension(value);
+    }
+    if(rows.isDynamic())
+    {
+        dimension_value_t value = src.rows;
+        if(src.rows < rows.getMinValue())
+            value = rows.getMinValue();
+
+        if(src.rows > rows.getMaxValue())
+            value = rows.getMaxValue();
+
+        if(value != src.rows)
+            rows = Dimension(value);
     }
     cv::resize(src, dst, cv::Size(cols.getStaticValue(), rows.getStaticValue()));
     return StatusCode::OK;
@@ -238,7 +262,7 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
         cv::Mat image = convertStringValToMat(src.string_val(i));
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
-
+    
         cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
         auto status = validateInput(tensorInfo, image, firstImage);
         if (status != StatusCode::OK) {
@@ -281,8 +305,7 @@ InferenceEngine::SizeVector getShapeFromImages(const std::vector<cv::Mat>& image
 }
 
 ov::runtime::Tensor createBlobFromMats_2(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
-    // TODO binary inputs support for dynamic shapes - probably we should have here just getShapeFromImages
-    ov::Shape shape = !isPipeline ? tensorInfo->getShape_3().getFlatShape() : getShapeFromImages(images, tensorInfo);
+    ov::Shape shape = getShapeFromImages(images, tensorInfo);
     ov::element::Type precision = tensorInfo->getOvPrecision();
     ov::runtime::Tensor tensor(precision, shape);
     char* ptr = (char*)tensor.data();
