@@ -54,7 +54,7 @@ docker pull openvino/model_server:latest
 
 Deploy OVMS using the following command:
 ```Bash
-docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_server:latest --model_path /models/resnet --model_name resnet --port 9000 --layout NHWC
+docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_server:latest --model_path /models/resnet --model_name resnet --port 9000 --layout NHWC:NCHW
 ```
 
 ### Running the inference requests from the client

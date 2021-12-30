@@ -4,7 +4,7 @@
             "config": {
                 "name": "east",
                 "base_path": "/OCR/east_fp32",
-                "layout": "NHWC",
+                "layout": "NHWC:NCHW",
                 "plugin_config": {
                     "CPU_THROUGHPUT_STREAMS":  "1"
                 }
@@ -13,7 +13,7 @@
         {
             "config": {
                 "name": "text-recognition",
-                "layout": "NHWC",
+                "layout": "NHWC:NCHW",
                 "base_path": "/OCR/text-recognition"
             }
         }
