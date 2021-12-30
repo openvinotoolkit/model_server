@@ -1148,6 +1148,7 @@ struct AddSubInternalManager {
     struct CustomNodeTensor* outputTensor;
     uint8_t* outputTensorData;
     uint64_t* outputTensorDims;
+    inline static std::vector<float> mockedOutput{0, 0, -1, 1, -2, 2, -3, 3, -4, 4};
 
     AddSubInternalManager() {
         inputDims = (uint64_t*)malloc(2 * sizeof(uint64_t));
@@ -1166,8 +1167,8 @@ struct AddSubInternalManager {
 
 struct LibraryAddSubWithInternalManager {
     static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
-        std::unique_ptr<AddSubInternalManager> internalManager = std::make_unique<AddSubInternalManager>();
-        *customNodeLibraryInternalManager = internalManager.release();
+        AddSubInternalManager* internalManager = new AddSubInternalManager();
+        *customNodeLibraryInternalManager = internalManager;
         return 0;
     }
     static int deinitialize(void* customNodeLibraryInternalManager) {
@@ -1182,42 +1183,13 @@ struct LibraryAddSubWithInternalManager {
         if (internalManager == nullptr)
             return 1;
 
-        if (paramsCount != 2) {
-            return 1;
-        }
-
-        if (inputsCount != 1) {
-            return 2;
-        }
-
-        if (strcmp(inputs[0].name, "input_numbers") != 0) {
-            return 3;
-        }
-
         const struct CustomNodeTensor* input = &inputs[0];
-
-        if (input->precision != FP32) {
-            return 4;
-        }
-
-        float addValue = 0.0f;
-        float subValue = 0.0f;
-
-        for (int i = 0; i < paramsCount; i++) {
-            if (strcmp(params[i].key, "add_value") == 0) {
-                addValue = atof(params[i].value);
-            }
-            if (strcmp(params[i].key, "sub_value") == 0) {
-                subValue = atof(params[i].value);
-            }
-        }
 
         *outputsCount = 1;
         *outputs = internalManager->outputTensor;
         struct CustomNodeTensor* output = (&(*outputs))[0];
 
         output->name = "output_numbers";
-        std::cout << input->dataBytes << std::endl;
         output->data = internalManager->outputTensorData;
         output->dataBytes = input->dataBytes;
         output->dims = internalManager->outputTensorDims;
@@ -1226,7 +1198,7 @@ struct LibraryAddSubWithInternalManager {
         output->precision = input->precision;
 
         for (uint64_t i = 0; i < output->dataBytes; i += sizeof(float)) {
-            *(float*)(output->data + i) = *(float*)(input->data + i) + addValue - subValue;
+            *(float*)(output->data + i) = internalManager->mockedOutput[i/sizeof(float)];
         }
 
         return 0;
@@ -1306,8 +1278,8 @@ TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, PipelineFactoryCreati
     ASSERT_EQ(factory.create(pipeline, "my_new_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
 
-    this->checkResponse<float>(inputValues, [addValue, subValue](float value) -> float {
-        return value + addValue - subValue;
+    this->checkResponse<float>(AddSubInternalManager::mockedOutput, [](float value) -> float {
+        return value;
     });
 }
 
