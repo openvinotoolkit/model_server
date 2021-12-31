@@ -14,10 +14,10 @@ shape: [N] with dtype: DT_STRING. Where N represents elements with binary data c
 ## Preparing for deployment
 Before processing in the target AI model, binary image data is encoded by OVMS to a NHWC layout in BGR color format.
 It will also be resized to the model or pipeline node resolution. When the model shape is dynamic and image data shape
-is out of range it will be adjusted to the nearer border. For example, when model shape is: [1,3,100:200,200]:
+is out of range it will be adjusted to the nearer border. For example, when model shape is: [1,100:200,200,3]:
 
-- if input shape is [1,3,90,200] it will be resized into [1,3,100,200]
-- if input shape is [1,3,220,200] it will be resized into [1,3,200,200]
+- if input shape is [1,90,200,3] it will be resized into [1,100,200,3]
+- if input shape is [1,220,200,3] it will be resized into [1,200,200,3]
 
 Processing the binary image requests requires the model or the custom nodes to accept NHWC layout in BGR color 
 format with data with the data range from 0-255. Original layout of the input data can be changed in the 
