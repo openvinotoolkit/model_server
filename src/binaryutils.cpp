@@ -110,7 +110,7 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
             rows = image.rows;
         }
     }
-    if ((!cols.match(Dimension(image.cols).getStaticValue())) || (!rows.match(Dimension(image.rows).getStaticValue()))) {
+    if ((!cols.match(image.cols)) || (!rows.match(image.rows))) {
         return true;
     }
     return false;

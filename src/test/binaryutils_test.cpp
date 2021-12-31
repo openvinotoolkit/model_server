@@ -330,7 +330,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_any_shape) {
     size_t expectedRowsNumber = 1;
     EXPECT_EQ(tensorDims[1], expectedRowsNumber);
     size_t expectedColsNumber = 1;
-    EXPECT_EQ(tensorDims[1], expectedColsNumber);
+    EXPECT_EQ(tensorDims[2], expectedColsNumber);
     ASSERT_EQ(tensor.get_size(), 3);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
