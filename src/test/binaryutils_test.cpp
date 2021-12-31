@@ -197,4 +197,142 @@ TEST_F(BinaryUtilsTest, positive_resizing) {
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
 }
+
+TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_smaller) {
+    uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
+
+    ov::runtime::Tensor tensor;
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, {2, 5}, 3}, InferenceEngine::Layout::NHWC);
+
+    ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    shape_t tensorDims = tensor.get_shape();
+    size_t expectedColsNumber = 2;
+    EXPECT_EQ(tensorDims[2], expectedColsNumber);
+    ASSERT_EQ(tensor.get_size(), 6);
+    uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+}
+
+TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_bigger) {
+    uint8_t rgb_expected_blob[] = {0x96, 0x8f, 0xf3, 0x98, 0x9a, 0x81, 0x9d, 0xa9, 0x12};
+
+    std::ifstream DataFile;
+    DataFile.open("/ovms/src/test/binaryutils/rgb4x4.jpg", std::ios::binary);
+    DataFile.seekg(0, std::ios::end);
+    size_t filesize = DataFile.tellg();
+    DataFile.seekg(0);
+    std::unique_ptr<char[]> image_bytes(new char[filesize]);
+    DataFile.read(image_bytes.get(), filesize);
+
+    tensorflow::TensorProto stringVal2x2;
+    stringVal2x2.set_dtype(tensorflow::DataType::DT_STRING);
+    stringVal2x2.add_string_val(image_bytes.get(), filesize);
+
+    ov::runtime::Tensor tensor;
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, {1, 3}, 3}, InferenceEngine::Layout::NHWC);
+
+    ASSERT_EQ(convertStringValToBlob_2(stringVal2x2, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    shape_t tensorDims = tensor.get_shape();
+    size_t expectedColsNumber = 3;
+    EXPECT_EQ(tensorDims[2], expectedColsNumber);
+    ASSERT_EQ(tensor.get_size(), 9);
+    uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+}
+
+TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_in_range) {
+    uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed};
+
+    ov::runtime::Tensor tensor;
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, {1, 3}, 3}, InferenceEngine::Layout::NHWC);
+
+    ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    shape_t tensorDims = tensor.get_shape();
+    size_t expectedColsNumber = 1;
+    EXPECT_EQ(tensorDims[2], expectedColsNumber);
+    ASSERT_EQ(tensor.get_size(), 3);
+    uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+}
+
+TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_smaller) {
+    uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
+
+    ov::runtime::Tensor tensor;
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, {2, 5}, 1, 3}, InferenceEngine::Layout::NHWC);
+
+    ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    shape_t tensorDims = tensor.get_shape();
+    size_t expectedRowsNumber = 2;
+    EXPECT_EQ(tensorDims[1], expectedRowsNumber);
+    ASSERT_EQ(tensor.get_size(), 6);
+    uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+}
+
+TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_bigger) {
+    uint8_t rgb_expected_blob[] = {0x3f, 0x65, 0x88, 0x98, 0x9a, 0x81, 0xf5, 0xd2, 0x7c};
+
+    std::ifstream DataFile;
+    DataFile.open("/ovms/src/test/binaryutils/rgb4x4.jpg", std::ios::binary);
+    DataFile.seekg(0, std::ios::end);
+    size_t filesize = DataFile.tellg();
+    DataFile.seekg(0);
+    std::unique_ptr<char[]> image_bytes(new char[filesize]);
+    DataFile.read(image_bytes.get(), filesize);
+
+    tensorflow::TensorProto stringVal2x2;
+    stringVal2x2.set_dtype(tensorflow::DataType::DT_STRING);
+    stringVal2x2.add_string_val(image_bytes.get(), filesize);
+
+    ov::runtime::Tensor tensor;
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, {1, 3}, 1, 3}, InferenceEngine::Layout::NHWC);
+
+    ASSERT_EQ(convertStringValToBlob_2(stringVal2x2, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    shape_t tensorDims = tensor.get_shape();
+    size_t expectedRowsNumber = 3;
+    EXPECT_EQ(tensorDims[1], expectedRowsNumber);
+    ASSERT_EQ(tensor.get_size(), 9);
+    uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+}
+
+TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_in_range) {
+    uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed};
+
+    ov::runtime::Tensor tensor;
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, {1, 3}, 1, 3}, InferenceEngine::Layout::NHWC);
+
+    ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    shape_t tensorDims = tensor.get_shape();
+    size_t expectedRowsNumber = 1;
+    EXPECT_EQ(tensorDims[1], expectedRowsNumber);
+    ASSERT_EQ(tensor.get_size(), 3);
+    uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+}
+
+TEST_F(BinaryUtilsTest, positive_resizing_with_any_shape) {
+    uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed};
+
+    ov::runtime::Tensor tensor;
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, -1, -1, 3}, InferenceEngine::Layout::NHWC);
+
+    ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    shape_t tensorDims = tensor.get_shape();
+    size_t expectedRowsNumber = 1;
+    EXPECT_EQ(tensorDims[1], expectedRowsNumber);
+    size_t expectedColsNumber = 1;
+    EXPECT_EQ(tensorDims[2], expectedColsNumber);
+    ASSERT_EQ(tensor.get_size(), 3);
+    uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+}
 }  // namespace

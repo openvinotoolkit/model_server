@@ -845,6 +845,31 @@ TEST_F(TestPredict, PerformInferenceWithBinaryInputChangeModelInputLayout) {
 }
 
 /**
+ * Scenario - perform inference with binary input with witdth exceeding shape range when model shape is dynamic. Check results.
+ *
+ * 1. Load model with dynamic shape and input layout=nhwc, initial internal layout: nchw
+ * 2. Do the inference with single binary image tensor with witdth exceeding shape range - expect status OK and reshaped output tensor
+ */
+TEST_F(TestPredict, PerformInferenceWithBinaryInputAndShapeDynamic) {
+    using namespace ovms;
+
+    // Prepare model with changed layout to nhwc (internal layout=nchw)
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    // binary input shape is [1,1,1,3] so it should be resized to the nearest border which is in this case [1,1,2,3]
+    ASSERT_EQ(config.parseShapeParameter("(1,1,2:5,3)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    tensorflow::serving::PredictResponse response;
+
+    // Perform inference with binary input, ensure status OK and correct results
+    ASSERT_EQ(performInferenceWithBinaryImageInput(response, INCREMENT_1x3x4x5_MODEL_INPUT_NAME, "increment_1x3x4x5"), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+    checkOutputValues(response, {37.0, 37.0, 28.0, 28.0, 238.0, 238.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+}
+
+/**
  * Scenario - send binary input request to model accepting auto batch size.
  *
  * 1. Load model with input layout=nhwc, batch_size=auto, initial internal layout: nchw, batch_size=1
