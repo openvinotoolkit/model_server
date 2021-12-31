@@ -14,32 +14,68 @@
 // limitations under the License.
 //*****************************************************************************
 #include <iostream>
+#include <shared_mutex>
 #include <string>
 #include <vector>
 
 #include "../../custom_node_interface.h"
 #include "../common/opencv_utils.hpp"
 #include "../common/utils.hpp"
+#include "../common/buffersqueue.hpp"
+#include "../common/custom_node_library_internal_manager.hpp"
 #include "opencv2/opencv.hpp"
 
-static constexpr const char* IMAGE_TENSOR_NAME = "image";
-static constexpr const char* SCORES_TENSOR_NAME = "scores";
-static constexpr const char* GEOMETRY_TENSOR_NAME = "boxes";
-static constexpr const char* TEXT_IMAGES_TENSOR_NAME = "text_images";
-static constexpr const char* COORDINATES_TENSOR_NAME = "text_coordinates";
-static constexpr const char* CONFIDENCE_TENSOR_NAME = "confidence_levels";
+using CustomNodeLibraryInternalManager = ovms::custom_nodes_common::CustomNodeLibraryInternalManager;
 
-bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale) {
+static constexpr const char* INPUT_IMAGE_TENSOR_NAME = "image";
+static constexpr const char* INPUT_GEOMETRY_TENSOR_NAME = "boxes";
+static constexpr const char* INPUT_TENSOR_INFO_NAME = "input_info";
+static constexpr const char* INPUT_IMAGE_INFO_DIMS_NAME = "image_info_dims";
+static constexpr const char* INPUT_GEOMETRY_INFO_DIMS_NAME = "boxes_info_dims";
+
+static constexpr const char* OUTPUT_TENSOR_NAME = "output";
+static constexpr const char* OUTPUT_CONFIDENCE_TENSOR_NAME = "confidence_levels";
+static constexpr const char* OUTPUT_TEXT_IMAGES_TENSOR_NAME = "text_images";
+static constexpr const char* OUTPUT_COORDINATES_TENSOR_NAME = "text_coordinates";
+static constexpr const char* OUTPUT_CONFIDENCE_DIMS_NAME = "confidence_levels_dims";
+static constexpr const char* OUTPUT_TEXT_IMAGES_DIMS_NAME = "text_images_dims";
+static constexpr const char* OUTPUT_COORDINATES_DIMS_NAME = "text_coordinates_dims";
+static constexpr const char* OUTPUT_TENSOR_INFO_NAME = "output_info";
+static constexpr const char* OUTPUT_CONFIDENCE_INFO_DIMS_NAME = "confidence_levels_info_dims";
+static constexpr const char* OUTPUT_TEXT_IMAGES_INFO_DIMS_NAME = "text_images_info_dims";
+static constexpr const char* OUTPUT_COORDINATES_INFO_DIMS_NAME = "text_coordinates_info_dims";
+
+static constexpr const int QUEUE_SIZE = 1;
+
+void cleanup(CustomNodeTensor& tensor, CustomNodeLibraryInternalManager* internalManager) {
+    release(tensor.data, internalManager);
+    release(tensor.dims, internalManager);
+}
+
+template <typename T>
+bool get_buffer(CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size) {
+    auto buffersQueue = internalManager->getBuffersQueue(buffersQueueName);
+    if (!(buffersQueue == nullptr))
+        *buffer = static_cast<T*>(buffersQueue->getBuffer());
+    if (*buffer == nullptr || buffersQueue == nullptr) {
+        *buffer = (T*)malloc(byte_size);
+        if (*buffer == nullptr) {
+            std::cout << "allocation for buffer: " << buffersQueueName << "FAILED" << std::endl;
+            return false;
+        }
+    }
+    return true;
+}
+
+bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale, CustomNodeLibraryInternalManager* internalManager) {
     const uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
 
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * outputBatch;
 
-    float* buffer = (float*)malloc(byteSize);
-    NODE_ASSERT(buffer != nullptr, "malloc has failed");
-    if (buffer == nullptr) {
+    float* buffer = nullptr;
+    if (!get_buffer<float>(internalManager, &buffer, OUTPUT_TEXT_IMAGES_TENSOR_NAME, byteSize))
         return false;
-    }
 
     for (uint64_t i = 0; i < outputBatch; i++) {
         cv::Size targetShape(targetImageWidth, targetImageHeight);
@@ -61,8 +97,10 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     output->data = reinterpret_cast<uint8_t*>(buffer);
     output->dataBytes = byteSize;
     output->dimsCount = 5;
-    output->dims = (uint64_t*)malloc(output->dimsCount * sizeof(uint64_t));
-    NODE_ASSERT(output->dims != nullptr, "malloc has failed");
+    if (!get_buffer<uint64_t>(internalManager, &(output->dims), OUTPUT_TEXT_IMAGES_DIMS_NAME, output->dimsCount * sizeof(uint64_t))) {
+        release(buffer, internalManager);
+        return false;
+    }
     output->dims[0] = outputBatch;
     output->dims[1] = 1;
     if (targetImageLayout == "NCHW") {
@@ -78,13 +116,13 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     return true;
 }
 
-bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
+bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, CustomNodeLibraryInternalManager* internalManager) {
     const uint64_t outputBatch = boxes.size();
     uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
 
-    int32_t* buffer = (int32_t*)malloc(byteSize);
-    NODE_ASSERT(buffer != nullptr, "malloc has failed");
-
+    int32_t* buffer = nullptr;
+    if (!get_buffer<int32_t>(internalManager, &buffer, OUTPUT_COORDINATES_TENSOR_NAME, byteSize))
+        return false;
     for (uint64_t i = 0; i < outputBatch; i++) {
         int32_t entry[] = {
             boxes[i].x,
@@ -96,8 +134,10 @@ bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::ve
     output->data = reinterpret_cast<uint8_t*>(buffer);
     output->dataBytes = byteSize;
     output->dimsCount = 3;
-    output->dims = (uint64_t*)malloc(output->dimsCount * sizeof(uint64_t));
-    NODE_ASSERT(output->dims != nullptr, "malloc has failed");
+    if (!get_buffer<uint64_t>(internalManager, &(output->dims), OUTPUT_COORDINATES_DIMS_NAME, output->dimsCount * sizeof(uint64_t))) {
+        release(buffer, internalManager);
+        return false;
+    }
     output->dims[0] = outputBatch;
     output->dims[1] = 1;
     output->dims[2] = 4;
@@ -105,19 +145,22 @@ bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::ve
     return true;
 }
 
-bool copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<float>& scores) {
+bool copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<float>& scores, CustomNodeLibraryInternalManager* internalManager) {
     const uint64_t outputBatch = scores.size();
     uint64_t byteSize = sizeof(float) * outputBatch;
 
-    float* buffer = (float*)malloc(byteSize);
-    NODE_ASSERT(buffer != nullptr, "malloc has failed");
+    float* buffer = nullptr;
+    if (!get_buffer<float>(internalManager, &buffer, OUTPUT_CONFIDENCE_TENSOR_NAME, byteSize))
+        return false;
     std::memcpy(buffer, scores.data(), byteSize);
 
     output->data = reinterpret_cast<uint8_t*>(buffer);
     output->dataBytes = byteSize;
     output->dimsCount = 3;
-    output->dims = (uint64_t*)malloc(output->dimsCount * sizeof(uint64_t));
-    NODE_ASSERT(output->dims != nullptr, "malloc has failed");
+    if (!get_buffer<uint64_t>(internalManager, &(output->dims), OUTPUT_CONFIDENCE_DIMS_NAME, output->dimsCount * sizeof(uint64_t))) {
+        release(buffer, internalManager);
+        return false;
+    }
     output->dims[0] = outputBatch;
     output->dims[1] = 1;
     output->dims[2] = 1;
@@ -126,10 +169,61 @@ bool copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<
 }
 
 int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+    // creating InternalManager instance
+    std::unique_ptr<CustomNodeLibraryInternalManager> internalManager = std::make_unique<CustomNodeLibraryInternalManager>();
+    NODE_ASSERT(internalManager != nullptr, "internalManager allocation failed");
+
+    // reading parameters to determine size of pre-allocated buffers
+    uint64_t maxOutputBatch = get_int_parameter("max_output_batch", params, paramsCount, 100);
+    NODE_ASSERT(maxOutputBatch > 0, "max output batch must be larger than 0");
+    bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
+    int targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
+    int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
+    NODE_ASSERT(targetImageHeight > 0, "target image height must be larger than 0");
+    NODE_ASSERT(targetImageWidth > 0, "target image width must be larger than 0");
+    
+    // creating BuffersQueues for output: text_images
+    int channels = convertToGrayScale ? 1 : 3;
+    uint64_t textImagesByteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * maxOutputBatch;
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TEXT_IMAGES_TENSOR_NAME, textImagesByteSize, QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TEXT_IMAGES_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+
+    // creating BuffersQueues for output: coordinates
+    uint64_t coordinatesByteSize = sizeof(int32_t) * 4 * maxOutputBatch;
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME, coordinatesByteSize, QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_COORDINATES_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+
+    // creating BuffersQueues for output: confidence
+    uint64_t confidenceByteSize = sizeof(float) * maxOutputBatch;
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCE_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCE_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+
+    // creating BuffersQueues for output tensor
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, 3 * sizeof(CustomNodeTensor), QUEUE_SIZE), "buffer creation failed");
+
+    // creating BuffersQueues for info tensors
+    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_TENSOR_INFO_NAME, 2 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE), "buffer creation failed");
+
+    // creating BuffersQueues for inputs dims in getInputsInfo
+    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_IMAGE_INFO_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_GEOMETRY_INFO_DIMS_NAME, 2 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+
+    // creating BuffersQueues for outputs dims in getOutputsInfo
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TEXT_IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_COORDINATES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCE_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+
+    *customNodeLibraryInternalManager = internalManager.release();
     return 0;
 }
 
 int deinitialize(void* customNodeLibraryInternalManager) {
+    // deallocate InternalManager and its contents
+    if (customNodeLibraryInternalManager != nullptr) {
+        CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
+        delete internalManager;
+    }
     return 0;
 }
 
@@ -158,9 +252,9 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     const CustomNodeTensor* boxesTensor = nullptr;
 
     for (int i = 0; i < inputsCount; i++) {
-        if (std::strcmp(inputs[i].name, IMAGE_TENSOR_NAME) == 0) {
+        if (std::strcmp(inputs[i].name, INPUT_IMAGE_TENSOR_NAME) == 0) {
             imageTensor = &(inputs[i]);
-        } else if (std::strcmp(inputs[i].name, GEOMETRY_TENSOR_NAME) == 0) {
+        } else if (std::strcmp(inputs[i].name, INPUT_GEOMETRY_TENSOR_NAME) == 0) {
             boxesTensor = &(inputs[i]);
         } else {
             std::cout << "Unrecognized input: " << inputs[i].name << std::endl;
@@ -240,31 +334,35 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     if (debugMode)
         std::cout << "Total findings: " << rects.size() << std::endl;
 
-    *outputsCount = 3;
-    *outputs = (struct CustomNodeTensor*)malloc(*outputsCount * sizeof(CustomNodeTensor));
+    CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
+    std::shared_lock lock(internalManager->getInternalManagerLock());
 
-    NODE_ASSERT((*outputs) != nullptr, "malloc has failed");
+    *outputsCount = 3;
+    if (!get_buffer<struct CustomNodeTensor>(internalManager, outputs, OUTPUT_TENSOR_NAME, *outputsCount * sizeof(CustomNodeTensor))) {
+        return 1;
+    }
+
     CustomNodeTensor& textImagesTensor = (*outputs)[0];
-    textImagesTensor.name = TEXT_IMAGES_TENSOR_NAME;
-    if (!copy_images_into_output(&textImagesTensor, rects, image, targetImageHeight, targetImageWidth, targetImageLayout, convertToGrayScale)) {
-        free(*outputs);
+    textImagesTensor.name = OUTPUT_TEXT_IMAGES_TENSOR_NAME;
+    if (!copy_images_into_output(&textImagesTensor, rects, image, targetImageHeight, targetImageWidth, targetImageLayout, convertToGrayScale, internalManager)) {
+        release(*outputs, internalManager);
         return 1;
     }
 
     CustomNodeTensor& coordinatesTensor = (*outputs)[1];
-    coordinatesTensor.name = COORDINATES_TENSOR_NAME;
-    if (!copy_coordinates_into_output(&coordinatesTensor, rects)) {
-        free(*outputs);
-        cleanup(textImagesTensor);
+    coordinatesTensor.name = OUTPUT_COORDINATES_TENSOR_NAME;
+    if (!copy_coordinates_into_output(&coordinatesTensor, rects, internalManager)) {
+        cleanup(textImagesTensor, internalManager);
+        release(*outputs, internalManager);
         return 1;
     }
 
     CustomNodeTensor& confidenceTensor = (*outputs)[2];
-    confidenceTensor.name = CONFIDENCE_TENSOR_NAME;
-    if (!copy_scores_into_output(&confidenceTensor, scores)) {
-        free(*outputs);
-        cleanup(textImagesTensor);
-        cleanup(coordinatesTensor);
+    confidenceTensor.name = OUTPUT_CONFIDENCE_TENSOR_NAME;
+    if (!copy_scores_into_output(&confidenceTensor, scores, internalManager)) {
+        cleanup(coordinatesTensor, internalManager);
+        cleanup(textImagesTensor, internalManager);
+        release(*outputs, internalManager);
         return 1;
     }
 
@@ -279,14 +377,20 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     std::string originalImageLayout = get_string_parameter("original_image_layout", params, paramsCount, "NCHW");
     NODE_ASSERT(originalImageLayout == "NCHW" || originalImageLayout == "NHWC", "original image layout must be NCHW or NHWC");
 
-    *infoCount = 2;
-    *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
-    NODE_ASSERT((*info) != nullptr, "malloc has failed");
+    CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
+    std::shared_lock lock(internalManager->getInternalManagerLock());
 
-    (*info)[0].name = IMAGE_TENSOR_NAME;
+    *infoCount = 2;
+    if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, INPUT_TENSOR_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {
+        return 1;
+    }
+
+    (*info)[0].name = INPUT_IMAGE_TENSOR_NAME;
     (*info)[0].dimsCount = 4;
-    (*info)[0].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
-    NODE_ASSERT(((*info)[0].dims) != nullptr, "malloc has failed");
+    if (!get_buffer<uint64_t>(internalManager, &((*info)[0].dims), INPUT_IMAGE_INFO_DIMS_NAME, (*info)[0].dimsCount * sizeof(uint64_t))) {
+        release(*info, internalManager);
+        return 1;
+    }
     (*info)[0].dims[0] = 1;
     if (originalImageLayout == "NCHW") {
         (*info)[0].dims[1] = 3;
@@ -299,10 +403,13 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     }
     (*info)[0].precision = FP32;
 
-    (*info)[1].name = GEOMETRY_TENSOR_NAME;
+    (*info)[1].name = INPUT_GEOMETRY_TENSOR_NAME;
     (*info)[1].dimsCount = 2;
-    (*info)[1].dims = (uint64_t*)malloc((*info)[1].dimsCount * sizeof(uint64_t));
-    NODE_ASSERT(((*info)[1].dims) != nullptr, "malloc has failed");
+    if (!get_buffer<uint64_t>(internalManager, &((*info)[1].dims), INPUT_GEOMETRY_INFO_DIMS_NAME, (*info)[1].dimsCount * sizeof(uint64_t))) {
+        release((*info)[0].dims, internalManager);
+        release(*info, internalManager);
+        return 1;
+    }
     (*info)[1].dims[0] = 100;
     (*info)[1].dims[1] = 5;
     (*info)[1].precision = FP32;
@@ -318,14 +425,20 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     NODE_ASSERT(targetImageLayout == "NCHW" || targetImageLayout == "NHWC", "target image layout must be NCHW or NHWC");
     bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
 
-    *infoCount = 3;
-    *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
-    NODE_ASSERT((*info) != nullptr, "malloc has failed");
+    CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
+    std::shared_lock lock(internalManager->getInternalManagerLock());
 
-    (*info)[0].name = TEXT_IMAGES_TENSOR_NAME;
+    *infoCount = 3;
+    if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, OUTPUT_TENSOR_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {
+        return 1;
+    }
+
+    (*info)[0].name = OUTPUT_TEXT_IMAGES_TENSOR_NAME;
     (*info)[0].dimsCount = 5;
-    (*info)[0].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
-    NODE_ASSERT(((*info)[0].dims) != nullptr, "malloc has failed");
+    if (!get_buffer<uint64_t>(internalManager, &((*info)[0].dims), OUTPUT_TEXT_IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t))) {
+        release(*info, internalManager);
+        return 1;
+    }
     (*info)[0].dims[0] = 0;
     (*info)[0].dims[1] = 1;
     if (targetImageLayout == "NCHW") {
@@ -339,19 +452,26 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     }
     (*info)[0].precision = FP32;
 
-    (*info)[1].name = COORDINATES_TENSOR_NAME;
+    (*info)[1].name = OUTPUT_COORDINATES_TENSOR_NAME;
     (*info)[1].dimsCount = 3;
-    (*info)[1].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
-    NODE_ASSERT(((*info)[1].dims) != nullptr, "malloc has failed");
+    if (!get_buffer<uint64_t>(internalManager, &((*info)[1].dims), OUTPUT_COORDINATES_INFO_DIMS_NAME, 3 * sizeof(uint64_t))) {
+        release((*info)[0].dims, internalManager);
+        release(*info, internalManager);
+        return 1;
+    }
     (*info)[1].dims[0] = 0;
     (*info)[1].dims[1] = 1;
     (*info)[1].dims[2] = 4;
     (*info)[1].precision = I32;
 
-    (*info)[2].name = CONFIDENCE_TENSOR_NAME;
+    (*info)[2].name = OUTPUT_CONFIDENCE_TENSOR_NAME;
     (*info)[2].dimsCount = 3;
-    (*info)[2].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
-    NODE_ASSERT(((*info)[2].dims) != nullptr, "malloc has failed");
+    if (!get_buffer<uint64_t>(internalManager, &((*info)[2].dims), OUTPUT_CONFIDENCE_INFO_DIMS_NAME, 3 * sizeof(uint64_t))) {
+        release((*info)[1].dims, internalManager);
+        release((*info)[0].dims, internalManager);
+        release(*info, internalManager);
+        return 1;
+    }
     (*info)[2].dims[0] = 0;
     (*info)[2].dims[1] = 1;
     (*info)[2].dims[2] = 1;
@@ -360,6 +480,10 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
 }
 
 int release(void* ptr, void* customNodeLibraryInternalManager) {
-    free(ptr);
+    CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
+    if (!internalManager->releaseBuffer(ptr)) {
+        free(ptr);
+        return 0;
+    }
     return 0;
 }

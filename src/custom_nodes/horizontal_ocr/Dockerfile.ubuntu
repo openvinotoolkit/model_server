@@ -21,11 +21,14 @@ ARG NODE_NAME=horizontal_ocr
 
 ARG OPS=-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv
 
+COPY ./queue.hpp ./queue.hpp
 COPY ./common /custom_nodes/common
 COPY . /custom_nodes/${NODE_NAME}/
 COPY custom_node_interface.h /
+WORKDIR /custom_nodes/common
+RUN g++ -c -std=c++17 *.cpp -fpic  -I/extras/opencv/include/ -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare  -fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv -fstack-protector
 WORKDIR /custom_nodes/${NODE_NAME}/
 RUN mkdir -p /custom_nodes/lib
 RUN g++ -c -std=c++17 ${NODE_NAME}.cpp ${OPS} -I/extras/opencv/include/
-RUN g++ -shared ${OPS} -o /custom_nodes/lib/libcustom_node_${NODE_NAME}.so ${NODE_NAME}.o \
+RUN g++ -shared ${OPS} -o /custom_nodes/lib/libcustom_node_${NODE_NAME}.so ${NODE_NAME}.o /custom_nodes/common/*.o \
     -L/extras/opencv/lib/ -I/extras/opencv/include/ -lopencv_core -lopencv_imgproc -lopencv_imgcodecs

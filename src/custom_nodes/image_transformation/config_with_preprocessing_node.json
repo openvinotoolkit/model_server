@@ -41,11 +41,11 @@
                         "debug": "true"
                     },
                     "inputs": [
-                        {"image": {
+                        {"image_in": {
                                 "node_name": "request",
                                 "data_item": "0"}}],
                     "outputs": [
-                        {"data_item": "image",
+                        {"data_item": "image_out",
                             "alias": "transformed_image"}]
                 },
                 {
