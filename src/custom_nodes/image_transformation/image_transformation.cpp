@@ -66,7 +66,6 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
     int targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
     int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
 
-
     // creating BuffersQueues for output: image_out
     // create buffer unless size of image is unknown or targetImage properties are incorrect
     if (targetImageHeight > 0 || targetImageWidth > 0) {
@@ -74,10 +73,10 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
         NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_IMAGE_TENSOR_NAME, byteSize, QUEUE_SIZE), "buffer creation failed");
     }
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_IMAGE_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
-    
+
     // creating BuffersQueues for output tensor
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, 4 * sizeof(CustomNodeTensor), QUEUE_SIZE), "buffer creation failed");
-    
+
     // creating BuffersQueues for info tensors
     NODE_ASSERT(internalManager->createBuffersQueue(INPUT_TENSOR_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE), "buffer creation failed");
     NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE), "buffer creation failed");

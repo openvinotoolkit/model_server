@@ -173,7 +173,7 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
     int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
     NODE_ASSERT(targetImageHeight > 0, "target image height must be larger than 0");
     NODE_ASSERT(targetImageWidth > 0, "target image width must be larger than 0");
-    
+
     // creating BuffersQueues for output: text_images
     int channels = convertToGrayScale ? 1 : 3;
     uint64_t textImagesByteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * maxOutputBatch;
@@ -466,7 +466,7 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     std::shared_lock lock(internalManager->getInternalManagerLock());
 
     *infoCount = 3;
-    if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, INPUT_TENSOR_INFO_NAME, *infoCount  * sizeof(CustomNodeTensorInfo))) {
+    if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, INPUT_TENSOR_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {
         return 1;
     }
 
