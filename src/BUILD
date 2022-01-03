@@ -307,6 +307,11 @@ cc_binary(
         "custom_nodes/east_ocr/east_ocr.cpp",
         "custom_nodes/east_ocr/nms.hpp",
         "custom_node_interface.h",
+        "custom_nodes/common/buffersqueue.hpp",
+        "custom_nodes/common/buffersqueue.cpp",
+        "custom_nodes/common/customNodeLibraryInternalManager.hpp",
+        "custom_nodes/common/customNodeLibraryInternalManager.cpp",
+        "queue.hpp"
     ],
     deps = [
         "@opencv//:opencv"
@@ -390,6 +395,11 @@ cc_binary(
         "custom_nodes/common/opencv_utils.hpp",
         "custom_nodes/horizontal_ocr/horizontal_ocr.cpp",
         "custom_node_interface.h",
+        "custom_nodes/common/buffersqueue.hpp",
+        "custom_nodes/common/buffersqueue.cpp",
+        "custom_nodes/common/customNodeLibraryInternalManager.hpp",
+        "custom_nodes/common/customNodeLibraryInternalManager.cpp",
+        "queue.hpp"
     ],
     deps = [
         "@opencv//:opencv"
