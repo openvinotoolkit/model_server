@@ -325,6 +325,29 @@ cc_binary(
 )
 
 cc_binary(
+    name = "libcustom_node_horizontal_ocr.so",
+    srcs = [
+        "custom_nodes/horizontal_ocr/horizontal_ocr.cpp",
+        "custom_nodes/horizontal_ocr/utils.hpp",
+        "custom_node_interface.h",
+        "custom_nodes/common/buffersqueue.hpp",
+        "custom_nodes/common/buffersqueue.cpp",
+        "custom_nodes/common/customNodeLibraryInternalManager.hpp",
+        "custom_nodes/common/customNodeLibraryInternalManager.cpp",
+        "queue.hpp"
+    ],
+    deps = [
+        "@opencv//:opencv"
+    ],
+    linkshared = 1,
+    copts = [
+        "-Wall",
+        "-Wno-unknown-pragmas",
+        "-Werror"
+    ]
+)
+
+cc_binary(
     name = "libcustom_node_add_one.so",
     srcs = [
         "custom_nodes/common/utils.hpp",
