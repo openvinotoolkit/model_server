@@ -50,7 +50,7 @@ int get_int_parameter(const std::string& name, const struct CustomNodeParam* par
 }
 
 template <typename T>
-bool get_buffer(CustomNodeLibraryInternalManager* internalManager, T** buffer, const std::string& buffersQueueName, uint64_t byte_size) {
+bool get_buffer(CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size) {
     auto buffersQueue = internalManager->getBuffersQueue(buffersQueueName);
     if (!(buffersQueue == nullptr)) {
         *buffer = static_cast<T*>(buffersQueue->getBuffer());
