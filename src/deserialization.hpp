@@ -18,7 +18,6 @@
 #include <memory>
 #include <string>
 
-#include <inference_engine.hpp>
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
@@ -35,21 +34,21 @@
 namespace ovms {
 
 ov::runtime::Tensor makeBlob_2(const tensorflow::TensorProto& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline);
+    const std::shared_ptr<TensorInfo>& tensorInfo);
 
 class ConcreteTensorProtoDeserializator_2 {
 public:
     static ov::runtime::Tensor deserializeTensorProto_2(
         const tensorflow::TensorProto& requestInput,
-        const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+        const std::shared_ptr<TensorInfo>& tensorInfo) {
         switch (tensorInfo->getPrecision_2()) {
         case ovms::Precision::FP32:
         case ovms::Precision::I32:
         case ovms::Precision::U8:
         case ovms::Precision::I16:
-            return makeBlob_2(requestInput, tensorInfo, isPipeline);
+            return makeBlob_2(requestInput, tensorInfo);
         case ovms::Precision::I8: {
-            return makeBlob_2(requestInput, tensorInfo, isPipeline);
+            return makeBlob_2(requestInput, tensorInfo);
         }
         case ovms::Precision::FP16: {
             ov::Shape shape;
@@ -90,8 +89,8 @@ public:
 template <class TensorProtoDeserializator>
 ov::runtime::Tensor deserializeTensorProto_2(
     const tensorflow::TensorProto& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
-    return TensorProtoDeserializator::deserializeTensorProto_2(requestInput, tensorInfo, isPipeline);
+    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    return TensorProtoDeserializator::deserializeTensorProto_2(requestInput, tensorInfo);
 }
 
 template <class Requester>
@@ -132,7 +131,7 @@ Status deserializePredictRequest_2(
                 }
             } else {
                 blob = deserializeTensorProto_2<TensorProtoDeserializator>(
-                    requestInput, tensorInfo, isPipeline);
+                    requestInput, tensorInfo);
             }
 
             if (!blob) {
@@ -146,7 +145,7 @@ Status deserializePredictRequest_2(
                 SPDLOG_DEBUG("Feeding input:{} to inference performer failed:{}", ovBlobName, status.string());
                 return status;
             }
-            // OV implementation the InferenceEngine::Exception is not
+            // OV implementation the ov::Exception is not
             // a base class for all other exceptions thrown from OV.
             // OV can throw exceptions derived from std::logic_error.
         } catch (const ov::Exception& e) {

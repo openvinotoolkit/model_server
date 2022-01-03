@@ -3260,8 +3260,8 @@ class DummyModelWithMockedMetadata : public ovms::ModelInstance {
     ovms::tensor_map_t mockedInputsInfo, mockedOutputsInfo;
 
 public:
-    DummyModelWithMockedMetadata(InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2, const ovms::tensor_map_t& inputsInfo, const ovms::tensor_map_t& outputsInfo) :
-        ovms::ModelInstance("dummy", 1, ieCore, ieCore_2),
+    DummyModelWithMockedMetadata(ov::runtime::Core& ieCore_2, const ovms::tensor_map_t& inputsInfo, const ovms::tensor_map_t& outputsInfo) :
+        ovms::ModelInstance("dummy", 1, ieCore_2),
         mockedInputsInfo(inputsInfo),
         mockedOutputsInfo(outputsInfo) {}
 
@@ -3289,7 +3289,7 @@ public:
     ModelWithDummyModelWithMockedMetadata(const std::string& name, std::shared_ptr<DummyModelWithMockedMetadata> modelInstance) :
         Model(name, false, nullptr),
         modelInstance(modelInstance) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::runtime::Core& ieCore_2) override {
         return modelInstance;
     }
 };
@@ -3399,10 +3399,8 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, CustomNodeWithDemultipl
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
 
-    auto ieCore = std::make_unique<InferenceEngine::Core>();
     auto ieCore2 = std::make_unique<ov::runtime::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
-        *ieCore,
         *ieCore2,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
@@ -3421,8 +3419,8 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, CustomNodeWithDemultipl
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
 }
-// TODO enable when batch size is working
-TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DISABLED_CustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy) {
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy) {
     // Prepare request
     std::vector<float> input(7 * 5 * DUMMY_MODEL_INPUT_SIZE);
     std::iota(input.begin(), input.end(), 42);
@@ -3509,10 +3507,8 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenDL
 
     connections[EXIT_NODE_NAME] = {
         {"custom_node", {{"out", pipelineOutputName}}}};
-    auto ieCore = std::make_unique<InferenceEngine::Core>();
     auto ieCore_2 = std::make_unique<ov::runtime::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
-        *ieCore,
         *ieCore_2,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
@@ -3735,10 +3731,8 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{"out", pipelineOutputName}}}};
 
-    auto ieCore = std::make_unique<InferenceEngine::Core>();
     auto ieCore_2 = std::make_unique<ov::runtime::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
-        *ieCore,
         *ieCore_2,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
@@ -3790,10 +3784,8 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
 
-    auto ieCore = std::make_unique<InferenceEngine::Core>();
     auto ieCore_2 = std::make_unique<ov::runtime::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
-        *ieCore,
         *ieCore_2,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
@@ -3888,10 +3880,8 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenDLModelAn
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{"out", pipelineOutputName}}}};
 
-    auto ieCore = std::make_unique<InferenceEngine::Core>();
     auto ieCore_2 = std::make_unique<ov::runtime::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
-        *ieCore,
         *ieCore_2,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
@@ -3943,10 +3933,8 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenCustomNod
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
 
-    auto ieCore = std::make_unique<InferenceEngine::Core>();
     auto ieCore_2 = std::make_unique<ov::runtime::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
-        *ieCore,
         *ieCore_2,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(

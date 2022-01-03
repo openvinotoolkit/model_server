@@ -39,7 +39,6 @@ using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
 
 using namespace ovms;
-using namespace InferenceEngine;
 
 using testing::_;
 using testing::NiceMock;
@@ -130,7 +129,7 @@ public:
 TEST(SerializeTFTensorProtoSingle_2, NegativeMismatchBetweenTensorInfoAndBlobPrecision) {
     ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
-    auto layout = Layout::NCHW;
+    auto layout = InferenceEngine::Layout::NCHW;
     const std::string name = "NOT_IMPORTANT";
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
     ov::runtime::Tensor tensor(ov::element::i32, tensorInfoShape);
@@ -145,7 +144,7 @@ TEST(SerializeTFTensorProtoSingle_2, NegativeMismatchBetweenTensorInfoAndBlobSha
     ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
     shape_t blobShape{1, 3, 225, 225};
-    auto layout = Layout::NCHW;
+    auto layout = InferenceEngine::Layout::NCHW;
     const std::string name = "NOT_IMPORTANT";
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
     ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), blobShape);
@@ -189,8 +188,8 @@ TEST_P(SerializeTFTensorProtoNegative_2, SerializeTensorProtoShouldSucceedForPre
 TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     PredictResponse response;
     ov::runtime::Core ieCore;
-    std::shared_ptr<ov::Function> network = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
-    ov::runtime::ExecutableNetwork execNetwork = ieCore.compile_model(network, "CPU");
+    std::shared_ptr<ov::Model> network = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
     ov::runtime::InferRequest inferRequest = execNetwork.create_infer_request();
     ovms::tensor_map_t tenMap;
     std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(

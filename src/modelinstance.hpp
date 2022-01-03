@@ -23,7 +23,6 @@
 #include <string>
 #include <vector>
 
-#include <inference_engine.hpp>
 #include <openvino/openvino.hpp>
 
 #pragma GCC diagnostic push
@@ -87,19 +86,17 @@ protected:
     /**
          * @brief Inference Engine core object
          */
-    InferenceEngine::Core& ieCore;
     ov::runtime::Core& ieCore_2;
 
     /**
          * @brief Inference Engine CNNNetwork object
          */
-    std::unique_ptr<InferenceEngine::CNNNetwork> network;
-    std::shared_ptr<ov::Function> network_2;
+    std::shared_ptr<ov::Model> network_2;
 
     /**
          * @brief Inference Engine device network
          */
-    std::shared_ptr<ov::runtime::ExecutableNetwork> execNetwork_2;
+    std::shared_ptr<ov::runtime::CompiledModel> execNetwork_2;
 
     /**
          * @brief Model name
@@ -162,7 +159,7 @@ protected:
          *
          * @return CNNNetwork ptr
          */
-    virtual std::unique_ptr<InferenceEngine::CNNNetwork> loadOVCNNNetworkPtr(const std::string& modelFile);
+    virtual std::shared_ptr<ov::Model> loadOVCNNNetworkPtr(const std::string& modelFile);
 
     /**
          * @brief Lock to disable concurrent modelinstance load/unload/reload
@@ -240,7 +237,6 @@ private:
     /**
          * @brief OpenVINO inference execution stream pool
          */
-    std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
     std::unique_ptr<OVInferRequestsQueue_2> inferRequestsQueue_2;
 
     /**
@@ -255,7 +251,7 @@ private:
          *
          * @param config
          */
-    Status loadTensors(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
+    Status loadTensors(const ModelConfig& config, bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter = DynamicModelParameter());
 
     /**
          * @brief Internal method for loading inputs
@@ -307,8 +303,7 @@ public:
     /**
          * @brief A default constructor
          */
-    ModelInstance(const std::string& name, model_version_t version, InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2) :
-        ieCore(ieCore),
+    ModelInstance(const std::string& name, model_version_t version, ov::runtime::Core& ieCore_2) :
         ieCore_2(ieCore_2),
         name(name),
         version(version),
@@ -391,7 +386,7 @@ public:
          * @return batch size
          */
     virtual Dimension getBatchSize() const {
-        return Dimension(ov::get_batch(network_2));  // TODO: Use layout info
+        return Dimension(ov::get_batch(network_2));
     }
 
     /**
@@ -519,7 +514,6 @@ public:
 
     const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
 
-    Status performInference(InferenceEngine::InferRequest& inferRequest);
     Status performInference_2(ov::runtime::InferRequest& inferRequest);
 
     virtual Status infer(const tensorflow::serving::PredictRequest* requestProto,

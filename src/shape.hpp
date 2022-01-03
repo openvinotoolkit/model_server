@@ -50,9 +50,6 @@ public:
 
     ov::Dimension createPartialDimension() const;
 
-    // TODO: Remove. For OV API 1.0 compatibility purposes only.
-    dimension_value_t getAnyValue() const;
-
     dimension_value_t getStaticValue() const;
     dimension_value_t getMinValue() const;
     dimension_value_t getMaxValue() const;
@@ -90,9 +87,6 @@ public:
     bool isDynamic() const;
 
     ov::PartialShape createPartialShape() const;
-
-    // TODO: Remove. For OV API 1.0 compatibility purposes only.
-    shape_t getFlatShape() const;
 
     bool operator==(const Shape& rhs) const;
     bool operator!=(const Shape& rhs) const;

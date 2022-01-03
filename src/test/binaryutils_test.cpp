@@ -323,7 +323,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_any_shape) {
 
     ov::runtime::Tensor tensor;
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, -1, -1, 3}, InferenceEngine::Layout::NHWC);
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, ovms::Dimension::any(), ovms::Dimension::any(), 3}, InferenceEngine::Layout::NHWC);
 
     ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
@@ -334,5 +334,19 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_any_shape) {
     ASSERT_EQ(tensor.get_size(), 3);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+}
+
+TEST_F(BinaryUtilsTest, positive_resizing_with_one_any_one_static_shape) {
+    ov::runtime::Tensor tensor;
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, ovms::Dimension::any(), 4, 3}, InferenceEngine::Layout::NHWC);
+
+    ASSERT_EQ(convertStringValToBlob_2(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    shape_t tensorDims = tensor.get_shape();
+    size_t expectedRowsNumber = 1;
+    EXPECT_EQ(tensorDims[1], expectedRowsNumber);
+    size_t expectedColsNumber = 4;
+    EXPECT_EQ(tensorDims[2], expectedColsNumber);
+    ASSERT_EQ(tensor.get_size(), 12);
 }
 }  // namespace

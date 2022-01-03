@@ -18,6 +18,8 @@
 #include <memory>
 #include <string>
 
+#include <openvino/openvino.hpp>
+
 #include "custom_node_interface.h"  // NOLINT
 #include "nodesession.hpp"
 #include "pipelineeventqueue.hpp"

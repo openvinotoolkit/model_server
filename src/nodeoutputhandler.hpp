@@ -17,13 +17,12 @@
 
 #include <memory>
 #include <string>
-#include <utility>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 namespace ovms {
 class NodeOutputHandler {
 public:
-    void setInput(const std::string& inputName, InferenceEngine::Blob::Ptr& blobPtr);
+    void setInput(const std::string& inputName, std::shared_ptr<ov::runtime::Tensor>& blobPtr);
 };
 }  // namespace ovms

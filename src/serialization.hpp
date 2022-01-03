@@ -18,7 +18,6 @@
 #include <memory>
 #include <string>
 
-#include <inference_engine.hpp>
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 

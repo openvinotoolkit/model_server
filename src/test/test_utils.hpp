@@ -26,7 +26,6 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
 
 #pragma GCC diagnostic push

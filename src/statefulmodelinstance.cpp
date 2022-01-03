@@ -16,6 +16,7 @@
 #include "statefulmodelinstance.hpp"
 
 #include <openvino/openvino.hpp>
+#include <openvino/pass/low_latency.hpp>
 
 #include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
@@ -23,8 +24,6 @@
 #include "predict_request_validation_utils.hpp"
 #include "serialization.hpp"
 #include "timer.hpp"
-
-using namespace InferenceEngine;
 
 namespace ovms {
 
@@ -134,7 +133,10 @@ Status StatefulModelInstance::loadOVExecutableNetwork(const ModelConfig& config)
     if (performLowLatencyTransformation) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "[Model: {} version: {}] Performing Low Latency Transformation on the network", getName(), getVersion());
         try {
-            InferenceEngine::lowLatency2(*network);
+            ov::pass::LowLatency2().run_on_function(network_2);
+        } catch (ov::Exception& ex) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error: {}; occurred during low latency transformation on model: {} version: {}", ex.what(), getName(), getVersion());
+            return StatusCode::INTERNAL_ERROR;
         } catch (std::exception& ex) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error: {}; occurred during low latency transformation on model: {} version: {}", ex.what(), getName(), getVersion());
             return StatusCode::INTERNAL_ERROR;

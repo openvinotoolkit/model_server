@@ -249,7 +249,7 @@ Status DLNodeSession::setInputsForInference(ov::runtime::InferRequest& inferRequ
             }
             inferRequest.set_tensor(realModelInputName, *tensor);
         }
-        // OV implementation the InferenceEngine::Exception is not
+        // OV implementation the ov::Exception is not
         // a base class for all other exceptions thrown from OV.
         // OV can throw exceptions derived from std::logic_error.
     } catch (const ov::Exception& e) {

@@ -44,8 +44,6 @@
 #include "tensorinfo.hpp"
 #include "timer.hpp"
 
-using namespace InferenceEngine;
-
 namespace ovms {
 
 const char* CPU_THROUGHPUT_STREAMS = "CPU_THROUGHPUT_STREAMS";
@@ -86,7 +84,7 @@ Status getRequestedShape(const ModelConfig& config, const DynamicModelParameter&
     return StatusCode::OK;
 }
 
-bool hasInputWithName(std::shared_ptr<ov::Function>& network, const std::string& name) {
+bool hasInputWithName(std::shared_ptr<ov::Model>& network, const std::string& name) {
     try {
         network->input(name);
         return true;
@@ -95,7 +93,7 @@ bool hasInputWithName(std::shared_ptr<ov::Function>& network, const std::string&
     }
 }
 
-bool hasOutputWithName(std::shared_ptr<ov::Function>& network, const std::string& name) {
+bool hasOutputWithName(std::shared_ptr<ov::Model>& network, const std::string& name) {
     try {
         network->output(name);
         return true;
@@ -104,7 +102,7 @@ bool hasOutputWithName(std::shared_ptr<ov::Function>& network, const std::string
     }
 }
 
-Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::shared_ptr<ov::Function>& network) {
+Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::shared_ptr<ov::Model>& network) {
     if (config.isShapeAnonymousFixed() && network->inputs().size() > 1) {
         Status status = StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED;
         SPDLOG_LOGGER_WARN(modelmanager_logger, status.string());
@@ -156,7 +154,7 @@ InferenceEngine::Layout getReportedTensorLayout(const ModelConfig& config, const
     return layout;
 }
 
-Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::Function>& network, const std::string& modelName, model_version_t modelVersion) {
+Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::Model>& network, const std::string& modelName, model_version_t modelVersion) {
     ov::preprocess::PrePostProcessor preproc(network);
 
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying layout configuration: {}", config.layoutConfigurationToString());
@@ -262,16 +260,18 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::F
     return StatusCode::OK;
 }
 
-Status ModelInstance::loadTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
+Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter) {
     Status status = validateConfigurationAgainstNetwork(config, this->network_2);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during configuration validation against network");
         return status;
     }
-    status = applyLayoutConfiguration(config, this->network_2, getName(), getVersion());
-    if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during layout configuration");
-        return status;
+    if (needsToApplyLayoutConfiguration) {
+        status = applyLayoutConfiguration(config, this->network_2, getName(), getVersion());
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during layout configuration");
+            return status;
+        }
     }
     status = loadInputTensors(config, parameter);
     if (!status.ok()) {
@@ -501,7 +501,7 @@ uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& mo
     std::string key = METRIC_KEY(OPTIMAL_NUMBER_OF_INFER_REQUESTS);
     try {
         numberOfParallelInferRequests = execNetwork_2->get_metric(key).as<unsigned int>();
-    } catch (const InferenceEngine::Exception& ex) {
+    } catch (const ov::Exception& ex) {
         SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
         numberOfParallelInferRequests = 1u;
     }
@@ -520,16 +520,15 @@ uint ModelInstance::getNumOfParallelInferRequests(const ModelConfig& modelConfig
     return nireq;
 }
 
-std::unique_ptr<InferenceEngine::CNNNetwork> ModelInstance::loadOVCNNNetworkPtr(const std::string& modelFile) {
-    return std::make_unique<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(modelFile));
+std::shared_ptr<ov::Model> ModelInstance::loadOVCNNNetworkPtr(const std::string& modelFile) {
+    return ieCore_2.read_model(modelFile);
 }
 
 Status ModelInstance::loadOVCNNNetwork() {
     auto& modelFile = modelFiles[0];
     SPDLOG_DEBUG("Try reading model file: {}", modelFile);
     try {
-        network = loadOVCNNNetworkPtr(modelFile);
-        network_2 = ieCore_2.read_model(modelFile);
+        network_2 = loadOVCNNNetworkPtr(modelFile);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Error: {}; occurred during loading CNNNetwork for model: {} version: {}", e.what(), getName(), getVersion());
         return StatusCode::INTERNAL_ERROR;
@@ -571,17 +570,10 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
         std::string strModel(model.begin(), model.end());
 
         if (res == CustomLoaderStatus::MODEL_TYPE_IR) {
-            Blob::Ptr blobWts = make_shared_blob<uint8_t>({InferenceEngine::Precision::U8, {weights.size()}, C});
             ov::runtime::Tensor tensorWts(ov::element::u8, ov::Shape{weights.size()});
-            (void)tensorWts;
-            blobWts->allocate();
-            // dont need to allocate
-            std::memcpy(InferenceEngine::as<InferenceEngine::MemoryBlob>(blobWts)->wmap(), weights.data(), weights.size());
             std::memcpy(tensorWts.data(), weights.data(), weights.size());
-            network = std::make_unique<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(strModel, blobWts));
             network_2 = ieCore_2.read_model(strModel, tensorWts);
         } else if (res == CustomLoaderStatus::MODEL_TYPE_ONNX) {
-            network = std::make_unique<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(strModel, InferenceEngine::Blob::CPtr()));
             network_2 = ieCore_2.read_model(strModel, ov::runtime::Tensor());
         } else if (res == CustomLoaderStatus::MODEL_TYPE_BLOB) {
             return StatusCode::INTERNAL_ERROR;
@@ -597,7 +589,7 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 }
 
 void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
-    execNetwork_2 = std::make_shared<ov::runtime::ExecutableNetwork>(ieCore_2.compile_model(network_2, targetDevice, pluginConfig));
+    execNetwork_2 = std::make_shared<ov::runtime::CompiledModel>(ieCore_2.compile_model(network_2, targetDevice, pluginConfig));
 }
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
@@ -740,7 +732,7 @@ void ModelInstance::configureBatchSize(const ModelConfig& config, const DynamicM
 
 Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
     bool isLayoutConfigurationChanged = !config.isLayoutConfigurationEqual(this->config);
-    SPDLOG_INFO("IS LAYOUT CONFIGURATION CHANGED: {}", isLayoutConfigurationChanged);
+    bool needsToApplyLayoutConfiguration = isLayoutConfigurationChanged || !this->network_2;
 
     subscriptionManager.notifySubscribers();
     this->path = config.getPath();
@@ -763,7 +755,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             }
         }
 
-        if (!this->network || isLayoutConfigurationChanged) {
+        if (!this->network_2 || isLayoutConfigurationChanged) {
             if (this->config.isCustomLoaderRequiredToLoadModel()) {
                 // loading the model using the custom loader
                 status = loadOVCNNNetworkUsingCustomLoader();
@@ -777,7 +769,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             return status;
         }
 
-        status = loadTensors(this->config, parameter);
+        status = loadTensors(this->config, needsToApplyLayoutConfiguration, parameter);
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
@@ -993,10 +985,8 @@ void ModelInstance::unloadModelComponents() {
             getName(), getVersion(), predictRequestsHandlesCount);
         std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }
-    inferRequestsQueue.reset();
     inferRequestsQueue_2.reset();
     execNetwork_2.reset();
-    network.reset();
     network_2.reset();
     outputsInfo.clear();
     inputsInfo.clear();
@@ -1027,23 +1017,6 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         optionalInputNames,
         getModelConfig().getBatchingMode(),
         getModelConfig().getShapes_2());
-}
-
-Status ModelInstance::performInference(InferenceEngine::InferRequest& inferRequest) {
-    try {
-        inferRequest.StartAsync();
-        InferenceEngine::StatusCode sts = inferRequest.Wait(InferenceEngine::IInferRequest::RESULT_READY);
-        if (sts != InferenceEngine::StatusCode::OK) {
-            Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
-            SPDLOG_ERROR("Async infer failed {}: {}", status.string(), sts);
-            return status;
-        }
-    } catch (const InferenceEngine::Exception& e) {
-        Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
-        SPDLOG_ERROR("Async caught an exception {}: {}", status.string(), e.what());
-        return status;
-    }
-    return StatusCode::OK;
 }
 
 Status ModelInstance::performInference_2(ov::runtime::InferRequest& inferRequest) {

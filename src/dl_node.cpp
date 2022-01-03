@@ -18,8 +18,6 @@
 #include <map>
 #include <utility>
 
-#include <openvino/openvino.hpp>
-
 #include "dlnodesession.hpp"
 #include "logging.hpp"
 #include "modelmanager.hpp"

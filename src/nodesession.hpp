@@ -19,7 +19,7 @@
 #include <string>
 #include <utility>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #include "nodesessionmetadata.hpp"
 #include "status.hpp"

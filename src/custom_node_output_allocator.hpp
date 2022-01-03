@@ -15,39 +15,12 @@
 //*****************************************************************************
 #pragma once
 
-#include <inference_engine.hpp>
 #include <openvino/openvino.hpp>
 
 #include "custom_node_interface.h"  // NOLINT
 #include "node_library.hpp"
 
 namespace ovms {
-
-class CustomNodeOutputAllocator : public InferenceEngine::IAllocator {
-    struct CustomNodeTensor tensor;
-    NodeLibrary nodeLibrary;
-    void* customNodeLibraryInternalManager;
-
-public:
-    CustomNodeOutputAllocator(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, void* customNodeLibraryInternalManager) :
-        tensor(tensor),
-        nodeLibrary(nodeLibrary),
-        customNodeLibraryInternalManager(customNodeLibraryInternalManager) {}
-
-    void* lock(void* handle, InferenceEngine::LockOp = InferenceEngine::LOCK_FOR_WRITE) noexcept override {
-        return handle;
-    }
-
-    void unlock(void* a) noexcept override {}
-
-    void* alloc(size_t size) noexcept override {
-        return (void*)tensor.data;
-    }
-
-    bool free(void* handle) noexcept override {
-        return nodeLibrary.release(tensor.data, customNodeLibraryInternalManager) == 0;
-    }
-};
 
 bool operator==(const CustomNodeTensor& t1, const CustomNodeTensor& t2);
 

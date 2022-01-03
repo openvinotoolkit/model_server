@@ -15,11 +15,9 @@
 //*****************************************************************************
 #pragma once
 
-#include <map>  // TODO remove
 #include <string>
 #include <unordered_map>
 
-#include <inference_engine.hpp>
 #include <openvino/openvino.hpp>
 
 namespace ovms {
@@ -109,32 +107,6 @@ inline static Precision fromString(const std::string& s) {
     return it->second;
 }
 
-inline static InferenceEngine::Precision ovmsPrecisionToIE1Precision(Precision precision) {
-    static std::unordered_map<Precision, InferenceEngine::Precision> precisionMap{
-        {Precision::BF16, InferenceEngine::Precision::BF16},
-        {Precision::FP64, InferenceEngine::Precision::FP64},
-        {Precision::FP32, InferenceEngine::Precision::FP32},
-        {Precision::FP16, InferenceEngine::Precision::FP16},
-        {Precision::I64, InferenceEngine::Precision::I64},
-        {Precision::I32, InferenceEngine::Precision::I32},
-        {Precision::I16, InferenceEngine::Precision::I16},
-        {Precision::I8, InferenceEngine::Precision::I8},
-        {Precision::U64, InferenceEngine::Precision::U64},
-        {Precision::U16, InferenceEngine::Precision::U16},
-        {Precision::U8, InferenceEngine::Precision::U8},
-        {Precision::BOOL, InferenceEngine::Precision::BOOL},
-        {Precision::MIXED, InferenceEngine::Precision::MIXED},
-        {Precision::Q78, InferenceEngine::Precision::Q78},
-        {Precision::BIN, InferenceEngine::Precision::BIN},
-        {Precision::UNDEFINED, InferenceEngine::Precision::UNSPECIFIED},
-        {Precision::CUSTOM, InferenceEngine::Precision::CUSTOM}};
-    auto it = precisionMap.find(precision);
-    if (it == precisionMap.end()) {
-        return InferenceEngine::Precision::CUSTOM;  // TODO other way?
-    }
-    return it->second;
-}
-
 inline static ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision) {
     static std::unordered_map<Precision, ov::element::Type_t> precisionMap{
         {Precision::FP32, ov::element::Type_t::f32},
@@ -208,31 +180,6 @@ inline static Precision ovElementTypeToOvmsPrecision(ov::element::Type_t type) {
 */
     };
     auto it = precisionMap.find(type);
-    if (it == precisionMap.end()) {
-        return Precision::UNDEFINED;  // TODO other way?
-    }
-    return it->second;
-}
-inline static Precision IE1PrecisionToOvmsPrecision(InferenceEngine::Precision precision) {
-    static std::map<InferenceEngine::Precision, Precision> precisionMap{
-        {InferenceEngine::Precision::BF16, Precision::BF16},
-        {InferenceEngine::Precision::FP64, Precision::FP64},
-        {InferenceEngine::Precision::FP32, Precision::FP32},
-        {InferenceEngine::Precision::FP16, Precision::FP16},
-        {InferenceEngine::Precision::I64, Precision::I64},
-        {InferenceEngine::Precision::I32, Precision::I32},
-        {InferenceEngine::Precision::I16, Precision::I16},
-        {InferenceEngine::Precision::I8, Precision::I8},
-        {InferenceEngine::Precision::U64, Precision::U64},
-        {InferenceEngine::Precision::U16, Precision::U16},
-        {InferenceEngine::Precision::U8, Precision::U8},
-        {InferenceEngine::Precision::BOOL, Precision::BOOL},
-        {InferenceEngine::Precision::MIXED, Precision::MIXED},
-        {InferenceEngine::Precision::Q78, Precision::Q78},
-        {InferenceEngine::Precision::BIN, Precision::BIN},
-        {InferenceEngine::Precision::UNSPECIFIED, Precision::UNDEFINED},
-        {InferenceEngine::Precision::CUSTOM, Precision::CUSTOM}};
-    auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
         return Precision::UNDEFINED;  // TODO other way?
     }

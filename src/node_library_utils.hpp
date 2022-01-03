@@ -20,8 +20,6 @@
 #include <string>
 #include <unordered_map>
 
-#include <inference_engine.hpp>
-
 #include "custom_node_interface.h"  // NOLINT
 #include "node_library.hpp"
 #include "precision.hpp"

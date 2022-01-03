@@ -148,7 +148,7 @@ public:
     MOCK_METHOD(ov::runtime::Tensor,
         deserializeTensorProto_2,
         (const tensorflow::TensorProto&,
-            const std::shared_ptr<ovms::TensorInfo>&, bool));
+            const std::shared_ptr<ovms::TensorInfo>&));
 };
 
 // Enables static method mock
@@ -157,8 +157,8 @@ public:
     static MockTensorProtoDeserializatorThrowingInferenceEngine_2* mock;
     static ov::runtime::Tensor deserializeTensorProto_2(
         const tensorflow::TensorProto& requestInput,
-        const std::shared_ptr<ovms::TensorInfo>& tensorInfo, bool isPipeline) {
-        return mock->deserializeTensorProto_2(requestInput, tensorInfo, isPipeline);
+        const std::shared_ptr<ovms::TensorInfo>& tensorInfo) {
+        return mock->deserializeTensorProto_2(requestInput, tensorInfo);
     }
 };
 
@@ -166,12 +166,12 @@ MockTensorProtoDeserializatorThrowingInferenceEngine_2* MockTensorProtoDeseriali
 
 TEST_F(GRPCPredictRequestNegative_2, ShouldReturnDeserializationErrorForSetBlobException2) {
     ov::runtime::Core ieCore;
-    std::shared_ptr<ov::Function> network = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
-    ov::runtime::ExecutableNetwork execNetwork = ieCore.compile_model(network, "CPU");
+    std::shared_ptr<ov::Model> network = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
     ov::runtime::InferRequest inferRequest = execNetwork.create_infer_request();
     MockTensorProtoDeserializatorThrowingInferenceEngine_2 mockTPobject;
     MockTensorProtoDeserializator_2::mock = &mockTPobject;
-    EXPECT_CALL(mockTPobject, deserializeTensorProto_2(_, _, _))
+    EXPECT_CALL(mockTPobject, deserializeTensorProto_2(_, _))
         .Times(1)
         .WillRepeatedly(
             Throw(ov::Exception("")));
@@ -184,8 +184,8 @@ TEST_F(GRPCPredictRequestNegative_2, ShouldReturnDeserializationErrorForSetBlobE
 
 TEST_F(GRPCPredictRequest_2, ShouldSuccessForSupportedPrecision) {
     ov::runtime::Core ieCore;
-    std::shared_ptr<ov::Function> network = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
-    ov::runtime::ExecutableNetwork execNetwork = ieCore.compile_model(network, "CPU");
+    std::shared_ptr<ov::Model> network = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
     ov::runtime::InferRequest inferRequest = execNetwork.create_infer_request();
     InputSink_2<ov::runtime::InferRequest&> inputSink(inferRequest);
     auto status = deserializePredictRequest_2<ConcreteTensorProtoDeserializator_2>(request, tensorMap, inputSink, isPipeline);
@@ -195,7 +195,7 @@ TEST_F(GRPCPredictRequest_2, ShouldSuccessForSupportedPrecision) {
 TEST_P(DeserializeTFTensorProtoNegative_2, ShouldReturnNullptrForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
-    ov::runtime::Tensor tensor = deserializeTensorProto_2<ConcreteTensorProtoDeserializator_2>(tensorProto, tensorMap[tensorName], isPipeline);
+    ov::runtime::Tensor tensor = deserializeTensorProto_2<ConcreteTensorProtoDeserializator_2>(tensorProto, tensorMap[tensorName]);
     EXPECT_FALSE((bool)tensor) << "Unsupported OVMS precision:"
                                << toString(testedPrecision)
                                << " should return nullptr";
@@ -205,7 +205,7 @@ TEST_P(DeserializeTFTensorProto_2, ShouldReturnValidBlob) {
     ovms::Precision testedPrecision = GetParam();
     SetUpTensorProto(TensorInfo::getPrecisionAsDataType(testedPrecision));
     tensorMap[tensorName]->setPrecision(testedPrecision);
-    ov::runtime::Tensor tensor = deserializeTensorProto_2<ConcreteTensorProtoDeserializator_2>(tensorProto, tensorMap[tensorName], isPipeline);
+    ov::runtime::Tensor tensor = deserializeTensorProto_2<ConcreteTensorProtoDeserializator_2>(tensorProto, tensorMap[tensorName]);
     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
                               << toString(testedPrecision)
                               << " should return valid blob ptr";
