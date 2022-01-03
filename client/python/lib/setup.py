@@ -45,15 +45,15 @@ class BuildApis(Command):
 
 from pathlib import Path
 this_directory = Path(__file__).parent
-long_description = (this_directory / "README.md").read_text()
+long_description = (this_directory / "docs/pypi_overview.md").read_text()
 
 setuptools.setup(
      name='ovmsclient',
-     version='2021.4.2',
+     version='0.2',
      license='Apache License 2.0',
      author="Intel Corporation",
      author_email="ovms.engineering@intel.com",
-     description="OVMS Client",
+     description="Python client for OpenVINO Model Server",
      long_description=long_description,
      long_description_content_type="text/markdown",
      url="https://github.com/openvinotoolkit/model_server/tree/main/client/python/lib",

@@ -13,11 +13,11 @@ See [API documentation](docs/README.md) for details on what the library provides
 
 **Note:** The client library requires Python in version >= 3.6.
 
-Install the `ovmsclient` package with:
+```
+pip3 install ovmsclient
+```
 
-`pip3 install ovmsclient`
-
-You can also build the wheel from sources:
+## Build the wheel
 
 ### Linux
 
@@ -38,17 +38,17 @@ Assuming you have TFS API built, you can use `make build-package` target to buil
 
 **To install the package run:**
 
-   `pip3 install dist/ovmsclient-2021.4.2-py3-none-any.whl`
+   `pip3 install dist/ovmsclient-0.2-py3-none-any.whl`
 
 *Note*: For development purposes you may want to repeatedly reinstall the package.
-For that consider using `pip install` with `--force-reinstall` and `--no-deps` options.
+For that consider using `pip3 install` with `--force-reinstall` and `--no-deps` options.
 
 Apart from `make build`, there are also other targets available:
  - `make build-deps` - downloads and compiles TFS API protos
  - `make build-package` - builds only `ovmsclient` package (requires TFS API protos compiled)
  - `make test` - runs tests on `ovmsclient` package. By default the package located in `dist/` directory is used. To specify custom package path pass `PACKAGE_PATH` option like: 
 
-   `make test PACKAGE_PATH=/opt/packages/ovmsclient-2021.4.2-py3-none-any.whl`
+   `make test PACKAGE_PATH=/opt/packages/ovmsclient-0.2-py3-none-any.whl`
 
  - `make clean` - removes all intermediate files generated while building the package
 
@@ -58,7 +58,7 @@ Apart from `make build`, there are also other targets available:
 There are also Dockerfiles available that prepare Docker image with `ovmsclient` installed and ready to use.
 Simply run `docker build` with the Dockerfile of your choice to get the minimal image:
 - [Ubuntu 20.04 based image](../Dockerfile.ubuntu)
-- [RHEL 8.4 based image](../Dockerfile.redhat)
+- [UBI 8.4 based image](../Dockerfile.redhat)
 
 ## Usage
 
@@ -73,7 +73,7 @@ client = ovmsclient.make_grpc_client("localhost:9000")
 ```python
 model_status = client.get_model_status(model_name="model")
 
-# Examplary status_response:
+# Exemplary model_status:
 #
 # {
 #    "1": {
@@ -89,8 +89,8 @@ model_status = client.get_model_status(model_name="model")
 ```python
 model_metadata = client.get_model_metadata(model_name="model")
 
-# Exemplary metadata_response. Values for model:
-# https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html
+# Exemplary model_metadata. Values for model:
+# https://docs.openvino.ai/latest/omz_models_model_resnet_50_tf.html
 #
 #{
 #   "model_version": 1,
@@ -113,14 +113,14 @@ model_metadata = client.get_model_metadata(model_name="model")
 **Create and send predict request with binary input data:**
 ```python
 # Assuming requesting model with inputs and outputs as in:
-# https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html
+# https://docs.openvino.ai/latest/omz_models_model_resnet_50_tf.html
 
 with open(<path_to_img>, 'rb') as f:
     img = f.read()
 inputs = {"map/TensorArrayStack/TensorArrayGatherV3": img}
 results = client.predict(inputs=inputs, model_name="model")
 
-# Examplary results:
+# Exemplary results:
 #
 # [[0.01, 0.03, 0.91, ... , 0.00021]]
 #

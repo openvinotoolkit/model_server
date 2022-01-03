@@ -18,19 +18,12 @@ It covers following topics:
 
 ## Requirement
 
-Start Model Server Client Library virtual environment
+Build and install [Model Server Client Library](../lib)
 
-If using Python virtual environment, activate it:
-```
-. ../lib/.venv/bin/activate
-```
-
-Install client dependencies using the command below:
+Install samples dependencies using the command below:
 ```
 pip3 install -r requirements.txt
 ```
-Build and install [Model Server Client Library](../lib)
-`pip3 install dist/ovmsclient-0.1-py3-none-any.whl`
 
 Download [Resnet50-tf Model](https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html) and convert it into Intermediate Representation format:
 ```bash
