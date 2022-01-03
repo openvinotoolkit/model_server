@@ -232,10 +232,8 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
 
 int deinitialize(void* customNodeLibraryInternalManager) {
     // deallocate InternalManager and its contents
-    if (customNodeLibraryInternalManager != nullptr) {
-        CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
-        delete internalManager;
-    }
+    CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
+    delete internalManager;
     return 0;
 }
 

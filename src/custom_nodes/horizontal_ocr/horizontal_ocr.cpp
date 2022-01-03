@@ -220,10 +220,8 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
 
 int deinitialize(void* customNodeLibraryInternalManager) {
     // deallocate InternalManager and its contents
-    if (customNodeLibraryInternalManager != nullptr) {
-        CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
-        delete internalManager;
-    }
+    CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
+    delete internalManager;
     return 0;
 }
 
@@ -435,7 +433,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
 
     (*info)[0].name = OUTPUT_TEXT_IMAGES_TENSOR_NAME;
     (*info)[0].dimsCount = 5;
-    if (!get_buffer<uint64_t>(internalManager, &((*info)[0].dims), OUTPUT_TEXT_IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t))) {
+    if (!get_buffer<uint64_t>(internalManager, &((*info)[0].dims), OUTPUT_TEXT_IMAGES_INFO_DIMS_NAME, (*info)[0].dimsCount * sizeof(uint64_t))) {
         release(*info, internalManager);
         return 1;
     }
@@ -454,7 +452,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
 
     (*info)[1].name = OUTPUT_COORDINATES_TENSOR_NAME;
     (*info)[1].dimsCount = 3;
-    if (!get_buffer<uint64_t>(internalManager, &((*info)[1].dims), OUTPUT_COORDINATES_INFO_DIMS_NAME, 3 * sizeof(uint64_t))) {
+    if (!get_buffer<uint64_t>(internalManager, &((*info)[1].dims), OUTPUT_COORDINATES_INFO_DIMS_NAME, (*info)[1].dimsCount * sizeof(uint64_t))) {
         release((*info)[0].dims, internalManager);
         release(*info, internalManager);
         return 1;
@@ -466,7 +464,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
 
     (*info)[2].name = OUTPUT_CONFIDENCE_TENSOR_NAME;
     (*info)[2].dimsCount = 3;
-    if (!get_buffer<uint64_t>(internalManager, &((*info)[2].dims), OUTPUT_CONFIDENCE_INFO_DIMS_NAME, 3 * sizeof(uint64_t))) {
+    if (!get_buffer<uint64_t>(internalManager, &((*info)[2].dims), OUTPUT_CONFIDENCE_INFO_DIMS_NAME, (*info)[2].dimsCount * sizeof(uint64_t))) {
         release((*info)[1].dims, internalManager);
         release((*info)[0].dims, internalManager);
         release(*info, internalManager);

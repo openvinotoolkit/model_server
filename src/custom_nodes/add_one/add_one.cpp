@@ -64,10 +64,8 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
 }
 
 int deinitialize(void* customNodeLibraryInternalManager) {
-    if (customNodeLibraryInternalManager != nullptr) {
-        InternalManager* internalManager = static_cast<InternalManager*>(customNodeLibraryInternalManager);
-        delete internalManager;
-    }
+    InternalManager* internalManager = static_cast<InternalManager*>(customNodeLibraryInternalManager);
+    delete internalManager;
     return 0;
 }
 
