@@ -37,7 +37,7 @@ TensorInfo::TensorInfo(const std::string& name,
     mapping(""),
     precision_2(precision),
     shape_3(shape),
-    layout(InferenceEngine::Layout::ANY) {}
+    layout(getDefaultLayout()) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
@@ -46,13 +46,13 @@ TensorInfo::TensorInfo(const std::string& name,
     mapping(""),
     precision_2(precision),
     shape_3(shape),
-    layout(InferenceEngine::Layout::ANY) {
+    layout(getDefaultLayout()) {
 }
 
 TensorInfo::TensorInfo(const std::string& name,
     const ovms::Precision& precision,
     const shape_t& shape,
-    const InferenceEngine::Layout& layout) :
+    const layout_t& layout) :
     name(name),
     mapping(""),
     precision_2(precision),
@@ -63,7 +63,7 @@ TensorInfo::TensorInfo(const std::string& name,
 TensorInfo::TensorInfo(const std::string& name,
     const ovms::Precision& precision,
     const Shape& shape,
-    const InferenceEngine::Layout& layout) :
+    const layout_t& layout) :
     name(name),
     mapping(""),
     precision_2(precision),
@@ -75,7 +75,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
     const ovms::Precision& precision,
     const shape_t& shape,
-    const InferenceEngine::Layout& layout) :
+    const layout_t& layout) :
     name(name),
     mapping(mapping),
     precision_2(precision),
@@ -86,7 +86,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
     const ovms::Precision& precision,
     const Shape& shape,
-    const InferenceEngine::Layout& layout) :
+    const layout_t& layout) :
     name(name),
     mapping(mapping),
     precision_2(precision),
@@ -101,7 +101,7 @@ TensorInfo::TensorInfo(const std::string& name,
     mapping(mapping),
     precision_2(precision),
     shape_3(shape),
-    layout(InferenceEngine::Layout::ANY) {
+    layout(getDefaultLayout()) {
 }
 
 const std::string& TensorInfo::getName() const {
@@ -194,86 +194,11 @@ const std::string TensorInfo::getDataTypeAsString(tensorflow::DataType dataType)
     }
 }
 
-InferenceEngine::Layout TensorInfo::getLayoutFromString(const std::string& layout) {
-    if (layout == "ANY")
-        return InferenceEngine::Layout::ANY;
-    if (layout == "NCHW")
-        return InferenceEngine::Layout::NCHW;
-    if (layout == "NHWC")
-        return InferenceEngine::Layout::NHWC;
-    if (layout == "NCDHW")
-        return InferenceEngine::Layout::NCDHW;
-    if (layout == "NDHWC")
-        return InferenceEngine::Layout::NDHWC;
-    if (layout == "OIHW")
-        return InferenceEngine::Layout::OIHW;
-    if (layout == "GOIHW")
-        return InferenceEngine::Layout::GOIHW;
-    if (layout == "OIDHW")
-        return InferenceEngine::Layout::OIDHW;
-    if (layout == "GOIDHW")
-        return InferenceEngine::Layout::GOIDHW;
-    if (layout == "SCALAR")
-        return InferenceEngine::Layout::SCALAR;
-    if (layout == "C")
-        return InferenceEngine::Layout::C;
-    if (layout == "CHW")
-        return InferenceEngine::Layout::CHW;
-    if (layout == "HW")
-        return InferenceEngine::Layout::HW;
-    if (layout == "HWC")
-        return InferenceEngine::Layout::HWC;
-    if (layout == "NC")
-        return InferenceEngine::Layout::NC;
-    if (layout == "CN")
-        return InferenceEngine::Layout::CN;
-    if (layout == "BLOCKED")
-        return InferenceEngine::Layout::BLOCKED;
-
-    return InferenceEngine::Layout::ANY;
+std::string TensorInfo::getStringFromLayout(const layout_t& layout) {
+    return layout;
 }
 
-std::string TensorInfo::getStringFromLayout(InferenceEngine::Layout layout) {
-    switch (layout) {
-    case InferenceEngine::Layout::ANY:
-        return "ANY";
-    case InferenceEngine::Layout::NCHW:
-        return "NCHW";
-    case InferenceEngine::Layout::NHWC:
-        return "NHWC";
-    case InferenceEngine::Layout::NCDHW:
-        return "NCDHW";
-    case InferenceEngine::Layout::NDHWC:
-        return "NDHWC";
-    case InferenceEngine::Layout::OIHW:
-        return "OIHW";
-    case InferenceEngine::Layout::GOIHW:
-        return "GOIHW";
-    case InferenceEngine::Layout::OIDHW:
-        return "OIDHW";
-    case InferenceEngine::Layout::GOIDHW:
-        return "GOIDHW";
-    case InferenceEngine::Layout::SCALAR:
-        return "SCALAR";
-    case InferenceEngine::Layout::C:
-        return "C";
-    case InferenceEngine::Layout::CHW:
-        return "CHW";
-    case InferenceEngine::Layout::HW:
-        return "HW";
-    case InferenceEngine::Layout::HWC:
-        return "HWC";
-    case InferenceEngine::Layout::NC:
-        return "NC";
-    case InferenceEngine::Layout::CN:
-        return "CN";
-    case InferenceEngine::Layout::BLOCKED:
-        return "BLOCKED";
-    }
-    return "";
-}
-
-const InferenceEngine::Layout& TensorInfo::getLayout() const {
+const layout_t& TensorInfo::getLayout() const {
     return layout;
 }
 
@@ -289,14 +214,14 @@ const Shape& TensorInfo::getShape_3() const {
     return this->shape_3;
 }
 
-void TensorInfo::setLayout(InferenceEngine::Layout layout) {
+void TensorInfo::setLayout(const layout_t& layout) {
     this->layout = layout;
 }
 
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const Shape& shape) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->shape_3 = shape;
-    copy->layout = InferenceEngine::Layout::ANY;
+    copy->layout = getDefaultLayout();
     return copy;
 }
 
@@ -363,6 +288,11 @@ std::string TensorInfo::asString() const {
         << "precision: " << getPrecisionAsString() << "; "
         << "layout: " << getStringFromLayout(getLayout());
     return ss.str();
+}
+
+const layout_t& TensorInfo::getDefaultLayout() {
+    static const layout_t defaultLayout{"N..."};
+    return defaultLayout;
 }
 
 }  // namespace ovms

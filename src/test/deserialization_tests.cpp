@@ -86,7 +86,7 @@ protected:
             tensorName,
             precision,
             shape_t{1, 3},
-            InferenceEngine::Layout::NC);
+            layout_t{"NC"});
         SetUpTensorProto(TensorInfo::getPrecisionAsDataType(precision));
     }
     void SetUpTensorProto(tensorflow::DataType dataType) {

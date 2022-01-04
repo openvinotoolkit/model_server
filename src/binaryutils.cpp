@@ -13,8 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-
-#include "status.hpp"
+#include "binaryutils.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -27,12 +26,11 @@
 #include <utility>
 #include <vector>
 
-#include <inference_engine.hpp>
 #include <openvino/openvino.hpp>
 
-#include "binaryutils.hpp"
 #include "logging.hpp"
 #include "opencv2/opencv.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
@@ -88,7 +86,7 @@ Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision 
 }
 
 bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    if (tensorInfo->getLayout() != InferenceEngine::Layout::NHWC && tensorInfo->getLayout() != InferenceEngine::Layout::ANY) {
+    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != TensorInfo::getDefaultLayout()) {
         return false;
     }
     Dimension cols = Dimension::any();
@@ -115,7 +113,7 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
 }
 
 Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    if (tensorInfo->getLayout() != InferenceEngine::Layout::NHWC && tensorInfo->getLayout() != InferenceEngine::Layout::ANY) {
+    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != TensorInfo::getDefaultLayout()) {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
     Dimension cols = Dimension::any();
@@ -164,7 +162,7 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
 Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     const cv::Mat input,
     cv::Mat* firstBatchImage) {
-    if (tensorInfo->getLayout() != InferenceEngine::Layout::NHWC && tensorInfo->getLayout() != InferenceEngine::ANY) {
+    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != TensorInfo::getDefaultLayout()) {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
 
@@ -212,7 +210,7 @@ Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Ma
     // With unknown layout, there is no way to deduce pipeline input resolution.
     // This forces binary utility to create blobs with resolution inherited from input binary image from request.
     // To achieve it, in this specific case we require all binary images to have the same resolution.
-    if (firstBatchImage && tensorInfo->getLayout() == InferenceEngine::Layout::ANY) {
+    if (firstBatchImage && tensorInfo->getLayout() == TensorInfo::getDefaultLayout()) {
         auto status = validateResolutionAgainstFirstBatchImage(input, firstBatchImage);
         if (!status.ok()) {
             return status;
@@ -223,7 +221,7 @@ Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Ma
 
 Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     const tensorflow::TensorProto& src) {
-    if (tensorInfo->getLayout() != InferenceEngine::Layout::NHWC && tensorInfo->getLayout() != InferenceEngine::Layout::ANY) {
+    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != TensorInfo::getDefaultLayout()) {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
 
@@ -286,8 +284,8 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
     return StatusCode::OK;
 }
 
-InferenceEngine::SizeVector getShapeFromImages(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    InferenceEngine::SizeVector dims;
+shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    shape_t dims;
     dims.push_back(images.size());
     if (tensorInfo->isInfluencedByDemultiplexer()) {
         dims.push_back(1);

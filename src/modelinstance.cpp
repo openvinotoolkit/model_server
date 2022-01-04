@@ -140,15 +140,15 @@ Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::share
     return StatusCode::OK;
 }
 
-InferenceEngine::Layout getReportedTensorLayout(const ModelConfig& config, const std::string& name) {
-    InferenceEngine::Layout layout = InferenceEngine::Layout::ANY;
-    if (config.getLayout_2().isSet()) {
-        layout = TensorInfo::getLayoutFromString(config.getLayout_2().getTensorLayout());
+const layout_t getReportedTensorLayout(const ModelConfig& config, const std::string& name, bool isInput) {
+    auto layout = TensorInfo::getDefaultLayout();
+    if (isInput && config.getLayout_2().isSet()) {
+        layout = config.getLayout_2().getTensorLayout();
     } else if (config.getLayouts_2().size() > 0) {
         auto mappedName = config.getMappingInputByKey(name);
         auto it = config.getLayouts_2().find(mappedName == "" ? name : mappedName);
         if (it != config.getLayouts_2().end()) {
-            layout = TensorInfo::getLayoutFromString(it->second.getTensorLayout());
+            layout = it->second.getTensorLayout();
         }
     }
     return layout;
@@ -358,7 +358,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             ovms::Precision precision = ovElementTypeToOvmsPrecision(input.get_element_type());
             Shape shape(input.get_partial_shape());
             std::string mappingName = config.getMappingInputByKey(name);
-            InferenceEngine::Layout layout = getReportedTensorLayout(config, name);
+            const layout_t layout = getReportedTensorLayout(config, name, true);
 
             std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
                 name,
@@ -404,7 +404,7 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
             ovms::Precision precision = ovElementTypeToOvmsPrecision(output.get_element_type());
             Shape shape(output.get_partial_shape());
             std::string mappingName = config.getMappingOutputByKey(name);
-            InferenceEngine::Layout layout = getReportedTensorLayout(config, name);
+            const layout_t layout = getReportedTensorLayout(config, name, false);
 
             std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
                 name,

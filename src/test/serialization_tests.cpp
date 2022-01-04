@@ -89,7 +89,7 @@ protected:
             tensorName,
             precision,
             shape_t{1, 3, 1, 1},
-            InferenceEngine::Layout::NHWC);
+            layout_t{"NHWC"});
         SetUpTensorProto(TensorInfo::getPrecisionAsDataType(precision));
     }
 
@@ -119,7 +119,7 @@ public:
                 std::string("2_values_C_layout"),
                 precision,
                 ovms::Shape{2},
-                InferenceEngine::Layout::C);
+                layout_t{"C"});
         std::shared_ptr<ov::runtime::Tensor> mockBlob = std::make_shared<ov::runtime::Tensor>(
             ovmsPrecisionToIE2Precision(precision), ov::Shape{2});
         return std::make_tuple(networkOutput, mockBlob);
@@ -129,7 +129,7 @@ public:
 TEST(SerializeTFTensorProtoSingle_2, NegativeMismatchBetweenTensorInfoAndBlobPrecision) {
     ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
-    auto layout = InferenceEngine::Layout::NCHW;
+    auto layout = layout_t{"NCHW"};
     const std::string name = "NOT_IMPORTANT";
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
     ov::runtime::Tensor tensor(ov::element::i32, tensorInfoShape);
@@ -144,7 +144,7 @@ TEST(SerializeTFTensorProtoSingle_2, NegativeMismatchBetweenTensorInfoAndBlobSha
     ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
     shape_t blobShape{1, 3, 225, 225};
-    auto layout = InferenceEngine::Layout::NCHW;
+    auto layout = layout_t{"NCHW"};
     const std::string name = "NOT_IMPORTANT";
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
     ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), blobShape);
@@ -196,7 +196,7 @@ TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
         DUMMY_MODEL_INPUT_NAME,
         ovms::Precision::FP32,
         ovms::Shape{1, 10},
-        InferenceEngine::Layout::NC);
+        layout_t{"NC"});
     tenMap[DUMMY_MODEL_OUTPUT_NAME] = tensorInfo;
     ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), ov::Shape{1, 10});
     inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
