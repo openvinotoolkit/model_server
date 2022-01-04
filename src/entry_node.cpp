@@ -21,8 +21,6 @@
 #include <string>
 #include <utility>
 
-#include <inference_engine.hpp>
-
 #include "binaryutils.hpp"
 #include "deserialization.hpp"
 #include "logging.hpp"

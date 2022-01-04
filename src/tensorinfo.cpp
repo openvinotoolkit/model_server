@@ -19,9 +19,6 @@
 #include <string>
 #include <unordered_map>
 
-#include <inference_engine.hpp>
-#include <openvino/openvino.hpp>
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"

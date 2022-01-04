@@ -33,8 +33,8 @@ public:
     /**
          * @brief A default constructor
          */
-    StatefulModelInstance(const std::string& name, model_version_t version, InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2, GlobalSequencesViewer* globalSequencesViewer) :
-        ModelInstance(name, version, ieCore, ieCore_2),
+    StatefulModelInstance(const std::string& name, model_version_t version, ov::runtime::Core& ieCore_2, GlobalSequencesViewer* globalSequencesViewer) :
+        ModelInstance(name, version, ieCore_2),
         globalSequencesViewer(globalSequencesViewer) {
         sequenceManager = std::make_shared<SequenceManager>(config.getMaxSequenceNumber(), name, version);
     }

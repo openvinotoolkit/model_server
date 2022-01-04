@@ -102,13 +102,11 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
     } else {
         return false;
     }
-    if (tensorInfo->getLayout() == InferenceEngine::Layout::ANY) {
-        if (cols == Dimension::any()) {
-            cols = image.cols;
-        }
-        if (rows == Dimension::any()) {
-            rows = image.rows;
-        }
+    if (cols.isAny()) {
+        cols = image.cols;
+    }
+    if (rows.isAny()) {
+        rows = image.rows;
     }
     if ((!cols.match(image.cols)) || (!rows.match(image.rows))) {
         return true;
@@ -131,13 +129,11 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
     } else {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
-    if (tensorInfo->getLayout() == InferenceEngine::Layout::ANY) {
-        if (cols == Dimension::any()) {
-            cols = src.cols;
-        }
-        if (rows == Dimension::any()) {
-            rows = src.rows;
-        }
+    if (cols.isAny()) {
+        cols = src.cols;
+    }
+    if (rows.isAny()) {
+        rows = src.rows;
     }
     if (cols.isDynamic()) {
         dimension_value_t value = src.cols;
@@ -173,24 +169,24 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     }
 
     // At this point we can either have nhwc format or pretendant to be nhwc but with ANY layout in pipeline info
-    dimension_value_t numberOfChannels = DYNAMIC_DIMENSION;
+    Dimension numberOfChannels;
     if (tensorInfo->getShape_3().size() == 4) {
-        numberOfChannels = tensorInfo->getShape_3()[3].getAnyValue();
+        numberOfChannels = tensorInfo->getShape_3()[3];
     } else if (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape_3().size() == 5) {
-        numberOfChannels = tensorInfo->getShape_3()[4].getAnyValue();
+        numberOfChannels = tensorInfo->getShape_3()[4];
     } else {
         return StatusCode::INVALID_NO_OF_CHANNELS;
     }
-    if (numberOfChannels == DYNAMIC_DIMENSION && firstBatchImage) {
+    if (numberOfChannels.isAny() && firstBatchImage) {
         numberOfChannels = firstBatchImage->channels();
     }
-    if (numberOfChannels == DYNAMIC_DIMENSION) {
+    if (numberOfChannels.isAny()) {
         return StatusCode::OK;
     }
-    if ((unsigned int)(input.channels()) != numberOfChannels) {
+    if (!numberOfChannels.match(input.channels())) {
         SPDLOG_DEBUG("Binary data sent to input: {} has invalid number of channels. Expected: {} Actual: {}",
             tensorInfo->getMappedName(),
-            numberOfChannels,
+            numberOfChannels.toString(),
             input.channels());
         return StatusCode::INVALID_NO_OF_CHANNELS;
     }

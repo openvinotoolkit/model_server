@@ -22,7 +22,7 @@ Status InputSink_2<ov::runtime::InferRequest&>::give(const std::string& name, ov
     Status status;
     try {
         requester.set_tensor(name, blob);
-        // OV implementation the InferenceEngine::Exception is not
+        // OV implementation the ov::Exception is not
         // a base class for all other exceptions thrown from OV.
         // OV can throw exceptions derived from std::logic_error.
     } catch (const ov::Exception& e) {
@@ -39,9 +39,8 @@ Status InputSink_2<ov::runtime::InferRequest&>::give(const std::string& name, ov
 }
 
 ov::runtime::Tensor makeBlob_2(const tensorflow::TensorProto& requestInput,
-    const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+    const std::shared_ptr<TensorInfo>& tensorInfo) {
     ov::Shape shape;
-    // TODO: Use isPipeline when DAG are switched to OV 2.0.
     for (size_t i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
         shape.push_back(requestInput.tensor_shape().dim(i).size());
     }

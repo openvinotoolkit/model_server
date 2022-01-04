@@ -20,7 +20,6 @@
 #include <string>
 #include <utility>
 
-#include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
 
 #pragma GCC diagnostic push
@@ -37,8 +36,6 @@
 #include "timer.hpp"
 
 using grpc::ServerContext;
-
-using namespace InferenceEngine;
 
 using tensorflow::TensorProto;
 

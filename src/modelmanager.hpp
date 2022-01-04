@@ -25,7 +25,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <inference_engine.hpp>
 #include <openvino/openvino.hpp>
 #include <rapidjson/document.h>
 #include <spdlog/spdlog.h>
@@ -68,7 +67,6 @@ protected:
      * 
      */
     std::map<std::string, std::shared_ptr<Model>> models;
-    std::unique_ptr<InferenceEngine::Core> ieCore;
     std::unique_ptr<ov::runtime::Core> ieCore_2;
 
     PipelineFactory pipelineFactory;

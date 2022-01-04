@@ -1291,7 +1291,8 @@ Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
         if (info.gatherFromNode.count(nodeName) > 0) {
             auto someNodeInfo = this->findNodeByName(nodeName);
             dimension_value_t demultiplyCount = static_cast<dimension_value_t>(someNodeInfo.demultiplyCount.value_or(0));
-            if (demultiplyCount == 0) {
+            Dimension dim = demultiplyCount == 0 ? Dimension::any() : Dimension(demultiplyCount);
+            if (dim.isAny()) {
                 tensor_map_t nodeOutputsInfo;
                 if (someNodeInfo.kind == NodeKind::CUSTOM) {
                     auto result = PipelineDefinition::getCustomNodeMetadata(
@@ -1311,12 +1312,12 @@ Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
                         SPDLOG_ERROR("Node: {} library metadata reports output with too small number of dimensions", nodeName);
                         return;
                     }
-                    demultiplyCount = nodeOutputsInfo.begin()->second->getShape_3().getFlatShape()[0];  // TODO DAG with dynamic shapes
+                    dim = nodeOutputsInfo.begin()->second->getShape_3()[0];
                 } else if (someNodeInfo.kind == NodeKind::ENTRY) {
-                    demultiplyCount = DYNAMIC_DIMENSION;
+                    dim = Dimension::any();
                 }
             }
-            shape.emplace_back(demultiplyCount ? Dimension(demultiplyCount) : Dimension::any());
+            shape.emplace_back(dim);
         }
 
         if (this->connections.at(nodeName).size() > 0) {

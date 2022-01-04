@@ -33,7 +33,7 @@ const std::string DUMMY_MODEL_PATH = std::filesystem::current_path().u8string() 
 TEST(OVInferRequestQueue, ShortQueue) {
     ov::runtime::Core ieCore;
     auto network = ieCore.read_model(DUMMY_MODEL_PATH);
-    ov::runtime::ExecutableNetwork execNetwork = ieCore.compile_model(network, "CPU");
+    ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
     ovms::OVInferRequestsQueue_2 inferRequestsQueue(execNetwork, 3);
     int reqid;
     reqid = inferRequestsQueue.getIdleStream().get();
@@ -56,7 +56,7 @@ TEST(OVInferRequestQueue, FullQueue) {
     ovms::Timer timer;
     ov::runtime::Core ieCore;
     auto network = ieCore.read_model(DUMMY_MODEL_PATH);
-    ov::runtime::ExecutableNetwork execNetwork = ieCore.compile_model(network, "CPU");
+    ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
     ovms::OVInferRequestsQueue_2 inferRequestsQueue(execNetwork, 50);
     int reqid;
     for (int i = 0; i < 50; i++) {
@@ -92,7 +92,7 @@ TEST(OVInferRequestQueue, MultiThread) {
     int number_clients = 100;  // represent number of serving clients
     ov::runtime::Core ieCore;
     auto network = ieCore.read_model(DUMMY_MODEL_PATH);
-    ov::runtime::ExecutableNetwork execNetwork = ieCore.compile_model(network, "CPU");
+    ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
 
     ovms::OVInferRequestsQueue_2 inferRequestsQueue(execNetwork, nireq);
 
@@ -110,7 +110,7 @@ TEST(OVInferRequestQueue, MultiThread) {
 TEST(OVInferRequestQueue, AsyncGetInferRequest) {
     ov::runtime::Core ieCore;
     auto network = ieCore.read_model(DUMMY_MODEL_PATH);
-    ov::runtime::ExecutableNetwork execNetwork = ieCore.compile_model(network, "CPU");
+    ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
     const int nireq = 1;
     ovms::OVInferRequestsQueue_2 inferRequestsQueue(execNetwork, nireq);
 

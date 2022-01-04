@@ -21,6 +21,7 @@
 #include <vector>
 
 #include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"

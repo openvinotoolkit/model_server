@@ -23,7 +23,6 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <inference_engine.hpp>
 #include <openvino/openvino.hpp>
 #include <stdlib.h>
 
@@ -208,8 +207,8 @@ public:
 
 class MockModelInstance : public ovms::ModelInstance {
 public:
-    MockModelInstance(InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2) :
-        ModelInstance("UNUSED_NAME", 42, ieCore, ieCore_2) {}
+    MockModelInstance(ov::runtime::Core& ieCore_2) :
+        ModelInstance("UNUSED_NAME", 42, ieCore_2) {}
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
         return validate(request);
     }
@@ -594,7 +593,6 @@ TEST_F(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
  * 8. Do the inference with (1,3,4,5) shape - expect status OK and result (1,3,4,5)
  * 9. Do the inference with (1,4,5,3) shape - expect INVALID_SHAPE
  */
-// TODO: Enable when https://jira.devtools.intel.com/browse/CVS-74065 is resolved by OpenVINO.
 TEST_F(TestPredict, PerformInferenceChangeModelInputLayout) {
     using namespace ovms;
 
@@ -649,7 +647,6 @@ TEST_F(TestPredict, PerformInferenceChangeModelInputLayout) {
  * 8. Do the inference with (1,3,1,2) shape - expect status OK and result (1,3,1,2)
  * 9. Do the inference with (1,1,2,3) shape - expect INVALID_SHAPE
  */
-// TODO: Enable when https://jira.devtools.intel.com/browse/CVS-74065 is resolved by OpenVINO.
 TEST_F(TestPredict, PerformInferenceChangeModelInputLayoutAndShape) {
     using namespace ovms;
 
@@ -707,7 +704,6 @@ TEST_F(TestPredict, PerformInferenceChangeModelInputLayoutAndShape) {
  * 5. Roll back layout setting to internal nchw
  * 6. Do the inference with (1,3,4,5) shape - expect status OK and result in NCHW layout
  */
-// TODO: Enable when https://jira.devtools.intel.com/browse/CVS-74065 is resolved by OpenVINO.
 TEST_F(TestPredict, PerformInferenceChangeModelOutputLayout) {
     using namespace ovms;
 
@@ -749,7 +745,6 @@ TEST_F(TestPredict, PerformInferenceChangeModelOutputLayout) {
  * 5. Roll back layout setting to internal nchw
  * 6. Do the inference with (1,3,4,5) shape - expect status OK and result in NCHW layout
  */
-// TODO: Enable when https://jira.devtools.intel.com/browse/CVS-74065 is resolved by OpenVINO.
 TEST_F(TestPredict, PerformInferenceChangeModelOutputLayoutAndShape) {
     using namespace ovms;
 
@@ -783,6 +778,48 @@ TEST_F(TestPredict, PerformInferenceChangeModelOutputLayoutAndShape) {
     ASSERT_EQ(performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
     checkOutputShape(response, {1, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
     checkOutputValues(response, {2.0, 3.0, 4.0, 5.0, 6.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+}
+
+/**
+ * Scenario - change input layout and changing batch size at runtime. Expect shape dimension order to stay the same.
+ *
+ * 1. Load model with output layout=nhwc:nchw, native unchanged shape (1,4,5,3) initial internal layout: nchw
+ * 2. Do the inference with (1,4,5,3) shape - expect status OK and result in NCHW layout
+ * 3. Change batch size setting to 10
+ * 4. Do the inference with (10,4,5,3) shape - expect status OK and result in NCHW layout
+ * 5. Change batch size setting to 15
+ * 6. Do the inference with (15,4,5,3) shape - expect status OK and result in NCHW layout
+ */
+TEST_F(TestPredict, PerformInferenceChangeModelLayoutAndKeepChangingBatchSize) {
+    using namespace ovms;
+
+    // Prepare model with changed output layout to nhwc (internal layout=nchw)
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    tensorflow::serving::PredictResponse response;
+
+    // Perform inference with NHWC layout, ensure status OK and results in NHWC order
+    ASSERT_EQ(performInferenceWithImageInput(response, {1, 4, 5, 3}), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 3, 4, 5}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+
+    // Reload model with batch size changed
+    config.setBatchingParams("10");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Perform inference with NHWC layout batch=10, ensure status OK and results still in NCHW order
+    ASSERT_EQ(performInferenceWithImageInput(response, {10, 4, 5, 3}), ovms::StatusCode::OK);
+    checkOutputShape(response, {10, 3, 4, 5}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+
+    // Change bs to 15
+    config.setBatchingParams("15");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Perform inference with NHWC layout batch=15, ensure status OK and input/output layout has not changed
+    ASSERT_EQ(performInferenceWithImageInput(response, {15, 4, 5, 3}), ovms::StatusCode::OK);
+    checkOutputShape(response, {15, 3, 4, 5}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 }
 
 TEST_F(TestPredict, ErrorWhenLayoutSetForMissingTensor) {

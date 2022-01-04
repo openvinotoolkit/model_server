@@ -23,7 +23,6 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <inference_engine.hpp>
 
 #include "../sequence.hpp"
 #include "../sequence_manager.hpp"
@@ -34,8 +33,6 @@
 #pragma GCC diagnostic pop
 
 #include <gmock/gmock-generated-function-mockers.h>
-
-using namespace InferenceEngine;
 
 const std::string SEQUENCE_ID_INPUT = "sequence_id";
 const std::string SEQUENCE_CONTROL_INPUT = "sequence_control_input";
@@ -75,32 +72,15 @@ private:
     ov::runtime::Core ieCore_2;
     const std::string MODEL_PATH = std::filesystem::current_path().u8string() + "/src/test/summator/1/summator.xml";
 
-    std::shared_ptr<InferenceEngine::CNNNetwork> cnnNetworkPtr;
-    std::shared_ptr<InferenceEngine::ExecutableNetwork> execNetworkPtr;
-    std::shared_ptr<InferenceEngine::InferRequest> inferRequestPtr;
-
-    std::shared_ptr<ov::Function> network_2;
-    std::shared_ptr<ov::runtime::ExecutableNetwork> execNetwork_2;
-
-    const Precision statePrecision{Precision::FP32};
-    const std::vector<size_t> stateShape{1, 1};
-    const Layout stateLayout{Layout::NC};
-    const TensorDesc stateDesc{statePrecision, stateShape, stateLayout};
+    std::shared_ptr<ov::Model> network_2;
+    std::shared_ptr<ov::runtime::CompiledModel> execNetwork_2;
 
     const std::string stateName = "state";
 
 public:
     DummyStatefulModel() {
-        InferenceEngine::Core ieCore;
-        cnnNetworkPtr = std::make_shared<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(MODEL_PATH));
-        execNetworkPtr = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*cnnNetworkPtr, "CPU"));
-
         network_2 = ieCore_2.read_model(MODEL_PATH);
-        execNetwork_2 = std::make_shared<ov::runtime::ExecutableNetwork>(ieCore_2.compile_model(network_2, "CPU"));
-    }
-
-    InferenceEngine::InferRequest createInferRequest() {
-        return execNetworkPtr->CreateInferRequest();
+        execNetwork_2 = std::make_shared<ov::runtime::CompiledModel>(ieCore_2.compile_model(network_2, "CPU"));
     }
 
     ov::runtime::InferRequest createInferRequest_2() {
@@ -111,36 +91,14 @@ public:
         return stateName;
     }
 
-    static InferenceEngine::VariableState getVariableState(InferenceEngine::InferRequest& inferRequest) {
-        std::vector<InferenceEngine::VariableState> memoryState = inferRequest.QueryState();
-        return memoryState[0];
-    }
-
     static ov::runtime::VariableState getVariableState_2(ov::runtime::InferRequest& inferRequest) {
         std::vector<ov::runtime::VariableState> memoryState = inferRequest.query_state();
         return memoryState[0];
     }
 
-    static void resetVariableState(InferenceEngine::InferRequest& inferRequest) {
-        std::vector<InferenceEngine::VariableState> memoryState = inferRequest.QueryState();
-        memoryState[0].Reset();
-    }
-
     static void resetVariableState_2(ov::runtime::InferRequest& inferRequest) {
         std::vector<ov::runtime::VariableState> memoryState = inferRequest.query_state();
         memoryState[0].reset();
-    }
-
-    static void setVariableState(InferenceEngine::InferRequest& inferRequest, std::vector<float> values) {
-        DummyStatefulModel::resetVariableState(inferRequest);
-        std::vector<size_t> shape{1, 1};
-        const Precision precision{Precision::FP32};
-        const Layout layout{Layout::NC};
-        const TensorDesc desc{precision, shape, layout};
-
-        Blob::Ptr inputBlob = make_shared_blob<float>(desc, values.data());
-        inferRequest.SetBlob("input", inputBlob);
-        inferRequest.Infer();
     }
 
     static void setVariableState_2(ov::runtime::InferRequest& inferRequest, std::vector<float> values) {

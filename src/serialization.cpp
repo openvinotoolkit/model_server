@@ -25,7 +25,7 @@ Status serializeBlobToTensorProto_2(
     ov::runtime::Tensor& blob) {
     responseOutput.Clear();
     if (networkOutput->getOvPrecision() != blob.get_element_type()) {
-        SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in precision expected:{} vs actual:{}",  // TODO: Convert OvType to readable string.
+        SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in precision expected:{} vs actual:{}",
             networkOutput->getName(),
             TensorInfo::getPrecisionAsString(networkOutput->getPrecision_2()),
             blob.get_element_type().get_type_name());

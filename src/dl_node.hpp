@@ -21,6 +21,8 @@
 #include <string>
 #include <unordered_map>
 
+#include <openvino/openvino.hpp>
+
 #include "executingstreamidguard.hpp"
 #include "model_version_policy.hpp"  // for model_version_t typename
 #include "modelinstance.hpp"

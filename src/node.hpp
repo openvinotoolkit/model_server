@@ -22,7 +22,7 @@
 #include <utility>
 #include <vector>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #include "aliases.hpp"
 #include "nodesession.hpp"

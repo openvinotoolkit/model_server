@@ -17,8 +17,6 @@
 
 #include <string>
 
-#include <inference_engine.hpp>
-
 #include "custom_node_interface.h"  // NOLINT
 
 namespace ovms {

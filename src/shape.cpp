@@ -76,10 +76,6 @@ ov::Dimension Dimension::createPartialDimension() const {
     return ov::Dimension(this->minimum, this->maximum);
 }
 
-dimension_value_t Dimension::getAnyValue() const {
-    return this->maximum;
-}
-
 dimension_value_t Dimension::getStaticValue() const {
     if (this->isDynamic())
         throw std::invalid_argument("getStaticValue but dimension dynamic");
@@ -89,12 +85,16 @@ dimension_value_t Dimension::getStaticValue() const {
 dimension_value_t Dimension::getMinValue() const {
     if (this->isStatic())
         throw std::invalid_argument("getMinValue but dimension static");
+    if (this->isAny())
+        throw std::invalid_argument("getMinValue but dimension any");
     return this->minimum;
 }
 
 dimension_value_t Dimension::getMaxValue() const {
     if (this->isStatic())
         throw std::invalid_argument("getMaxValue but dimension static");
+    if (this->isAny())
+        throw std::invalid_argument("getMinValue but dimension any");
     return this->maximum;
 }
 
@@ -304,20 +304,6 @@ ov::PartialShape Shape::createPartialShape() const {
         } else {
             shape.push_back(ov::Dimension{dim.getMinValue(), dim.getMaxValue()});
         }
-    }
-
-    return shape;
-}
-
-shape_t Shape::getFlatShape() const {
-    shape_t shape;
-    shape.reserve(this->size());
-
-    for (const Dimension& dim : *this) {
-        if (dim.getAnyValue() <= 0)
-            shape.emplace_back(0);
-        else
-            shape.emplace_back(dim.getAnyValue());
     }
 
     return shape;

@@ -22,7 +22,6 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <inference_engine.hpp>
 #include <openvino/openvino.hpp>
 #include <stdlib.h>
 
@@ -324,11 +323,15 @@ public:
         std::unique_ptr<std::future<void>> waitBeforePerformInference = nullptr);
 
     void deserialize(const std::vector<float>& input, ov::runtime::InferRequest& inferRequest, std::shared_ptr<ovms::ModelInstance> modelInstance) {
-        ov::runtime::Tensor tensor(
-            modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getOvPrecision(),
-            modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getShape_3().getFlatShape(),  // TODO: Get rid of getflatshape
-            const_cast<float*>(reinterpret_cast<const float*>(input.data())));
-        inferRequest.set_tensor(DUMMY_MODEL_INPUT_NAME, tensor);
+        try {
+            ov::runtime::Tensor tensor(
+                modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getOvPrecision(),
+                modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getShape_3().createPartialShape().get_shape(),
+                const_cast<float*>(reinterpret_cast<const float*>(input.data())));
+            inferRequest.set_tensor(DUMMY_MODEL_INPUT_NAME, tensor);
+        } catch (...) {
+            ASSERT_TRUE(false) << "exception during deserialize";
+        }
     }
 
     void serializeAndCheck(int outputSize, ov::runtime::InferRequest& inferRequest) {
@@ -366,8 +369,8 @@ public:
 
 class MockModelInstance : public ovms::ModelInstance {
 public:
-    MockModelInstance(InferenceEngine::Core& ieCore, ov::runtime::Core& ieCore_2) :
-        ModelInstance("UNUSED_NAME", 42, ieCore, ieCore_2) {}
+    MockModelInstance(ov::runtime::Core& ieCore_2) :
+        ModelInstance("UNUSED_NAME", 42, ieCore_2) {}
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
         return validate(request);
     }
