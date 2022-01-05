@@ -34,6 +34,9 @@ cc_library(
     ]),
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],
+    deps = [
+        "@openvino//:openvino_old_headers",
+    ]
 )
 
 cc_library(
@@ -43,9 +46,6 @@ cc_library(
     ]),
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],
-    deps = [
-        "@openvino//:openvino_old_headers",
-    ],
 )
 
 cc_library(

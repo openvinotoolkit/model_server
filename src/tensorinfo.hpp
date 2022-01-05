@@ -20,7 +20,6 @@
 #include <string>
 #include <vector>
 
-#include <inference_engine.hpp>
 #include <openvino/openvino.hpp>
 
 #pragma GCC diagnostic push
@@ -37,6 +36,7 @@ namespace ovms {
 class TensorInfo;
 
 using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
+using layout_t = std::string;
 
 /**
      * @brief Class containing information about the tensor
@@ -63,7 +63,7 @@ protected:
     /**
          * @brief Tensor layout
          */
-    InferenceEngine::Layout layout;
+    layout_t layout;
 
     /**
          * @brief Information if influenced by demultiplexer
@@ -103,11 +103,11 @@ public:
     TensorInfo(const std::string& name,
         const Precision& precision,
         const shape_t& shape,
-        const InferenceEngine::Layout& layout);
+        const layout_t& layout);
     TensorInfo(const std::string& name,
         const Precision& precision,
         const Shape& shape,
-        const InferenceEngine::Layout& layout);
+        const layout_t& layout);
 
     /**
          * @brief Construct a new Tensor Info object
@@ -121,12 +121,12 @@ public:
         const std::string& mapping,
         const Precision& precision,
         const shape_t& shape,
-        const InferenceEngine::Layout& layout);
+        const layout_t& layout);
     TensorInfo(const std::string& name,
         const std::string& mapping,
         const Precision& precision,
         const Shape& shape,
-        const InferenceEngine::Layout& layout);
+        const layout_t& layout);
     TensorInfo(const std::string& name,
         const std::string& mapping,
         const Precision& precision,
@@ -163,10 +163,8 @@ public:
 
     /**
          * @brief Set the Layout object
-         * 
-         * @return const InferenceEngine::Layout
          */
-    void setLayout(InferenceEngine::Layout layout);
+    void setLayout(const layout_t& layout);
 
     /**
          * @brief Get the Precision As DataType object
@@ -197,27 +195,19 @@ public:
     static const std::string getDataTypeAsString(tensorflow::DataType dataType);
 
     /**
-         * @brief Get the InferenceEngine Layout From String 
-         * 
-         * @param layout 
-         * @return InferenceEngine::Layout 
-         */
-    static InferenceEngine::Layout getLayoutFromString(const std::string& layout);
-
-    /**
-         * @brief Get the layout name from InferenceEngine Layout
+         * @brief Get the layout name from layout_t
          *
-         * @param InferenceEngine::Layout
+         * @param layout_t
          * @return std::string
          */
-    static std::string getStringFromLayout(const InferenceEngine::Layout layout);
+    static std::string getStringFromLayout(const layout_t& layout);
 
     /**
-         * @brief Get the Layout enum
+         * @brief Get the Layout string
          *
-         * @return const InferenceEngine::Layout
+         * @return const layout_t&
          */
-    const InferenceEngine::Layout& getLayout() const;
+    const layout_t& getLayout() const;
 
     /**
          * @brief Gets input shape
@@ -244,5 +234,7 @@ public:
     static std::shared_ptr<TensorInfo> getUnspecifiedTensorInfo();
 
     const Dimension& getBatchSize() const;
+
+    static const layout_t& getDefaultLayout();
 };
 }  // namespace ovms

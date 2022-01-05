@@ -55,13 +55,13 @@ protected:
 
         networkInputs = ovms::tensor_map_t({
             {"Input_FP32_1_3_224_224_NHWC",
-                std::make_shared<ovms::TensorInfo>("Input_FP32_1_3_224_224_NHWC", ovms::Precision::FP32, ovms::shape_t{1, 224, 224, 3}, InferenceEngine::Layout::NHWC)},
+                std::make_shared<ovms::TensorInfo>("Input_FP32_1_3_224_224_NHWC", ovms::Precision::FP32, ovms::shape_t{1, 224, 224, 3}, ovms::layout_t{"NHWC"})},
             {"Input_U8_1_3_62_62_NCHW",
-                std::make_shared<ovms::TensorInfo>("Input_U8_1_3_62_62_NCHW", ovms::Precision::U8, ovms::shape_t{1, 3, 62, 62}, InferenceEngine::Layout::NCHW)},
+                std::make_shared<ovms::TensorInfo>("Input_U8_1_3_62_62_NCHW", ovms::Precision::U8, ovms::shape_t{1, 3, 62, 62}, ovms::layout_t{"NCHW"})},
             {"Input_I64_1_6_128_128_16_NCDHW",
-                std::make_shared<ovms::TensorInfo>("Input_I64_1_6_128_128_16_NCDHW", ovms::Precision::I64, ovms::shape_t{1, 6, 128, 128, 16}, InferenceEngine::Layout::NCDHW)},
+                std::make_shared<ovms::TensorInfo>("Input_I64_1_6_128_128_16_NCDHW", ovms::Precision::I64, ovms::shape_t{1, 6, 128, 128, 16}, ovms::layout_t{"NCDHW"})},
             {"Input_U16_1_2_8_4_NCHW",
-                std::make_shared<ovms::TensorInfo>("Input_U16_1_2_8_4_NCHW", ovms::Precision::U16, ovms::shape_t{1, 2, 8, 4}, InferenceEngine::Layout::NCHW)},
+                std::make_shared<ovms::TensorInfo>("Input_U16_1_2_8_4_NCHW", ovms::Precision::U16, ovms::shape_t{1, 2, 8, 4}, ovms::layout_t{"NCHW"})},
         });
 
         ON_CALL(*instance, getInputsInfo()).WillByDefault(ReturnRef(networkInputs));
@@ -182,7 +182,7 @@ TEST_F(PredictValidation, ValidRequestBinaryInputs) {
         inputName,
         ovms::Precision::FP32,
         shape,
-        InferenceEngine::Layout::NHWC);
+        ovms::layout_t{"NHWC"});
 
     auto status = instance->mockValidate(&binaryInputRequest);
     EXPECT_TRUE(status.ok());
@@ -206,7 +206,7 @@ TEST_F(PredictValidation, RequestWrongBatchSizeBinaryInputs) {
         inputName,
         ovms::Precision::FP32,
         shape,
-        InferenceEngine::Layout::NHWC);
+        ovms::layout_t{"NHWC"});
 
     auto status = instance->mockValidate(&binaryInputRequest);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
@@ -231,7 +231,7 @@ TEST_F(PredictValidation, RequestWrongBatchSizeAutoBinaryInputs) {
         inputName,
         ovms::Precision::FP32,
         shape,
-        InferenceEngine::Layout::NHWC);
+        ovms::layout_t{"NHWC"});
 
     auto status = instance->mockValidate(&binaryInputRequest);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
@@ -246,8 +246,8 @@ TEST_F(PredictValidation, RequestWrongAndCorrectBatchSizeAuto) {
 
     networkInputs.clear();
     networkInputs = ovms::tensor_map_t{
-        {"im_data", std::make_shared<ovms::TensorInfo>("im_data", ovms::Precision::FP32, ovms::shape_t{1, 3, 800, 1344}, InferenceEngine::Layout::NCHW)},
-        {"im_info", std::make_shared<ovms::TensorInfo>("im_info", ovms::Precision::FP32, ovms::shape_t{1, 3}, InferenceEngine::Layout::NC)},
+        {"im_data", std::make_shared<ovms::TensorInfo>("im_data", ovms::Precision::FP32, ovms::shape_t{1, 3, 800, 1344}, ovms::layout_t{"NCHW"})},
+        {"im_info", std::make_shared<ovms::TensorInfo>("im_info", ovms::Precision::FP32, ovms::shape_t{1, 3}, ovms::layout_t{"NC"})},
     };
 
     auto status = instance->mockValidate(&request);
@@ -268,8 +268,8 @@ TEST_F(PredictValidation, RequestWrongAndCorrectShapeAuto) {
     // First is incorrect, second is correct
     networkInputs.clear();
     networkInputs = ovms::tensor_map_t{
-        {"im_data", std::make_shared<ovms::TensorInfo>("im_data", ovms::Precision::FP32, ovms::shape_t{1, 3, 800, 1344}, InferenceEngine::Layout::NCHW)},
-        {"im_info", std::make_shared<ovms::TensorInfo>("im_info", ovms::Precision::FP32, ovms::shape_t{1, 3}, InferenceEngine::Layout::NC)},
+        {"im_data", std::make_shared<ovms::TensorInfo>("im_data", ovms::Precision::FP32, ovms::shape_t{1, 3, 800, 1344}, ovms::layout_t{"NCHW"})},
+        {"im_info", std::make_shared<ovms::TensorInfo>("im_info", ovms::Precision::FP32, ovms::shape_t{1, 3}, ovms::layout_t{"NC"})},
     };
 
     auto status = instance->mockValidate(&request);
