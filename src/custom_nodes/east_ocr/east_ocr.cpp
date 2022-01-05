@@ -207,8 +207,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(imageTensor->dims[0] == 1, "input image batch must be 1");
     uint64_t _imageHeight = imageTensor->dims[originalImageLayout == "NCHW" ? 2 : 1];
     uint64_t _imageWidth = imageTensor->dims[originalImageLayout == "NCHW" ? 3 : 2];
-    NODE_ASSERT(_imageHeight <= std::numeric_limits<int>::max(), "image height is too large");
-    NODE_ASSERT(_imageWidth <= std::numeric_limits<int>::max(), "image width is too large");
+    NODE_ASSERT(_imageHeight <= std::numeric_limits<uint>::max(), "image height is too large");
+    NODE_ASSERT(_imageWidth <= std::numeric_limits<uint>::max(), "image width is too large");
     int imageHeight = static_cast<int>(_imageHeight);
     int imageWidth = static_cast<int>(_imageWidth);
 
@@ -231,8 +231,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     uint64_t _numRows = scoresTensor->dims[2];
     uint64_t _numCols = scoresTensor->dims[3];
-    NODE_ASSERT(_numRows <= std::numeric_limits<int>::max(), "score  rows is too large");
-    NODE_ASSERT(_numCols <= std::numeric_limits<int>::max(), "score columns is too large");
+    NODE_ASSERT(_numRows <= std::numeric_limits<uint>::max(), "score  rows is too large");
+    NODE_ASSERT(_numCols <= std::numeric_limits<uint>::max(), "score columns is too large");
     int numRows = static_cast<int>(_numRows);
     int numCols = static_cast<int>(_numCols);
 
