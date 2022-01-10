@@ -366,11 +366,6 @@ cc_binary(
     srcs = [
         "custom_nodes/common/utils.hpp",
         "custom_nodes/common/cv_utils.hpp",
-        "custom_nodes/common/buffersqueue.hpp",
-        "custom_nodes/common/buffersqueue.cpp",
-        "custom_nodes/common/custom_node_library_internal_manager.hpp",
-        "custom_nodes/common/custom_node_library_internal_manager.cpp",
-        "queue.hpp",
         "custom_nodes/image_transformation/image_transformation.cpp",
         "custom_node_interface.h",
     ],
@@ -390,11 +385,6 @@ cc_binary(
     srcs = [
         "custom_nodes/common/utils.hpp",
         "custom_nodes/common/cv_utils.hpp",
-        "custom_nodes/common/buffersqueue.hpp",
-        "custom_nodes/common/buffersqueue.cpp",
-        "custom_nodes/common/custom_node_library_internal_manager.hpp",
-        "custom_nodes/common/custom_node_library_internal_manager.cpp",
-        "queue.hpp",
         "custom_nodes/horizontal_ocr/horizontal_ocr.cpp",
         "custom_node_interface.h",
     ],
