@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-#include "customNodeLibraryInternalManager.hpp"
+#include "custom_node_library_internal_manager.hpp"
 #include "opencv2/opencv.hpp"
 
 using CustomNodeLibraryInternalManager = ovms::custom_nodes_common::CustomNodeLibraryInternalManager;
