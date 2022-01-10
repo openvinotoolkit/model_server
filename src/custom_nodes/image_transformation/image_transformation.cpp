@@ -18,6 +18,7 @@
 #include <string>
 
 #include "../../custom_node_interface.h"
+#include "../common/cv_utils.hpp"
 #include "../common/utils.hpp"
 #include "opencv2/opencv.hpp"
 

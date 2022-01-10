@@ -63,5 +63,25 @@ bool CustomNodeLibraryInternalManager::releaseBuffer(void* ptr) {
 std::shared_timed_mutex& CustomNodeLibraryInternalManager::getInternalManagerLock() {
     return this->internalManagerLock;
 }
+
+template <typename T>
+bool get_buffer(CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size) {
+    auto buffersQueue = internalManager->getBuffersQueue(buffersQueueName);
+    if (!(buffersQueue == nullptr)) {
+        *buffer = static_cast<T*>(buffersQueue->getBuffer());
+    }
+    if (*buffer == nullptr || buffersQueue == nullptr) {
+        *buffer = (T*)malloc(byte_size);
+        if (*buffer == nullptr) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void cleanup(CustomNodeTensor& tensor, CustomNodeLibraryInternalManager* internalManager) {
+    release(tensor.data, internalManager);
+    release(tensor.dims, internalManager);
+}
 }  // namespace custom_nodes_common
 }  // namespace ovms

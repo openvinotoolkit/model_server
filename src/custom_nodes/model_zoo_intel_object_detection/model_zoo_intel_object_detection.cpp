@@ -19,13 +19,12 @@
 #include <vector>
 
 #include "../../custom_node_interface.h"
-#include "../common/buffersqueue.hpp"
 #include "../common/custom_node_library_internal_manager.hpp"
+#include "../common/cv_utils.hpp"
 #include "../common/utils.hpp"
 #include "opencv2/opencv.hpp"
 
 using CustomNodeLibraryInternalManager = ovms::custom_nodes_common::CustomNodeLibraryInternalManager;
-using BuffersQueue = ovms::custom_nodes_common::BuffersQueue;
 
 static constexpr const char* INPUT_IMAGE_TENSOR_NAME = "image";
 static constexpr const char* INPUT_DETECTION_TENSOR_NAME = "detection";

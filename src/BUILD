@@ -300,11 +300,7 @@ cc_binary(
     name = "libcustom_node_east_ocr.so",
     srcs = [
         "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/buffersqueue.hpp",
-        "custom_nodes/common/buffersqueue.cpp",
-        "custom_nodes/common/custom_node_library_internal_manager.hpp",
-        "custom_nodes/common/custom_node_library_internal_manager.cpp",
-        "queue.hpp",
+        "custom_nodes/common/cv_utils.hpp",
         "custom_nodes/east_ocr/east_ocr.cpp",
         "custom_nodes/east_ocr/nms.hpp",
         "custom_node_interface.h",
@@ -333,9 +329,6 @@ cc_binary(
         "custom_node_interface.h",
         "custom_nodes/add_one/addOneInternalManager.hpp"
     ],
-    deps = [
-        "@opencv//:opencv"
-    ],
     linkshared = 1,
     copts = [
         "-Wall",
@@ -348,6 +341,7 @@ cc_binary(
     name = "libcustom_node_model_zoo_intel_object_detection.so",
     srcs = [
         "custom_nodes/common/utils.hpp",
+        "custom_nodes/common/cv_utils.hpp",
         "custom_nodes/common/buffersqueue.hpp",
         "custom_nodes/common/buffersqueue.cpp",
         "custom_nodes/common/custom_node_library_internal_manager.hpp",
@@ -371,6 +365,7 @@ cc_binary(
     name = "libcustom_node_image_transformation.so",
     srcs = [
         "custom_nodes/common/utils.hpp",
+        "custom_nodes/common/cv_utils.hpp",
         "custom_nodes/common/buffersqueue.hpp",
         "custom_nodes/common/buffersqueue.cpp",
         "custom_nodes/common/custom_node_library_internal_manager.hpp",
@@ -394,6 +389,7 @@ cc_binary(
     name = "libcustom_node_horizontal_ocr.so",
     srcs = [
         "custom_nodes/common/utils.hpp",
+        "custom_nodes/common/cv_utils.hpp",
         "custom_nodes/common/buffersqueue.hpp",
         "custom_nodes/common/buffersqueue.cpp",
         "custom_nodes/common/custom_node_library_internal_manager.hpp",

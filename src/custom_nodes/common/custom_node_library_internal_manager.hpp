@@ -20,6 +20,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "../../custom_node_interface.h"
 #include "../common/buffersqueue.hpp"
 
 namespace ovms {
@@ -39,3 +40,8 @@ public:
 };
 }  // namespace custom_nodes_common
 }  // namespace ovms
+
+template <typename T>
+bool get_buffer(ovms::custom_nodes_common::CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size);
+
+void cleanup(CustomNodeTensor& tensor, ovms::custom_nodes_common::CustomNodeLibraryInternalManager* internalManager);
