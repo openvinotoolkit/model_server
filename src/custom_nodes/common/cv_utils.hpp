@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <vector>
+
 #include "../../custom_node_interface.h"
 #include "opencv2/opencv.hpp"
 
