@@ -68,18 +68,18 @@ Status EntryNode::fetchResults(TensorMap& outputs) {
     if (!status.ok()) {
         return status;
     }
-    InputSink_2<TensorMap&> inputSink(outputs);
+    InputSink<TensorMap&> inputSink(outputs);
     bool isPipeline = true;
-    return deserializePredictRequest_2<ConcreteTensorProtoDeserializator_2>(*request, inputsInfo, inputSink, isPipeline);
+    return deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, inputsInfo, inputSink, isPipeline);
 }
 template <>  // TODO remove
-Status InputSink_2<TensorMap&>::give(const std::string& name, ov::runtime::Tensor& tensor) {
+Status InputSink<TensorMap&>::give(const std::string& name, ov::runtime::Tensor& tensor) {
     requester[name] = std::make_shared<ov::runtime::Tensor>(tensor);
     return StatusCode::OK;
 }
 
 template <>
-Status InputSink_2<TensorMap&>::give(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& tensor) {
+Status InputSink<TensorMap&>::give(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& tensor) {
     requester[name] = tensor;
     return StatusCode::OK;
 }

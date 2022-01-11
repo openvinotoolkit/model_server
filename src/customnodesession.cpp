@@ -205,7 +205,7 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, std:
             error.str());
         return StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE;
     }
-    auto allocatorImpl = std::make_shared<CustomNodeOutputAllocator_2>(*tensor, library, customNodeLibraryInternalManager);
+    auto allocatorImpl = std::make_shared<CustomNodeOutputAllocator>(*tensor, library, customNodeLibraryInternalManager);
     auto allocator = ov::runtime::Allocator(allocatorImpl);
     try {
         switch (tensor->precision) {

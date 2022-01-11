@@ -59,7 +59,7 @@ static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
 static bool watcherStarted = false;
 
 ModelManager::ModelManager(const std::string& modelCacheDirectory) :
-    ieCore_2(std::make_unique<ov::runtime::Core>()),
+    ieCore(std::make_unique<ov::runtime::Core>()),
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
     modelCacheDirectory(modelCacheDirectory) {
     // Take --cache_dir from CLI
@@ -90,7 +90,7 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory) :
     if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
         SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
         try {
-            ieCore_2->add_extension(ovms::Config::instance().cpuExtensionLibraryPath());
+            ieCore->add_extension(ovms::Config::instance().cpuExtensionLibraryPath());
             SPDLOG_INFO("Extention added.");
         } catch (std::exception& ex) {
             SPDLOG_CRITICAL("Custom CPU extention loading has failed! Reason: {}", ex.what());
@@ -104,7 +104,7 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory) :
 }
 
 void ModelManager::logPluginConfiguration() {
-    auto availableDevices = ieCore_2->get_available_devices();
+    auto availableDevices = ieCore->get_available_devices();
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Available devices for Open VINO: {}", joins(availableDevices, std::string(", ")));
     auto availablePlugins = availableDevices;
     availablePlugins.emplace_back("AUTO");
@@ -115,7 +115,7 @@ void ModelManager::logPluginConfiguration() {
         std::vector<std::string> supportedConfigKeys;
         try {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging plugin: {}; configuration", plugin);
-            std::vector<std::string> supportedConfigKeys2 = ieCore_2->get_metric(plugin, supportedConfigKey);
+            std::vector<std::string> supportedConfigKeys2 = ieCore->get_metric(plugin, supportedConfigKey);
             supportedConfigKeys = std::move(supportedConfigKeys2);
         } catch (std::exception& e) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}, key: {} value. Error: {}", plugin, supportedConfigKey, e.what());
@@ -125,7 +125,7 @@ void ModelManager::logPluginConfiguration() {
         for (auto& key : supportedConfigKeys) {
             std::string value;
             try {
-                auto paramValue = ieCore_2->get_config(plugin, key);
+                auto paramValue = ieCore->get_config(plugin, key);
                 value = paramValue.as<std::string>();
             } catch (std::exception& e) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}, config key: {}; Error: {}", plugin, key, e.what());
@@ -222,7 +222,7 @@ Status ModelManager::startFromConfig() {
     }
 
     bool batchSizeSet = (modelConfig.getBatchingMode() != FIXED || modelConfig.getBatchSize() != 0);
-    bool shapeSet = (modelConfig.getShapes_2().size() > 0);
+    bool shapeSet = (modelConfig.getShapes().size() > 0);
 
     SPDLOG_DEBUG("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
     if (batchSizeSet && shapeSet) {
@@ -1020,7 +1020,7 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
 Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed) {
     Status status = StatusCode::OK;
     try {
-        status = model->addVersions(versionsToStart, config, fs, *ieCore_2, versionsFailed);
+        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
@@ -1037,7 +1037,7 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
     Status status = StatusCode::OK;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading model versions");
     try {
-        auto status = model->reloadVersions(versionsToReload, config, fs, *ieCore_2, versionsFailed);
+        auto status = model->reloadVersions(versionsToReload, config, fs, *ieCore, versionsFailed);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading model: {}; versions; error: {}",
                 config.getName(),

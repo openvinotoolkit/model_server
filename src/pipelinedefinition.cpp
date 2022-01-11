@@ -535,8 +535,8 @@ public:
         // Affect shape by demultiplexer/gather if applies.
         const auto& tensorInput = this->inputsInfo.at(modelInputName);
         const auto& tensorOutput = this->dependencyOutputsInfo.at(modelOutputName);
-        Shape tensorInputShape = tensorInput->getShape_3();
-        Shape tensorOutputShape = tensorOutput->getShape_3();
+        Shape tensorInputShape = tensorInput->getShape();
+        Shape tensorOutputShape = tensorOutput->getShape();
         if (dependencyNodeInfo.demultiplyCount) {
             auto result = influenceShapeWithDemultiplexer(tensorOutputShape, dependencyNodeInfo);
             if (!result.ok()) {
@@ -785,7 +785,7 @@ public:
 
         if (dependantNodeInfo.kind == NodeKind::DL || dependantNodeInfo.kind == NodeKind::CUSTOM) {
             for (const auto& [name, tensorOutput] : outputsInfo) {
-                auto result = validateShapeWithDemultiplexer(tensorOutput->getShape_3(), dependantNodeInfo);
+                auto result = validateShapeWithDemultiplexer(tensorOutput->getShape(), dependantNodeInfo);
                 if (!result.ok()) {
                     return result;
                 }
@@ -1052,7 +1052,7 @@ std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string&
         newOwnedTensorInfo->setMappedName(mappedName);
         return newOwnedTensorInfo;
     }
-    Shape newShape = tensorInfo->getShape_3();
+    Shape newShape = tensorInfo->getShape();
     if (isConnectionFromDemultiplexer) {
         newShape.erase(newShape.begin());
     }
@@ -1308,11 +1308,11 @@ Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
                     if (nodeOutputsInfo.size() == 0) {
                         SPDLOG_ERROR("Node: {} library metadata reports no outputs", nodeName);
                         return;
-                    } else if (nodeOutputsInfo.begin()->second->getShape_3().size() < 3) {
+                    } else if (nodeOutputsInfo.begin()->second->getShape().size() < 3) {
                         SPDLOG_ERROR("Node: {} library metadata reports output with too small number of dimensions", nodeName);
                         return;
                     }
-                    dim = nodeOutputsInfo.begin()->second->getShape_3()[0];
+                    dim = nodeOutputsInfo.begin()->second->getShape()[0];
                 } else if (someNodeInfo.kind == NodeKind::ENTRY) {
                     dim = Dimension::any();
                 }

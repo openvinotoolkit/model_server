@@ -42,7 +42,7 @@ std::string getTensorMapString(const std::map<std::string, std::shared_ptr<Tenso
         auto inputInfo = pair.second;
         auto precision = inputInfo->getPrecision();
         auto layout = inputInfo->getLayout();
-        auto shape = inputInfo->getShape_3();
+        auto shape = inputInfo->getShape();
 
         stringStream << "\nname: " << name
                      << "; mapping: " << inputInfo->getMappedName()

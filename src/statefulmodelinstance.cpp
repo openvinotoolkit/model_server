@@ -133,7 +133,7 @@ Status StatefulModelInstance::loadOVExecutableNetwork(const ModelConfig& config)
     if (performLowLatencyTransformation) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "[Model: {} version: {}] Performing Low Latency Transformation on the network", getName(), getVersion());
         try {
-            ov::pass::LowLatency2().run_on_model(network_2);
+            ov::pass::LowLatency2().run_on_model(network);
         } catch (ov::Exception& ex) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error: {}; occurred during low latency transformation on model: {} version: {}", ex.what(), getName(), getVersion());
             return StatusCode::INTERNAL_ERROR;
@@ -187,7 +187,7 @@ const Status StatefulModelInstance::validate(const tensorflow::serving::PredictR
         getVersion(),
         SPECIAL_INPUT_NAMES,
         getModelConfig().getBatchingMode(),
-        getModelConfig().getShapes_2());
+        getModelConfig().getShapes());
 }
 
 Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,
@@ -213,55 +213,55 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     sequenceManagerLock.unlock();
 
     timer.start("get infer request");
-    ExecutingStreamIdGuard_2 executingStreamIdGuard_2(getInferRequestsQueue_2());
-    int executingInferId_2 = executingStreamIdGuard_2.getId();
-    (void)executingInferId_2;
-    ov::runtime::InferRequest& inferRequest_2 = executingStreamIdGuard_2.getInferRequest();
+    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+    int executingInferId = executingStreamIdGuard.getId();
+    (void)executingInferId;
+    ov::runtime::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     timer.stop("get infer request");
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("get infer request") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
 
     timer.start("preprocess");
-    status = preInferenceProcessing_2(inferRequest_2, sequence, sequenceProcessingSpec);
+    status = preInferenceProcessing(inferRequest, sequence, sequenceProcessingSpec);
     timer.stop("preprocess");
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Preprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("preprocess") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("preprocess") / 1000);
 
     timer.start("deserialize");
-    InputSink_2<ov::runtime::InferRequest&> inputSink_2(inferRequest_2);
+    InputSink<ov::runtime::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
-    status = deserializePredictRequest_2<ConcreteTensorProtoDeserializator_2>(*requestProto, getInputsInfo(), inputSink_2, isPipeline);
+    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
     timer.stop("deserialize");
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("deserialize") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
 
     timer.start("prediction");
-    status = performInference_2(inferRequest_2);
+    status = performInference(inferRequest);
     timer.stop("prediction");
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("prediction") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
 
     timer.start("serialize");
-    status = serializePredictResponse_2(inferRequest_2, getOutputsInfo(), responseProto);
+    status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
     timer.stop("serialize");
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("serialize") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
 
     timer.start("postprocess");
-    status = postInferenceProcessing_2(responseProto, inferRequest_2, sequence, sequenceProcessingSpec);
+    status = postInferenceProcessing(responseProto, inferRequest, sequence, sequenceProcessingSpec);
     timer.stop("postprocess");
     if (!status.ok())
         return status;
     SPDLOG_DEBUG("Postprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
-        requestProto->model_spec().name(), getVersion(), executingInferId_2, timer.elapsed<microseconds>("postprocess") / 1000);
+        requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("postprocess") / 1000);
 
     sequenceLock.unlock();
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
@@ -274,7 +274,7 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     return StatusCode::OK;
 }
 
-const Status StatefulModelInstance::preInferenceProcessing_2(ov::runtime::InferRequest& inferRequest, Sequence& sequence,
+const Status StatefulModelInstance::preInferenceProcessing(ov::runtime::InferRequest& inferRequest, Sequence& sequence,
     SequenceProcessingSpec& sequenceProcessingSpec) {
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_START) {
         // On SEQUENCE_START reset memory state of infer request to default
@@ -283,7 +283,7 @@ const Status StatefulModelInstance::preInferenceProcessing_2(ov::runtime::InferR
         }
     } else {
         // For next requests in the sequence set infer request memory state to the last state saved by the sequence
-        const sequence_memory_state_t_2& sequenceMemoryState = sequence.getMemoryState_2();
+        const sequence_memory_state_t& sequenceMemoryState = sequence.getMemoryState();
         for (auto&& state : inferRequest.query_state()) {
             auto stateName = state.get_name();
             if (!sequenceMemoryState.count(stateName))
@@ -294,7 +294,7 @@ const Status StatefulModelInstance::preInferenceProcessing_2(ov::runtime::InferR
     return StatusCode::OK;
 }
 
-const Status StatefulModelInstance::postInferenceProcessing_2(tensorflow::serving::PredictResponse* response,
+const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving::PredictResponse* response,
     ov::runtime::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec) {
     // Reset inferRequest states on SEQUENCE_END
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
@@ -304,7 +304,7 @@ const Status StatefulModelInstance::postInferenceProcessing_2(tensorflow::servin
         }
     } else {
         auto modelState = inferRequest.query_state();
-        sequence.updateMemoryState_2(modelState);
+        sequence.updateMemoryState(modelState);
     }
 
     // Include sequence_id in server response

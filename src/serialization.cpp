@@ -19,7 +19,7 @@
 
 namespace ovms {
 
-Status serializeBlobToTensorProto_2(
+Status serializeBlobToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& networkOutput,
     ov::runtime::Tensor& blob) {
@@ -55,7 +55,7 @@ Status serializeBlobToTensorProto_2(
     }
     }
     responseOutput.mutable_tensor_shape()->Clear();
-    auto& effectiveNetworkOutputShape = networkOutput->getShape_3();
+    auto& effectiveNetworkOutputShape = networkOutput->getShape();
     ov::Shape actualBlobShape = blob.get_shape();
     if (effectiveNetworkOutputShape.size() != actualBlobShape.size()) {
         SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in number of dimensions expected:{} vs actual:{}",
@@ -77,7 +77,7 @@ Status serializeBlobToTensorProto_2(
 }
 
 template <>
-Status OutputGetter_2<ov::runtime::InferRequest&>::get(const std::string& name, ov::runtime::Tensor& blob) {
+Status OutputGetter<ov::runtime::InferRequest&>::get(const std::string& name, ov::runtime::Tensor& blob) {
     try {
         blob = outputSource.get_tensor(name);
     } catch (const ov::Exception& e) {
@@ -88,7 +88,7 @@ Status OutputGetter_2<ov::runtime::InferRequest&>::get(const std::string& name, 
     return StatusCode::OK;
 }
 
-Status serializePredictResponse_2(
+Status serializePredictResponse(
     ov::runtime::InferRequest& inferRequest,
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response) {
@@ -96,13 +96,13 @@ Status serializePredictResponse_2(
     for (const auto& pair : outputMap) {
         auto networkOutput = pair.second;
         ov::runtime::Tensor blob;
-        OutputGetter_2<ov::runtime::InferRequest&> outputGetter(inferRequest);
+        OutputGetter<ov::runtime::InferRequest&> outputGetter(inferRequest);
         status = outputGetter.get(networkOutput->getName(), blob);
         if (!status.ok()) {
             return status;
         }
         auto& tensorProto = (*response->mutable_outputs())[networkOutput->getMappedName()];
-        status = serializeBlobToTensorProto_2(tensorProto, networkOutput, blob);
+        status = serializeBlobToTensorProto(tensorProto, networkOutput, blob);
         if (!status.ok()) {
             return status;
         }

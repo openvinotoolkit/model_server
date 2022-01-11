@@ -98,7 +98,7 @@ public:
     static Status fromString(const std::string& strIn, Shape& shapeOut);
 };
 
-using shapes_map_2_t = std::unordered_map<std::string, Shape>;
+using shapes_map_t = std::unordered_map<std::string, Shape>;
 
 struct ShapeInfo {
     Mode shapeMode = FIXED;

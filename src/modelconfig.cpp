@@ -326,7 +326,7 @@ Status ModelConfig::parseLayoutParameter(const rapidjson::Value& node) {
         }
         layouts[it->name.GetString()] = layout;
     }
-    setLayouts_2(layouts);
+    setLayouts(layouts);
 
     return StatusCode::OK;
 }
@@ -578,10 +578,10 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     SPDLOG_DEBUG("model_name: {}", getName());
     SPDLOG_DEBUG("batch_size: {}", getBatchSize().has_value() ? getBatchSize().value().toString() : "not configured");
     if (isShapeAnonymous()) {
-        SPDLOG_DEBUG("shape: {}", std::string(getShapes_2().begin()->second));
+        SPDLOG_DEBUG("shape: {}", std::string(getShapes().begin()->second));
     } else {
         SPDLOG_DEBUG("shape:");
-        for (auto& [shapeInput, shapeValue] : getShapes_2()) {
+        for (auto& [shapeInput, shapeValue] : getShapes()) {
             SPDLOG_DEBUG("  {}: {}", shapeInput, std::string(shapeValue));
         }
     }
@@ -596,7 +596,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     }
 
     bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize().has_value());
-    bool shapeSet = (getShapes_2().size() > 0);
+    bool shapeSet = (getShapes().size() > 0);
 
     SPDLOG_DEBUG("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
     if (batchSizeSet && shapeSet) {
@@ -652,11 +652,11 @@ Status ModelConfig::parseCustomLoaderOptionsConfig(const rapidjson::Value& node)
 }
 
 std::string ModelConfig::layoutConfigurationToString() const {
-    if (getLayout_2().isSet()) {
-        return getLayout_2().toString();
+    if (getLayout().isSet()) {
+        return getLayout().toString();
     }
     std::stringstream ss;
-    for (const auto& [name, layoutCfg] : getLayouts_2()) {
+    for (const auto& [name, layoutCfg] : getLayouts()) {
         ss << name << " " << layoutCfg.toString() << "; ";
     }
     return ss.str();

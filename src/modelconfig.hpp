@@ -686,7 +686,7 @@ public:
          * @return bool
          */
     bool anyShapeSetToAuto() const {
-        for (const auto& [name, shapeInfo] : getShapes_2()) {
+        for (const auto& [name, shapeInfo] : getShapes()) {
             if (shapeInfo.shapeMode == AUTO)
                 return true;
         }
@@ -698,7 +698,7 @@ public:
          * 
          * @return const shapes_map_t& 
          */
-    const shapes_info_map_t& getShapes_2() const {
+    const shapes_info_map_t& getShapes() const {
         return this->shapes;
     }
 
@@ -717,18 +717,18 @@ public:
          * @return bool
          */
     bool isShapeAuto(const std::string& name) const {
-        auto it = getShapes_2().find(name);
-        if (it == getShapes_2().end()) {
-            it = getShapes_2().find(ANONYMOUS_INPUT_NAME);
+        auto it = getShapes().find(name);
+        if (it == getShapes().end()) {
+            it = getShapes().find(ANONYMOUS_INPUT_NAME);
         }
-        if (it == getShapes_2().end()) {
+        if (it == getShapes().end()) {
             return false;
         }
         return it->second.shapeMode == Mode::AUTO;
     }
 
     bool isShapeAnonymous() const {
-        return getShapes_2().size() == 1 && getShapes_2().begin()->first == ANONYMOUS_INPUT_NAME;
+        return getShapes().size() == 1 && getShapes().begin()->first == ANONYMOUS_INPUT_NAME;
     }
 
     bool isShapeAnonymousFixed() const {
@@ -767,7 +767,7 @@ public:
          * 
          * @return const std::string& 
          */
-    const LayoutConfiguration& getLayout_2() const {
+    const LayoutConfiguration& getLayout() const {
         return this->layout;
     }
 
@@ -786,7 +786,7 @@ public:
          * 
          * @return const layouts_map_t& 
          */
-    const layouts_map_t& getLayouts_2() const {
+    const layouts_map_t& getLayouts() const {
         return this->layouts;
     }
 
@@ -795,7 +795,7 @@ public:
          * 
          * @param layouts 
          */
-    void setLayouts_2(const layouts_map_t& layouts) {
+    void setLayouts(const layouts_map_t& layouts) {
         this->layouts = layouts;
         this->layout = LayoutConfiguration();
     }

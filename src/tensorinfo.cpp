@@ -36,7 +36,7 @@ TensorInfo::TensorInfo(const std::string& name,
     name(name),
     mapping(""),
     precision(precision),
-    shape_3(shape),
+    shape(shape),
     layout(getDefaultLayout()) {}
 
 TensorInfo::TensorInfo(const std::string& name,
@@ -45,7 +45,7 @@ TensorInfo::TensorInfo(const std::string& name,
     name(name),
     mapping(""),
     precision(precision),
-    shape_3(shape),
+    shape(shape),
     layout(getDefaultLayout()) {
 }
 
@@ -56,7 +56,7 @@ TensorInfo::TensorInfo(const std::string& name,
     name(name),
     mapping(""),
     precision(precision),
-    shape_3(shape),
+    shape(shape),
     layout(layout) {
 }
 
@@ -67,7 +67,7 @@ TensorInfo::TensorInfo(const std::string& name,
     name(name),
     mapping(""),
     precision(precision),
-    shape_3(shape),
+    shape(shape),
     layout(layout) {
 }
 
@@ -79,7 +79,7 @@ TensorInfo::TensorInfo(const std::string& name,
     name(name),
     mapping(mapping),
     precision(precision),
-    shape_3(shape),
+    shape(shape),
     layout(layout) {
 }
 TensorInfo::TensorInfo(const std::string& name,
@@ -90,7 +90,7 @@ TensorInfo::TensorInfo(const std::string& name,
     name(name),
     mapping(mapping),
     precision(precision),
-    shape_3(shape),
+    shape(shape),
     layout(layout) {
 }
 TensorInfo::TensorInfo(const std::string& name,
@@ -100,7 +100,7 @@ TensorInfo::TensorInfo(const std::string& name,
     name(name),
     mapping(mapping),
     precision(precision),
-    shape_3(shape),
+    shape(shape),
     layout(getDefaultLayout()) {
 }
 
@@ -207,11 +207,11 @@ bool TensorInfo::isInfluencedByDemultiplexer() const {
 }
 
 void TensorInfo::setShape(const Shape& shape) {
-    this->shape_3 = shape;
+    this->shape = shape;
 }
 
-const Shape& TensorInfo::getShape_3() const {
-    return this->shape_3;
+const Shape& TensorInfo::getShape() const {
+    return this->shape;
 }
 
 void TensorInfo::setLayout(const layout_t& layout) {
@@ -220,7 +220,7 @@ void TensorInfo::setLayout(const layout_t& layout) {
 
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const Shape& shape) const {
     auto copy = std::make_shared<TensorInfo>(*this);
-    copy->shape_3 = shape;
+    copy->shape = shape;
     copy->layout = getDefaultLayout();
     return copy;
 }
@@ -228,12 +228,12 @@ std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const Shape& shap
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithEffectiveDimensionPrefix(const Dimension& dim) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->influencedByDemultiplexer = true;
-    copy->shape_3.emplace(copy->shape_3.begin(), dim);  // TODO check together with pipeline definiton apply demultiplexer to shape
+    copy->shape.emplace(copy->shape.begin(), dim);  // TODO check together with pipeline definiton apply demultiplexer to shape
     return copy;
 }
 
 bool TensorInfo::isTensorSpecEqual(const TensorInfo& other) const {
-    return (this->getShape_3() == other.getShape_3()) &&
+    return (this->getShape() == other.getShape()) &&
            (this->getPrecision() == other.getPrecision());
 }
 
@@ -276,7 +276,7 @@ std::shared_ptr<TensorInfo> TensorInfo::getUnspecifiedTensorInfo() {
 }
 
 const Dimension& TensorInfo::getBatchSize() const {
-    return getShape_3()[0];  // TODO use layout
+    return getShape()[0];  // TODO use layout
 }
 
 std::string TensorInfo::asString() const {
@@ -284,7 +284,7 @@ std::string TensorInfo::asString() const {
     ss
         << "name: " << getName() << "; "
         << "mapping_name: " << getMappedName() << "; "
-        << "shape: " << getShape_3().toString() << "; "
+        << "shape: " << getShape().toString() << "; "
         << "precision: " << getPrecisionAsString() << "; "
         << "layout: " << getStringFromLayout(getLayout());
     return ss.str();

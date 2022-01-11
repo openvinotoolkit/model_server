@@ -58,7 +58,7 @@ protected:
     /**
          * @brief Model input shape
          */
-    Shape shape_3;
+    Shape shape;
 
     /**
          * @brief Tensor layout
@@ -214,7 +214,7 @@ public:
          *
          * @return shape
          */
-    const Shape& getShape_3() const;
+    const Shape& getShape() const;
     void setShape(const Shape& shape);
 
     bool isInfluencedByDemultiplexer() const;

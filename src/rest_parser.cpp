@@ -42,8 +42,8 @@ RestParser::RestParser(const tensor_map_t& tensors) {
             }
         };
         input.mutable_tensor_content()->reserve(std::accumulate(
-                                                    tensor->getShape_3().cbegin(),
-                                                    tensor->getShape_3().cend(),
+                                                    tensor->getShape().cbegin(),
+                                                    tensor->getShape().cend(),
                                                     1,
                                                     fold) *
                                                 DataTypeSize(tensor->getPrecisionAsDataType()));

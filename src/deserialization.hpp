@@ -33,12 +33,12 @@
 
 namespace ovms {
 
-ov::runtime::Tensor makeBlob_2(const tensorflow::TensorProto& requestInput,
+ov::runtime::Tensor makeBlob(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo);
 
-class ConcreteTensorProtoDeserializator_2 {
+class ConcreteTensorProtoDeserializator {
 public:
-    static ov::runtime::Tensor deserializeTensorProto_2(
+    static ov::runtime::Tensor deserializeTensorProto(
         const tensorflow::TensorProto& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo) {
         switch (tensorInfo->getPrecision()) {
@@ -46,9 +46,9 @@ public:
         case ovms::Precision::I32:
         case ovms::Precision::U8:
         case ovms::Precision::I16:
-            return makeBlob_2(requestInput, tensorInfo);
+            return makeBlob(requestInput, tensorInfo);
         case ovms::Precision::I8: {
-            return makeBlob_2(requestInput, tensorInfo);
+            return makeBlob(requestInput, tensorInfo);
         }
         case ovms::Precision::FP16: {
             ov::Shape shape;
@@ -87,25 +87,25 @@ public:
 };
 
 template <class TensorProtoDeserializator>
-ov::runtime::Tensor deserializeTensorProto_2(
+ov::runtime::Tensor deserializeTensorProto(
     const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo) {
-    return TensorProtoDeserializator::deserializeTensorProto_2(requestInput, tensorInfo);
+    return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo);
 }
 
 template <class Requester>
-class InputSink_2 {
+class InputSink {
     Requester requester;
 
 public:
-    InputSink_2(Requester requester) :
+    InputSink(Requester requester) :
         requester(requester) {}
     Status give(const std::string& name, ov::runtime::Tensor& blob);  // TODO replace with one below
     Status give(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& tensor);
 };
 
 template <class TensorProtoDeserializator, class Sink>
-Status deserializePredictRequest_2(
+Status deserializePredictRequest(
     const tensorflow::serving::PredictRequest& request,
     const tensor_map_t& inputMap,
     Sink& inputSink, bool isPipeline) {
@@ -124,13 +124,13 @@ Status deserializePredictRequest_2(
 
             if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
                 SPDLOG_DEBUG("Request contains binary input: {}", name);
-                status = convertStringValToBlob_2(requestInput, blob, tensorInfo, isPipeline);
+                status = convertStringValToBlob(requestInput, blob, tensorInfo, isPipeline);
                 if (!status.ok()) {
                     SPDLOG_DEBUG("Binary inputs conversion failed.");
                     return status;
                 }
             } else {
-                blob = deserializeTensorProto_2<TensorProtoDeserializator>(
+                blob = deserializeTensorProto<TensorProtoDeserializator>(
                     requestInput, tensorInfo);
             }
 
