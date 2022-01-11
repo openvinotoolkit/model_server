@@ -326,7 +326,7 @@ public:
         try {
             ov::runtime::Tensor tensor(
                 modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getOvPrecision(),
-                modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getShape_3().createPartialShape().get_shape(),
+                modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getShape().createPartialShape().get_shape(),
                 const_cast<float*>(reinterpret_cast<const float*>(input.data())));
             inferRequest.set_tensor(DUMMY_MODEL_INPUT_NAME, tensor);
         } catch (...) {
@@ -369,8 +369,8 @@ public:
 
 class MockModelInstance : public ovms::ModelInstance {
 public:
-    MockModelInstance(ov::runtime::Core& ieCore_2) :
-        ModelInstance("UNUSED_NAME", 42, ieCore_2) {}
+    MockModelInstance(ov::runtime::Core& ieCore) :
+        ModelInstance("UNUSED_NAME", 42, ieCore) {}
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
         return validate(request);
     }
@@ -409,13 +409,13 @@ void TestCustomLoader::performPredict(const std::string modelName,
                 validationStatus == ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
     ASSERT_EQ(modelInstance->reloadModelIfRequired(validationStatus, &request, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 
-    ovms::ExecutingStreamIdGuard_2 executingStreamIdGuard(modelInstance->getInferRequestsQueue_2());
+    ovms::ExecutingStreamIdGuard executingStreamIdGuard(modelInstance->getInferRequestsQueue());
     ov::runtime::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     std::vector<float> input(inputSize);
     std::generate(input.begin(), input.end(), []() { return 1.; });
     ASSERT_THAT(input, Each(Eq(1.)));
     deserialize(input, inferRequest, modelInstance);
-    auto status = modelInstance->performInference_2(inferRequest);
+    auto status = modelInstance->performInference(inferRequest);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     size_t outputSize = batchSize * DUMMY_MODEL_OUTPUT_SIZE;
     serializeAndCheck(outputSize, inferRequest);

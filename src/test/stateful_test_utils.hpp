@@ -69,40 +69,40 @@ static bool CheckSequenceIdResponse(tensorflow::serving::PredictResponse& respon
 
 class DummyStatefulModel {
 private:
-    ov::runtime::Core ieCore_2;
+    ov::runtime::Core ieCore;
     const std::string MODEL_PATH = std::filesystem::current_path().u8string() + "/src/test/summator/1/summator.xml";
 
-    std::shared_ptr<ov::Model> network_2;
-    std::shared_ptr<ov::runtime::CompiledModel> execNetwork_2;
+    std::shared_ptr<ov::Model> network;
+    std::shared_ptr<ov::runtime::CompiledModel> execNetwork;
 
     const std::string stateName = "state";
 
 public:
     DummyStatefulModel() {
-        network_2 = ieCore_2.read_model(MODEL_PATH);
-        execNetwork_2 = std::make_shared<ov::runtime::CompiledModel>(ieCore_2.compile_model(network_2, "CPU"));
+        network = ieCore.read_model(MODEL_PATH);
+        execNetwork = std::make_shared<ov::runtime::CompiledModel>(ieCore.compile_model(network, "CPU"));
     }
 
-    ov::runtime::InferRequest createInferRequest_2() {
-        return execNetwork_2->create_infer_request();
+    ov::runtime::InferRequest createInferRequest() {
+        return execNetwork->create_infer_request();
     }
 
     const std::string getStateName() {
         return stateName;
     }
 
-    static ov::runtime::VariableState getVariableState_2(ov::runtime::InferRequest& inferRequest) {
+    static ov::runtime::VariableState getVariableState(ov::runtime::InferRequest& inferRequest) {
         std::vector<ov::runtime::VariableState> memoryState = inferRequest.query_state();
         return memoryState[0];
     }
 
-    static void resetVariableState_2(ov::runtime::InferRequest& inferRequest) {
+    static void resetVariableState(ov::runtime::InferRequest& inferRequest) {
         std::vector<ov::runtime::VariableState> memoryState = inferRequest.query_state();
         memoryState[0].reset();
     }
 
-    static void setVariableState_2(ov::runtime::InferRequest& inferRequest, std::vector<float> values) {
-        DummyStatefulModel::resetVariableState_2(inferRequest);
+    static void setVariableState(ov::runtime::InferRequest& inferRequest, std::vector<float> values) {
+        DummyStatefulModel::resetVariableState(inferRequest);
         std::vector<size_t> shape{1, 1};
 
         ov::runtime::Tensor tensor(

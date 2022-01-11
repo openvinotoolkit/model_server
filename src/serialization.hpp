@@ -33,9 +33,9 @@
 namespace ovms {
 
 template <typename T>
-class OutputGetter_2 {
+class OutputGetter {
 public:
-    OutputGetter_2(T t) :
+    OutputGetter(T t) :
         outputSource(t) {}
     Status get(const std::string& name, ov::runtime::Tensor& blob);  // TODO replace with shared_ptr version
     Status get(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& tensor);
@@ -44,19 +44,19 @@ private:
     T outputSource;
 };
 
-Status serializeBlobToTensorProto_2(
+Status serializeBlobToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& networkOutput,
     ov::runtime::Tensor& blob);
 
-Status serializePredictResponse_2(
+Status serializePredictResponse(
     ov::runtime::InferRequest& inferRequest,
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response);
 
 template <typename T>
-Status serializePredictResponse_2(
-    OutputGetter_2<T>& outputGetter,
+Status serializePredictResponse(
+    OutputGetter<T>& outputGetter,
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response) {
     Status status;
@@ -67,7 +67,7 @@ Status serializePredictResponse_2(
             return status;
         }
         auto& tensorProto = (*response->mutable_outputs())[outputInfo->getMappedName()];
-        status = serializeBlobToTensorProto_2(tensorProto, outputInfo, tensor);
+        status = serializeBlobToTensorProto(tensorProto, outputInfo, tensor);
         if (!status.ok()) {
             return status;
         }

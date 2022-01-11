@@ -42,7 +42,7 @@ protected:
     const std::unordered_map<std::string, std::string> nodeOutputNameAlias;
 
     std::shared_ptr<ModelInstance> model;
-    std::unique_ptr<NodeStreamIdGuard_2> nodeStreamIdGuard;
+    std::unique_ptr<NodeStreamIdGuard> nodeStreamIdGuard;
     std::unique_ptr<ModelInstanceUnloadGuard> modelUnloadGuard;
 
 public:

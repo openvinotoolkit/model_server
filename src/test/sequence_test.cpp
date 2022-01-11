@@ -36,19 +36,19 @@ TEST(Sequence, SequenceDisabled) {
 }
 
 TEST(Sequence, UpdateSequenceState) {
-    ovms::model_memory_state_t_2 newState;
+    ovms::model_memory_state_t newState;
     DummyStatefulModel model;
     std::vector<float> expectedState{10};
-    ov::runtime::InferRequest auxInferRequest = model.createInferRequest_2();
+    ov::runtime::InferRequest auxInferRequest = model.createInferRequest();
 
-    model.setVariableState_2(auxInferRequest, expectedState);
-    ov::runtime::VariableState memoryState = model.getVariableState_2(auxInferRequest);
+    model.setVariableState(auxInferRequest, expectedState);
+    ov::runtime::VariableState memoryState = model.getVariableState(auxInferRequest);
     newState.push_back(memoryState);
     uint64_t sequenceId = 3;
     ovms::Sequence sequence(sequenceId);
-    sequence.updateMemoryState_2(newState);
+    sequence.updateMemoryState(newState);
 
-    const ovms::sequence_memory_state_t_2& sequenceMemoryState = sequence.getMemoryState_2();
+    const ovms::sequence_memory_state_t& sequenceMemoryState = sequence.getMemoryState();
     const std::string stateName = model.getStateName();
     ASSERT_TRUE(sequenceMemoryState.count(stateName));
 

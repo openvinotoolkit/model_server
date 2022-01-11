@@ -26,7 +26,7 @@ RestParser::RestParser(const tensor_map_t& tensors) {
     for (const auto& kv : tensors) {
         const auto& name = kv.first;
         const auto& tensor = kv.second;
-        tensorPrecisionMap[name] = tensor->getPrecision_2();
+        tensorPrecisionMap[name] = tensor->getPrecision();
         auto& input = (*requestProto.mutable_inputs())[name];
         input.set_dtype(tensor->getPrecisionAsDataType());
 
@@ -42,8 +42,8 @@ RestParser::RestParser(const tensor_map_t& tensors) {
             }
         };
         input.mutable_tensor_content()->reserve(std::accumulate(
-                                                    tensor->getShape_3().cbegin(),
-                                                    tensor->getShape_3().cend(),
+                                                    tensor->getShape().cbegin(),
+                                                    tensor->getShape().cend(),
                                                     1,
                                                     fold) *
                                                 DataTypeSize(tensor->getPrecisionAsDataType()));

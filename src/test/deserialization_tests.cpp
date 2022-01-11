@@ -44,7 +44,7 @@ using testing::_;
 using testing::NiceMock;
 using testing::Throw;
 
-const std::vector<ovms::Precision> SUPPORTED_INPUT_PRECISIONS_2{
+const std::vector<ovms::Precision> SUPPORTED_INPUT_PRECISIONS{
     // ovms::Precision::UNSPECIFIED,
     // ovms::Precision::MIXED,
     ovms::Precision::FP32,
@@ -61,7 +61,7 @@ const std::vector<ovms::Precision> SUPPORTED_INPUT_PRECISIONS_2{
     // ovms::Precision::CUSTOM)
 };
 
-const std::vector<ovms::Precision> UNSUPPORTED_INPUT_PRECISIONS_2{
+const std::vector<ovms::Precision> UNSUPPORTED_INPUT_PRECISIONS{
     ovms::Precision::UNDEFINED,
     ovms::Precision::MIXED,
     // ovms::Precision::FP32,
@@ -78,7 +78,7 @@ const std::vector<ovms::Precision> UNSUPPORTED_INPUT_PRECISIONS_2{
     // ovms::Precision::CUSTOM)
 };
 
-class TensorflowGRPCPredict_2 : public ::testing::TestWithParam<ovms::Precision> {
+class TensorflowGRPCPredict : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     void SetUp() override {
         auto precision = ovms::Precision::FP32;
@@ -103,13 +103,13 @@ protected:
     bool isPipeline = false;
 };
 
-class DeserializeTFTensorProto_2 : public TensorflowGRPCPredict_2 {};
-class DeserializeTFTensorProtoNegative_2 : public TensorflowGRPCPredict_2 {};
+class DeserializeTFTensorProto : public TensorflowGRPCPredict {};
+class DeserializeTFTensorProtoNegative : public TensorflowGRPCPredict {};
 
-class GRPCPredictRequest_2 : public TensorflowGRPCPredict_2 {
+class GRPCPredictRequest : public TensorflowGRPCPredict {
 public:
     void SetUp() {
-        TensorflowGRPCPredict_2::SetUp();
+        TensorflowGRPCPredict::SetUp();
         (*request.mutable_inputs())[tensorName] = tensorProto;
     }
     void TearDown() {
@@ -120,92 +120,92 @@ public:
     PredictRequest request;
 };
 
-class GRPCPredictRequestNegative_2 : public GRPCPredictRequest_2 {};
+class GRPCPredictRequestNegative : public GRPCPredictRequest {};
 
-TEST_P(GRPCPredictRequestNegative_2, ShouldReturnDeserializationErrorForPrecision) {
+TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
     ov::runtime::InferRequest inferRequest;
-    InputSink_2<ov::runtime::InferRequest&> inputSink(inferRequest);
-    auto status = deserializePredictRequest_2<ConcreteTensorProtoDeserializator_2>(request, tensorMap, inputSink, isPipeline);
+    InputSink<ov::runtime::InferRequest&> inputSink(inferRequest);
+    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION)
         << "Unsupported OVMS precision:"
         << toString(testedPrecision)
         << " should return error";
 }
 
-TEST_P(GRPCPredictRequestNegative_2, ShouldReturnDeserializationErrorForSetBlobException) {
+TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobException) {
     ovms::Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
     ov::runtime::InferRequest inferRequest;
-    InputSink_2<ov::runtime::InferRequest&> inputSink(inferRequest);
-    auto status = deserializePredictRequest_2<ConcreteTensorProtoDeserializator_2>(request, tensorMap, inputSink, isPipeline);
+    InputSink<ov::runtime::InferRequest&> inputSink(inferRequest);
+    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION) << status.string();
 }
 
-class MockTensorProtoDeserializatorThrowingInferenceEngine_2 {
+class MockTensorProtoDeserializatorThrowingInferenceEngine {
 public:
     MOCK_METHOD(ov::runtime::Tensor,
-        deserializeTensorProto_2,
+        deserializeTensorProto,
         (const tensorflow::TensorProto&,
             const std::shared_ptr<ovms::TensorInfo>&));
 };
 
 // Enables static method mock
-class MockTensorProtoDeserializator_2 {
+class MockTensorProtoDeserializator {
 public:
-    static MockTensorProtoDeserializatorThrowingInferenceEngine_2* mock;
-    static ov::runtime::Tensor deserializeTensorProto_2(
+    static MockTensorProtoDeserializatorThrowingInferenceEngine* mock;
+    static ov::runtime::Tensor deserializeTensorProto(
         const tensorflow::TensorProto& requestInput,
         const std::shared_ptr<ovms::TensorInfo>& tensorInfo) {
-        return mock->deserializeTensorProto_2(requestInput, tensorInfo);
+        return mock->deserializeTensorProto(requestInput, tensorInfo);
     }
 };
 
-MockTensorProtoDeserializatorThrowingInferenceEngine_2* MockTensorProtoDeserializator_2::mock = nullptr;
+MockTensorProtoDeserializatorThrowingInferenceEngine* MockTensorProtoDeserializator::mock = nullptr;
 
-TEST_F(GRPCPredictRequestNegative_2, ShouldReturnDeserializationErrorForSetBlobException2) {
+TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobException2) {
     ov::runtime::Core ieCore;
     std::shared_ptr<ov::Model> network = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
     ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
     ov::runtime::InferRequest inferRequest = execNetwork.create_infer_request();
-    MockTensorProtoDeserializatorThrowingInferenceEngine_2 mockTPobject;
-    MockTensorProtoDeserializator_2::mock = &mockTPobject;
-    EXPECT_CALL(mockTPobject, deserializeTensorProto_2(_, _))
+    MockTensorProtoDeserializatorThrowingInferenceEngine mockTPobject;
+    MockTensorProtoDeserializator::mock = &mockTPobject;
+    EXPECT_CALL(mockTPobject, deserializeTensorProto(_, _))
         .Times(1)
         .WillRepeatedly(
             Throw(ov::Exception("")));
-    InputSink_2<ov::runtime::InferRequest&> inputSink(inferRequest);
+    InputSink<ov::runtime::InferRequest&> inputSink(inferRequest);
     Status status;
-    status = deserializePredictRequest_2<MockTensorProtoDeserializator_2>(
+    status = deserializePredictRequest<MockTensorProtoDeserializator>(
         request, tensorMap, inputSink, isPipeline);
     EXPECT_EQ(status, ovms::StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR) << status.string();
 }
 
-TEST_F(GRPCPredictRequest_2, ShouldSuccessForSupportedPrecision) {
+TEST_F(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
     ov::runtime::Core ieCore;
     std::shared_ptr<ov::Model> network = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
     ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
     ov::runtime::InferRequest inferRequest = execNetwork.create_infer_request();
-    InputSink_2<ov::runtime::InferRequest&> inputSink(inferRequest);
-    auto status = deserializePredictRequest_2<ConcreteTensorProtoDeserializator_2>(request, tensorMap, inputSink, isPipeline);
+    InputSink<ov::runtime::InferRequest&> inputSink(inferRequest);
+    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
     EXPECT_TRUE(status.ok());
 }
 
-TEST_P(DeserializeTFTensorProtoNegative_2, ShouldReturnNullptrForPrecision) {
+TEST_P(DeserializeTFTensorProtoNegative, ShouldReturnNullptrForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
-    ov::runtime::Tensor tensor = deserializeTensorProto_2<ConcreteTensorProtoDeserializator_2>(tensorProto, tensorMap[tensorName]);
+    ov::runtime::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName]);
     EXPECT_FALSE((bool)tensor) << "Unsupported OVMS precision:"
                                << toString(testedPrecision)
                                << " should return nullptr";
 }
 
-TEST_P(DeserializeTFTensorProto_2, ShouldReturnValidBlob) {
+TEST_P(DeserializeTFTensorProto, ShouldReturnValidBlob) {
     ovms::Precision testedPrecision = GetParam();
     SetUpTensorProto(TensorInfo::getPrecisionAsDataType(testedPrecision));
     tensorMap[tensorName]->setPrecision(testedPrecision);
-    ov::runtime::Tensor tensor = deserializeTensorProto_2<ConcreteTensorProtoDeserializator_2>(tensorProto, tensorMap[tensorName]);
+    ov::runtime::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName]);
     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
                               << toString(testedPrecision)
                               << " should return valid blob ptr";
@@ -213,32 +213,32 @@ TEST_P(DeserializeTFTensorProto_2, ShouldReturnValidBlob) {
 
 INSTANTIATE_TEST_SUITE_P(
     TestDeserialize,
-    GRPCPredictRequestNegative_2,
-    ::testing::ValuesIn(UNSUPPORTED_INPUT_PRECISIONS_2),
-    [](const ::testing::TestParamInfo<GRPCPredictRequestNegative_2::ParamType>& info) {
+    GRPCPredictRequestNegative,
+    ::testing::ValuesIn(UNSUPPORTED_INPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<GRPCPredictRequestNegative::ParamType>& info) {
         return toString(info.param);
     });
 
 INSTANTIATE_TEST_SUITE_P(
     TestDeserialize,
-    GRPCPredictRequest_2,
-    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS_2),
-    [](const ::testing::TestParamInfo<GRPCPredictRequest_2::ParamType>& info) {
+    GRPCPredictRequest,
+    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<GRPCPredictRequest::ParamType>& info) {
         return toString(info.param);
     });
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    DeserializeTFTensorProtoNegative_2,
-    ::testing::ValuesIn(UNSUPPORTED_INPUT_PRECISIONS_2),
-    [](const ::testing::TestParamInfo<DeserializeTFTensorProtoNegative_2::ParamType>& info) {
+    DeserializeTFTensorProtoNegative,
+    ::testing::ValuesIn(UNSUPPORTED_INPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<DeserializeTFTensorProtoNegative::ParamType>& info) {
         return toString(info.param);
     });
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    DeserializeTFTensorProto_2,
-    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS_2),
-    [](const ::testing::TestParamInfo<DeserializeTFTensorProto_2::ParamType>& info) {
+    DeserializeTFTensorProto,
+    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<DeserializeTFTensorProto::ParamType>& info) {
         return toString(info.param);
     });

@@ -40,7 +40,7 @@ Status validate(
     const model_version_t servableVersion,
     const std::set<const char*>& optionalAllowedInputNames = {},
     const Mode batchingMode = Mode::FIXED,
-    const shapes_info_map_2_t& shapeInfo = shapes_info_map_2_t());
+    const shapes_info_map_t& shapeInfo = shapes_info_map_t());
 
 }  // namespace request_validation_utils
 }  // namespace ovms

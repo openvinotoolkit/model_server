@@ -33,8 +33,8 @@ public:
     /**
          * @brief A default constructor
          */
-    StatefulModelInstance(const std::string& name, model_version_t version, ov::runtime::Core& ieCore_2, GlobalSequencesViewer* globalSequencesViewer) :
-        ModelInstance(name, version, ieCore_2),
+    StatefulModelInstance(const std::string& name, model_version_t version, ov::runtime::Core& ieCore, GlobalSequencesViewer* globalSequencesViewer) :
+        ModelInstance(name, version, ieCore),
         globalSequencesViewer(globalSequencesViewer) {
         sequenceManager = std::make_shared<SequenceManager>(config.getMaxSequenceNumber(), name, version);
     }
@@ -53,7 +53,7 @@ public:
 
         Always returns StatusCode::OK
     */
-    const Status preInferenceProcessing_2(ov::runtime::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
+    const Status preInferenceProcessing(ov::runtime::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
 
     /*
     Performs pre inference operations:
@@ -63,7 +63,7 @@ public:
 
         Always returns StatusCode::OK
     */
-    const Status postInferenceProcessing_2(tensorflow::serving::PredictResponse* response,
+    const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response,
         ov::runtime::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
 
     Status infer(const tensorflow::serving::PredictRequest* requestProto,

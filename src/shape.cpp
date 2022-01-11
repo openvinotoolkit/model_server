@@ -438,7 +438,7 @@ Status Shape::fromString(const std::string& strIn, Shape& shapeOut) {
     return StatusCode::OK;
 }
 
-ShapeInfo_2::operator std::string() const {
+ShapeInfo::operator std::string() const {
     std::stringstream ss;
     ss << this->shape.toString() << " (" << (this->shapeMode == Mode::FIXED ? "fixed" : "auto") << ")";
     return ss.str();

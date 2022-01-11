@@ -86,17 +86,17 @@ protected:
     /**
          * @brief Inference Engine core object
          */
-    ov::runtime::Core& ieCore_2;
+    ov::runtime::Core& ieCore;
 
     /**
          * @brief Inference Engine CNNNetwork object
          */
-    std::shared_ptr<ov::Model> network_2;
+    std::shared_ptr<ov::Model> network;
 
     /**
          * @brief Inference Engine device network
          */
-    std::shared_ptr<ov::runtime::CompiledModel> execNetwork_2;
+    std::shared_ptr<ov::runtime::CompiledModel> execNetwork;
 
     /**
          * @brief Model name
@@ -237,7 +237,7 @@ private:
     /**
          * @brief OpenVINO inference execution stream pool
          */
-    std::unique_ptr<OVInferRequestsQueue_2> inferRequestsQueue_2;
+    std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
 
     /**
          * @brief Holds current usage count in predict requests
@@ -303,8 +303,8 @@ public:
     /**
          * @brief A default constructor
          */
-    ModelInstance(const std::string& name, model_version_t version, ov::runtime::Core& ieCore_2) :
-        ieCore_2(ieCore_2),
+    ModelInstance(const std::string& name, model_version_t version, ov::runtime::Core& ieCore) :
+        ieCore(ieCore),
         name(name),
         version(version),
         subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)) { isCustomLoaderConfigChanged = false; }
@@ -386,7 +386,7 @@ public:
          * @return batch size
          */
     virtual Dimension getBatchSize() const {
-        return Dimension(ov::get_batch(network_2));
+        return Dimension(ov::get_batch(network));
     }
 
     /**
@@ -430,8 +430,8 @@ public:
          * 
          * @return OVStreamsQueue
          */
-    OVInferRequestsQueue_2& getInferRequestsQueue_2() {
-        return *inferRequestsQueue_2;
+    OVInferRequestsQueue& getInferRequestsQueue() {
+        return *inferRequestsQueue;
     }
 
     /**
@@ -514,7 +514,7 @@ public:
 
     const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
 
-    Status performInference_2(ov::runtime::InferRequest& inferRequest);
+    Status performInference(ov::runtime::InferRequest& inferRequest);
 
     virtual Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,

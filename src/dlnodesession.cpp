@@ -55,7 +55,7 @@ ModelInstance& DLNodeSession::getModelInstance() {
 }
 
 ov::runtime::InferRequest& DLNodeSession::getInferRequest(const uint microseconds) {
-    auto& inferRequestsQueue = this->model->getInferRequestsQueue_2();
+    auto& inferRequestsQueue = this->model->getInferRequestsQueue();
     auto streamIdOpt = this->nodeStreamIdGuard->tryGetId(microseconds);
     if (!streamIdOpt) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to get streamId on already executed node: {} session: {}", getName(), getSessionKey());
@@ -80,7 +80,7 @@ Status DLNodeSession::requestExecuteRequiredResources() {
     if (!status.ok()) {
         return status;
     }
-    this->nodeStreamIdGuard = std::make_unique<NodeStreamIdGuard_2>(model->getInferRequestsQueue_2());
+    this->nodeStreamIdGuard = std::make_unique<NodeStreamIdGuard>(model->getInferRequestsQueue());
     return status;
 }
 
@@ -147,7 +147,7 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
 }
 
 Status DLNodeSession::validate(const std::shared_ptr<ov::runtime::Tensor>& tensor, const TensorInfo& tensorInfo) {
-    if (ovmsPrecisionToIE2Precision(tensorInfo.getPrecision_2()) != tensor->get_element_type()) {
+    if (ovmsPrecisionToIE2Precision(tensorInfo.getPrecision()) != tensor->get_element_type()) {
         std::stringstream ss;
         ss << "Node: " << getName() << " input: " << tensorInfo.getName()
            << " Invalid precision -"
@@ -160,14 +160,14 @@ Status DLNodeSession::validate(const std::shared_ptr<ov::runtime::Tensor>& tenso
 
     // If batch size differs, check if remaining dimensions are equal
     const auto& dims = tensor->get_shape();
-    if (!tensorInfo.getShape_3()[0].match(dims[0])) {
+    if (!tensorInfo.getShape()[0].match(dims[0])) {
         // If remaining dimensions are equal, it is invalid batch size
         std::stringstream ss;
         size_t batchSkippedPosition = 1;
-        if (!tensorInfo.getShape_3().match(dims, batchSkippedPosition)) {
+        if (!tensorInfo.getShape().match(dims, batchSkippedPosition)) {
             ss << "Node: " << getName() << " input: " << tensorInfo.getName()
                << " Invalid batch size -"
-               << " Expected: " << tensorInfo.getShape_3()[0].toString()
+               << " Expected: " << tensorInfo.getShape()[0].toString()
                << "; Actual: " << dims[0];
             const std::string details = ss.str();
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
@@ -176,7 +176,7 @@ Status DLNodeSession::validate(const std::shared_ptr<ov::runtime::Tensor>& tenso
             // Otherwise whole shape is incorrect
             ss << "Node: " << getName() << " input: " << tensorInfo.getName()
                << " Invalid shape -"
-               << " Expected: " << tensorInfo.getShape_3().toString()
+               << " Expected: " << tensorInfo.getShape().toString()
                << "; Actual: " << TensorInfo::shapeToString(dims);
             const std::string details = ss.str();
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
@@ -184,11 +184,11 @@ Status DLNodeSession::validate(const std::shared_ptr<ov::runtime::Tensor>& tenso
         }
     }
 
-    if (!tensorInfo.getShape_3().match(dims)) {
+    if (!tensorInfo.getShape().match(dims)) {
         std::stringstream ss;
         ss << "Node: " << getName() << " input: " << tensorInfo.getName()
            << " Invalid shape -"
-           << " Expected: " << tensorInfo.getShape_3().toString()
+           << " Expected: " << tensorInfo.getShape().toString()
            << "; Actual: " << TensorInfo::shapeToString(dims);
         const std::string details = ss.str();
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
@@ -212,7 +212,7 @@ Status DLNodeSession::execute(PipelineEventQueue& notifyEndQueue, uint waitForSt
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Could not acquire stream Id right away", getName());
         return StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET;
     }
-    auto& inferRequestsQueue = this->model->getInferRequestsQueue_2();
+    auto& inferRequestsQueue = this->model->getInferRequestsQueue();
     auto& inferRequest = inferRequestsQueue.getInferRequest(streamIdOpt.value());
     status = setInputsForInference(inferRequest);
     if (!status.ok()) {

@@ -44,6 +44,6 @@ public:
     std::string toString() const;
 };
 
-using layouts_map_2_t = std::unordered_map<std::string, LayoutConfiguration>;
+using layouts_map_t = std::unordered_map<std::string, LayoutConfiguration>;
 
 }  // namespace ovms

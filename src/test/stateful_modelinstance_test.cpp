@@ -95,7 +95,7 @@ public:
     inputs_info_t modelInput;
     std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
     std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
-    std::unique_ptr<ov::runtime::Core> ieCore_2;
+    std::unique_ptr<ov::runtime::Core> ieCore;
 
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
@@ -106,7 +106,7 @@ public:
     }
     void SetUp() override {
         TestWithTempDir::SetUp();
-        ieCore_2 = std::make_unique<ov::runtime::Core>();
+        ieCore = std::make_unique<ov::runtime::Core>();
         modelVersion = 1;
         // Prepare manager
         modelPath = directoryPath + "/dummy/";
@@ -127,24 +127,24 @@ public:
     inputs_info_t modelInput;
     std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
     std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
-    std::unique_ptr<ov::runtime::Core> ieCore_2;
+    std::unique_ptr<ov::runtime::Core> ieCore;
 
     void SetUp() override {
         modelInput = {};
-        ieCore_2 = std::make_unique<ov::runtime::Core>();
+        ieCore = std::make_unique<ov::runtime::Core>();
     }
 
     void TearDown() override {
         modelInput.clear();
-        ieCore_2.reset();
+        ieCore.reset();
     }
 };
 
 class MockedValidateStatefulModelInstance : public ovms::StatefulModelInstance {
 public:
     ovms::GlobalSequencesViewer sequencesViewer;
-    MockedValidateStatefulModelInstance(const std::string& name, ovms::model_version_t version, ov::runtime::Core& ieCore_2) :
-        StatefulModelInstance(name, version, ieCore_2, &sequencesViewer) {}
+    MockedValidateStatefulModelInstance(const std::string& name, ovms::model_version_t version, ov::runtime::Core& ieCore) :
+        StatefulModelInstance(name, version, ieCore, &sequencesViewer) {}
 
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request, ovms::SequenceProcessingSpec& processingSpec) {
         return validate(request, processingSpec);
@@ -163,8 +163,8 @@ public:
     ovms::GlobalSequencesViewer sequencesViewer;
     std::unique_ptr<MockedSequenceManager> mockedSequenceManager = std::make_unique<MockedSequenceManager>(60, "dummy", 1);
 
-    MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version, ov::runtime::Core& ieCore_2) :
-        StatefulModelInstance(name, version, ieCore_2, &sequencesViewer) {}
+    MockedStatefulModelInstance(const std::string& name, ovms::model_version_t version, ov::runtime::Core& ieCore) :
+        StatefulModelInstance(name, version, ieCore, &sequencesViewer) {}
 
     const std::unique_ptr<MockedSequenceManager>& getMockedSequenceManager() const {
         return this->mockedSequenceManager;
@@ -174,10 +174,10 @@ public:
         return static_cast<MockedGlobalSequencesViewer*>(this->globalSequencesViewer);
     }
 
-    void injectSequence_2(uint64_t sequenceId, ovms::model_memory_state_t_2 state) {
+    void injectSequence(uint64_t sequenceId, ovms::model_memory_state_t state) {
         ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, sequenceId);
         getMockedSequenceManager()->mockCreateSequence(spec);
-        getMockedSequenceManager()->getSequence(sequenceId).updateMemoryState_2(state);
+        getMockedSequenceManager()->getSequence(sequenceId).updateMemoryState(state);
     }
 
     // This method must be kept up to date with StatefulModelInstance::infer for tests to function properly.
@@ -220,39 +220,39 @@ public:
         sequenceManagerLock.unlock();
 
         timer.start("get infer request");
-        ovms::ExecutingStreamIdGuard_2 executingStreamIdGuard_2(getInferRequestsQueue_2());
-        ov::runtime::InferRequest& inferRequest_2 = executingStreamIdGuard_2.getInferRequest();
+        ovms::ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+        ov::runtime::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
         timer.stop("get infer request");
 
         timer.start("preprocess");
-        status = preInferenceProcessing_2(inferRequest_2, sequence, sequenceProcessingSpec);
+        status = preInferenceProcessing(inferRequest, sequence, sequenceProcessingSpec);
         if (!status.ok())
             return status;
         timer.stop("preprocess");
 
         timer.start("deserialize");
-        ovms::InputSink_2<ov::runtime::InferRequest&> inputSink_2(inferRequest_2);
-        (void)inputSink_2;
+        ovms::InputSink<ov::runtime::InferRequest&> inputSink(inferRequest);
+        (void)inputSink;
         bool isPipeline = false;
-        status = ovms::deserializePredictRequest_2<ovms::ConcreteTensorProtoDeserializator_2>(*requestProto, getInputsInfo(), inputSink_2, isPipeline);
+        status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
         if (!status.ok())
             return status;
         timer.stop("deserialize");
 
         timer.start("prediction");
-        status = performInference_2(inferRequest_2);
+        status = performInference(inferRequest);
         if (!status.ok())
             return status;
         timer.stop("prediction");
 
         timer.start("serialize");
-        status = serializePredictResponse_2(inferRequest_2, getOutputsInfo(), responseProto);
+        status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
         timer.stop("serialize");
         if (!status.ok())
             return status;
 
         timer.start("postprocess");
-        status = postInferenceProcessing_2(responseProto, inferRequest_2, sequence, sequenceProcessingSpec);
+        status = postInferenceProcessing(responseProto, inferRequest, sequence, sequenceProcessingSpec);
         timer.stop("postprocess");
         if (!status.ok())
             return status;
@@ -279,7 +279,7 @@ public:
     DummyStatefulModel realModel;
     std::shared_ptr<MockedStatefulModelInstance> modelInstance;
     std::vector<size_t> shape;
-    std::unique_ptr<ov::runtime::Core> ieCore_2;
+    std::unique_ptr<ov::runtime::Core> ieCore;
 
     std::vector<float> defaultState{0};
     std::vector<float> currentState{10};
@@ -288,8 +288,8 @@ public:
     size_t elementsCount;
 
     void SetUp() override {
-        ieCore_2 = std::make_unique<ov::runtime::Core>();
-        modelInstance = std::make_shared<MockedStatefulModelInstance>("model", 1, *ieCore_2);
+        ieCore = std::make_unique<ov::runtime::Core>();
+        modelInstance = std::make_shared<MockedStatefulModelInstance>("model", 1, *ieCore);
         // Prepare states blob desc
         shape = std::vector<size_t>{1, 1};
         elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
@@ -1040,7 +1040,7 @@ TEST_F(StatefulModelInstanceTempDir, statefulInferStandardFlow) {
 
 TEST_F(StatefulModelInstanceTempDir, loadModel) {
     ovms::GlobalSequencesViewer sequencesViewer;
-    ovms::StatefulModelInstance modelInstance(dummyModelName, modelVersion, *ieCore_2, &sequencesViewer);
+    ovms::StatefulModelInstance modelInstance(dummyModelName, modelVersion, *ieCore, &sequencesViewer);
 
     const ovms::ModelConfig config1{
         dummyModelName,
@@ -1084,7 +1084,7 @@ TEST_F(StatefulModelInstanceTempDir, loadModel) {
 }
 
 TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
-    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore_2);
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore);
     uint64_t seqId = 1;
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, seqId);
 
@@ -1111,7 +1111,7 @@ TEST_F(StatefulModelInstanceInputValidation, positiveValidate) {
 }
 
 TEST_F(StatefulModelInstanceInputValidation, missingSeqId) {
-    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore_2);
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceControl(&request, ovms::SEQUENCE_END);
@@ -1121,7 +1121,7 @@ TEST_F(StatefulModelInstanceInputValidation, missingSeqId) {
 }
 
 TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdEnd) {
-    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore_2);
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceControl(&request, ovms::SEQUENCE_END);
@@ -1133,7 +1133,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdEnd) {
 }
 
 TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdNoControl) {
-    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore_2);
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     setRequestSequenceControl(&request, ovms::NO_CONTROL_INPUT);
@@ -1145,7 +1145,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongSeqIdNoControl) {
 }
 
 TEST_F(StatefulModelInstanceInputValidation, wrongProtoKeywords) {
-    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore_2);
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     auto& input = (*request.mutable_inputs())["sequenceid"];
@@ -1157,7 +1157,7 @@ TEST_F(StatefulModelInstanceInputValidation, wrongProtoKeywords) {
 }
 
 TEST_F(StatefulModelInstanceInputValidation, badControlInput) {
-    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore_2);
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
     request = preparePredictRequest(modelInput);
@@ -1170,7 +1170,7 @@ TEST_F(StatefulModelInstanceInputValidation, badControlInput) {
 }
 
 TEST_F(StatefulModelInstanceInputValidation, invalidProtoTypes) {
-    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore_2);
+    std::shared_ptr<MockedValidateStatefulModelInstance> modelInstance = std::make_shared<MockedValidateStatefulModelInstance>("model", 1, *ieCore);
     ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, 1);
     {
         tensorflow::serving::PredictRequest request = preparePredictRequest(modelInput);
@@ -1197,11 +1197,11 @@ TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
     uint32_t sequenceControlInput = ovms::SEQUENCE_START;
     uint64_t sequenceId = 42;
     ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
-    ov::runtime::InferRequest inferRequest = realModel.createInferRequest_2();
-    realModel.setVariableState_2(inferRequest, currentState);
+    ov::runtime::InferRequest inferRequest = realModel.createInferRequest();
+    realModel.setVariableState(inferRequest, currentState);
 
     // Check if InferRequest has been initialized properly
-    const ovms::model_memory_state_t_2& irMemoryState = inferRequest.query_state();
+    const ovms::model_memory_state_t& irMemoryState = inferRequest.query_state();
     EXPECT_EQ(irMemoryState.size(), 1);
     EXPECT_EQ(irMemoryState[0].get_name(), realModel.getStateName());
 
@@ -1215,7 +1215,7 @@ TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
 
     // Perform preprocessing (load state from sequence to infer request)
     ovms::Sequence sequence(sequenceId);
-    modelInstance->preInferenceProcessing_2(inferRequest, sequence, sequenceProcessingSpec);
+    modelInstance->preInferenceProcessing(inferRequest, sequence, sequenceProcessingSpec);
 
     // Check if InferRequest memory state has been reset to default
     state = irMemoryState[0].get_state();
@@ -1225,17 +1225,17 @@ TEST_F(StatefulModelInstanceTest, PreprocessingFirstRequest) {
 }
 
 TEST_F(StatefulModelInstanceTest, PreprocessingIntermediateRequest) {
-    ov::runtime::InferRequest inferRequest = realModel.createInferRequest_2();
+    ov::runtime::InferRequest inferRequest = realModel.createInferRequest();
     for (uint32_t sequenceControlInput : {ovms::NO_CONTROL_INPUT, ovms::SEQUENCE_END}) {
         // Prepare model instance and processing spec
         uint64_t sequenceId = 42;
         ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
 
         // Reset inferRequest state to default for new iteration
-        realModel.resetVariableState_2(inferRequest);
+        realModel.resetVariableState(inferRequest);
 
         // Check if InferRequest has been initialized properly
-        const ovms::model_memory_state_t_2& irMemoryState = inferRequest.query_state();
+        const ovms::model_memory_state_t& irMemoryState = inferRequest.query_state();
         EXPECT_EQ(irMemoryState.size(), 1);
         EXPECT_EQ(irMemoryState[0].get_name(), realModel.getStateName());
 
@@ -1248,16 +1248,16 @@ TEST_F(StatefulModelInstanceTest, PreprocessingIntermediateRequest) {
         EXPECT_EQ(currentTensorIrData, defaultState);
 
         // Inject sequence with newState as the last state written to sequence memory state
-        ovms::model_memory_state_t_2 memoryState;
-        ov::runtime::InferRequest auxInferRequest = realModel.createInferRequest_2();
-        realModel.setVariableState_2(auxInferRequest, newState);
-        ov::runtime::VariableState variableState = realModel.getVariableState_2(auxInferRequest);
+        ovms::model_memory_state_t memoryState;
+        ov::runtime::InferRequest auxInferRequest = realModel.createInferRequest();
+        realModel.setVariableState(auxInferRequest, newState);
+        ov::runtime::VariableState variableState = realModel.getVariableState(auxInferRequest);
         memoryState.push_back(variableState);
-        modelInstance->injectSequence_2(sequenceId, memoryState);
+        modelInstance->injectSequence(sequenceId, memoryState);
 
         // Perform preprocessing (load state from sequence to infer request)
         ovms::Sequence& sequence = modelInstance->getMockedSequenceManager()->getSequence(sequenceId);
-        modelInstance->preInferenceProcessing_2(inferRequest, sequence, sequenceProcessingSpec);
+        modelInstance->preInferenceProcessing(inferRequest, sequence, sequenceProcessingSpec);
 
         // Check if InferRequest memory state has been updated to sequence memory state
         state = irMemoryState[0].get_state();
@@ -1274,11 +1274,11 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
     ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
 
     // Initialize InferRequest with current state and default state
-    ov::runtime::InferRequest inferRequest = realModel.createInferRequest_2();
-    realModel.setVariableState_2(inferRequest, currentState);
+    ov::runtime::InferRequest inferRequest = realModel.createInferRequest();
+    realModel.setVariableState(inferRequest, currentState);
 
     // Check if InferRequest has been initialized properly
-    const ovms::model_memory_state_t_2& irMemoryState = inferRequest.query_state();
+    const ovms::model_memory_state_t& irMemoryState = inferRequest.query_state();
     EXPECT_EQ(irMemoryState.size(), 1);
     EXPECT_EQ(irMemoryState[0].get_name(), realModel.getStateName());
 
@@ -1292,7 +1292,7 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
 
     tensorflow::serving::PredictResponse response;
     ovms::Sequence sequence(sequenceId);
-    modelInstance->postInferenceProcessing_2(&response, inferRequest, sequence, sequenceProcessingSpec);
+    modelInstance->postInferenceProcessing(&response, inferRequest, sequence, sequenceProcessingSpec);
 
     EXPECT_TRUE(CheckSequenceIdResponse(response, sequenceId));
 
@@ -1304,19 +1304,19 @@ TEST_F(StatefulModelInstanceTest, PostprocessingLastRequest) {
 }
 
 TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
-    ov::runtime::InferRequest inferRequest = realModel.createInferRequest_2();
+    ov::runtime::InferRequest inferRequest = realModel.createInferRequest();
     for (uint32_t sequenceControlInput : {ovms::NO_CONTROL_INPUT, ovms::SEQUENCE_START}) {
         // Prepare model instance and processing spec
         uint64_t sequenceId = 33;
         ovms::SequenceProcessingSpec sequenceProcessingSpec(sequenceControlInput, sequenceId);
 
         // Reset inferRequest state to default for new iteration
-        realModel.resetVariableState_2(inferRequest);
+        realModel.resetVariableState(inferRequest);
         // Set newState as current state in the inferRequest
-        realModel.setVariableState_2(inferRequest, newState);
+        realModel.setVariableState(inferRequest, newState);
 
         // Check if InferRequest has been initialized properly
-        const ovms::model_memory_state_t_2& irMemoryState = inferRequest.query_state();
+        const ovms::model_memory_state_t& irMemoryState = inferRequest.query_state();
         EXPECT_EQ(irMemoryState.size(), 1);
         EXPECT_EQ(irMemoryState[0].get_name(), realModel.getStateName());
 
@@ -1329,15 +1329,15 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         EXPECT_EQ(currentTensorIrData, newState);
 
         // Inject sequence with current state as the last state written to sequence memory state
-        ovms::model_memory_state_t_2 memoryState;
-        ov::runtime::InferRequest auxInferRequest = realModel.createInferRequest_2();
-        realModel.setVariableState_2(auxInferRequest, currentState);
-        ov::runtime::VariableState variableState = realModel.getVariableState_2(auxInferRequest);
+        ovms::model_memory_state_t memoryState;
+        ov::runtime::InferRequest auxInferRequest = realModel.createInferRequest();
+        realModel.setVariableState(auxInferRequest, currentState);
+        ov::runtime::VariableState variableState = realModel.getVariableState(auxInferRequest);
         memoryState.push_back(variableState);
-        modelInstance->injectSequence_2(sequenceId, memoryState);
+        modelInstance->injectSequence(sequenceId, memoryState);
         ovms::Sequence& sequence = modelInstance->getMockedSequenceManager()->getSequence(sequenceId);
         // Sanity check for current state
-        const ovms::sequence_memory_state_t_2& currentSequenceMemoryState = sequence.getMemoryState_2();
+        const ovms::sequence_memory_state_t& currentSequenceMemoryState = sequence.getMemoryState();
         EXPECT_TRUE(currentSequenceMemoryState.count(realModel.getStateName()));
         std::shared_ptr<ov::runtime::Tensor> sanityTensor = currentSequenceMemoryState.at(realModel.getStateName());
         std::vector<float> sanityTensorIrData;
@@ -1345,10 +1345,10 @@ TEST_F(StatefulModelInstanceTest, PostprocessingStartAndNoControl) {
         EXPECT_EQ(sanityTensorIrData, currentState);
 
         tensorflow::serving::PredictResponse response;
-        modelInstance->postInferenceProcessing_2(&response, inferRequest, sequence, sequenceProcessingSpec);
+        modelInstance->postInferenceProcessing(&response, inferRequest, sequence, sequenceProcessingSpec);
 
         // Check if sequence memory state is the same as InferRequest memory state
-        const ovms::sequence_memory_state_t_2& updatedSequenceMemoryState = sequence.getMemoryState_2();
+        const ovms::sequence_memory_state_t& updatedSequenceMemoryState = sequence.getMemoryState();
         EXPECT_TRUE(updatedSequenceMemoryState.count(realModel.getStateName()));
         std::shared_ptr<ov::runtime::Tensor> changedTensor = updatedSequenceMemoryState.at(realModel.getStateName());
         std::vector<float> sequenceTensorIrData;

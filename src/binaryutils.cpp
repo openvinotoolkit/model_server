@@ -91,12 +91,12 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
     }
     Dimension cols = Dimension::any();
     Dimension rows = Dimension::any();
-    if (tensorInfo->getShape_3().size() == 4) {
-        cols = tensorInfo->getShape_3()[2];
-        rows = tensorInfo->getShape_3()[1];
-    } else if (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape_3().size() == 5) {
-        cols = tensorInfo->getShape_3()[3];
-        rows = tensorInfo->getShape_3()[2];
+    if (tensorInfo->getShape().size() == 4) {
+        cols = tensorInfo->getShape()[2];
+        rows = tensorInfo->getShape()[1];
+    } else if (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5) {
+        cols = tensorInfo->getShape()[3];
+        rows = tensorInfo->getShape()[2];
     } else {
         return false;
     }
@@ -118,12 +118,12 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
     }
     Dimension cols = Dimension::any();
     Dimension rows = Dimension::any();
-    if (tensorInfo->getShape_3().size() == 4) {
-        cols = tensorInfo->getShape_3()[2];
-        rows = tensorInfo->getShape_3()[1];
-    } else if (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape_3().size() == 5) {
-        cols = tensorInfo->getShape_3()[3];
-        rows = tensorInfo->getShape_3()[2];
+    if (tensorInfo->getShape().size() == 4) {
+        cols = tensorInfo->getShape()[2];
+        rows = tensorInfo->getShape()[1];
+    } else if (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5) {
+        cols = tensorInfo->getShape()[3];
+        rows = tensorInfo->getShape()[2];
     } else {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
@@ -168,10 +168,10 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
 
     // At this point we can either have nhwc format or pretendant to be nhwc but with ANY layout in pipeline info
     Dimension numberOfChannels;
-    if (tensorInfo->getShape_3().size() == 4) {
-        numberOfChannels = tensorInfo->getShape_3()[3];
-    } else if (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape_3().size() == 5) {
-        numberOfChannels = tensorInfo->getShape_3()[4];
+    if (tensorInfo->getShape().size() == 4) {
+        numberOfChannels = tensorInfo->getShape()[3];
+    } else if (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5) {
+        numberOfChannels = tensorInfo->getShape()[4];
     } else {
         return StatusCode::INVALID_NO_OF_CHANNELS;
     }
@@ -226,8 +226,8 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     }
 
     // 4 for default pipelines, 5 for pipelines with demultiplication at entry
-    bool isShapeDimensionValid = tensorInfo->getShape_3().size() == 4 ||
-                                 (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape_3().size() == 5);
+    bool isShapeDimensionValid = tensorInfo->getShape().size() == 4 ||
+                                 (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5);
     if (!isShapeDimensionValid) {
         return StatusCode::INVALID_SHAPE;
     }
@@ -261,9 +261,9 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
             return status;
         }
 
-        if (!isPrecisionEqual(image.depth(), tensorInfo->getPrecision_2())) {
+        if (!isPrecisionEqual(image.depth(), tensorInfo->getPrecision())) {
             cv::Mat imageCorrectPrecision;
-            status = convertPrecision(image, imageCorrectPrecision, tensorInfo->getPrecision_2());
+            status = convertPrecision(image, imageCorrectPrecision, tensorInfo->getPrecision());
 
             if (status != StatusCode::OK) {
                 return status;
@@ -296,7 +296,7 @@ shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const std::shared
     return dims;
 }
 
-ov::runtime::Tensor createBlobFromMats_2(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+ov::runtime::Tensor createBlobFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     ov::Shape shape = getShapeFromImages(images, tensorInfo);
     ov::element::Type precision = tensorInfo->getOvPrecision();
     ov::runtime::Tensor tensor(precision, shape);
@@ -308,8 +308,8 @@ ov::runtime::Tensor createBlobFromMats_2(const std::vector<cv::Mat>& images, con
     return tensor;
 }
 
-ov::runtime::Tensor convertMatsToBlob_2(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
-    switch (tensorInfo->getPrecision_2()) {
+ov::runtime::Tensor convertMatsToBlob(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+    switch (tensorInfo->getPrecision()) {
     case ovms::Precision::FP32:
     case ovms::Precision::I32:
     case ovms::Precision::I8:
@@ -317,7 +317,7 @@ ov::runtime::Tensor convertMatsToBlob_2(std::vector<cv::Mat>& images, const std:
     case ovms::Precision::FP16:
     case ovms::Precision::U16:
     case ovms::Precision::I16:
-        return createBlobFromMats_2(images, tensorInfo, isPipeline);
+        return createBlobFromMats(images, tensorInfo, isPipeline);
     case ovms::Precision::I64:
     case ovms::Precision::MIXED:
     case ovms::Precision::Q78:
@@ -329,7 +329,7 @@ ov::runtime::Tensor convertMatsToBlob_2(std::vector<cv::Mat>& images, const std:
     }
 }
 
-Status convertStringValToBlob_2(const tensorflow::TensorProto& src, ov::runtime::Tensor& blob, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+Status convertStringValToBlob(const tensorflow::TensorProto& src, ov::runtime::Tensor& blob, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     auto status = validateTensor(tensorInfo, src);
     if (status != StatusCode::OK) {
         return status;
@@ -342,7 +342,7 @@ Status convertStringValToBlob_2(const tensorflow::TensorProto& src, ov::runtime:
         return status;
     }
 
-    blob = convertMatsToBlob_2(images, tensorInfo, isPipeline);
+    blob = convertMatsToBlob(images, tensorInfo, isPipeline);
     if (!blob) {
         return StatusCode::IMAGE_PARSING_FAILED;  // TODO: Add unit test.
     }

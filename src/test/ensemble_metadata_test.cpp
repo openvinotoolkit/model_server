@@ -63,12 +63,12 @@ TEST(EnsembleMetadata, OneNode) {
     ASSERT_NE(outputs.find("request_output_name"), outputs.end());
 
     const auto& input = inputs.at("request_input_name");
-    EXPECT_EQ(input->getShape_3(), Shape({1, DUMMY_MODEL_INPUT_SIZE}));
-    EXPECT_EQ(input->getPrecision_2(), ovms::Precision::FP32);
+    EXPECT_EQ(input->getShape(), Shape({1, DUMMY_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(input->getPrecision(), ovms::Precision::FP32);
 
     const auto& output = outputs.at("request_output_name");
-    EXPECT_EQ(output->getShape_3(), Shape({1, DUMMY_MODEL_OUTPUT_SIZE}));
-    EXPECT_EQ(output->getPrecision_2(), ovms::Precision::FP32);
+    EXPECT_EQ(output->getShape(), Shape({1, DUMMY_MODEL_OUTPUT_SIZE}));
+    EXPECT_EQ(output->getPrecision(), ovms::Precision::FP32);
 }
 
 TEST(EnsembleMetadata, MultipleNodesOnDifferentLevelsUsingTheSamePipelineInputs) {
@@ -132,24 +132,24 @@ TEST(EnsembleMetadata, MultipleNodesOnDifferentLevelsUsingTheSamePipelineInputs)
     ASSERT_NE(outputs.find("original_input_for_N2"), outputs.end());
 
     const auto& request_input_for_N1 = inputs.at("request_input_for_N1");
-    EXPECT_EQ(request_input_for_N1->getShape_3(), Shape({1, INCREMENT_MODEL_INPUT_SIZE}));
-    EXPECT_EQ(request_input_for_N1->getPrecision_2(), ovms::Precision::FP32);
+    EXPECT_EQ(request_input_for_N1->getShape(), Shape({1, INCREMENT_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(request_input_for_N1->getPrecision(), ovms::Precision::FP32);
 
     const auto& request_input_for_N2_and_exit = inputs.at("request_input_for_N2_and_exit");
-    EXPECT_EQ(request_input_for_N2_and_exit->getShape_3(), Shape({1, SUM_MODEL_INPUT_SIZE}));
-    EXPECT_EQ(request_input_for_N2_and_exit->getPrecision_2(), ovms::Precision::FP32);
+    EXPECT_EQ(request_input_for_N2_and_exit->getShape(), Shape({1, SUM_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(request_input_for_N2_and_exit->getPrecision(), ovms::Precision::FP32);
 
     const auto& intermediate_result_from_increment = outputs.at("intermediate_result_from_increment");
-    EXPECT_EQ(intermediate_result_from_increment->getShape_3(), Shape({1, INCREMENT_MODEL_OUTPUT_SIZE}));
-    EXPECT_EQ(intermediate_result_from_increment->getPrecision_2(), ovms::Precision::FP32);
+    EXPECT_EQ(intermediate_result_from_increment->getShape(), Shape({1, INCREMENT_MODEL_OUTPUT_SIZE}));
+    EXPECT_EQ(intermediate_result_from_increment->getPrecision(), ovms::Precision::FP32);
 
     const auto& intermediate_result_from_sum = outputs.at("intermediate_result_from_sum");
-    EXPECT_EQ(intermediate_result_from_sum->getShape_3(), Shape({1, SUM_MODEL_OUTPUT_SIZE}));
-    EXPECT_EQ(intermediate_result_from_sum->getPrecision_2(), ovms::Precision::FP32);
+    EXPECT_EQ(intermediate_result_from_sum->getShape(), Shape({1, SUM_MODEL_OUTPUT_SIZE}));
+    EXPECT_EQ(intermediate_result_from_sum->getPrecision(), ovms::Precision::FP32);
 
     const auto& original_input_for_N2 = outputs.at("original_input_for_N2");
-    EXPECT_EQ(original_input_for_N2->getShape_3(), Shape({}));
-    EXPECT_EQ(original_input_for_N2->getPrecision_2(), ovms::Precision::UNDEFINED);
+    EXPECT_EQ(original_input_for_N2->getShape(), Shape({}));
+    EXPECT_EQ(original_input_for_N2->getPrecision(), ovms::Precision::UNDEFINED);
 }
 
 TEST(EnsembleMetadata, EmptyPipelineReturnsCorrectInputAndOutputInfo) {
@@ -184,12 +184,12 @@ TEST(EnsembleMetadata, EmptyPipelineReturnsCorrectInputAndOutputInfo) {
     ASSERT_NE(outputs.find("name_for_response"), outputs.end());
 
     const auto& name_from_entry = inputs.at("name_from_entry");
-    EXPECT_EQ(name_from_entry->getShape_3(), Shape({}));
-    EXPECT_EQ(name_from_entry->getPrecision_2(), ovms::Precision::UNDEFINED);
+    EXPECT_EQ(name_from_entry->getShape(), Shape({}));
+    EXPECT_EQ(name_from_entry->getPrecision(), ovms::Precision::UNDEFINED);
 
     const auto& name_for_response = outputs.at("name_for_response");
-    EXPECT_EQ(name_for_response->getShape_3(), Shape({}));
-    EXPECT_EQ(name_for_response->getPrecision_2(), ovms::Precision::UNDEFINED);
+    EXPECT_EQ(name_for_response->getShape(), Shape({}));
+    EXPECT_EQ(name_for_response->getPrecision(), ovms::Precision::UNDEFINED);
 }
 
 TEST(EnsembleMetadata, ParallelDLModelNodesReferingToManyPipelineInputs) {
@@ -276,16 +276,16 @@ TEST(EnsembleMetadata, ParallelDLModelNodesReferingToManyPipelineInputs) {
         ASSERT_NE(inputs.find(name_a), inputs.end());
         ASSERT_NE(inputs.find(name_b), inputs.end());
 
-        EXPECT_EQ(inputs.find(name_a)->second->getShape_3(), Shape({1, SUM_MODEL_INPUT_SIZE}));
-        EXPECT_EQ(inputs.find(name_a)->second->getPrecision_2(), ovms::Precision::FP32);
-        EXPECT_EQ(inputs.find(name_b)->second->getShape_3(), Shape({1, SUM_MODEL_INPUT_SIZE}));
-        EXPECT_EQ(inputs.find(name_b)->second->getPrecision_2(), ovms::Precision::FP32);
+        EXPECT_EQ(inputs.find(name_a)->second->getShape(), Shape({1, SUM_MODEL_INPUT_SIZE}));
+        EXPECT_EQ(inputs.find(name_a)->second->getPrecision(), ovms::Precision::FP32);
+        EXPECT_EQ(inputs.find(name_b)->second->getShape(), Shape({1, SUM_MODEL_INPUT_SIZE}));
+        EXPECT_EQ(inputs.find(name_b)->second->getPrecision(), ovms::Precision::FP32);
     }
 
     ASSERT_EQ(outputs.size(), 1);
     ASSERT_NE(outputs.find("final_sum"), outputs.end());
-    EXPECT_EQ(outputs.find("final_sum")->second->getShape_3(), Shape({1, SUM_MODEL_INPUT_SIZE}));
-    EXPECT_EQ(outputs.find("final_sum")->second->getPrecision_2(), ovms::Precision::FP32);
+    EXPECT_EQ(outputs.find("final_sum")->second->getShape(), Shape({1, SUM_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(outputs.find("final_sum")->second->getPrecision(), ovms::Precision::FP32);
 }
 
 TEST(EnsembleMetadata, OneUnavailableNodeBeforeRevalidationShouldWork) {
@@ -392,12 +392,12 @@ TEST(EnsembleMetadata, OneCustomNode) {
     ASSERT_NE(outputs.find("request_output_name"), outputs.end());
 
     const auto& input = inputs.at("request_input_name");
-    EXPECT_EQ(input->getShape_3(), Shape({1, -1}));
-    EXPECT_EQ(input->getPrecision_2(), ovms::Precision::FP32);
+    EXPECT_EQ(input->getShape(), Shape({1, -1}));
+    EXPECT_EQ(input->getPrecision(), ovms::Precision::FP32);
 
     const auto& output = outputs.at("request_output_name");
-    EXPECT_EQ(output->getShape_3(), Shape({1, -1}));
-    EXPECT_EQ(output->getPrecision_2(), ovms::Precision::FP32);
+    EXPECT_EQ(output->getShape(), Shape({1, -1}));
+    EXPECT_EQ(output->getPrecision(), ovms::Precision::FP32);
 }
 
 TEST(EnsembleMetadata, ParallelCustomNodes) {
@@ -450,13 +450,13 @@ TEST(EnsembleMetadata, ParallelCustomNodes) {
     ASSERT_NE(outputs.find("request_output_name_2"), outputs.end());
 
     const auto& input = inputs.at("request_input_name");
-    EXPECT_EQ(input->getShape_3(), Shape({1, -1}));
-    EXPECT_EQ(input->getPrecision_2(), ovms::Precision::FP32);
+    EXPECT_EQ(input->getShape(), Shape({1, -1}));
+    EXPECT_EQ(input->getPrecision(), ovms::Precision::FP32);
 
     for (int i = 0; i < 3; i++) {
         const auto& output = outputs.at("request_output_name_" + std::to_string(i));
-        EXPECT_EQ(output->getShape_3(), Shape({1, -1}));
-        EXPECT_EQ(output->getPrecision_2(), ovms::Precision::FP32);
+        EXPECT_EQ(output->getShape(), Shape({1, -1}));
+        EXPECT_EQ(output->getPrecision(), ovms::Precision::FP32);
     }
 }
 
@@ -627,16 +627,16 @@ TEST(EnsembleMetadata, CustomNodeMultipleDemultiplexers) {
     ASSERT_NE(outputs.find("request_output_name"), outputs.end());
 
     const auto& input_A = inputs.at("request_input_name_A");
-    EXPECT_EQ(input_A->getShape_3(), Shape({1, 1000}));
-    EXPECT_EQ(input_A->getPrecision_2(), ovms::Precision::FP32);
+    EXPECT_EQ(input_A->getShape(), Shape({1, 1000}));
+    EXPECT_EQ(input_A->getPrecision(), ovms::Precision::FP32);
 
     const auto& input_B = inputs.at("request_input_name_B");
-    EXPECT_EQ(input_B->getShape_3(), Shape({1, 400}));
-    EXPECT_EQ(input_B->getPrecision_2(), ovms::Precision::FP32);
+    EXPECT_EQ(input_B->getShape(), Shape({1, 400}));
+    EXPECT_EQ(input_B->getPrecision(), ovms::Precision::FP32);
 
     const auto& output = outputs.at("request_output_name");
-    EXPECT_EQ(output->getShape_3(), Shape({3, 4, 1, 10}));
-    EXPECT_EQ(output->getPrecision_2(), ovms::Precision::FP32);
+    EXPECT_EQ(output->getShape(), Shape({3, 4, 1, 10}));
+    EXPECT_EQ(output->getPrecision(), ovms::Precision::FP32);
 }
 
 TEST(EnsembleMetadata, GatherFromNotExistingNode) {

@@ -119,16 +119,16 @@ bool ModelConfig::isBatchSizeConfigurationEqual(const ModelConfig& rhs) const {
 }
 
 bool ModelConfig::isLayoutConfigurationEqual(const ModelConfig& rhs) const {
-    if (this->layout_2 != rhs.layout_2) {
+    if (this->layout != rhs.layout) {
         return false;
     }
 
-    if (this->layouts_2.size() != rhs.layouts_2.size()) {
+    if (this->layouts.size() != rhs.layouts.size()) {
         return false;
     }
-    for (const auto& [name, layoutConfig] : this->layouts_2) {
-        auto it = rhs.layouts_2.find(name);
-        if (it == rhs.layouts_2.end()) {
+    for (const auto& [name, layoutConfig] : this->layouts) {
+        auto it = rhs.layouts.find(name);
+        if (it == rhs.layouts.end()) {
             return false;
         }
         if (layoutConfig != it->second) {
@@ -139,12 +139,12 @@ bool ModelConfig::isLayoutConfigurationEqual(const ModelConfig& rhs) const {
 }
 
 bool ModelConfig::isShapeConfigurationEqual(const ModelConfig& rhs) const {
-    if (this->shapes_2.size() != rhs.shapes_2.size()) {
+    if (this->shapes.size() != rhs.shapes.size()) {
         return false;
     }
-    for (const auto& [name, shape] : this->shapes_2) {
-        auto it = rhs.shapes_2.find(name);
-        if (it == rhs.shapes_2.end()) {
+    for (const auto& [name, shape] : this->shapes) {
+        auto it = rhs.shapes.find(name);
+        if (it == rhs.shapes.end()) {
             return false;
         }
         if (shape != it->second) {
@@ -261,25 +261,25 @@ Status ModelConfig::parseShapeParameter(const rapidjson::Value& node) {
         return StatusCode::SHAPE_WRONG_FORMAT;
     }
 
-    shapes_info_map_2_t shapes;
+    shapes_info_map_t shapes;
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
         if (!it->value.IsString()) {
             return StatusCode::SHAPE_WRONG_FORMAT;
         }
-        ShapeInfo_2 shapeInfo;
+        ShapeInfo shapeInfo;
         auto status = parseShape(shapeInfo, it->value.GetString());
         if (!status.ok()) {
             return status;
         }
         shapes[it->name.GetString()] = shapeInfo;
     }
-    this->shapes_2 = shapes;
+    this->shapes = shapes;
 
     return StatusCode::OK;
 }
 
 Status ModelConfig::parseShapeParameter(const std::string& command) {
-    this->shapes_2.clear();
+    this->shapes.clear();
 
     if (command.empty()) {
         return StatusCode::OK;
@@ -287,7 +287,7 @@ Status ModelConfig::parseShapeParameter(const std::string& command) {
 
     // parse as string
     if (command.front() == shapeLeft || command == "auto") {
-        ShapeInfo_2 shapeInfo;
+        ShapeInfo shapeInfo;
         auto status = parseShape(shapeInfo, command);
         if (!status.ok()) {
             return status;
@@ -311,7 +311,7 @@ Status ModelConfig::parseLayoutParameter(const rapidjson::Value& node) {
     if (!node.IsObject()) {
         return StatusCode::LAYOUT_WRONG_FORMAT;
     }
-    layouts_map_2_t layouts;
+    layouts_map_t layouts;
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
         if (!it->value.IsString()) {
             return StatusCode::LAYOUT_WRONG_FORMAT;
@@ -326,14 +326,14 @@ Status ModelConfig::parseLayoutParameter(const rapidjson::Value& node) {
         }
         layouts[it->name.GetString()] = layout;
     }
-    setLayouts_2(layouts);
+    setLayouts(layouts);
 
     return StatusCode::OK;
 }
 
 Status ModelConfig::parseLayoutParameter(const std::string& command) {
-    this->layouts_2.clear();
-    this->layout_2 = LayoutConfiguration();
+    this->layouts.clear();
+    this->layout = LayoutConfiguration();
     if (command.empty()) {
         return StatusCode::OK;
     }
@@ -349,7 +349,7 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
         if (!status.ok()) {
             return status;
         }
-        setLayout_2(layout);
+        setLayout(layout);
         return StatusCode::OK;
     }
 
@@ -361,7 +361,7 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
     return parseLayoutParameter(node);
 }
 
-Status ModelConfig::parseShape(ShapeInfo_2& shapeInfo, const std::string& str) {
+Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
     if (str == "auto") {
         shapeInfo.shapeMode = AUTO;
         return StatusCode::OK;
@@ -442,7 +442,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     if (v.HasMember("shape")) {
         // Legacy format as string
         if (v["shape"].IsString()) {
-            ShapeInfo_2 shapeInfo;
+            ShapeInfo shapeInfo;
             auto status = parseShape(shapeInfo, v["shape"].GetString());
             if (!status.ok()) {
                 if (!firstErrorStatus.ok()) {
@@ -455,7 +455,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         } else {
             // Map of shapes
             for (auto& s : v["shape"].GetObject()) {
-                ShapeInfo_2 shapeInfo;
+                ShapeInfo shapeInfo;
                 bool valid = true;
                 // check if legacy format is used
                 if (s.value.IsString()) {
@@ -578,10 +578,10 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     SPDLOG_DEBUG("model_name: {}", getName());
     SPDLOG_DEBUG("batch_size: {}", getBatchSize().has_value() ? getBatchSize().value().toString() : "not configured");
     if (isShapeAnonymous()) {
-        SPDLOG_DEBUG("shape: {}", std::string(getShapes_2().begin()->second));
+        SPDLOG_DEBUG("shape: {}", std::string(getShapes().begin()->second));
     } else {
         SPDLOG_DEBUG("shape:");
-        for (auto& [shapeInput, shapeValue] : getShapes_2()) {
+        for (auto& [shapeInput, shapeValue] : getShapes()) {
             SPDLOG_DEBUG("  {}: {}", shapeInput, std::string(shapeValue));
         }
     }
@@ -596,7 +596,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     }
 
     bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize().has_value());
-    bool shapeSet = (getShapes_2().size() > 0);
+    bool shapeSet = (getShapes().size() > 0);
 
     SPDLOG_DEBUG("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
     if (batchSizeSet && shapeSet) {
@@ -652,11 +652,11 @@ Status ModelConfig::parseCustomLoaderOptionsConfig(const rapidjson::Value& node)
 }
 
 std::string ModelConfig::layoutConfigurationToString() const {
-    if (getLayout_2().isSet()) {
-        return getLayout_2().toString();
+    if (getLayout().isSet()) {
+        return getLayout().toString();
     }
     std::stringstream ss;
-    for (const auto& [name, layoutCfg] : getLayouts_2()) {
+    for (const auto& [name, layoutCfg] : getLayouts()) {
         ss << name << " " << layoutCfg.toString() << "; ";
     }
     return ss.str();

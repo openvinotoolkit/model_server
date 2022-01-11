@@ -32,13 +32,13 @@ namespace ovms {
 class ModelManager;
 class ModelInstance;
 class Node;
-class NodeStreamIdGuard_2;
+class NodeStreamIdGuard;
 class ModelInstanceUnloadGuard;
 class TensorInfo;
 
 class DLNodeSession : public NodeSession {
     std::shared_ptr<ModelInstance> model;
-    std::unique_ptr<NodeStreamIdGuard_2> nodeStreamIdGuard;
+    std::unique_ptr<NodeStreamIdGuard> nodeStreamIdGuard;
     std::unique_ptr<ModelInstanceUnloadGuard> modelUnloadGuard;
 
     ModelManager& modelManager;

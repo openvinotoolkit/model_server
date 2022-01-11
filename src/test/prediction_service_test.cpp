@@ -41,7 +41,7 @@ using testing::Eq;
 void serializeAndCheck(int outputSize, ov::runtime::InferRequest& inferRequest, const std::string& outputName, const ovms::tensor_map_t& outputsInfo) {
     std::vector<float> output(10);
     tensorflow::serving::PredictResponse response;
-    auto status = serializePredictResponse_2(inferRequest, outputsInfo, &response);
+    auto status = serializePredictResponse(inferRequest, outputsInfo, &response);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
     std::memcpy(output.data(), (float*)response.outputs().at(outputName).tensor_content().data(), DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
@@ -207,8 +207,8 @@ public:
 
 class MockModelInstance : public ovms::ModelInstance {
 public:
-    MockModelInstance(ov::runtime::Core& ieCore_2) :
-        ModelInstance("UNUSED_NAME", 42, ieCore_2) {}
+    MockModelInstance(ov::runtime::Core& ieCore) :
+        ModelInstance("UNUSED_NAME", 42, ieCore) {}
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
         return validate(request);
     }
@@ -249,13 +249,13 @@ void performPrediction(const std::string modelName,
                 validationStatus == ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
     ASSERT_EQ(modelInstance->reloadModelIfRequired(validationStatus, &request, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 
-    ovms::ExecutingStreamIdGuard_2 executingStreamIdGuard(modelInstance->getInferRequestsQueue_2());
+    ovms::ExecutingStreamIdGuard executingStreamIdGuard(modelInstance->getInferRequestsQueue());
     ov::runtime::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
-    ovms::InputSink_2<ov::runtime::InferRequest&> inputSink(inferRequest);
+    ovms::InputSink<ov::runtime::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
 
-    auto status = ovms::deserializePredictRequest_2<ovms::ConcreteTensorProtoDeserializator_2>(request, modelInstance->getInputsInfo(), inputSink, isPipeline);
-    status = modelInstance->performInference_2(inferRequest);
+    auto status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(request, modelInstance->getInputsInfo(), inputSink, isPipeline);
+    status = modelInstance->performInference(inferRequest);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     size_t outputSize = batchSize * DUMMY_MODEL_OUTPUT_SIZE;
     serializeAndCheck(outputSize, inferRequest, outputName, modelInstance->getOutputsInfo());

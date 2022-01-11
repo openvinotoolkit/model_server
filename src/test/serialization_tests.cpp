@@ -44,7 +44,7 @@ using testing::_;
 using testing::NiceMock;
 using testing::Throw;
 
-const std::vector<ovms::Precision> SUPPORTED_OUTPUT_PRECISIONS_2{
+const std::vector<ovms::Precision> SUPPORTED_OUTPUT_PRECISIONS{
     // ovms::Precision::UNDEFINED,
     // ovms::Precision::MIXED,
     ovms::Precision::FP32,
@@ -61,7 +61,7 @@ const std::vector<ovms::Precision> SUPPORTED_OUTPUT_PRECISIONS_2{
     // ovms::Precision::CUSTOM)
 };
 
-const std::vector<ovms::Precision> UNSUPPORTED_OUTPUT_PRECISIONS_2{
+const std::vector<ovms::Precision> UNSUPPORTED_OUTPUT_PRECISIONS{
     // ovms::Precision::UNDEFINED, // Cannot create blob with such precision
     // ovms::Precision::MIXED, // Cannot create blob with such precision
     // ovms::Precision::FP32,
@@ -80,7 +80,7 @@ const std::vector<ovms::Precision> UNSUPPORTED_OUTPUT_PRECISIONS_2{
     // TODO: There are new API 2.0 precisions we do not support. Add tests for those.
 };
 
-class TensorflowGRPCPredict_2 : public ::testing::TestWithParam<ovms::Precision> {
+class TensorflowGRPCPredict : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     void SetUp() override {
         ovms::Precision precision = ovms::Precision::FP32;
@@ -108,7 +108,7 @@ protected:
     ovms::tensor_map_t tensorMap;
 };
 
-class SerializeTFTensorProto_2 : public TensorflowGRPCPredict_2 {
+class SerializeTFTensorProto : public TensorflowGRPCPredict {
 public:
     std::tuple<
         std::shared_ptr<ovms::TensorInfo>,
@@ -126,7 +126,7 @@ public:
     }
 };
 
-TEST(SerializeTFTensorProtoSingle_2, NegativeMismatchBetweenTensorInfoAndBlobPrecision) {
+TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobPrecision) {
     ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
     auto layout = layout_t{"NCHW"};
@@ -134,13 +134,13 @@ TEST(SerializeTFTensorProtoSingle_2, NegativeMismatchBetweenTensorInfoAndBlobPre
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
     ov::runtime::Tensor tensor(ov::element::i32, tensorInfoShape);
     TensorProto responseOutput;
-    auto status = serializeBlobToTensorProto_2(responseOutput,
+    auto status = serializeBlobToTensorProto(responseOutput,
         tensorInfo,
         tensor);
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
 }
 
-TEST(SerializeTFTensorProtoSingle_2, NegativeMismatchBetweenTensorInfoAndBlobShape) {
+TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobShape) {
     ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
     shape_t blobShape{1, 3, 225, 225};
@@ -149,19 +149,19 @@ TEST(SerializeTFTensorProtoSingle_2, NegativeMismatchBetweenTensorInfoAndBlobSha
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
     ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), blobShape);
     TensorProto responseOutput;
-    auto status = serializeBlobToTensorProto_2(responseOutput,
+    auto status = serializeBlobToTensorProto(responseOutput,
         tensorInfo,
         tensor);
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
 }
 
-TEST_P(SerializeTFTensorProto_2, SerializeTensorProtoShouldSucceedForPrecision) {
+TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
     std::shared_ptr<ov::runtime::Tensor> mockBlob = std::get<1>(inputs);
     // EXPECT_CALL(*mockBlob, get_byte_size()); // TODO: Mock it properly with templates
-    auto status = serializeBlobToTensorProto_2(responseOutput,
+    auto status = serializeBlobToTensorProto(responseOutput,
         std::get<0>(inputs),
         *mockBlob);
     EXPECT_TRUE(status.ok())
@@ -170,13 +170,13 @@ TEST_P(SerializeTFTensorProto_2, SerializeTensorProtoShouldSucceedForPrecision) 
         << "should succeed";
 }
 
-class SerializeTFTensorProtoNegative_2 : public SerializeTFTensorProto_2 {};
+class SerializeTFTensorProtoNegative : public SerializeTFTensorProto {};
 
-TEST_P(SerializeTFTensorProtoNegative_2, SerializeTensorProtoShouldSucceedForPrecision) {
+TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldSucceedForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
-    auto status = serializeBlobToTensorProto_2(responseOutput,
+    auto status = serializeBlobToTensorProto(responseOutput,
         std::get<0>(inputs),
         *std::get<1>(inputs));
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION)
@@ -200,22 +200,22 @@ TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     tenMap[DUMMY_MODEL_OUTPUT_NAME] = tensorInfo;
     ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), ov::Shape{1, 10});
     inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
-    auto status = serializePredictResponse_2(inferRequest, tenMap, &response);
+    auto status = serializePredictResponse(inferRequest, tenMap, &response);
     EXPECT_TRUE(status.ok());
 }
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    SerializeTFTensorProto_2,
-    ::testing::ValuesIn(SUPPORTED_OUTPUT_PRECISIONS_2),
-    [](const ::testing::TestParamInfo<SerializeTFTensorProto_2::ParamType>& info) {
+    SerializeTFTensorProto,
+    ::testing::ValuesIn(SUPPORTED_OUTPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<SerializeTFTensorProto::ParamType>& info) {
         return toString(info.param);
     });
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    SerializeTFTensorProtoNegative_2,
-    ::testing::ValuesIn(UNSUPPORTED_OUTPUT_PRECISIONS_2),
-    [](const ::testing::TestParamInfo<SerializeTFTensorProtoNegative_2::ParamType>& info) {
+    SerializeTFTensorProtoNegative,
+    ::testing::ValuesIn(UNSUPPORTED_OUTPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<SerializeTFTensorProtoNegative::ParamType>& info) {
         return toString(info.param);
     });

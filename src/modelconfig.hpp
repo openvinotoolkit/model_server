@@ -129,17 +129,17 @@ private:
     /**
          * @brief Layout for single input
          */
-    LayoutConfiguration layout_2;
+    LayoutConfiguration layout;
 
     /**
          * @brief Map of shapes
          */
-    shapes_info_map_2_t shapes_2;
+    shapes_info_map_t shapes;
 
     /**
          * @brief Map of layouts
          */
-    layouts_map_2_t layouts_2;
+    layouts_map_t layouts;
 
     /**
          * @brief Input mapping configuration
@@ -225,9 +225,9 @@ public:
         cacheDir(cacheDir),
         version(version),
         pluginConfig({}),
-        layout_2(""),
-        shapes_2({}),
-        layouts_2({}),
+        layout(""),
+        shapes({}),
+        layouts({}),
         mappingInputs({}),
         mappingOutputs({}) {
         setBatchingParams(configBatchSize);
@@ -686,7 +686,7 @@ public:
          * @return bool
          */
     bool anyShapeSetToAuto() const {
-        for (const auto& [name, shapeInfo] : getShapes_2()) {
+        for (const auto& [name, shapeInfo] : getShapes()) {
             if (shapeInfo.shapeMode == AUTO)
                 return true;
         }
@@ -698,8 +698,8 @@ public:
          * 
          * @return const shapes_map_t& 
          */
-    const shapes_info_map_2_t& getShapes_2() const {
-        return this->shapes_2;
+    const shapes_info_map_t& getShapes() const {
+        return this->shapes;
     }
 
     /**
@@ -707,8 +707,8 @@ public:
          * 
          * @param shapes 
          */
-    void setShapes(const shapes_info_map_2_t& shapes) {
-        this->shapes_2 = shapes;
+    void setShapes(const shapes_info_map_t& shapes) {
+        this->shapes = shapes;
     }
 
     /**
@@ -717,18 +717,18 @@ public:
          * @return bool
          */
     bool isShapeAuto(const std::string& name) const {
-        auto it = getShapes_2().find(name);
-        if (it == getShapes_2().end()) {
-            it = getShapes_2().find(ANONYMOUS_INPUT_NAME);
+        auto it = getShapes().find(name);
+        if (it == getShapes().end()) {
+            it = getShapes().find(ANONYMOUS_INPUT_NAME);
         }
-        if (it == getShapes_2().end()) {
+        if (it == getShapes().end()) {
             return false;
         }
         return it->second.shapeMode == Mode::AUTO;
     }
 
     bool isShapeAnonymous() const {
-        return getShapes_2().size() == 1 && getShapes_2().begin()->first == ANONYMOUS_INPUT_NAME;
+        return getShapes().size() == 1 && getShapes().begin()->first == ANONYMOUS_INPUT_NAME;
     }
 
     bool isShapeAnonymousFixed() const {
@@ -746,7 +746,7 @@ public:
          * @param str
          * @return Status
          */
-    static Status parseShape(ShapeInfo_2& shapeInfo, const std::string& str);
+    static Status parseShape(ShapeInfo& shapeInfo, const std::string& str);
 
     /**
          * @brief Add a single named shape
@@ -754,12 +754,12 @@ public:
          * @param name 
          * @param shape 
          */
-    void addShape(const std::string& name, const ShapeInfo_2& shapeInfo) {
-        this->shapes_2[name] = shapeInfo;
+    void addShape(const std::string& name, const ShapeInfo& shapeInfo) {
+        this->shapes[name] = shapeInfo;
     }
 
     void removeShape(const std::string& name) {
-        this->shapes_2.erase(name);
+        this->shapes.erase(name);
     }
 
     /**
@@ -767,8 +767,8 @@ public:
          * 
          * @return const std::string& 
          */
-    const LayoutConfiguration& getLayout_2() const {
-        return this->layout_2;
+    const LayoutConfiguration& getLayout() const {
+        return this->layout;
     }
 
     /**
@@ -776,9 +776,9 @@ public:
          * 
          * @param layout
          */
-    void setLayout_2(const LayoutConfiguration& layout) {
-        this->layout_2 = layout;
-        this->layouts_2.clear();
+    void setLayout(const LayoutConfiguration& layout) {
+        this->layout = layout;
+        this->layouts.clear();
     }
 
     /**
@@ -786,8 +786,8 @@ public:
          * 
          * @return const layouts_map_t& 
          */
-    const layouts_map_2_t& getLayouts_2() const {
-        return this->layouts_2;
+    const layouts_map_t& getLayouts() const {
+        return this->layouts;
     }
 
     /**
@@ -795,9 +795,9 @@ public:
          * 
          * @param layouts 
          */
-    void setLayouts_2(const layouts_map_2_t& layouts) {
-        this->layouts_2 = layouts;
-        this->layout_2 = LayoutConfiguration();
+    void setLayouts(const layouts_map_t& layouts) {
+        this->layouts = layouts;
+        this->layout = LayoutConfiguration();
     }
 
     /**

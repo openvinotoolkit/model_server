@@ -18,7 +18,7 @@
 namespace ovms {
 
 template <>
-Status InputSink_2<ov::runtime::InferRequest&>::give(const std::string& name, ov::runtime::Tensor& blob) {
+Status InputSink<ov::runtime::InferRequest&>::give(const std::string& name, ov::runtime::Tensor& blob) {
     Status status;
     try {
         requester.set_tensor(name, blob);
@@ -38,7 +38,7 @@ Status InputSink_2<ov::runtime::InferRequest&>::give(const std::string& name, ov
     return status;
 }
 
-ov::runtime::Tensor makeBlob_2(const tensorflow::TensorProto& requestInput,
+ov::runtime::Tensor makeBlob(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo) {
     ov::Shape shape;
     for (size_t i = 0; i < requestInput.tensor_shape().dim_size(); i++) {

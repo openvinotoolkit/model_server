@@ -53,12 +53,12 @@ protected:
          */
     std::string mapping;
 
-    Precision precision_2;
+    Precision precision;
 
     /**
          * @brief Model input shape
          */
-    Shape shape_3;
+    Shape shape;
 
     /**
          * @brief Tensor layout
@@ -152,7 +152,7 @@ public:
          * 
          * @return const InferenceEngine::Precision
          */
-    const Precision getPrecision_2() const;
+    const Precision getPrecision() const;
 
     /**
          * @brief Set the Precision object
@@ -214,7 +214,7 @@ public:
          *
          * @return shape
          */
-    const Shape& getShape_3() const;
+    const Shape& getShape() const;
     void setShape(const Shape& shape);
 
     bool isInfluencedByDemultiplexer() const;

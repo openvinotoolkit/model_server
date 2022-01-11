@@ -103,7 +103,7 @@ void GetModelMetadataImpl::convert(
         *input.mutable_name() = name;
         *input.mutable_tensor_shape() = tensorflow::TensorShapeProto();
 
-        for (auto dim : tensor->getShape_3()) {
+        for (auto dim : tensor->getShape()) {
             if (dim.isStatic()) {
                 input.mutable_tensor_shape()->add_dim()->set_size(dim.getStaticValue());
             } else {
