@@ -18,10 +18,10 @@
 namespace ovms {
 
 template <>
-Status InputSink<ov::runtime::InferRequest&>::give(const std::string& name, ov::runtime::Tensor& blob) {
+Status InputSink<ov::runtime::InferRequest&>::give(const std::string& name, ov::runtime::Tensor& tensor) {
     Status status;
     try {
-        requester.set_tensor(name, blob);
+        requester.set_tensor(name, tensor);
         // OV implementation the ov::Exception is not
         // a base class for all other exceptions thrown from OV.
         // OV can throw exceptions derived from std::logic_error.
@@ -38,7 +38,7 @@ Status InputSink<ov::runtime::InferRequest&>::give(const std::string& name, ov::
     return status;
 }
 
-ov::runtime::Tensor makeBlob(const tensorflow::TensorProto& requestInput,
+ov::runtime::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo) {
     ov::Shape shape;
     for (size_t i = 0; i < requestInput.tensor_shape().dim_size(); i++) {

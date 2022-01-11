@@ -33,7 +33,7 @@ class Node;
 class NodeLibrary;
 
 class CustomNodeSession : public NodeSession {
-    TensorMap resultBlobs;
+    TensorMap resultTensors;
 
 public:
     CustomNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
@@ -48,13 +48,13 @@ public:
         int parametersCount,
         void* customNodeLibraryInternalManager);
 
-    Status fetchResult(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& resultBlob);
+    Status fetchResult(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& resultTensor);
 
     void clearInputs();
     void release() override;
 
 private:
     static void releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibrary& library, void* customNodeLibraryInternalManager);
-    Status createBlob(const struct CustomNodeTensor* tensor, std::shared_ptr<ov::runtime::Tensor>& resultBlob, const NodeLibrary& library, void* customNodeLibraryInternalManager);
+    Status createTensor(const struct CustomNodeTensor* tensor, std::shared_ptr<ov::runtime::Tensor>& resultTensor, const NodeLibrary& library, void* customNodeLibraryInternalManager);
 };
 }  // namespace ovms

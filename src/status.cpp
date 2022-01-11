@@ -105,7 +105,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     // Serialization
     {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, "Unsupported serialization precision"},
     {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR, "Internal serialization error"},
-    {StatusCode::OV_CLONE_BLOB_ERROR, "Error during blob clone"},
+    {StatusCode::OV_CLONE_BLOB_ERROR, "Error during tensor clone"},
     {StatusCode::OV_CLONE_TENSOR_ERROR, "Error during tensor clone"},
 
     // GetModelStatus
@@ -158,8 +158,8 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_EXIT_USED_AS_NODE_DEPENDENCY, "Pipeline definition has response node used as dependency node"},
     {StatusCode::PIPELINE_NAME_OCCUPIED, "Pipeline has the same name as model"},
     {StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY, "Pipeline refers to incorrect library"},
-    {StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS, "Gathered blob shards dimensions are different"},
-    {StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY, "Wrong number of dimensions in a blob to be sharded"},
+    {StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS, "Gathered tensor shards dimensions are different"},
+    {StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY, "Wrong number of dimensions in a tensor to be sharded"},
     {StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY, "Wrong dimension size. Should match demultiply count"},
     {StatusCode::PIPELINE_TRIED_TO_SET_THE_SAME_INPUT_TWICE, "Tried to set the same input twice for node input handler"},
     {StatusCode::PIPELINE_TRIED_TO_SET_INPUT_SHARD_FOR_ORDINARY_INPUT_HANDLER, "Tried to set input with shard id > 0 for ordinary input handler"},
@@ -227,8 +227,8 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::NODE_LIBRARY_EXECUTION_FAILED, "Custom node failed during execution"},
     {StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED, "Custom node library has returned corrupted outputs handle"},
     {StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT, "Custom node library has produced corrupted number of outputs"},
-    {StatusCode::NODE_LIBRARY_INVALID_PRECISION, "Custom node has produced blob with unspecified precision"},
-    {StatusCode::NODE_LIBRARY_INVALID_SHAPE, "Custom node has produced blob with not matching shape"},
+    {StatusCode::NODE_LIBRARY_INVALID_PRECISION, "Custom node has produced tensor with unspecified precision"},
+    {StatusCode::NODE_LIBRARY_INVALID_SHAPE, "Custom node has produced tensor with not matching shape"},
     {StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE, "Custom node output has invalid content size"},
     {StatusCode::NODE_LIBRARY_METADATA_FAILED, "Custom node failed on metadata call"},
     {StatusCode::NODE_LIBRARY_OUTPUT_MISSING_NAME, "Custom node output is missing name"},

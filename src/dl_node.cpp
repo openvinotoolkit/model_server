@@ -46,19 +46,19 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
             getName(), nodeSession.getSessionKey());
         return StatusCode::INTERNAL_ERROR;
     }
-    auto& metadataBlobResultsPair = it.first->second;
-    auto& blobResults = metadataBlobResultsPair.second;
+    auto& metadataTensorResultsPair = it.first->second;
+    auto& tensorResults = metadataTensorResultsPair.second;
     Status status;
     const uint waitTimeMicroseconds = 1;
     auto& inferRequest = dlNodeSession.getInferRequest(waitTimeMicroseconds);
     auto& model = dlNodeSession.getModelInstance();
-    status = this->fetchResults(blobResults, inferRequest, model, nodeSession.getSessionKey());
+    status = this->fetchResults(tensorResults, inferRequest, model, nodeSession.getSessionKey());
     return status;
 }
 
 Status DLNode::fetchResults(TensorMap& outputs, ov::runtime::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey) {
     ReleaseSessionGuard releaseSessionGuard(this->getNodeSession(sessionKey));
-    // Wait for blob results
+    // Wait for tensor results
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Waiting for infer request to finish", getName(), sessionKey);
     try {
         inferRequest.wait();
@@ -78,7 +78,7 @@ Status DLNode::fetchResults(TensorMap& outputs, ov::runtime::InferRequest& infer
 
     static_cast<DLNodeSession&>(this->getNodeSession(sessionKey)).clearInputs();
 
-    // Fill outputs map with result blobs. Fetch only those that are required in following nodes.
+    // Fill outputs map with result tensors. Fetch only those that are required in following nodes.
     for (const auto& node : this->next) {
         for (const auto& pair : node.get().getMappingByDependency(*this)) {
             const auto& output_name = pair.first;
@@ -92,10 +92,10 @@ Status DLNode::fetchResults(TensorMap& outputs, ov::runtime::InferRequest& infer
                     SPDLOG_LOGGER_WARN(dag_executor_logger, "Node: {} session: {} Cannot find real model output name for alias: {}", getName(), sessionKey, output_name);
                     return StatusCode::INTERNAL_ERROR;
                 }
-                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Getting tensor from model: {}, inferRequestStreamId: {}, blobName: {}",
+                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Getting tensor from model: {}, inferRequestStreamId: {}, tensorName: {}",
                     getName(), sessionKey, modelName, sessionKey, realModelOutputName);
                 const auto tensor = inferRequest.get_tensor(realModelOutputName);
-                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Creating copy of tensor from model: {}, blobName: {}",
+                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Creating copy of tensor from model: {}, tensorName: {}",
                     getName(), sessionKey, modelName, realModelOutputName);
                 std::shared_ptr<ov::runtime::Tensor> copiedTensor;
                 auto status = tensorClone(copiedTensor, tensor);
@@ -112,7 +112,7 @@ Status DLNode::fetchResults(TensorMap& outputs, ov::runtime::InferRequest& infer
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session:{} Error during getting tensor {}; exception message: {}", getName(), sessionKey, status.string(), e.what());
                 return status;
             }
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Blob with name {} has been prepared", getName(), sessionKey, output_name);
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Tensor with name {} has been prepared", getName(), sessionKey, output_name);
         }
     }
     return StatusCode::OK;

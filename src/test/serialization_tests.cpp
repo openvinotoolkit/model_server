@@ -62,18 +62,18 @@ const std::vector<ovms::Precision> SUPPORTED_OUTPUT_PRECISIONS{
 };
 
 const std::vector<ovms::Precision> UNSUPPORTED_OUTPUT_PRECISIONS{
-    // ovms::Precision::UNDEFINED, // Cannot create blob with such precision
-    // ovms::Precision::MIXED, // Cannot create blob with such precision
+    // ovms::Precision::UNDEFINED, // Cannot create tensor with such precision
+    // ovms::Precision::MIXED, // Cannot create tensor with such precision
     // ovms::Precision::FP32,
     // ovms::Precision::FP16,
-    // ovms::Precision::Q78, // Cannot create blob with such precision
+    // ovms::Precision::Q78, // Cannot create tensor with such precision
     // ovms::Precision::I16,
     // ovms::Precision::U8,
     // ovms::Precision::I8,
     // ovms::Precision::U16,
     // ovms::Precision::I32,
     // ovms::Precision::I64,
-    // ovms::Precision::BIN, // Cannot create blob with such precision
+    // ovms::Precision::BIN, // Cannot create tensor with such precision
     ovms::Precision::BOOL
     // ovms::Precision::CUSTOM),
 
@@ -120,13 +120,13 @@ public:
                 precision,
                 ovms::Shape{2},
                 layout_t{"C"});
-        std::shared_ptr<ov::runtime::Tensor> mockBlob = std::make_shared<ov::runtime::Tensor>(
+        std::shared_ptr<ov::runtime::Tensor> mockTensor = std::make_shared<ov::runtime::Tensor>(
             ovmsPrecisionToIE2Precision(precision), ov::Shape{2});
-        return std::make_tuple(networkOutput, mockBlob);
+        return std::make_tuple(networkOutput, mockTensor);
     }
 };
 
-TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobPrecision) {
+TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndTensorPrecision) {
     ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
     auto layout = layout_t{"NCHW"};
@@ -134,22 +134,22 @@ TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobPreci
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
     ov::runtime::Tensor tensor(ov::element::i32, tensorInfoShape);
     TensorProto responseOutput;
-    auto status = serializeBlobToTensorProto(responseOutput,
+    auto status = serializeTensorToTensorProto(responseOutput,
         tensorInfo,
         tensor);
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
 }
 
-TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndBlobShape) {
+TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndTensorShape) {
     ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
     shape_t tensorInfoShape{1, 3, 224, 224};
-    shape_t blobShape{1, 3, 225, 225};
+    shape_t tensorShape{1, 3, 225, 225};
     auto layout = layout_t{"NCHW"};
     const std::string name = "NOT_IMPORTANT";
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
-    ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), blobShape);
+    ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), tensorShape);
     TensorProto responseOutput;
-    auto status = serializeBlobToTensorProto(responseOutput,
+    auto status = serializeTensorToTensorProto(responseOutput,
         tensorInfo,
         tensor);
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
@@ -159,11 +159,11 @@ TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
-    std::shared_ptr<ov::runtime::Tensor> mockBlob = std::get<1>(inputs);
-    // EXPECT_CALL(*mockBlob, get_byte_size()); // TODO: Mock it properly with templates
-    auto status = serializeBlobToTensorProto(responseOutput,
+    std::shared_ptr<ov::runtime::Tensor> mockTensor = std::get<1>(inputs);
+    // EXPECT_CALL(*mockTensor, get_byte_size()); // TODO: Mock it properly with templates
+    auto status = serializeTensorToTensorProto(responseOutput,
         std::get<0>(inputs),
-        *mockBlob);
+        *mockTensor);
     EXPECT_TRUE(status.ok())
         << "Supported OV serialization precision"
         << toString(testedPrecision)
@@ -176,7 +176,7 @@ TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldSucceedForPreci
     ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
-    auto status = serializeBlobToTensorProto(responseOutput,
+    auto status = serializeTensorToTensorProto(responseOutput,
         std::get<0>(inputs),
         *std::get<1>(inputs));
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION)
