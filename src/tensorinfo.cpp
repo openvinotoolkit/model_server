@@ -35,7 +35,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const Shape& shape) :
     name(name),
     mapping(""),
-    precision_2(precision),
+    precision(precision),
     shape_3(shape),
     layout(getDefaultLayout()) {}
 
@@ -44,7 +44,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const shape_t& shape) :
     name(name),
     mapping(""),
-    precision_2(precision),
+    precision(precision),
     shape_3(shape),
     layout(getDefaultLayout()) {
 }
@@ -55,7 +55,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const layout_t& layout) :
     name(name),
     mapping(""),
-    precision_2(precision),
+    precision(precision),
     shape_3(shape),
     layout(layout) {
 }
@@ -66,7 +66,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const layout_t& layout) :
     name(name),
     mapping(""),
-    precision_2(precision),
+    precision(precision),
     shape_3(shape),
     layout(layout) {
 }
@@ -78,7 +78,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const layout_t& layout) :
     name(name),
     mapping(mapping),
-    precision_2(precision),
+    precision(precision),
     shape_3(shape),
     layout(layout) {
 }
@@ -89,7 +89,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const layout_t& layout) :
     name(name),
     mapping(mapping),
-    precision_2(precision),
+    precision(precision),
     shape_3(shape),
     layout(layout) {
 }
@@ -99,7 +99,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const shape_t& shape) :
     name(name),
     mapping(mapping),
-    precision_2(precision),
+    precision(precision),
     shape_3(shape),
     layout(getDefaultLayout()) {
 }
@@ -116,16 +116,16 @@ void TensorInfo::setMappedName(const std::string& mappedName) {
     mapping = mappedName;
 }
 
-const Precision TensorInfo::getPrecision_2() const {
-    return precision_2;
+const Precision TensorInfo::getPrecision() const {
+    return precision;
 }
 
 void TensorInfo::setPrecision(const ovms::Precision& requestedPrecision) {
-    precision_2 = requestedPrecision;
+    precision = requestedPrecision;
 }
 
 tensorflow::DataType TensorInfo::getPrecisionAsDataType() const {
-    return getPrecisionAsDataType(precision_2);
+    return getPrecisionAsDataType(precision);
 }
 
 tensorflow::DataType TensorInfo::getPrecisionAsDataType(Precision precision) {
@@ -158,11 +158,11 @@ std::string TensorInfo::getPrecisionAsString(Precision precision) {
 }
 
 ov::element::Type TensorInfo::getOvPrecision() const {
-    return ovmsPrecisionToIE2Precision(precision_2);
+    return ovmsPrecisionToIE2Precision(precision);
 }
 
 std::string TensorInfo::getPrecisionAsString() const {
-    return getPrecisionAsString(precision_2);
+    return getPrecisionAsString(precision);
 }
 
 const std::string TensorInfo::getDataTypeAsString(tensorflow::DataType dataType) {
@@ -234,11 +234,11 @@ std::shared_ptr<TensorInfo> TensorInfo::createCopyWithEffectiveDimensionPrefix(c
 
 bool TensorInfo::isTensorSpecEqual(const TensorInfo& other) const {
     return (this->getShape_3() == other.getShape_3()) &&
-           (this->getPrecision_2() == other.getPrecision_2());
+           (this->getPrecision() == other.getPrecision());
 }
 
 bool TensorInfo::isTensorUnspecified() const {
-    return this->getPrecision_2() == Precision::UNDEFINED;
+    return this->getPrecision() == Precision::UNDEFINED;
 }
 
 std::string TensorInfo::shapeToString(const shape_t& shape) {

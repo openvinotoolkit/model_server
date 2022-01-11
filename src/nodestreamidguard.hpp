@@ -25,7 +25,7 @@
 namespace ovms {
 
 struct NodeStreamIdGuard_2 {
-    NodeStreamIdGuard_2(ovms::OVInferRequestsQueue_2& inferRequestsQueue) :
+    NodeStreamIdGuard_2(ovms::OVInferRequestsQueue& inferRequestsQueue) :
         inferRequestsQueue_(inferRequestsQueue),
         futureStreamId(inferRequestsQueue_.getIdleStream()) {}
 
@@ -60,7 +60,7 @@ struct NodeStreamIdGuard_2 {
     }
 
 private:
-    ovms::OVInferRequestsQueue_2& inferRequestsQueue_;
+    ovms::OVInferRequestsQueue& inferRequestsQueue_;
     std::future<int> futureStreamId;
     std::optional<int> streamId = std::nullopt;
     bool disarmed = false;

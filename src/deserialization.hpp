@@ -41,7 +41,7 @@ public:
     static ov::runtime::Tensor deserializeTensorProto_2(
         const tensorflow::TensorProto& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo) {
-        switch (tensorInfo->getPrecision_2()) {
+        switch (tensorInfo->getPrecision()) {
         case ovms::Precision::FP32:
         case ovms::Precision::I32:
         case ovms::Precision::U8:

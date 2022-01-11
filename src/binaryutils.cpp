@@ -261,9 +261,9 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
             return status;
         }
 
-        if (!isPrecisionEqual(image.depth(), tensorInfo->getPrecision_2())) {
+        if (!isPrecisionEqual(image.depth(), tensorInfo->getPrecision())) {
             cv::Mat imageCorrectPrecision;
-            status = convertPrecision(image, imageCorrectPrecision, tensorInfo->getPrecision_2());
+            status = convertPrecision(image, imageCorrectPrecision, tensorInfo->getPrecision());
 
             if (status != StatusCode::OK) {
                 return status;
@@ -309,7 +309,7 @@ ov::runtime::Tensor createBlobFromMats_2(const std::vector<cv::Mat>& images, con
 }
 
 ov::runtime::Tensor convertMatsToBlob_2(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
-    switch (tensorInfo->getPrecision_2()) {
+    switch (tensorInfo->getPrecision()) {
     case ovms::Precision::FP32:
     case ovms::Precision::I32:
     case ovms::Precision::I8:

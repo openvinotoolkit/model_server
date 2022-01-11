@@ -237,7 +237,7 @@ private:
     /**
          * @brief OpenVINO inference execution stream pool
          */
-    std::unique_ptr<OVInferRequestsQueue_2> inferRequestsQueue_2;
+    std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue_2;
 
     /**
          * @brief Holds current usage count in predict requests
@@ -430,7 +430,7 @@ public:
          * 
          * @return OVStreamsQueue
          */
-    OVInferRequestsQueue_2& getInferRequestsQueue_2() {
+    OVInferRequestsQueue& getInferRequestsQueue_2() {
         return *inferRequestsQueue_2;
     }
 

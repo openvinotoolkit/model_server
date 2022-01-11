@@ -34,7 +34,7 @@ TEST(OVInferRequestQueue, ShortQueue) {
     ov::runtime::Core ieCore;
     auto network = ieCore.read_model(DUMMY_MODEL_PATH);
     ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
-    ovms::OVInferRequestsQueue_2 inferRequestsQueue(execNetwork, 3);
+    ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, 3);
     int reqid;
     reqid = inferRequestsQueue.getIdleStream().get();
     EXPECT_EQ(reqid, 0);
@@ -47,7 +47,7 @@ TEST(OVInferRequestQueue, ShortQueue) {
     EXPECT_EQ(reqid, 0);
 }
 
-void releaseStream(ovms::OVInferRequestsQueue_2& requestsQueue) {
+void releaseStream(ovms::OVInferRequestsQueue& requestsQueue) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     requestsQueue.returnStream(3);
 }
@@ -57,7 +57,7 @@ TEST(OVInferRequestQueue, FullQueue) {
     ov::runtime::Core ieCore;
     auto network = ieCore.read_model(DUMMY_MODEL_PATH);
     ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
-    ovms::OVInferRequestsQueue_2 inferRequestsQueue(execNetwork, 50);
+    ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, 50);
     int reqid;
     for (int i = 0; i < 50; i++) {
         reqid = inferRequestsQueue.getIdleStream().get();
@@ -72,7 +72,7 @@ TEST(OVInferRequestQueue, FullQueue) {
     EXPECT_EQ(reqid, 3);
 }
 
-void inferenceSimulate(ovms::OVInferRequestsQueue_2& ms, std::vector<int>& tv) {
+void inferenceSimulate(ovms::OVInferRequestsQueue& ms, std::vector<int>& tv) {
     for (int i = 1; i <= 10; i++) {
         int st = ms.getIdleStream().get();
         int rd = std::rand();
@@ -94,7 +94,7 @@ TEST(OVInferRequestQueue, MultiThread) {
     auto network = ieCore.read_model(DUMMY_MODEL_PATH);
     ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
 
-    ovms::OVInferRequestsQueue_2 inferRequestsQueue(execNetwork, nireq);
+    ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, nireq);
 
     std::vector<int> test_vector(nireq);  // vector to test if only one thread can manage each element
     std::vector<std::thread> clients;
@@ -112,7 +112,7 @@ TEST(OVInferRequestQueue, AsyncGetInferRequest) {
     auto network = ieCore.read_model(DUMMY_MODEL_PATH);
     ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
     const int nireq = 1;
-    ovms::OVInferRequestsQueue_2 inferRequestsQueue(execNetwork, nireq);
+    ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, nireq);
 
     std::future<int> firstStreamRequest = inferRequestsQueue.getIdleStream();
     std::future<int> secondStreamRequest = inferRequestsQueue.getIdleStream();

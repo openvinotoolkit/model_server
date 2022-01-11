@@ -27,11 +27,11 @@ Status serializeBlobToTensorProto_2(
     if (networkOutput->getOvPrecision() != blob.get_element_type()) {
         SPDLOG_ERROR("Failed to serialize blob: {}. There is difference in precision expected:{} vs actual:{}",
             networkOutput->getName(),
-            TensorInfo::getPrecisionAsString(networkOutput->getPrecision_2()),
+            TensorInfo::getPrecisionAsString(networkOutput->getPrecision()),
             blob.get_element_type().get_type_name());
         return StatusCode::INTERNAL_ERROR;
     }
-    switch (networkOutput->getPrecision_2()) {
+    switch (networkOutput->getPrecision()) {
     case ovms::Precision::FP32:
     case ovms::Precision::I32:
     case ovms::Precision::I8:

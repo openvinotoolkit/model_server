@@ -53,7 +53,7 @@ protected:
          */
     std::string mapping;
 
-    Precision precision_2;
+    Precision precision;
 
     /**
          * @brief Model input shape
@@ -152,7 +152,7 @@ public:
          * 
          * @return const InferenceEngine::Precision
          */
-    const Precision getPrecision_2() const;
+    const Precision getPrecision() const;
 
     /**
          * @brief Set the Precision object

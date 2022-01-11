@@ -147,7 +147,7 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
 }
 
 Status DLNodeSession::validate(const std::shared_ptr<ov::runtime::Tensor>& tensor, const TensorInfo& tensorInfo) {
-    if (ovmsPrecisionToIE2Precision(tensorInfo.getPrecision_2()) != tensor->get_element_type()) {
+    if (ovmsPrecisionToIE2Precision(tensorInfo.getPrecision()) != tensor->get_element_type()) {
         std::stringstream ss;
         ss << "Node: " << getName() << " input: " << tensorInfo.getName()
            << " Invalid precision -"

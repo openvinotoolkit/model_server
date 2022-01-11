@@ -100,21 +100,21 @@ public:
 
 using shapes_map_2_t = std::unordered_map<std::string, Shape>;
 
-struct ShapeInfo_2 {
+struct ShapeInfo {
     Mode shapeMode = FIXED;
     Shape shape;
 
     operator std::string() const;
 
-    bool operator==(const ShapeInfo_2& rhs) const {
+    bool operator==(const ShapeInfo& rhs) const {
         return this->shapeMode == rhs.shapeMode && this->shape == rhs.shape;
     }
 
-    bool operator!=(const ShapeInfo_2& rhs) const {
+    bool operator!=(const ShapeInfo& rhs) const {
         return !(*this == rhs);
     }
 };
 
-using shapes_info_map_2_t = std::unordered_map<std::string, ShapeInfo_2>;
+using shapes_info_map_t = std::unordered_map<std::string, ShapeInfo>;
 
 }  // namespace ovms

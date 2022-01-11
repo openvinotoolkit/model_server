@@ -73,7 +73,7 @@ TEST(ModelConfig, getters_setters) {
 TEST(ModelConfig, layout_single) {
     ovms::ModelConfig config;
 
-    config.setLayout_2(ovms::LayoutConfiguration{"NCHW", "NHWC"});
+    config.setLayout(ovms::LayoutConfiguration{"NCHW", "NHWC"});
     auto l1 = config.getLayout_2();
     auto l2 = config.getLayouts_2();
     EXPECT_EQ(l1.getTensorLayout(), "NCHW");
@@ -84,11 +84,11 @@ TEST(ModelConfig, layout_single) {
 TEST(ModelConfig, layout_multi) {
     ovms::ModelConfig config;
 
-    ovms::layouts_map_2_t layouts;
+    ovms::layouts_map_t layouts;
     layouts["A"] = ovms::LayoutConfiguration{"NCHW", "NHWC"};
     layouts["B"] = ovms::LayoutConfiguration{"CN", "NC"};
 
-    config.setLayout_2("NHWC");
+    config.setLayout("NHWC");
     config.setLayouts_2(layouts);
 
     auto l1 = config.getLayout_2();
@@ -101,7 +101,7 @@ TEST(ModelConfig, layout_multi) {
     EXPECT_EQ(l2.find("B")->second.getTensorLayout(), "CN");
     EXPECT_EQ(l2.find("B")->second.getModelLayout(), "NC");
 
-    config.setLayout_2("NHWC");
+    config.setLayout("NHWC");
     l1 = config.getLayout_2();
     l2 = config.getLayouts_2();
     EXPECT_EQ(l1.isSet(), true);
@@ -194,11 +194,11 @@ TEST(ModelConfig, parseLayoutParam_multi) {
 TEST(ModelConfig, shape) {
     ovms::ModelConfig config;
 
-    ovms::ShapeInfo_2 s1{ovms::FIXED, {1, 2, 3}};
-    ovms::ShapeInfo_2 s2{ovms::FIXED, {6, 6, 200, 300}};
-    ovms::ShapeInfo_2 s3{ovms::FIXED, {100, 500}};
+    ovms::ShapeInfo s1{ovms::FIXED, {1, 2, 3}};
+    ovms::ShapeInfo s2{ovms::FIXED, {6, 6, 200, 300}};
+    ovms::ShapeInfo s3{ovms::FIXED, {100, 500}};
 
-    ovms::shapes_info_map_2_t shapeMap;
+    ovms::shapes_info_map_t shapeMap;
     shapeMap["first"] = s1;
     shapeMap["second"] = s2;
 
@@ -223,7 +223,7 @@ TEST(ModelConfig, parseShapeFromString) {
     std::string auto_str = "auto";
     std::string valid_str1 = "(64,128,256,   300)";
     std::string valid_str2 = "   (     64 , 300   )   ";
-    ovms::ShapeInfo_2 shapeInfo;
+    ovms::ShapeInfo shapeInfo;
 
     config.parseShape(shapeInfo, auto_str);
     EXPECT_EQ(shapeInfo.shapeMode, ovms::AUTO);
@@ -616,7 +616,7 @@ TEST(ModelConfig, shapeConfigurationEqual_MultipleInputs) {
     using namespace ovms;
     ModelConfig lhs, rhs;
 
-    shapes_info_map_2_t shapesMap = {
+    shapes_info_map_t shapesMap = {
         {"a", {Mode::AUTO, {}}},
         {"b", {Mode::FIXED, {1, 3, 224, 224}}}};
 

@@ -231,11 +231,11 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
 
     const auto& vector = inputs.at("vector");
     EXPECT_EQ(vector->getShape_3(), ovms::Shape({1, DUMMY_MODEL_INPUT_SIZE}));
-    EXPECT_EQ(vector->getPrecision_2(), ovms::Precision::FP32);
+    EXPECT_EQ(vector->getPrecision(), ovms::Precision::FP32);
 
     const auto& response_tensor_name = outputs.at("response_tensor_name");
     EXPECT_EQ(response_tensor_name->getShape_3(), ovms::Shape({1, DUMMY_MODEL_OUTPUT_SIZE}));
-    EXPECT_EQ(response_tensor_name->getPrecision_2(), ovms::Precision::FP32);
+    EXPECT_EQ(response_tensor_name->getPrecision(), ovms::Precision::FP32);
 }
 
 TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAddingModelMapping) {

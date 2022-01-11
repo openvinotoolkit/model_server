@@ -1175,7 +1175,7 @@ TEST_F(ReloadAvailableModelDueToConfigChange, ExpectReloadDueToPluginConfigChang
 
 TEST_F(ReloadAvailableModelDueToConfigChange, ExpectReloadDueToLayoutChange) {
     mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, *ieCore_2, config);
-    config.setLayout_2("NEW_LAYOUT");
+    config.setLayout("NEW_LAYOUT");
     ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
 }

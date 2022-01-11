@@ -26,7 +26,7 @@ RestParser::RestParser(const tensor_map_t& tensors) {
     for (const auto& kv : tensors) {
         const auto& name = kv.first;
         const auto& tensor = kv.second;
-        tensorPrecisionMap[name] = tensor->getPrecision_2();
+        tensorPrecisionMap[name] = tensor->getPrecision();
         auto& input = (*requestProto.mutable_inputs())[name];
         input.set_dtype(tensor->getPrecisionAsDataType());
 

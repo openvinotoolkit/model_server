@@ -713,7 +713,7 @@ Status ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
     if (numberOfParallelInferRequests == 0) {
         return Status(StatusCode::INVALID_NIREQ, "Exceeded allowed nireq value");
     }
-    inferRequestsQueue_2 = std::make_unique<OVInferRequestsQueue_2>(*execNetwork_2, numberOfParallelInferRequests);
+    inferRequestsQueue_2 = std::make_unique<OVInferRequestsQueue>(*execNetwork_2, numberOfParallelInferRequests);
     SPDLOG_INFO("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
         getName(),
         getVersion(),

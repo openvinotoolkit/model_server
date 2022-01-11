@@ -32,7 +32,7 @@ class RequestValidator {
     const model_version_t servableVersion;
     const std::set<const char*>& optionalAllowedInputNames;
     const Mode batchingMode;
-    const shapes_info_map_2_t& shapeInfo;
+    const shapes_info_map_t& shapeInfo;
 
     google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator it;
 
@@ -46,7 +46,7 @@ public:
     RequestValidator(
         const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo,
         const std::string& servableName, const model_version_t servableVersion, const std::set<const char*>& optionalAllowedInputNames,
-        const Mode batchingMode, const shapes_info_map_2_t& shapeInfo) :
+        const Mode batchingMode, const shapes_info_map_t& shapeInfo) :
         request(request),
         inputsInfo(inputsInfo),
         servableName(servableName),
@@ -273,7 +273,7 @@ Status RequestValidator::validatePrecision(const ovms::TensorInfo& inputInfo, co
     return StatusCode::OK;
 }
 
-Mode getShapeMode(const shapes_info_map_2_t& shapeInfo, const std::string& name) {
+Mode getShapeMode(const shapes_info_map_t& shapeInfo, const std::string& name) {
     if (shapeInfo.size() == 0) {
         return Mode::FIXED;
     }
@@ -338,14 +338,14 @@ Status RequestValidator::validate() {
         if (!status.ok())
             return status;
 
-        status = validateTensorContentSize(proto, inputInfo->getPrecision_2());
+        status = validateTensorContentSize(proto, inputInfo->getPrecision());
         if (!status.ok())
             return status;
     }
     return finalStatus;
 }
 
-Status validate(const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<const char*>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_2_t& shapeInfo) {
+Status validate(const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<const char*>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
     return RequestValidator(request, inputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
 }
 
