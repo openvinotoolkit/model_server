@@ -327,7 +327,7 @@ cc_binary(
         "queue.hpp",
         "custom_nodes/add_one/add_one.cpp",
         "custom_node_interface.h",
-        "custom_nodes/add_one/addOneInternalManager.hpp"
+        "custom_nodes/add_one/add_one_internal_manager.hpp"
     ],
     linkshared = 1,
     copts = [
