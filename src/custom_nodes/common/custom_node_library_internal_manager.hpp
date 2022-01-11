@@ -33,7 +33,6 @@ class CustomNodeLibraryInternalManager {
 public:
     CustomNodeLibraryInternalManager() = default;
     bool createBuffersQueue(const std::string& name, size_t singleBufferSize, int streamsLength);
-    bool recreateBuffersQueue(const std::string& name, size_t singleBufferSize, int streamsLength);
     BuffersQueue* getBuffersQueue(const std::string& name);
     bool releaseBuffer(void* ptr);
     std::shared_timed_mutex& getInternalManagerLock();

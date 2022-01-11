@@ -32,18 +32,6 @@ bool CustomNodeLibraryInternalManager::createBuffersQueue(const std::string& nam
     return true;
 }
 
-bool CustomNodeLibraryInternalManager::recreateBuffersQueue(const std::string& name, size_t singleBufferSize, int streamsLength) {
-    auto it = outputBuffers.find(name);
-    if (it != outputBuffers.end()) {
-        if (!(it->second->getSize() == singleBufferSize &&
-                it->second->getSingleBufferSize() == streamsLength * singleBufferSize)) {
-            it->second.reset(new BuffersQueue(singleBufferSize, streamsLength));
-        }
-        return true;
-    }
-    return false;
-}
-
 BuffersQueue* CustomNodeLibraryInternalManager::getBuffersQueue(const std::string& name) {
     auto it = outputBuffers.find(name);
     if (it == outputBuffers.end())
