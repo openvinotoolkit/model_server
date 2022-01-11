@@ -42,6 +42,18 @@ public:
 }  // namespace ovms
 
 template <typename T>
-bool get_buffer(ovms::custom_nodes_common::CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size);
+bool get_buffer(ovms::custom_nodes_common::CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size) {
+    auto buffersQueue = internalManager->getBuffersQueue(buffersQueueName);
+    if (!(buffersQueue == nullptr)) {
+        *buffer = static_cast<T*>(buffersQueue->getBuffer());
+    }
+    if (*buffer == nullptr || buffersQueue == nullptr) {
+        *buffer = (T*)malloc(byte_size);
+        if (*buffer == nullptr) {
+            return false;
+        }
+    }
+    return true;
+}
 
 void cleanup(CustomNodeTensor& tensor, ovms::custom_nodes_common::CustomNodeLibraryInternalManager* internalManager);
