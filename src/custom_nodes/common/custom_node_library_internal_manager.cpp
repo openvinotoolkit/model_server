@@ -14,7 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include "customNodeLibraryInternalManager.hpp"
+#include "custom_node_library_internal_manager.hpp"
 
 #include <iostream>
 #include <memory>
@@ -65,3 +65,8 @@ std::shared_timed_mutex& CustomNodeLibraryInternalManager::getInternalManagerLoc
 }
 }  // namespace custom_nodes_common
 }  // namespace ovms
+
+void cleanup(CustomNodeTensor& tensor, ovms::custom_nodes_common::CustomNodeLibraryInternalManager* internalManager) {
+    release(tensor.data, internalManager);
+    release(tensor.dims, internalManager);
+}

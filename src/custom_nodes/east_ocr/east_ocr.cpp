@@ -18,9 +18,10 @@
 #include <vector>
 
 #include "../../custom_node_interface.h"
+#include "../common/opencv_utils.hpp"
+#include "../common/utils.hpp"
 #include "nms.hpp"
 #include "opencv2/opencv.hpp"
-#include "utils.hpp"
 
 static constexpr const char* IMAGE_TENSOR_NAME = "image";
 static constexpr const char* SCORES_TENSOR_NAME = "scores";
@@ -88,7 +89,7 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     return true;
 }
 
-bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
+bool copy_boxes_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
     const uint64_t outputBatch = boxes.size();
     uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
 
@@ -115,13 +116,13 @@ bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::ve
     return true;
 }
 
-bool copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<float>& scores) {
-    const uint64_t outputBatch = scores.size();
+bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::vector<float>& confidences) {
+    const uint64_t outputBatch = confidences.size();
     uint64_t byteSize = sizeof(float) * outputBatch;
 
     float* buffer = (float*)malloc(byteSize);
     NODE_ASSERT(buffer != nullptr, "malloc has failed");
-    std::memcpy(buffer, scores.data(), byteSize);
+    std::memcpy(buffer, confidences.data(), byteSize);
 
     output->data = reinterpret_cast<uint8_t*>(buffer);
     output->dataBytes = byteSize;
@@ -133,11 +134,6 @@ bool copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<
     output->dims[2] = 1;
     output->precision = FP32;
     return true;
-}
-
-void cleanup(CustomNodeTensor& tensor) {
-    free(tensor.data);
-    free(tensor.dims);
 }
 
 int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
@@ -358,7 +354,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     CustomNodeTensor& coordinatesTensor = (*outputs)[1];
     coordinatesTensor.name = COORDINATES_TENSOR_NAME;
-    if (!copy_coordinates_into_output(&coordinatesTensor, filteredBoxes)) {
+    if (!copy_boxes_into_output(&coordinatesTensor, filteredBoxes)) {
         free(*outputs);
         cleanup(textImagesTensor);
         return 1;
@@ -366,7 +362,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     CustomNodeTensor& confidenceTensor = (*outputs)[2];
     confidenceTensor.name = CONFIDENCE_TENSOR_NAME;
-    if (!copy_scores_into_output(&confidenceTensor, filteredScores)) {
+    if (!copy_confidences_into_output(&confidenceTensor, filteredScores)) {
         free(*outputs);
         cleanup(textImagesTensor);
         cleanup(coordinatesTensor);

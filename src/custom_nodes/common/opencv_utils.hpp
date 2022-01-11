@@ -15,43 +15,44 @@
 //*****************************************************************************
 #pragma once
 
-#include <cmath>
-#include <string>
-#include <utility>
 #include <vector>
 
 #include "../../custom_node_interface.h"
 #include "opencv2/opencv.hpp"
 
-#define NODE_ASSERT(cond, msg)                                            \
-    if (!(cond)) {                                                        \
-        std::cout << "[" << __LINE__ << "] Assert: " << msg << std::endl; \
-        return 1;                                                         \
+template <typename T>
+void reorder_to_nhwc_2(const T* sourceNchwBuffer, T* destNhwcBuffer, int rows, int cols, int channels) {
+    for (int y = 0; y < rows; ++y) {
+        for (int x = 0; x < cols; ++x) {
+            for (int c = 0; c < channels; ++c) {
+                destNhwcBuffer[y * channels * cols + x * channels + c] = reinterpret_cast<const T*>(sourceNchwBuffer)[c * (rows * cols) + y * cols + x];
+            }
+        }
     }
+}
 
 template <typename T>
 std::vector<T> reorder_to_nhwc(const T* nchwVector, int rows, int cols, int channels) {
     std::vector<T> nhwcVector(rows * cols * channels);
+    reorder_to_nhwc_2(nchwVector, nhwcVector.data(), rows, cols, channels);
+    return nhwcVector;
+}
+
+template <typename T>
+void reorder_to_nchw_2(const T* sourceNhwcBuffer, T* destNchwBuffer, int rows, int cols, int channels) {
     for (int y = 0; y < rows; ++y) {
         for (int x = 0; x < cols; ++x) {
             for (int c = 0; c < channels; ++c) {
-                nhwcVector[y * channels * cols + x * channels + c] = reinterpret_cast<const T*>(nchwVector)[c * (rows * cols) + y * cols + x];
+                destNchwBuffer[c * (rows * cols) + y * cols + x] = reinterpret_cast<const T*>(sourceNhwcBuffer)[y * channels * cols + x * channels + c];
             }
         }
     }
-    return nhwcVector;
 }
 
 template <typename T>
 std::vector<T> reorder_to_nchw(const T* nhwcVector, int rows, int cols, int channels) {
     std::vector<T> nchwVector(rows * cols * channels);
-    for (int y = 0; y < rows; ++y) {
-        for (int x = 0; x < cols; ++x) {
-            for (int c = 0; c < channels; ++c) {
-                nchwVector[c * (rows * cols) + y * cols + x] = reinterpret_cast<const T*>(nhwcVector)[y * channels * cols + x * channels + c];
-            }
-        }
-    }
+    reorder_to_nchw_2(nhwcVector, nchwVector.data(), rows, cols, channels);
     return nchwVector;
 }
 
@@ -110,41 +111,53 @@ cv::Mat apply_grayscale(cv::Mat image) {
     return grayscaled;
 }
 
-float get_float_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsCount, float defaultValue = 0.0f) {
-    for (int i = 0; i < paramsCount; i++) {
-        if (name == params[i].key) {
-            try {
-                return std::stof(params[i].value);
-            } catch (std::invalid_argument& e) {
-                return defaultValue;
-            } catch (std::out_of_range& e) {
-                return defaultValue;
-            }
-        }
+bool scale_image(
+    bool isScaleDefined,
+    const float scale,
+    const std::vector<float>& meanValues,
+    const std::vector<float>& scaleValues,
+    cv::Mat& image) {
+    if (!isScaleDefined && scaleValues.size() == 0 && meanValues.size() == 0) {
+        return true;
     }
-    return defaultValue;
-}
 
-int get_int_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsCount, int defaultValue = 0) {
-    for (int i = 0; i < paramsCount; i++) {
-        if (name == params[i].key) {
-            try {
-                return std::stoi(params[i].value);
-            } catch (std::invalid_argument& e) {
-                return defaultValue;
-            } catch (std::out_of_range& e) {
-                return defaultValue;
-            }
-        }
+    size_t colorChannels = static_cast<size_t>(image.channels());
+    if (meanValues.size() > 0 && meanValues.size() != colorChannels) {
+        return false;
     }
-    return defaultValue;
-}
+    if (scaleValues.size() > 0 && scaleValues.size() != colorChannels) {
+        return false;
+    }
 
-std::string get_string_parameter(const std::string& name, const struct CustomNodeParam* params, int paramsCount, const std::string& defaultValue = "") {
-    for (int i = 0; i < paramsCount; i++) {
-        if (name == params[i].key) {
-            return params[i].value;
+    std::vector<cv::Mat> channels;
+    if (meanValues.size() > 0 || scaleValues.size() > 0) {
+        cv::split(image, channels);
+        if (channels.size() != colorChannels) {
+            return false;
+        }
+    } else {
+        channels.emplace_back(image);
+    }
+
+    for (size_t i = 0; i < meanValues.size(); i++) {
+        channels[i] -= meanValues[i];
+    }
+
+    if (scaleValues.size() > 0) {
+        for (size_t i = 0; i < channels.size(); i++) {
+            channels[i] /= scaleValues[i];
+        }
+    } else if (isScaleDefined) {
+        for (size_t i = 0; i < channels.size(); i++) {
+            channels[i] /= scale;
         }
     }
-    return defaultValue;
+
+    if (channels.size() == 1) {
+        image = channels[0];
+    } else {
+        cv::merge(channels, image);
+    }
+
+    return true;
 }

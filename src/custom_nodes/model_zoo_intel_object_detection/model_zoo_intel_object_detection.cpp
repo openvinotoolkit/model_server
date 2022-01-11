@@ -19,13 +19,12 @@
 #include <vector>
 
 #include "../../custom_node_interface.h"
-#include "../common/buffersqueue.hpp"
-#include "../common/customNodeLibraryInternalManager.hpp"
+#include "../common/custom_node_library_internal_manager.hpp"
+#include "../common/opencv_utils.hpp"
+#include "../common/utils.hpp"
 #include "opencv2/opencv.hpp"
-#include "utils.hpp"
 
 using CustomNodeLibraryInternalManager = ovms::custom_nodes_common::CustomNodeLibraryInternalManager;
-using BuffersQueue = ovms::custom_nodes_common::BuffersQueue;
 
 static constexpr const char* INPUT_IMAGE_TENSOR_NAME = "image";
 static constexpr const char* INPUT_DETECTION_TENSOR_NAME = "detection";
@@ -50,26 +49,6 @@ static constexpr const char* OUTPUT_LABEL_IDS_INFO_DIMS_NAME = "label_ids_info_d
 static constexpr const int QUEUE_SIZE = 1;
 
 std::shared_mutex internalManagerLock;
-
-void cleanup(CustomNodeTensor& tensor, CustomNodeLibraryInternalManager* internalManager) {
-    release(tensor.data, internalManager);
-    release(tensor.dims, internalManager);
-}
-
-template <typename T>
-bool get_buffer(CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size) {
-    auto buffersQueue = internalManager->getBuffersQueue(buffersQueueName);
-    if (!(buffersQueue == nullptr))
-        *buffer = static_cast<T*>(buffersQueue->getBuffer());
-    if (*buffer == nullptr || buffersQueue == nullptr) {
-        *buffer = (T*)malloc(byte_size);
-        if (*buffer == nullptr) {
-            std::cout << "allocation for buffer: " << buffersQueueName << "FAILED" << std::endl;
-            return false;
-        }
-    }
-    return true;
-}
 
 bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale, CustomNodeLibraryInternalManager* internalManager) {
     const uint64_t outputBatch = boxes.size();
