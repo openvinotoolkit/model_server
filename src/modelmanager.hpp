@@ -123,7 +123,7 @@ private:
      */
     std::thread monitor;
 
-     /**
+    /**
      * @brief A thread object used for cleanup
      */
     std::thread cleanerThread;
