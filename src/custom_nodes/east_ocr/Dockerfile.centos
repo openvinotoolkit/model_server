@@ -19,16 +19,9 @@ RUN yum update -y && yum install centos-release-scl -y && yum install -y devtool
 RUN curl -s https://download.01.org/opencv/master/openvinotoolkit/thirdparty/linux/opencv/opencv_4.5.1-044_centos7.txz | tar --use-compress-program=xz -xvf -
 ARG NODE_NAME=east_ocr
 
-ARG OPS=-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv
-
-COPY ./queue.hpp ./queue.hpp
-COPY ./common /custom_nodes/common
 COPY . /custom_nodes/${NODE_NAME}/
 COPY custom_node_interface.h /
-WORKDIR /custom_nodes/common
-RUN /opt/rh/devtoolset-8/root/bin/g++ -c -std=c++17 *.cpp -fpic  -I/opencv/include/ -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare  -fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv -fstack-protector
 WORKDIR /custom_nodes/${NODE_NAME}/
 RUN mkdir -p /custom_nodes/lib
-RUN /opt/rh/devtoolset-8/root/bin/g++ -c -std=c++17 ${NODE_NAME}.cpp ${OPS} -I/opencv/include/
-RUN /opt/rh/devtoolset-8/root/bin/g++ -shared ${OPS} -o /custom_nodes/lib/libcustom_node_${NODE_NAME}.so ${NODE_NAME}.o /custom_nodes/common/*.o \
-    -L/opencv/lib/ -I/opencv/include/ -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+RUN /opt/rh/devtoolset-8/root/bin/g++ -c -std=c++17 ${NODE_NAME}.cpp -fpic  -I/opencv/include/ -Wall -Wno-unknown-pragmas -Werror -fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv -fstack-protector
+RUN /opt/rh/devtoolset-8/root/bin/g++ -shared -o /custom_nodes/lib/libcustom_node_${NODE_NAME}.so ${NODE_NAME}.o -L/opencv/lib/ -I/opencv/include/ -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
