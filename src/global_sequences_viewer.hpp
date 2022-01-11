@@ -34,24 +34,12 @@ private:
     // used to block parallel access to registered sequence managers map
     std::mutex viewerMutex;
 
-    // used to send exit signal to sequence cleaner thread and force termination
-    std::promise<void> exitTrigger;
-
     std::map<std::string, std::shared_ptr<SequenceManager>> registeredSequenceManagers;
-
-    void sequenceCleanerRoutine(uint32_t sequenceCleanerIntervalMinutes, std::future<void> exitSignal);
-
-    std::thread sequenceCleanerThread;
 
 protected:
     Status removeIdleSequences();
 
 public:
-    void startCleanerThread(uint32_t sequenceCleanerIntervalMinutes = DEFAULT_SEQUENCE_CLEANER_INTERVAL);
-
-    // Gracefully finish sequence cleaner thread
-    void join();
-
     Status registerForCleanup(std::string modelName, model_version_t modelVersion, std::shared_ptr<SequenceManager> sequenceManager);
 
     Status unregisterFromCleanup(std::string modelName, model_version_t modelVersion);

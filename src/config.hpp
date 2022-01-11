@@ -349,12 +349,21 @@ public:
     }
 
     /**
-     * @brief Get the sequence cleaner poll wait time in minutes
+     * @brief Get the sequence cleanup poll wait time in minutes
      * 
      * @return uint 
      */
     uint32_t sequenceCleanerPollWaitMinutes() {
         return result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
+    }
+
+    /**
+     * @brief Get the resources cleanup poll wait time in seconds
+     * 
+     * @return uint 
+     */
+    uint32_t resourcesCleanerPollWaitSeconds() {
+        return result->operator[]("resources_cleaner_poll_wait_minutes").as<uint32_t>();
     }
 
     /**

@@ -118,10 +118,20 @@ private:
      */
     std::thread monitor;
 
+     /**
+     * @brief A thread object used for cleanup
+     */
+    std::thread cleanerThread;
+
     /**
      * @brief An exit trigger to notify watcher thread to exit
      */
     std::promise<void> exitTrigger;
+
+    /**
+     * @brief An exit trigger to notify cleaner thread to exit
+     */
+    std::promise<void> cleanerExitTrigger;
 
     /**
      * @brief A current configurations of models
@@ -147,9 +157,14 @@ private:
     uint watcherIntervalSec = 1;
 
     /**
-     * Time interval between two consecutive sequence cleaner scans (in minutes)
+     * Time interval between two consecutive sequence cleanup scans (in minutes)
      */
-    uint32_t sequenceCleanerIntervalMinutes = 5;
+    uint32_t sequenceCleaupIntervalMinutes = 5;
+
+    /**
+     * Time interval between two consecutive resources cleanup scans (in seconds)
+     */
+    uint32_t resourcesCleanupIntervalSec = 1;
 
     /**
       * @brief last md5sum of configfile
@@ -213,7 +228,7 @@ public:
         return models;
     }
 
-    void startSequenceCleaner();
+    void startCleaner();
 
     const PipelineFactory& getPipelineFactory() const {
         return pipelineFactory;

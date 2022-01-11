@@ -57,6 +57,7 @@ namespace ovms {
 
 static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
 static bool watcherStarted = false;
+static bool cleanerStarted = false;
 
 ModelManager::ModelManager(const std::string& modelCacheDirectory) :
     ieCore(std::make_unique<ov::runtime::Core>()),
@@ -144,7 +145,8 @@ ModelManager::~ModelManager() = default;
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
     watcherIntervalSec = config.filesystemPollWaitSeconds();
-    sequenceCleanerIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
+    sequenceCleaupIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
+    resourcesCleanupIntervalSec = config.resourcesCleanerPollWaitSeconds();
     Status status;
     if (config.configPath() != "") {
         status = startFromFile(config.configPath());
@@ -167,11 +169,16 @@ void ModelManager::startWatcher() {
         monitor = std::move(t);
     }
 
-    startSequenceCleaner();
+    startCleaner();
 }
 
-void ModelManager::startSequenceCleaner() {
-    globalSequencesViewer.startCleanerThread(sequenceCleanerIntervalMinutes);
+void ModelManager::startCleaner() {
+    if ((!cleanerStarted)) {
+        std::future<void> exitSignal = cleanerExitTrigger.get_future();
+        std::thread t(std::thread(&ModelManager::cleanerRoutine, this, resourcesCleanupIntervalSec, sequenceCleaupIntervalMinutes, std::move(exitSignal)));
+        cleanerStarted = true;
+        cleanerThread = std::move(t);
+    }
 }
 
 Status ModelManager::startFromConfig() {
@@ -822,11 +829,32 @@ void ModelManager::watcher(std::future<void> exitSignal) {
             loadConfig(configFilename);
         }
         updateConfigurationWithoutConfigFile();
-        cleanupResources();
 
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Models configuration and filesystem check cycle end");
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
+}
+
+void ModelManager::cleanerRoutine(uint32_t resourcesCleanupIntervalSec, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal) {
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Started cleaner thread");
+
+    uint32_t resourcesTime = resourcesCleanupIntervalSec;
+    uint32_t sequenceTime = sequenceCleanerIntervalMinutes * 60;
+    uint32_t currentWaitTime = (resourcesTime < sequenceTime || sequenceTime == 0) : resourcesTime ? sequenceTime;
+
+    while (exitSignal.wait_for(std::chrono::seconds(currentWaitTime)) == std::future_status::timeout) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleanup check cycle begin");
+
+        cleanupResources();
+        globalSequencesViewer.removeIdleSequences();
+
+        resourcesTime = (resourcesTime - currentWaitTime) == 0 : resourcesCleanupIntervalSec ? resourcesTime - currentWaitTime;
+        sequenceTime = (sequenceTime - currentWaitTime) == 0 : sequenceCleanerIntervalMinutes * 60 ? sequenceTime - currentWaitTime;
+        currentWaitTime = (resourcesTime < sequenceTime || sequenceTime == 0) : resourcesTime ? sequenceTime;
+
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleanup check cycle end");
+    }
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped cleaner thread");
 }
 
 void ModelManager::cleanupResources() {
@@ -848,7 +876,14 @@ void ModelManager::join() {
         }
     }
 
-    globalSequencesViewer.join();
+    if (cleanerStarted) {
+        cleanerExitTrigger.set_value();
+        if (cleanerThread.joinable()) {
+            cleanerThread.join();
+            cleanerStarted = false;
+            SPDLOG_INFO("Shutdown cleaner thread");
+        }
+    }
 }
 
 void ModelManager::getVersionsToChange(
