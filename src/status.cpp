@@ -105,7 +105,6 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     // Serialization
     {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, "Unsupported serialization precision"},
     {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR, "Internal serialization error"},
-    {StatusCode::OV_CLONE_BLOB_ERROR, "Error during tensor clone"},
     {StatusCode::OV_CLONE_TENSOR_ERROR, "Error during tensor clone"},
 
     // GetModelStatus
@@ -167,7 +166,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER, "Gather node refers to node that isn't demultiplexer"},
     {StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE, "Gathering from entry node is not allowed"},
     {StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE, "Demultiplication at entry node is not allowed"},
-    {StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT, "Demultiplication count does not match tensor first dimension"},
+    {StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_TENSOR_SHARD_COUNT, "Demultiplication count does not match tensor first dimension"},
     {StatusCode::PIPELINE_MANUAL_GATHERING_FROM_MULTIPLE_NODES_NOT_SUPPORTED, "Manual gathering from multiple nodes is not supported"},
     {StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY, "Pipeline has not enough shape dimensions to demultiply"},
     {StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY, "Too large dynamic demultiplication requested."},

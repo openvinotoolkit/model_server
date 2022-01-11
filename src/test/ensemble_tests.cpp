@@ -3312,7 +3312,7 @@ TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeWithShapeNotEqualToDemult
     ConstructorEnabledModelManager manager;
 
     auto status = manager.loadConfig(fileToReload);
-    ASSERT_EQ(status, StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT);
+    ASSERT_EQ(status, StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_TENSOR_SHARD_COUNT);
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
