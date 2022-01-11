@@ -44,7 +44,7 @@ using testing::_;
 using testing::NiceMock;
 using testing::Throw;
 
-const std::vector<ovms::Precision> SUPPORTED_OUTPUT_PRECISIONS_2{
+const std::vector<ovms::Precision> SUPPORTED_OUTPUT_PRECISIONS{
     // ovms::Precision::UNDEFINED,
     // ovms::Precision::MIXED,
     ovms::Precision::FP32,
@@ -61,7 +61,7 @@ const std::vector<ovms::Precision> SUPPORTED_OUTPUT_PRECISIONS_2{
     // ovms::Precision::CUSTOM)
 };
 
-const std::vector<ovms::Precision> UNSUPPORTED_OUTPUT_PRECISIONS_2{
+const std::vector<ovms::Precision> UNSUPPORTED_OUTPUT_PRECISIONS{
     // ovms::Precision::UNDEFINED, // Cannot create blob with such precision
     // ovms::Precision::MIXED, // Cannot create blob with such precision
     // ovms::Precision::FP32,
@@ -207,7 +207,7 @@ TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
 INSTANTIATE_TEST_SUITE_P(
     Test,
     SerializeTFTensorProto,
-    ::testing::ValuesIn(SUPPORTED_OUTPUT_PRECISIONS_2),
+    ::testing::ValuesIn(SUPPORTED_OUTPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<SerializeTFTensorProto::ParamType>& info) {
         return toString(info.param);
     });
@@ -215,7 +215,7 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     Test,
     SerializeTFTensorProtoNegative,
-    ::testing::ValuesIn(UNSUPPORTED_OUTPUT_PRECISIONS_2),
+    ::testing::ValuesIn(UNSUPPORTED_OUTPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<SerializeTFTensorProtoNegative::ParamType>& info) {
         return toString(info.param);
     });

@@ -44,7 +44,7 @@ using testing::_;
 using testing::NiceMock;
 using testing::Throw;
 
-const std::vector<ovms::Precision> SUPPORTED_INPUT_PRECISIONS_2{
+const std::vector<ovms::Precision> SUPPORTED_INPUT_PRECISIONS{
     // ovms::Precision::UNSPECIFIED,
     // ovms::Precision::MIXED,
     ovms::Precision::FP32,
@@ -61,7 +61,7 @@ const std::vector<ovms::Precision> SUPPORTED_INPUT_PRECISIONS_2{
     // ovms::Precision::CUSTOM)
 };
 
-const std::vector<ovms::Precision> UNSUPPORTED_INPUT_PRECISIONS_2{
+const std::vector<ovms::Precision> UNSUPPORTED_INPUT_PRECISIONS{
     ovms::Precision::UNDEFINED,
     ovms::Precision::MIXED,
     // ovms::Precision::FP32,
@@ -214,7 +214,7 @@ TEST_P(DeserializeTFTensorProto, ShouldReturnValidBlob) {
 INSTANTIATE_TEST_SUITE_P(
     TestDeserialize,
     GRPCPredictRequestNegative,
-    ::testing::ValuesIn(UNSUPPORTED_INPUT_PRECISIONS_2),
+    ::testing::ValuesIn(UNSUPPORTED_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<GRPCPredictRequestNegative::ParamType>& info) {
         return toString(info.param);
     });
@@ -222,7 +222,7 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     TestDeserialize,
     GRPCPredictRequest,
-    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS_2),
+    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<GRPCPredictRequest::ParamType>& info) {
         return toString(info.param);
     });
@@ -230,7 +230,7 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     Test,
     DeserializeTFTensorProtoNegative,
-    ::testing::ValuesIn(UNSUPPORTED_INPUT_PRECISIONS_2),
+    ::testing::ValuesIn(UNSUPPORTED_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<DeserializeTFTensorProtoNegative::ParamType>& info) {
         return toString(info.param);
     });
@@ -238,7 +238,7 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     Test,
     DeserializeTFTensorProto,
-    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS_2),
+    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<DeserializeTFTensorProto::ParamType>& info) {
         return toString(info.param);
     });
