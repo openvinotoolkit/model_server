@@ -84,7 +84,7 @@ Status getRequestedShape(const ModelConfig& config, const DynamicModelParameter&
     return StatusCode::OK;
 }
 
-bool hasInputWithName(std::shared_ptr<ov::Model>& network, const std::string& name) {
+bool hasInputWithName(std::shared_ptr<ov::Function>& network, const std::string& name) {
     try {
         network->input(name);
         return true;
@@ -93,7 +93,7 @@ bool hasInputWithName(std::shared_ptr<ov::Model>& network, const std::string& na
     }
 }
 
-bool hasOutputWithName(std::shared_ptr<ov::Model>& network, const std::string& name) {
+bool hasOutputWithName(std::shared_ptr<ov::Function>& network, const std::string& name) {
     try {
         network->output(name);
         return true;
@@ -102,7 +102,7 @@ bool hasOutputWithName(std::shared_ptr<ov::Model>& network, const std::string& n
     }
 }
 
-Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::shared_ptr<ov::Model>& network) {
+Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::shared_ptr<ov::Function>& network) {
     if (config.isShapeAnonymousFixed() && network->inputs().size() > 1) {
         Status status = StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED;
         SPDLOG_LOGGER_WARN(modelmanager_logger, status.string());
@@ -154,7 +154,7 @@ const layout_t getReportedTensorLayout(const ModelConfig& config, const std::str
     return layout;
 }
 
-Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::Model>& network, const std::string& modelName, model_version_t modelVersion) {
+Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::Function>& network, const std::string& modelName, model_version_t modelVersion) {
     ov::preprocess::PrePostProcessor preproc(network);
 
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying layout configuration: {}", config.layoutConfigurationToString());
@@ -520,7 +520,7 @@ uint ModelInstance::getNumOfParallelInferRequests(const ModelConfig& modelConfig
     return nireq;
 }
 
-std::shared_ptr<ov::Model> ModelInstance::loadOVCNNNetworkPtr(const std::string& modelFile) {
+std::shared_ptr<ov::Function> ModelInstance::loadOVCNNNetworkPtr(const std::string& modelFile) {
     return ieCore_2.read_model(modelFile);
 }
 
@@ -589,7 +589,7 @@ Status ModelInstance::loadOVCNNNetworkUsingCustomLoader() {
 }
 
 void ModelInstance::loadExecutableNetworkPtr(const plugin_config_t& pluginConfig) {
-    execNetwork_2 = std::make_shared<ov::runtime::CompiledModel>(ieCore_2.compile_model(network_2, targetDevice, pluginConfig));
+    execNetwork_2 = std::make_shared<ov::runtime::ExecutableNetwork>(ieCore_2.compile_model(network_2, targetDevice, pluginConfig));
 }
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {

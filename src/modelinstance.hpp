@@ -91,12 +91,12 @@ protected:
     /**
          * @brief Inference Engine CNNNetwork object
          */
-    std::shared_ptr<ov::Model> network_2;
+    std::shared_ptr<ov::Function> network_2;
 
     /**
          * @brief Inference Engine device network
          */
-    std::shared_ptr<ov::runtime::CompiledModel> execNetwork_2;
+    std::shared_ptr<ov::runtime::ExecutableNetwork> execNetwork_2;
 
     /**
          * @brief Model name
@@ -159,7 +159,7 @@ protected:
          *
          * @return CNNNetwork ptr
          */
-    virtual std::shared_ptr<ov::Model> loadOVCNNNetworkPtr(const std::string& modelFile);
+    virtual std::shared_ptr<ov::Function> loadOVCNNNetworkPtr(const std::string& modelFile);
 
     /**
          * @brief Lock to disable concurrent modelinstance load/unload/reload
