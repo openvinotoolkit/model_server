@@ -19,7 +19,7 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
 RUN curl -s http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/ubuntu18.tgz | tar -xzf -
 ARG NODE_NAME=east_ocr
 
-ARG OPS=-O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow -fpic -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv
+ARG OPS=-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv
 
 COPY ./common /custom_nodes/common
 COPY . /custom_nodes/${NODE_NAME}/
