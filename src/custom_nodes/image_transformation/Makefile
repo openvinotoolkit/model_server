@@ -25,7 +25,7 @@ docker_build:
 	@cp $(HEADER_FILE_PATH) ./custom_node_interface.h
 	@mkdir common
 	@cp -r ../common/utils.hpp ./common/utils.hpp
-	@cp -r ../common/cv_utils.hpp ./common/cv_utils.hpp
+	@cp -r ../common/opencv_utils.hpp ./common/opencv_utils.hpp
 	@docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} .
 	@rm -Rf lib
 	@docker cp $$(docker create --rm custom_node_build_image:latest):/custom_nodes/lib/ ./lib/
