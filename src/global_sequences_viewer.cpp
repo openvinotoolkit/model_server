@@ -28,7 +28,6 @@
 
 namespace ovms {
 
-static bool sequenceCleanerStarted = false;
 static std::string separator = "_";
 
 Status GlobalSequencesViewer::registerForCleanup(std::string modelName, model_version_t modelVersion, std::shared_ptr<SequenceManager> sequenceManager) {

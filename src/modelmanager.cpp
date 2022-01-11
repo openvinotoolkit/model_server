@@ -840,17 +840,17 @@ void ModelManager::cleanerRoutine(uint32_t resourcesCleanupIntervalSec, uint32_t
 
     uint32_t resourcesTime = resourcesCleanupIntervalSec;
     uint32_t sequenceTime = sequenceCleanerIntervalMinutes * 60;
-    uint32_t currentWaitTime = (resourcesTime < sequenceTime || sequenceTime == 0) : resourcesTime ? sequenceTime;
+    uint32_t currentWaitTime = (resourcesTime < sequenceTime || sequenceTime == 0) ? resourcesTime : sequenceTime;
 
-    while (exitSignal.wait_for(std::chrono::seconds(currentWaitTime)) == std::future_status::timeout) {
+    while (cleanerExitSignal.wait_for(std::chrono::seconds(currentWaitTime)) == std::future_status::timeout) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleanup check cycle begin");
 
         cleanupResources();
         globalSequencesViewer.removeIdleSequences();
 
-        resourcesTime = (resourcesTime - currentWaitTime) == 0 : resourcesCleanupIntervalSec ? resourcesTime - currentWaitTime;
-        sequenceTime = (sequenceTime - currentWaitTime) == 0 : sequenceCleanerIntervalMinutes * 60 ? sequenceTime - currentWaitTime;
-        currentWaitTime = (resourcesTime < sequenceTime || sequenceTime == 0) : resourcesTime ? sequenceTime;
+        resourcesTime = (resourcesTime - currentWaitTime) == 0 ? resourcesCleanupIntervalSec : resourcesTime - currentWaitTime;
+        sequenceTime = (sequenceTime - currentWaitTime) == 0 ? sequenceCleanerIntervalMinutes * 60 : sequenceTime - currentWaitTime;
+        currentWaitTime = (resourcesTime < sequenceTime || sequenceTime == 0) ? resourcesTime : sequenceTime;
 
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleanup check cycle end");
     }

@@ -109,6 +109,11 @@ private:
     void watcher(std::future<void> exitSignal);
 
     /**
+     * @brief Cleaner thread for sequence and resources cleanup
+     */
+    void cleanerRoutine(uint32_t resourcesCleanupIntervalSec, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal);
+
+    /**
      * @brief A JSON configuration filename
      */
     std::string configFilename;

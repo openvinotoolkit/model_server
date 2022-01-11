@@ -86,6 +86,10 @@ Config& Config::parse(int argc, char** argv) {
                 "Time interval between two consecutive sequence cleaner scans. Default is 5. Zero value disables sequence cleaner.",
                 cxxopts::value<uint32_t>()->default_value("5"),
                 "SEQUENCE_CLEANER_POLL_WAIT_MINUTES")
+            ("resources_cleaner_poll_wait_seconds",
+                "Time interval between two consecutive resources cleanup scans. Default is 1. Must be greater than 0.",
+                cxxopts::value<uint32_t>()->default_value("1"),
+                "RESOURCES_CLEANER_POLL_WAIT_SECONDS")
             ("cache_dir",
                 "Overrides model cache directory. By default cache files are saved into /opt/cache if the directory is present. When enabled, first model load will produce cache files.",
                 cxxopts::value<std::string>(),

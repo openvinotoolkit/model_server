@@ -36,10 +36,9 @@ private:
 
     std::map<std::string, std::shared_ptr<SequenceManager>> registeredSequenceManagers;
 
-protected:
-    Status removeIdleSequences();
-
 public:
+    Status removeIdleSequences();
+    
     Status registerForCleanup(std::string modelName, model_version_t modelVersion, std::shared_ptr<SequenceManager> sequenceManager);
 
     Status unregisterFromCleanup(std::string modelName, model_version_t modelVersion);
