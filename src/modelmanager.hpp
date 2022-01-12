@@ -203,6 +203,13 @@ public:
     }
 
     /**
+     *  @brief Gets the cleaner resources interval timestep in seconds
+     */
+    uint32_t getResourcesCleanupIntervalSec() {
+        return resourcesCleanupIntervalSec;
+    }
+
+    /**
      *  @brief Adds new resource to watch by the watcher thread
      */
     void addResourceToWatcher(std::shared_ptr<CNLIMWrapper> resource) {

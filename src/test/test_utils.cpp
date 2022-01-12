@@ -30,6 +30,14 @@ void waitForOVMSConfigReload(ovms::ModelManager& manager) {
     std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
 }
 
+void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {
+    // This is effectively multiplying by 1.2 to have 1 config reload in between
+    // two test steps
+    const float WAIT_MULTIPLIER_FACTOR = 1.2;
+    const uint waitTime = WAIT_MULTIPLIER_FACTOR * manager.getResourcesCleanupIntervalSec() * 1000;
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
+}
+
 std::string createConfigFileWithContent(const std::string& content, std::string filename) {
     std::ofstream configFile{filename};
     spdlog::info("Creating config file: {}\n with content:\n{}", filename, content);

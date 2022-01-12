@@ -541,7 +541,7 @@ public:
 
 TEST(ModelManager, ConfigReloadShouldCleanupResources) {
     ResourcesAccessModelManager manager;
-    manager.startWatcher();
+    manager.startCleaner();
     ASSERT_EQ(manager.getResourcesSize(), 0);
 
     // Reset mocked wrapper deinitializeSum
@@ -569,11 +569,11 @@ TEST(ModelManager, ConfigReloadShouldCleanupResources) {
         manager.addResourceToWatcher(std::move(ptr3));
         ASSERT_EQ(manager.getResourcesSize(), 3);
 
-        waitForOVMSConfigReload(manager);
+        waitForOVMSResourcesCleanup(manager);
         ASSERT_EQ(manager.getResourcesSize(), 2);
         ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, num3);
     }
-    waitForOVMSConfigReload(manager);
+    waitForOVMSResourcesCleanup(manager);
     ASSERT_EQ(manager.getResourcesSize(), 0);
     ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, (num1 + num2 + num3));
 

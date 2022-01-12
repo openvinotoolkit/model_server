@@ -147,6 +147,10 @@ Status ModelManager::start() {
     watcherIntervalSec = config.filesystemPollWaitSeconds();
     sequenceCleaupIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
     resourcesCleanupIntervalSec = config.resourcesCleanerPollWaitSeconds();
+    if (resourcesCleanupIntervalSec < 1) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Parameter: resources_cleaner_poll_wait_seconds has to be greater than 0. Applying default value(1 second)");
+        resourcesCleanupIntervalSec = 1;
+    }
     Status status;
     if (config.configPath() != "") {
         status = startFromFile(config.configPath());
@@ -839,7 +843,7 @@ void ModelManager::cleanerRoutine(uint32_t resourcesCleanupIntervalSec, uint32_t
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started cleaner thread");
 
     uint32_t resourcesTime = resourcesCleanupIntervalSec;
-    uint32_t sequenceTime = 7;
+    uint32_t sequenceTime = sequenceCleanerIntervalMinutes * 60;
     uint32_t currentWaitTime = (resourcesTime < sequenceTime || sequenceTime == 0) ? resourcesTime : sequenceTime;
 
     while (cleanerExitSignal.wait_for(std::chrono::seconds(currentWaitTime)) == std::future_status::timeout) {

@@ -4862,7 +4862,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnR
     //  O--------->O--------->O--------->O---------->O
     //          add-sub    add-sub    add-sub
     ResourcesAccessModelManager manager;
-    manager.startWatcher();
+    manager.startCleaner();
     ASSERT_EQ(manager.getResourcesSize(), 0);
     PipelineFactory factory;
 
@@ -4896,11 +4896,11 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnR
         {"custom_node_3", {{customNodeOutputName, pipelineOutputName}}}};
 
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
-    waitForOVMSConfigReload(manager);
+    waitForOVMSResourcesCleanup(manager);
     ASSERT_EQ(manager.getResourcesSize(), 3);
 
     factory.retireOtherThan({}, manager);
-    waitForOVMSConfigReload(manager);
+    waitForOVMSResourcesCleanup(manager);
     ASSERT_EQ(manager.getResourcesSize(), 0);
     manager.join();
 }
@@ -4911,7 +4911,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
     //  O--------->O--------->O--------->O---------->O
     //          add-sub    add-sub    add-sub
     ResourcesAccessModelManager manager;
-    manager.startWatcher();
+    manager.startCleaner();
     ASSERT_EQ(manager.getResourcesSize(), 0);
     PipelineFactory factory;
 
@@ -4945,7 +4945,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
         {"custom_node_3", {{customNodeOutputName, pipelineOutputName}}}};
 
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
-    waitForOVMSConfigReload(manager);
+    waitForOVMSResourcesCleanup(manager);
     ASSERT_EQ(manager.getResourcesSize(), 3);
 
     // Nodes
@@ -4957,7 +4957,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{customNodeOutputName, pipelineOutputName}}}};
     ASSERT_EQ(factory.reloadDefinition("my_new_pipeline", std::move(info), std::move(connections), manager), StatusCode::OK);
-    waitForOVMSConfigReload(manager);
+    waitForOVMSResourcesCleanup(manager);
     ASSERT_EQ(manager.getResourcesSize(), 2);
     manager.join();
 }
