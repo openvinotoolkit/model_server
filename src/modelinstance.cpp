@@ -613,7 +613,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     try {
         loadCompiledModelPtr(pluginConfig);
     } catch (ov::Exception& e) {
-        Status status = StatusCode::CANNOT_LOAD_COMPILED_MODEL_INTO_TARGET_DEVICE;
+        Status status = StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE;
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}; error: {}; model: {}; version: {}; device: {}",
             status.string(),
             e.what(),
@@ -622,7 +622,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             config.getTargetDevice());
         return status;
     } catch (std::exception& e) {
-        Status status = StatusCode::CANNOT_LOAD_COMPILED_MODEL_INTO_TARGET_DEVICE;
+        Status status = StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE;
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}; error: {}; model: {}; version: {}; device: {}",
             status.string(),
             e.what(),

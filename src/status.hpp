@@ -62,7 +62,7 @@ enum class StatusCode {
     CONFIG_LAYOUT_IS_NOT_IN_NETWORK,         /*!< Configured tensor layout is not present in network */
     CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME,  /*!< Using old name of input/output in config shape when mapped in mapping_config.json*/
     CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME, /*!< Using old name of input/output in config layout when mapped in mapping_config.json*/
-    CANNOT_LOAD_COMPILED_MODEL_INTO_TARGET_DEVICE,
+    CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE,
     REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL,
     CANNOT_CONVERT_FLAT_SHAPE,
 

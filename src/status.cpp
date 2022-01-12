@@ -45,7 +45,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::FORBIDDEN_MODEL_DYNAMIC_PARAMETER, "Value of provided parameter is forbidden"},
     {StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED, "Anonymous fixed shape is invalid for models with multiple inputs"},
     {StatusCode::ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED, "Anonymous fixed layout is invalid for models with multiple inputs"},
-    {StatusCode::CANNOT_LOAD_COMPILED_MODEL_INTO_TARGET_DEVICE, "Cannot load compiled model into target device"},
+    {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, "Cannot compile model into target device"},
     {StatusCode::MODEL_MISSING, "Model with requested name and/or version is not found"},
     {StatusCode::MODEL_CONFIG_INVALID, "Model config is invalid"},
     {StatusCode::MODEL_NAME_MISSING, "Model with requested name is not found"},
@@ -269,7 +269,7 @@ const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusM
     {StatusCode::MODEL_SPEC_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_SIGNATURE_DEF, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, grpc::StatusCode::ABORTED},
-    {StatusCode::CANNOT_LOAD_COMPILED_MODEL_INTO_TARGET_DEVICE, grpc::StatusCode::FAILED_PRECONDITION},
+    {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, grpc::StatusCode::FAILED_PRECONDITION},
 
     // Sequence management
     {StatusCode::SEQUENCE_MISSING, grpc::StatusCode::NOT_FOUND},
@@ -365,7 +365,7 @@ const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::htt
     {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, net_http::HTTPStatusCode::NO_CONTENT},
-    {StatusCode::CANNOT_LOAD_COMPILED_MODEL_INTO_TARGET_DEVICE, net_http::HTTPStatusCode::PRECOND_FAILED},
+    {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, net_http::HTTPStatusCode::PRECOND_FAILED},
 
     // Sequence management
     {StatusCode::SEQUENCE_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
