@@ -47,26 +47,6 @@ static constexpr const char* OUTPUT_COORDINATES_INFO_DIMS_NAME = "text_coordinat
 
 static constexpr const int QUEUE_SIZE = 1;
 
-void cleanup(CustomNodeTensor& tensor, CustomNodeLibraryInternalManager* internalManager) {
-    release(tensor.data, internalManager);
-    release(tensor.dims, internalManager);
-}
-
-template <typename T>
-bool get_buffer(CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size) {
-    auto buffersQueue = internalManager->getBuffersQueue(buffersQueueName);
-    if (!(buffersQueue == nullptr))
-        *buffer = static_cast<T*>(buffersQueue->getBuffer());
-    if (*buffer == nullptr || buffersQueue == nullptr) {
-        *buffer = (T*)malloc(byte_size);
-        if (*buffer == nullptr) {
-            std::cout << "allocation for buffer: " << buffersQueueName << "FAILED" << std::endl;
-            return false;
-        }
-    }
-    return true;
-}
-
 bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale, CustomNodeLibraryInternalManager* internalManager) {
     const uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
