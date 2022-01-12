@@ -19,9 +19,9 @@
 #include <vector>
 
 #include "../../custom_node_interface.h"
+#include "../common/custom_node_library_internal_manager.hpp"
 #include "../common/opencv_utils.hpp"
 #include "../common/utils.hpp"
-#include "../common/custom_node_library_internal_manager.hpp"
 #include "nms.hpp"
 #include "opencv2/opencv.hpp"
 

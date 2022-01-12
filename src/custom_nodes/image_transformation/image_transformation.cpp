@@ -19,10 +19,10 @@
 #include <string>
 
 #include "../../custom_node_interface.h"
-#include "../common/opencv_utils.hpp"
-#include "../common/utils.hpp"
 #include "../common/buffersqueue.hpp"
 #include "../common/custom_node_library_internal_manager.hpp"
+#include "../common/opencv_utils.hpp"
+#include "../common/utils.hpp"
 #include "opencv2/opencv.hpp"
 
 using CustomNodeLibraryInternalManager = ovms::custom_nodes_common::CustomNodeLibraryInternalManager;
