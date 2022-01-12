@@ -83,7 +83,7 @@ Config& Config::parse(int argc, char** argv) {
                 cxxopts::value<uint>()->default_value("1"),
                 "FILE_SYSTEM_POLL_WAIT_SECONDS")
             ("sequence_cleaner_poll_wait_minutes",
-                "Time interval between two consecutive sequence cleaner scans. Default is 5. Zero value disables sequence cleaner.",
+                "Time interval between two consecutive sequence cleanup scans. Default is 5. Zero value disables sequence cleaner.",
                 cxxopts::value<uint32_t>()->default_value("5"),
                 "SEQUENCE_CLEANER_POLL_WAIT_MINUTES")
             ("resources_cleaner_poll_wait_seconds",

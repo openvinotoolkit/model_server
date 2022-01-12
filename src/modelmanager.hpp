@@ -210,9 +210,9 @@ public:
     }
 
     /**
-     *  @brief Adds new resource to watch by the watcher thread
+     *  @brief Adds new resource to watch by the cleaner thread
      */
-    void addResourceToWatcher(std::shared_ptr<CNLIMWrapper> resource) {
+    void addResourceToCleaner(std::shared_ptr<CNLIMWrapper> resource) {
         resources.emplace(resources.end(), std::move(resource));
     }
 
@@ -407,7 +407,7 @@ public:
     Status updateConfigurationWithoutConfigFile();
 
     /**
-     * @brief Watcher thread procedure to cleanup resources that are not used
+     * @brief Cleaner thread procedure to cleanup resources that are not used
      */
     void cleanupResources();
 };

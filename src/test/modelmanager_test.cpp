@@ -564,9 +564,9 @@ TEST(ModelManager, ConfigReloadShouldCleanupResources) {
             return *number;
         });
 
-        manager.addResourceToWatcher(ptr1);
-        manager.addResourceToWatcher(ptr2);
-        manager.addResourceToWatcher(std::move(ptr3));
+        manager.addResourceToCleaner(ptr1);
+        manager.addResourceToCleaner(ptr2);
+        manager.addResourceToCleaner(std::move(ptr3));
         ASSERT_EQ(manager.getResourcesSize(), 3);
 
         waitForOVMSResourcesCleanup(manager);
