@@ -49,12 +49,12 @@ std::unordered_map<std::string, shape_t> createOwnedShapesCopy(const TensorMap& 
 }
 
 Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node, const NodeLibrary& library, std::unique_ptr<struct CustomNodeParam[]>& parameters, int parametersCount, void* customNodeLibraryInternalManager) {
-    const auto& blobMap = this->inputHandler->getInputs();
-    auto inputTensorsCount = blobMap.size();
+    const auto& tensorMap = this->inputHandler->getInputs();
+    auto inputTensorsCount = tensorMap.size();
     // this is a hack to overcome OV 1.0 -> 2.0 API change where we do not get reference to
     // tensor shape now but a copy. Hence we have to extend the lifetime of dims vector
-    auto tensorsDims = createOwnedShapesCopy(blobMap);
-    auto inputTensors = createCustomNodeTensorArray(blobMap, tensorsDims);
+    auto tensorsDims = createOwnedShapesCopy(tensorMap);
+    auto inputTensors = createCustomNodeTensorArray(tensorMap, tensorsDims);
     struct CustomNodeTensor* outputTensors = nullptr;
     int outputTensorsCount = 0;
     this->timer->start("execution");
@@ -94,25 +94,25 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
     }
 
     // At this point this is important we do not exit before finishing the loop.
-    // There will be memory leak if any tensor is not converted into blob.
-    // Blob destructor is responsible for cleaning up resources.
+    // There will be memory leak if any tensor is not converted into tensor.
+    // Tensor destructor is responsible for cleaning up resources.
     Status status = StatusCode::OK;
     for (int i = 0; i < outputTensorsCount; i++) {
-        std::shared_ptr<ov::runtime::Tensor> resultBlob;
-        auto result = this->createBlob(&outputTensors[i], resultBlob, library, customNodeLibraryInternalManager);
+        std::shared_ptr<ov::runtime::Tensor> resultTensor;
+        auto result = this->createTensor(&outputTensors[i], resultTensor, library, customNodeLibraryInternalManager);
         if (outputTensors[i].name == nullptr) {
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed blob conversion - missing output name", getName(), getSessionKey());
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed tensor conversion - missing output name", getName(), getSessionKey());
             status = StatusCode::NODE_LIBRARY_OUTPUT_MISSING_NAME;
             continue;
         }
         if (!result.ok()) {
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed to convert {}: to blob", getName(), getSessionKey(), outputTensors[i].name);
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed to convert {}: to tensor", getName(), getSessionKey(), outputTensors[i].name);
             if (status.ok()) {
                 status = result;
             }
             continue;
         }
-        this->resultBlobs.emplace(std::string(outputTensors[i].name), std::move(resultBlob));
+        this->resultTensors.emplace(std::string(outputTensors[i].name), std::move(resultTensor));
     }
 
     library.release(outputTensors, customNodeLibraryInternalManager);
@@ -120,12 +120,12 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
     return status;
 }
 
-Status CustomNodeSession::fetchResult(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& resultBlob) {
-    auto it = resultBlobs.find(name);
-    if (it == resultBlobs.end()) {
+Status CustomNodeSession::fetchResult(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& resultTensor) {
+    auto it = resultTensors.find(name);
+    if (it == resultTensors.end()) {
         return StatusCode::NODE_LIBRARY_MISSING_OUTPUT;
     }
-    resultBlob = it->second;
+    resultTensor = it->second;
     return StatusCode::OK;
 }
 
@@ -162,7 +162,7 @@ public:
     }
 };
 
-Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, std::shared_ptr<ov::runtime::Tensor>& resultBlob, const NodeLibrary& library, void* customNodeLibraryInternalManager) {
+Status CustomNodeSession::createTensor(const struct CustomNodeTensor* tensor, std::shared_ptr<ov::runtime::Tensor>& resultTensor, const NodeLibrary& library, void* customNodeLibraryInternalManager) {
     TensorResourcesGuard tensorResourcesGuard(tensor, library, customNodeLibraryInternalManager);
 
     auto precision = ovmsPrecisionToIE2Precision(toInferenceEnginePrecision(tensor->precision));
@@ -216,7 +216,7 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, std:
         case CustomNodeTensorPrecision::FP16:
         case CustomNodeTensorPrecision::I16:
         case CustomNodeTensorPrecision::U16:
-            resultBlob = std::make_shared<ov::runtime::Tensor>(ov::element::Type(ovmsPrecisionToIE2Precision(toInferenceEnginePrecision(tensor->precision))), ov::Shape(shape), allocator);
+            resultTensor = std::make_shared<ov::runtime::Tensor>(ov::element::Type(ovmsPrecisionToIE2Precision(toInferenceEnginePrecision(tensor->precision))), ov::Shape(shape), allocator);
             break;
         case CustomNodeTensorPrecision::UNSPECIFIED:
             return StatusCode::INTERNAL_ERROR;

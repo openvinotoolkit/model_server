@@ -28,8 +28,8 @@ const NodeSessionMetadata& NodeSession::getNodeSessionMetadata() const {
     return this->metadata;
 }
 
-Status NodeSession::setInput(const std::string& inputName, std::shared_ptr<ov::runtime::Tensor>& blobPtr, session_id_t shardId) {
-    return inputHandler->setInput(inputName, blobPtr, shardId);
+Status NodeSession::setInput(const std::string& inputName, std::shared_ptr<ov::runtime::Tensor>& tensorPtr, session_id_t shardId) {
+    return inputHandler->setInput(inputName, tensorPtr, shardId);
 }
 
 std::unique_ptr<NodeInputHandler> createNodeInputHandler(uint32_t inputsCount, const CollapseDetails& collapsingDetails) {

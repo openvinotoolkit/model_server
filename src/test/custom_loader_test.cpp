@@ -337,9 +337,9 @@ public:
     void serializeAndCheck(int outputSize, ov::runtime::InferRequest& inferRequest) {
         std::vector<float> output(outputSize);
         ASSERT_THAT(output, Each(Eq(0.)));
-        auto blobOutput = inferRequest.get_tensor(DUMMY_MODEL_OUTPUT_NAME);
-        ASSERT_EQ(blobOutput.get_byte_size(), outputSize * sizeof(float));
-        std::memcpy(output.data(), blobOutput.data(), outputSize * sizeof(float));
+        auto tensorOutput = inferRequest.get_tensor(DUMMY_MODEL_OUTPUT_NAME);
+        ASSERT_EQ(tensorOutput.get_byte_size(), outputSize * sizeof(float));
+        std::memcpy(output.data(), tensorOutput.data(), outputSize * sizeof(float));
         EXPECT_THAT(output, Each(Eq(2.)));
     }
 

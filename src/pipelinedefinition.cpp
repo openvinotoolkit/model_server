@@ -488,7 +488,7 @@ public:
                         demultiplicatorNodeInfo.demultiplyCount.value(),
                         demultiplicatorNodeInfo.nodeName,
                         shape[0].toString());
-                    return StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT;
+                    return StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_TENSOR_SHARD_COUNT;
                 }
             } else {
                 SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {}; Demultiply count: {} of node: {} is fixed while first dimenson value of node library is not: {}. This pipeline may fail at execution stage.",

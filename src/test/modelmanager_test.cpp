@@ -696,7 +696,7 @@ TEST(ModelManager, ModelVersionFailedReloadReportsFailedStatus) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     // force reload with wrong shape
     config.setTargetDevice("invalid");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::CANNOT_LOAD_COMPILED_MODEL_INTO_TARGET_DEVICE);
 }
 
 TEST(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {

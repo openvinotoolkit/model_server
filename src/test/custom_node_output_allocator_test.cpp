@@ -78,7 +78,7 @@ public:
     }
 };
 
-TEST(CustomNodeOutputAllocator, BlobDeallocationCallsReleaseBuffer) {
+TEST(CustomNodeOutputAllocator, TensorDeallocationCallsReleaseBuffer) {
     unsigned int elementsCount = 10;
     std::vector<float> data(elementsCount);
     CustomNodeTensor tensor{
@@ -131,7 +131,7 @@ int release(void* ptr, void* customNodeLibraryInternalManager) {
     return 0;
 }
 
-TEST(CustomNodeOutputAllocator, BlobReturnsCorrectPointer) {
+TEST(CustomNodeOutputAllocator, TensorReturnsCorrectPointer) {
     unsigned int elementsCount = 10;
     std::vector<float> data(elementsCount);
     CustomNodeTensor tensor{

@@ -208,7 +208,7 @@ bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
 Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage) {
     // For pipelines with only custom nodes entry, there is no way to deduce layout.
     // With unknown layout, there is no way to deduce pipeline input resolution.
-    // This forces binary utility to create blobs with resolution inherited from input binary image from request.
+    // This forces binary utility to create tensors with resolution inherited from input binary image from request.
     // To achieve it, in this specific case we require all binary images to have the same resolution.
     if (firstBatchImage && tensorInfo->getLayout() == TensorInfo::getDefaultLayout()) {
         auto status = validateResolutionAgainstFirstBatchImage(input, firstBatchImage);
@@ -296,7 +296,7 @@ shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const std::shared
     return dims;
 }
 
-ov::runtime::Tensor createBlobFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+ov::runtime::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     ov::Shape shape = getShapeFromImages(images, tensorInfo);
     ov::element::Type precision = tensorInfo->getOvPrecision();
     ov::runtime::Tensor tensor(precision, shape);
@@ -308,7 +308,7 @@ ov::runtime::Tensor createBlobFromMats(const std::vector<cv::Mat>& images, const
     return tensor;
 }
 
-ov::runtime::Tensor convertMatsToBlob(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+ov::runtime::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     switch (tensorInfo->getPrecision()) {
     case ovms::Precision::FP32:
     case ovms::Precision::I32:
@@ -317,7 +317,7 @@ ov::runtime::Tensor convertMatsToBlob(std::vector<cv::Mat>& images, const std::s
     case ovms::Precision::FP16:
     case ovms::Precision::U16:
     case ovms::Precision::I16:
-        return createBlobFromMats(images, tensorInfo, isPipeline);
+        return createTensorFromMats(images, tensorInfo, isPipeline);
     case ovms::Precision::I64:
     case ovms::Precision::MIXED:
     case ovms::Precision::Q78:
@@ -329,7 +329,7 @@ ov::runtime::Tensor convertMatsToBlob(std::vector<cv::Mat>& images, const std::s
     }
 }
 
-Status convertStringValToBlob(const tensorflow::TensorProto& src, ov::runtime::Tensor& blob, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+Status convertStringValToTensor(const tensorflow::TensorProto& src, ov::runtime::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     auto status = validateTensor(tensorInfo, src);
     if (status != StatusCode::OK) {
         return status;
@@ -342,8 +342,8 @@ Status convertStringValToBlob(const tensorflow::TensorProto& src, ov::runtime::T
         return status;
     }
 
-    blob = convertMatsToBlob(images, tensorInfo, isPipeline);
-    if (!blob) {
+    tensor = convertMatsToTensor(images, tensorInfo, isPipeline);
+    if (!tensor) {
         return StatusCode::IMAGE_PARSING_FAILED;  // TODO: Add unit test.
     }
     return StatusCode::OK;

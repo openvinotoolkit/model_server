@@ -91,12 +91,12 @@ protected:
     /**
          * @brief Inference Engine CNNNetwork object
          */
-    std::shared_ptr<ov::Model> network;
+    std::shared_ptr<ov::Model> model;
 
     /**
-         * @brief Inference Engine device network
+         * @brief Inference Engine device model
          */
-    std::shared_ptr<ov::runtime::CompiledModel> execNetwork;
+    std::shared_ptr<ov::runtime::CompiledModel> compiledModel;
 
     /**
          * @brief Model name
@@ -159,7 +159,7 @@ protected:
          *
          * @return CNNNetwork ptr
          */
-    virtual std::shared_ptr<ov::Model> loadOVCNNNetworkPtr(const std::string& modelFile);
+    virtual std::shared_ptr<ov::Model> loadOVModelPtr(const std::string& modelFile);
 
     /**
          * @brief Lock to disable concurrent modelinstance load/unload/reload
@@ -176,12 +176,12 @@ protected:
          *
          * @return Status
          */
-    Status loadOVCNNNetwork();
+    Status loadOVModel();
 
     /**
          * @brief Sets OV ExecutableNetworkPtr
          */
-    virtual void loadExecutableNetworkPtr(const plugin_config_t& pluginConfig);
+    virtual void loadCompiledModelPtr(const plugin_config_t& pluginConfig);
 
     /**
          * @brief Loads OV ExecutableNetwork
@@ -214,7 +214,7 @@ protected:
          *
          * @return Status
          */
-    Status loadOVCNNNetworkUsingCustomLoader();
+    Status loadOVModelUsingCustomLoader();
 
     virtual const Status validate(const tensorflow::serving::PredictRequest* request);
 
@@ -285,7 +285,7 @@ private:
     Status recoverFromReloadingError(const Status& status);
 
     /**
-         * @brief Perform full engine/network reload with dynamic parameter
+         * @brief Perform full engine/model reload with dynamic parameter
          * 
          * @param status returned from reload operation
          * @param parameter requested dynamic parameter
@@ -386,7 +386,7 @@ public:
          * @return batch size
          */
     virtual Dimension getBatchSize() const {
-        return Dimension(ov::get_batch(network));
+        return Dimension(ov::get_batch(model));
     }
 
     /**
@@ -419,7 +419,7 @@ public:
     /**
          * @brief Check if can unload infer requests
          *
-         * @return bool 
+         * @return bool
          */
     virtual bool canUnloadInstance() const {
         return 0 == predictRequestsHandlesCount;
@@ -427,7 +427,7 @@ public:
 
     /**
          * @brief Get OV streams pool
-         * 
+         *
          * @return OVStreamsQueue
          */
     OVInferRequestsQueue& getInferRequestsQueue() {
@@ -442,7 +442,7 @@ public:
     static plugin_config_t prepareDefaultPluginConfig(const ModelConfig& config);
 
     /**
-         * @brief Loads model version, reads CNN network model from files (*.xml and *.bin files) and creates inference engine
+         * @brief Loads model version, reads CNN model from files (*.xml and *.bin files) and creates inference engine
          *
          * @param config model configuration
          *
@@ -451,7 +451,7 @@ public:
     virtual Status loadModel(const ModelConfig& config);
 
     /**
-         * @brief Reloads model version, reads CNN network model from files (*.xml and *.bin files) and creates inference engine
+         * @brief Reloads model version, reads CNN model from files (*.xml and *.bin files) and creates inference engine
          *
          * @param config model configuration
          *
@@ -460,12 +460,12 @@ public:
     virtual Status reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
 
     /**
-         * @brief Reloads model version with different batch size or shape, reads CNN network model from files (*.xml and *.bin files) and recreates inference engine
+         * @brief Reloads model version with different batch size or shape, reads CNN model from files (*.xml and *.bin files) and recreates inference engine
          *
          * @param batchSize new batch size
          * @param shape new shape
          * @param unloadGuard unloadGuardPtr
-         * 
+         *
          * @return Status
          */
     virtual Status reloadModel(std::optional<Dimension> batchSize, std::map<std::string, shape_t> shape, std::unique_ptr<ModelInstanceUnloadGuard>& unloadGuardPtr);

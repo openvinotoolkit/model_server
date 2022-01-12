@@ -172,7 +172,7 @@ public:
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
 
 protected:
-    std::shared_ptr<ov::Model> loadOVCNNNetworkPtr(const std::string& modelFile) override {
+    std::shared_ptr<ov::Model> loadOVModelPtr(const std::string& modelFile) override {
         throw std::runtime_error("File was not found");
         return nullptr;
     }
@@ -191,7 +191,7 @@ public:
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
 
 protected:
-    void loadExecutableNetworkPtr(const ovms::plugin_config_t& pluginConfig) override {
+    void loadCompiledModelPtr(const ovms::plugin_config_t& pluginConfig) override {
         throw std::runtime_error("File was not found");
     }
 };
@@ -200,7 +200,7 @@ TEST_F(TestLoadModel, CheckIfOVNonExistingBinFileErrorIsCatched) {
     // Check if handling file removal after file existence was checked
     MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork mockModelInstance(*ieCore);
     auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
-    EXPECT_EQ(status, ovms::StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE) << status.string();
+    EXPECT_EQ(status, ovms::StatusCode::CANNOT_LOAD_COMPILED_MODEL_INTO_TARGET_DEVICE) << status.string();
 }
 
 TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {

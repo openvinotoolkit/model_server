@@ -94,27 +94,27 @@ Status EntryNode::isInputBinary(const std::string& name, bool& isBinary) const {
     return StatusCode::OK;
 }
 
-Status EntryNode::createShardedBlob(std::shared_ptr<ov::runtime::Tensor>& dividedBlob, Precision precision, const shape_t& shape, std::shared_ptr<ov::runtime::Tensor> tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
+Status EntryNode::createShardedTensor(std::shared_ptr<ov::runtime::Tensor>& dividedTensor, Precision precision, const shape_t& shape, std::shared_ptr<ov::runtime::Tensor> tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
     bool isBinary = false;
     auto status = this->isInputBinary(tensorName, isBinary);
     if (!status.ok()) {
         return status;
     }
     if (isBinary) {
-        return Node::createShardedBlob(dividedBlob, precision, shape, tensor, i, step, metadata, tensorName);
+        return Node::createShardedTensor(dividedTensor, precision, shape, tensor, i, step, metadata, tensorName);
     }
 
     // if condition is perf optimization
-    // when demultiplying from entry node from tensor content we can skip allocation for sharded blobs
+    // when demultiplying from entry node from tensor content we can skip allocation for sharded tensors
     // and reuse memory from original tensor since its memory is kept for whole duration of predict request
     if ((precision == Precision::FP32) ||
         (precision == Precision::I32) ||
         (precision == Precision::I8) ||
         (precision == Precision::U8) ||
         (precision == Precision::I16)) {
-        dividedBlob = createSharedTensor(ovmsPrecisionToIE2Precision(precision), shape, (void*)((char*)(tensor->data()) + i * step));
+        dividedTensor = createSharedTensor(ovmsPrecisionToIE2Precision(precision), shape, (void*)((char*)(tensor->data()) + i * step));
     } else {
-        return Node::createShardedBlob(dividedBlob, precision, shape, tensor, i, step, metadata, tensorName);
+        return Node::createShardedTensor(dividedTensor, precision, shape, tensor, i, step, metadata, tensorName);
     }
     return StatusCode::OK;
 }

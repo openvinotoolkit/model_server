@@ -38,11 +38,11 @@ Pipeline::Pipeline(EntryNode& entry, ExitNode& exit, const std::string& name) :
 void Pipeline::push(std::unique_ptr<Node> node) {
     nodes.emplace_back(std::move(node));
 }
-void Pipeline::connect(Node& from, Node& to, const Aliases& blobNamesMapping) {
+void Pipeline::connect(Node& from, Node& to, const Aliases& tensorNamesMapping) {
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Connecting from: {}, to: {}", from.getName(), to.getName());
-    printNodeConnections(to.getName(), from.getName(), blobNamesMapping);
+    printNodeConnections(to.getName(), from.getName(), tensorNamesMapping);
     from.addDependant(to);
-    to.addDependency(from, blobNamesMapping);
+    to.addDependency(from, tensorNamesMapping);
 }
 
 void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const Aliases& pairs) {

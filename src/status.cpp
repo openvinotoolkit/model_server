@@ -45,7 +45,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::FORBIDDEN_MODEL_DYNAMIC_PARAMETER, "Value of provided parameter is forbidden"},
     {StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED, "Anonymous fixed shape is invalid for models with multiple inputs"},
     {StatusCode::ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED, "Anonymous fixed layout is invalid for models with multiple inputs"},
-    {StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE, "Cannot load network into target device"},
+    {StatusCode::CANNOT_LOAD_COMPILED_MODEL_INTO_TARGET_DEVICE, "Cannot load compiled model into target device"},
     {StatusCode::MODEL_MISSING, "Model with requested name and/or version is not found"},
     {StatusCode::MODEL_CONFIG_INVALID, "Model config is invalid"},
     {StatusCode::MODEL_NAME_MISSING, "Model with requested name is not found"},
@@ -105,7 +105,6 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     // Serialization
     {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, "Unsupported serialization precision"},
     {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR, "Internal serialization error"},
-    {StatusCode::OV_CLONE_BLOB_ERROR, "Error during blob clone"},
     {StatusCode::OV_CLONE_TENSOR_ERROR, "Error during tensor clone"},
 
     // GetModelStatus
@@ -158,8 +157,8 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_EXIT_USED_AS_NODE_DEPENDENCY, "Pipeline definition has response node used as dependency node"},
     {StatusCode::PIPELINE_NAME_OCCUPIED, "Pipeline has the same name as model"},
     {StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY, "Pipeline refers to incorrect library"},
-    {StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS, "Gathered blob shards dimensions are different"},
-    {StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY, "Wrong number of dimensions in a blob to be sharded"},
+    {StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS, "Gathered tensor shards dimensions are different"},
+    {StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY, "Wrong number of dimensions in a tensor to be sharded"},
     {StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY, "Wrong dimension size. Should match demultiply count"},
     {StatusCode::PIPELINE_TRIED_TO_SET_THE_SAME_INPUT_TWICE, "Tried to set the same input twice for node input handler"},
     {StatusCode::PIPELINE_TRIED_TO_SET_INPUT_SHARD_FOR_ORDINARY_INPUT_HANDLER, "Tried to set input with shard id > 0 for ordinary input handler"},
@@ -167,7 +166,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER, "Gather node refers to node that isn't demultiplexer"},
     {StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE, "Gathering from entry node is not allowed"},
     {StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE, "Demultiplication at entry node is not allowed"},
-    {StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT, "Demultiplication count does not match tensor first dimension"},
+    {StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_TENSOR_SHARD_COUNT, "Demultiplication count does not match tensor first dimension"},
     {StatusCode::PIPELINE_MANUAL_GATHERING_FROM_MULTIPLE_NODES_NOT_SUPPORTED, "Manual gathering from multiple nodes is not supported"},
     {StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY, "Pipeline has not enough shape dimensions to demultiply"},
     {StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY, "Too large dynamic demultiplication requested."},
@@ -227,8 +226,8 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::NODE_LIBRARY_EXECUTION_FAILED, "Custom node failed during execution"},
     {StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED, "Custom node library has returned corrupted outputs handle"},
     {StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT, "Custom node library has produced corrupted number of outputs"},
-    {StatusCode::NODE_LIBRARY_INVALID_PRECISION, "Custom node has produced blob with unspecified precision"},
-    {StatusCode::NODE_LIBRARY_INVALID_SHAPE, "Custom node has produced blob with not matching shape"},
+    {StatusCode::NODE_LIBRARY_INVALID_PRECISION, "Custom node has produced tensor with unspecified precision"},
+    {StatusCode::NODE_LIBRARY_INVALID_SHAPE, "Custom node has produced tensor with not matching shape"},
     {StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE, "Custom node output has invalid content size"},
     {StatusCode::NODE_LIBRARY_METADATA_FAILED, "Custom node failed on metadata call"},
     {StatusCode::NODE_LIBRARY_OUTPUT_MISSING_NAME, "Custom node output is missing name"},
@@ -270,7 +269,7 @@ const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusM
     {StatusCode::MODEL_SPEC_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_SIGNATURE_DEF, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, grpc::StatusCode::ABORTED},
-    {StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE, grpc::StatusCode::FAILED_PRECONDITION},
+    {StatusCode::CANNOT_LOAD_COMPILED_MODEL_INTO_TARGET_DEVICE, grpc::StatusCode::FAILED_PRECONDITION},
 
     // Sequence management
     {StatusCode::SEQUENCE_MISSING, grpc::StatusCode::NOT_FOUND},
@@ -366,7 +365,7 @@ const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::htt
     {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, net_http::HTTPStatusCode::NO_CONTENT},
-    {StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE, net_http::HTTPStatusCode::PRECOND_FAILED},
+    {StatusCode::CANNOT_LOAD_COMPILED_MODEL_INTO_TARGET_DEVICE, net_http::HTTPStatusCode::PRECOND_FAILED},
 
     // Sequence management
     {StatusCode::SEQUENCE_MISSING, net_http::HTTPStatusCode::NOT_FOUND},

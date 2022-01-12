@@ -290,7 +290,7 @@ public:
     void SetUp() override {
         ieCore = std::make_unique<ov::runtime::Core>();
         modelInstance = std::make_shared<MockedStatefulModelInstance>("model", 1, *ieCore);
-        // Prepare states blob desc
+        // Prepare states tensor desc
         shape = std::vector<size_t>{1, 1};
         elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
     }

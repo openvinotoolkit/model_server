@@ -59,7 +59,7 @@ class GetModelMetadataResponse : public ::testing::Test {
     tensor_desc_map_t inputTensors;
     tensor_desc_map_t outputTensors;
     ovms::tensor_map_t networkInputs;
-    ovms::tensor_map_t networkOutputs;
+    ovms::tensor_map_t servableOutputs;
 
 protected:
     std::string modelName = "resnet";
@@ -105,12 +105,12 @@ protected:
         };
 
         prepare(inputTensors, networkInputs);
-        prepare(outputTensors, networkOutputs);
+        prepare(outputTensors, servableOutputs);
 
         ON_CALL(*instance, getInputsInfo())
             .WillByDefault(ReturnRef(networkInputs));
         ON_CALL(*instance, getOutputsInfo())
-            .WillByDefault(ReturnRef(networkOutputs));
+            .WillByDefault(ReturnRef(servableOutputs));
         ON_CALL(*instance, getName())
             .WillByDefault(ReturnRef(modelName));
         ON_CALL(*instance, getVersion())

@@ -23,7 +23,7 @@
 
 using testing::ElementsAre;
 
-TEST(OVUtils, CopyBlob) {
+TEST(OVUtils, CopyTensor) {
     const std::vector<size_t> shape{2, 3, 4, 5};
     const auto elementType = ov::element::Type(ov::element::Type_t::f32);
     const size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
@@ -57,11 +57,11 @@ TEST(OVUtils, CopyBlob) {
     EXPECT_EQ(originalTensorActualData, data);
     EXPECT_EQ(copyTensorActualData, data);
 
-    // Expect memory addresses to differ since cloning should allocate new memory space for the cloned blob
+    // Expect memory addresses to differ since cloning should allocate new memory space for the cloned tensor
     EXPECT_NE(originalTensor.data(), copyTensor->data());
 }
 
-TEST(OVUtils, ConstCopyBlob) {
+TEST(OVUtils, ConstCopyTensor) {
     const std::vector<size_t> shape{2, 3, 4, 5};
     const auto elementType = ov::element::Type(ov::element::Type_t::f32);
     const size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
@@ -96,6 +96,6 @@ TEST(OVUtils, ConstCopyBlob) {
     EXPECT_EQ(originalTensorActualData, data);
     EXPECT_EQ(copyTensorActualData, data);
 
-    // Expect memory addresses to differ since cloning should allocate new memory space for the cloned blob
+    // Expect memory addresses to differ since cloning should allocate new memory space for the cloned tensor
     EXPECT_NE(originalTensor.data(), copyTensor->data());
 }

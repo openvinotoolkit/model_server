@@ -33,7 +33,7 @@
 
 namespace ovms {
 
-ov::runtime::Tensor makeBlob(const tensorflow::TensorProto& requestInput,
+ov::runtime::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo);
 
 class ConcreteTensorProtoDeserializator {
@@ -46,9 +46,9 @@ public:
         case ovms::Precision::I32:
         case ovms::Precision::U8:
         case ovms::Precision::I16:
-            return makeBlob(requestInput, tensorInfo);
+            return makeTensor(requestInput, tensorInfo);
         case ovms::Precision::I8: {
-            return makeBlob(requestInput, tensorInfo);
+            return makeTensor(requestInput, tensorInfo);
         }
         case ovms::Precision::FP16: {
             ov::Shape shape;
@@ -57,7 +57,7 @@ public:
             }
             ov::runtime::Tensor tensor(ov::element::f16, shape);
             // Needs conversion due to zero padding for each value:
-            // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
+            // https://github.com/tensorflow/tensorflow/tensor/v2.2.0/tensorflow/core/framework/tensor.proto#L55
             uint16_t* ptr = (uint16_t*)tensor.data();
             auto size = static_cast<size_t>(requestInput.half_val_size());
             for (size_t i = 0; i < size; i++) {
@@ -72,7 +72,7 @@ public:
             }
             ov::runtime::Tensor tensor(ov::element::u16, shape);
             // Needs conversion due to zero padding for each value:
-            // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
+            // https://github.com/tensorflow/tensorflow/tensor/v2.2.0/tensorflow/core/framework/tensor.proto#L55
             uint16_t* ptr = (uint16_t*)tensor.data();
             auto size = static_cast<size_t>(requestInput.int_val_size());
             for (size_t i = 0; i < size; i++) {
@@ -100,7 +100,7 @@ class InputSink {
 public:
     InputSink(Requester requester) :
         requester(requester) {}
-    Status give(const std::string& name, ov::runtime::Tensor& blob);  // TODO replace with one below
+    Status give(const std::string& name, ov::runtime::Tensor& tensor);  // TODO replace with one below
     Status give(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& tensor);
 };
 
@@ -120,29 +120,29 @@ Status deserializePredictRequest(
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
             }
             auto& requestInput = requestInputItr->second;
-            ov::runtime::Tensor blob;
+            ov::runtime::Tensor tensor;
 
             if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
                 SPDLOG_DEBUG("Request contains binary input: {}", name);
-                status = convertStringValToBlob(requestInput, blob, tensorInfo, isPipeline);
+                status = convertStringValToTensor(requestInput, tensor, tensorInfo, isPipeline);
                 if (!status.ok()) {
                     SPDLOG_DEBUG("Binary inputs conversion failed.");
                     return status;
                 }
             } else {
-                blob = deserializeTensorProto<TensorProtoDeserializator>(
+                tensor = deserializeTensorProto<TensorProtoDeserializator>(
                     requestInput, tensorInfo);
             }
 
-            if (!blob) {
+            if (!tensor) {
                 status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
                 SPDLOG_DEBUG(status.string());
                 return status;
             }
-            const std::string ovBlobName = isPipeline ? name : tensorInfo->getName();
-            status = inputSink.give(ovBlobName, blob);
+            const std::string ovTensorName = isPipeline ? name : tensorInfo->getName();
+            status = inputSink.give(ovTensorName, tensor);
             if (!status.ok()) {
-                SPDLOG_DEBUG("Feeding input:{} to inference performer failed:{}", ovBlobName, status.string());
+                SPDLOG_DEBUG("Feeding input:{} to inference performer failed:{}", ovTensorName, status.string());
                 return status;
             }
             // OV implementation the ov::Exception is not

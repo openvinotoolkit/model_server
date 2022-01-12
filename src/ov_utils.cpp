@@ -30,8 +30,8 @@ std::shared_ptr<ov::runtime::Tensor> createSharedTensor(ov::element::Type_t prec
     return tensor;
 }
 
-Status createSharedTensor(std::shared_ptr<ov::runtime::Tensor>& destinationBlob, ov::element::Type_t precision, const ov::Shape& shape) {
-    destinationBlob = std::make_shared<ov::runtime::Tensor>(precision, shape);
+Status createSharedTensor(std::shared_ptr<ov::runtime::Tensor>& destinationTensor, ov::element::Type_t precision, const ov::Shape& shape) {
+    destinationTensor = std::make_shared<ov::runtime::Tensor>(precision, shape);
     return StatusCode::OK;
 }
 

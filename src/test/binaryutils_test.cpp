@@ -46,7 +46,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonMatchingBatchsize) {
     auto tensorInfo = std::make_shared<TensorInfo>();
     tensorInfo->setShape({5, 1, 1, 1});
     tensorInfo->setLayout(layout_t{"NHWC"});
-    auto status = convertStringValToBlob(stringVal, tensor, tensorInfo, false);
+    auto status = convertStringValToTensor(stringVal, tensor, tensorInfo, false);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE) << status.string();
 }
 
@@ -59,7 +59,7 @@ TEST_F(BinaryUtilsTest, tensorWithInvalidImage) {
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, layout_t{"NHWC"});
 
-    EXPECT_EQ(convertStringValToBlob(stringValInvalidImage, tensor, tensorInfo, false), ovms::StatusCode::IMAGE_PARSING_FAILED);
+    EXPECT_EQ(convertStringValToTensor(stringValInvalidImage, tensor, tensorInfo, false), ovms::StatusCode::IMAGE_PARSING_FAILED);
 }
 
 TEST_F(BinaryUtilsTest, tensorWithEmptyStringVal) {
@@ -71,7 +71,7 @@ TEST_F(BinaryUtilsTest, tensorWithEmptyStringVal) {
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, layout_t{"NHWC"});
 
-    EXPECT_EQ(convertStringValToBlob(stringValEmptyImage, tensor, tensorInfo, false), ovms::StatusCode::STRING_VAL_EMPTY);
+    EXPECT_EQ(convertStringValToTensor(stringValEmptyImage, tensor, tensorInfo, false), ovms::StatusCode::STRING_VAL_EMPTY);
 }
 
 TEST_F(BinaryUtilsTest, tensorWithNonSupportedLayout) {
@@ -79,7 +79,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonSupportedLayout) {
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, layout_t{"NCHW"});
 
-    EXPECT_EQ(convertStringValToBlob(stringVal, tensor, tensorInfo, false), ovms::StatusCode::UNSUPPORTED_LAYOUT);
+    EXPECT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::UNSUPPORTED_LAYOUT);
 }
 
 TEST_F(BinaryUtilsTest, tensorWithNonSupportedPrecision) {
@@ -87,7 +87,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonSupportedPrecision) {
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::MIXED, ovms::Shape{1, 1, 1, 3}, layout_t{"NHWC"});
 
-    EXPECT_EQ(convertStringValToBlob(stringVal, tensor, tensorInfo, false), ovms::StatusCode::INVALID_PRECISION);
+    EXPECT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::INVALID_PRECISION);
 }
 
 TEST_F(BinaryUtilsTest, tensorWithNonMatchingShapeSize) {
@@ -95,7 +95,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonMatchingShapeSize) {
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1}, layout_t{"NC"});
 
-    EXPECT_EQ(convertStringValToBlob(stringVal, tensor, tensorInfo, false), ovms::StatusCode::UNSUPPORTED_LAYOUT);
+    EXPECT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::UNSUPPORTED_LAYOUT);
 }
 
 TEST_F(BinaryUtilsTest, tensorWithNonMatchingNumberOfChannelsNHWC) {
@@ -103,7 +103,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonMatchingNumberOfChannelsNHWC) {
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 1}, layout_t{"NHWC"});
 
-    EXPECT_EQ(convertStringValToBlob(stringVal, tensor, tensorInfo, false), ovms::StatusCode::INVALID_NO_OF_CHANNELS);
+    EXPECT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::INVALID_NO_OF_CHANNELS);
 }
 
 TEST_F(BinaryUtilsTest, positive_rgb) {
@@ -113,7 +113,7 @@ TEST_F(BinaryUtilsTest, positive_rgb) {
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, layout_t{"NHWC"});
 
-    ASSERT_EQ(convertStringValToBlob(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_size(), 3);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
@@ -137,85 +137,85 @@ TEST_F(BinaryUtilsTest, positive_grayscale) {
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 1}, layout_t{"NHWC"});
 
-    ASSERT_EQ(convertStringValToBlob(grayscaleStringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringValToTensor(grayscaleStringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_size(), 1);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), grayscale_expected_tensor), true);
 }
 
 TEST_F(BinaryUtilsTest, positive_batch_size_2) {
-    uint8_t rgb_batchsize_2_blob[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
+    uint8_t rgb_batchsize_2_tensor[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
 
     ov::runtime::Tensor tensor;
     stringVal.add_string_val(image_bytes.get(), filesize);
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{2, 1, 1, 3}, layout_t{"NHWC"});
 
-    ASSERT_EQ(convertStringValToBlob(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_size(), 6);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
-    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_batchsize_2_blob), true);
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_batchsize_2_tensor), true);
 }
 
 TEST_F(BinaryUtilsTest, positive_precision_changed) {
-    uint8_t rgb_precision_changed_expected_blob[] = {0x24, 0x00, 0x00, 0x00, 0x1b, 0x00, 0x00, 0x00, 0xed, 0x00, 0x00, 0x00};
+    uint8_t rgb_precision_changed_expected_tensor[] = {0x24, 0x00, 0x00, 0x00, 0x1b, 0x00, 0x00, 0x00, 0xed, 0x00, 0x00, 0x00};
 
     ov::runtime::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::I32, ovms::Shape{1, 1, 1, 3}, layout_t{"NHWC"});
 
-    ASSERT_EQ(convertStringValToBlob(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_size(), 3);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
     int I32_size = 4;
-    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size() * I32_size, rgb_precision_changed_expected_blob), true);
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size() * I32_size, rgb_precision_changed_expected_tensor), true);
 }
 
 TEST_F(BinaryUtilsTest, positive_nhwc_layout) {
-    uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed};
+    uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
 
     ov::runtime::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, layout_t{"NHWC"});
 
-    ASSERT_EQ(convertStringValToBlob(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_size(), 3);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
 
-    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
 TEST_F(BinaryUtilsTest, positive_resizing) {
-    uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
+    uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
 
     ov::runtime::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 2, 2, 3}, layout_t{"NHWC"});
 
-    ASSERT_EQ(convertStringValToBlob(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_size(), 12);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
-    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
 TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_smaller) {
-    uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
+    uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
 
     ov::runtime::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, {2, 5}, 3}, layout_t{"NHWC"});
 
-    ASSERT_EQ(convertStringValToBlob(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
     size_t expectedColsNumber = 2;
     EXPECT_EQ(tensorDims[2], expectedColsNumber);
     ASSERT_EQ(tensor.get_size(), 6);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
-    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
 TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_bigger) {
-    uint8_t rgb_expected_blob[] = {0x96, 0x8f, 0xf3, 0x98, 0x9a, 0x81, 0x9d, 0xa9, 0x12};
+    uint8_t rgb_expected_tensor[] = {0x96, 0x8f, 0xf3, 0x98, 0x9a, 0x81, 0x9d, 0xa9, 0x12};
 
     std::ifstream DataFile;
     DataFile.open("/ovms/src/test/binaryutils/rgb4x4.jpg", std::ios::binary);
@@ -233,49 +233,49 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_bigger) {
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, {1, 3}, 3}, layout_t{"NHWC"});
 
-    ASSERT_EQ(convertStringValToBlob(stringVal2x2, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringValToTensor(stringVal2x2, tensor, tensorInfo, false), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
     size_t expectedColsNumber = 3;
     EXPECT_EQ(tensorDims[2], expectedColsNumber);
     ASSERT_EQ(tensor.get_size(), 9);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
-    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
 TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_in_range) {
-    uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed};
+    uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
 
     ov::runtime::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, {1, 3}, 3}, layout_t{"NHWC"});
 
-    ASSERT_EQ(convertStringValToBlob(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
     size_t expectedColsNumber = 1;
     EXPECT_EQ(tensorDims[2], expectedColsNumber);
     ASSERT_EQ(tensor.get_size(), 3);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
-    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
 TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_smaller) {
-    uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
+    uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
 
     ov::runtime::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, {2, 5}, 1, 3}, layout_t{"NHWC"});
 
-    ASSERT_EQ(convertStringValToBlob(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
     size_t expectedRowsNumber = 2;
     EXPECT_EQ(tensorDims[1], expectedRowsNumber);
     ASSERT_EQ(tensor.get_size(), 6);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
-    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
 TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_bigger) {
-    uint8_t rgb_expected_blob[] = {0x3f, 0x65, 0x88, 0x98, 0x9a, 0x81, 0xf5, 0xd2, 0x7c};
+    uint8_t rgb_expected_tensor[] = {0x3f, 0x65, 0x88, 0x98, 0x9a, 0x81, 0xf5, 0xd2, 0x7c};
 
     std::ifstream DataFile;
     DataFile.open("/ovms/src/test/binaryutils/rgb4x4.jpg", std::ios::binary);
@@ -293,39 +293,39 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_bigger) {
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, {1, 3}, 1, 3}, layout_t{"NHWC"});
 
-    ASSERT_EQ(convertStringValToBlob(stringVal2x2, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringValToTensor(stringVal2x2, tensor, tensorInfo, false), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
     size_t expectedRowsNumber = 3;
     EXPECT_EQ(tensorDims[1], expectedRowsNumber);
     ASSERT_EQ(tensor.get_size(), 9);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
-    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
 TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_in_range) {
-    uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed};
+    uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
 
     ov::runtime::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, {1, 3}, 1, 3}, layout_t{"NHWC"});
 
-    ASSERT_EQ(convertStringValToBlob(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
     size_t expectedRowsNumber = 1;
     EXPECT_EQ(tensorDims[1], expectedRowsNumber);
     ASSERT_EQ(tensor.get_size(), 3);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
-    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
 TEST_F(BinaryUtilsTest, positive_resizing_with_any_shape) {
-    uint8_t rgb_expected_blob[] = {0x24, 0x1b, 0xed};
+    uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
 
     ov::runtime::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, ovms::Dimension::any(), ovms::Dimension::any(), 3}, layout_t{"NHWC"});
 
-    ASSERT_EQ(convertStringValToBlob(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
     size_t expectedRowsNumber = 1;
     EXPECT_EQ(tensorDims[1], expectedRowsNumber);
@@ -333,7 +333,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_any_shape) {
     EXPECT_EQ(tensorDims[2], expectedColsNumber);
     ASSERT_EQ(tensor.get_size(), 3);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
-    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_blob), true);
+    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
 TEST_F(BinaryUtilsTest, positive_resizing_with_one_any_one_static_shape) {
@@ -341,7 +341,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_one_any_one_static_shape) {
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, ovms::Dimension::any(), 4, 3}, layout_t{"NHWC"});
 
-    ASSERT_EQ(convertStringValToBlob(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
     size_t expectedRowsNumber = 1;
     EXPECT_EQ(tensorDims[1], expectedRowsNumber);

@@ -134,7 +134,7 @@ TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision)
         << " should return error";
 }
 
-TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobException) {
+TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorException) {
     ovms::Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
     ov::runtime::InferRequest inferRequest;
@@ -164,11 +164,11 @@ public:
 
 MockTensorProtoDeserializatorThrowingInferenceEngine* MockTensorProtoDeserializator::mock = nullptr;
 
-TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobException2) {
+TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorException2) {
     ov::runtime::Core ieCore;
     std::shared_ptr<ov::Model> network = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
-    ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
-    ov::runtime::InferRequest inferRequest = execNetwork.create_infer_request();
+    ov::runtime::CompiledModel compiledModel = ieCore.compile_model(network, "CPU");
+    ov::runtime::InferRequest inferRequest = compiledModel.create_infer_request();
     MockTensorProtoDeserializatorThrowingInferenceEngine mockTPobject;
     MockTensorProtoDeserializator::mock = &mockTPobject;
     EXPECT_CALL(mockTPobject, deserializeTensorProto(_, _))
@@ -185,8 +185,8 @@ TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetBlobExc
 TEST_F(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
     ov::runtime::Core ieCore;
     std::shared_ptr<ov::Model> network = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
-    ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
-    ov::runtime::InferRequest inferRequest = execNetwork.create_infer_request();
+    ov::runtime::CompiledModel compiledModel = ieCore.compile_model(network, "CPU");
+    ov::runtime::InferRequest inferRequest = compiledModel.create_infer_request();
     InputSink<ov::runtime::InferRequest&> inputSink(inferRequest);
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
     EXPECT_TRUE(status.ok());
@@ -201,14 +201,14 @@ TEST_P(DeserializeTFTensorProtoNegative, ShouldReturnNullptrForPrecision) {
                                << " should return nullptr";
 }
 
-TEST_P(DeserializeTFTensorProto, ShouldReturnValidBlob) {
+TEST_P(DeserializeTFTensorProto, ShouldReturnValidTensor) {
     ovms::Precision testedPrecision = GetParam();
     SetUpTensorProto(TensorInfo::getPrecisionAsDataType(testedPrecision));
     tensorMap[tensorName]->setPrecision(testedPrecision);
     ov::runtime::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName]);
     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
                               << toString(testedPrecision)
-                              << " should return valid blob ptr";
+                              << " should return valid tensor ptr";
 }
 
 INSTANTIATE_TEST_SUITE_P(
