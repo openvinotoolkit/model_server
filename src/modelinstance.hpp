@@ -72,7 +72,7 @@ private:
 class PipelineDefinition;
 
 /**
-     * @brief This class contains all the information about inference engine model
+     * @brief This class contains all the information about model
      */
 class ModelInstance {
 protected:
@@ -179,16 +179,16 @@ protected:
     Status loadOVModel();
 
     /**
-         * @brief Sets OV ExecutableNetworkPtr
+         * @brief Sets OV CompiledModelPtr
          */
     virtual void loadCompiledModelPtr(const plugin_config_t& pluginConfig);
 
     /**
-         * @brief Loads OV ExecutableNetwork
+         * @brief Loads OV CompiledModel
          *
          * @return Status
          */
-    virtual Status loadOVExecutableNetwork(const ModelConfig& config);
+    virtual Status loadOVCompiledModel(const ModelConfig& config);
 
     /**
          * @brief Prepares inferenceRequestsQueue
@@ -285,7 +285,7 @@ private:
     Status recoverFromReloadingError(const Status& status);
 
     /**
-         * @brief Perform full engine/model reload with dynamic parameter
+         * @brief Perform full model reload with dynamic parameter
          * 
          * @param status returned from reload operation
          * @param parameter requested dynamic parameter
@@ -442,7 +442,7 @@ public:
     static plugin_config_t prepareDefaultPluginConfig(const ModelConfig& config);
 
     /**
-         * @brief Loads model version, reads CNN model from files (*.xml and *.bin files) and creates inference engine
+         * @brief Loads model version
          *
          * @param config model configuration
          *
@@ -451,7 +451,7 @@ public:
     virtual Status loadModel(const ModelConfig& config);
 
     /**
-         * @brief Reloads model version, reads CNN model from files (*.xml and *.bin files) and creates inference engine
+         * @brief Reloads model version
          *
          * @param config model configuration
          *
@@ -460,7 +460,7 @@ public:
     virtual Status reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
 
     /**
-         * @brief Reloads model version with different batch size or shape, reads CNN model from files (*.xml and *.bin files) and recreates inference engine
+         * @brief Reloads model version with different batch size or shape
          *
          * @param batchSize new batch size
          * @param shape new shape

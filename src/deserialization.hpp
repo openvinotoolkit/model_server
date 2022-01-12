@@ -57,7 +57,7 @@ public:
             }
             ov::runtime::Tensor tensor(ov::element::f16, shape);
             // Needs conversion due to zero padding for each value:
-            // https://github.com/tensorflow/tensorflow/tensor/v2.2.0/tensorflow/core/framework/tensor.proto#L55
+            // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
             uint16_t* ptr = (uint16_t*)tensor.data();
             auto size = static_cast<size_t>(requestInput.half_val_size());
             for (size_t i = 0; i < size; i++) {
@@ -72,7 +72,7 @@ public:
             }
             ov::runtime::Tensor tensor(ov::element::u16, shape);
             // Needs conversion due to zero padding for each value:
-            // https://github.com/tensorflow/tensorflow/tensor/v2.2.0/tensorflow/core/framework/tensor.proto#L55
+            // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
             uint16_t* ptr = (uint16_t*)tensor.data();
             auto size = static_cast<size_t>(requestInput.int_val_size());
             for (size_t i = 0; i < size; i++) {

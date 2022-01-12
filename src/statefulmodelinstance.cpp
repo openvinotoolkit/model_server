@@ -129,7 +129,7 @@ Status StatefulModelInstance::loadModelImpl(const ModelConfig& config, const Dyn
     return ModelInstance::loadModelImpl(config, parameter);
 }
 
-Status StatefulModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
+Status StatefulModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     if (performLowLatencyTransformation) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "[Model: {} version: {}] Performing Low Latency Transformation on the model", getName(), getVersion());
         try {
@@ -142,7 +142,7 @@ Status StatefulModelInstance::loadOVExecutableNetwork(const ModelConfig& config)
             return StatusCode::INTERNAL_ERROR;
         }
     }
-    return ModelInstance::loadOVExecutableNetwork(config);
+    return ModelInstance::loadOVCompiledModel(config);
 }
 
 const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec) {

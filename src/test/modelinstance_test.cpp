@@ -185,9 +185,9 @@ TEST_F(TestLoadModel, CheckIfOVNonExistingXMLFileErrorIsCatched) {
     EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR) << status.string();
 }
 
-class MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork : public ovms::ModelInstance {
+class MockModelInstanceThrowingFileNotFoundForLoadingCompiledModel : public ovms::ModelInstance {
 public:
-    MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork(ov::runtime::Core& ieCore) :
+    MockModelInstanceThrowingFileNotFoundForLoadingCompiledModel(ov::runtime::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
 
 protected:
@@ -198,7 +198,7 @@ protected:
 
 TEST_F(TestLoadModel, CheckIfOVNonExistingBinFileErrorIsCatched) {
     // Check if handling file removal after file existence was checked
-    MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork mockModelInstance(*ieCore);
+    MockModelInstanceThrowingFileNotFoundForLoadingCompiledModel mockModelInstance(*ieCore);
     auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
     EXPECT_EQ(status, ovms::StatusCode::CANNOT_LOAD_COMPILED_MODEL_INTO_TARGET_DEVICE) << status.string();
 }

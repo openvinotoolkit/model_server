@@ -94,8 +94,8 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
     }
 
     // At this point this is important we do not exit before finishing the loop.
-    // There will be memory leak if any tensor is not converted into tensor.
-    // Tensor destructor is responsible for cleaning up resources.
+    // There will be memory leak if any tensor is not converted into ov::Tensor.
+    // ov::Tensor destructor is responsible for cleaning up resources.
     Status status = StatusCode::OK;
     for (int i = 0; i < outputTensorsCount; i++) {
         std::shared_ptr<ov::runtime::Tensor> resultTensor;

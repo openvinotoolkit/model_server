@@ -204,7 +204,7 @@ Status RequestValidator::validateTensorContentSize(const tensorflow::TensorProto
     double      data in request.tensor_content
 
     _TENSOR_CONTENT_TYPES
-    https://github.com/tensorflow/tensorflow/tensor/903a6399aab19b549fefd0ead836af644f3d00f8/tensorflow/python/framework/tensor_util.py#L237
+    https://github.com/tensorflow/tensorflow/blob/903a6399aab19b549fefd0ead836af644f3d00f8/tensorflow/python/framework/tensor_util.py#L237
 */
 
     size_t expectedValueCount = 1;

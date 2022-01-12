@@ -24,7 +24,7 @@ enum class CustomLoaderStatus {
     OK,                /*!< Success */
     MODEL_TYPE_IR,     /*!< When model buffers are returned, they belong to IR model */
     MODEL_TYPE_ONNX,   /*!< When model buffers are returned, they belong to ONXX model */
-    MODEL_TYPE_BLOB,   /*!< When model buffers are returned, they belong to Tensor */
+    MODEL_TYPE_BLOB,   /*!< When model buffers are returned, they belong to Blob */
     MODEL_LOAD_ERROR,  /*!< Error while loading the model */
     MODEL_BLACKLISTED, /*!< Model is blacklisted. Do not load */
     INTERNAL_ERROR     /*!< generic error */

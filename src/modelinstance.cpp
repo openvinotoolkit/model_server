@@ -608,7 +608,7 @@ plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& con
     return pluginConfig;
 }
 
-Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
+Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     plugin_config_t pluginConfig = prepareDefaultPluginConfig(config);
     try {
         loadCompiledModelPtr(pluginConfig);
@@ -644,26 +644,26 @@ Status ModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
         std::vector<std::string> supportedConfigKeys2 = compiledModel->get_metric(supportedConfigKey);
         supportedConfigKeys = std::move(supportedConfigKeys2);
     } catch (std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, ExecutableNetwork metric key: {}; Error: {}", targetDevice, supportedConfigKey, e.what());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}; Error: {}", targetDevice, supportedConfigKey, e.what());
         return StatusCode::OK;
     } catch (...) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, ExecutableNetwork metric key: {}", targetDevice, supportedConfigKey);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}", targetDevice, supportedConfigKey);
         return StatusCode::OK;
     }
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging model:{}; version {};target device: {}; ExecutableNetwork configuration", getName(), getVersion(), targetDevice);
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging model:{}; version {};target device: {}; CompiledModel configuration", getName(), getVersion(), targetDevice);
     for (auto& key : supportedConfigKeys) {
         std::string value;
         try {
             auto paramValue = compiledModel->get_config(key);
             value = paramValue.as<std::string>();
         } catch (std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, ExecutableNetwork config key: {}; Error: {}", targetDevice, key, e.what());
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel config key: {}; Error: {}", targetDevice, key, e.what());
             continue;
         } catch (...) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, ExecutableNetwork config key: {}", targetDevice, key);
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel config key: {}", targetDevice, key);
             continue;
         }
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}; version: {}; target device: {}, ExecutableNetwork config key: {}, value :{}", getName(), getVersion(), targetDevice, key, value);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}; version: {}; target device: {}, CompiledModel config key: {}, value :{}", getName(), getVersion(), targetDevice, key, value);
     }
     return StatusCode::OK;
 }
@@ -774,7 +774,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
         }
-        status = loadOVExecutableNetwork(this->config);
+        status = loadOVCompiledModel(this->config);
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
