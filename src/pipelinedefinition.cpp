@@ -480,7 +480,7 @@ public:
         }
         if (demultiplicatorNodeInfo.demultiplyCount.value() != 0) {
             // TODO -1 vs 0 as demultiplexing value
-            if (shape[0] != 0) {
+            if (!shape[0].isAny()) {
                 auto demultiplyDimension = Dimension(demultiplicatorNodeInfo.demultiplyCount.value());
                 if (!shape[0].partiallyFitsInto(demultiplyDimension)) {
                     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of node: {} does not match tensor first dimension value: {}",
@@ -497,7 +497,7 @@ public:
                     demultiplicatorNodeInfo.nodeName,
                     shape[0].toString());
             }
-        } else if (!shape[0].isAny() && shape[0] != 0) {  // TODO we probably should remove part after && since dynamic demultiplexer should be -1 in follow up tasks
+        } else if (!shape[0].isAny()) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {}; Demultiply count: {} of node: {} is dynamic while first dimenson value of gather node is not: {}. This pipeline may fail at execution stage.",
                 this->pipelineName,
                 demultiplicatorNodeInfo.demultiplyCount.value(),

@@ -54,8 +54,8 @@ TEST(Shape, OvShapeMatch) {
     EXPECT_FALSE(ovms::Shape({1, 6, 8}).match(ov::Shape({1, 6})));
     EXPECT_TRUE(ovms::Shape({1, 6, 8}).match(ov::Shape({1, 6, 8})));
     EXPECT_TRUE(ovms::Shape({{1, 2}, {6, 12}, Dimension::any()}).match(ov::Shape({1, 8, 100})));
-    size_t startingPosition = 2;
-    EXPECT_TRUE(ovms::Shape({{3, 5}, {7, 10}, {11, 19}}).match(ov::Shape({1000, 1000, 12}), startingPosition));
-    startingPosition = 200;
-    EXPECT_TRUE(ovms::Shape({{3, 5}, {7, 10}, {11, 19}}).match(ov::Shape({1000, 1000, 12000}), startingPosition));
+    size_t skipPosition = 1;
+    EXPECT_TRUE(ovms::Shape({{3, 5}, {7, 10}, {11, 19}}).match(ov::Shape({4, 1000, 12}), skipPosition));
+    skipPosition = 2;
+    EXPECT_TRUE(ovms::Shape({{3, 5}, {7, 10}, {11, 19}}).match(ov::Shape({4, 8, 12000}), skipPosition));
 }

@@ -18,6 +18,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <openvino/openvino.hpp>
@@ -28,6 +29,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "layout.hpp"
 #include "precision.hpp"
 #include "shape.hpp"
 
@@ -36,7 +38,6 @@ namespace ovms {
 class TensorInfo;
 
 using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
-using layout_t = std::string;
 
 /**
      * @brief Class containing information about the tensor
@@ -63,7 +64,7 @@ protected:
     /**
          * @brief Tensor layout
          */
-    layout_t layout;
+    Layout layout;
 
     /**
          * @brief Information if influenced by demultiplexer
@@ -103,11 +104,11 @@ public:
     TensorInfo(const std::string& name,
         const Precision& precision,
         const shape_t& shape,
-        const layout_t& layout);
+        const Layout& layout);
     TensorInfo(const std::string& name,
         const Precision& precision,
         const Shape& shape,
-        const layout_t& layout);
+        const Layout& layout);
 
     /**
          * @brief Construct a new Tensor Info object
@@ -121,12 +122,12 @@ public:
         const std::string& mapping,
         const Precision& precision,
         const shape_t& shape,
-        const layout_t& layout);
+        const Layout& layout);
     TensorInfo(const std::string& name,
         const std::string& mapping,
         const Precision& precision,
         const Shape& shape,
-        const layout_t& layout);
+        const Layout& layout);
     TensorInfo(const std::string& name,
         const std::string& mapping,
         const Precision& precision,
@@ -164,7 +165,7 @@ public:
     /**
          * @brief Set the Layout object
          */
-    void setLayout(const layout_t& layout);
+    void setLayout(const Layout& layout);
 
     /**
          * @brief Get the Precision As DataType object
@@ -195,19 +196,19 @@ public:
     static const std::string getDataTypeAsString(tensorflow::DataType dataType);
 
     /**
-         * @brief Get the layout name from layout_t
+         * @brief Get the layout name from Layout
          *
-         * @param layout_t
+         * @param Layout
          * @return std::string
          */
-    static std::string getStringFromLayout(const layout_t& layout);
+    static std::string getStringFromLayout(const Layout& layout);
 
     /**
          * @brief Get the Layout string
          *
-         * @return const layout_t&
+         * @return const Layout&
          */
-    const layout_t& getLayout() const;
+    const Layout& getLayout() const;
 
     /**
          * @brief Gets input shape
@@ -233,8 +234,8 @@ public:
 
     static std::shared_ptr<TensorInfo> getUnspecifiedTensorInfo();
 
-    const Dimension& getBatchSize() const;
+    const std::optional<Dimension> getBatchSize() const;
 
-    static const layout_t& getDefaultLayout();
+    static const Layout& getDefaultLayout();
 };
 }  // namespace ovms

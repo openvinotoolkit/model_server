@@ -91,7 +91,8 @@ public:
     bool operator==(const Shape& rhs) const;
     bool operator!=(const Shape& rhs) const;
 
-    bool match(const ov::Shape& rhs, size_t startingPosition = 0) const;
+    bool match(const ov::Shape& rhs) const;
+    bool match(const ov::Shape& rhs, const size_t skipPosition) const;
 
     std::string toString() const;
 

@@ -16,23 +16,34 @@
 #pragma once
 
 #include <string>
-#include <utility>
+#include <unordered_map>
 
 #include "status.hpp"
 
 namespace ovms {
 
-class Layout : public std::string {
-    std::optional<size_t> batchIndex = std::nullopt;
-
-    Status validate() const;
-    std::optional<size_t> retrieveBatchIndex() const;
+class LayoutConfiguration {
+    std::string tensor;
+    std::string model;
 
 public:
-    Layout();
-    Layout(const std::string& str);
+    LayoutConfiguration() = default;
+    LayoutConfiguration(const char* Layout);
+    LayoutConfiguration(const std::string& Layout);
+    LayoutConfiguration(const std::string& tensorLayout, const std::string& modelLayout);
 
-    const std::optional<size_t>& getBatchIndex() const;
+    const std::string& getTensorLayout() const;
+    const std::string& getModelLayout() const;
+
+    bool isSet() const;
+
+    bool operator==(const LayoutConfiguration& rhs) const;
+    bool operator!=(const LayoutConfiguration& rhs) const;
+
+    static Status fromString(const std::string& configurationStr, LayoutConfiguration& configOut);
+    std::string toString() const;
 };
+
+using layouts_map_t = std::unordered_map<std::string, LayoutConfiguration>;
 
 }  // namespace ovms

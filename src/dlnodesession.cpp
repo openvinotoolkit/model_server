@@ -160,15 +160,23 @@ Status DLNodeSession::validate(const std::shared_ptr<ov::runtime::Tensor>& tenso
 
     // If batch size differs, check if remaining dimensions are equal
     const auto& dims = tensor->get_shape();
-    if (!tensorInfo.getShape()[0].match(dims[0])) {
+    const auto batchIndex = tensorInfo.getLayout().getBatchIndex();
+    if (!batchIndex.has_value() || tensorInfo.getShape().size() < batchIndex.value() + 1 || dims.size() < batchIndex.value() + 1) {
+        std::stringstream ss;
+        ss << "Node: " << getName() << " input: " << tensorInfo.getName()
+           << " Invalid batch size index";
+        const std::string details = ss.str();
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
+        return Status(StatusCode::INVALID_BATCH_DIMENSION, details);
+    }
+    if (!tensorInfo.getShape()[batchIndex.value()].match(dims[batchIndex.value()])) {
         // If remaining dimensions are equal, it is invalid batch size
         std::stringstream ss;
-        size_t batchSkippedPosition = 1;
-        if (!tensorInfo.getShape().match(dims, batchSkippedPosition)) {
+        if (!tensorInfo.getShape().match(dims, batchIndex.value())) {
             ss << "Node: " << getName() << " input: " << tensorInfo.getName()
                << " Invalid batch size -"
-               << " Expected: " << tensorInfo.getShape()[0].toString()
-               << "; Actual: " << dims[0];
+               << " Expected: " << tensorInfo.getShape()[batchIndex.value()].toString()
+               << "; Actual: " << dims[batchIndex.value()];
             const std::string details = ss.str();
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
             return Status(StatusCode::INVALID_BATCH_SIZE, details);

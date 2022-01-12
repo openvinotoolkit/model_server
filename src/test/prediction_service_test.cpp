@@ -179,8 +179,9 @@ public:
         return performInferenceWithRequest(request, response);
     }
 
-    ovms::Status performInferenceWithBatchSize(tensorflow::serving::PredictResponse& response, int batchSize = 1, const tensorflow::DataType precision = tensorflow::DataType::DT_FLOAT) {
-        ovms::shape_t shape = {batchSize, 10};
+    ovms::Status performInferenceWithBatchSize(tensorflow::serving::PredictResponse& response, int batchSize = 1, const tensorflow::DataType precision = tensorflow::DataType::DT_FLOAT, const size_t batchSizePosition = 0) {
+        ovms::shape_t shape = {1, 10};
+        shape[batchSizePosition] = batchSize;
         auto request = preparePredictRequest(
             {{DUMMY_MODEL_INPUT_NAME, std::tuple<ovms::shape_t, tensorflow::DataType>{shape, precision}}});
         return performInferenceWithRequest(request, response);
@@ -959,6 +960,58 @@ TEST_F(TestPredict, PerformInferenceWithBinaryInputNoInputShape) {
 
     // Perform inference with binary input, ensure status INVALID_NO_OF_SHAPE_DIMENSIONS
     ASSERT_EQ(performInferenceWithRequest(request, response, "increment_1x3x4x5"), ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+}
+
+/**
+ * Scenario - perform inference with with batch size set to auto and batch size not matching on position other than first
+ * 
+ * 1. Load model with bs=auto, layout=b=>cn,a=>cn initial internal shape (1,10)
+ * 2. Do the inference with (1,30) shape - expect status OK and result (1,30)
+ * 3. Change model batch size to fixed=4 with config.json change
+ * 4. Do the inference with (1,30) shape - expect status INVALID_BATCH_SIZE
+ * 5. Do the inference with (1,4) shape - expect status OK and result (1,4)
+ * 6. Reshape model back to batchsize=auto, initial internal shape (1,10)
+ * 7. Do the inference with (1,30) shape - expect status OK and result (1,30)
+ * 8. Do the inference with (30,10) shape - expect status INVALID_SHAPE
+ */
+TEST_F(TestPredict, ChangeBatchSizeViaRequestAndConfigChangeArbitraryPosition) {
+    using namespace ovms;
+    size_t batchSizePosition = 1;  //  [0:C, 1:N]
+
+    // Prepare model with bs=auto, layout=b=>cn,a=>cn (initially (1,10) shape)
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("auto");
+    ASSERT_EQ(config.parseLayoutParameter("{\"b\":\"cn\",\"a\":\"cn\"}"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    tensorflow::serving::PredictResponse response;
+
+    // Perform batch size change to 30 using request
+    ASSERT_EQ(performInferenceWithBatchSize(response, 30, tensorflow::DataType::DT_FLOAT, batchSizePosition), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 30});
+
+    // Change batch size with model reload to Fixed=4
+    config.setBatchingParams("4");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Cannot do the inference with (1,30)
+    ASSERT_EQ(performInferenceWithBatchSize(response, 30, tensorflow::DataType::DT_FLOAT, batchSizePosition), ovms::StatusCode::INVALID_BATCH_SIZE);
+
+    // Successfull inference with (1,4)
+    ASSERT_EQ(performInferenceWithBatchSize(response, 4, tensorflow::DataType::DT_FLOAT, batchSizePosition), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 4});
+
+    // Reshape back to AUTO, internal shape is (1,10)
+    config.setBatchingParams("auto");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Perform batch change to 30 using request
+    ASSERT_EQ(performInferenceWithBatchSize(response, 30, tensorflow::DataType::DT_FLOAT, batchSizePosition), ovms::StatusCode::OK);
+    checkOutputShape(response, {1, 30});
+
+    // Ensure cannot change batch size with first dimension
+    batchSizePosition = 0;
+    ASSERT_EQ(performInferenceWithBatchSize(response, 30, tensorflow::DataType::DT_FLOAT, batchSizePosition), ovms::StatusCode::INVALID_SHAPE);
 }
 
 #pragma GCC diagnostic pop

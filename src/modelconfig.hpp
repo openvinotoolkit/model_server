@@ -26,7 +26,7 @@
 
 #include <rapidjson/document.h>
 
-#include "layout.hpp"
+#include "layout_configuration.hpp"
 #include "model_version_policy.hpp"
 #include "shape.hpp"
 #include "status.hpp"

@@ -325,14 +325,25 @@ bool Shape::operator!=(const Shape& rhs) const {
     return !(this->operator==(rhs));
 }
 
-bool Shape::match(const ov::Shape& ovShape, size_t startingPosition) const {
+bool Shape::match(const ov::Shape& ovShape) const {
+    for (size_t i = 0; i < this->size(); i++) {
+        if (!(*this)[i].match(ovShape[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Shape::match(const ov::Shape& ovShape, const size_t skipPosition) const {
     if (this->size() != ovShape.size()) {
         return false;
     }
-    if (this->size() <= startingPosition) {
-        return true;
+    for (size_t i = 0; i < skipPosition; i++) {
+        if (!(*this)[i].match(ovShape[i])) {
+            return false;
+        }
     }
-    for (size_t i = startingPosition; i < this->size(); i++) {
+    for (size_t i = skipPosition + 1; i < this->size(); i++) {
         if (!(*this)[i].match(ovShape[i])) {
             return false;
         }

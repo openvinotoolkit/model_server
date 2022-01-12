@@ -52,7 +52,7 @@ TensorInfo::TensorInfo(const std::string& name,
 TensorInfo::TensorInfo(const std::string& name,
     const ovms::Precision& precision,
     const shape_t& shape,
-    const layout_t& layout) :
+    const Layout& layout) :
     name(name),
     mapping(""),
     precision(precision),
@@ -63,7 +63,7 @@ TensorInfo::TensorInfo(const std::string& name,
 TensorInfo::TensorInfo(const std::string& name,
     const ovms::Precision& precision,
     const Shape& shape,
-    const layout_t& layout) :
+    const Layout& layout) :
     name(name),
     mapping(""),
     precision(precision),
@@ -75,7 +75,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
     const ovms::Precision& precision,
     const shape_t& shape,
-    const layout_t& layout) :
+    const Layout& layout) :
     name(name),
     mapping(mapping),
     precision(precision),
@@ -86,7 +86,7 @@ TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
     const ovms::Precision& precision,
     const Shape& shape,
-    const layout_t& layout) :
+    const Layout& layout) :
     name(name),
     mapping(mapping),
     precision(precision),
@@ -194,11 +194,11 @@ const std::string TensorInfo::getDataTypeAsString(tensorflow::DataType dataType)
     }
 }
 
-std::string TensorInfo::getStringFromLayout(const layout_t& layout) {
+std::string TensorInfo::getStringFromLayout(const Layout& layout) {
     return layout;
 }
 
-const layout_t& TensorInfo::getLayout() const {
+const Layout& TensorInfo::getLayout() const {
     return layout;
 }
 
@@ -214,7 +214,7 @@ const Shape& TensorInfo::getShape() const {
     return this->shape;
 }
 
-void TensorInfo::setLayout(const layout_t& layout) {
+void TensorInfo::setLayout(const Layout& layout) {
     this->layout = layout;
 }
 
@@ -275,8 +275,15 @@ std::shared_ptr<TensorInfo> TensorInfo::getUnspecifiedTensorInfo() {
     return std::make_shared<TensorInfo>("", Precision::UNDEFINED, Shape{});
 }
 
-const Dimension& TensorInfo::getBatchSize() const {
-    return getShape()[0];  // TODO use layout
+const std::optional<Dimension> TensorInfo::getBatchSize() const {
+    const auto batchIndex = this->layout.getBatchIndex();
+    if (!batchIndex.has_value()) {
+        return std::nullopt;
+    }
+    if (getShape().size() < batchIndex.value() + 1) {
+        throw std::logic_error("batch outside of shape range");
+    }
+    return getShape()[batchIndex.value()];
 }
 
 std::string TensorInfo::asString() const {
@@ -290,8 +297,8 @@ std::string TensorInfo::asString() const {
     return ss.str();
 }
 
-const layout_t& TensorInfo::getDefaultLayout() {
-    static const layout_t defaultLayout{"N..."};
+const Layout& TensorInfo::getDefaultLayout() {
+    static const Layout defaultLayout{"N..."};
     return defaultLayout;
 }
 
