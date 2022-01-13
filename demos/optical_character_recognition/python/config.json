@@ -1,0 +1,111 @@
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "east",
+                "base_path": "/OCR/east_fp32",
+                "layout": "NHWC:NCHW",
+                "plugin_config": {
+                    "CPU_THROUGHPUT_STREAMS":  "1"
+                }
+            }
+        },
+        {
+            "config": {
+                "name": "text-recognition",
+                "layout": "NHWC:NCHW",
+                "base_path": "/OCR/text-recognition"
+            }
+        }
+    ],
+    "custom_node_library_config_list": [
+        {
+            "name": "east_image_extractor",
+            "base_path": "/OCR/lib/libcustom_node_east_ocr.so"
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "detect_text_images",
+            "inputs": ["image"],
+            "nodes": [
+                {
+                    "name": "east_node",
+                    "model_name": "east",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input_images": {"node_name": "request",
+                                          "data_item": "image"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "feature_fusion/Conv_7/Sigmoid",
+                         "alias": "scores"},
+                        {"data_item": "feature_fusion/concat_3",
+                         "alias": "geometry"}
+                    ]
+                },
+                {
+                    "name": "extract_node",
+                    "library_name": "east_image_extractor",
+                    "type": "custom",
+                    "demultiply_count": 0,
+                    "params": {
+                        "original_image_width": "1920",
+                        "original_image_height": "1024",
+                        "original_image_layout": "NHWC",
+                        "target_image_width": "128",
+                        "target_image_height": "32",
+                        "target_image_layout": "NHWC",
+                        "convert_to_gray_scale": "true",
+                        "confidence_threshold": "0.9",
+                        "overlap_threshold": "0.2",
+                        "max_output_batch": "100",
+                        "box_width_adjustment": "0.1",
+                        "box_height_adjustment": "0.0",
+                        "rotation_angle_threshold": "8",
+                        "debug": "true"
+                    },
+                    "inputs": [
+                        {"image": {"node_name": "request",
+                                   "data_item": "image"}},
+                        {"scores": {"node_name": "east_node",
+                                    "data_item": "scores"}},
+                        {"geometry": {"node_name": "east_node",
+                                      "data_item": "geometry"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "text_images",
+                         "alias": "text_images"},
+                        {"data_item": "text_coordinates",
+                         "alias": "text_coordinates"},
+                        {"data_item": "confidence_levels",
+                         "alias": "confidence_levels"}
+                    ]
+                },
+                {
+                    "name": "text-recognition_node",
+                    "model_name": "text-recognition",
+                    "type": "DL model",
+                    "inputs": [
+                        {"imgs": {"node_name": "extract_node",
+                            "data_item": "text_images"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "logits",
+                            "alias": "texts"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"text_images": {"node_name": "extract_node",
+                         "data_item": "text_images"}},
+                {"text_coordinates": {"node_name": "extract_node",
+                         "data_item": "text_coordinates"}},
+                {"confidence_levels": {"node_name": "extract_node",
+                         "data_item": "confidence_levels"}},
+                {"texts": {"node_name": "text-recognition_node",
+                         "data_item": "texts"}}
+            ]
+        }
+    ]
+}

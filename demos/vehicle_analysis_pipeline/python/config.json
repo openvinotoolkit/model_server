@@ -1,0 +1,101 @@
+{
+    "model_config_list": [
+        {"config": {
+                "name": "vehicle_detection",
+                "base_path": "/workspace/vehicle-detection-0202/",
+                "layout": "NHWC:NCHW"}},
+        {"config": {
+                "name": "vehicle_attributes_recognition",
+                "base_path": "/workspace/vehicle-attributes-recognition-barrier-0042/",
+                "layout": "NHWC:NCHW"}}
+    ],
+    "custom_node_library_config_list": [
+        {"name": "object_detection_image_extractor",
+            "base_path": "/workspace/lib/libcustom_node_model_zoo_intel_object_detection.so"}
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "multiple_vehicle_recognition",
+            "inputs": [
+                "image"
+            ],
+            "nodes": [
+                {
+                    "name": "vehicle_detection_node",
+                    "model_name": "vehicle_detection",
+                    "type": "DL model",
+                    "inputs": [
+                        {"image": {
+                                "node_name": "request",
+                                "data_item": "image"}}],
+                    "outputs": [
+                        {"data_item": "detection_out",
+                            "alias": "detection"}]
+                },
+                {
+                    "name": "extract_node",
+                    "library_name": "object_detection_image_extractor",
+                    "type": "custom",
+                    "demultiply_count": 0,
+                    "params": {
+                        "original_image_width": "512",
+                        "original_image_height": "512",
+                        "target_image_width": "72",
+                        "target_image_height": "72",
+                        "original_image_layout": "NHWC",
+                        "target_image_layout": "NHWC",
+                        "convert_to_gray_scale": "false",
+                        "max_output_batch": "100",
+                        "confidence_threshold": "0.7",
+                        "debug": "true"
+                    },
+                    "inputs": [
+                        {"image": {
+                                "node_name": "request",
+                                "data_item": "image"}},
+                        {"detection": {
+                                "node_name": "vehicle_detection_node",
+                                "data_item": "detection"}}],
+                    "outputs": [
+                        {"data_item": "images",
+                            "alias": "vehicle_images"},
+                        {"data_item": "coordinates",
+                            "alias": "vehicle_coordinates"},
+                        {"data_item": "confidences",
+                            "alias": "confidence_levels"}]
+                },
+                {
+                    "name": "vehicle_attributes_recognition_node",
+                    "model_name": "vehicle_attributes_recognition",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {
+                                "node_name": "extract_node",
+                                "data_item": "vehicle_images"}}],
+                    "outputs": [
+                        {"data_item": "color",
+                            "alias": "color"},
+                        {"data_item": "type",
+                            "alias": "type"}]
+                }
+            ],
+            "outputs": [
+                {"vehicle_images": {
+                        "node_name": "extract_node",
+                        "data_item": "vehicle_images"}},
+                {"vehicle_coordinates": {
+                        "node_name": "extract_node",
+                        "data_item": "vehicle_coordinates"}},
+                {"confidence_levels": {
+                        "node_name": "extract_node",
+                        "data_item": "confidence_levels"}},
+                {"colors": {
+                        "node_name": "vehicle_attributes_recognition_node",
+                        "data_item": "color"}},
+                {"types": {
+                        "node_name": "vehicle_attributes_recognition_node",
+                        "data_item": "type"}}
+            ]
+        }
+    ]
+}
