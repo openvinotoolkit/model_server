@@ -412,4 +412,9 @@ public:
     void cleanupResources();
 };
 
+struct FunctorResourcesCleaner;
+struct FunctorSequenceCleaner;
+
+void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal);
+
 }  // namespace ovms

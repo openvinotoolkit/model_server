@@ -162,6 +162,7 @@ Status ModelManager::start() {
         return status;
     }
     startWatcher();
+    startCleaner();
     return status;
 }
 
@@ -172,8 +173,6 @@ void ModelManager::startWatcher() {
         watcherStarted = true;
         monitor = std::move(t);
     }
-
-    startCleaner();
 }
 
 void ModelManager::startCleaner() {
@@ -839,30 +838,63 @@ void ModelManager::watcher(std::future<void> exitSignal) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
 }
 
+struct FunctorSequenceCleaner {
+    GlobalSequencesViewer& globalSequencesViewer;
+
+    FunctorSequenceCleaner(GlobalSequencesViewer& globalSequencesViewer) :
+        globalSequencesViewer(globalSequencesViewer) {}
+
+    void operator()() {
+        globalSequencesViewer.removeIdleSequences();
+    }
+};
+
+struct FunctorResourcesCleaner {
+    ModelManager& modelManager;
+
+    FunctorResourcesCleaner(ModelManager& modelManager) :
+        modelManager(modelManager) {}
+
+    void operator()() {
+        modelManager.cleanupResources();
+    }
+};
+
 void ModelManager::cleanerRoutine(uint32_t resourcesCleanupIntervalSec, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started cleaner thread");
 
-    uint32_t resourcesWaitTime = resourcesCleanupIntervalSec;
-    uint32_t sequenceWaitTime = sequenceCleanerIntervalMinutes * 60;
-    uint32_t currentWaitTime = (resourcesWaitTime < sequenceWaitTime || sequenceWaitTime == 0) ? resourcesWaitTime : sequenceWaitTime;
-    bool shouldCleanupSequence = sequenceCleanerIntervalMinutes != 0;
+    uint32_t resourcesCleanupIntervalMiliseconds = resourcesCleanupIntervalSec * 1000;
+    uint32_t sequenceCleanerIntervalMiliseconds = sequenceCleanerIntervalMinutes * 60 * 1000;
 
-    while (cleanerExitSignal.wait_for(std::chrono::seconds(currentWaitTime)) == std::future_status::timeout) {
+    FunctorResourcesCleaner functorResourcesCleaner{*this};
+    FunctorSequenceCleaner functorSequenceCleaner{globalSequencesViewer};
+
+    ovms::cleanerRoutine(resourcesCleanupIntervalMiliseconds, functorResourcesCleaner, sequenceCleanerIntervalMiliseconds, functorSequenceCleaner, cleanerExitSignal);
+
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped cleaner thread");
+}
+
+void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal) {
+    uint32_t currentResourcesWaitTime = resourcesCleanupInterval;
+    uint32_t currentSequenceWaitTime = sequenceCleanerInterval;
+    bool shouldCheckForSequenceCleanup = sequenceCleanerInterval != 0;
+    uint32_t currentWaitTime = (!shouldCheckForSequenceCleanup || currentResourcesWaitTime < currentSequenceWaitTime) ? currentResourcesWaitTime : currentSequenceWaitTime;
+
+    while (cleanerExitSignal.wait_for(std::chrono::milliseconds(currentWaitTime)) == std::future_status::timeout) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleanup check cycle begin");
 
-        resourcesWaitTime = (resourcesWaitTime - currentWaitTime) == 0 ? resourcesCleanupIntervalSec : resourcesWaitTime - currentWaitTime;
-        if (shouldCleanupSequence)
-            sequenceWaitTime = (sequenceWaitTime - currentWaitTime) == 0 ? sequenceCleanerIntervalMinutes * 60 : sequenceWaitTime - currentWaitTime;
-        currentWaitTime = (resourcesWaitTime < sequenceWaitTime || sequenceWaitTime == 0) ? resourcesWaitTime : sequenceWaitTime;
+        currentResourcesWaitTime = (currentResourcesWaitTime - currentWaitTime) == 0 ? resourcesCleanupInterval : currentResourcesWaitTime - currentWaitTime;
+        if (shouldCheckForSequenceCleanup)
+            currentSequenceWaitTime = (currentSequenceWaitTime - currentWaitTime) == 0 ? sequenceCleanerInterval : currentSequenceWaitTime - currentWaitTime;
+        currentWaitTime = (!shouldCheckForSequenceCleanup || currentResourcesWaitTime < currentSequenceWaitTime) ? currentResourcesWaitTime : currentSequenceWaitTime;
 
-        if (resourcesWaitTime == resourcesCleanupIntervalSec)
-            cleanupResources();
-        if (sequenceWaitTime == sequenceCleanerIntervalMinutes * 60 && shouldCleanupSequence)
-            globalSequencesViewer.removeIdleSequences();
+        if (currentResourcesWaitTime == resourcesCleanupInterval)
+            functorResourcesCleaner();
+        if (currentSequenceWaitTime == sequenceCleanerInterval && shouldCheckForSequenceCleanup)
+            functorSequenceCleaner();
 
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleanup check cycle end");
     }
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped cleaner thread");
 }
 
 void ModelManager::cleanupResources() {
