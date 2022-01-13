@@ -166,8 +166,8 @@ MockTensorProtoDeserializatorThrowingInferenceEngine* MockTensorProtoDeserializa
 
 TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorException2) {
     ov::runtime::Core ieCore;
-    std::shared_ptr<ov::Model> network = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
-    ov::runtime::CompiledModel compiledModel = ieCore.compile_model(network, "CPU");
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ov::runtime::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::runtime::InferRequest inferRequest = compiledModel.create_infer_request();
     MockTensorProtoDeserializatorThrowingInferenceEngine mockTPobject;
     MockTensorProtoDeserializator::mock = &mockTPobject;
@@ -184,8 +184,8 @@ TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorE
 
 TEST_F(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
     ov::runtime::Core ieCore;
-    std::shared_ptr<ov::Model> network = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
-    ov::runtime::CompiledModel compiledModel = ieCore.compile_model(network, "CPU");
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ov::runtime::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::runtime::InferRequest inferRequest = compiledModel.create_infer_request();
     InputSink<ov::runtime::InferRequest&> inputSink(inferRequest);
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);

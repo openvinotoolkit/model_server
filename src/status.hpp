@@ -39,7 +39,7 @@ enum class StatusCode {
     FILE_INVALID,        /*!< File not found or cannot open */
     CONFIG_FILE_INVALID, /*!< Config file not found or cannot open */
     FILESYSTEM_ERROR,    /*!< Underlaying filesystem error */
-    NETWORK_NOT_LOADED,
+    MODEL_NOT_LOADED,
     JSON_INVALID,             /*!< The file/content is not valid json */
     JSON_SERIALIZATION_ERROR, /*!< Data serialization to json format failed */
     MODELINSTANCE_NOT_FOUND,
@@ -58,8 +58,8 @@ enum class StatusCode {
     FORBIDDEN_MODEL_DYNAMIC_PARAMETER,       /*!< Value of the provided param is forbidden */
     ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED,       /*!< Anonymous fixed shape is invalid for models with multiple inputs */
     ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED,      /*!< Anonymous fixed layout is invalid for models with multiple inputs */
-    CONFIG_SHAPE_IS_NOT_IN_NETWORK,          /*!< Configured tensor shape is not present in network */
-    CONFIG_LAYOUT_IS_NOT_IN_NETWORK,         /*!< Configured tensor layout is not present in network */
+    CONFIG_SHAPE_IS_NOT_IN_MODEL,
+    CONFIG_LAYOUT_IS_NOT_IN_MODEL,
     CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME,  /*!< Using old name of input/output in config shape when mapped in mapping_config.json*/
     CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME, /*!< Using old name of input/output in config layout when mapped in mapping_config.json*/
     CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE,
@@ -104,7 +104,7 @@ enum class StatusCode {
     INVALID_CONTENT_SIZE,           /*!< Invalid content size error status for types using tensor_content() */
 
     // Deserialization
-    OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against network precision */
+    OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against model precision */
     OV_INTERNAL_DESERIALIZATION_ERROR,        /*!< Error occured during deserialization */
 
     // Inference

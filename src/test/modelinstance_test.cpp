@@ -293,7 +293,7 @@ TEST_F(TestLoadModel, UnSuccessfulLoadWhenLayoutIncorrect) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     auto config = DUMMY_MODEL_CONFIG;
     config.parseLayoutParameter("nchw:nc");
-    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::NETWORK_NOT_LOADED);
+    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::MODEL_NOT_LOADED);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
 }
 
@@ -441,7 +441,7 @@ TEST_F(TestReloadModel, ReloadWithIncorrectLayoutAndThenFix) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     ASSERT_EQ(config.parseLayoutParameter("nchw:nc"), ovms::StatusCode::OK);
-    ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::NETWORK_NOT_LOADED);
+    ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::MODEL_NOT_LOADED);
     ASSERT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
     ASSERT_EQ(config.parseLayoutParameter("cn:nc"), ovms::StatusCode::OK);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
@@ -631,7 +631,7 @@ TEST_F(TestReloadModelWithMapping, ReloadMultipleTimes) {
     ovms::shapes_info_map_t shapeMapUnknown;
     shapeMapUnknown["unknown"] = inputShape;
     config.setShapes(shapeMapUnknown);
-    EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK);
+    EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_MODEL);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 
     // load with valid config
@@ -645,7 +645,7 @@ TEST_F(TestReloadModelWithMapping, ReloadMultipleTimes) {
     layoutsUnknown["input"] = "LAYOUT_INPUT";
     layoutsUnknown["unknown"] = "LAYOUT_OUTPUT";
     config.setLayouts(layoutsUnknown);
-    EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK);
+    EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_LAYOUT_IS_NOT_IN_MODEL);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 
     // load with valid config

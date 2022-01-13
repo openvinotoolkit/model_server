@@ -825,14 +825,14 @@ TEST_F(TestPredict, PerformInferenceChangeModelLayoutAndKeepChangingBatchSize) {
 TEST_F(TestPredict, ErrorWhenLayoutSetForMissingTensor) {
     ovms::ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
     ASSERT_EQ(config.parseLayoutParameter("{\"invalid_tensor_name\":\"nhwc\"}"), ovms::StatusCode::OK);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::CONFIG_LAYOUT_IS_NOT_IN_MODEL);
 }
 
 TEST_F(TestPredict, NetworkNotLoadedWhenLayoutAndDimsInconsistent) {
     // Dummy has 2 dimensions: (1,10), changing layout to NHWC should fail
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::NETWORK_NOT_LOADED);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::MODEL_NOT_LOADED);
 }
 
 /**

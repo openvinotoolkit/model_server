@@ -532,7 +532,7 @@ TEST(ModelManager, ConfigReloadingWithWrongInputName) {
     config.parseShapeParameter("{\"wrong_input_name\": \"(1,3,224,224)\"}");
     config.setBasePath("/ovms/src/test/dummy");
     auto status = manager.reloadModelWithVersions(config);
-    ASSERT_EQ(status, ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK);
+    ASSERT_EQ(status, ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_MODEL);
 }
 
 TEST(ModelManager, ConfigReloadingStatefulDynamic) {

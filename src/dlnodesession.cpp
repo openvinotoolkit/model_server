@@ -113,7 +113,7 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
             return status;
         }
 
-        // If batch size is incorrect, perform network batch size change if allowed (shape mode=auto or batch size=auto)
+        // If batch size is incorrect, perform model batch size change if allowed (shape mode=auto or batch size=auto)
         if (status == StatusCode::INVALID_BATCH_SIZE) {
             if (this->model->getModelConfig().getBatchingMode() == Mode::AUTO) {
                 requestedBatchSize = tensor->get_shape()[0];

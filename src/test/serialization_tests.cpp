@@ -188,8 +188,8 @@ TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldSucceedForPreci
 TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     PredictResponse response;
     ov::runtime::Core ieCore;
-    std::shared_ptr<ov::Model> network = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
-    ov::runtime::CompiledModel compiledModel = ieCore.compile_model(network, "CPU");
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ov::runtime::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::runtime::InferRequest inferRequest = compiledModel.create_infer_request();
     ovms::tensor_map_t tenMap;
     std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(

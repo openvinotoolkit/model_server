@@ -122,7 +122,7 @@ Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::share
             return StatusCode::CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME;
         } else if (!hasInputWithName(model, name) && !hasInputWithName(model, config.getRealInputNameByValue(name))) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Config shape - {} not found in model", name);
-            return StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK;
+            return StatusCode::CONFIG_SHAPE_IS_NOT_IN_MODEL;
         }
     }
     for (const auto& [name, _] : config.getLayouts()) {
@@ -134,7 +134,7 @@ Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::share
             return StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME;
         } else if (!hasInputWithName(model, name) && !hasOutputWithName(model, name) && !hasInputWithName(model, config.getRealInputNameByValue(name)) && !hasOutputWithName(model, config.getRealOutputNameByValue(name))) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Config layout - {} not found in model", name);
-            return StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK;
+            return StatusCode::CONFIG_LAYOUT_IS_NOT_IN_MODEL;
         }
     }
     return StatusCode::OK;
@@ -255,7 +255,7 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::M
         model = preproc.build();
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot change layout");
-        return StatusCode::NETWORK_NOT_LOADED;
+        return StatusCode::MODEL_NOT_LOADED;
     }
     return StatusCode::OK;
 }
@@ -787,11 +787,11 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     } catch (const ov::Exception& e) {
         SPDLOG_ERROR("exception occurred while loading model: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
-        return StatusCode::NETWORK_NOT_LOADED;
+        return StatusCode::MODEL_NOT_LOADED;
     } catch (const std::exception& e) {
         SPDLOG_ERROR("exception occurred while loading model: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
-        return StatusCode::NETWORK_NOT_LOADED;
+        return StatusCode::MODEL_NOT_LOADED;
     }
     this->status.setAvailable();
     modelLoadedNotify.notify_all();
