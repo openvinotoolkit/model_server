@@ -47,13 +47,13 @@ protected:
     std::unique_ptr<NiceMock<MockModelInstance>> instance;
     tensorflow::serving::PredictRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
-    ovms::tensor_map_t networkInputs;
+    ovms::tensor_map_t servableInputs;
 
     void SetUp() override {
         ieCore = std::make_unique<ov::runtime::Core>();
         instance = std::make_unique<NiceMock<MockModelInstance>>(*ieCore);
 
-        networkInputs = ovms::tensor_map_t({
+        servableInputs = ovms::tensor_map_t({
             {"Input_FP32_1_3_224_224_NHWC",
                 std::make_shared<ovms::TensorInfo>("Input_FP32_1_3_224_224_NHWC", ovms::Precision::FP32, ovms::shape_t{1, 224, 224, 3}, ovms::layout_t{"NHWC"})},
             {"Input_U8_1_3_62_62_NCHW",
@@ -64,7 +64,7 @@ protected:
                 std::make_shared<ovms::TensorInfo>("Input_U16_1_2_8_4_NCHW", ovms::Precision::U16, ovms::shape_t{1, 2, 8, 4}, ovms::layout_t{"NCHW"})},
         });
 
-        ON_CALL(*instance, getInputsInfo()).WillByDefault(ReturnRef(networkInputs));
+        ON_CALL(*instance, getInputsInfo()).WillByDefault(ReturnRef(servableInputs));
         ON_CALL(*instance, getBatchSize()).WillByDefault(Return(1));
         ON_CALL(*instance, getModelConfig()).WillByDefault(ReturnRef(modelConfig));
 
@@ -176,9 +176,9 @@ TEST_F(PredictValidation, ValidRequestBinaryInputs) {
     }
     input.mutable_tensor_shape()->add_dim()->set_size(requestBatchSize);
 
-    networkInputs.clear();
+    servableInputs.clear();
     ovms::shape_t shape = {1, 3, 224, 224};
-    networkInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
         inputName,
         ovms::Precision::FP32,
         shape,
@@ -200,9 +200,9 @@ TEST_F(PredictValidation, RequestWrongBatchSizeBinaryInputs) {
     }
     input.mutable_tensor_shape()->add_dim()->set_size(requestBatchSize);
 
-    networkInputs.clear();
+    servableInputs.clear();
     ovms::shape_t shape = {1, 3, 224, 224};
-    networkInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
         inputName,
         ovms::Precision::FP32,
         shape,
@@ -225,9 +225,9 @@ TEST_F(PredictValidation, RequestWrongBatchSizeAutoBinaryInputs) {
     }
     input.mutable_tensor_shape()->add_dim()->set_size(requestBatchSize);
 
-    networkInputs.clear();
+    servableInputs.clear();
     ovms::shape_t shape = {1, 3, 224, 224};
-    networkInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
         inputName,
         ovms::Precision::FP32,
         shape,
@@ -244,8 +244,8 @@ TEST_F(PredictValidation, RequestWrongAndCorrectBatchSizeAuto) {
     request = preparePredictRequest({{"im_data", {{3, 3, 800, 1344}, tensorflow::DataType::DT_FLOAT}},
         {"im_info", {{1, 3}, tensorflow::DataType::DT_FLOAT}}});
 
-    networkInputs.clear();
-    networkInputs = ovms::tensor_map_t{
+    servableInputs.clear();
+    servableInputs = ovms::tensor_map_t{
         {"im_data", std::make_shared<ovms::TensorInfo>("im_data", ovms::Precision::FP32, ovms::shape_t{1, 3, 800, 1344}, ovms::layout_t{"NCHW"})},
         {"im_info", std::make_shared<ovms::TensorInfo>("im_info", ovms::Precision::FP32, ovms::shape_t{1, 3}, ovms::layout_t{"NC"})},
     };
@@ -266,8 +266,8 @@ TEST_F(PredictValidation, RequestWrongAndCorrectShapeAuto) {
         {"im_info", {{1, 3}, tensorflow::DataType::DT_FLOAT}}});
 
     // First is incorrect, second is correct
-    networkInputs.clear();
-    networkInputs = ovms::tensor_map_t{
+    servableInputs.clear();
+    servableInputs = ovms::tensor_map_t{
         {"im_data", std::make_shared<ovms::TensorInfo>("im_data", ovms::Precision::FP32, ovms::shape_t{1, 3, 800, 1344}, ovms::layout_t{"NCHW"})},
         {"im_info", std::make_shared<ovms::TensorInfo>("im_info", ovms::Precision::FP32, ovms::shape_t{1, 3}, ovms::layout_t{"NC"})},
     };

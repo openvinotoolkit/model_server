@@ -23,6 +23,6 @@
 namespace ovms {
 class NodeOutputHandler {
 public:
-    void setInput(const std::string& inputName, std::shared_ptr<ov::runtime::Tensor>& blobPtr);
+    void setInput(const std::string& inputName, std::shared_ptr<ov::runtime::Tensor>& tensorPtr);
 };
 }  // namespace ovms

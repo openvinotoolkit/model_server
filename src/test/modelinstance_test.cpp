@@ -172,7 +172,7 @@ public:
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
 
 protected:
-    std::shared_ptr<ov::Model> loadOVCNNNetworkPtr(const std::string& modelFile) override {
+    std::shared_ptr<ov::Model> loadOVModelPtr(const std::string& modelFile) override {
         throw std::runtime_error("File was not found");
         return nullptr;
     }
@@ -185,22 +185,22 @@ TEST_F(TestLoadModel, CheckIfOVNonExistingXMLFileErrorIsCatched) {
     EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR) << status.string();
 }
 
-class MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork : public ovms::ModelInstance {
+class MockModelInstanceThrowingFileNotFoundForLoadingCompiledModel : public ovms::ModelInstance {
 public:
-    MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork(ov::runtime::Core& ieCore) :
+    MockModelInstanceThrowingFileNotFoundForLoadingCompiledModel(ov::runtime::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
 
 protected:
-    void loadExecutableNetworkPtr(const ovms::plugin_config_t& pluginConfig) override {
+    void loadCompiledModelPtr(const ovms::plugin_config_t& pluginConfig) override {
         throw std::runtime_error("File was not found");
     }
 };
 
 TEST_F(TestLoadModel, CheckIfOVNonExistingBinFileErrorIsCatched) {
     // Check if handling file removal after file existence was checked
-    MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork mockModelInstance(*ieCore);
+    MockModelInstanceThrowingFileNotFoundForLoadingCompiledModel mockModelInstance(*ieCore);
     auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
-    EXPECT_EQ(status, ovms::StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE) << status.string();
+    EXPECT_EQ(status, ovms::StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE) << status.string();
 }
 
 TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
@@ -293,7 +293,7 @@ TEST_F(TestLoadModel, UnSuccessfulLoadWhenLayoutIncorrect) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     auto config = DUMMY_MODEL_CONFIG;
     config.parseLayoutParameter("nchw:nc");
-    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::NETWORK_NOT_LOADED);
+    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::MODEL_NOT_LOADED);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
 }
 
@@ -441,7 +441,7 @@ TEST_F(TestReloadModel, ReloadWithIncorrectLayoutAndThenFix) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     ASSERT_EQ(config.parseLayoutParameter("nchw:nc"), ovms::StatusCode::OK);
-    ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::NETWORK_NOT_LOADED);
+    ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::MODEL_NOT_LOADED);
     ASSERT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
     ASSERT_EQ(config.parseLayoutParameter("cn:nc"), ovms::StatusCode::OK);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
@@ -631,7 +631,7 @@ TEST_F(TestReloadModelWithMapping, ReloadMultipleTimes) {
     ovms::shapes_info_map_t shapeMapUnknown;
     shapeMapUnknown["unknown"] = inputShape;
     config.setShapes(shapeMapUnknown);
-    EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK);
+    EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_MODEL);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 
     // load with valid config
@@ -645,7 +645,7 @@ TEST_F(TestReloadModelWithMapping, ReloadMultipleTimes) {
     layoutsUnknown["input"] = "LAYOUT_INPUT";
     layoutsUnknown["unknown"] = "LAYOUT_OUTPUT";
     config.setLayouts(layoutsUnknown);
-    EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK);
+    EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_LAYOUT_IS_NOT_IN_MODEL);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 
     // load with valid config

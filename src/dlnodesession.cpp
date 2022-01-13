@@ -113,7 +113,7 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
             return status;
         }
 
-        // If batch size is incorrect, perform network batch size change if allowed (shape mode=auto or batch size=auto)
+        // If batch size is incorrect, perform model batch size change if allowed (shape mode=auto or batch size=auto)
         if (status == StatusCode::INVALID_BATCH_SIZE) {
             if (this->model->getModelConfig().getBatchingMode() == Mode::AUTO) {
                 requestedBatchSize = tensor->get_shape()[0];
@@ -239,7 +239,7 @@ Status DLNodeSession::getRealInputName(const std::string& alias, std::string* re
 Status DLNodeSession::setInputsForInference(ov::runtime::InferRequest& inferRequest) {
     Status status = StatusCode::OK;
     try {
-        // Prepare inference request, fill with input blobs
+        // Prepare inference request, fill with input tensors
         for (const auto& [name, tensor] : this->inputHandler->getInputs()) {
             std::string realModelInputName;
             if (!getRealInputName(name, &realModelInputName).ok()) {
@@ -271,7 +271,7 @@ Status DLNodeSession::executeInference(PipelineEventQueue& notifyEndQueue, ov::r
         inferRequest.set_callback([this, &notifyEndQueue, &inferRequest, &node](std::exception_ptr exception_ptr) {
             this->timer->stop("inference");
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Completion callback received for node name: {}", this->getName());
-            // After inference is completed, input blobs are not needed anymore
+            // After inference is completed, input tensors are not needed anymore
             this->inputHandler->clearInputs();
             notifyEndQueue.push({node, getSessionKey()});
             inferRequest.set_callback([](std::exception_ptr exception_ptr) {});  // reset callback on infer request

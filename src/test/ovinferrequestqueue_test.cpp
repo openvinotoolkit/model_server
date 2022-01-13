@@ -32,9 +32,9 @@ const std::string DUMMY_MODEL_PATH = std::filesystem::current_path().u8string() 
 
 TEST(OVInferRequestQueue, ShortQueue) {
     ov::runtime::Core ieCore;
-    auto network = ieCore.read_model(DUMMY_MODEL_PATH);
-    ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
-    ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, 3);
+    auto model = ieCore.read_model(DUMMY_MODEL_PATH);
+    ov::runtime::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
+    ovms::OVInferRequestsQueue inferRequestsQueue(compiledModel, 3);
     int reqid;
     reqid = inferRequestsQueue.getIdleStream().get();
     EXPECT_EQ(reqid, 0);
@@ -55,9 +55,9 @@ void releaseStream(ovms::OVInferRequestsQueue& requestsQueue) {
 TEST(OVInferRequestQueue, FullQueue) {
     ovms::Timer timer;
     ov::runtime::Core ieCore;
-    auto network = ieCore.read_model(DUMMY_MODEL_PATH);
-    ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
-    ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, 50);
+    auto model = ieCore.read_model(DUMMY_MODEL_PATH);
+    ov::runtime::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
+    ovms::OVInferRequestsQueue inferRequestsQueue(compiledModel, 50);
     int reqid;
     for (int i = 0; i < 50; i++) {
         reqid = inferRequestsQueue.getIdleStream().get();
@@ -91,10 +91,10 @@ TEST(OVInferRequestQueue, MultiThread) {
     int nireq = 10;            // represnet queue size
     int number_clients = 100;  // represent number of serving clients
     ov::runtime::Core ieCore;
-    auto network = ieCore.read_model(DUMMY_MODEL_PATH);
-    ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
+    auto model = ieCore.read_model(DUMMY_MODEL_PATH);
+    ov::runtime::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
 
-    ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, nireq);
+    ovms::OVInferRequestsQueue inferRequestsQueue(compiledModel, nireq);
 
     std::vector<int> test_vector(nireq);  // vector to test if only one thread can manage each element
     std::vector<std::thread> clients;
@@ -109,10 +109,10 @@ TEST(OVInferRequestQueue, MultiThread) {
 
 TEST(OVInferRequestQueue, AsyncGetInferRequest) {
     ov::runtime::Core ieCore;
-    auto network = ieCore.read_model(DUMMY_MODEL_PATH);
-    ov::runtime::CompiledModel execNetwork = ieCore.compile_model(network, "CPU");
+    auto model = ieCore.read_model(DUMMY_MODEL_PATH);
+    ov::runtime::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     const int nireq = 1;
-    ovms::OVInferRequestsQueue inferRequestsQueue(execNetwork, nireq);
+    ovms::OVInferRequestsQueue inferRequestsQueue(compiledModel, nireq);
 
     std::future<int> firstStreamRequest = inferRequestsQueue.getIdleStream();
     std::future<int> secondStreamRequest = inferRequestsQueue.getIdleStream();

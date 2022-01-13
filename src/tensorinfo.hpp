@@ -140,7 +140,7 @@ public:
     const std::string& getName() const;
 
     /**
-         * @brief Get the tensor name - as in network model or mapped name
+         * @brief Get the tensor name - as in model or mapped name
          * 
          * @return const std::string& 
          */

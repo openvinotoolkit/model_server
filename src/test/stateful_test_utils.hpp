@@ -72,19 +72,19 @@ private:
     ov::runtime::Core ieCore;
     const std::string MODEL_PATH = std::filesystem::current_path().u8string() + "/src/test/summator/1/summator.xml";
 
-    std::shared_ptr<ov::Model> network;
-    std::shared_ptr<ov::runtime::CompiledModel> execNetwork;
+    std::shared_ptr<ov::Model> model;
+    std::shared_ptr<ov::runtime::CompiledModel> compiledModel;
 
     const std::string stateName = "state";
 
 public:
     DummyStatefulModel() {
-        network = ieCore.read_model(MODEL_PATH);
-        execNetwork = std::make_shared<ov::runtime::CompiledModel>(ieCore.compile_model(network, "CPU"));
+        model = ieCore.read_model(MODEL_PATH);
+        compiledModel = std::make_shared<ov::runtime::CompiledModel>(ieCore.compile_model(model, "CPU"));
     }
 
     ov::runtime::InferRequest createInferRequest() {
-        return execNetwork->create_infer_request();
+        return compiledModel->create_infer_request();
     }
 
     const std::string getStateName() {

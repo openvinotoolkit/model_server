@@ -51,7 +51,7 @@ public:
 
 protected:
     Status fetchResults(TensorMap& outputs);
-    Status createShardedBlob(std::shared_ptr<ov::runtime::Tensor>& dividedBlob, Precision precision, const shape_t& shape, std::shared_ptr<ov::runtime::Tensor> blob, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName) override;
+    Status createShardedTensor(std::shared_ptr<ov::runtime::Tensor>& dividedTensor, Precision precision, const shape_t& shape, std::shared_ptr<ov::runtime::Tensor> tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) override;
 
 public:
     // Entry nodes have no dependency

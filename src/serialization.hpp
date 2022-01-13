@@ -37,17 +37,17 @@ class OutputGetter {
 public:
     OutputGetter(T t) :
         outputSource(t) {}
-    Status get(const std::string& name, ov::runtime::Tensor& blob);  // TODO replace with shared_ptr version
+    Status get(const std::string& name, ov::runtime::Tensor& tensor);  // TODO replace with shared_ptr version
     Status get(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& tensor);
 
 private:
     T outputSource;
 };
 
-Status serializeBlobToTensorProto(
+Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,
-    const std::shared_ptr<TensorInfo>& networkOutput,
-    ov::runtime::Tensor& blob);
+    const std::shared_ptr<TensorInfo>& servableOutput,
+    ov::runtime::Tensor& tensor);
 
 Status serializePredictResponse(
     ov::runtime::InferRequest& inferRequest,
@@ -67,7 +67,7 @@ Status serializePredictResponse(
             return status;
         }
         auto& tensorProto = (*response->mutable_outputs())[outputInfo->getMappedName()];
-        status = serializeBlobToTensorProto(tensorProto, outputInfo, tensor);
+        status = serializeTensorToTensorProto(tensorProto, outputInfo, tensor);
         if (!status.ok()) {
             return status;
         }

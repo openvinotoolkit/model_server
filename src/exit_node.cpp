@@ -32,7 +32,7 @@
 namespace ovms {
 Status ExitNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
     auto& exitNodeSession = static_cast<ExitNodeSession&>(nodeSession);
-    return this->fetchResults(exitNodeSession.getInputBlobs());
+    return this->fetchResults(exitNodeSession.getInputTensors());
 }
 
 Status ExitNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
@@ -41,18 +41,18 @@ Status ExitNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQ
 }
 
 template <>
-Status OutputGetter<const TensorMap&>::get(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& blob) {
+Status OutputGetter<const TensorMap&>::get(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& tensor) {
     auto it = outputSource.find(name);
     if (it == outputSource.end()) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Failed to find expected pipeline output when serializing response: {}", name);
         return StatusCode::INTERNAL_ERROR;
     }
-    blob = it->second;
+    tensor = it->second;
     return StatusCode::OK;
 }
 
 template <>
-Status OutputGetter<const TensorMap&>::get(const std::string& name, ov::runtime::Tensor& blob) {
+Status OutputGetter<const TensorMap&>::get(const std::string& name, ov::runtime::Tensor& tensor) {
     auto it = outputSource.find(name);
     if (it == outputSource.end()) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Failed to find expected pipeline output when serializing response: {}", name);
@@ -60,7 +60,7 @@ Status OutputGetter<const TensorMap&>::get(const std::string& name, ov::runtime:
     }
     std::shared_ptr<ov::runtime::Tensor> finalTensor;
     auto status = tensorClone(finalTensor, *(it->second));
-    blob = *it->second;
+    tensor = *it->second;
     return StatusCode::OK;
 }
 

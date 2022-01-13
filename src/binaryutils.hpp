@@ -21,5 +21,5 @@
 #include "tensorinfo.hpp"
 
 namespace ovms {
-Status convertStringValToBlob(const tensorflow::TensorProto& src, ov::runtime::Tensor& blob, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline);
+Status convertStringValToTensor(const tensorflow::TensorProto& src, ov::runtime::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline);
 }  // namespace ovms

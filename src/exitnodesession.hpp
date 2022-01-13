@@ -35,7 +35,7 @@ public:
     ExitNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
     virtual ~ExitNodeSession();
 
-    const TensorMap& getInputBlobs() const;
+    const TensorMap& getInputTensors() const;
     void release() override;
 };
 }  // namespace ovms

@@ -29,7 +29,7 @@ namespace ovms {
 
 class TensorInfo;
 
-Status createSharedTensor(std::shared_ptr<ov::runtime::Tensor>& destinationBlob, ov::element::Type_t precision, const ov::Shape& shape);
+Status createSharedTensor(std::shared_ptr<ov::runtime::Tensor>& destinationTensor, ov::element::Type_t precision, const ov::Shape& shape);
 /**
  *  Creates new tensor that copies data and owns the copy
  **/

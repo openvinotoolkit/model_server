@@ -33,11 +33,11 @@ namespace ovms {
 
 class OVInferRequestsQueue : public Queue<ov::runtime::InferRequest> {
 public:
-    OVInferRequestsQueue(ov::runtime::CompiledModel& network, int streamsLength) :
+    OVInferRequestsQueue(ov::runtime::CompiledModel& compiledModel, int streamsLength) :
         Queue(streamsLength) {
         for (int i = 0; i < streamsLength; ++i) {
             streams[i] = i;
-            inferRequests.push_back(network.create_infer_request());
+            inferRequests.push_back(compiledModel.create_infer_request());
         }
     }
 };

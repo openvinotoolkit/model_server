@@ -58,10 +58,10 @@ Status CustomNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSe
         customNodeSession.release();
         return StatusCode::INTERNAL_ERROR;
     }
-    auto& metadataBlobResultsPair = it.first->second;
-    auto& blobResults = metadataBlobResultsPair.second;
+    auto& metadataTensorResultsPair = it.first->second;
+    auto& tensorResults = metadataTensorResultsPair.second;
     return this->fetchResults(
-        blobResults,
+        tensorResults,
         nodeSession.getSessionKey());
 }
 
@@ -88,7 +88,7 @@ Status CustomNode::fetchResults(TensorMap& outputs, session_key_t sessionKey) {
             }
 
             outputs.emplace(std::make_pair(output_name, std::move(resultTensor)));
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Blob with name {} has been prepared under alias {}",
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Tensor with name {} has been prepared under alias {}",
                 getName(), sessionKey, realOutputName, output_name);
         }
     }

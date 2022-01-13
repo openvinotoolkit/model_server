@@ -59,8 +59,8 @@ public:
     Status validateAndGetInput(const tensorflow::serving::PredictRequest& request, const std::string& name, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it);
     Status checkIfShapeValuesNegative(const tensorflow::TensorProto& proto) const;
     Status validateNumberOfBinaryInputShapeDimensions(const tensorflow::TensorProto& proto) const;
-    Status checkBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& networkBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
-    Status checkBinaryBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& networkBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
+    Status checkBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
+    Status checkBinaryBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
     Status checkShapeMismatch(const tensorflow::TensorProto& proto, const ovms::TensorInfo& inputInfo, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
     Status validateTensorContentSize(const tensorflow::TensorProto& proto, ovms::Precision expectedPrecision) const;
     Status validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const tensorflow::TensorProto& proto) const;
@@ -120,8 +120,8 @@ Status RequestValidator::validateNumberOfBinaryInputShapeDimensions(const tensor
     return StatusCode::OK;
 }
 
-Status RequestValidator::checkBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& networkBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
-    if (networkBatchSize.match(proto.tensor_shape().dim(0).size())) {  // TODO use layout INFO
+Status RequestValidator::checkBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+    if (servableBatchSize.match(proto.tensor_shape().dim(0).size())) {  // TODO use layout INFO
         return StatusCode::OK;
     }
     if (batchingMode == AUTO) {
@@ -129,7 +129,7 @@ Status RequestValidator::checkBatchSizeMismatch(const tensorflow::TensorProto& p
         return StatusCode::OK;
     } else if (shapeMode != AUTO) {
         std::stringstream ss;
-        ss << "Expected: " << networkBatchSize.toString() << "; Actual: " << proto.tensor_shape().dim(0).size() << "; input name: " << getCurrentlyValidatedInputName();
+        ss << "Expected: " << servableBatchSize.toString() << "; Actual: " << proto.tensor_shape().dim(0).size() << "; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
@@ -137,7 +137,7 @@ Status RequestValidator::checkBatchSizeMismatch(const tensorflow::TensorProto& p
     return StatusCode::OK;
 }
 
-Status RequestValidator::checkBinaryBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& networkBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+Status RequestValidator::checkBinaryBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
     if (proto.string_val_size() <= 0) {
         std::stringstream ss;
         ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
@@ -145,7 +145,7 @@ Status RequestValidator::checkBinaryBatchSizeMismatch(const tensorflow::TensorPr
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
     }
-    if (networkBatchSize.match(proto.tensor_shape().dim(0).size())) {  // TODO use layout
+    if (servableBatchSize.match(proto.tensor_shape().dim(0).size())) {  // TODO use layout
         return StatusCode::OK;
     }
     if (batchingMode == AUTO) {
@@ -153,7 +153,7 @@ Status RequestValidator::checkBinaryBatchSizeMismatch(const tensorflow::TensorPr
         return StatusCode::OK;
     } else if (shapeMode != AUTO) {
         std::stringstream ss;
-        ss << "Expected: " << networkBatchSize.toString() << "; Actual: " << proto.string_val_size() << "; input name: " << getCurrentlyValidatedInputName();
+        ss << "Expected: " << servableBatchSize.toString() << "; Actual: " << proto.string_val_size() << "; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
@@ -308,7 +308,7 @@ Status RequestValidator::validate() {
         const Dimension batchSize = inputInfo->getShape()[0];  // replace with getBatchSize() //TODO
         Mode shapeMode = getShapeMode(shapeInfo, name);
 
-        // More detailed binary input validation is performed in next step, during conversion to blob.
+        // More detailed binary input validation is performed in next step, during conversion to tensor.
         if (proto.dtype() == tensorflow::DataType::DT_STRING) {
             SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing binary input: name: {}; batch size: {}", servableName, servableVersion, name, proto.string_val_size());
 
