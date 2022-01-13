@@ -1,18 +1,18 @@
-# Dynamic shape with custom node{#ovms_docs_dynamic_shape_custom_node}
+# Dynamic Shape with a Custom Node{#ovms_docs_dynamic_shape_custom_node}
 
 ## Introduction
-This document guides how to configure a simple DAG with custom node that performs input resizing before passing data to the actual model. 
+This guide shows how to configure a simple Directed Acyclic Graph (DAG) with a custom node that performs input resizing before passing input data to the model. 
 
-Such custom node has been created by the model server team. The description of how to build and use it is avaiable on: https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/image_transformation.
+The node below is provided as a demonstration. See instructions for how to build and use the custom node: https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/image_transformation.
 
 
-To show inference running on such setup let's take adventage of:
+To run inference with this setup, we will use the following:
 
-- Example client in python [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/face_detection.py), that can be used to request inference on desired input shape.
+- Example client in Python [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/face_detection.py) that can be used to request inference on with the desired input shape.
 
-- The example model [face_detection_retail_0004](https://docs.openvinotoolkit.org/2021.4/omz_models_model_face_detection_retail_0004.html).
+- An example [face_detection_retail_0004](https://docs.openvinotoolkit.org/2021.4/omz_models_model_face_detection_retail_0004.html) model.
 
-- While using face_detection_retail_0004 model with face_detection.py the script loads images and resizes them to desired width and height. Then it processes the output from the server and displays the inference results by drawing bounding boxes around predicted faces. 
+- When using the `face_detection_retail_0004` model with the `face_detection.py` script, images are loaded and resized to the desired width and height. Then the output from the server is processed and inference results are displayed with bounding boxes drawn around the detected faces. 
 
 ## Steps
 Clone OpenVINO&trade; Model Server github repository and enter `model_server` directory.
@@ -21,22 +21,22 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 ```
 
-#### Download the pretrained model
-Download model files and store it in `models` directory
+#### Download the Pretrained Model
+Download the model files and store them in the `models` directory
 ```Bash
 mkdir -p models/face_detection/1
 curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml -o models/face_detection/1/face-detection-retail-0004.bin -o models/face_detection/1/face-detection-retail-0004.xml
 ```
 
-#### Pull the latest OVMS image from dockerhub
-Pull the latest version of OpenVINO&trade; Model Server from Dockerhub :
+#### Pull the Latest Model Server Image
+Pull the latest version of OpenVINO&trade; Model Server from Docker Hub :
 ```Bash
 docker pull openvino/model_server:latest
 ```
 
-### Build the custom node
+### Build a Custom Node
 
-1. Go to custom node directory
+1. Go to the custom node directory
     ```
     cd src/custom_nodes/image_transformation/
     ``` 
@@ -46,18 +46,18 @@ docker pull openvino/model_server:latest
     make build
     ```
 
-4. Copy the custom node to `models` repository
+4. Copy the custom node to the `models` repository
     ```
     cp lib/libcustom_node_image_transformation.so ../../../models
     ```
 
-#### OVMS configuration file
-Go to `models` directory:
+#### Create Model Server Configuration File
+Go to the `models` directory:
 ```
 cd ../../../models
 ```
 
-Create new file named `config.json` there:
+Create a new file named `config.json` in the `models` directory:
 ```json
 {
     "model_config_list": [
@@ -130,13 +130,13 @@ Create new file named `config.json` there:
 }
 ```
 
-#### Start ovms docker container with downloaded model
-Start ovms container with image pulled in previous step and mount <models_dir> :
+#### Start Model Server Container with Downloaded Model
+Start the container with the image pulled in the previous step and mount <models_dir> :
 ```Bash
 docker run --rm -d -v <models_dir>:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config.json --port 9000
 ```
 
-#### Run the client
+#### Run the Client
 ```Bash
 cd ../example_client
 virtualenv .venv

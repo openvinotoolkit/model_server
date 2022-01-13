@@ -1,13 +1,13 @@
-# Models Repository {#ovms_docs_models_repository}
+# Model Repository {#ovms_docs_models_repository}
 
 ## Introduction 
-This guide will help you to create a models repository for serving with the OpenVINO&trade; Model Server. This will help you to serve any model with the OpenVINO&trade; Model Server.
+This guide will help you to create a model repository for serving with OpenVINO&trade; Model Server.
 
 
-## Creating Repository
-The AI models to be served with OpenVINO&trade; Model Server should be in Intermediate Representation (IR) format (where the graph is represented in .bin and .xml format) or in [ONNX](https://onnx.ai/) format. 
+## Create a Repository
+The AI models to be served must be in [OpenVINO IR](https://docs.openvino.ai/latest/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets) (where the model is represented in .bin and .xml files) or in [ONNX](https://onnx.ai/) format. 
 
-Tensorflow, Caffe and MXNet trained models can be converted to IR format using Model Optimizer from OpenVINO&trade; toolkit. Follow the steps from  [model optimizer documentation](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer) to convert your model.
+Models trained in deep learning frameworks like TensorFlow, Caffe and MXNet can be converted to OpenVINO IR format using [Model Optimizer](https://docs.openvino.ai/latest/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html). Models trained in PyTorch can also be exported to ONNX and loaded in Model Server. 
 
 ONNX model format can be also converted from other frameworks using [converters](https://onnx.ai/supported-tools.html). 
 
@@ -38,9 +38,9 @@ representing its versions (1,2, etc). The versions and the sub-folder names shou
 - Every version folder _must_ include model files. IR model files must be with .bin and .xml extensions. ONNX model must have .onnx extension. The file name can be arbitrary.
 
 - Each model defines input and output tensors in the AI graph. The client passes data to model input tensors by filling appropriate entries in the request inputs map.
-  Prediction results can be read from response outputs map. By default OpenVINO™ Model Server is using model
-  tensors names as inputs and outputs names in prediction requests and responses. The client passes the input values to the request and 
-  reads the results by referring to the correspondent output names. 
+  Prediction results can be read from the response output map. By default, Model Server uses model
+  tensor names as inputs and outputs the names in prediction requests and responses. The client passes the input values to the request and 
+  reads the results by referring to the corresponding output names. 
 
 Below is the snippet of the example client code :
 ```python

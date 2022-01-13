@@ -1,8 +1,8 @@
-# Using cloud storage for models {#ovms_docs_cloud_storage}
+# Using Cloud Storage as a Model Repository {#ovms_docs_cloud_storage}
 
 ### Cloud Storage Requirements<a name="storage"></a>
 
-OVMS supports a range of cloud storage types. In general OVMS requires "read" and "list" permissions on the model repository side.
+OpenVINO Model Server supports a range of cloud storage options. In general, "read" and "list" permissions are required for a model repository.
 
 ### Azure Cloud Storage
 
@@ -63,7 +63,7 @@ openvino/model_server:latest \
 --model_path gs://bucket/model_path --model_name gs_model --port 9001
 ```
 
-### AWS S3 and Minio storage
+### Amazon S3 and MinIO Storage
 
 @sphinxdirective
 .. raw:: html
@@ -72,7 +72,7 @@ openvino/model_server:latest \
 @endsphinxdirective
 
 Add the S3 path as the model_path and pass the credentials as environment variables to the Docker container.
-S3_ENDPOINT is optional for AWS s3 storage and mandatory for Minio and other s3 compatible storage types.
+`S3_ENDPOINT` is optional for Amazon S3 storage and mandatory for MinIO and other S3-compatible storage types.
 
 Example command with `s3://<bucket>/<model_path>:`
 
@@ -86,7 +86,7 @@ openvino/model_server:latest \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
 
-You can also use anonymous access to s3 public paths.
+You can also use anonymous access to public S3 paths.
 
 Example command with `s3://<public_bucket>/<model_path>:`
 

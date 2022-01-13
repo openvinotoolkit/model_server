@@ -20,64 +20,64 @@
 
 @endsphinxdirective
 
-## Serve single model
+## Serving a Single Model
 
-The simplest way to deploy OpenVINO Model Server is in single model mode. In this mode only one model is served and the whole configuration is passed via CLI parameters.
->Note: In single model mode changing configuration in runtime is not available.
+The simplest way to deploy OpenVINO Model Server is with a single model. Only one model is served and the whole configuration is passed via command line parameters.
+>NOTE: In single model mode changing configuration at runtime is not possible.
 
 [Learn more](single_model_mode.md)
 
-## Serve multiple models
+## Serving Multiple Models
 
-For serving multiple models use multi model mode. It requires configuration file that holds configuration for all served models. In this mode you can add and delete models as well as update their configuration in runtime, without restarting model server.
+To serve multiple models, use multi-model mode. This requires a configuration file that stores the configuration of all served models. In this mode you can add or delete models as well as update their configurations at runtime, without restarting Model Server.
 
 [Learn more](multiple_models_mode.md)
 
-## Run in Docker container
+## Run in a Container
 
-OpenVINO Model Server is distributed as a Docker image and is available on [DockerHub](https://hub.docker.com/r/openvino/model_server) and [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de). Model server images are minimal and contain only necessary dependencies. Using Docker is recommended way of running OpenVINO Model Server.
+OpenVINO Model Server is distributed as a Docker container image available from [DockerHub](https://hub.docker.com/r/openvino/model_server) and the [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de). Model Server images are minimal and contain only the necessary dependencies for inference serving. Using Docker is the recommended way to deploy OpenVINO Model Server.
 
 [Learn more](docker_container.md)
 
-## Run on bare metal and virtual hosts
+## Run on Bare Metal and Virtual Machine (VM) Hosts
 
-OpenVINO Model Server is an open source project written in C++. Therefore it's possible to download and compile the code to obtain the binary and run it on bare metal. There are `make` targets provided to make this process simpler.
+OpenVINO Model Server is open-source and implemented in C++. Therefore it's possible to download and compile the source code to obtain a binary and run on bare metal. The provided `make` targets simplify the build process.
 
 [Learn more](host.md)
 
-## Configure deployment to fit your needs
+## Configure Deployments
 
-Depending on what models OVMS serves, what are performance requirements and traffic expectations, you may want to configure some server options like:
-- used ports
+Depending on which models are served, and what performance requirements and traffic expectations exist, you may want to configure some server options like:
+- ports used
 - enable/disable REST API
 - set configuration monitoring 
 
-... as well as best fitting configuration for each of the served models like:
-- device to load the model onto
-- model version policy
+... as well as the best fitting configuration for each of the served models like:
+- which device to load the model onto
+- the model version policy
 - inference related options
 
 [Learn more](parameters.md)
 
-## Hold your models in remote storage
+## Save Models in Remote Storage
 
-Leverage remote storages such as Azure Blob Storage, Google Cloud Storage or AWS S3 compatible to create more elastic model repositories, that are easy to use and manage for example in Kubernetes deployments.
+Leverage remote storage options including Azure Blob Storage, Google Cloud Storage or any S3-compatible storage to create more elastic model repositories that are easy to use and manage in Kubernetes, for example.
 
 [Learn more](using_cloud_storage.md)
 
-## Set up model versioning policies for served models
+## Set Model Versioning Policies
 
-Take adventage of the model repository stucture. Add or delete version directories and model server will automatically adjust what is actually served. Have full control over served model versions by setting model version policy and serving all, only specific or always the latest version of the model.
+Take advantage of the model repository structure. Add or delete version directories and Model Server will automatically adjust what is being served. Take full control over served model versions by setting a model version policy and serving all, specific models or only the latest version of a model.
 
 [Learn more](model_version_policy.md)
 
-## Modify models configuration in runtime with no service disruptions
+## Modify Model Configuration at Runtime
 
-OpenVINO Model Server tracks changes in the configuration file and applies them in runtime. It means that you can change models configuration (for example serve model on different device), add new model or completely remove one that is not needed anymore. Any changes will be applied with no disruptions of service functionality (no restart required).
+OpenVINO Model Server tracks changes to the configuration file and applies them during runtime. This means you can change model configurations (for example serve a model on a different device), add a new model or completely remove one that is no longer needed. Any changes will be applied with no disruptions of service functionality (no restart required).
 
 [Learn more](online_config_changes.md)
 
-## Keep your deployments secure
+## Secure Deployments
 
 While deploying model server, think about security of your deployment. Take care of appropriate permissions and keeping your models in a safe place. Consider configuring access restrictions and traffic encryption to secure communication with the model server.
 

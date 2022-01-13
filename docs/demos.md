@@ -24,43 +24,43 @@
 
 @endsphinxdirective
 
-OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate it's capabilities. Source codes for all of below demos are available on GitHub. See the demos along with steps to reproduce:
+OpenVINO Model Server demos show how to use the model server and its features. Source code for the demos below are available on GitHub. See the demos along with steps to reproduce:
 
 
-- [Age and Gender Recognition via REST API](age_gender_guide.md) - run prediction on a JPEG image using an age and gender recognition model via REST API.
+- [Age and Gender Recognition via REST API](age_gender_guide.md) - run predictions on JPEG images using an age and gender recognition model via the REST API.
 
-- [Horizontal Text Detection in Real-Time](camera_example.md) - run prediction on camera stream using a horizontal text detection model via gRPC API.
+- [Horizontal Text Detection in Real-Time](camera_example.md) - run predictions on a camera stream using a horizontal text detection model via the gRPC API.
 
-- [Age, Gender and Emotion Recognition with Pipelined Models](combined_model_dag.md) - run prediction on a JPEG image using a pipeline of age-gender recognition and emotion recognition models via gRPC API.
+- [Age, Gender and Emotion Recognition with Pipelined Models](combined_model_dag.md) - run predictions on JPEG images using a pipeline of age-gender recognition and emotion recognition models via the gRPC API.
 
-- [Optical Character Recognition Pipeline](east_ocr.md) - run prediction on a JPEG image using a pipeline of text recognition and text detection models with a custom node for intermediate results processing via gRPC API.
+- [Optical Character Recognition Pipeline](east_ocr.md) - run predictions on JPEG images using a pipeline of text recognition and text detection models, with a custom node for processing intermediate results, via the gRPC API.
 
-- [Simple Face Detection](face_detection_script_example.md) - run prediction on a JPEG image using a face detection model via gRPC API.
+- [Simple Face Detection](face_detection_script_example.md) - run predictions on JPEG images using a face detection model via the gRPC API.
 
-- [Age, Gender and Emotion Recognition with Pipelined Models (full)](faces_analysis_dag.md) - run prediction on a JPEG image using a pipeline of age-gender recognition and emotion recogition models via gRPC API.
+- [Age, Gender and Emotion Recognition with Pipelined Models (full)](faces_analysis_dag.md) - run predictions on JPEG images using a pipeline of age-gender recognition and emotion recognition models via the gRPC API.
 
-- [Image Classification with ONNX Model](ovms_onnx_example.md) - run prediction on a JPEG image using an original ONNX classificatin model via gRPC API.
+- [Image Classification with ONNX Models](ovms_onnx_example.md) - run predictions on JPEG images using a ResNet-50 classification model from [ONNX Model Zoo](https://github.com/onnx/models) via the gRPC API.
 
-- [Preparing TensorFlow Model For Serving](tf_model_binary_input.md) - download and convert original TensorFlow model to the format accepted by OpenVINO Model Server.
+- [Preparing TensorFlow Model For Serving](tf_model_binary_input.md) - download and convert a [ResNet-50 TensorFlow model](https://github.com/tensorflow/models/tree/v2.2.0/official/r1/resnet) to the [OpenVINO IR](https://docs.openvino.ai/latest/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets) format accepted by OpenVINO Model Server.
 
-- [Vehicle Analysis Pipeline](vehicles_analysis_dag.md) - detect vehicles and recognize their attributes using a pipeline of vehicle detection and vehicle attributes recognition models with a custom node for intermediate results processing via gRPC API.
+- [Vehicle Analysis Pipeline](vehicles_analysis_dag.md) - detect vehicles and recognize their attributes using a pipeline of vehicle detection and vehicle attribute recognition models, with a custom node for processing intermediate results, via the gRPC API.
 
-- [Natural Language Processing with BERT](../example_client/bert/README.md) - provide a knowledge source and a query and use BERT model for question answering use case via gRPC API.
+- [Natural Language Processing with BERT](../example_client/bert/README.md) - provide a knowledge source and a query a [BERT model](https://docs.openvino.ai/latest/omz_models_model_bert_small_uncased_whole_word_masking_squad_int8_0002.html) for question answering use case via gRPC API.
 
-- [Run Predictions with C++ application](../example_client/cpp/README.md) - build C++ client application in Docker and use it to run predictions via gRPC API. 
+- [Run Predictions with a C++ application](../example_client/cpp/README.md) - build a C++ client application in a Docker container and send predictions via the gRPC API. 
 
-- [Run Predictions with Go application](../example_client/go/README.md) - build Go client application in Docker and use it to run predictions via gRPC API.
+- [Run Predictions with a Go application](../example_client/go/README.md) - build a Go client application in a Docker container and send predictions via the gRPC API.
 
-- [ovmsclient package examples](../client/python/samples/README.md) - use a set of samples based on `ovmsclient` Python package for predictions, getting model status and getting model metadata both via gRPC and REST APIs
+- [ovmsclient Python samples](../client/python/samples/README.md) - a set of samples that use the `ovmsclient` Python package for predictions, getting model status and model metadata via both the gRPC and REST APIs.
 
-Additional demos that show how to work with dynamic inputs:
+Additional demos that show how to handle dynamic inputs:
 
-- [Handling dynamic batch size with a demuliplexer](./dynamic_bs_demultiplexer.md) - create a simple pipeline that will split data of any batch size and perform inference on each element in the batch separately.
+- [dynamic batch size with a demuliplexer](./dynamic_bs_demultiplexer.md) - create a simple pipeline that splits data of any batch size and performs inference on each element in the batch separately.
 
-- [Handling dynamic batch size with automatic model reloading](./dynamic_bs_auto_reload.md) - configure model server to reload the model every time it receives a request with batch size other than currently set.
+- [dynamic batch size with automatic model reloading](./dynamic_bs_auto_reload.md) - configure the model server to reload the model every time it receives a request with batch size other than what is currently set.
 
-- [Handling dynamic shape with automatic model reloading](./dynamic_shape_auto_reload.md) - configure model server to reload the model every time model receives a request with data in shape other than currently set.
+- [dynamic shape with automatic model reloading](./dynamic_shape_auto_reload.md) - configure the model server to reload a model every time the model receives a request with data in a shape other than what is currently set.
 
-- [Handling dynamic input shape with a custom node](./dynamic_shape_custom_node.md) - create a simple pipeline by pairing your model with a custom node that will perform data preprocessing and provide your model with data in acceptable shape.
+- [dynamic input shape with a custom node](./dynamic_shape_custom_node.md) - create a simple pipeline by pairing a model with a custom node that performs data preprocessing and provides the model with data in an acceptable shape.
 
-- [Handling dynamic input shape with binary input format](./dynamic_shape_binary_inputs.md) - send data in binary format (JPEG or PNG encoded), so model server will adjust the input on data decoding. 
+- [dynamic input shape with binary input format](./dynamic_shape_binary_inputs.md) - send data in binary format (i.e. JPEG or PNG encoded), so the model server adjusts the input on data decoding. 

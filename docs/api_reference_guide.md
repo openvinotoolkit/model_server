@@ -1,4 +1,4 @@
-# API References {#ovms_docs_server_api}
+# API Reference Guide {#ovms_docs_server_api}
 
 @sphinxdirective
 

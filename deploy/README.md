@@ -1,6 +1,6 @@
 # Helm Deployment {#ovms_deploy_helm_chart}
 
-A helm chart for installing OpenVINO Model Server in a Kubernetes cluster is provided. 
+To simplify deployment in Kubernetes, we provide a helm chart for installing OpenVINO Model Server in a Kubernetes cluster. 
 The helm chart is managing the Model Server instance which represents a kubernetes deployment and a
 kubernetes service with exposed REST and gRPC inference endpoints.
 This guide assumes you already have a functional Kubernetes cluster and helm 

@@ -1,4 +1,4 @@
-# Multiple models mode with a config file {#ovms_docs_multiple_models}
+# Deploy Multiple Models with a Config File {#ovms_docs_multiple_models}
 
 ### Starting Docker Container with a Configuration File for **Multiple** Models <a name="configfile"></a>
 
@@ -56,7 +56,7 @@ Example configuration file:
 }
 ```
 
-When the config file is present, the Docker container can be started in a similar manner as a single model. Keep in mind that models with cloud storage path require specific environmental variables set. Refer to cloud storage requirements below.
+When the config file is present, the Docker container can be started similar to a single model. Keep in mind that models with cloud storage paths require setting specific environmental variables. Refer to the cloud storage requirements below for more details.
 
 ```bash
 
@@ -65,7 +65,7 @@ docker run --rm -d -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 -v <config.j
 
 ```
 
->Note: Follow the below model repository structure for multiple models:
+>NOTE: Follow the model repository structure below to serve multiple models:
 
 ```bash
 models/
@@ -83,4 +83,4 @@ models/
          mapping_config.json
 ```
 
-Here the numerical values depict the version number of the model.
+The numerical values represent the version number of the model.

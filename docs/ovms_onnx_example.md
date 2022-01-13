@@ -1,6 +1,6 @@
 # Prediction with ONNX Models {#ovms_docs_demo_onnx}
 
-Steps are similar to [quick start](ovms_quickstart.md) guide with IR model format. Model Server accepts ONNX models as well with no differences in versioning. Locate ONNX model file in separate model version directory.
+Similar to the steps in the [quick start](ovms_quickstart.md) guide using an OpenVINO IR model format. Model Server accepts ONNX models with the same versioning structure. Similar to IR, place each ONNX model file in a separate model version subdirectory.
 Below is a complete functional use case using python 3.6 or higher.
 
 Download the model:

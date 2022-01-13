@@ -1,6 +1,6 @@
 # Clients {#ovms_docs_clients}
 
-## Python client
+## Python Client
 
 @sphinxdirective
 .. raw:: html
@@ -8,11 +8,11 @@
     <div id="switcher-python" class="switcher-anchor">Python</div>
 @endsphinxdirective
 
-Creating client application in Python is probably the simplest due to existance of two PyPi packages that make developer life easier when developing logic responsible for interaction with OpenVINO Model Server. Namely, the two packages are:
+When creating a Python-based client application, there are two packages on PyPi that can be used to interact with OpenVINO Model Server:
 - [tensorflow-serving-api](https://pypi.org/project/tensorflow-serving-api/)
 - [ovmsclient](https://pypi.org/project/ovmsclient/)
 
-### Install the package
+### Install the Package
 @sphinxdirective
 
 .. tab:: ovmsclient  
@@ -29,7 +29,7 @@ Creating client application in Python is probably the simplest due to existance 
 
 @endsphinxdirective
 
-### Request model status
+### Request Model Status
 
 @sphinxdirective
 
@@ -70,7 +70,7 @@ Creating client application in Python is probably the simplest due to existance 
      
 @endsphinxdirective
 
-### Request model metadata
+### Request Model Metadata
 
 @sphinxdirective
 
@@ -131,7 +131,7 @@ Creating client application in Python is probably the simplest due to existance 
 
 @endsphinxdirective
 
-### Request prediction on binary
+### Request Prediction on a Binary Input
 
 @sphinxdirective
 
@@ -169,7 +169,7 @@ Creating client application in Python is probably the simplest due to existance 
 
 @endsphinxdirective
 
-### Request prediction on Numpy
+### Request Prediction on a Numpy Array
 
 @sphinxdirective
 
@@ -208,7 +208,7 @@ Creating client application in Python is probably the simplest due to existance 
 
 For complete usage examples see [ovmsclient samples](../client/python/samples/README.md)
 
-## C++ client
+## C++ Client
 
 @sphinxdirective
 .. raw:: html
@@ -216,13 +216,13 @@ For complete usage examples see [ovmsclient samples](../client/python/samples/RE
     <div id="switcher-cpp" class="switcher-anchor">C++</div>
 @endsphinxdirective
 
-Creating client application in C++ follows the same principals as in Python, but in C++ it's a little bit more complicated. There's no package or library with convenient functions for interaction with the model server.
+Creating a client application in C++ follows the same principles as Python, but using C++ adds some complexity. There's no package or library available with convenient functions for interacting with OpenVINO Model Server.
 
-To successfully set up communication with the model server you need to implement the logic to communicate with endpoints specified in the [API](api_reference_guide.md). For gRPC, download and compile protos, and then link and use them in your application according to [gRPC API specification](model_server_grpc_api.md). For REST, prepare your data and pack it to appropriate JSON structure according to [REST API specification](model_server_rest_api.md).
+To successfully set up communication with the model server you need to implement the logic to communicate with endpoints specified in the [API](api_reference_guide.md). For gRPC, download and compile protos, then link and use them in your application according to the [gRPC API specification](model_server_grpc_api.md). For REST, prepare your data and pack it into the appropriate JSON structure according to the [REST API specification](model_server_rest_api.md).
 
-See [C++ demo](../example_client/cpp/README.md) to learn how to build exemplary C++ client application in Docker and use it to run predictions via gRPC API. 
+See our [C++ demo](../example_client/cpp/README.md) to learn how to build a sample C++ client application in a Docker container and get predictions via the gRPC API. 
 
-## Go client
+## Go Client
 
 @sphinxdirective
 .. raw:: html
@@ -230,8 +230,8 @@ See [C++ demo](../example_client/cpp/README.md) to learn how to build exemplary 
     <div id="switcher-go" class="switcher-anchor">Go</div>
 @endsphinxdirective
 
-Creating client application in Go follows the same principals as in Python, but in Go it's a little bit more complicated. There's no package or library with convenient functions for interaction with the model server.
+Creating a client application in [Go ](https://go.dev/) follows the same principals as Python, but Go adds complexity. There's no Go package or library available with convenient functions for interacting with OpenVINO Model Server..
 
-To successfully set up communication with the model server you need to implement the logic to communicate with endpoints specified in the [API](api_reference_guide.md). For gRPC, download and compile protos, and then link and use them in your application according to [gRPC API specification](model_server_grpc_api.md). For REST, prepare your data and pack it to appropriate JSON structure according to [REST API specification](model_server_rest_api.md).
+To successfully set up communication with the model server you need to implement the logic to communicate with endpoints specified in the [API](api_reference_guide.md). For gRPC, download and compile protos, then link and use them in your application according to the [gRPC API specification](model_server_grpc_api.md). For REST, prepare your data and pack it into the appropriate JSON structure according to the [REST API specification](model_server_rest_api.md).
 
-See [Go demo](../example_client/go/README.md) to learn how to build exemplary Go client application in Docker and use it to run predictions via gRPC API.
+See our [Go demo](../example_client/go/README.md) to learn how to build a sample Go-based client application in a Docker container and get predictions via the gRPC API.

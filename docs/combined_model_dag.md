@@ -1,7 +1,7 @@
-## DAG Scheduler combining results from two models {#ovms_docs_demo_combined_model_dag}
+## DAG Scheduler: Combine Results from Two Models {#ovms_docs_demo_combined_model_dag}
 
-This document presents a models ensemble as an example of [DAG Scheduler](dag_scheduler.md) implementation.
-It describes how to combine several models to perform multiple inference operations with a single prediction call.
+This document presents an example of model ensemble using the [DAG Scheduler](dag_scheduler.md).
+It describes how to combine several models to perform multiple inference operations from a single prediction call.
 When you need to execute several predictions on the same data, you can create a pipeline, which combines the results from several models.
 
 ![diagram](combined_model_dag.png)

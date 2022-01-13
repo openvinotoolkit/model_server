@@ -1,7 +1,7 @@
 # Demultiplexing in DAG {#ovms_docs_demuliplexing}
 
-## Pipeline branching
-Directed Acyclic Graph Scheduler allows creating pipelines with optional parameter `demultiply_count: N` which adds ability to any node to slice outputs into `N` separate sub outputs and branch pipeline execution into `N` sub pipelines. Following nodes will be executed by event loop `N` times independently from each other and results will be gathered and packed into one output just before sending a response. Additionally `gather_from_node: <node_name>` parameter can be used to specify gathering at any point in Directed Acyclic Graph.`demultiply_count` node parameter value has to match first dimension of all node outputs. All node outputs have to have at least 2 dimensions.
+## Pipeline Branching
+Directed Acyclic Graph (DAG) Scheduler enables creating pipelines with optional parameter `demultiply_count: N` which makes it possible for any node to slice outputs into `N` separate sub-outputs and branch pipeline execution into `N` sub-pipelines. Nodes that follow will be executed by event loop `N` times independently from each other and results gathered and packed into one output just prior to sending a response. Additionally, `gather_from_node: <node_name>` parameter can be used to specify gathering at any point in the Directed Acyclic Graph. The `demultiply_count` node parameter value must match the first dimension of all node outputs. All node outputs must have at least 2 dimensions.
 
 ## Basic demultiplexer example and metadata explanation
 This example contains 2 consecutive models:

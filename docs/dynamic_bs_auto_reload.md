@@ -1,15 +1,15 @@
-# Dynamic batch size with automatic model reloading{#ovms_docs_dynamic_bs_auto_reload}
+# Dynamic Batch Size with Automatic Model Reloading{#ovms_docs_dynamic_bs_auto_reload}
 
 ## Introduction
-This document guides how to configure model to accept input data in different batch sizes. In this case it's done by reloading the model with new batch size every time it receives the request with batch size different than the one currently set. 
+This guide shows how to configure a model to accept input data with different batch sizes. In this example, it is done by reloading the model with new batch size each time a request is received with a batch size different than what is currently set. 
 
-The enabling of dynamic batch size via model reload is as simple as setting `batch_size` parameter to `auto`. To show how to configure dynamic batch size and make use of it let's take adventage of:
+Enabling dynamic batch size via model reload is as simple as setting the `batch_size` parameter to `auto`. To configure dynamic batch size and use of it, let's take advantage of:
 
-- Example client in python [grpc_serving_client.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/grpc_serving_client.py), that can be used to request inference on desired batch size.
+- An example client in Python [grpc_serving_client.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/grpc_serving_client.py) that can be used to request inference with the desired batch size.
 
-- The example model [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/resnet50-binary-0001/README.md).
+- A sample [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/resnet50-binary-0001/README.md) model.
 
-- While using resnet model with grpc_serving_client.py the script processes the output from the server and displays the inference results using previously prepared file with labels. Inside this file each image has assigned number, which indicates the correct classification result.  
+- When using the resnet model with `grpc_serving_client.py`, the script processes the output from the server and displays the inference results using the previously prepared file containing labels. Inside this file each image has assigned number, which indicates the correct classification result.  
 
 ## Steps
 Clone OpenVINO&trade; Model Server github repository and enter `model_server` directory.
@@ -17,26 +17,26 @@ Clone OpenVINO&trade; Model Server github repository and enter `model_server` di
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 ```
-#### Download the pretrained model
-Download model files and store it in `models` directory
+#### Download the Pretrained Model
+Download the model files and store in `models` directory
 ```Bash
 mkdir -p models/resnet/1
 curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
 ```
 
-#### Pull the latest OVMS image from dockerhub
-Pull the latest version of OpenVINO&trade; Model Server from Dockerhub :
+#### Pull the Latest Model Server Image
+Pull the latest version of OpenVINO&trade; Model Server from Docker Hub :
 ```Bash
 docker pull openvino/model_server:latest
 ```
 
-#### Start ovms docker container with downloaded model and dynamic batch size
-Start ovms container with image pulled in previous step and mount `models` directory :
+#### Start the Model Server Container with Downloaded Model and Dynamic Batch Size
+Start the server container with the image pulled in the previous step and mount the `models` directory :
 ```Bash
 docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9000
 ```
 
-#### Run the client
+#### Run the Client
 ```Bash
 cd example_client
 virtualenv .venv
@@ -47,7 +47,7 @@ python grpc_serving_client.py --grpc_port 9000 --images_numpy_path imgs.npy --la
 ```
 *Note:* Results of running the client will be available in .txt files in current directory.
 
-#### Output of the script
+#### Script Output
 Output with `batchsize 1` stored in `b1.txt`:
 ```Bash
 Image data range: 0.0 : 255.0
@@ -132,6 +132,6 @@ time variance: 0.00
 Classification accuracy: 100.00
 
 ```
-Each iteration presents the results of each infer request and details for each image in batch.
+Each iteration presents the results of each infer request and details for each image in the batch.
 
 > Note that reloading the model takes time and during the reload new requests get queued up. Therefore, frequent model reloading may negatively affect overall performance. 

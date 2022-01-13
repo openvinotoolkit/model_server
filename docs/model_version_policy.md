@@ -1,9 +1,9 @@
 # Model Version Policy {#ovms_docs_model_version_policy}
 
-Model version policy makes it possible to decide which versions of model will be served by OVMS. 
-This parameter allows you to control the memory consumption of the server and decide which versions will be used regardless of what is located 
-under the path given when the server is started. model_version_policy parameter is optional. 
-By default server serves only the latest version for the model. Accepted format for parameter in CLI and in config is json.
+The model version policy determines which versions of a model or models will be served by OpenVINO Model Server. 
+This parameter enables controlling memory consumption of the server and deciding which versions will be used regardless of what exists
+in the model repository when the server is started. The `model_version_policy` parameter is optional. 
+By default, the server serves only the latest version of a model. The accepted format for parameters using the CLI and in the configuration file is JSON.
 
 Accepted values :
 ```
@@ -21,8 +21,8 @@ Examples:
 
 {"all": {}} # server will serve all available versions of given model
 ```
-## Updating model versions
-- Served versions are updated online by monitoring file system changes in the model storage. OpenVINO Model Server will add new version to the serving list when new numerical subfolder with the model files is added. The default served version will be switched to the one with the highest number. 
+## Updating Model Versions
+- Served versions of models are updated online by monitoring file system changes in the model repository. OpenVINO Model Server adds new versions to the serving list when a new numerical subfolder containing model files is added. The default served version will be switched to the highest numbered subdirectory. 
 
 - When the model version is deleted from the file system, it will become unavailable on the server and it will release RAM allocation. Updates in the deployed model version files will not be detected and they will not trigger changes in serving.
 

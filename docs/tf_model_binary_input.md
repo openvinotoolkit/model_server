@@ -1,6 +1,6 @@
-# TensorFlow model conversion for serving {#ovms_docs_demo_tensorflow_conversion}
+# Convert TensorFlow Models for Serving {#ovms_docs_demo_tensorflow_conversion}
 
-This document guides how to convert TensorFlow model and deploy it with the OpenVINO&trade; Model Server. It also explains how to scale the input tensors and adjust to binary JPEG and PNG input data.
+This guide shows how to convert TensorFlow models and deploy with the OpenVINO Model Server. It also explains how to scale the input tensors and adjust to use binary JPEG or PNG input data.
 
 - In this example TensorFlow model [ResNet](https://github.com/tensorflow/models/tree/v2.2.0/official/r1/resnet) will be used.
 

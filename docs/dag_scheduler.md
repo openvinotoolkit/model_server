@@ -1,4 +1,4 @@
-# Directed Acyclic Graph Scheduler {#ovms_docs_dag}
+# Directed Acyclic Graph (DAG) Scheduler {#ovms_docs_dag}
 
 @sphinxdirective
 
@@ -13,7 +13,7 @@
 @endsphinxdirective
 
 ## Introduction
-OpenVINO&trade; Model Server provides possibility to create pipeline of models for execution in a single client request. 
+The Directed Acyclic Graph (DAG) Scheduler makes it possible to create a pipeline of models for execution in a single client request. 
 Pipeline is a Directed Acyclic Graph with different nodes which define how to process each step of predict request. 
 By using such pipeline, there is no need to return intermediate results of every model to the client. This allows avoiding the network overhead by minimizing the number of requests sent to model server. 
 Each model output can be mapped to another model input. Since intermediate results are kept in server's RAM these can be reused by subsequent inferences which reduces overall latency.
@@ -144,7 +144,7 @@ Below is depicted a basic pipeline section template:
 |`"outputs"`|array|Defines outputs (data items) to be retrieved from intermediate results (nodes) after pipeline execution completed for final gRPC/REST response to the client|Yes|
 |`"nodes"`|array|Declares nodes used in pipeline and its connections|Yes|
 
-### Node options explained
+### Node Options
 
 |Option|Type|Description|Required|
 |:---|:---|:---|:---|
@@ -157,14 +157,14 @@ Below is depicted a basic pipeline section template:
 |`"inputs"`|array|Defines list of input/output mappings between this and dependency nodes, **IMPORTANT**: Please note that output shape, precision and layout of previous node/request needs to match input of current node's model|Yes|
 |`"outputs"`|array|Defines model output name alias mapping - you can rename model output names for easier use in subsequent nodes|Yes|
 
-### Node input options explained
+### Node Input Options
 
 |Option|Type|Description|Required|
 |:---|:---|:---|:---|
 |`"node_name"`|string|Defines which node we refer to|Yes|
 |`"data_item"`|string|Defines which resource of node we point to|Yes|
 
-### Node output options explained
+### Node Output Options
 
 |Option|Type|Description|Required|
 |:---|:---|:---|:---|
@@ -172,7 +172,7 @@ Below is depicted a basic pipeline section template:
 |`"alias"`|string|Is a name assigned to data item, makes it easier to refer to results of this node in subsequent nodes|Yes|
 
 
-### Custom node options explained
+### Custom Node Options
 
 In case the pipeline definition includes the custom node, the configuration file must include `custom_node_library_config_list`
 section. It includes:
@@ -181,8 +181,8 @@ section. It includes:
 |`"name"`|string|The name of the custom node library - it will be used as a reference in the custom node pipeline definition |Yes|
 |`"base_path"`|string|Path the the dynamic library with the custom node implementation|Yes|
 
-Custom node definition in the pipeline configuration is similar to the model node. Node inputs and outputs are configurable in 
-the same way. Custom node functions just like a standard mode in that respect. The differences is in extra parameters:
+Custom node definition in a pipeline configuration is similar to a model node. Node inputs and outputs are configurable in 
+the same way. Custom node functions are just like a standard node in that respect. The differences are in the extra parameters:
 
 |Option|Type|Description|Required|
 |:---|:---|:---|:---|
@@ -190,7 +190,7 @@ the same way. Custom node functions just like a standard mode in that respect. T
 |`"type"`|string|Must be set to `custom`|Yes|
 |`"params"`| json object with string values| a list of parameters and their values which could be used in the custom node implementation|No|
 
-## Using the pipelines <a name="using-pipelines"></a>
+## Using Pipelines <a name="using-pipelines"></a>
 
 Pipelines can use the same API like the models. There are exactly the same calls for running 
 the predictions. The request format must match the pipeline definition inputs.
@@ -205,7 +205,7 @@ and [REST Model Status](model_server_rest_api.md#model-status)
 The only difference in using the pipelines and individual models is in version management. In all calls to the pipelines, 
 version parameter is ignored. Pipelines are not versioned. Though, they can reference a particular version of the models in the graph.
 
-## Pipelines examples <a name="pipeline-examples"></a>
+## Pipelines Examples <a name="pipeline-examples"></a>
 
 [Single face analysis with combined models](combined_model_dag.md)
 

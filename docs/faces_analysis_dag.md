@@ -1,7 +1,7 @@
-# Face analysis pipeline {#ovms_docs_demo_face_analysis_dag}
+# Face Analysis Pipeline {#ovms_docs_demo_face_analysis_dag}
 
-## Analysis of multiple faces in single image frame request
-This document demonstrates how to create complex pipelines using object detection and object recognition models from OpenVINO Model Zoo. As an example, we will use [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/face-detection-retail-0004/README.md) to detect multiple faces on the image. Then, for each detected face we will crop it using [model_zoo_intel_object_detection](../src/custom_nodes/model_zoo_intel_object_detection) example custom node. Finally, each image face image will be forwarded to [age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/age-gender-recognition-retail-0013/README.md) and [emotion-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/emotions-recognition-retail-0003/README.md) models.
+## Analyze Multiple Faces in a Single Image Frame
+This guide demonstrates how to create complex pipelines using object detection and object recognition models from [Open Model Zoo](https://github.com/openvinotoolkit/open_model_zoo). In this example, we use the [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/face-detection-retail-0004/README.md) model to detect multiple faces in an image. Next, for each detected face we crop using the [model_zoo_intel_object_detection](../src/custom_nodes/model_zoo_intel_object_detection) custom node sample. Finally, each cropped image containing a face is sent to the [age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/age-gender-recognition-retail-0013/README.md) and [emotion-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/emotions-recognition-retail-0003/README.md) models.
 
 ![Faces analysis graph](faces_analysis.png)
 

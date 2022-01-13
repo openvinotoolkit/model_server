@@ -1,18 +1,18 @@
-# Single model mode {#ovms_docs_single_model}
+# Single Model Mode {#ovms_docs_single_model}
 
 
-### Running the OpenVINO&trade; Model Server Image for **Single** Model
+### Running the Model Server with a **Single** Model
 
-Follow the [Preparation of Model guide](models_repository.md) before running the docker image 
+Follow the [Preparation of Model guide](models_repository.md) before running the Docker image 
 
-Run the OpenVINO&trade; Model Server by running the following command: 
+Launch Model Server by running the following command: 
 
 ```
 docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 9001:9001 openvino/model_server:latest \
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 9001 --log_level DEBUG
 ```
 
-#### Configuration Arguments for Running the OpenVINO&trade; Model Server:
+#### Configuration Arguments for Running Model Server:
 
 - `--rm` - Remove the container when exiting the Docker container.
 - `-d` - Run the container in the background.

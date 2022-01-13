@@ -1,7 +1,7 @@
 # Model Server Parameters {#ovms_docs_parameters}
 
 
-## Model configuration options
+## Model Configuration Options
 
 | Option  | Value format | Description | Required |
 |---|---|---|---|
@@ -19,7 +19,7 @@
 | `max_sequence_number` | `uint32` | Determines how many sequences can be handled concurrently by a model instance. | No |
 | `low_latency_transformation` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_network_state_intro.html#lowlatency_transformation) on model load. | No |
 
-### Batch Processing in OpenVINO&trade; Model Server
+### Batch Processing in OpenVINO Model Server
 
 - `batch_size` parameter is optional. By default, is accepted the batch size derived from the model. It is set by the model optimizer tool.
 - When that parameter is set to numerical value, it is changing the model batch size at service start up. 

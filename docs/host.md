@@ -1,10 +1,10 @@
-# Bare Metal and Virtual Hosts {#ovms_docs_baremetal}
+# Bare Metal and Virtual Machine (VM) Hosts {#ovms_docs_baremetal}
 
 ## Introduction
-OpenVINO&trade; Model Server includes a C++ implementation of gRPC and RESTful API interfaces defined by TensorFlow Serving. 
-In the backend it uses Inference Engine libraries from OpenVINO&trade; toolkit, which speeds up the execution on CPU, and enables it on iGPU and Movidius devices.
+OpenVINO&trade; Model Server includes a C++ implementation of gRPC and RESTful API interfaces compatible with TensorFlow Serving. 
+In the backend, Model Server leverages the Inference Engine libraries from OpenVINO&trade; to accelerate inference execution on Intel CPU, iGPU and Movidius VPU devices.
 
-OpenVINO&trade; Model Server can be hosted on a bare metal server, virtual machine or inside a docker container. It is also suitable for landing in Kubernetes environment.
+OpenVINO&trade; Model Server can be hosted on a bare metal servers, virtual machines (VMs) or inside containers. The server can also be deployed in Kubernetes and OpenShift clusters.
 
 ## System Requirements
 
@@ -33,13 +33,13 @@ Look at VPU Plugins to see if your model is supported and use [OpenVINO Model Op
    ```Bash
    cd model_server
    ```
-3. To install Model Server, you could use precompiled version or built it on your own inside a docker container. Build a docker container with automated steps using the command :
+3. To install Model Server, it is possible to use a precompiled binary or built it on your own inside a Docker container. To automatically build a container from source, use the following command :
    ```Bash
    make docker_build
    ```
-4. The `make docker_build` target will also make a copy of the binary package in a dist subfolder in the model server root directory.
+4. Running `make docker_build` will also place a copy of the binary package in the `dist` subfolder in the Model Server root directory.
 
-5. Navigate to the folder containing binary package and unpack the included tar.gz file using the command :
+5. Navigate to the folder containing the binary package and unpack the included tar.gz file using the following command :
    ```Bash
    cd dist/ubuntu && tar -xzvf ovms.tar.gz
    ```

@@ -1,36 +1,36 @@
-# Using Docker Containers {#ovms_docs_docker_container}
+# Using Containers {#ovms_docs_docker_container}
 
 ## Overview 
 
-This guide provides step-by-step instructions on how to deploy OpenVINO&trade; Model Server for Linux using Docker Container including a Quick Start guide. Links are provided for different compatible hardwares. Following instructions are covered in this:
+This guide provides step-by-step instructions for deploying OpenVINO&trade; Model Server on Linux using Docker Containers. Links are provided for different compatible hardware. 
 
 ## System Requirements
 
-- docker engine installed
-- 6th to 12th generation Intel® Core™ processors and Intel® Xeon® processors
-- AI accelerators [supported by OpenVINO toolkit](https://docs.openvino.ai/2020.3/_docs_IE_DG_supported_plugins_Supported_Devices.html)
-- Linux, MacOS or Windows via WSL 
+- [Docker Engine](https://docs.docker.com/engine/) installed
+- 6th to 12th generation Intel® Core™ processors or Intel® Xeon® processors
+- (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html)
+- Linux, macOS or Windows via [WSL](https://docs.microsoft.com/en-us/windows/wsl/) 
 
-Note: accelerators are tested only on baremetal Linux OS
+NOTE: accelerators are only tested on bare metal Linux hosts.
 
 ## Quick Start Guide <a name="quickstart"></a>
 
-Start the docker container with OVMS and a public ResNet50 model from the cloud storage:
+Start a Docker container with OpenVINO Model Server and a ResNet-50 model from public cloud storage:
 ```bash
 docker run -p 9000:9000 openvino/model_server:latest \ 
 --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary \ 
 --layout NHWC --port 9000 
 ```
-Download image to classify and file with labels mapping:
+Download a JPEG image to classify and list of classes with label mappings:
 ```
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/images/zebra.jpeg 
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/classes.py 
 ```
-Install Python client package:
+Install the Python-based ovmsclient package:
 ```
 pip3 install ovmsclient
 ```
-Run the predication using ovmsclient
+Run predication using ovmsclient
 ```python
 import numpy as np
 from classes import imagenet_classes
@@ -47,9 +47,9 @@ predicted_class = imagenet_classes[result_index]
 ```
 
 
-Refer also to [Quick Start guide](./ovms_quickstart.md) to set up OpenVINO&trade; Model Server.
+Refer to the [Quick Start guide](./ovms_quickstart.md) to set up OpenVINO&trade; Model Server.
 
-## Detailed steps to pull and build OpenVINO&trade; Model Server docker image
+## Steps to Build OpenVINO&trade; Model Server from Source
 
 ### Install Docker
 

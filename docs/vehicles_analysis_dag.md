@@ -1,7 +1,7 @@
-# Vehicle analysis pipeline {#ovms_docs_demo_vehicle_analysis}
+# Vehicle Analysis Pipeline {#ovms_docs_demo_vehicle_analysis}
 
-## Analysis of multiple vehicles in single image frame request
-This document demonstrates how to create complex pipelines using object detection and object recognition models from OpenVINO Model Zoo. As an example, we will use [vehicle-detection-0202](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/vehicle-detection-0202/README.md) to detect multiple vehicles on the image. Then, for each detected vehicle we will crop it using [model_zoo_intel_object_detection](../src/custom_nodes/model_zoo_intel_object_detection) example custom node. Finally, each vehicle image will be forwarded to [vehicle-attributes-recognition-barrier-0042](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/vehicle-attributes-recognition-barrier-0042/README.md) model.
+## Analyze Multiple Vehicles in a Single Image Frame
+This document demonstrates how to create complex pipelines using object detection and object recognition models from [Open Model Zoo](https://github.com/openvinotoolkit/open_model_zoo). As an example, we use the [vehicle-detection-0202](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/vehicle-detection-0202/README.md) to detect multiple vehicles on the image. Next, for each detected vehicle we crop using the [model_zoo_intel_object_detection](../src/custom_nodes/model_zoo_intel_object_detection) custom node. Finally, each vehicle image is sent to the [vehicle-attributes-recognition-barrier-0042](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/vehicle-attributes-recognition-barrier-0042/README.md) model.
 
 ![Vehicles analysis visualization](vehicles_analysis.png)
 

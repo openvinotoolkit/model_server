@@ -1,47 +1,47 @@
-# Dynamic shape with binary inputs{#ovms_docs_dynamic_shape_binary_inputs}
+# Dynamic Shape with Binary Inputs{#ovms_docs_dynamic_shape_binary_inputs}
 
 ## Introduction
-This document guides how to use binary inputs feature to send data in binary format. This way you can just load an JPEG/PNG image and run inference on it without preprocessing.
+This guide shows how to use the binary inputs feature to send data in binary format. This means you can load just a JPEG or PNG image and run inference on it without any data preprocessing.
 
-To run inference on binary encoded data make sure your model accepts NHWC layout and prepare your request in a certain way to let model server know that data in the request is binary.
+To run inference on binary encoded data, make sure your model accepts NHWC layout. When preparing the request, we need to let Model Server know that the data is in binary format.
 
-Learn more about [binary inputs feature](binary_input.md).
+Learn more about the [binary inputs](binary_input.md) feature.
 
 ## Steps
 
-#### Download the pretrained model
-Download model files and store it in `models` directory
+#### Download the Pretrained Model
+Download the model files and store them in the `models` directory
 ```Bash
 mkdir -p models/resnet/1
 curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
 ```
 
-#### Pull the latest OVMS image from dockerhub
-Pull the latest version of OpenVINO&trade; Model Server from Dockerhub :
+#### Pull the Latest Model Server Image from Docker Hub
+Pull the latest version of OpenVINO&trade; Model Server from Docker Hub :
 ```Bash
 docker pull openvino/model_server:latest
 ```
 
-#### Start ovms docker container with downloaded model
-Start ovms container with image pulled in previous step and mount `models` directory :
+#### Start the Container with Downloaded Model
+Start the container with the image pulled in the previous step and mount the `models` directory :
 ```Bash
 docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --layout NHWC --port 9000
 ```
 
-### Download ovmsclient package
+### Download ovmsclient Package
 
 ``` 
 pip3 install ovmsclient 
 ```
 
-### Download sample image and file with label mapping
+### Download a Sample Image and Label Mappings
 ```
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/images/zebra.jpeg 
 
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/classes.py 
 ```
 
-### Run inference and see the result
+### Run Inference
 
 ```python
 import numpy as np 

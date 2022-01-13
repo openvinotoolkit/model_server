@@ -1,25 +1,25 @@
-# Online config file updates {#ovms_docs_online_config_changes}
+# Online Configuration Updates {#ovms_docs_online_config_changes}
 
 ### Updating Configuration File
-OpenVINO Model Server monitors the changes in its configuration and applies required modifications in runtime in two ways:
+OpenVINO Model Server monitors changes to the configuration file and applies required modifications during runtime using two different methods:
 
-- Automatically, with an interval defined by the parameter --file_system_poll_wait_seconds. (introduced in release 2021.1)
-- On demand, by using [Config Reload API](./model_server_rest_api.md#config-reload). (introduced in release 2021.3)
+1. Automatically, with an interval defined by the parameter `--file_system_poll_wait_seconds`. (introduced in version 2021.1)
+2. On demand, using the [Config Reload API](./model_server_rest_api.md#config-reload). (introduced in version 2021.3)
 
 Configuration reload triggers the following operations:
 
-- new model or [DAGs](./dag_scheduler.md) added to the configuration file will be loaded and served by OVMS.
-- changes made in the configured model storage (e.g. new model version is added) will be applied. 
-- changes in the configuration of deployed models and [DAGs](./dag_scheduler.md) will be applied. 
-- all model version will be reloaded when there is a change in model configuration.
-- when a deployed model, [DAG](./dag_scheduler.md) is deleted from config.json, it will be unloaded completely from OVMS after already started inference operations are completed.
-- [DAGs](./dag_scheduler.md) that depends on changed or removed models will also be reloaded.
-- changes in [custom loaders](./custom_model_loader.md) and custom node libraries configs will also be applied.
+- new model(s) or [DAG(s)](./dag_scheduler.md) are added to the configuration file, loaded and served.
+- changes to the configured model storage (e.g. new model version is added) are applied. 
+- changes to the configuration of deployed models and [DAGs](./dag_scheduler.md) are applied. 
+- all model versions will be reloaded when there is a change to the model configuration.
+- when a deployed model or [DAG](./dag_scheduler.md) is deleted from `config.json`, it will be unloaded completely from the server after already running inference operations have completed.
+- [DAGs](./dag_scheduler.md) that depend on changed or removed models are reloaded.
+- changes to [custom loaders](./custom_model_loader.md) and custom node library configs are applied.
 
-OVMS behavior in case of errors during config reloading:
+Model Server behavior if there are errors during configuration reloading:
 
-- if the new config.json is not compliant with json schema, no changes will be applied to the served models.
-- if the new model, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) has invalid configuration it will be ignored till next configuration reload. Configuration may be invalid because of invalid paths(leading to non-existing directories), forbidden values in config, invalid structure of [DAG](./dag_scheduler.md) (e.g. found cycle in a graph), etc.
-- an error during one model reloading, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) does not prevent the reload of the remaining updated models.
-- errors from configuration reloads triggered internally are saved in the logs. If [Config Reload API](./model_server_rest_api.md#config-reload) was used, also the response contains an error message. 
+- if a new `config.json` is not compliant with JSON schema, no changes are applied to the served models.
+- if the new model, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) has an invalid configuration, it will be ignored until the next configuration reload. Configurations may be invalid due to incorrect paths (leading to non-existent directories), forbidden values in the config, invalid [DAG](./dag_scheduler.md) structure (e.g. cycle found in a graph), etc.
+- an error occurs when a model, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) is reloading but does not prevent the reload of the remaining updated models.
+- errors from configuration reload are triggered internally and saved in the logs. If [Config Reload API](./model_server_rest_api.md#config-reload) is used, the response will also contain an error message. 
 

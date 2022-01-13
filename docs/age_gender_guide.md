@@ -1,7 +1,7 @@
 # Age and Gender Recognition via REST API {#ovms_docs_demo_age_gender_guide}
 
 ## Introduction
-This documentation presents how to use OpenVINO&trade; Model Server to execute inference requests over REST API interface. The demo is using a pretrained model from [open_model_zoo](https://github.com/opencv/open_model_zoo) repository.
+This article describes how to use OpenVINO&trade; Model Server to execute inference requests sent over the REST API interface. The demo uses a pretrained model from the [Open Model Zoo](https://github.com/openvinotoolkit/open_model_zoo) repository.
 
 ## Steps
 

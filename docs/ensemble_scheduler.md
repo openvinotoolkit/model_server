@@ -1,7 +1,7 @@
 
-## Image classification with models ensemble {#ovms_docs_demo_ensemble}
+## Image Classification with Model Ensemble {#ovms_docs_demo_ensemble}
 
-This document presents ensemble models as an example of [DAG Scheduler](dag_scheduler.md) implementation.
+This guide shows how to implement a model ensemble using the [DAG Scheduler](dag_scheduler.md).
 
 - Let's consider you develop an application to perform image classification. There are many different models that can be used for this task. The goal is to combine results from inferences executed on two different models and calculate argmax to pick most probable classification label. 
 - For this task, select two models: [googlenet-v2](https://docs.openvinotoolkit.org/latest/omz_models_public_googlenet_v2_tf_googlenet_v2_tf.html) and [resnet-50](https://docs.openvinotoolkit.org/latest/omz_models_public_resnet_50_tf_resnet_50_tf.html). Additionally, create own model **argmax** to combine and select top result. The aim is to perform this task on the server side with no intermediate results passed over the network. Server should take care of feeding inputs/outputs in subsequent models. Both - googlenet and resnet predictions should run in parallel. 

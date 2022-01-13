@@ -110,14 +110,14 @@ For debugging steps refer the OVMS [developer guide](developer_guide.md)
 
 
 ## Custom node examples 
-The best staring point for developing new custom nodes is via exploring or copying the examples.
+The best staring point for developing new custom nodes is by exploring and copying from the existing examples.
 
-The fully functional custom nodes are in:
+Fully functional custom nodes are available here:
 - [east-resnet50 OCR custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/east_ocr)
 - [model zoo intel object detection custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/model_zoo_intel_object_detection)
 - [image transformation custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/image_transformation)
 
-Other examples are included in the unit tests:
+Additional examples are included in the unit tests:
 - [node_add_sub.c](https://github.com/openvinotoolkit/model_server/tree/main/src/test/custom_nodes/node_add_sub.c)
 - [node_choose_maximum.cpp](https://github.com/openvinotoolkit/model_server/tree/main/src/test/custom_nodes/node_choose_maximum.cpp)
 - [node_missing_implementation.c](https://github.com/openvinotoolkit/model_server/tree/main/src/test/custom_nodes/node_missing_implementation.c)

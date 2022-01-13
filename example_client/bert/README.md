@@ -1,6 +1,6 @@
-# BERT model usage example with OVMS {#ovms_example_client_bert_readme}
+# Deploy BERT with Model Server {#ovms_example_client_bert_readme}
 
-## Starting OVMS with BERT model
+## Starting Model Server with a BERT Model
 
 ```bash
 curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/bert-small-uncased-whole-word-masking-squad-int8-0002/FP32-INT8/bert-small-uncased-whole-word-masking-squad-int8-0002.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/bert-small-uncased-whole-word-masking-squad-int8-0002/FP32-INT8/bert-small-uncased-whole-word-masking-squad-int8-0002.xml -o model/1/bert-small-uncased-whole-word-masking-squad-int8-0002.bin -o model/1/bert-small-uncased-whole-word-masking-squad-int8-0002.xml

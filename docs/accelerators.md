@@ -1,8 +1,8 @@
 # Using AI accelerators {#ovms_docs_target_devices}
 
-## Start the server with an Intel Movidius Neural Compute Stick
+## Start the Server with a Neural Compute Stick
 
-[Intel Movidius Neural Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick) can be employed by OVMS via a [MYRIAD
+Using the [Intel Movidius Neural Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick) with the server is possible with the [MYRIAD
 plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_MYRIAD.html). 
 
 The Intel Movidius Neural Compute Stick must be visible and accessible on host machine. 
@@ -23,14 +23,14 @@ To start server with Neural Compute Stick using one of the options below:
    --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
    ```
 
-## Starting docker container with HDDL
+## Starting a Docker Container with HDDL
 
 In order to run container that is using HDDL accelerator, _hddldaemon_ must
  run on host machine. It's required to set up environment 
  (the OpenVINO package must be pre-installed) and start _hddldaemon_ on the
  host before starting a container. Refer to the steps from [OpenVINO documentation](https://docs.openvinotoolkit.org/2021.4/_docs_install_guides_installing_openvino_docker_linux.html#build_docker_image_for_intel_vision_accelerator_design_with_intel_movidius_vpus).
 
-To start server with HDDL you can use command similar to:
+To start the server with HDDL device(s) you can use a command similar to the following:
 
 ```
 docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest \
@@ -49,48 +49,48 @@ It requires RW permissions in the docker container security context. It is recom
 same context like the account starting hddldaemon. For example if you start the hddldaemon as root, add `--user root` to 
 the `docker run` command.
 
-## Starting docker container with GPU
+## Starting a Docker Container with Intel GPU
 
-The [GPU plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_GPU.html) uses the Intel Compute Library for Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. 
-It employs for inference execution Intel Processor Graphics including Intel HD Graphics and Intel Iris Graphics.
+The [GPU plugin](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_GPU.html) uses the Intel Compute Library for Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. 
+The plugin supports inference execution with Intel® Processor Graphics including Intel® HD Graphics, Intel® Iris® Graphics, Intel® Iris® Xe Graphics, and Intel® Iris® Xe MAX graphics.
 
-Before using GPU as OVMS target device, you need to install the required drivers. Refer to [OpenVINO installation steps](https://docs.openvinotoolkit.org/2021.4/openvino_docs_install_guides_installing_openvino_linux.html).
-Next, start the docker container with additional parameter --device /dev/dri to pass the device context and set OVMS parameter --target_device GPU. 
-The command example is listed below:
+Before using Intel GPU as a target device, you need to install the required drivers. Refer to [OpenVINO installation guide](https://docs.openvino.ai/latest/openvino_docs_install_guides_installing_openvino_linux.html#install-gpu) for more details.
+Next, start the docker container with an additional parameter `--device /dev/dri` (to pass the device context) and set parameter `--target_device GPU`. You will also need to use the `openvino/model_server:latest-gpu` image, which contains GPU dependencies. 
+See an example command below:
 
 ```
 docker run --rm -it --device=/dev/dri -v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
 --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
 ```
 
-Running the inference operation on GPU requires the ovms process security context account to have correct permissions.
-It has to belong to the render group identified by the command:
+Running inference on GPU device(s) requires the server process security context account to have the correct permissions.
+It must belong to the render group identified by the following command:
 ```
 stat -c "group_name=%G group_id=%g" /dev/dri/render*
 ```
-The default account in the docker image is already preconfigured. In case you change the security context, use the following command
-to start the ovms container:
+The default account in the Docker image `openvino/model_server:latest-gpu` is preconfigured. In case you change the security context, use the following command
+to start the Model Server container:
 ```
 docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) -u $(id -u):$(id -g) \
 -v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
 --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
 ```
 
-*Note:* The public docker image includes the OpenCL drivers for GPU in version 20.35.17767. Older version could be used 
-via building the image with a parameter INSTALL_DRIVER_VERSION:
-`make docker_build INSTALL_DRIVER_VERSION=19.41.14441`. The older GPU driver will not support the latest Intel GPU platforms like TigerLake or newer.
+*Note:* The Docker image (`openvino/model_server:latest-gpu`) includes OpenCL for GPU driver version 20.35.17767. Older versions can be used 
+by building the image from source with a parameter `INSTALL_DRIVER_VERSION:`
+`make docker_build INSTALL_DRIVER_VERSION=19.41.14441`. The older GPU drivers are not supported with the latest Intel® Iris® Xe Graphics, and Intel® Iris® Xe MAX graphics (starting with codename Tiger Lake).
 
 ## Using Multi-Device Plugin
 
 If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
 With Multi-Device Plugin enabled, inference requests will be load balanced between multiple devices. 
-For more detailed information read [OpenVino's Multi-Device plugin documentation](https://docs.openvinotoolkit.org/2021.4/_docs_IE_DG_supported_plugins_MULTI.html).
+For more details, see the [Multi-Device Plugin](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_MULTI.html) documentation.
 
-In order to use this feature in OpenVino Model Server, following steps are required:
+To use this feature in OpenVINO Model Server, the following steps are required:
 
-Set target_device for the model in configuration json file to MULTI:<DEVICE_1>,<DEVICE_2> (e.g. MULTI:MYRIAD,CPU, order of the devices defines their priority, so MYRIAD devices will be used first in this example)
+Set `target_device` for specific model(s) in the JSON configuration file to `MULTI:<DEVICE_1>,<DEVICE_2>` (e.g. `MULTI:MYRIAD,CPU`, where the order of the devices defines priority, so MYRIAD devices will be used first in this example)
 
-Below is exemplary config.json setting up Multi-Device Plugin for resnet model, using Intel Movidius Neural Compute Stick and CPU devices:
+An example `config.json` is included below. It shows how to set up Multi-Device Plugin for a sample `resnet` model, using Intel® Movidius Neural Compute Stick and CPU devices:
 
 ```json
 {"model_config_list": [
@@ -102,12 +102,12 @@ Below is exemplary config.json setting up Multi-Device Plugin for resnet model, 
    }]
 }
 ```
-Starting OpenVINO Model Server with config.json (placed in ./models/config.json path) defined as above, and with grpc_workers parameter set to match nireq field in config.json:
+To start OpenVINO Model Server with a `config.json` file (placed in `./models/config.json` path) as defined above, with `grpc_workers` parameter set to match `nireq` field in `config.json`:
 ```
 docker run -d --net=host -u root --privileged --rm -v $(pwd)/models/:/opt/ml:ro -v /dev:/dev -p 9001:9001 \
 openvino/model_server:latest --config_path /opt/ml/config.json --port 9001 
 ```
-Or alternatively, when you are using just a single model, start OpenVINO Model Server using this command (config.json is not needed in this case):
+Alternatively, when deploying a single model, start the server using the following command (`config.json` is not required for single model deployments):
 ```
 docker run -d --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/models/:/opt/ml:ro -v \
  /dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/ml/resnet --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
@@ -117,13 +117,13 @@ Total throughput will be roughly equal to sum of CPU and Intel Movidius Neural C
 
 ## Using Heterogeneous Plugin
 
-[HETERO plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_HETERO.html) makes it possible to distribute a single inference processing and model between several AI accelerators.
-That way different parts of the DL network can split and executed on optimized devices.
+[HETERO plugin](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_HETERO.html) enables computing the inference of one network on several devices.
+This enables splitting operations in a model and executed on different devices.
 OpenVINO automatically divides the network to optimize the execution.
 
-Similarly to the MULTI plugin, Heterogenous plugin can be configured by using `--target_device` parameter using the pattern: `HETERO:<DEVICE_1>,<DEVICE_2>`.
-The order of devices defines their priority. The first one is the primary device while the second is the fallback.<br>
-Below is a config example using heterogeneous plugin with GPU as a primary device and CPU as a fallback.
+Similar to the MULTI plugin, HETERO plugin can be configured using `--target_device` parameter with the following pattern: `HETERO:<DEVICE_1>,<DEVICE_2>`.
+The order of devices defines their priority. The first is the primary device and the second is the fallback.
+The example configuration below uses the HETERO plugin with Intel GPU as the primary device and CPU as a fallback.
 
 ```json
 {"model_config_list": [

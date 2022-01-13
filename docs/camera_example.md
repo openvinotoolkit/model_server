@@ -1,7 +1,7 @@
-# Horizontal text detection in real-time {#ovms_docs_demo_camera_example}
+# Real-Time Horizontal Text Detection {#ovms_docs_demo_camera_example}
 
-This demo presents a use case with a client written in python which captures camera frames and performs text spotting analysis via gRPC requests to OVMS. The client visualizes the results as a boxes depicted on the original image frames using OpenCV in real-time.
-The client can work efficiently also over slow internet connection with long latency thanks to image data compression and parallel execution for multiple frames.
+This demo uses a client written in Python to capture web camera frames and performs text spotting analysis via gRPC requests to OpenVINO Model Server. The client visualizes the results as bounding boxes overlaid on the original image frames using OpenCV.
+The client works efficiently, even over a slow network with high latency, thanks to image data compression and parallel execution for multiple frames.
 
 ![horizontal text detection](horizontal-text-detection.gif)
 

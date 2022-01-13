@@ -1,6 +1,6 @@
 # Face Detection {#ovms_docs_demo_face_detection}
 
-This page guides you through an example script to run face detection inference with OpenVINO&trade; Model Server.
+This guide includes an example script to run face detection inference with OpenVINO&trade; Model Server.
 
 
 - The script [face_detection.py](../example_client/face_detection.py) runs face detection inference requests for all the images
