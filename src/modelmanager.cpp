@@ -91,12 +91,12 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory) :
         SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
         try {
             ieCore->add_extension(ovms::Config::instance().cpuExtensionLibraryPath());
-            SPDLOG_INFO("Extention added.");
+            SPDLOG_INFO("Extension added.");
         } catch (std::exception& ex) {
-            SPDLOG_CRITICAL("Custom CPU extention loading has failed! Reason: {}", ex.what());
+            SPDLOG_CRITICAL("Custom CPU extension loading has failed! Reason: {}", ex.what());
             throw;
         } catch (...) {
-            SPDLOG_CRITICAL("Custom CPU extention loading has failed with an unknown error!");
+            SPDLOG_CRITICAL("Custom CPU extension loading has failed with an unknown error!");
             throw;
         }
     }
