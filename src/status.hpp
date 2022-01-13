@@ -50,14 +50,14 @@ enum class StatusCode {
     MODEL_VERSION_POLICY_WRONG_FORMAT,    /*!< Model version policy is in wrong format */
     MODEL_VERSION_POLICY_UNSUPPORTED_KEY, /*!< Model version policy contains invalid key */
     GRPC_CHANNEL_ARG_WRONG_FORMAT,
-    CONFIG_FILE_TIMESTAMP_READING_FAILED,    /*!< Reading config file timestamp failed */
-    NO_MODEL_VERSION_AVAILABLE,              /*!< No model version found in path */
-    RESHAPE_ERROR,                           /*!< Impossible to perform reshape */
-    RESHAPE_REQUIRED,                        /*!< Model instance needs to be reloaded with new shape */
-    BATCHSIZE_CHANGE_REQUIRED,               /*!< Model instance needs to be reloaded with new batch size */
-    FORBIDDEN_MODEL_DYNAMIC_PARAMETER,       /*!< Value of the provided param is forbidden */
-    ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED,       /*!< Anonymous fixed shape is invalid for models with multiple inputs */
-    ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED,      /*!< Anonymous fixed layout is invalid for models with multiple inputs */
+    CONFIG_FILE_TIMESTAMP_READING_FAILED, /*!< Reading config file timestamp failed */
+    NO_MODEL_VERSION_AVAILABLE,           /*!< No model version found in path */
+    RESHAPE_ERROR,                        /*!< Impossible to perform reshape */
+    RESHAPE_REQUIRED,                     /*!< Model instance needs to be reloaded with new shape */
+    BATCHSIZE_CHANGE_REQUIRED,            /*!< Model instance needs to be reloaded with new batch size */
+    FORBIDDEN_MODEL_DYNAMIC_PARAMETER,    /*!< Value of the provided param is forbidden */
+    ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED,    /*!< Anonymous fixed shape is invalid for models with multiple inputs */
+    ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED,   /*!< Anonymous fixed layout is invalid for models with multiple inputs */
     CONFIG_SHAPE_IS_NOT_IN_MODEL,
     CONFIG_LAYOUT_IS_NOT_IN_MODEL,
     CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME,  /*!< Using old name of input/output in config shape when mapped in mapping_config.json*/
