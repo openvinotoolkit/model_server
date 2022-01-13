@@ -1,11 +1,11 @@
-# Exemplary client for face detection model with configurable input shape and batch size
+# Face Detection Demo in OVMS
 
 ## Overview
 
 The script [face_detection.py](face_detection.py) run face detection inference requests for all the images
 saved in `image_input_dir` directory. 
 
-The script can adjust the input image size and change the batch size in the request. It demonstrate how to use
+The script can adjust the input image size and change the batch size in the request. It demonstrates how to use
 the functionality of dynamic shape in OpenVINO Model Server and how to process the output from the server.
 
 The example relies on the model [face-detection-retail-0004](https://docs.openvinotoolkit.org/2021.4/omz_models_model_face_detection_retail_0004.html).
@@ -61,10 +61,7 @@ docker run -d -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest -
 
 Run the client:
 ```bash
-cd example_client
-virtualenv .venv
-. .venv/bin/activate
-pip install -r client_requirements.txt
+pip install -r ../../common/python/requirements.txt
 mkdir results
 
 python face_detection.py --batch_size 1 --width 300 --height 300

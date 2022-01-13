@@ -1,4 +1,4 @@
-# BERT model usage example with OVMS
+# BERT Question Answering Demo with OVMS
 
 ## Starting OVMS with BERT model
 
