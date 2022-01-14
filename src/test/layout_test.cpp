@@ -32,10 +32,21 @@ TEST(Layout, BatchPositionValid) {
     EXPECT_EQ(Layout{"N...CH"}.getBatchIndex(), 0);
     EXPECT_EQ(Layout{"??N..."}.getBatchIndex(), 2);
     EXPECT_EQ(Layout{"?C???N..."}.getBatchIndex(), 5);
+    EXPECT_EQ(Layout{"...NC"}.getBatchIndex(), std::nullopt);
 }
 
 TEST(Layout, BatchPositionInvalid) {
     EXPECT_EQ(Layout{"NCHWN"}.getBatchIndex(), std::nullopt);
+    EXPECT_EQ(Layout{"N.C.H.W"}.getBatchIndex(), std::nullopt);
+    EXPECT_EQ(Layout{"N..H.W"}.getBatchIndex(), std::nullopt);
+    EXPECT_EQ(Layout{"N.H..W"}.getBatchIndex(), std::nullopt);
+    EXPECT_EQ(Layout{"NH.W.."}.getBatchIndex(), std::nullopt);
+    EXPECT_EQ(Layout{"NH."}.getBatchIndex(), std::nullopt);
+    EXPECT_EQ(Layout{"N.H.W"}.getBatchIndex(), std::nullopt);
+    EXPECT_EQ(Layout{"NHW.."}.getBatchIndex(), std::nullopt);
+    EXPECT_EQ(Layout{"N..CH"}.getBatchIndex(), std::nullopt);
+    EXPECT_EQ(Layout{"N.CH"}.getBatchIndex(), std::nullopt);
+    EXPECT_EQ(Layout{"..NHW."}.getBatchIndex(), std::nullopt);
     EXPECT_EQ(Layout{"N...N"}.getBatchIndex(), std::nullopt);
     EXPECT_EQ(Layout{"N...C...H"}.getBatchIndex(), std::nullopt);
     EXPECT_EQ(Layout{"N???N"}.getBatchIndex(), std::nullopt);

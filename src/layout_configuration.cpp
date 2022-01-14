@@ -32,8 +32,8 @@ LayoutConfiguration::LayoutConfiguration(const std::string& layout) :
 }
 
 LayoutConfiguration::LayoutConfiguration(const std::string& tensorLayout, const std::string& modelLayout) :
-    tensor(tensorLayout),
-    model(modelLayout) {
+    tensor(Layout(tensorLayout)),
+    model(Layout(modelLayout)) {
 }
 
 bool LayoutConfiguration::isSet() const {
@@ -46,17 +46,17 @@ Status LayoutConfiguration::fromString(const std::string& configurationStr, Layo
 
     std::transform(configurationCopy.begin(), configurationCopy.end(), configurationCopy.begin(), ::toupper);
 
-    if (configurationCopy.find_first_not_of("NCHWD?.:") != std::string::npos)
+    if (configurationCopy.find_first_not_of(ALLOWED_DIMENSION_LETTERS_AND_CHARS + LAYOUT_CONFIGURATION_DELIMETER) != std::string::npos)
         return StatusCode::LAYOUT_WRONG_FORMAT;
 
-    size_t delimCount = std::count(configurationCopy.begin(), configurationCopy.end(), ':');
+    size_t delimCount = std::count(configurationCopy.begin(), configurationCopy.end(), LAYOUT_CONFIGURATION_DELIMETER);
     if (delimCount > 1)
         return StatusCode::LAYOUT_WRONG_FORMAT;
 
     if (delimCount == 0) {
         configOut = LayoutConfiguration(configurationCopy);
     } else {
-        std::vector<std::string> tokens = tokenize(configurationCopy, ':');
+        std::vector<std::string> tokens = tokenize(configurationCopy, LAYOUT_CONFIGURATION_DELIMETER);
         if (tokens.size() > 2)
             return StatusCode::LAYOUT_WRONG_FORMAT;
         else if (tokens.size() == 2)
@@ -74,16 +74,16 @@ std::string LayoutConfiguration::toString() const {
     if (tensor.empty()) {
         ss << model;
     } else {
-        ss << tensor << ":" << model;
+        ss << tensor << LAYOUT_CONFIGURATION_DELIMETER << model;
     }
     return ss.str();
 }
 
-const std::string& LayoutConfiguration::getTensorLayout() const {
+const Layout& LayoutConfiguration::getTensorLayout() const {
     return this->tensor;
 }
 
-const std::string& LayoutConfiguration::getModelLayout() const {
+const Layout& LayoutConfiguration::getModelLayout() const {
     return this->model;
 }
 

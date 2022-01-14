@@ -84,7 +84,7 @@ TEST(ModelConfig, layout_single) {
 TEST(ModelConfig, layout_multi) {
     ovms::ModelConfig config;
 
-    ovms::layouts_map_t layouts;
+    ovms::layout_configurations_map_t layouts;
     layouts["A"] = ovms::LayoutConfiguration{"NCHW", "NHWC"};
     layouts["B"] = ovms::LayoutConfiguration{"CN", "NC"};
 

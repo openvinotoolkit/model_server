@@ -29,6 +29,8 @@ using dimension_value_t = std::int64_t;
 
 constexpr dimension_value_t DYNAMIC_DIMENSION = -1;
 
+constexpr char DIMENSION_RANGE_DELIMETER = ':';
+
 enum Mode { FIXED,
     AUTO };
 using shape_t = std::vector<size_t>;

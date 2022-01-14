@@ -17,10 +17,6 @@
 
 namespace ovms {
 
-Layout::Layout() :
-    std::string() {
-}
-
 Layout::Layout(const std::string& str) :
     std::string(str) {
     this->batchIndex = retrieveBatchIndex();
@@ -35,8 +31,8 @@ std::optional<size_t> Layout::retrieveBatchIndex() const {
     if (!status.ok()) {
         return std::nullopt;
     }
-    auto batchPos = this->find('N');
-    auto etcPos = this->find("...");
+    auto batchPos = this->find(BATCH_DIMENSION_LETTER);
+    auto etcPos = this->find(ETC_LAYOUT_DELIMETER);
     if (batchPos == std::string::npos) {
         return std::nullopt;
     }
@@ -47,27 +43,35 @@ std::optional<size_t> Layout::retrieveBatchIndex() const {
 }
 
 Status Layout::validate() const {
-    if (this->find_first_not_of("NCHWD?.") != std::string::npos)
+    if (this->find_first_not_of(ALLOWED_DIMENSION_LETTERS_AND_CHARS) != std::string::npos)
         return StatusCode::LAYOUT_WRONG_FORMAT;  // Cannot contain other letters
 
-    for (char c : std::string{"NCHWD"}) {
+    for (char c : ALLOWED_DIMENSION_LETTERS) {
         if (std::count(this->begin(), this->end(), c) > 1) {
             return StatusCode::LAYOUT_WRONG_FORMAT;  // Can contain NCHWD only single time
         }
     }
 
     size_t dotCount = 0;
-    bool etcAppeared = false;
+    bool firstEtcAppeared = false;
+    bool fullEtcAppeared = false;
     for (char c : (*this)) {
-        if (c == '.') {
-            if (etcAppeared) {
+        if (c == ETC_CHAR) {
+            if (fullEtcAppeared) {
                 return StatusCode::LAYOUT_WRONG_FORMAT;  // Cannot appear multiple times
             }
+            firstEtcAppeared = true;
             dotCount++;
             if (dotCount >= 3) {
-                etcAppeared = true;
+                fullEtcAppeared = true;
+                firstEtcAppeared = false;
             }
+        } else if (firstEtcAppeared) {
+            return StatusCode::LAYOUT_WRONG_FORMAT;  // Dots separated
         }
+    }
+    if (firstEtcAppeared && !fullEtcAppeared) {
+        return StatusCode::LAYOUT_WRONG_FORMAT;  // Dots not completed
     }
 
     return StatusCode::OK;

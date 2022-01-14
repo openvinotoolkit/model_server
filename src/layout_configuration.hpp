@@ -18,22 +18,25 @@
 #include <string>
 #include <unordered_map>
 
+#include "layout.hpp"
 #include "status.hpp"
 
 namespace ovms {
 
+static const char LAYOUT_CONFIGURATION_DELIMETER = ':';
+
 class LayoutConfiguration {
-    std::string tensor;
-    std::string model;
+    Layout tensor;
+    Layout model;
 
 public:
     LayoutConfiguration() = default;
-    LayoutConfiguration(const char* Layout);
-    LayoutConfiguration(const std::string& Layout);
+    LayoutConfiguration(const char* layout);
+    LayoutConfiguration(const std::string& layout);
     LayoutConfiguration(const std::string& tensorLayout, const std::string& modelLayout);
 
-    const std::string& getTensorLayout() const;
-    const std::string& getModelLayout() const;
+    const Layout& getTensorLayout() const;
+    const Layout& getModelLayout() const;
 
     bool isSet() const;
 
@@ -44,6 +47,6 @@ public:
     std::string toString() const;
 };
 
-using layouts_map_t = std::unordered_map<std::string, LayoutConfiguration>;
+using layout_configurations_map_t = std::unordered_map<std::string, LayoutConfiguration>;
 
 }  // namespace ovms

@@ -161,7 +161,7 @@ Status DLNodeSession::validate(const std::shared_ptr<ov::runtime::Tensor>& tenso
     // If batch size differs, check if remaining dimensions are equal
     const auto& dims = tensor->get_shape();
     const auto batchIndex = tensorInfo.getLayout().getBatchIndex();
-    if (!batchIndex.has_value() || tensorInfo.getShape().size() < batchIndex.value() + 1 || dims.size() < batchIndex.value() + 1) {
+    if (!batchIndex.has_value() || batchIndex.value() >= tensorInfo.getShape().size() || batchIndex.value() >= dims.size()) {
         std::stringstream ss;
         ss << "Node: " << getName() << " input: " << tensorInfo.getName()
            << " Invalid batch size index";

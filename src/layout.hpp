@@ -22,6 +22,12 @@
 
 namespace ovms {
 
+static const std::string ALLOWED_DIMENSION_LETTERS = "NCHWD";
+static const std::string ALLOWED_DIMENSION_LETTERS_AND_CHARS = ALLOWED_DIMENSION_LETTERS + ".?";
+static const std::string ETC_LAYOUT_DELIMETER = "...";
+static const char ETC_CHAR = '.';
+static const std::string BATCH_DIMENSION_LETTER = "N";
+
 class Layout : public std::string {
     std::optional<size_t> batchIndex = std::nullopt;
 
@@ -29,7 +35,7 @@ class Layout : public std::string {
     std::optional<size_t> retrieveBatchIndex() const;
 
 public:
-    Layout();
+    Layout() = default;
     Layout(const std::string& str);
 
     const std::optional<size_t>& getBatchIndex() const;
