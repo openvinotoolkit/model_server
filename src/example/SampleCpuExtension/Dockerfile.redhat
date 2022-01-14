@@ -32,8 +32,7 @@ RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
     ln -s /opt/intel/openvino_* /opt/intel/openvino
 
-COPY Makefile /workspace/Makefile
-COPY custom_relu_cpu_extension.cpp /workspace/custom_relu_cpu_extension.cpp
-
 WORKDIR /workspace
+COPY Makefile ov_extension.cpp CustomReluOp.cpp CustomReluOp.hpp ./
+
 RUN make

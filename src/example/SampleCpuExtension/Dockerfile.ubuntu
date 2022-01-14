@@ -32,8 +32,7 @@ RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
     rm -rf /opt/intel/openvino && \
     ln -s /opt/intel/openvino_2022 /opt/intel/openvino
 
-COPY Makefile /workspace/Makefile
-COPY custom_relu_cpu_extension.cpp /workspace/custom_relu_cpu_extension.cpp
-
 WORKDIR /workspace
+COPY Makefile ov_extension.cpp CustomReluOp.cpp CustomReluOp.hpp ./
+
 RUN make
