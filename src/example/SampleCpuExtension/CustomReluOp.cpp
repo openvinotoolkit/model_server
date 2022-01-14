@@ -38,7 +38,6 @@ bool CustomReluOp::visit_attributes(ov::AttributeVisitor& visitor) {
 bool CustomReluOp::evaluate(ov::runtime::TensorVector& outputs, const ov::runtime::TensorVector& inputs) const {
     auto in = inputs[0];
     auto out = outputs[0];
-    //out.set_shape(in.get_shape());
     static bool wasCalled = false;
     if (!wasCalled) {
         std::cout << "Running Relu custom kernel for the first time (next messages won't be printed)"
