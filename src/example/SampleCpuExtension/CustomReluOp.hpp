@@ -11,8 +11,8 @@ namespace TemplateExtension {
 
 class CustomReluOp : public ov::op::Op {
 public:
-    OPENVINO_OP("ReLU","opset1");
-    
+    OPENVINO_OP("ReLU", "opset1");
+
     CustomReluOp() = default;
     CustomReluOp(const ov::Output<ov::Node>& arg);
     void validate_and_infer_types() override;

@@ -7,7 +7,8 @@
 using namespace TemplateExtension;
 
 //! [op:ctor]
-CustomReluOp::CustomReluOp(const ov::Output<ov::Node>& arg) : Op({arg}) {
+CustomReluOp::CustomReluOp(const ov::Output<ov::Node>& arg) :
+    Op({arg}) {
     constructor_validate_and_infer_types();
 }
 //! [op:ctor]
@@ -40,13 +41,13 @@ bool CustomReluOp::evaluate(ov::runtime::TensorVector& outputs, const ov::runtim
     //out.set_shape(in.get_shape());
     static bool wasCalled = false;
     if (!wasCalled) {
-            std::cout << "Running Relu custom kernel for the first time (next messages won't be printed)"
-                      << std::endl;
-            wasCalled = true;
+        std::cout << "Running Relu custom kernel for the first time (next messages won't be printed)"
+                  << std::endl;
+        wasCalled = true;
     }
     // std::cout << "executing custom layer" << std::endl;
-    const float * in_data = in.data<float>();
-    float * out_data = out.data<float>();
+    const float* in_data = in.data<float>();
+    float* out_data = out.data<float>();
     for (size_t j = 0; j < in.get_size(); j++) {
         out_data[j] = in_data[j] < 0 ? 0 : in_data[j];
     }
