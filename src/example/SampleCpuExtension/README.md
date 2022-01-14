@@ -8,7 +8,7 @@ custom extension execution.
 
 Compile the library by running `make cpu_extension BASE_OS=ubuntu` in root directory of this repository.
 
-Shared library will be generated for targeted  in the `lib` folder. Such library can be used to run Model Server, using `--cpu_extension` argument:
+Shared library will be generated in the `lib` folder. Such library can be used to run Model Server, using `--cpu_extension` argument:
 
 ```bash
 $ docker run -it --rm -p 9000:9000 -v <your_lib_dir>:/extension:ro openvino/model_server \
