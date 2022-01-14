@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 
+import sys
+sys.path.append("../../../../demos/common/python")
+
 import grpc
 import numpy as np
 from tensorflow import make_tensor_proto, make_ndarray

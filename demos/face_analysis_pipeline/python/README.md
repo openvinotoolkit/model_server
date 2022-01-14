@@ -1,5 +1,5 @@
 # Face Analysis Pipeline Demo with OVMS
-This document demonstrates how to create complex pipelines using object detection and object recognition models from OpenVINO Model Zoo. As an example, we will use [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/face-detection-retail-0004/README.md) to detect multiple faces on the image. Then, for each detected face we will crop it using [model_zoo_intel_object_detection](../src/custom_nodes/model_zoo_intel_object_detection) example custom node. Finally, each image face image will be forwarded to [age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/age-gender-recognition-retail-0013/README.md) and [emotion-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/emotions-recognition-retail-0003/README.md) models.
+This document demonstrates how to create complex pipelines using object detection and object recognition models from OpenVINO Model Zoo. As an example, we will use [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/face-detection-retail-0004/README.md) to detect multiple faces on the image. Then, for each detected face we will crop it using [model_zoo_intel_object_detection](../../../src/custom_nodes/model_zoo_intel_object_detection) example custom node. Finally, each image face image will be forwarded to [age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/age-gender-recognition-retail-0013/README.md) and [emotion-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/emotions-recognition-retail-0003/README.md) models.
 
 ![Faces analysis graph](faces_analysis.png)
 
@@ -14,9 +14,9 @@ Below is depicted graph implementing faces analysis pipeline execution.
 It includes the following Nodes:
 - Model `face-detection` - deep learning model which takes user image as input. Its outputs contain information about face coordinates and confidence levels.
 - Custom node `model_zoo_intel_object_detection` - it includes C++ implementation of common object detection models results processing. By analysing the output it produces cropped face images based on the configurable score level threshold. Custom node also resizes them to the target resolution and combines into a single output of a dynamic batch size. The output batch size is determined by the number of detected
-boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [model_zoo_intel_object_detection custom node](../src/custom_nodes/model_zoo_intel_object_detection).
+boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [model_zoo_intel_object_detection custom node](../../../src/custom_nodes/model_zoo_intel_object_detection).
 - demultiplexer - outputs from the custom node model_zoo_intel_object_detection have variable batch size. In order to match it with the sequential recognition models, data is split into individuial images with each batch size equal to 1.
-Such smaller requests can be submitted for inference in parallel to the next Model Nodes. Learn more about the [demultiplexing](./demultiplexing.md).
+Such smaller requests can be submitted for inference in parallel to the next Model Nodes. Learn more about the [demultiplexing](../../../docs/demultiplexing.md).
 - Model `age-gender-recognition` - this model recognizes age and gender on given face image
 - Model `emotion-recognition` - this model outputs emotion probability for emotions: neutral, happy, sad, surprised and angry
 - Response - the output of the whole pipeline combines the recognized face images with their metadata: coordinates, age, gender, emotions and detection confidence level. 
@@ -24,7 +24,9 @@ Such smaller requests can be submitted for inference in parallel to the next Mod
 ## Prepare workspace to run the demo
 
 To successfully deploy face analysis pipeline you need to have a workspace that contains:
-- Deep learning models for inference
+- [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/face-detection-retail-0004/README.md), 
+[age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/age-gender-recognition-retail-0013/README.md) and
+[emotion-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/emotions-recognition-retail-0003/README.md) models
 - Custom node for image processing
 - Configuration file
 

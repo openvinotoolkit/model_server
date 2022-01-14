@@ -10,7 +10,7 @@ It covers following topics:
 
 Install client dependencies using the command below in the example_client directory:
 ```
-pip3 install -r stateful_client_requirements.txt
+pip3 install -r requirements.txt
 ```
 
 ### Getting ready with rm_lstm4f stateful model

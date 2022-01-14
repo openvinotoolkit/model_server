@@ -1,4 +1,4 @@
-# Image Classification Demo in OVMS
+# Image Classification Demo with OVMS
 
 ## Overview
 
@@ -46,7 +46,7 @@ usage: jpeg_classification.py [-h] [--images_list IMAGES_LIST]
 ### Usage example
 
 ```bash
-python jpeg_classification.py --grpc_port 9000 --input_name data --output_name prob
+python jpeg_classification.py --grpc_port 9000 --input_name data --output_name prob --image_list ../input_images.txt
 
 Start processing:
 	Model name: resnet

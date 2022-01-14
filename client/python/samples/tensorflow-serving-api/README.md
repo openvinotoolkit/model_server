@@ -1,8 +1,9 @@
-# OpenVINO™ Model Server Example Client 
+# Samples based on tensorflow-serving-api package
 
 This document contains examples to run *GetModelStatus*, *GetModelMetadata*, *Predict* functions over gRPC API and REST API.
+Samples are based on [tensorflow-serving-api](https://pypi.org/project/tensorflow-serving-api/) package. 
 
-[Stateful model example](stateful) to run *Predict* functions over gRPC and REST API on stateful Kaldi model.
+> **Note** : _tensorflow-serving-api_ package is heavy as it includes _tensorflow_ as its dependency. For a lightweight alternative, see [ovmsclient](https://pypi.org/project/ovmsclient/) package (along with the [samples](../ovmsclient))
 
 It covers following topics:
 * <a href="#grpc-api">gRPC API Client Examples </a>
@@ -14,7 +15,7 @@ It covers following topics:
 
 Install client dependencies using the command below in the example_client directory:
 ```
-pip3 install -r client_requirements.txt
+pip3 install -r requirements.txt
 ```
 
 Access to Google Cloud Storage might require proper configuration of https_proxy in the docker engine or in the docker container.

@@ -1,12 +1,11 @@
-# Example clients in C++
+# Image Classification Demo with OVMS
 
-To build examplary clients, run `make` command in this directory. It will build docker image named `ovms_cpp_clients` with all dependencies.
-
-There are 3 clients:
+This demo provides 3 clients:
 - _classification_client_sync_ - simple client using synchronous gRPC API, testing accurracy of classification models
 - _classification_client_async_benchmark_ - client using asynchronous gRPC API, testing accurracy and performance with real image data
 - _synthetic_client_async_benchmark_ - client using asynchronous gRPC API, testing performance with synthetic data, stripped out of OpenCV dependency
 
+To build examplary clients, run `make` command in this directory. It will build docker image named `ovms_cpp_clients` with all dependencies.
 The example clients image also contains test images required for accurracy measurements. It is also possible to use custom images.
 
 ## Prepare classification model
@@ -15,7 +14,6 @@ Start OVMS with resnet50-binary model:
 ```bash
 curl -L --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o resnet50-binary/1/model.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o resnet50-binary/1/model.xml
 ```
-
 
 # Client requesting prediction synchronously
 
