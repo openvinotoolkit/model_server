@@ -1,6 +1,6 @@
 # Image Classification Demo with OVMS
 
-This demo provides 3 clients:
+This demo provides 2 clients:
 - _classification_client_sync_ - simple client using synchronous gRPC API, testing accurracy of classification models
 - _classification_client_async_benchmark_ - client using asynchronous gRPC API, testing accurracy and performance with real image data
 
