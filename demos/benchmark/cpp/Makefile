@@ -20,8 +20,6 @@ default: build
 
 build:
 	cd ../../common/cpp/ && \
-	cp ../../image_classification/cpp/classification_client_sync.cpp src/ && \
-	cp ../../image_classification/cpp/classification_client_async_benchmark.cpp src/ && \
-	make ovms_cpp_image_classification && \
-	rm src/classification_client_sync.cpp && \
-	rm src/classification_client_async_benchmark.cpp
+	cp ../../benchmark/cpp/synthetic_client_async_benchmark.cpp src/ && \
+	make ovms_cpp_benchmark && \
+	rm src/synthetic_client_async_benchmark.cpp

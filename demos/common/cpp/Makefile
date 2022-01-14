@@ -14,23 +14,8 @@
 # limitations under the License.
 #
 
-import sys
-sys.path.append("../../../../demos/common/python")
+ovms_cpp_image_classification:
+	@docker build -t ovms_cpp_image_classification:latest --build-arg CLIENT=ovms_cpp_image_classification --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} .
 
-import numpy as np
-from classes import imagenet_classes
-
-
-def resnet_postprocess(response, output_name):
-    if isinstance(response, dict):
-        output = response[output_name]
-    else:
-        output = response
-    
-    predicted_class = np.argmax(output[0])
-    offset = 0
-    if output.shape[1] == 1001:
-        offset = 1
-    confidence_score = output[0][predicted_class]
-    label = imagenet_classes[predicted_class-offset]
-    return label, confidence_score
+ovms_cpp_benchmark:
+	@docker build -t ovms_cpp_benchmark:latest --build-arg CLIENT=ovms_cpp_benchmark --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} .

@@ -16,6 +16,7 @@
 
 FROM ubuntu:20.04 as base_build
 
+ARG CLIENT=all
 ENV DEBIAN_FRONTEND=noninteractive 
 
 RUN apt update && apt install -y --no-install-recommends \
@@ -99,7 +100,7 @@ RUN bazel build \
 
 COPY src/ /build/src/
 
-RUN bazel build //src:all
+RUN bazel build //src:$CLIENT
 
 FROM ubuntu:20.04 as release
 ENV DEBIAN_FRONTEND=noninteractive 
@@ -110,10 +111,8 @@ WORKDIR /clients/
 
 RUN mkdir -p /clients/libs/ && mkdir -p /clients/images
 COPY --from=base_build \
-    /build/bazel-bin/src/classification_client_sync \
-    /build/bazel-bin/src/classification_client_async_benchmark \
-    /build/bazel-bin/src/synthetic_client_async_benchmark \
-    /clients/
+    /build/bazel-bin/src \
+    /clients
 COPY --from=base_build /input/images/*.jpeg /clients/images/
 COPY --from=base_build /input/input_images.txt /clients/
 COPY --from=base_build /opt/intel/openvino/extras/opencv/lib/* /lib/x86_64-linux-gnu/

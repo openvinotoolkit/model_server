@@ -22,7 +22,7 @@ docker run -d -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest -
 
 
 ```bash
-python multi_inputs.py --help
+python person_vehicle_bike_detection.py --help
 ```
 
 ### Arguments
@@ -43,7 +43,7 @@ python multi_inputs.py --help
 
 Set `camera` count to `0` with `-c 0` and provide path to the video file with `-f` parameter.
 ```
-python multi_inputs.py -n person-vehicle-detection -l input -o output -d 1024 -c 0 -f <path_to_video_file> -i 127.0.0.1 -p 9000
+python person_vehicle_bike_detection.py -n person-vehicle-detection -l input -o output -d 1024 -c 0 -f <path_to_video_file> -i 127.0.0.1 -p 9000
 ```
 Output:
 ```
@@ -58,7 +58,7 @@ Output:
 
 Set `camera` count to `1` with `-c 1` and provide path to the video file with `-f` parameter.
 ```
-python multi_inputs.py -n person-vehicle-detection -l input -o output -d 1024 -c 0 -f <path_to_video_file> -i 127.0.0.1 -p 9000
+python person_vehicle_bike_detection.py -n person-vehicle-detection -l input -o output -d 1024 -c 0 -f <path_to_video_file> -i 127.0.0.1 -p 9000
 ```
 
 Console logs:

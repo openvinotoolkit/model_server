@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 
+import sys
+sys.path.append("../../common/python")
+
 import argparse
 import cv2
 import datetime

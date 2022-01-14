@@ -18,8 +18,12 @@ For example:
 ```
 
 ## Build Go client docker image
+Before building the image let's copy single zebra image, here so it's included in the docker build context. This way client container will already have a sample to run prediction on:
 
-To build the docker image and tag it `ovmsclient` run:
+```
+cp ../../common/static/images/zebra.jpeg .
+``` 
+Then build the docker image and tag it `ovmsclient`:
 ```
 docker build . -t ovmsclient
 ```

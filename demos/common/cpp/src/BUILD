@@ -14,6 +14,21 @@
 # limitations under the License.
 #
 
+filegroup(
+  name = "ovms_cpp_image_classification",
+  srcs = [
+    "//src:classification_client_sync",
+    "//src:classification_client_async_benchmark",
+  ]
+)
+
+filegroup(
+  name = "ovms_cpp_benchmark",
+  srcs = [
+    "//src:synthetic_client_async_benchmark",
+  ]
+)
+
 cc_binary(
     name = "classification_client_sync",
     srcs = [

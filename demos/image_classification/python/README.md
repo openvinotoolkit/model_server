@@ -20,7 +20,7 @@ docker run -d -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest -
 
 ## Run the client:
 ```bash
-usage: jpeg_classification.py [-h] [--images_list IMAGES_LIST]
+usage: image_classification.py [-h] [--images_list IMAGES_LIST]
                               [--grpc_address GRPC_ADDRESS]
                               [--grpc_port GRPC_PORT]
                               [--input_name INPUT_NAME]
@@ -46,7 +46,7 @@ usage: jpeg_classification.py [-h] [--images_list IMAGES_LIST]
 ### Usage example
 
 ```bash
-python jpeg_classification.py --grpc_port 9000 --input_name data --output_name prob --image_list ../input_images.txt
+python image_classification.py --grpc_port 9000 --input_name data --output_name prob --image_list ../input_images.txt
 
 Start processing:
 	Model name: resnet

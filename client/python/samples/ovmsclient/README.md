@@ -1,6 +1,7 @@
 # OpenVINO&trade; Model Server Client Library Example Clients
 
 This document contains examples to run *GetModelStatus*, *GetModelMetadata*, *Predict* functions over gRPC API.
+Samples are based on [ovmsclient](https://pypi.org/project/ovmsclient/) package. 
 
 It covers following topics:
 - <a href="#grpc-api">gRPC API Example Clients </a>
@@ -18,9 +19,7 @@ It covers following topics:
 
 ## Requirement
 
-Build and install [Model Server Client Library](../lib)
-
-Install samples dependencies using the command below:
+Install samples dependencies:
 ```
 pip3 install -r requirements.txt
 ```

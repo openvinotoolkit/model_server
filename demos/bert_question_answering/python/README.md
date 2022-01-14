@@ -17,7 +17,7 @@ docker run -it --network host -e no_proxy=localhost bert-client:latest --grpc_ad
 
 Docker image with BERT client by default start the container with a command:
 ```
-python bert_question_answering_demo_ovms.py -v vocab.txt -i "https://en.wikipedia.org/wiki/BERT_(language_model)" --question "what is bert" --grpc_port 4000 --input_names input_ids,attention_mask,token_type_ids,position_ids --output_names output_s,output_e
+python bert_question_answering.py -v vocab.txt -i "https://en.wikipedia.org/wiki/BERT_(language_model)" --question "what is bert" --grpc_port 4000 --input_names input_ids,attention_mask,token_type_ids,position_ids --output_names output_s,output_e
 ```
 You can change the entrypoint to adjust to different parameters
 

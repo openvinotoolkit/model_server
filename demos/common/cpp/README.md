@@ -3,8 +3,9 @@
 This demo provides 3 clients:
 - _classification_client_sync_ - simple client using synchronous gRPC API, testing accurracy of classification models
 - _classification_client_async_benchmark_ - client using asynchronous gRPC API, testing accurracy and performance with real image data
+- _synthetic_client_async_benchmark_ - client using asynchronous gRPC API, testing performance with synthetic data, stripped out of OpenCV dependency
 
-To build the clients, run `make` command in this directory. It will build docker image named `ovms_cpp_image_classification` with all dependencies.
+To build examplary clients, run `make` command in this directory. It will build docker image named `ovms_cpp_clients` with all dependencies.
 The example clients image also contains test images required for accurracy measurements. It is also possible to use custom images.
 
 ## Prepare classification model
@@ -96,4 +97,37 @@ Producer threads: 1
 Consumer threads: 8
 Max parallel requests: 100
 Avg FPS: 1012.15
+```
+
+## Async client with synthetic data
+
+This client is simplified to test performance of any model/pipeline by requesting `GetModelMetadata` endpoint and using such information to prepare synthetic inputs with matching shape and precision. It also does not need OpenCV as dependency.
+
+> NOTE: It is required that endpoint does not use dynamic shape.
+
+### Prepare the server
+```bash
+docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet50-binary:/model -p 9001:9001 openvino/model_server:latest \
+--model_path /model --model_name resnet --port 9001 --layout NCHW
+```
+
+### Start the client:
+```bash
+docker run --rm --network host -e "no_proxy=localhost" ovms_cpp_clients ./synthetic_client_async_benchmark --grpc_port=9001 --iterations=2000 --max_parallel_requests=100 --consumers=8 --producers=1
+
+Address: localhost:11337
+Model name: resnet
+Synthetic inputs:
+        0: (1,3,224,224); DT_FLOAT
+
+Running the workload...
+========================
+        Summary
+========================
+Total time: 1933ms
+Total iterations: 2000
+Producer threads: 1
+Consumer threads: 8
+Max parallel requests: 100
+Avg FPS: 1034.66
 ```
