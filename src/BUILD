@@ -42,6 +42,8 @@ cc_library(
     ],
 )
 
+load("@com_google_protobuf//:protobuf.bzl", "cc_proto_library")
+
 cc_library(
     name = "ovms_lib",
     linkstatic = 1,
@@ -204,9 +206,9 @@ cc_library(
         "@awssdk//:s3",
         "@awssdk//:core",
         "@awssdk//:deps",
-	    "@azure//:storage",
-	    "@cpprest//:sdk",
-	    "@boost//:lib",
+        "@azure//:storage",
+        "@cpprest//:sdk",
+        "@boost//:lib",
         "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
@@ -214,6 +216,8 @@ cc_library(
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "@openvino//:openvino",
         "@opencv//:opencv",
+        #":kfserving_api_cpp",
+        "//src/kfserving_api:kfserving_api_cpp",
     ],
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG"
@@ -439,6 +443,7 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
+        "//src:kfserving_api_cpp",
     ]
 )
 
