@@ -412,8 +412,27 @@ public:
     void cleanupResources();
 };
 
-struct FunctorResourcesCleaner;
-struct FunctorSequenceCleaner;
+struct FunctorSequenceCleaner {
+    GlobalSequencesViewer& globalSequencesViewer;
+
+    FunctorSequenceCleaner(GlobalSequencesViewer& globalSequencesViewer) :
+        globalSequencesViewer(globalSequencesViewer) {}
+
+    virtual void cleanup() {
+        globalSequencesViewer.removeIdleSequences();
+    }
+};
+
+struct FunctorResourcesCleaner {
+    ModelManager& modelManager;
+
+    FunctorResourcesCleaner(ModelManager& modelManager) :
+        modelManager(modelManager) {}
+
+    virtual void cleanup() {
+        modelManager.cleanupResources();
+    }
+};
 
 void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal);
 

@@ -838,28 +838,6 @@ void ModelManager::watcher(std::future<void> exitSignal) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
 }
 
-struct FunctorSequenceCleaner {
-    GlobalSequencesViewer& globalSequencesViewer;
-
-    FunctorSequenceCleaner(GlobalSequencesViewer& globalSequencesViewer) :
-        globalSequencesViewer(globalSequencesViewer) {}
-
-    void operator()() {
-        globalSequencesViewer.removeIdleSequences();
-    }
-};
-
-struct FunctorResourcesCleaner {
-    ModelManager& modelManager;
-
-    FunctorResourcesCleaner(ModelManager& modelManager) :
-        modelManager(modelManager) {}
-
-    void operator()() {
-        modelManager.cleanupResources();
-    }
-};
-
 void ModelManager::cleanerRoutine(uint32_t resourcesCleanupIntervalSec, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started cleaner thread");
 
@@ -889,9 +867,9 @@ void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& 
         currentWaitTime = (!shouldCheckForSequenceCleanup || currentResourcesWaitTime < currentSequenceWaitTime) ? currentResourcesWaitTime : currentSequenceWaitTime;
 
         if (currentResourcesWaitTime == resourcesCleanupInterval)
-            functorResourcesCleaner();
+            functorResourcesCleaner.cleanup();
         if (currentSequenceWaitTime == sequenceCleanerInterval && shouldCheckForSequenceCleanup)
-            functorSequenceCleaner();
+            functorSequenceCleaner.cleanup();
 
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleanup check cycle end");
     }

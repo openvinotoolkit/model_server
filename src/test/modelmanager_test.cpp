@@ -580,6 +580,132 @@ TEST(ModelManager, ConfigReloadShouldCleanupResources) {
     manager.join();
 }
 
+struct MockedFunctorSequenceCleaner : public ovms::FunctorSequenceCleaner {
+public:
+    MockedFunctorSequenceCleaner(ovms::GlobalSequencesViewer& globalSequencesViewer) :
+        ovms::FunctorSequenceCleaner(globalSequencesViewer) {}
+
+    MOCK_METHOD(void, cleanup, (), (override));
+};
+
+struct MockedFunctorResourcesCleaner : public ovms::FunctorResourcesCleaner {
+public:
+    MockedFunctorResourcesCleaner(ovms::ModelManager& modelManager) :
+        ovms::FunctorResourcesCleaner(modelManager) {}
+    
+    MOCK_METHOD(void, cleanup, (), (override));
+};
+
+TEST(ModelManager, CleanerShouldCleanupResourcesAndSequenceWhenResourcesIntervalIsShorter) {
+    uint32_t resourcesIntervalMiliseconds = 103;
+    uint32_t sequenceIntervalMiliseconds = 151;
+    const float WAIT_MULTIPLIER_FACTOR = 1.2;
+
+    ovms::GlobalSequencesViewer globalSequencesViewer;
+    MockModelManager modelManager;
+
+    MockedFunctorSequenceCleaner mockedFunctorSequenceCleaner(globalSequencesViewer);
+    MockedFunctorResourcesCleaner mockedFunctorResourcesCleaner(modelManager);
+
+    std::promise<void> cleanerExitTrigger;
+    std::future<void> exitSignal = cleanerExitTrigger.get_future();
+
+    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
+
+    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
+    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1);
+    uint resourcesWaitTime = resourcesIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR;
+    std::this_thread::sleep_for(std::chrono::milliseconds(resourcesWaitTime));
+    uint sequenceRemainingWaitTime = (sequenceIntervalMiliseconds - resourcesIntervalMiliseconds) * WAIT_MULTIPLIER_FACTOR;
+    std::this_thread::sleep_for(std::chrono::milliseconds(sequenceRemainingWaitTime));
+
+    cleanerExitTrigger.set_value();
+    if (t.joinable()) {
+        t.join();
+    }
+}
+
+TEST(ModelManager, CleanerShouldCleanupResourcesAndSequenceWhenSequenceIntervalIsShorter) {
+    uint32_t resourcesIntervalMiliseconds = 151;
+    uint32_t sequenceIntervalMiliseconds = 103;
+    const float WAIT_MULTIPLIER_FACTOR = 1.2;
+
+    ovms::GlobalSequencesViewer globalSequencesViewer;
+    MockModelManager modelManager;
+
+    MockedFunctorSequenceCleaner mockedFunctorSequenceCleaner(globalSequencesViewer);
+    MockedFunctorResourcesCleaner mockedFunctorResourcesCleaner(modelManager);
+
+    std::promise<void> cleanerExitTrigger;
+    std::future<void> exitSignal = cleanerExitTrigger.get_future();
+
+    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
+
+    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
+    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1);
+    uint sequenceWaitTime = sequenceIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR;
+    std::this_thread::sleep_for(std::chrono::milliseconds(sequenceWaitTime));
+    uint resourcesRemainingWaitTime = (resourcesIntervalMiliseconds - sequenceIntervalMiliseconds) * WAIT_MULTIPLIER_FACTOR;
+    std::this_thread::sleep_for(std::chrono::milliseconds(resourcesRemainingWaitTime));
+    cleanerExitTrigger.set_value();
+    if (t.joinable()) {
+        t.join();
+    }
+}
+
+TEST(ModelManager, CleanerShouldStopCheckingForCleanupWhenExitSignalIsSet) {
+    uint32_t resourcesIntervalMiliseconds = 151;
+    uint32_t sequenceIntervalMiliseconds = 103;
+    const float WAIT_MULTIPLIER_FACTOR = 1.2;
+
+    ovms::GlobalSequencesViewer globalSequencesViewer;
+    MockModelManager modelManager;
+
+    MockedFunctorSequenceCleaner mockedFunctorSequenceCleaner(globalSequencesViewer);
+    MockedFunctorResourcesCleaner mockedFunctorResourcesCleaner(modelManager);
+
+    std::promise<void> cleanerExitTrigger;
+    std::future<void> exitSignal = cleanerExitTrigger.get_future();
+
+    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
+
+    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
+    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1);
+    uint waitTime = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR: sequenceIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR;
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
+    cleanerExitTrigger.set_value();
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
+    if (t.joinable()) {
+        t.join();
+    }
+}
+
+TEST(ModelManager, CleanerShouldCleanupResourcesAndSequenceWhenIntervalsAreEqual) {
+    uint32_t resourcesIntervalMiliseconds = 103;
+    uint32_t sequenceIntervalMiliseconds = 103;
+    const float WAIT_MULTIPLIER_FACTOR = 1.2;
+
+    ovms::GlobalSequencesViewer globalSequencesViewer;
+    MockModelManager modelManager;
+
+    MockedFunctorSequenceCleaner mockedFunctorSequenceCleaner(globalSequencesViewer);
+    MockedFunctorResourcesCleaner mockedFunctorResourcesCleaner(modelManager);
+
+    std::promise<void> cleanerExitTrigger;
+    std::future<void> exitSignal = cleanerExitTrigger.get_future();
+
+    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
+
+    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
+    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1);
+    uint waitTime = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR: sequenceIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR;
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
+    cleanerExitTrigger.set_value();
+    if (t.joinable()) {
+        t.join();
+    }
+}
+
 TEST(ModelManager, ConfigReloadingWithWrongInputName) {
     ConstructorEnabledModelManager manager;
     ovms::ModelConfig config;
