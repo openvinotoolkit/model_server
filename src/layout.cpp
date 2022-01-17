@@ -15,84 +15,66 @@
 //*****************************************************************************
 #include "layout.hpp"
 
-#include <algorithm>
-#include <sstream>
-#include <vector>
-
-#include "stringutils.hpp"
-
 namespace ovms {
 
-LayoutConfiguration::LayoutConfiguration(const char* layout) :
-    LayoutConfiguration(std::string(layout)) {
+Layout::Layout(const std::string& str) :
+    std::string(str) {
+    this->batchIndex = retrieveBatchIndex();
 }
 
-LayoutConfiguration::LayoutConfiguration(const std::string& layout) :
-    LayoutConfiguration(layout, layout) {
+const std::optional<size_t>& Layout::getBatchIndex() const {
+    return this->batchIndex;
 }
 
-LayoutConfiguration::LayoutConfiguration(const std::string& tensorLayout, const std::string& modelLayout) :
-    tensor(tensorLayout),
-    model(modelLayout) {
-}
-
-bool LayoutConfiguration::isSet() const {
-    return !tensor.empty() || !model.empty();
-}
-
-Status LayoutConfiguration::fromString(const std::string& configuration, LayoutConfiguration& configOut) {
-    std::string configurationCopy = configuration;
-    erase_spaces(configurationCopy);
-
-    std::transform(configurationCopy.begin(), configurationCopy.end(), configurationCopy.begin(), ::toupper);
-
-    if (configurationCopy.find_first_not_of("NCHWD?.:") != std::string::npos)
-        return StatusCode::LAYOUT_WRONG_FORMAT;
-
-    size_t delimCount = std::count(configurationCopy.begin(), configurationCopy.end(), ':');
-    if (delimCount > 1)
-        return StatusCode::LAYOUT_WRONG_FORMAT;
-
-    if (delimCount == 0) {
-        configOut = LayoutConfiguration(configurationCopy);
-    } else {
-        std::vector<std::string> tokens = tokenize(configurationCopy, ':');
-        if (tokens.size() > 2)
-            return StatusCode::LAYOUT_WRONG_FORMAT;
-        else if (tokens.size() == 2)
-            configOut = LayoutConfiguration(tokens[0], tokens[1]);
-        else if (tokens.size() == 1)
-            configOut = LayoutConfiguration(tokens[0]);
-        else
-            return StatusCode::LAYOUT_WRONG_FORMAT;
+std::optional<size_t> Layout::retrieveBatchIndex() const {
+    auto status = validate();
+    if (!status.ok()) {
+        return std::nullopt;
     }
+    auto batchPos = this->find(BATCH_DIMENSION_LETTER);
+    auto etcPos = this->find(ETC_LAYOUT_DELIMETER);
+    if (batchPos == std::string::npos) {
+        return std::nullopt;
+    }
+    if (etcPos != std::string::npos && batchPos > etcPos) {
+        return std::nullopt;
+    }
+    return batchPos;
+}
+
+Status Layout::validate() const {
+    if (this->find_first_not_of(ALLOWED_DIMENSION_LETTERS_AND_CHARS) != std::string::npos)
+        return StatusCode::LAYOUT_WRONG_FORMAT;  // Cannot contain other letters
+
+    for (char c : ALLOWED_DIMENSION_LETTERS) {
+        if (std::count(this->begin(), this->end(), c) > 1) {
+            return StatusCode::LAYOUT_WRONG_FORMAT;  // Can contain NCHWD only single time
+        }
+    }
+
+    size_t dotCount = 0;
+    bool firstEtcAppeared = false;
+    bool fullEtcAppeared = false;
+    for (char c : (*this)) {
+        if (c == ETC_CHAR) {
+            if (fullEtcAppeared) {
+                return StatusCode::LAYOUT_WRONG_FORMAT;  // Cannot appear multiple times
+            }
+            firstEtcAppeared = true;
+            dotCount++;
+            if (dotCount >= 3) {
+                fullEtcAppeared = true;
+                firstEtcAppeared = false;
+            }
+        } else if (firstEtcAppeared) {
+            return StatusCode::LAYOUT_WRONG_FORMAT;  // Dots separated
+        }
+    }
+    if (firstEtcAppeared && !fullEtcAppeared) {
+        return StatusCode::LAYOUT_WRONG_FORMAT;  // Dots not completed
+    }
+
     return StatusCode::OK;
-}
-
-std::string LayoutConfiguration::toString() const {
-    std::stringstream ss;
-    if (tensor.empty()) {
-        ss << model;
-    } else {
-        ss << tensor << ":" << model;
-    }
-    return ss.str();
-}
-
-const std::string& LayoutConfiguration::getTensorLayout() const {
-    return this->tensor;
-}
-
-const std::string& LayoutConfiguration::getModelLayout() const {
-    return this->model;
-}
-
-bool LayoutConfiguration::operator==(const LayoutConfiguration& rhs) const {
-    return this->tensor == rhs.tensor && this->model == rhs.model;
-}
-
-bool LayoutConfiguration::operator!=(const LayoutConfiguration& rhs) const {
-    return !(this->operator==(rhs));
 }
 
 }  // namespace ovms

@@ -314,7 +314,7 @@ protected:
     }
     ovms::ModelConfig config;
     ovms::shapes_info_map_t shapeMap;
-    ovms::layouts_map_t layouts;
+    ovms::layout_configurations_map_t layouts;
 };
 
 TEST_F(TestLoadModelWithMapping, SuccessfulLoad) {
@@ -505,7 +505,7 @@ protected:
     }
     ovms::ModelConfig config;
     ovms::shapes_info_map_t shapeMap;
-    ovms::layouts_map_t layouts;
+    ovms::layout_configurations_map_t layouts;
 };
 
 TEST_F(TestReloadModelWithMapping, SuccessfulReload) {
@@ -603,7 +603,7 @@ TEST_F(TestReloadModelWithMapping, ReloadMultipleTimes) {
     shapeMapInvalid["b"] = inputShape;
     config.setShapes(shapeMapInvalid);
 
-    ovms::layouts_map_t layoutsInvalid;
+    ovms::layout_configurations_map_t layoutsInvalid;
     layoutsInvalid["b"] = "LAYOUT_INPUT";
     layoutsInvalid["a"] = "LAYOUT_OUTPUT";
     config.setLayouts(layoutsInvalid);
@@ -641,7 +641,7 @@ TEST_F(TestReloadModelWithMapping, ReloadMultipleTimes) {
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 
     // load with invalid layout
-    ovms::layouts_map_t layoutsUnknown;
+    ovms::layout_configurations_map_t layoutsUnknown;
     layoutsUnknown["input"] = "LAYOUT_INPUT";
     layoutsUnknown["unknown"] = "LAYOUT_OUTPUT";
     config.setLayouts(layoutsUnknown);

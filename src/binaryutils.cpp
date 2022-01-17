@@ -202,7 +202,10 @@ Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* fi
 
 bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     const int batchSize) {
-    return !tensorInfo->getBatchSize().match(batchSize);
+    if (!tensorInfo->getBatchSize().has_value()) {
+        return true;
+    }
+    return !tensorInfo->getBatchSize().value().match(batchSize);
 }
 
 Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage) {
@@ -235,7 +238,7 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     if (checkBatchSizeMismatch(tensorInfo, src.string_val_size())) {
         SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}",
             tensorInfo->getMappedName(),
-            tensorInfo->getBatchSize().toString(),
+            tensorInfo->getBatchSize().has_value() ? tensorInfo->getBatchSize().value().toString() : std::string{"none"},
             src.string_val_size());
         return StatusCode::INVALID_BATCH_SIZE;
     }

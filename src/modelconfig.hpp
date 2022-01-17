@@ -26,7 +26,7 @@
 
 #include <rapidjson/document.h>
 
-#include "layout.hpp"
+#include "layout_configuration.hpp"
 #include "model_version_policy.hpp"
 #include "shape.hpp"
 #include "status.hpp"
@@ -139,7 +139,7 @@ private:
     /**
          * @brief Map of layouts
          */
-    layouts_map_t layouts;
+    layout_configurations_map_t layouts;
 
     /**
          * @brief Input mapping configuration
@@ -784,9 +784,9 @@ public:
     /**
          * @brief Get the layouts
          * 
-         * @return const layouts_map_t& 
+         * @return const layout_configurations_map_t& 
          */
-    const layouts_map_t& getLayouts() const {
+    const layout_configurations_map_t& getLayouts() const {
         return this->layouts;
     }
 
@@ -795,7 +795,7 @@ public:
          * 
          * @param layouts 
          */
-    void setLayouts(const layouts_map_t& layouts) {
+    void setLayouts(const layout_configurations_map_t& layouts) {
         this->layouts = layouts;
         this->layout = LayoutConfiguration();
     }

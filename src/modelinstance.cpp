@@ -34,6 +34,7 @@
 #include "executingstreamidguard.hpp"
 #include "filesystem.hpp"
 #include "layout.hpp"
+#include "layout_configuration.hpp"
 #include "logging.hpp"
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
@@ -140,7 +141,7 @@ Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::share
     return StatusCode::OK;
 }
 
-const layout_t getReportedTensorLayout(const ModelConfig& config, const std::string& name, bool isInput) {
+const Layout getReportedTensorLayout(const ModelConfig& config, const std::string& name, bool isInput) {
     auto layout = TensorInfo::getDefaultLayout();
     if (isInput && config.getLayout().isSet()) {
         layout = config.getLayout().getTensorLayout();
@@ -358,7 +359,7 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             ovms::Precision precision = ovElementTypeToOvmsPrecision(input.get_element_type());
             Shape shape(input.get_partial_shape());
             std::string mappingName = config.getMappingInputByKey(name);
-            const layout_t layout = getReportedTensorLayout(config, name, true);
+            const Layout layout = getReportedTensorLayout(config, name, true);
 
             std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
                 name,
@@ -404,7 +405,7 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
             ovms::Precision precision = ovElementTypeToOvmsPrecision(output.get_element_type());
             Shape shape(output.get_partial_shape());
             std::string mappingName = config.getMappingOutputByKey(name);
-            const layout_t layout = getReportedTensorLayout(config, name, false);
+            const Layout layout = getReportedTensorLayout(config, name, false);
 
             std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
                 name,
@@ -891,7 +892,11 @@ Status ModelInstance::reloadModelIfRequired(
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
     Status status = validationStatus;
     if (status.batchSizeChangeRequired()) {
-        status = reloadModel(getRequestBatchSize(requestProto), {}, modelUnloadGuardPtr);
+        try {
+            status = reloadModel(getRequestBatchSize(requestProto, this->getBatchSizeIndex()), {}, modelUnloadGuardPtr);
+        } catch (const std::exception& e) {
+            status = Status(StatusCode::INVALID_BATCH_DIMENSION, e.what());
+        }
         if (!status.ok()) {
             SPDLOG_ERROR("Model: {}, version: {} reload (batch size change) failed. Status Code: {}, Error {}",
                 getName(), getVersion(), status.getCode(), status.string());
@@ -1078,4 +1083,18 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
 
     return StatusCode::OK;
 }
+
+const size_t ModelInstance::getBatchSizeIndex() const {
+    const auto& inputItr = this->inputsInfo.cbegin();
+    if (inputItr == this->inputsInfo.cend()) {
+        throw std::logic_error("model has no inputs");
+    }
+    const auto& input = inputItr->second;
+    const auto batchIndex = input->getLayout().getBatchIndex();
+    if (!batchIndex.has_value()) {
+        throw std::logic_error("cannot get batch index");
+    }
+    return batchIndex.value();
+}
+
 }  // namespace ovms

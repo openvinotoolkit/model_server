@@ -311,7 +311,7 @@ Status ModelConfig::parseLayoutParameter(const rapidjson::Value& node) {
     if (!node.IsObject()) {
         return StatusCode::LAYOUT_WRONG_FORMAT;
     }
-    layouts_map_t layouts;
+    layout_configurations_map_t layouts;
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
         if (!it->value.IsString()) {
             return StatusCode::LAYOUT_WRONG_FORMAT;

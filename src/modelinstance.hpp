@@ -389,6 +389,8 @@ public:
         return Dimension(ov::get_batch(model));
     }
 
+    const size_t getBatchSizeIndex() const;
+
     /**
          * @brief Gets model config
          *

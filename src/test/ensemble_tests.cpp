@@ -59,11 +59,11 @@ protected:
         dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
             ovms::Precision::FP32,
             DUMMY_MODEL_SHAPE,
-            layout_t{"NC"});
+            Layout{"NC"});
         dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
             ovms::Precision::FP32,
             DUMMY_MODEL_SHAPE,
-            layout_t{"NC"});
+            Layout{"NC"});
     }
 
     void prepareRequest(const std::vector<float>& requestData, PredictRequest& request, const std::string& customPipelineInputName) {
@@ -144,11 +144,11 @@ protected:
     std::shared_ptr<ovms::TensorInfo> dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
         ovms::Precision::FP32,
         DUMMY_MODEL_SHAPE,
-        layout_t{"NC"});
+        Layout{"NC"});
     std::shared_ptr<ovms::TensorInfo> dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
         ovms::Precision::FP32,
         DUMMY_MODEL_SHAPE,
-        layout_t{"NC"});
+        Layout{"NC"});
 
     std::vector<float> requestData;
     const std::vector<float> bs1requestData{-5.0, 3.0, 0.0, -12.0, 9.0, -100.0, 102.0, 92.0, -1.0, 12.0};
@@ -494,7 +494,7 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicBatchSize) {
     auto outputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
         ovms::Precision::FP32,
         ovms::Shape{3, DUMMY_MODEL_OUTPUT_SIZE},
-        layout_t{"NC"});
+        Layout{"NC"});
     const tensor_map_t outputsInfo{{customPipelineOutputName, outputTensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
 
@@ -543,7 +543,7 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicShape) {
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
         ovms::Precision::FP32,
         ovms::Shape{1, 5},
-        layout_t{"NC"});
+        Layout{"NC"});
     const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
 
@@ -614,14 +614,14 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchAndShape) {
     auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
         ovms::Precision::FP32,
         ovms::Shape{3, 500},
-        layout_t{"NC"});
+        Layout{"NC"});
     const tensor_map_t inputsInfo{{customPipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, manager);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
         ovms::Precision::FP32,
         ovms::Shape{3, 500},
-        layout_t{"NC"});
+        Layout{"NC"});
     const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
 
@@ -695,14 +695,14 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape_RequestHasDifferentDim0
     auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
         ovms::Precision::FP32,
         ovms::Shape{BATCH_SIZE, WIDTH},
-        layout_t{"NC"});
+        Layout{"NC"});
     const tensor_map_t inputsInfo{{customPipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, manager);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
         ovms::Precision::FP32,
         ovms::Shape{BATCH_SIZE, WIDTH},
-        layout_t{"NC"});
+        Layout{"NC"});
     const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
 
@@ -738,7 +738,7 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
         inputsInfoTmp[inputName] = std::make_shared<ovms::TensorInfo>(inputName,
             ovms::Precision::FP32,
             DUMMY_MODEL_SHAPE,
-            layout_t{"NC"});
+            Layout{"NC"});
     }
     const tensor_map_t inputsInfo = inputsInfoTmp;
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
@@ -749,7 +749,7 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
             std::make_shared<ovms::TensorInfo>(outputName,
                 ovms::Precision::FP32,
                 DUMMY_MODEL_SHAPE,
-                layout_t{"NC"}));
+                Layout{"NC"}));
     }
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
     Pipeline pipeline(*input_node, *output_node);
@@ -2224,12 +2224,12 @@ TEST_F(EnsembleFlowTest, ErrorHandlingSkipsDeferredNodesExecutionIfExecutionFail
                                       std::make_shared<ovms::TensorInfo>("proto_input_1x10",
                                           ovms::Precision::FP32,
                                           DUMMY_MODEL_SHAPE,
-                                          layout_t{"NC"})},
+                                          Layout{"NC"})},
         {"proto_input_1x5",
             std::make_shared<ovms::TensorInfo>("proto_input_1x5",
                 ovms::Precision::FP32,
                 ovms::Shape{1, 5},
-                layout_t{"NC"})}};
+                Layout{"NC"})}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
@@ -2440,6 +2440,94 @@ TEST_F(EnsembleFlowTest, ExecuteOnPipelineCreatedBeforeRetireShouldPass) {
     pipelineBeforeRetire->execute();
     uint dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
+}
+
+TEST_F(EnsembleFlowTest, RuntimeWrongBatchSizeArbitraryPosition) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+
+    ModelConfig configCN = DUMMY_MODEL_CONFIG;
+    configCN.setName("dummy_C1_N10");
+    configCN.parseShapeParameter("(1,10)");
+    ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
+    managerWithDummyModel.reloadModelWithVersions(configCN);
+
+    configCN = DUMMY_MODEL_CONFIG;
+    configCN.setName("dummy_C1_N15");
+    configCN.parseShapeParameter("(1,15)");
+    ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
+    managerWithDummyModel.reloadModelWithVersions(configCN);
+
+    dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+        ovms::Precision::FP32,
+        Shape{1, 10},
+        Layout{"CN"});
+    dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+        ovms::Precision::FP32,
+        Shape{1, 15},
+        Layout{"CN"});
+
+    // Configure pipeline
+    const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    auto model_node_1 = std::make_unique<DLNode>("dummy_node_1", "dummy_C1_N10", requestedModelVersion, managerWithDummyModel);
+    auto model_node_2 = std::make_unique<DLNode>("dummy_node_2", "dummy_C1_N15", requestedModelVersion, managerWithDummyModel);
+    const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+    Pipeline pipeline(*input_node, *output_node);
+    pipeline.connect(*input_node, *model_node_1, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_1, *model_node_2, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_2, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node_1));
+    pipeline.push(std::move(model_node_2));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_BATCH_SIZE);
+}
+
+TEST_F(EnsembleFlowTest, RuntimeWrongShapeArbitraryBatchPosition) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+
+    ModelConfig configCN = DUMMY_MODEL_CONFIG;
+    configCN.setName("dummy_C1_N10");
+    configCN.parseShapeParameter("(1,10)");
+    ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
+    managerWithDummyModel.reloadModelWithVersions(configCN);
+
+    configCN = DUMMY_MODEL_CONFIG;
+    configCN.setName("dummy_C2_N10");
+    configCN.parseShapeParameter("(2,10)");
+    ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
+    managerWithDummyModel.reloadModelWithVersions(configCN);
+
+    dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+        ovms::Precision::FP32,
+        Shape{1, 10},
+        Layout{"CN"});
+    dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+        ovms::Precision::FP32,
+        Shape{2, 10},
+        Layout{"CN"});
+
+    // Configure pipeline
+    const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    auto model_node_1 = std::make_unique<DLNode>("dummy_node_1", "dummy_C1_N10", requestedModelVersion, managerWithDummyModel);
+    auto model_node_2 = std::make_unique<DLNode>("dummy_node_2", "dummy_C1_N15", requestedModelVersion, managerWithDummyModel);
+    const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+    Pipeline pipeline(*input_node, *output_node);
+    pipeline.connect(*input_node, *model_node_1, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_1, *model_node_2, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_2, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node_1));
+    pipeline.push(std::move(model_node_2));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_SHAPE);
 }
 
 class MockedPipelineDefinitionWithHandlingStatus : public PipelineDefinition {

@@ -65,6 +65,7 @@ enum class StatusCode {
     CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE,
     REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL,
     CANNOT_CONVERT_FLAT_SHAPE,
+    INVALID_BATCH_DIMENSION, /*!< Invalid batch dimension in shape */
 
     // Model management
     MODEL_MISSING,                                     /*!< Model with such name and/or version does not exist */

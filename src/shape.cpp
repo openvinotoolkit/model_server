@@ -111,18 +111,18 @@ Status Dimension::fromString(const std::string& str, Dimension& dimOut) {
 
     std::string strCopy = str;
     erase_spaces(strCopy);
-    if (strCopy.find(':') != std::string::npos) {
+    if (strCopy.find(DIMENSION_RANGE_DELIMETER) != std::string::npos) {
         // Range
         if (strCopy.find_first_not_of("0123456789:") != std::string::npos) {
             SPDLOG_ERROR("Parsing dimension string not a range: {}", strCopy);
             return StatusCode::DIM_WRONG_FORMAT;
         }
-        size_t delimCount = std::count(strCopy.begin(), strCopy.end(), ':');
+        size_t delimCount = std::count(strCopy.begin(), strCopy.end(), DIMENSION_RANGE_DELIMETER);
         if (delimCount != 1) {
-            SPDLOG_ERROR("Parsing dimension string, wrong amount of ':' - {}; {}", delimCount, strCopy);
+            SPDLOG_ERROR("Parsing dimension string, wrong amount of '{}' - {}; {}", DIMENSION_RANGE_DELIMETER, delimCount, strCopy);
             return StatusCode::DIM_WRONG_FORMAT;
         } else {
-            std::vector<std::string> tokens = tokenize(strCopy, ':');
+            std::vector<std::string> tokens = tokenize(strCopy, DIMENSION_RANGE_DELIMETER);
             if (tokens.size() == 2) {
                 try {
                     int dimNumberMin = std::stoi(tokens[0]);
@@ -144,7 +144,7 @@ Status Dimension::fromString(const std::string& str, Dimension& dimOut) {
                     return StatusCode::DIM_WRONG_FORMAT;
                 }
             } else {
-                SPDLOG_ERROR("Parsing dimension string, not a number between ':' - {}", strCopy);
+                SPDLOG_ERROR("Parsing dimension string, not a number between '{}' - {}", DIMENSION_RANGE_DELIMETER, strCopy);
                 return StatusCode::DIM_WRONG_FORMAT;
             }
         }
@@ -325,14 +325,25 @@ bool Shape::operator!=(const Shape& rhs) const {
     return !(this->operator==(rhs));
 }
 
-bool Shape::match(const ov::Shape& ovShape, size_t startingPosition) const {
+bool Shape::match(const ov::Shape& ovShape) const {
+    for (size_t i = 0; i < this->size(); i++) {
+        if (!(*this)[i].match(ovShape[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Shape::match(const ov::Shape& ovShape, const size_t skipPosition) const {
     if (this->size() != ovShape.size()) {
         return false;
     }
-    if (this->size() <= startingPosition) {
-        return true;
+    for (size_t i = 0; i < skipPosition; i++) {
+        if (!(*this)[i].match(ovShape[i])) {
+            return false;
+        }
     }
-    for (size_t i = startingPosition; i < this->size(); i++) {
+    for (size_t i = skipPosition + 1; i < this->size(); i++) {
         if (!(*this)[i].match(ovShape[i])) {
             return false;
         }
@@ -393,9 +404,9 @@ Status Shape::fromString(const std::string& strIn, Shape& shapeOut) {
             return StatusCode::SHAPE_WRONG_FORMAT;
         }
 
-        count = std::count(token.begin(), token.end(), ':');
+        count = std::count(token.begin(), token.end(), DIMENSION_RANGE_DELIMETER);
         if (count > 1) {
-            SPDLOG_ERROR("Parsing model shape string: {}; too many ':' characters", token);
+            SPDLOG_ERROR("Parsing model shape string: {}; too many '{}' characters", DIMENSION_RANGE_DELIMETER, token);
             return StatusCode::SHAPE_WRONG_FORMAT;
         }
         try {
@@ -408,7 +419,7 @@ Status Shape::fromString(const std::string& strIn, Shape& shapeOut) {
                     return StatusCode::SHAPE_WRONG_FORMAT;
                 }
             } else {
-                std::vector<std::string> subTokens = tokenize(token, ':');
+                std::vector<std::string> subTokens = tokenize(token, DIMENSION_RANGE_DELIMETER);
                 if (subTokens.size() != 2 || subTokens[0].empty() || subTokens[1].empty()) {
                     SPDLOG_ERROR("Parsing model shape string: {}; range must have min and max", strIn);
                     return StatusCode::SHAPE_WRONG_FORMAT;

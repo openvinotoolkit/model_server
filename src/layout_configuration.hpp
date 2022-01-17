@@ -16,29 +16,37 @@
 #pragma once
 
 #include <string>
-#include <utility>
+#include <unordered_map>
 
+#include "layout.hpp"
 #include "status.hpp"
 
 namespace ovms {
 
-static const std::string ALLOWED_DIMENSION_LETTERS = "NCHWD";
-static const std::string ALLOWED_DIMENSION_LETTERS_AND_CHARS = ALLOWED_DIMENSION_LETTERS + ".?";
-static const std::string ETC_LAYOUT_DELIMETER = "...";
-static const char ETC_CHAR = '.';
-static const std::string BATCH_DIMENSION_LETTER = "N";
+static const char LAYOUT_CONFIGURATION_DELIMETER = ':';
 
-class Layout : public std::string {
-    std::optional<size_t> batchIndex = std::nullopt;
-
-    Status validate() const;
-    std::optional<size_t> retrieveBatchIndex() const;
+class LayoutConfiguration {
+    Layout tensor;
+    Layout model;
 
 public:
-    Layout() = default;
-    Layout(const std::string& str);
+    LayoutConfiguration() = default;
+    LayoutConfiguration(const char* layout);
+    LayoutConfiguration(const std::string& layout);
+    LayoutConfiguration(const std::string& tensorLayout, const std::string& modelLayout);
 
-    const std::optional<size_t>& getBatchIndex() const;
+    const Layout& getTensorLayout() const;
+    const Layout& getModelLayout() const;
+
+    bool isSet() const;
+
+    bool operator==(const LayoutConfiguration& rhs) const;
+    bool operator!=(const LayoutConfiguration& rhs) const;
+
+    static Status fromString(const std::string& configurationStr, LayoutConfiguration& configOut);
+    std::string toString() const;
 };
+
+using layout_configurations_map_t = std::unordered_map<std::string, LayoutConfiguration>;
 
 }  // namespace ovms

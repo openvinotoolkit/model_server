@@ -59,9 +59,9 @@ public:
     Status validateAndGetInput(const tensorflow::serving::PredictRequest& request, const std::string& name, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it);
     Status checkIfShapeValuesNegative(const tensorflow::TensorProto& proto) const;
     Status validateNumberOfBinaryInputShapeDimensions(const tensorflow::TensorProto& proto) const;
-    Status checkBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
+    Status checkBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& servableBatchSize, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
     Status checkBinaryBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
-    Status checkShapeMismatch(const tensorflow::TensorProto& proto, const ovms::TensorInfo& inputInfo, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
+    Status checkShapeMismatch(const tensorflow::TensorProto& proto, const ovms::TensorInfo& inputInfo, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
     Status validateTensorContentSize(const tensorflow::TensorProto& proto, ovms::Precision expectedPrecision) const;
     Status validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const tensorflow::TensorProto& proto) const;
     Status validatePrecision(const ovms::TensorInfo& inputInfo, const tensorflow::TensorProto& proto) const;
@@ -120,8 +120,8 @@ Status RequestValidator::validateNumberOfBinaryInputShapeDimensions(const tensor
     return StatusCode::OK;
 }
 
-Status RequestValidator::checkBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
-    if (servableBatchSize.match(proto.tensor_shape().dim(0).size())) {  // TODO use layout INFO
+Status RequestValidator::checkBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& servableBatchSize, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+    if (servableBatchSize.match(proto.tensor_shape().dim(batchSizeIndex).size())) {
         return StatusCode::OK;
     }
     if (batchingMode == AUTO) {
@@ -129,7 +129,7 @@ Status RequestValidator::checkBatchSizeMismatch(const tensorflow::TensorProto& p
         return StatusCode::OK;
     } else if (shapeMode != AUTO) {
         std::stringstream ss;
-        ss << "Expected: " << servableBatchSize.toString() << "; Actual: " << proto.tensor_shape().dim(0).size() << "; input name: " << getCurrentlyValidatedInputName();
+        ss << "Expected: " << servableBatchSize.toString() << "; Actual: " << proto.tensor_shape().dim(batchSizeIndex).size() << "; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
@@ -145,7 +145,7 @@ Status RequestValidator::checkBinaryBatchSizeMismatch(const tensorflow::TensorPr
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
     }
-    if (servableBatchSize.match(proto.tensor_shape().dim(0).size())) {  // TODO use layout
+    if (servableBatchSize.match(proto.tensor_shape().dim(0).size())) {
         return StatusCode::OK;
     }
     if (batchingMode == AUTO) {
@@ -161,14 +161,28 @@ Status RequestValidator::checkBinaryBatchSizeMismatch(const tensorflow::TensorPr
     return StatusCode::OK;
 }
 
-Status RequestValidator::checkShapeMismatch(const tensorflow::TensorProto& proto, const ovms::TensorInfo& inputInfo, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+Status RequestValidator::checkShapeMismatch(const tensorflow::TensorProto& proto, const ovms::TensorInfo& inputInfo, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
     const auto& shape = inputInfo.getShape();
-    int i = (batchingMode == AUTO) ? 1 : 0;  // If batch size is automatic, omit first dimension
     bool mismatch = false;
-    for (; i < proto.tensor_shape().dim_size(); i++) {
-        if (!shape[i].match(static_cast<dimension_value_t>(proto.tensor_shape().dim(i).size()))) {
-            mismatch = true;
-            break;
+    if (batchingMode == AUTO) {  // Skip batch dimension
+        for (int i = 0; i < batchSizeIndex; i++) {
+            if (!shape[i].match(static_cast<dimension_value_t>(proto.tensor_shape().dim(i).size()))) {
+                mismatch = true;
+                break;
+            }
+        }
+        for (int i = batchSizeIndex + 1; i < proto.tensor_shape().dim_size(); i++) {
+            if (!shape[i].match(static_cast<dimension_value_t>(proto.tensor_shape().dim(i).size()))) {
+                mismatch = true;
+                break;
+            }
+        }
+    } else {  // Do not skip batch dimension
+        for (int i = 0; i < proto.tensor_shape().dim_size(); i++) {
+            if (!shape[i].match(static_cast<dimension_value_t>(proto.tensor_shape().dim(i).size()))) {
+                mismatch = true;
+                break;
+            }
         }
     }
     if (!mismatch) {
@@ -304,8 +318,18 @@ Status RequestValidator::validate() {
         status = checkIfShapeValuesNegative(proto);
         if (!status.ok())
             return status;
-        // TODO what if dynamic? ovms::Dimension
-        const Dimension batchSize = inputInfo->getShape()[0];  // replace with getBatchSize() //TODO
+        auto batchIndex = inputInfo->getLayout().getBatchIndex();
+        if (!batchIndex.has_value()) {
+            SPDLOG_ERROR("[servable name: {} version: {}] Missing batch index in input: {} layout: {}",
+                servableName, servableVersion, name, inputInfo->getLayout());
+            return StatusCode::INTERNAL_ERROR;
+        }
+        if (inputInfo->getShape().size() < batchIndex.value() + 1) {
+            SPDLOG_ERROR("[servable name: {} version: {}] Batch index out of shape range for input: {} layout: {} shape: {}",
+                servableName, servableVersion, name, inputInfo->getLayout(), inputInfo->getShape().toString());
+            return StatusCode::INTERNAL_ERROR;
+        }
+        const Dimension& batchSize = inputInfo->getShape()[batchIndex.value()];
         Mode shapeMode = getShapeMode(shapeInfo, name);
 
         // More detailed binary input validation is performed in next step, during conversion to tensor.
@@ -326,15 +350,13 @@ Status RequestValidator::validate() {
         status = validatePrecision(*inputInfo, proto);
         if (!status.ok())
             return status;
-        // TODO handle N... -> how? expect 1<=X?
         status = validateNumberOfShapeDimensions(*inputInfo, proto);
         if (!status.ok())
             return status;
-        // TODO batch size -> if outside of range request 1 specific BS vs range?
-        status = checkBatchSizeMismatch(proto, batchSize, finalStatus, batchingMode, shapeMode);
+        status = checkBatchSizeMismatch(proto, batchSize, batchIndex.value(), finalStatus, batchingMode, shapeMode);
         if (!status.ok())
             return status;
-        status = checkShapeMismatch(proto, *inputInfo, finalStatus, batchingMode, shapeMode);
+        status = checkShapeMismatch(proto, *inputInfo, batchIndex.value(), finalStatus, batchingMode, shapeMode);
         if (!status.ok())
             return status;
 
