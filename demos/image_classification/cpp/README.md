@@ -29,7 +29,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet50-binary:/model -p 9001:9001
 
 ## Start the client:
 ```bash
-docker run --rm --network host -e "no_proxy=localhost" ovms_cpp_clients ./classification_client_sync --grpc_port=9001 --iterations=10 --layout="binary"
+docker run --rm --network host -e "no_proxy=localhost" ovms_cpp_image_classification ./classification_client_sync --grpc_port=9001 --iterations=10 --layout="binary"
 
 call predict ok
 call predict time: 24ms
@@ -76,7 +76,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet50-binary:/model -p 9001:9001
 
 ### Start the client:
 ```bash
-docker run --rm --network host -e "no_proxy=localhost" ovms_cpp_clients ./classification_client_async_benchmark --grpc_port=9001 --layout="nchw" --iterations=2000 --batch_size=1 --max_parallel_requests=100 --consumers=8 --producers=1 --benchmark_mode=1
+docker run --rm --network host -e "no_proxy=localhost" ovms_cpp_image_classification ./classification_client_async_benchmark --grpc_port=9001 --layout="nchw" --iterations=2000 --batch_size=1 --max_parallel_requests=100 --consumers=8 --producers=1 --benchmark_mode=1
 
 Address: localhost:9001
 Model name: resnet
