@@ -16,6 +16,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../cleaner_utils.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model.hpp"
@@ -592,118 +593,122 @@ struct MockedFunctorResourcesCleaner : public ovms::FunctorResourcesCleaner {
 public:
     MockedFunctorResourcesCleaner(ovms::ModelManager& modelManager) :
         ovms::FunctorResourcesCleaner(modelManager) {}
-    
+
     MOCK_METHOD(void, cleanup, (), (override));
 };
 
-TEST(ModelManager, CleanerShouldCleanupResourcesAndSequenceWhenResourcesIntervalIsShorter) {
-    uint32_t resourcesIntervalMiliseconds = 103;
-    uint32_t sequenceIntervalMiliseconds = 151;
-    const float WAIT_MULTIPLIER_FACTOR = 1.2;
+class ModelManagerCleanerThread : public ::testing::Test {
+public:
+    ModelManagerCleanerThread() :
+        mockedFunctorSequenceCleaner(globalSequencesViewer),
+        mockedFunctorResourcesCleaner(modelManager) {}
+    void SetUp() {
+        exitSignal = cleanerExitTrigger.get_future();
+    }
 
     ovms::GlobalSequencesViewer globalSequencesViewer;
     MockModelManager modelManager;
 
-    MockedFunctorSequenceCleaner mockedFunctorSequenceCleaner(globalSequencesViewer);
-    MockedFunctorResourcesCleaner mockedFunctorResourcesCleaner(modelManager);
+    MockedFunctorSequenceCleaner mockedFunctorSequenceCleaner;
+    MockedFunctorResourcesCleaner mockedFunctorResourcesCleaner;
 
     std::promise<void> cleanerExitTrigger;
-    std::future<void> exitSignal = cleanerExitTrigger.get_future();
+    std::future<void> exitSignal;
+};
 
-    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
+TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenResourcesIntervalIsShorterAndWaitTimeIsGreaterThanSequenceWaitTime) {
+    uint32_t resourcesIntervalMiliseconds = 29;
+    uint32_t sequenceIntervalMiliseconds = 37;
+    const float WAIT_MULTIPLIER_FACTOR = 1.2;
 
     EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1);
-    uint resourcesWaitTime = resourcesIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR;
-    std::this_thread::sleep_for(std::chrono::milliseconds(resourcesWaitTime));
-    uint sequenceRemainingWaitTime = (sequenceIntervalMiliseconds - resourcesIntervalMiliseconds) * WAIT_MULTIPLIER_FACTOR;
-    std::this_thread::sleep_for(std::chrono::milliseconds(sequenceRemainingWaitTime));
+    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
+
+    uint waitTime = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR;
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
 
     cleanerExitTrigger.set_value();
     if (t.joinable()) {
         t.join();
     }
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
 }
 
-TEST(ModelManager, CleanerShouldCleanupResourcesAndSequenceWhenSequenceIntervalIsShorter) {
-    uint32_t resourcesIntervalMiliseconds = 151;
-    uint32_t sequenceIntervalMiliseconds = 103;
+TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesWhenResourcesIntervalIsShorterAndWaitTimeIsShorterThanSequenceInterval) {
+    uint32_t resourcesIntervalMiliseconds = 29;
+    uint32_t sequenceIntervalMiliseconds = 37;
     const float WAIT_MULTIPLIER_FACTOR = 1.2;
 
-    ovms::GlobalSequencesViewer globalSequencesViewer;
-    MockModelManager modelManager;
-
-    MockedFunctorSequenceCleaner mockedFunctorSequenceCleaner(globalSequencesViewer);
-    MockedFunctorResourcesCleaner mockedFunctorResourcesCleaner(modelManager);
-
-    std::promise<void> cleanerExitTrigger;
-    std::future<void> exitSignal = cleanerExitTrigger.get_future();
-
+    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(0);
+    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1);
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
-    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
-    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1);
-    uint sequenceWaitTime = sequenceIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR;
-    std::this_thread::sleep_for(std::chrono::milliseconds(sequenceWaitTime));
-    uint resourcesRemainingWaitTime = (resourcesIntervalMiliseconds - sequenceIntervalMiliseconds) * WAIT_MULTIPLIER_FACTOR;
-    std::this_thread::sleep_for(std::chrono::milliseconds(resourcesRemainingWaitTime));
+    uint waitTime = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR;
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
+
     cleanerExitTrigger.set_value();
     if (t.joinable()) {
         t.join();
     }
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
 }
 
-TEST(ModelManager, CleanerShouldStopCheckingForCleanupWhenExitSignalIsSet) {
-    uint32_t resourcesIntervalMiliseconds = 151;
-    uint32_t sequenceIntervalMiliseconds = 103;
+TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenSequenceIntervalIsShorterAndWaitTimeIsGreaterThanResurcesInterval) {
+    uint32_t resourcesIntervalMiliseconds = 37;
+    uint32_t sequenceIntervalMiliseconds = 29;
     const float WAIT_MULTIPLIER_FACTOR = 1.2;
-
-    ovms::GlobalSequencesViewer globalSequencesViewer;
-    MockModelManager modelManager;
-
-    MockedFunctorSequenceCleaner mockedFunctorSequenceCleaner(globalSequencesViewer);
-    MockedFunctorResourcesCleaner mockedFunctorResourcesCleaner(modelManager);
-
-    std::promise<void> cleanerExitTrigger;
-    std::future<void> exitSignal = cleanerExitTrigger.get_future();
-
-    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
     EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1);
-    uint waitTime = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR: sequenceIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR;
+    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
+
+    uint waitTime = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR;
     std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
+
     cleanerExitTrigger.set_value();
-    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
     if (t.joinable()) {
         t.join();
     }
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
 }
 
-TEST(ModelManager, CleanerShouldCleanupResourcesAndSequenceWhenIntervalsAreEqual) {
-    uint32_t resourcesIntervalMiliseconds = 103;
-    uint32_t sequenceIntervalMiliseconds = 103;
+TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupSequenceWhenSequenceIntervalIsShorterAndWaitTimeIsShorterThanResourcesInterval) {
+    uint32_t resourcesIntervalMiliseconds = 37;
+    uint32_t sequenceIntervalMiliseconds = 29;
     const float WAIT_MULTIPLIER_FACTOR = 1.2;
 
-    ovms::GlobalSequencesViewer globalSequencesViewer;
-    MockModelManager modelManager;
-
-    MockedFunctorSequenceCleaner mockedFunctorSequenceCleaner(globalSequencesViewer);
-    MockedFunctorResourcesCleaner mockedFunctorResourcesCleaner(modelManager);
-
-    std::promise<void> cleanerExitTrigger;
-    std::future<void> exitSignal = cleanerExitTrigger.get_future();
-
+    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
+    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(0);
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
-    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
-    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1);
-    uint waitTime = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR: sequenceIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR;
+    uint waitTime = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR;
     std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
+
     cleanerExitTrigger.set_value();
     if (t.joinable()) {
         t.join();
     }
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
+}
+
+TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenIntervalsAreEqualAndWaitTimeIsGreaterThanInterval) {
+    uint32_t resourcesIntervalMiliseconds = 29;
+    uint32_t sequenceIntervalMiliseconds = 29;
+    const float WAIT_MULTIPLIER_FACTOR = 1.2;
+
+    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
+    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1);
+    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
+
+    uint waitTime = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR;
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
+
+    cleanerExitTrigger.set_value();
+    if (t.joinable()) {
+        t.join();
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
 }
 
 TEST(ModelManager, ConfigReloadingWithWrongInputName) {
