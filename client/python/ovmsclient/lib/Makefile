@@ -20,7 +20,7 @@ ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
 
 PACKAGE_PATH := dist/ovmsclient-0.2-py3-none-any.whl
 
-.PHONY: build-deps build-package build test clean
+.PHONY: build-deps build-package build test clean style
 
 venv:$(ACTIVATE)
 	@echo -n "Using virtual environment: $(VIRTUALENV_DIR)\n"
