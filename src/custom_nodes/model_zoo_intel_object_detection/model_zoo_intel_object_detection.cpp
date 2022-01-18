@@ -356,8 +356,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         confidences.resize(maxOutputBatch);
     }
 
-    std::shared_lock lock(internalManager->getInternalManagerLock());
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
+    std::shared_lock lock(internalManager->getInternalManagerLock());
 
     *outputsCount = 4;
     if (!get_buffer<struct CustomNodeTensor>(internalManager, outputs, OUTPUT_TENSOR_NAME, *outputsCount * sizeof(CustomNodeTensor))) {
@@ -409,8 +409,8 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     std::string originalImageLayout = get_string_parameter("original_image_layout", params, paramsCount, "NCHW");
     NODE_ASSERT(originalImageLayout == "NCHW" || originalImageLayout == "NHWC", "original image layout must be NCHW or NHWC");
 
-    std::shared_lock lock(internalManager->getInternalManagerLock());
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
+    std::shared_lock lock(internalManager->getInternalManagerLock());
 
     *infoCount = 2;
     if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, INPUT_TENSOR_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {
@@ -459,8 +459,8 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     NODE_ASSERT(targetImageLayout == "NCHW" || targetImageLayout == "NHWC", "target image layout must be NCHW or NHWC");
     bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
 
-    std::shared_lock lock(internalManager->getInternalManagerLock());
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
+    std::shared_lock lock(internalManager->getInternalManagerLock());
 
     *infoCount = 4;
     if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, OUTPUT_TENSOR_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {
