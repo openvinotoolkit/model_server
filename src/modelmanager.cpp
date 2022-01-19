@@ -877,6 +877,7 @@ void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& 
 }
 
 void ModelManager::cleanupResources() {
+    std::unique_lock resourcesLock(resourcesMtx);
     resources.erase(
         std::remove_if(
             resources.begin(),

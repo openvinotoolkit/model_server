@@ -116,6 +116,11 @@ private:
     void cleanerRoutine(uint32_t resourcesCleanupIntervalSec, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal);
 
     /**
+     * @brief Mutex for blocking concurrent add & remove of resources
+     */
+    std::shared_mutex resourcesMtx;
+    
+    /**
      * @brief A JSON configuration filename
      */
     std::string configFilename;
@@ -215,6 +220,7 @@ public:
      *  @brief Adds new resource to watch by the cleaner thread
      */
     void addResourceToCleaner(std::shared_ptr<CNLIMWrapper> resource) {
+        std::unique_lock resourcesLock(resourcesMtx);
         resources.emplace(resources.end(), std::move(resource));
     }
 
