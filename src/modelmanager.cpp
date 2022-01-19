@@ -877,13 +877,22 @@ void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& 
 }
 
 void ModelManager::cleanupResources() {
+    std::vector<std::shared_ptr<CNLIMWrapper>> toBeRemoved;
     std::unique_lock resourcesLock(resourcesMtx);
+    // Move all resources that should be destroyed to temporary container
+    std::copy_if(resources.begin(),
+        resources.end(),
+        std::back_inserter(toBeRemoved),
+        [](auto& resource) { return resource.use_count() == 1; });
     resources.erase(
         std::remove_if(
             resources.begin(),
             resources.end(),
-            [](auto& resource) { return resource.use_count() == 1; }),
+            [toBeRemoved](auto& resource) { return std::find(toBeRemoved.begin(), toBeRemoved.end(), resource) != toBeRemoved.end(); }),
         resources.end());
+    // Unlock mutex so new resources can be put into container owned by ModelManager
+    resourcesLock.unlock();
+    // Temporary container will fall out of scope and therefore deinitialize should be called on every resource inside of it
 }
 
 void ModelManager::join() {
