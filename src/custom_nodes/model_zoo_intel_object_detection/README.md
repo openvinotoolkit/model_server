@@ -68,3 +68,4 @@ Parameters can be defined in pipeline definition in OVMS configuration file. [Re
 | debug  | Defines if debug messages should be displayed | false | |
 | max_output_batch  | Prevents too big batches with incorrect confidence level. It can avoid exceeding RAM resources | 100 | |
 | filter_label_id  | For object detection models with multiple label IDs results, use this parameter to filter the ones with desired ID | | |
+| queue_size  | Defines the amount of preallocated buffers to allocate during library initialize | 24 | |
