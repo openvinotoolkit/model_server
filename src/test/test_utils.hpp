@@ -139,6 +139,7 @@ static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t r
 }
 
 tensorflow::serving::PredictRequest prepareBinaryPredictRequest(const std::string& inputName, const int batchSize = 1);
+tensorflow::serving::PredictRequest prepareBinary4x4PredictRequest(const std::string& inputName, const int batchSize = 1);
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
@@ -147,6 +148,10 @@ void checkDummyResponse(const std::string outputName,
 void checkIncrement4DimResponse(const std::string outputName,
     const std::vector<float>& expectedData,
     tensorflow::serving::PredictRequest& request,
+    tensorflow::serving::PredictResponse& response,
+    const std::vector<size_t>& expectedShape);
+
+void checkIncrement4DimShape(const std::string outputName,
     tensorflow::serving::PredictResponse& response,
     const std::vector<size_t>& expectedShape);
 

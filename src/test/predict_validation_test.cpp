@@ -32,8 +32,8 @@ using ::testing::ReturnRef;
 
 class MockModelInstance : public ovms::ModelInstance {
 public:
-    MockModelInstance(ov::runtime::Core& ieCore_2) :
-        ModelInstance("UNUSED_NAME", 42, ieCore_2) {}
+    MockModelInstance(ov::runtime::Core& ieCore) :
+        ModelInstance("UNUSED_NAME", 42, ieCore) {}
     MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
     MOCK_METHOD(ovms::Dimension, getBatchSize, (), (const, override));
     MOCK_METHOD(const ovms::ModelConfig&, getModelConfig, (), (const, override));
@@ -557,6 +557,84 @@ TEST_F(PredictValidationArbitraryBatchPosition, RequestWrongShapeValuesAuto) {
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
+}
+
+class PredictValidationDynamicModel : public PredictValidation {
+protected:
+    void SetUp() override {
+        PredictValidation::SetUp();
+
+        servableInputs = ovms::tensor_map_t({{"Input_FP32_any_224:512_224:512_3_NHWC",
+                                                 std::make_shared<ovms::TensorInfo>("Input_FP32_any_224:512_224:512_3_NHWC", ovms::Precision::FP32, ovms::Shape{ovms::Dimension::any(), {224, 512}, {224, 512}, 3}, ovms::Layout{"NHWC"})},
+            {"Input_U8_100:200_any_CN",
+                std::make_shared<ovms::TensorInfo>("Input_U8_100:200_any_CN", ovms::Precision::U8, ovms::Shape{{100, 200}, ovms::Dimension::any()}, ovms::Layout{"CN"})}});
+
+        ON_CALL(*instance, getBatchSize()).WillByDefault(Return(ovms::Dimension::any()));
+
+        const ovms::dimension_value_t requestBatchSize = 16;
+        request = preparePredictRequest(
+            {
+                {"Input_FP32_any_224:512_224:512_3_NHWC",
+                    std::tuple<ovms::shape_t, tensorflow::DataType>{{requestBatchSize, 300, 320, 3}, tensorflow::DataType::DT_FLOAT}},
+                {"Input_U8_100:200_any_CN",
+                    std::tuple<ovms::shape_t, tensorflow::DataType>{{101, requestBatchSize}, tensorflow::DataType::DT_UINT8}},
+            });
+    }
+};
+
+TEST_F(PredictValidationDynamicModel, ValidRequest) {
+    auto status = instance->mockValidate(&request);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST_F(PredictValidationDynamicModel, RequestBatchNotInRangeFirstPosition) {
+    auto& input = (*request.mutable_inputs())["Input_FP32_any_224:512_224:512_3_NHWC"];
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(98);  // Should be in 1-5 range
+
+    servableInputs["Input_FP32_any_224:512_224:512_3_NHWC"] = std::make_shared<ovms::TensorInfo>("Input_FP32_any_224:512_224:512_3_NHWC", ovms::Precision::FP32, ovms::Shape{{1, 5}, {224, 512}, {224, 512}, 3}, ovms::Layout{"NHWC"});
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
+}
+
+TEST_F(PredictValidationDynamicModel, RequestDimensionNotInRangeFirstPosition) {
+    auto& input = (*request.mutable_inputs())["Input_U8_100:200_any_CN"];
+    input.mutable_tensor_shape()->mutable_dim(0)->set_size(98);  // Should be in 100-200 range
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(PredictValidationDynamicModel, RequestBatchNotInRangeSecondPosition) {
+    auto& input = (*request.mutable_inputs())["Input_U8_100:200_any_CN"];
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(98);  // Should be in 1-5 range
+
+    servableInputs["Input_U8_100:200_any_CN"] = std::make_shared<ovms::TensorInfo>("Input_U8_100:200_any_CN", ovms::Precision::U8, ovms::Shape{{100, 200}, {1, 5}}, ovms::Layout{"CN"});
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
+}
+
+TEST_F(PredictValidationDynamicModel, RequestDimensionNotInRangeSecondPosition) {
+    auto& input = (*request.mutable_inputs())["Input_FP32_any_224:512_224:512_3_NHWC"];
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(223);  // Should be in 224-512 range
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(PredictValidationDynamicModel, RequestDimensionInRangeWrongTensorContent) {
+    auto& input = (*request.mutable_inputs())["Input_U8_100:200_any_CN"];
+
+    size_t numberOfElements = 1;
+    for (int i = 0; i < input.tensor_shape().dim_size(); i++) {
+        numberOfElements *= input.tensor_shape().dim(i).size();
+    }
+    numberOfElements -= 1;
+    *input.mutable_tensor_content() = std::string(numberOfElements * tensorflow::DataTypeSize(input.dtype()), '1');
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE);
 }
 
 #pragma GCC diagnostic pop

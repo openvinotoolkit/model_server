@@ -1109,7 +1109,9 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                         }
                         if (!it->second->isTensorSpecEqual(*tensorInfo) &&
                             !it->second->isTensorUnspecified()) {
-                            return StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA;
+                            Status status = StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA;
+                            SPDLOG_ERROR("Error validating pipeline: {}", status.string());
+                            return status;
                         }
                     }
                     inputsInfo[alias] = tensorInfo;
