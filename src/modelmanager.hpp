@@ -119,7 +119,7 @@ private:
      * @brief Mutex for blocking concurrent add & remove of resources
      */
     std::shared_mutex resourcesMtx;
-    
+
     /**
      * @brief A JSON configuration filename
      */
