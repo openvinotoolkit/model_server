@@ -63,7 +63,8 @@
                         "box_width_adjustment": "0.1",
                         "box_height_adjustment": "0.0",
                         "rotation_angle_threshold": "8",
-                        "debug": "true"
+                        "debug": "true",
+                        "queue_size": "24"
                     },
                     "inputs": [
                         {"image": {"node_name": "request",

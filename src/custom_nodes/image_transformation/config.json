@@ -28,7 +28,8 @@
                         "scale_values": "[0.003921568627451,0.003921568627451,0.003921568627451]",
                         "mean_values": "[-2,-2,-2]",
 
-                        "debug": "true"
+                        "debug": "true",
+                        "queue_size": "24"
 
                     },
                     "inputs": [

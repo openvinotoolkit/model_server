@@ -57,7 +57,8 @@
                         "convert_to_gray_scale": "true",
                         "confidence_threshold": "0.3",
                         "max_output_batch": "100",
-                        "debug": "true"
+                        "debug": "true",
+                        "queue_size": "4"
                     },
                     "inputs": [
                         {"image": {"node_name": "request",

@@ -30,15 +30,13 @@ using BuffersQueue = ovms::custom_nodes_common::BuffersQueue;
 
 static constexpr const char* INPUT_IMAGE_TENSOR_NAME = "image_in";
 static constexpr const char* INPUT_TENSOR_INFO_NAME = "input_info";
-static constexpr const char* INPUT_IMAGE_INFO_DIMS_NAME = "input_info_dims";
+static constexpr const char* INPUT_IMAGE_INFO_DIMS_NAME = "image_in_info_dims";
 
 static constexpr const char* OUTPUT_TENSOR_NAME = "output";
 static constexpr const char* OUTPUT_IMAGE_TENSOR_NAME = "image_out";
-static constexpr const char* OUTPUT_IMAGE_DIMS_NAME = "image_dims";
+static constexpr const char* OUTPUT_IMAGE_DIMS_NAME = "image_out_dims";
 static constexpr const char* OUTPUT_TENSOR_INFO_NAME = "output_info";
-static constexpr const char* OUTPUT_IMAGE_INFO_DIMS_NAME = "image_info_dims";
-
-static constexpr const int QUEUE_SIZE = 1;
+static constexpr const char* OUTPUT_IMAGE_INFO_DIMS_NAME = "image_out_info_dims";
 
 int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
     // creating InternalManager instance
@@ -50,27 +48,28 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
     uint64_t targetImageColorChannels = targetImageColorOrder == "GRAY" ? 1 : 3;
     int targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
     int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
+    int queue_size = get_int_parameter("queue_size", params, paramsCount, 24);
+
+    // creating BuffersQueues for output tensor
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, 4 * sizeof(CustomNodeTensor), queue_size), "buffer creation failed");
 
     // creating BuffersQueues for output: image_out
     // create buffer unless size of image is unknown or targetImage properties are incorrect
     if (targetImageHeight > 0 || targetImageWidth > 0) {
         uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * targetImageColorChannels;
-        NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_IMAGE_TENSOR_NAME, byteSize, QUEUE_SIZE), "buffer creation failed");
+        NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_IMAGE_TENSOR_NAME, byteSize, queue_size), "buffer creation failed");
     }
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_IMAGE_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
-
-    // creating BuffersQueues for output tensor
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, 4 * sizeof(CustomNodeTensor), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_IMAGE_DIMS_NAME, 4 * sizeof(uint64_t), queue_size), "buffer creation failed");
 
     // creating BuffersQueues for info tensors
-    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_TENSOR_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE), "buffer creation failed");
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_TENSOR_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), queue_size), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), queue_size), "buffer creation failed");
 
     // creating BuffersQueues for inputs dims in getInputsInfo
-    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_IMAGE_INFO_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_IMAGE_INFO_DIMS_NAME, 4 * sizeof(uint64_t), queue_size), "buffer creation failed");
 
     // creating BuffersQueues for outputs dims in getOutputsInfo
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_IMAGE_INFO_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_IMAGE_INFO_DIMS_NAME, 4 * sizeof(uint64_t), queue_size), "buffer creation failed");
 
     *customNodeLibraryInternalManager = internalManager.release();
     return 0;

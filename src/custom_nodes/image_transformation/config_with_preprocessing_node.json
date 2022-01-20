@@ -38,7 +38,8 @@
                         "original_image_layout": "NHWC",
                         "target_image_layout": "NHWC",
 
-                        "debug": "true"
+                        "debug": "true",
+                        "queue_size": "24"
                     },
                     "inputs": [
                         {"image_in": {

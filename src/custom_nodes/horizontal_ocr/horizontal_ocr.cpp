@@ -45,8 +45,6 @@ static constexpr const char* OUTPUT_CONFIDENCE_INFO_DIMS_NAME = "confidence_leve
 static constexpr const char* OUTPUT_TEXT_IMAGES_INFO_DIMS_NAME = "text_images_info_dims";
 static constexpr const char* OUTPUT_COORDINATES_INFO_DIMS_NAME = "text_coordinates_info_dims";
 
-static constexpr const int QUEUE_SIZE = 1;
-
 bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes, const cv::Mat& originalImage, int targetImageHeight, int targetImageWidth, const std::string& targetImageLayout, bool convertToGrayScale, CustomNodeLibraryInternalManager* internalManager) {
     const uint64_t outputBatch = boxes.size();
     int channels = convertToGrayScale ? 1 : 3;
@@ -161,38 +159,39 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
     int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
     NODE_ASSERT(targetImageHeight > 0, "target image height must be larger than 0");
     NODE_ASSERT(targetImageWidth > 0, "target image width must be larger than 0");
+    int queue_size = get_int_parameter("queue_size", params, paramsCount, 4);
+
+    // creating BuffersQueues for output tensor
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, 3 * sizeof(CustomNodeTensor), queue_size), "buffer creation failed");
 
     // creating BuffersQueues for output: text_images
     int channels = convertToGrayScale ? 1 : 3;
     uint64_t textImagesByteSize = sizeof(float) * targetImageHeight * targetImageWidth * channels * maxOutputBatch;
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TEXT_IMAGES_TENSOR_NAME, textImagesByteSize, QUEUE_SIZE), "buffer creation failed");
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TEXT_IMAGES_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TEXT_IMAGES_TENSOR_NAME, textImagesByteSize, queue_size), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TEXT_IMAGES_DIMS_NAME, 5 * sizeof(uint64_t), queue_size), "buffer creation failed");
 
     // creating BuffersQueues for output: coordinates
     uint64_t coordinatesByteSize = sizeof(int32_t) * 4 * maxOutputBatch;
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME, coordinatesByteSize, QUEUE_SIZE), "buffer creation failed");
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_COORDINATES_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_COORDINATES_TENSOR_NAME, coordinatesByteSize, queue_size), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_COORDINATES_DIMS_NAME, 3 * sizeof(uint64_t), queue_size), "buffer creation failed");
 
     // creating BuffersQueues for output: confidence
     uint64_t confidenceByteSize = sizeof(float) * maxOutputBatch;
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCE_TENSOR_NAME, confidenceByteSize, QUEUE_SIZE), "buffer creation failed");
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCE_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
-
-    // creating BuffersQueues for output tensor
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, 3 * sizeof(CustomNodeTensor), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCE_TENSOR_NAME, confidenceByteSize, queue_size), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCE_DIMS_NAME, 3 * sizeof(uint64_t), queue_size), "buffer creation failed");
 
     // creating BuffersQueues for info tensors
-    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_TENSOR_INFO_NAME, 2 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE), "buffer creation failed");
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_TENSOR_INFO_NAME, 2 * sizeof(CustomNodeTensorInfo), queue_size), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 3 * sizeof(CustomNodeTensorInfo), queue_size), "buffer creation failed");
 
     // creating BuffersQueues for inputs dims in getInputsInfo
-    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_IMAGE_INFO_DIMS_NAME, 4 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
-    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_GEOMETRY_INFO_DIMS_NAME, 2 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_IMAGE_INFO_DIMS_NAME, 4 * sizeof(uint64_t), queue_size), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_GEOMETRY_INFO_DIMS_NAME, 2 * sizeof(uint64_t), queue_size), "buffer creation failed");
 
     // creating BuffersQueues for outputs dims in getOutputsInfo
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TEXT_IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_COORDINATES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCE_INFO_DIMS_NAME, 3 * sizeof(uint64_t), QUEUE_SIZE), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TEXT_IMAGES_INFO_DIMS_NAME, 5 * sizeof(uint64_t), queue_size), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_COORDINATES_INFO_DIMS_NAME, 3 * sizeof(uint64_t), queue_size), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_CONFIDENCE_INFO_DIMS_NAME, 3 * sizeof(uint64_t), queue_size), "buffer creation failed");
 
     *customNodeLibraryInternalManager = internalManager.release();
     return 0;
