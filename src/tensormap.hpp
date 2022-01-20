@@ -23,6 +23,6 @@
 
 namespace ovms {
 
-using TensorMap = std::unordered_map<std::string, std::shared_ptr<ov::runtime::Tensor>>;
+using TensorMap = std::unordered_map<std::string, ov::runtime::Tensor>;
 
 }  // namespace ovms

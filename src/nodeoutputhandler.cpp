@@ -16,5 +16,5 @@
 #include "nodeoutputhandler.hpp"
 
 namespace ovms {
-void NodeOutputHandler::setInput(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& tensorPtr) {}
+void NodeOutputHandler::setInput(const std::string& name, ov::runtime::Tensor& tensorPtr) {}
 }  // namespace ovms

@@ -79,7 +79,7 @@ Status CustomNode::fetchResults(TensorMap& outputs, session_key_t sessionKey) {
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Getting custom node output tensor with name: {}",
                 getName(), sessionKey, realOutputName);
 
-            std::shared_ptr<ov::runtime::Tensor> resultTensor;
+            ov::runtime::Tensor resultTensor;
             auto status = session.fetchResult(realOutputName, resultTensor);
             if (!status.ok()) {
                 SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} Custom node output with name {} is missing",

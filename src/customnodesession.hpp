@@ -48,13 +48,13 @@ public:
         int parametersCount,
         void* customNodeLibraryInternalManager);
 
-    Status fetchResult(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& resultTensor);
+    Status fetchResult(const std::string& name, ov::runtime::Tensor& resultTensor);
 
     void clearInputs();
     void release() override;
 
 private:
     static void releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibrary& library, void* customNodeLibraryInternalManager);
-    Status createTensor(const struct CustomNodeTensor* tensor, std::shared_ptr<ov::runtime::Tensor>& resultTensor, const NodeLibrary& library, void* customNodeLibraryInternalManager);
+    Status createTensor(const struct CustomNodeTensor* tensor, ov::runtime::Tensor& resultTensor, const NodeLibrary& library, void* customNodeLibraryInternalManager);
 };
 }  // namespace ovms

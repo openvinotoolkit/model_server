@@ -112,7 +112,7 @@ class SerializeTFTensorProto : public TensorflowGRPCPredict {
 public:
     std::tuple<
         std::shared_ptr<ovms::TensorInfo>,
-        std::shared_ptr<ov::runtime::Tensor>>
+        ov::runtime::Tensor>
     getInputs(ovms::Precision precision) {
         std::shared_ptr<ovms::TensorInfo> servableOutput =
             std::make_shared<ovms::TensorInfo>(
@@ -120,7 +120,7 @@ public:
                 precision,
                 ovms::Shape{2},
                 Layout{"C"});
-        std::shared_ptr<ov::runtime::Tensor> mockTensor = std::make_shared<ov::runtime::Tensor>(
+        ov::runtime::Tensor mockTensor = ov::runtime::Tensor(
             ovmsPrecisionToIE2Precision(precision), ov::Shape{2});
         return std::make_tuple(servableOutput, mockTensor);
     }
@@ -159,11 +159,11 @@ TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
-    std::shared_ptr<ov::runtime::Tensor> mockTensor = std::get<1>(inputs);
+    ov::runtime::Tensor mockTensor = std::get<1>(inputs);
     // EXPECT_CALL(*mockTensor, get_byte_size()); // TODO: Mock it properly with templates
     auto status = serializeTensorToTensorProto(responseOutput,
         std::get<0>(inputs),
-        *mockTensor);
+        mockTensor);
     EXPECT_TRUE(status.ok())
         << "Supported OV serialization precision"
         << toString(testedPrecision)
@@ -178,7 +178,7 @@ TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldSucceedForPreci
     TensorProto responseOutput;
     auto status = serializeTensorToTensorProto(responseOutput,
         std::get<0>(inputs),
-        *std::get<1>(inputs));
+        std::get<1>(inputs));
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION)
         << "Unsupported OV serialization precision"
         << toString(testedPrecision)

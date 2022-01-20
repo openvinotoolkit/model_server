@@ -87,11 +87,11 @@ std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const Ten
         }
         const auto& dims = dimsIt->second;  // TODO compile time asser uint64_t == size_t
         inputTensors[i].name = static_cast<const char*>(name.c_str());
-        inputTensors[i].data = static_cast<uint8_t*>(tensor->data());
-        inputTensors[i].dataBytes = static_cast<uint64_t>(tensor->get_byte_size());
+        inputTensors[i].data = static_cast<uint8_t*>(tensor.data());
+        inputTensors[i].dataBytes = static_cast<uint64_t>(tensor.get_byte_size());
         inputTensors[i].dims = const_cast<uint64_t*>(dims.data());
         inputTensors[i].dimsCount = static_cast<uint64_t>(dims.size());
-        inputTensors[i].precision = toCustomNodeTensorPrecision(tensor->get_element_type());
+        inputTensors[i].precision = toCustomNodeTensorPrecision(tensor.get_element_type());
         i++;
     }
     return inputTensors;
