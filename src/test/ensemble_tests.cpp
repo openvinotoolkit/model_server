@@ -919,8 +919,8 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithShapeRange) {
     managerWithDynamicShapeDummyModel.reloadModelWithVersions(config);
 
     // Configure pipeline
-    dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName, ovms::Precision::FP32, ovms::Shape{1, ovms::Dimension::any()}, Layout{"NC"});
-    dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName, ovms::Precision::FP32, ovms::Shape{1, ovms::Dimension::any()}, Layout{"NC"});
+    dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName, ovms::Precision::FP32, ovms::Shape{1, {1, 5}}, Layout{"NC"});
+    dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName, ovms::Precision::FP32, ovms::Shape{1, {1, 5}}, Layout{"NC"});
     {
         const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
         auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);

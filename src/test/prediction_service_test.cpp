@@ -1061,7 +1061,7 @@ TEST_F(TestPredict, PerformInferenceDummyBatchSizeAny) {
 
     tensorflow::serving::PredictResponse response;
 
-    for (int i = 1; i <= 100; i++) {
+    for (size_t i : {1, 3, 5, 7, 11, 17, 21, 57, 99}) {
         ASSERT_EQ(performInferenceWithShape(response, {i, 10}), ovms::StatusCode::OK);
         checkOutputShape(response, {i, 10}, DUMMY_MODEL_OUTPUT_NAME);
     }
