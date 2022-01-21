@@ -632,11 +632,11 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             config.getTargetDevice());
         return status;
     }
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Plugin config for device {}:", targetDevice);
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Plugin config for device: {}", targetDevice);
     for (const auto pair : pluginConfig) {
         const auto key = pair.first;
         const auto value = pair.second;
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key:{}; value:{};", key, value);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, value);
     }
 
     const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
@@ -651,7 +651,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}", targetDevice, supportedConfigKey);
         return StatusCode::OK;
     }
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging model:{}; version {};target device: {}; CompiledModel configuration", getName(), getVersion(), targetDevice);
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging model:{}; version: {};target device: {}; CompiledModel configuration", getName(), getVersion(), targetDevice);
     for (auto& key : supportedConfigKeys) {
         std::string value;
         try {
@@ -664,7 +664,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel config key: {}", targetDevice, key);
             continue;
         }
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}; version: {}; target device: {}, CompiledModel config key: {}, value :{}", getName(), getVersion(), targetDevice, key, value);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}; version: {}; target device: {}, CompiledModel config key: {}, value: {}", getName(), getVersion(), targetDevice, key, value);
     }
     return StatusCode::OK;
 }
