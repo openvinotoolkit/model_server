@@ -254,13 +254,13 @@ TEST(RestParserColumn, AllowsDifferent0thDimension) {
 }
 
 TEST(RestParserColumn, ParseUint8) {
-    std::vector<RestParser> parsers{RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::U8))};
+    std::vector<RestParser> parsers{RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U8))};
     for (RestParser& parser : parsers) {
         ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[0,5,15,255]]]}})"), StatusCode::OK);
         EXPECT_THAT(asVector<uint8_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, 5, 15, 255));
     }
 
-    parsers = std::vector<RestParser>{RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::U8))};
+    parsers = std::vector<RestParser>{RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U8))};
     for (RestParser& parser : parsers) {
         ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[0.0,5.0,15.0,255.0]]]}})"), StatusCode::OK);
         EXPECT_THAT(asVector<uint8_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, 5, 15, 255));
@@ -268,13 +268,13 @@ TEST(RestParserColumn, ParseUint8) {
 }
 
 TEST(RestParserColumn, ParseInt8) {
-    std::vector<RestParser> parsers{RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::I8))};
+    std::vector<RestParser> parsers{RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I8))};
     for (RestParser& parser : parsers) {
         ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[0,-5,127,-128]]]}})"), StatusCode::OK);
         EXPECT_THAT(asVector<int8_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 127, -128));
     }
 
-    parsers = std::vector<RestParser>{RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::I8))};
+    parsers = std::vector<RestParser>{RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I8))};
     for (RestParser& parser : parsers) {
         ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[0.0,-5.0,127.0,-128.0]]]}})"), StatusCode::OK);
         EXPECT_THAT(asVector<int8_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 127, -128));
@@ -282,13 +282,13 @@ TEST(RestParserColumn, ParseInt8) {
 }
 
 TEST(RestParserColumn, ParseUint16) {
-    std::vector<RestParser> parsers{RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::U16))};
+    std::vector<RestParser> parsers{RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U16))};
     for (RestParser& parser : parsers) {
         ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[0,5,128,65535]]]}})"), StatusCode::OK);
         EXPECT_THAT(asVector(parser.getProto().mutable_inputs()->at("i").mutable_int_val()), ElementsAre(0, 5, 128, 65535));
     }
 
-    parsers = std::vector<RestParser>{RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::U16))};
+    parsers = std::vector<RestParser>{RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U16))};
     for (RestParser& parser : parsers) {
         ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[0.0,5.0,128.0,65535.0]]]}})"), StatusCode::OK);
         EXPECT_THAT(asVector(parser.getProto().mutable_inputs()->at("i").mutable_int_val()), ElementsAre(0, 5, 128, 65535));
@@ -296,13 +296,13 @@ TEST(RestParserColumn, ParseUint16) {
 }
 
 TEST(RestParserColumn, ParseInt16) {
-    std::vector<RestParser> parsers{RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::I16))};
+    std::vector<RestParser> parsers{RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I16))};
     for (RestParser& parser : parsers) {
         ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[0,-5,32768,-32767]]]}})"), StatusCode::OK);
         EXPECT_THAT(asVector<int16_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 32768, -32767));
     }
 
-    parsers = std::vector<RestParser>{RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::I16))};
+    parsers = std::vector<RestParser>{RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I16))};
     for (RestParser& parser : parsers) {
         ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[0.0,-5.0,32768.0,-32767.0]]]}})"), StatusCode::OK);
         EXPECT_THAT(asVector<int16_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 32768, -32767));
@@ -310,25 +310,25 @@ TEST(RestParserColumn, ParseInt16) {
 }
 
 TEST(RestParserColumn, ParseInt32) {
-    RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::I32));
+    RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I32));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[0,-5,2147483648,-2147483647]]]}})"), StatusCode::OK);
     EXPECT_THAT(asVector<int32_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 2147483648, -2147483647));
 
-    parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::I32));
+    parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I32));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[0,-5,2147483648,-2147483647]]]}})"), StatusCode::OK);
     EXPECT_THAT(asVector<int32_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 2147483648, -2147483647));
 }
 
 TEST(RestParserColumn, ParseUint64) {
-    std::vector<RestParser> parsers{RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::U64))};
+    std::vector<RestParser> parsers{RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U64))};
     for (RestParser& parser : parsers) {
         ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[0,5,128,18446744073709551615]]]}})"), StatusCode::OK);
         EXPECT_THAT(asVector<uint64_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, 5, 128, 18446744073709551615U));
     }
 
-    parsers = std::vector<RestParser>{RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::U64))};
+    parsers = std::vector<RestParser>{RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::U64))};
     for (RestParser& parser : parsers) {
         ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[0.0,5.0,128.0,555222.0]]]}})"), StatusCode::OK);
         EXPECT_THAT(asVector<uint64_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, 5, 128, 555222));  // Can't looselessly cast large double to int64
@@ -336,50 +336,50 @@ TEST(RestParserColumn, ParseUint64) {
 }
 
 TEST(RestParserColumn, ParseInt64) {
-    RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::I64));
+    RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I64));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[0,-5,5522,-9223372036854775807]]]}})"), StatusCode::OK);
     EXPECT_THAT(asVector<int64_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 5522, -9223372036854775807));
 
-    parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::I64));
+    parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::I64));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[0.0,-5.0,5522.0,-55333.0]]]}})"), StatusCode::OK);
     EXPECT_THAT(asVector<int64_t>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(0, -5, 5522, -55333));  // Can't looselessly cast double to int64
 }
 
 TEST(RestParserColumn, ParseFloat) {
-    RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::FP32));
+    RestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::FP32));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[-5.0, 0.0, -4.0, 155234.0]]]}})"), StatusCode::OK);
     EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(-5.0, 0.0, -4.0, 155234.0));
 
-    parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::FP32));
+    parser = RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::FP32));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[-5.12, 0.4344, -4.521, 155234.221]]]}})"), StatusCode::OK);
     EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(-5.12, 0.4344, -4.521, 155234.221));
 }
 
 TEST(RestParserColumn, ParseHalf) {
-    std::vector<RestParser> parsers{RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::FP16))};
+    std::vector<RestParser> parsers{RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::FP16))};
     for (RestParser& parser : parsers) {
         ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[-5, 0, -4, 155234]]]}})"), StatusCode::OK);
     }
 
-    parsers = std::vector<RestParser>{RestParser(prepareTensors({{"i", {1, 1, 4}}}, InferenceEngine::Precision::FP16))};
+    parsers = std::vector<RestParser>{RestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::FP16))};
     for (RestParser& parser : parsers) {
         ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[-5.1222, 0.434422, -4.52122, 155234.22122]]]}})"), StatusCode::OK);
     }
 }
 
 TEST(RestParserColumn, InputsNotAnObject) {
-    RestParser parser(prepareTensors({}, InferenceEngine::Precision::FP16));
+    RestParser parser(prepareTensors({}, ovms::Precision::FP16));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":"","inputs":"string"})"), StatusCode::REST_INPUTS_NOT_AN_OBJECT);
     EXPECT_EQ(parser.parse(R"({"signature_name":"","inputs":5})"), StatusCode::REST_INPUTS_NOT_AN_OBJECT);
 }
 
 TEST(RestParserColumn, NoInputsFound) {
-    RestParser parser(prepareTensors({}, InferenceEngine::Precision::FP16));
+    RestParser parser(prepareTensors({}, ovms::Precision::FP16));
 
     EXPECT_EQ(parser.parse(R"({"signature_name":"","inputs":{}})"), StatusCode::REST_NO_INPUTS_FOUND);
 }
@@ -597,7 +597,7 @@ TEST(RestParserColumn, InstancesShapeDiffer_3) {
 }
 
 TEST(RestParserColumn, RemoveUnnecessaryInputs) {
-    RestParser parser(prepareTensors({{"i", {1, 1}}, {"j", {1, 1}}, {"k", {1, 1}}, {"l", {1, 1}}}, InferenceEngine::Precision::FP16));
+    RestParser parser(prepareTensors({{"i", {1, 1}}, {"j", {1, 1}}, {"k", {1, 1}}, {"l", {1, 1}}}, ovms::Precision::FP16));
 
     ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{
         "k":[[155.0]], "l": [[1.0]]

@@ -61,17 +61,27 @@ SEPARATOR = "\n"
 def main():
     contents = [LICENCE_PREAMBULE, AUTOGEN_WARNING, EXTERNAL_IMPORTS]
 
-    import_template = "from {} import {} as {}"
-    imports = ["# Exported API functions\n"]
+    import_functions_template = "from {} import {} as {}"
+    function_imports = ["# Exported API functions\n"]
     bindings_template = "    {} = {}"
     namespaces = ["# Namespaces bindings\n"]
+
+    errors = ["ModelServerError", "ModelNotFoundError", "InvalidInputError", "BadResponseError"]
+    import_errors_template = "from ovmsclient.tfs_compat.base.errors import {} # noqa"
+    errors_imports = ["# Exported errors\n"]
+
+    for error in errors:
+        errors_imports.append(import_errors_template.format(error))
+    errors_imports.append(SEPARATOR)
 
     for namespace_name, functions in NAME_TO_SYMBOL_MAPPING.items():
         if namespace_name == MAIN_NAMESPACE_NAME:
             for main_function_name, function in functions.items():
                 _, function_impl = function
-                imports.append(import_template.format(function_impl.__module__, function_impl.__name__, main_function_name))
-            imports.append(SEPARATOR)
+                function_imports.append(import_functions_template.format(function_impl.__module__,
+                                                                         function_impl.__name__,
+                                                                         main_function_name))
+            function_imports.append(SEPARATOR)
         else:
             namespace = ["class {}(SimpleNamespace):\n".format(namespace_name)]
             bindings = []
@@ -81,7 +91,7 @@ def main():
             namespace.extend([*bindings, SEPARATOR])
             namespaces.extend(namespace)
 
-    contents.extend([*imports, *namespaces])
+    contents.extend([*errors_imports, *function_imports, *namespaces])
     contents_str = SEPARATOR.join(contents)
     contents_str = contents_str[:-1] # exclude last newline sign to avoid double new line at the end of the file
 

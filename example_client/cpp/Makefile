@@ -19,4 +19,4 @@
 default: docker_build
 
 docker_build:
-	@docker build -t ovms_cpp_clients:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} .
+	@docker build -t ovms_cpp_clients:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} .

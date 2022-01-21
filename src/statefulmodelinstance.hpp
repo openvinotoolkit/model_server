@@ -33,7 +33,7 @@ public:
     /**
          * @brief A default constructor
          */
-    StatefulModelInstance(const std::string& name, model_version_t version, InferenceEngine::Core& ieCore, GlobalSequencesViewer* globalSequencesViewer) :
+    StatefulModelInstance(const std::string& name, model_version_t version, ov::runtime::Core& ieCore, GlobalSequencesViewer* globalSequencesViewer) :
         ModelInstance(name, version, ieCore),
         globalSequencesViewer(globalSequencesViewer) {
         sequenceManager = std::make_shared<SequenceManager>(config.getMaxSequenceNumber(), name, version);
@@ -53,7 +53,7 @@ public:
 
         Always returns StatusCode::OK
     */
-    const Status preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
+    const Status preInferenceProcessing(ov::runtime::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
 
     /*
     Performs pre inference operations:
@@ -64,7 +64,7 @@ public:
         Always returns StatusCode::OK
     */
     const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response,
-        InferenceEngine::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
+        ov::runtime::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
 
     Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,
@@ -91,7 +91,7 @@ protected:
 
     Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
 
-    Status loadOVExecutableNetwork(const ModelConfig& config) override;
+    Status loadOVCompiledModel(const ModelConfig& config) override;
 
 private:
     const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec);

@@ -22,18 +22,20 @@
 #include <utility>
 #include <vector>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #include "aliases.hpp"
-#include "blobmap.hpp"
 #include "nodesession.hpp"
 #include "nodesessionresult.hpp"
 #include "pipelineeventqueue.hpp"
+#include "precision.hpp"
+#include "shape.hpp"
 #include "status.hpp"
+#include "tensormap.hpp"
 
 namespace ovms {
 
-using BlobNames = std::vector<std::string>;
+using TensorNames = std::vector<std::string>;
 using session_key_t = std::string;
 
 class Node {
@@ -43,11 +45,11 @@ protected:
     std::vector<std::reference_wrapper<Node>> previous;
     std::vector<std::reference_wrapper<Node>> next;
 
-    // Blobs ready and waiting for execution
+    // Tensors ready and waiting for execution
     std::unordered_map<session_key_t, std::unique_ptr<NodeSession>> nodeSessions;
 
     // Input/Output name mapping and list of required inputs from previous nodes
-    std::unordered_map<std::string, Aliases> blobNamesMapping;
+    std::unordered_map<std::string, Aliases> tensorNamesMapping;
 
     const std::optional<uint32_t> demultiplexCount;
     const std::optional<std::set<std::string>> gatherFrom;
@@ -65,21 +67,21 @@ public:
 protected:
     virtual Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) = 0;
     Status demultiplyOutputs(SessionResults& nodeSessionOutputs);
-    virtual Status createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, const InferenceEngine::TensorDesc& dividedBlobDesc, InferenceEngine::Blob::Ptr blob, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName);
+    virtual Status createShardedTensor(std::shared_ptr<ov::runtime::Tensor>& dividedTensor, Precision precision, const shape_t& shape, std::shared_ptr<ov::runtime::Tensor> tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
 
 public:
-    Status setInputs(const Node& dependency, BlobMap& inputs, NodeSessionMetadata& metadata);
+    Status setInputs(const Node& dependency, TensorMap& inputs, NodeSessionMetadata& metadata);
     Status setInputs(const Node& dependency, SessionResults& inputs);
 
-    virtual void addDependency(Node& node, const Aliases& blobNamesMapping) {
+    virtual void addDependency(Node& node, const Aliases& tensorNamesMapping) {
         this->previous.emplace_back(node);
-        this->blobNamesMapping[node.getName()] = blobNamesMapping;
+        this->tensorNamesMapping[node.getName()] = tensorNamesMapping;
     }
 
     virtual void addDependant(Node& node) { this->next.emplace_back(node); }
 
     const Aliases& getMappingByDependency(const Node& dependency) {
-        return blobNamesMapping.at(dependency.getName());
+        return tensorNamesMapping.at(dependency.getName());
     }
 
     std::vector<session_key_t> getReadySessions() const;

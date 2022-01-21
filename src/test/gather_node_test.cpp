@@ -51,11 +51,9 @@ TEST_F(GatherNodeInputHandlerTest, ThreePredecessorNodesWithSubsessionSize2) {
     const uint32_t shardsCount = 2;  // subsessionSize/demultiplyCount
     std::vector<std::string> inputNames{"a", "b"};
     std::vector<std::vector<size_t>> shapes{{1, 10}, {1, 2}};
-    std::vector<InferenceEngine::Precision> precisions{InferenceEngine::Precision::FP32, InferenceEngine::Precision::FP32};
-    std::vector<InferenceEngine::Layout> layouts{InferenceEngine::Layout::NC, InferenceEngine::Layout::NC};
-    std::vector<std::vector<float>> blobsData{{-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67}, {1., 3}};
-    std::vector<InferenceEngine::TensorDesc> descs{{precisions[0], shapes[0], layouts[0]}, {precisions[1], shapes[1], layouts[1]}};
-    std::vector<InferenceEngine::Blob::Ptr> inputBlobs{InferenceEngine::make_shared_blob<float>(descs[0], blobsData[0].data()), InferenceEngine::make_shared_blob<float>(descs[1], blobsData[1].data())};
+    std::vector<ov::element::Type_t> precisions{ov::element::Type_t::f32, ov::element::Type_t::f32};
+    std::vector<std::vector<float>> tensorsData{{-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67}, {1., 3}};
+    std::vector<std::shared_ptr<ov::runtime::Tensor>> inputTensors{createSharedTensor(precisions[0], shapes[0], tensorsData[0].data()), createSharedTensor(precisions[1], shapes[1], tensorsData[1].data())};
     NodeSessionMetadata meta;
     const std::string demultiplexerName = "NOT_IMPORTANT_NAME";
     auto newMeta = meta.generateSubsessions(demultiplexerName, shardsCount)[0];
@@ -64,26 +62,26 @@ TEST_F(GatherNodeInputHandlerTest, ThreePredecessorNodesWithSubsessionSize2) {
     for (session_id_t j = 0; j < shardsCount; ++j) {
         for (size_t i = 0; i < inputNames.size(); ++i) {
             EXPECT_FALSE(gInputHandler.isReady());
-            gInputHandler.setInput(inputNames[i], inputBlobs[i], j);
+            gInputHandler.setInput(inputNames[i], inputTensors[i], j);
             // each input comming from different node so we call notify each time
             ASSERT_EQ(gInputHandler.notifyFinishedDependency(), StatusCode::OK);
         }
     }
     EXPECT_TRUE(gInputHandler.isReady());
-    const auto blobMap = gInputHandler.getInputs();
-    EXPECT_EQ(blobMap.size(), inputNames.size());
+    const auto tensorMap = gInputHandler.getInputs();
+    EXPECT_EQ(tensorMap.size(), inputNames.size());
 
-    std::vector<std::vector<float>> resultBlobsData(inputNames.size());
+    std::vector<std::vector<float>> resultTensorsData(inputNames.size());
     for (size_t i = 0; i < inputNames.size(); ++i) {
-        resultBlobsData[i].reserve(blobsData[i].size() * shardsCount);
-        std::copy(blobsData[i].begin(), blobsData[i].end(), resultBlobsData[i].begin());
-        std::copy(blobsData[i].begin(), blobsData[i].end(), resultBlobsData[i].begin() + blobsData[i].size());
+        resultTensorsData[i].reserve(tensorsData[i].size() * shardsCount);
+        std::copy(tensorsData[i].begin(), tensorsData[i].end(), resultTensorsData[i].begin());
+        std::copy(tensorsData[i].begin(), tensorsData[i].end(), resultTensorsData[i].begin() + tensorsData[i].size());
     }
     for (size_t i = 0; i < inputNames.size(); ++i) {
-        const auto& blob = blobMap.at(inputNames[i]);
-        EXPECT_EQ(blob->size(), blobsData[i].size() * shardsCount);
-        EXPECT_THAT(blob->getTensorDesc().getDims(), ElementsAre(shardsCount, 1, blobsData[i].size()));
-        EXPECT_EQ(std::memcmp((char*)((const void*)InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap()), resultBlobsData[i].data(), resultBlobsData[i].size() * sizeof(float)), 0);
+        const auto& tensor = tensorMap.at(inputNames[i]);
+        EXPECT_EQ(tensor->get_size(), tensorsData[i].size() * shardsCount);
+        EXPECT_THAT(tensor->get_shape(), ElementsAre(shardsCount, 1, tensorsData[i].size()));
+        EXPECT_EQ(std::memcmp((char*)((const void*)(tensor->data())), resultTensorsData[i].data(), resultTensorsData[i].size() * sizeof(float)), 0);
     }
 }
 
@@ -91,8 +89,7 @@ TEST_F(GatherNodeInputHandlerTest, GatheringOnTwoDemultiplexersAtOnce) {
     const std::string inputName{"a"};
     const size_t elementCountPerShard = 10;
     std::vector<size_t> shape{1, elementCountPerShard};
-    InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
-    InferenceEngine::Layout layout{InferenceEngine::Layout::NC};
+    ov::element::Type_t precision{ov::element::Type_t::f32};
     const std::vector<session_id_t> demultiplyCounts{3, 5};  // 3 for first demultiply, 5 for second
     const std::vector<std::string> demultiplexerNodeNames{"firstDemultiplexer", "secondDemultiplexer"};
     NodeSessionMetadata meta;
@@ -103,53 +100,48 @@ TEST_F(GatherNodeInputHandlerTest, GatheringOnTwoDemultiplexersAtOnce) {
     }
 
     const size_t numberOfShards = std::accumulate(demultiplyCounts.begin(), demultiplyCounts.end(), 1, std::multiplies<size_t>());
-    const size_t numberOfElementsInGatheredBlob = elementCountPerShard * numberOfShards;
-    std::vector<float> blobsData(numberOfElementsInGatheredBlob);
-    std::iota(blobsData.begin(), blobsData.end(), 0.1);
-    InferenceEngine::TensorDesc desc{precision, shape, layout};
-    std::vector<InferenceEngine::Blob::Ptr> inputBlobs(numberOfShards);
+    const size_t numberOfElementsInGatheredTensor = elementCountPerShard * numberOfShards;
+    std::vector<float> tensorsData(numberOfElementsInGatheredTensor);
+    std::iota(tensorsData.begin(), tensorsData.end(), 0.1);
+    std::vector<ov::runtime::Tensor> inputTensors(numberOfShards);
     GatherNodeInputHandler gInputHandler(1, {demultiplexerNodeNames, demultiplyCounts});
     Status status;
     for (size_t i = 0; i < demultiplyCounts[0]; ++i) {
         for (size_t j = 0; j < demultiplyCounts[1]; ++j) {
             auto index = i * demultiplyCounts[1] + j;
-            InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<float>(desc, blobsData.data() + index * elementCountPerShard);
+            auto tensor = createSharedTensor(precision, shape, (void*)(tensorsData.data() + index * elementCountPerShard));
             ASSERT_FALSE(gInputHandler.isReady());
             SPDLOG_DEBUG("i: {}, j: {}, metadatas.size: {}, metadatas[i].size() :{}", i, j, metadatas.size(), metadatas[i].size());
             auto shardId = metadatas[i][j].getShardId({demultiplexerNodeNames[0], demultiplexerNodeNames[1]});
             status = gInputHandler.setInput(inputName,
-                blob,
+                tensor,
                 shardId);
             ASSERT_EQ(status, StatusCode::OK) << status.string();
             gInputHandler.notifyFinishedDependency();
         }
     }
     ASSERT_TRUE(gInputHandler.isReady());
-    const auto blobMap = gInputHandler.getInputs();
-    ASSERT_EQ(blobMap.size(), 1);
-    const auto& blob = blobMap.at(inputName);
-    EXPECT_EQ(blob->size(), blobsData.size());
-    EXPECT_THAT(blob->getTensorDesc().getDims(), ElementsAre(demultiplyCounts[0], demultiplyCounts[1], 1, elementCountPerShard));
-    EXPECT_EQ(std::memcmp((char*)((const void*)InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap()), blobsData.data(), blobsData.size() * sizeof(float)), 0);
+    const auto tensorMap = gInputHandler.getInputs();
+    ASSERT_EQ(tensorMap.size(), 1);
+    const auto& tensor = tensorMap.at(inputName);
+    EXPECT_EQ(tensor->get_size(), tensorsData.size());
+    EXPECT_THAT(tensor->get_shape(), ElementsAre(demultiplyCounts[0], demultiplyCounts[1], 1, elementCountPerShard));
+    EXPECT_EQ(std::memcmp((char*)((const void*)(tensor->data())), tensorsData.data(), tensorsData.size() * sizeof(float)), 0);
 }
 
 TEST_F(GatherNodeInputHandlerTest, SetInputsWithShardsHavingDifferentShapesShouldReturnErrorWhenGathering) {
-    // simulate all 3 inputs comming from different predecessor nodes
-    // with session demultiplexed to 2 shards
     const std::string inputNames{"a"};
     std::vector<std::vector<size_t>> shapes{{1, 10}, {1, 9}};
-    InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
-    InferenceEngine::Layout layout{InferenceEngine::Layout::NC};
-    std::vector<float> blobsData{-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67};
-    std::vector<InferenceEngine::TensorDesc> descs{{precision, shapes[0], layout}, {precision, shapes[1], layout}};
-    std::vector<InferenceEngine::Blob::Ptr> inputBlobs{InferenceEngine::make_shared_blob<float>(descs[0], blobsData.data()), InferenceEngine::make_shared_blob<float>(descs[1], blobsData.data())};
+    ov::element::Type_t precision{ov::element::Type_t::f32};
+    std::vector<float> tensorsData{-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67};
+    std::vector<std::shared_ptr<ov::runtime::Tensor>> inputTensors{createSharedTensor(precision, shapes[0], tensorsData.data()), createSharedTensor(precision, shapes[1], tensorsData.data())};
     const session_id_t shardsCount = 2;  // subsessionSize/demultiplyCount
     CollapseDetails collapsingDetails{{std::string("NOT_IMPORTANT_DEMULTIPLEXER_NAME")}, {shardsCount}};
     GatherNodeInputHandler gInputHandler(inputNames.size(), collapsingDetails);
     Status status;
     for (session_id_t j = 0; j < shardsCount; ++j) {
         EXPECT_FALSE(gInputHandler.isReady());
-        status = gInputHandler.setInput(inputNames, inputBlobs[j], j);
+        status = gInputHandler.setInput(inputNames, inputTensors[j], j);
         EXPECT_EQ(status, StatusCode::OK) << status.string();
         // each input comming from different node so we call notify each time
         status = gInputHandler.notifyFinishedDependency();
@@ -233,18 +225,16 @@ TEST_F(GatherNodeTest, FullFlowGatherInNonExitNode) {
     DLNodeWithGetInputsExposed gather2DummyNode{"nodeGather", "dummy2bs", 1, manager, {}, gatherFrom};
     Pipeline::connect(oneDummyNode1, gather2DummyNode, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
 
-    // prepare blobs to be gathered
+    // prepare tensors to be gathered
     const std::vector<size_t> shape{1, 10};
-    const InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
-    const InferenceEngine::Layout layout{InferenceEngine::Layout::NC};
+    const ov::element::Type_t precision{ov::element::Type_t::f32};
     std::vector<float> nodeRawResults1{-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67};
     std::vector<float> nodeRawResults2{-13, -4.4, 15, 2, 0.3, -42, 13, 0.1, 91, 21.67};
-    const InferenceEngine::TensorDesc desc{precision, shape, layout};
-    InferenceEngine::Blob::Ptr originalBlob1 = InferenceEngine::make_shared_blob<float>(desc, nodeRawResults1.data());
-    InferenceEngine::Blob::Ptr originalBlob2 = InferenceEngine::make_shared_blob<float>(desc, nodeRawResults2.data());
+    auto originalTensor1 = createSharedTensor(precision, shape, nodeRawResults1.data());
+    auto originalTensor2 = createSharedTensor(precision, shape, nodeRawResults2.data());
     // prepare session results
-    BlobMap dummy1Result{{DUMMY_MODEL_OUTPUT_NAME, originalBlob1}};
-    BlobMap dummy2Result{{DUMMY_MODEL_OUTPUT_NAME, originalBlob2}};
+    TensorMap dummy1Result{{DUMMY_MODEL_OUTPUT_NAME, originalTensor1}};
+    TensorMap dummy2Result{{DUMMY_MODEL_OUTPUT_NAME, originalTensor2}};
     NodeSessionMetadata meta;
     const session_id_t shardsCount = 2;
     auto subsessions = meta.generateSubsessions(demultiplexerNodeName, shardsCount);
@@ -261,10 +251,10 @@ TEST_F(GatherNodeTest, FullFlowGatherInNonExitNode) {
     const auto& inputs = gather2DummyNode.getInputsFromInputHandler(subsessions[0].getSessionKey({demultiplexerNodeName}));
     EXPECT_EQ(inputs.size(), 1);
     ASSERT_NE(inputs.find(DUMMY_MODEL_INPUT_NAME), inputs.end());
-    const auto& gatheredBlob = inputs.at(DUMMY_MODEL_INPUT_NAME);
-    EXPECT_EQ(gatheredBlob->size(), nodeRawResults1.size() * shardsCount);
-    std::vector<float> resultBlobData(nodeRawResults1.size() * shardsCount);
-    std::copy(nodeRawResults1.begin(), nodeRawResults1.end(), resultBlobData.begin());
-    std::copy(nodeRawResults2.begin(), nodeRawResults2.end(), resultBlobData.begin() + nodeRawResults1.size());
-    EXPECT_EQ(memcmp((char*)((const void*)InferenceEngine::as<InferenceEngine::MemoryBlob>(gatheredBlob)->rmap()), resultBlobData.data(), resultBlobData.size() * sizeof(float)), 0);
+    const auto& gatheredTensor = inputs.at(DUMMY_MODEL_INPUT_NAME);
+    EXPECT_EQ(gatheredTensor->get_size(), nodeRawResults1.size() * shardsCount);
+    std::vector<float> resultTensorData(nodeRawResults1.size() * shardsCount);
+    std::copy(nodeRawResults1.begin(), nodeRawResults1.end(), resultTensorData.begin());
+    std::copy(nodeRawResults2.begin(), nodeRawResults2.end(), resultTensorData.begin() + nodeRawResults1.size());
+    EXPECT_EQ(memcmp((char*)((const void*)gatheredTensor->data()), resultTensorData.data(), resultTensorData.size() * sizeof(float)), 0);
 }

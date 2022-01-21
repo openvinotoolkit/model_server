@@ -1,52 +1,43 @@
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L212"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L124"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `make_grpc_client`
 
 ```python
-make_grpc_client(config)
+make_grpc_client(url, tls_config)
 ```
-
-**Aliases:**
-- `make_client` in [`grpcclient`](grpcclient.md) namespace
-
 
 **Description**:
 
-Creates `GrpcClient` object. 
+Creates [`GrpcClient`](grpc_client.md) object. 
 
 
 **Args:**
  
- - <b>`config`</b>:  Python dictionary with client configuration. The accepted format is: 
+ - <b>`url`</b> - Model Server URL as a string in format `<address>:<port>`
+ - <b>`tls_config`</b> <i>(optional)</i>: dictionary with TLS configuration. The accepted format is: 
 
     ```python
 
-    {
-        "address": <IP address of the serving>,                  
-        "port": <Port number used by the gRPC interface of the server>,                      
-        "tls_config": {                      
-            "client_key_path": <Path to client key file>,
-            "client_cert_path": <Path to client certificate file>,
-            "server_cert_path": <Path to server certificate file>
-        }              
-    }                        
+    {                   
+        "client_key_path": <Path to client key file>,
+        "client_cert_path": <Path to client certificate file>,
+        "server_cert_path": <Path to server certificate file>             
+     }                       
 
     ```
 
     With following types accepted: 
     | Key | Value type |
     |---|---|
-    | address | string |
-    | port | integer |
     | client_key_path | string |
     | client_cert_path | string |
     | server_cert_path | string |
                                     
-    The minimal config must contain `address` and `port`. 
+    By default TLS is not used and `tls_config` value is `None`.
 
 
 **Returns:**
- `GrpcClient` object 
+ [`GrpcClient`](grpc_client.md) object 
 
 
 
@@ -62,28 +53,26 @@ Creates `GrpcClient` object.
 
 ```python
 
-config = {
-    "address": "localhost",
-    "port": 9000
-}
-client = make_grpc_client(config)
+from ovmsclient import make_grpc_client
+client = make_grpc_client("localhost:9000")
 
 ```
 
-Create GrpcClient with TLS:
+Create `GrpcClient` with TLS:
 
 ```python
 
-config = {
-    "address": "localhost",
-    "port": 9000,
+from ovmsclient import make_grpc_client
+
+tls_config = {
     "tls_config": {
         "client_key_path": "/opt/tls/client.key",
         "client_cert_path": "/opt/tls/client.crt",
         "server_cert_path": "/opt/tls/server.crt"    
     }
 }
-client = make_grpc_client(config)
+
+client = make_grpc_client("localhost:9000", tls_config=tls_config)
 
 ```
 

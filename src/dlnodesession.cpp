@@ -27,6 +27,7 @@
 #include "nodeoutputhandler.hpp"
 #include "nodestreamidguard.hpp"
 #include "ov_utils.hpp"
+#include "shape.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
 
@@ -53,7 +54,7 @@ ModelInstance& DLNodeSession::getModelInstance() {
     return *this->model;
 }
 
-InferenceEngine::InferRequest& DLNodeSession::getInferRequest(const uint microseconds) {
+ov::runtime::InferRequest& DLNodeSession::getInferRequest(const uint microseconds) {
     auto& inferRequestsQueue = this->model->getInferRequestsQueue();
     auto streamIdOpt = this->nodeStreamIdGuard->tryGetId(microseconds);
     if (!streamIdOpt) {
@@ -84,14 +85,14 @@ Status DLNodeSession::requestExecuteRequiredResources() {
 }
 
 Status DLNodeSession::prepareInputsAndModelForInference() {
-    size_t requestedBatchSize = 0;
+    std::optional<Dimension> requestedBatchSize = std::nullopt;
     std::map<std::string, shape_t> requestedReshapes;
 
-    // Validate each blob against its OV tensor info
+    // Validate each tensor against its OV tensor info
     const auto& inputsInfo = this->model->getInputsInfo();
     for (const auto& kv : this->inputHandler->getInputs()) {
         const auto& name = kv.first;
-        auto& blob = kv.second;
+        auto& tensor = kv.second;
 
         auto it = inputsInfo.find(name);
         if (it == inputsInfo.end()) {
@@ -102,7 +103,7 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
             return Status(StatusCode::INVALID_MISSING_INPUT, details);
         }
         auto& inputInfo = *it->second;
-        auto status = validate(blob, inputInfo);
+        auto status = validate(tensor, inputInfo);
         if (status.ok()) {
             continue;
         }
@@ -112,12 +113,12 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
             return status;
         }
 
-        // If batch size is incorrect, perform network batch size change if allowed (shape mode=auto or batch size=auto)
+        // If batch size is incorrect, perform model batch size change if allowed (shape mode=auto or batch size=auto)
         if (status == StatusCode::INVALID_BATCH_SIZE) {
             if (this->model->getModelConfig().getBatchingMode() == Mode::AUTO) {
-                requestedBatchSize = blob->getTensorDesc().getDims()[0];
+                requestedBatchSize = tensor->get_shape()[0];
             } else if (this->model->getModelConfig().isShapeAuto(name)) {
-                requestedReshapes[name] = blob->getTensorDesc().getDims();
+                requestedReshapes[name] = tensor->get_shape();
             } else {
                 return status;
             }
@@ -128,16 +129,15 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
             if (!this->model->getModelConfig().isShapeAuto(name)) {
                 return status;
             }
-            requestedReshapes[name] = blob->getTensorDesc().getDims();
+            requestedReshapes[name] = tensor->get_shape();
         }
     }
     if (requestedReshapes.size() > 0) {
-        size_t bs = 0;
-        auto status = this->model->reloadModel(bs, requestedReshapes, this->modelUnloadGuard);
+        auto status = this->model->reloadModel(std::nullopt, requestedReshapes, this->modelUnloadGuard);
         if (!status.ok()) {
             return status;
         }
-    } else if (requestedBatchSize > 0) {
+    } else if (requestedBatchSize.has_value()) {
         auto status = this->model->reloadModel(requestedBatchSize, {}, this->modelUnloadGuard);
         if (!status.ok()) {
             return status;
@@ -146,28 +146,37 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
     return StatusCode::OK;
 }
 
-Status DLNodeSession::validate(const InferenceEngine::Blob::Ptr& blob, const TensorInfo& tensorInfo) {
-    if (tensorInfo.getPrecision() != blob->getTensorDesc().getPrecision()) {
+Status DLNodeSession::validate(const std::shared_ptr<ov::runtime::Tensor>& tensor, const TensorInfo& tensorInfo) {
+    if (ovmsPrecisionToIE2Precision(tensorInfo.getPrecision()) != tensor->get_element_type()) {
         std::stringstream ss;
         ss << "Node: " << getName() << " input: " << tensorInfo.getName()
            << " Invalid precision -"
            << " Expected: " << tensorInfo.getPrecisionAsString()
-           << "; Actual: " << TensorInfo::getPrecisionAsString(blob->getTensorDesc().getPrecision());
+           << "; Actual: " << toString(ovElementTypeToOvmsPrecision(tensor->get_element_type()));
         const std::string details = ss.str();
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
         return Status(StatusCode::INVALID_PRECISION, details);
     }
 
     // If batch size differs, check if remaining dimensions are equal
-    const auto& dims = getEffectiveBlobShape(blob);
-    if (tensorInfo.getEffectiveShape()[0] != dims[0]) {
+    const auto& dims = tensor->get_shape();
+    const auto batchIndex = tensorInfo.getLayout().getBatchIndex();
+    if (!batchIndex.has_value() || batchIndex.value() >= tensorInfo.getShape().size() || batchIndex.value() >= dims.size()) {
+        std::stringstream ss;
+        ss << "Node: " << getName() << " input: " << tensorInfo.getName()
+           << " Invalid batch size index";
+        const std::string details = ss.str();
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
+        return Status(StatusCode::INVALID_BATCH_DIMENSION, details);
+    }
+    if (!tensorInfo.getShape()[batchIndex.value()].match(dims[batchIndex.value()])) {
         // If remaining dimensions are equal, it is invalid batch size
         std::stringstream ss;
-        if (std::equal(tensorInfo.getEffectiveShape().begin() + 1, tensorInfo.getEffectiveShape().end(), dims.begin() + 1)) {
+        if (tensorInfo.getShape().match(dims, batchIndex.value())) {
             ss << "Node: " << getName() << " input: " << tensorInfo.getName()
                << " Invalid batch size -"
-               << " Expected: " << tensorInfo.getEffectiveShape()[0]
-               << "; Actual: " << dims[0];
+               << " Expected: " << tensorInfo.getShape()[batchIndex.value()].toString()
+               << "; Actual: " << dims[batchIndex.value()];
             const std::string details = ss.str();
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
             return Status(StatusCode::INVALID_BATCH_SIZE, details);
@@ -175,7 +184,7 @@ Status DLNodeSession::validate(const InferenceEngine::Blob::Ptr& blob, const Ten
             // Otherwise whole shape is incorrect
             ss << "Node: " << getName() << " input: " << tensorInfo.getName()
                << " Invalid shape -"
-               << " Expected: " << TensorInfo::shapeToString(tensorInfo.getEffectiveShape())
+               << " Expected: " << tensorInfo.getShape().toString()
                << "; Actual: " << TensorInfo::shapeToString(dims);
             const std::string details = ss.str();
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
@@ -183,11 +192,11 @@ Status DLNodeSession::validate(const InferenceEngine::Blob::Ptr& blob, const Ten
         }
     }
 
-    if (tensorInfo.getEffectiveShape() != dims) {
+    if (!tensorInfo.getShape().match(dims)) {
         std::stringstream ss;
         ss << "Node: " << getName() << " input: " << tensorInfo.getName()
            << " Invalid shape -"
-           << " Expected: " << TensorInfo::shapeToString(tensorInfo.getEffectiveShape())
+           << " Expected: " << tensorInfo.getShape().toString()
            << "; Actual: " << TensorInfo::shapeToString(dims);
         const std::string details = ss.str();
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
@@ -235,28 +244,23 @@ Status DLNodeSession::getRealInputName(const std::string& alias, std::string* re
     return StatusCode::OK;
 }
 
-Status DLNodeSession::setInputsForInference(InferenceEngine::InferRequest& inferRequest) {
+Status DLNodeSession::setInputsForInference(ov::runtime::InferRequest& inferRequest) {
     Status status = StatusCode::OK;
     try {
-        // Prepare inference request, fill with input blobs
-        for (const auto& [name, blob] : this->inputHandler->getInputs()) {
+        // Prepare inference request, fill with input tensors
+        for (const auto& [name, tensor] : this->inputHandler->getInputs()) {
             std::string realModelInputName;
             if (!getRealInputName(name, &realModelInputName).ok()) {
                 SPDLOG_LOGGER_WARN(dag_executor_logger, "DLNode::{} [Node name: {}]; cannot find real model input name for alias: {}",
                     __FUNCTION__, getName(), name);
                 return StatusCode::INTERNAL_ERROR;
             }
-            // Update blob layout with model input layout
-            auto& inputInfo = this->model->getInputsInfo().at(name);
-
-            blob->getTensorDesc().setLayout(inputInfo->getLayout());
-            blob->getTensorDesc().reshape(inputInfo->getTensorDesc().getDims());
-            inferRequest.SetBlob(realModelInputName, blob);
+            inferRequest.set_tensor(realModelInputName, *tensor);
         }
-        // OV implementation the InferenceEngine::Exception is not
+        // OV implementation the ov::Exception is not
         // a base class for all other exceptions thrown from OV.
         // OV can throw exceptions derived from std::logic_error.
-    } catch (const InferenceEngine::Exception& e) {
+    } catch (const ov::Exception& e) {
         status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] {}; exception message: {}", getName(), status.string(), e.what());
     } catch (std::logic_error& e) {
@@ -269,21 +273,21 @@ Status DLNodeSession::setInputsForInference(InferenceEngine::InferRequest& infer
     return status;
 }
 
-Status DLNodeSession::executeInference(PipelineEventQueue& notifyEndQueue, InferenceEngine::InferRequest& inferRequest, Node& node) {
+Status DLNodeSession::executeInference(PipelineEventQueue& notifyEndQueue, ov::runtime::InferRequest& inferRequest, Node& node) {
     try {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Setting completion callback for node name: {}", this->getName());
-        inferRequest.SetCompletionCallback([this, &notifyEndQueue, &inferRequest, &node]() {
+        inferRequest.set_callback([this, &notifyEndQueue, &inferRequest, &node](std::exception_ptr exception_ptr) {
             this->timer->stop("inference");
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Completion callback received for node name: {}", this->getName());
-            // After inference is completed, input blobs are not needed anymore
+            // After inference is completed, input tensors are not needed anymore
             this->inputHandler->clearInputs();
             notifyEndQueue.push({node, getSessionKey()});
-            inferRequest.SetCompletionCallback([]() {});  // reset callback on infer request
+            inferRequest.set_callback([](std::exception_ptr exception_ptr) {});  // reset callback on infer request
         });
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Starting infer async for node name: {}", getName());
         this->timer->start("inference");
-        inferRequest.StartAsync();
-    } catch (const InferenceEngine::Exception& e) {
+        inferRequest.start_async();
+    } catch (const ov::Exception& e) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception occured when starting async inference or setting completion callback on model: {}, error: {}",
             getName(), getModelName(), e.what());
         return StatusCode::OV_INTERNAL_INFERENCE_ERROR;

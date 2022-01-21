@@ -43,14 +43,18 @@ class BuildApis(Command):
         self.build_tfs_api()
 
 
+from pathlib import Path
+this_directory = Path(__file__).parent
+long_description = (this_directory / "docs/pypi_overview.md").read_text()
+
 setuptools.setup(
-     name='ovmsclient',  
+     name='ovmsclient',
      version='0.2',
-     scripts=[] ,
-     author="Intel",
+     license='Apache License 2.0',
+     author="Intel Corporation",
      author_email="ovms.engineering@intel.com",
-     description="OVMS client library",
-     long_description="Python library for simplified interaction with OpenVINO Model Server",
+     description="Python client for OpenVINO Model Server",
+     long_description=long_description,
      long_description_content_type="text/markdown",
      url="https://github.com/openvinotoolkit/model_server/tree/main/client/python/lib",
      cmdclass={
@@ -59,4 +63,3 @@ setuptools.setup(
      packages=setuptools.find_namespace_packages(include=["ovmsclient*", "tensorflow*", "tensorflow_serving*"]),
      install_requires=["grpcio>=1.21", "protobuf>=3.8", "numpy>=1.16.4", "validators>=0.18.2", "requests >= 2.26.0"],
  )
-

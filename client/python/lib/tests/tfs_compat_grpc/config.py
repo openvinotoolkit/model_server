@@ -16,7 +16,7 @@
 
 from grpc import StatusCode
 from numpy import array, float64, int32, int8, float128, float32
-from ovmsclient.tfs_compat.base.errors import ModelNotFoundError
+from ovmsclient.tfs_compat.base.errors import ModelNotFoundError, InvalidInputError
 
 from config import CallCount, PATH_VALID # noqa
 
@@ -156,7 +156,7 @@ PREDICT_REQUEST_INVALID_INPUTS = [
     ({
         1: [1, 2, 3],
         "input2": [1, 2]
-    }, 'model_name', 0, TypeError, "inputs keys should be type str, but found int"),
+    }, 'model_name', 0, TypeError, "inputs keys type should be str, but found int"),
     ({
         "input1": [[1.0, 2.0], [1.0, 2.0, 3.0]]
     }, 'model_name', 0, ValueError,
@@ -241,16 +241,14 @@ PREDICT_REQUEST_VALID = [
     }, 'model_name', 0)
 ]
 
-# (response_outputs_dict, model_name, model_version, expected_outputs_dict)
+# (response_outputs_dict, model_name, model_version, expected_outputs)
 PREDICT_RESPONSE_VALID = [
     ({
         "1463": TensorProto(dtype=DataType.DT_INT8,
                             tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=3)]),
                             tensor_content=array([1, 2, 3], dtype=int8).tobytes()),
-    }, "model_name", 0,
-     {
-        "1463": array([1, 2, 3], dtype=int8)
-    }),
+    }, "model_name", 0, array([1, 2, 3], dtype=int8)
+    ),
 
     ({
         "1463": TensorProto(dtype=DataType.DT_INT32,
@@ -260,8 +258,7 @@ PREDICT_RESPONSE_VALID = [
         "2": TensorProto(dtype=DataType.DT_DOUBLE,
                          tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]),
                          double_val=array([12.0], dtype=float64)),
-    }, "model_name", 0,
-     {
+    }, "model_name", 0, {
         "1463": array([[1, 2, 3], [4, 5, 6]], dtype=int32),
         "2": array([12.0], dtype=float64)
     }),
@@ -273,15 +270,14 @@ PREDICT_RESPONSE_VALID = [
         "2": TensorProto(dtype=DataType.DT_STRING,
                          tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=1)]),
                          string_val=[bytes([1, 2, 3])]),
-    }, "model_name", 0,
-     {
+    }, "model_name", 0, {
         "1463": [bytes([1, 2, 3]), bytes([4, 5])],
         "2": [bytes([1, 2, 3])]
     }),
 ]
 
 # (response_outputs_dict, model_name, model_version, expected_exception, expected_message)
-PREDICT_RESPONSE_INVALID = [
+PREDICT_RESPONSE_TENSOR_TYPE_INVALID = [
     ({
         "1463": TensorProto(),
     }, "model_name", 0, TypeError, "Unsupported tensor type: 0"),
@@ -328,9 +324,8 @@ MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE = [
      "request is not valid GrpcModelStatusRequest")
 ]
 
-
 # (grpc_error_status_code, grpc_error_details, raised_error_type, raised_error_message)
-GET_MODEL_STATUS_INVALID_GRPC = [
+COMMON_INVALID_GRPC = [
     (StatusCode.UNAVAILABLE, "failed to connect to all adresses",
      ConnectionError, "Error occurred during handling the request: "
                       "failed to connect to all adresses"),
@@ -391,22 +386,6 @@ MODEL_METADATA_REQUEST_INVALID_REQUEST_TYPE = [
      "request type should be GrpcModelMetadataRequest, but is GetModelMetadataRequest"),
     (GrpcModelMetadataRequest('model_name', 0, 'raw_request'), TypeError,
      "request is not valid GrpcModelMetadataRequest")
-]
-
-# expected_message, grpc_error_status_code, grpc_error_details)
-GET_MODEL_METADATA_INVALID_GRPC = [
-    ("There was an error during sending ModelMetadataRequest. "
-     f"Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - failed to connect to all adresses",
-     StatusCode.UNAVAILABLE, "failed to connect to all adresses"),
-    ("There was an error during sending ModelMetadataRequest. "
-     f"Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - Empty update",
-     StatusCode.UNAVAILABLE, "Empty update"),
-    ("There was an error during sending ModelMetadataRequest. "
-     f"Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested version is not found",
-     StatusCode.NOT_FOUND, "Model with requested version is not found"),
-    ("There was an error during sending ModelMetadataRequest. "
-     f"Grpc exited with: \n{StatusCode.NOT_FOUND.name} - Model with requested name is not found",
-     StatusCode.NOT_FOUND, "Model with requested name is not found"),
 ]
 
 # ({"model_name": model_name, "model_version": model_version,
@@ -484,40 +463,22 @@ PREDICT_REQUEST_INVALID_SPEC_TYPE = [
      TypeError, 'request is not valid GrpcPredictRequest'),
 ]
 
-# (expected_message, grpc_error_status_code, grpc_error_details)
-PREDICT_INVAlID_GRPC = [
-    ("There was an error during sending PredictRequest. "
-     f"Grpc exited with: \n{StatusCode.UNAVAILABLE.name} - "
-     "failed to connect to all adresses",
-     StatusCode.UNAVAILABLE, "failed to connect to all adresses"),
-    ("There was an error during sending PredictRequest. "
-     f"Grpc exited with: \n{StatusCode.NOT_FOUND.name} - "
-     "Model with requested version is not found",
-     StatusCode.NOT_FOUND, "Model with requested version is not found"),
-    ("There was an error during sending PredictRequest. "
-     f"Grpc exited with: \n{StatusCode.NOT_FOUND.name} - "
-     "Model with requested name is not found",
-     StatusCode.NOT_FOUND, "Model with requested name is not found"),
-    ("There was an error during sending PredictRequest. "
-     f"Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - "
-     "Invalid input precision - Expected: FP32; Actual: I64",
-     StatusCode.INVALID_ARGUMENT, ("Invalid input precision - "
-                                   "Expected: FP32; Actual: I64")),
-    ("There was an error during sending PredictRequest. "
-     f"Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - "
-     "Invalid number of inputs - Expected: 1; Actual: 0",
-     StatusCode.INVALID_ARGUMENT, ("Invalid number of inputs - "
-                                   "Expected: 1; Actual: 0")),
-    ("There was an error during sending PredictRequest. "
-     f"Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - "
-     "Missing input with specific name - Required input: 0",
-     StatusCode.INVALID_ARGUMENT, ("Missing input with specific name - "
-                                   "Required input: 0")),
-    ("There was an error during sending PredictRequest. "
-     f"Grpc exited with: \n{StatusCode.INVALID_ARGUMENT.name} - "
-     "Invalid number of shape dimensions - Expected: (1,3,224,224); Actual: (3)",
-     StatusCode.INVALID_ARGUMENT, ("Invalid number of shape dimensions - "
-                                   "Expected: (1,3,224,224); Actual: (3)")),
+# (grpc_error_status_code, grpc_error_details, raised_error_type, raised_error_message)
+PREDICT_INVALID_GRPC = COMMON_INVALID_GRPC + [
+    (StatusCode.INVALID_ARGUMENT, "Invalid input precision - Expected: FP32; Actual: I64",
+     InvalidInputError, "Error occurred during handling the request: "
+                        "Invalid input precision - Expected: FP32; Actual: I64"),
+    (StatusCode.INVALID_ARGUMENT, "Invalid number of inputs - Expected: 1; Actual: 0",
+     InvalidInputError, "Error occurred during handling the request: "
+                        "Invalid number of inputs - Expected: 1; Actual: 0"),
+    (StatusCode.INVALID_ARGUMENT, "Missing input with specific name - Required input: 0",
+     InvalidInputError, "Error occurred during handling the request: "
+                        "Missing input with specific name - Required input: 0"),
+    (StatusCode.INVALID_ARGUMENT, "Invalid number of shape dimensions - "
+                                  "Expected: (1,3,224,224); Actual: (3)",
+     InvalidInputError, "Error occurred during handling the request: "
+                        "Invalid number of shape dimensions - Expected: (1,3,224,224); "
+                        "Actual: (3)"),
 ]
 
 # (config_dict,

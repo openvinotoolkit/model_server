@@ -24,20 +24,20 @@
 #include <thread>
 #include <vector>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
 #include "queue.hpp"
 
 namespace ovms {
 
-class OVInferRequestsQueue : public Queue<InferenceEngine::InferRequest> {
+class OVInferRequestsQueue : public Queue<ov::runtime::InferRequest> {
 public:
-    OVInferRequestsQueue(InferenceEngine::ExecutableNetwork& network, int streamsLength) :
+    OVInferRequestsQueue(ov::runtime::CompiledModel& compiledModel, int streamsLength) :
         Queue(streamsLength) {
         for (int i = 0; i < streamsLength; ++i) {
             streams[i] = i;
-            inferRequests.push_back(network.CreateInferRequest());
+            inferRequests.push_back(compiledModel.create_infer_request());
         }
     }
 };

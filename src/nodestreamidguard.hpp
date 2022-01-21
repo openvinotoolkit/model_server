@@ -23,6 +23,7 @@
 #include "ovinferrequestsqueue.hpp"
 
 namespace ovms {
+
 struct NodeStreamIdGuard {
     NodeStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
         inferRequestsQueue_(inferRequestsQueue),

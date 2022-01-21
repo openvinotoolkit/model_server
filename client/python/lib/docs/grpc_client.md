@@ -1,135 +1,212 @@
 
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L26"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L34"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `GrpcClient`
 
 ---
 
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L61"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L58"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `get_model_metadata`
 
 ```python
-get_model_metadata(request)
+get_model_metadata(model_name, model_version, timeout)
 ```
 
-Send [`GrpcModelMetadataRequest`](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/lib/ovmsclient/tfs_compat/grpc/requests.py#L31) to the server and return response.
+Request model metadata.
 
 
 **Args:**
  
- - <b>`request`</b>:  `GrpcModelMetadataRequest` object. 
+ - <b>`model_name`</b>:  name of the requested model. Accepted types: `string`.
+ - <b>`model_version`</b> <i>(optional)</i>: version of the requested model. Accepted types: `positive integer`. Value 0 is special and means the latest served version will be chosen <i>(only in OVMS, TFS requires specific version number provided)</i>. Default value: 0.
+ - <b>`timeout`</b> <i>(optional)</i>: time in seconds to wait for the response from the server. If exceeded, TimeoutError is raised. 
+ Accepted types: `positive integer`, `positive float`. Value 0 is not accepted. Default value: 10.0.
 
 
 **Returns:**
- `GrpcModelMetadataResponse` object 
+ Dictionary with model metadata in form:
+
+ ``` python
+
+{
+    "model_version": <version_number>,
+    "inputs": {
+        <input_name>: {
+            "shape": <input_shape>,
+            "dtype": <input_dtype>,
+        },
+        ...
+    },
+    "outputs":
+        <output_name>: {
+            "shape": <output_shape>,
+            "dtype": <output_dtype>,
+        },
+        ...
+    }
+} 
+
+``` 
 
 
 **Raises:**
  
- - <b>`TypeError`</b>:   if request argument is of wrong type.
- - <b>`ValueError`</b>:   if request argument has invalid contents.
- - <b>`ConnectionError`</b>:   if there was an error while sending request to the server.
+- <b>`TypeError`</b>:  if provided argument is of wrong type.
+- <b>`ValueError`</b>: if provided argument has unsupported value.
+- <b>`ConnectionError`</b>: if there is an issue with server connection.
+- <b>`TimeoutError`</b>: if request handling duration exceeded timeout.
+- <b>`ModelNotFound`</b>: if model with specified name and version does not exist
+                           in the model server.
+- <b>`BadResponseError`</b>: if server response in malformed and cannot be parsed.
 
 
 **Examples:**
  
 ```python
-
-config = {
-    "address": "localhost",
-    "port": 9000
-}
-client = make_grpc_client(config)
-request = make_model_metadata_request("model")
-response = client.get_model_metadata(request)
+import ovmsclient
+client = ovmsclient.make_grpc_client("localhost:9000")
+# request metadata of the specific model version, with timeout set to 2.5 seconds
+model_metadata = client.get_model_metadata(model_name="model", model_version=1, timeout=2.5)
+# request metadata of the latest model version
+model_metadata = client.get_model_metadata(model_name="model")
 
 ```
 
 ---
 
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L89"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L75"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `get_model_status`
 
 ```python
-get_model_status(request)
+get_model_status(model_name, model_version, timeout)
 ```
 
-Send [`GrpcModelStatusRequest`](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/lib/ovmsclient/tfs_compat/grpc/requests.py#L37) to the server and return response. 
+Request model status.
 
 
 **Args:**
  
- - <b>`request`</b>:  `GrpcModelStatusRequest` object. 
+ - <b>`model_name`</b>:  name of the requested model. Accepted types: `string`.
+ - <b>`model_version`</b> <i>(optional)</i>: version of the requested model. Accepted types: `positive integer`. Value 0 means that status of all model versions will be returned. Default value: 0.
+ - <b>`timeout`</b> <i>(optional)</i>: time in seconds to wait for the response from the server. If exceeded, TimeoutError is raised. 
+ Accepted types: `positive integer`, `positive float`. Value 0 is not accepted. Default value: 10.0.
 
 
 **Returns:**
- `GrpcModelStatusResponse` object 
+ Dictionary with model status in form:
+
+ ``` python
+
+{
+    ...
+    <version_number>: {
+        "state": <model_version_state>, 
+        "error_code": <error_code>, 
+        "error_message": <error_message>
+    },          
+    ...      
+} 
+```
 
 
 **Raises:**
  
- - <b>`TypeError`</b>:   if request argument is of wrong type.
- - <b>`ValueError`</b>:   if request argument has invalid contents.
- - <b>`ConnectionError`</b>:   if there was an error while sending request to the server.
+- <b>`TypeError`</b>:  if provided argument is of wrong type.
+- <b>`ValueError`</b>: if provided argument has unsupported value.
+- <b>`ConnectionError`</b>: if there is an issue with server connection.
+- <b>`TimeoutError`</b>: if request handling duration exceeded timeout.
+- <b>`ModelNotFound`</b>: if model with specified name and version does not exist
+                          in the model server.
+- <b>`BadResponseError`</b>: if server response in malformed and cannot be parsed.
 
 
 **Examples:**
-
+ 
 ```python
-
-config = {
-    "address": "localhost",
-    "port": 9000
-}
-client = make_grpc_client(config)
-request = make_model_status_request("model")
-response = client.get_model_status(request)
+import ovmsclient
+client = ovmsclient.make_grpc_client("localhost:9000")
+# request status of the specific model version, with timeout set to 2.5 seconds
+model_status = client.get_model_status(model_name="model", model_version=1, timeout=2.5)
+# request status of all model versions
+model_status = client.get_model_status(model_name="model")
 
 ```
 
-
 ---
 
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L33"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../../../client/python/lib/ovmsclient/tfs_compat/grpc/serving_client.py#L41"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `predict`
 
 ```python
-predict(request)
+predict(inputs, model_name, model_version, timeout)
 ```
 
-Send [`GrpcPredictRequest`](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/lib/ovmsclient/tfs_compat/grpc/requests.py#L25) to the server and return response. 
+Request prediction on provided inputs. 
 
 
 **Args:**
  
- - <b>`request`</b>:  `GrpcPredictRequest` object. 
+- <b>`inputs`</b>: dictionary in form
+    ```python
+    {
+        ...
+        <input_name>:<input_data>
+        ...
+    }
+    ```               
+    Following types are accepted: 
+
+    | Key | Value type |
+    |---|---|
+    | input_name | string |
+    | input_data | python scalar, python list, numpy scalar, numpy array, TensorProto |        
+
+    If provided **input_data** is not TensorProto, the `make_tensor_proto` function with default parameters will be called internally. 
+
+ - <b>`model_name`</b>:  name of the requested model. Accepted types: `string`.
+ - <b>`model_version`</b> <i>(optional)</i>: version of the requested model. Accepted types: `positive integer`. Value 0 is special and means the latest served version will be chosen <i>(only in OVMS, TFS requires specific version number provided)</i>. Default value: 0.
+ - <b>`timeout`</b> <i>(optional)</i>: time in seconds to wait for the response from the server. If exceeded, TimeoutError is raised. 
+ Accepted types: `positive integer`, `positive float`. Value 0 is not accepted. Default value: 10.0.
 
 
 **Returns:**
- `GrpcPredictResponse` object 
+ - if model has one output: `numpy ndarray` with prediction results
+ - if model has multiple outputs: `dictionary` in form:
+     ```python
+    {
+        ...
+        <output_name>:<prediction_result>
+        ...
+    }
+    ```   
+    Where `output_name` is a `string` and `prediction_result` is a `numpy ndarray`
 
 
 **Raises:**
- 
- - <b>`TypeError`</b>:   if request argument is of wrong type.
- - <b>`ValueError`</b>:   if request argument has invalid contents.
- - <b>`ConnectionError`</b>:   if there was an error while sending request to the server.
+
+- <b>`TypeError`</b>:  if provided argument is of wrong type.
+- <b>`ValueError`</b>: if provided argument has unsupported value.
+- <b>`ConnectionError`</b>: if there is an issue with server connection.
+- <b>`TimeoutError`</b>: if request handling duration exceeded timeout.
+- <b>`ModelNotFound`</b>: if model with specified name and version does not exist
+                          in the model server.
+- <b>`BadResponseError`</b>: if server response in malformed and cannot be parsed.
+- <b>`InvalidInputError`</b>: if provided inputs do not match model's inputs
 
 
 **Examples:**
 
 ```python
-
-config = {
-"address": "localhost",
-"port": 9000
-}
-client = make_grpc_client(config)
-request = make_predict_request({"input": [1, 2, 3]}, "model")
-response = client.predict(request)
+import ovmsclient
+client = ovmsclient.make_grpc_client("localhost:9000")
+inputs = {"input": [1, 2, 3]}
+# request prediction on specific model version, with timeout set to 2.5 seconds
+results = client.predict(inputs=inputs, model_name="model", model_version=1, timeout=2.5)
+# request prediction on the latest model version
+results = client.predict(inputs=inputs, model_name="model")
 
 ```
 

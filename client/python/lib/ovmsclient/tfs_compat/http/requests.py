@@ -21,7 +21,6 @@ from ovmsclient.tfs_compat.base.requests import (PredictRequest, ModelMetadataRe
                                                  ModelStatusRequest, _check_model_spec)
 from ovmsclient.tfs_compat.grpc.tensors import (NP_TO_TENSOR_MAP, DataType,
                                                 _get_dense_dimensions, _is_bytes_shape_valid)
-from ovmsclient.util.ovmsclient_export import ovmsclient_export
 
 
 class HttpPredictRequest(PredictRequest):
@@ -38,7 +37,6 @@ class HttpModelStatusRequest(ModelStatusRequest):
     pass
 
 
-@ovmsclient_export("make_http_predict_request", httpclient="make_predict_request")
 def make_predict_request(inputs, model_name, model_version=0):
     '''
     Create HttpPredictRequest object.
@@ -98,7 +96,7 @@ def make_predict_request(inputs, model_name, model_version=0):
     parsed_inputs = {}
     for input_name, input_data in inputs.items():
         if not isinstance(input_name, str):
-            raise TypeError(f'inputs keys should be type str, but found '
+            raise TypeError(f'inputs keys type should be str, but found '
                             f'{type(input_name).__name__}')
         try:
             parsed_inputs[input_name] = _parse_input_data(input_data)
@@ -110,7 +108,6 @@ def make_predict_request(inputs, model_name, model_version=0):
     return HttpPredictRequest(inputs, model_name, model_version, parsed_inputs)
 
 
-@ovmsclient_export("make_http_metadata_request", httpclient="make_metadata_request")
 def make_metadata_request(model_name, model_version=0):
     '''
     Create HttpModelMetadataRequest object.
@@ -140,7 +137,6 @@ def make_metadata_request(model_name, model_version=0):
     return HttpModelMetadataRequest(model_name, model_version)
 
 
-@ovmsclient_export("make_http_status_request", httpclient="make_status_request")
 def make_status_request(model_name, model_version=0):
     '''
     Create HttpModelStatusRequest object.
@@ -200,7 +196,7 @@ def _parse_input_data(values):
         b64_values = []
         for value in tensor_values:
             b64_value = base64.b64encode(value).decode('utf-8')
-            b64_values.append(b64_value)
-        return {"b64": b64_values}
+            b64_values.append({"b64": b64_value})
+        return b64_values
     else:
         return tensor_values.tolist()

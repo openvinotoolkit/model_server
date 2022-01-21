@@ -25,6 +25,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <openvino/openvino.hpp>
 #include <rapidjson/document.h>
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
@@ -66,7 +67,7 @@ protected:
      * 
      */
     std::map<std::string, std::shared_ptr<Model>> models;
-    std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::runtime::Core> ieCore;
 
     PipelineFactory pipelineFactory;
 
@@ -83,6 +84,7 @@ private:
 
     Status lastLoadConfigStatus = StatusCode::OK;
 
+    std::string getConfigFileMD5();
     Status cleanupModelTmpFiles(ModelConfig& config);
     Status reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t> versionsFailed);
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed);
@@ -146,9 +148,9 @@ private:
     uint32_t sequenceCleanerIntervalMinutes = 5;
 
     /**
-     * @brief Time of last config change
-     */
-    timespec lastConfigChangeTime;
+      * @brief last md5sum of configfile
+      */
+    std::string lastConfigFileMD5;
 
     /**
      * @brief Directory for OpenVINO to store cache files.

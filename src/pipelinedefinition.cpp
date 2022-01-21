@@ -91,11 +91,6 @@ Status PipelineDefinition::initializeNodeResources() {
     for (const auto& nodeInfo : nodeInfos) {
         if (nodeInfo.kind == NodeKind::CUSTOM) {
             void* customNodeLibraryInternalManager = nullptr;
-            auto it = nodeResources.find(nodeInfo.nodeName);
-            bool internalManagerExists = (it != nodeResources.end());
-            if (internalManagerExists) {
-                customNodeLibraryInternalManager = it->second;
-            }
             auto params = createCustomNodeParamArray(nodeInfo.parameters);
             int paramsLength = nodeInfo.parameters.size();
             if (!nodeInfo.library.isValid()) {
@@ -107,9 +102,8 @@ Status PipelineDefinition::initializeNodeResources() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Initialization of library with base path: {} failed", nodeInfo.library.basePath);
                 return StatusCode::NODE_LIBRARY_INITIALIZE_FAILED;
             }
-            if (!internalManagerExists) {
-                nodeResources.insert({nodeInfo.nodeName, customNodeLibraryInternalManager});
-            }
+            std::shared_ptr<CNLIMWrapper> sharedCustomNodeLibraryInternalManager(new CNLIMWrapper{customNodeLibraryInternalManager, nodeInfo.library.deinitialize});
+            nodeResources.emplace(std::make_pair(nodeInfo.nodeName, std::move(sharedCustomNodeLibraryInternalManager)));
         }
     }
     return StatusCode::OK;
@@ -131,15 +125,9 @@ std::vector<NodeInfo> PipelineDefinition::calculateNodeInfosDiff(const std::vect
 void PipelineDefinition::deinitializeNodeResources(const std::vector<NodeInfo>& nodeInfosDiff) {
     for (const auto& nodeInfo : nodeInfosDiff) {
         if (nodeInfo.kind == NodeKind::CUSTOM) {
-            auto it = nodeResources.find(nodeInfo.nodeName);
-            if (it == nodeResources.end()) {
+            if (nodeResources.find(nodeInfo.nodeName) == nodeResources.end()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Library deinitialization of Node: {} failed. Couldn't find any initialized resources", nodeInfo.nodeName);
                 continue;
-            }
-            void* customNodeLibraryInternalManager = it->second;
-            auto status = nodeInfo.library.deinitialize(customNodeLibraryInternalManager);
-            if (status != 0) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Deinitialization of library with base path: {} failed", nodeInfo.library.basePath);
             }
             nodeResources.erase(nodeInfo.nodeName);
         }
@@ -348,7 +336,7 @@ class NodeValidator {
     const NodeInfo& dependantNodeInfo;
     const pipeline_connections_t& connections;
     const std::vector<NodeInfo>& nodeInfos;
-    std::map<std::string, void*>& nodeResources;
+    std::map<std::string, std::shared_ptr<CNLIMWrapper>>& nodeResources;
     const bool isMultiBatchAllowed;
 
     std::unique_ptr<ModelInstanceUnloadGuard> dependantModelUnloadGuard;
@@ -365,7 +353,7 @@ public:
         const NodeInfo& dependantNodeInfo,
         const pipeline_connections_t& connections,
         const std::vector<NodeInfo>& nodeInfos,
-        std::map<std::string, void*>& nodeResources,
+        std::map<std::string, std::shared_ptr<CNLIMWrapper>>& nodeResources,
         const bool isMultiBatchAllowed = true) :
         pipelineName(pipelineName),
         manager(manager),
@@ -431,25 +419,6 @@ public:
         return StatusCode::OK;
     }
 
-    Status checkForRestrictedBatchSize() {
-        if (!isMultiBatchAllowed) {
-            for (auto& [inputName, tensorInfo] : this->inputsInfo) {
-                if (!tensorInfo->getEffectiveShape().empty() &&
-                    dependantNodeInfo.gatherFromNode.empty() &&
-                    (tensorInfo->getEffectiveShape()[0] >= 2)) {
-                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {}, node: {}, inputName: {}, inputShape: {}. Batch size >= 2 is not allowed for non gathering nodes",
-                        pipelineName, dependantNodeInfo.nodeName, inputName, TensorInfo::shapeToString(tensorInfo->getEffectiveShape()));
-                    return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE;
-                }
-            }
-            if (dependantModelInstance && dependantModelInstance->getBatchSize() >= 2) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Batch size >= 2 is not allowed for pipeline with demultiplexer. Pipeline: {} node: {}", pipelineName, dependantNodeInfo.nodeName);
-                return StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE;
-            }
-        }
-        return StatusCode::OK;
-    }
-
     Status validateGatherNode(const NodeInfo& dependantNodeInfo) const {
         for (const auto& gather : dependantNodeInfo.gatherFromNode) {
             auto it = std::find_if(nodeInfos.begin(), nodeInfos.end(), [gather](const NodeInfo& nodeInfo) { return nodeInfo.nodeName == gather; });
@@ -495,11 +464,10 @@ public:
                 return StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL_OUTPUT;
             }
         }
-
         return StatusCode::OK;
     }
 
-    Status validateShapeWithDemultiplexer(const shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) const {
+    Status validateShapeWithDemultiplexer(const Shape& shape, const NodeInfo& demultiplicatorNodeInfo) const {
         if (!demultiplicatorNodeInfo.demultiplyCount) {
             return StatusCode::OK;
         }
@@ -511,33 +479,35 @@ public:
             return StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY;
         }
         if (demultiplicatorNodeInfo.demultiplyCount.value() != 0) {
-            if (shape[0] != 0) {
-                // 0 means that node accepts dynamic shape
-                if (shape[0] != demultiplicatorNodeInfo.demultiplyCount.value()) {
+            // TODO -1 vs 0 as demultiplexing value
+            if (!shape[0].isAny()) {
+                auto demultiplyDimension = Dimension(demultiplicatorNodeInfo.demultiplyCount.value());
+                if (!shape[0].partiallyFitsInto(demultiplyDimension)) {
                     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of node: {} does not match tensor first dimension value: {}",
                         this->pipelineName,
                         demultiplicatorNodeInfo.demultiplyCount.value(),
                         demultiplicatorNodeInfo.nodeName,
-                        shape[0]);
-                    return StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT;
+                        shape[0].toString());
+                    return StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_TENSOR_SHARD_COUNT;
                 }
             } else {
-                SPDLOG_LOGGER_WARN(modelmanager_logger, "Demultiply count: {} of node: {} is fixed while first dimenson value of node library is not: {}. This pipeline may fail at execution stage.",
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {}; Demultiply count: {} of node: {} is fixed while first dimenson value of node library is not: {}. This pipeline may fail at execution stage.",
+                    this->pipelineName,
                     demultiplicatorNodeInfo.demultiplyCount.value(),
                     demultiplicatorNodeInfo.nodeName,
-                    shape[0]);
+                    shape[0].toString());
             }
-        } else if (shape[0] != 0) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Demultiply count: {} of node: {} is dynamic while first dimenson value of gather node is not: {}. This pipeline may fail at execution stage.",
+        } else if (!shape[0].isAny()) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {}; Demultiply count: {} of node: {} is dynamic while first dimenson value of gather node is not: {}. This pipeline may fail at execution stage.",
                 this->pipelineName,
                 demultiplicatorNodeInfo.demultiplyCount.value(),
                 demultiplicatorNodeInfo.nodeName,
-                shape[0]);
+                shape[0].toString());
         }
         return StatusCode::OK;
     }
 
-    Status influenceShapeWithDemultiplexer(shape_t& shape, const NodeInfo& demultiplicatorNodeInfo) {
+    Status influenceShapeWithDemultiplexer(Shape& shape, const NodeInfo& demultiplicatorNodeInfo) {
         auto result = validateShapeWithDemultiplexer(shape, demultiplicatorNodeInfo);
         if (!result.ok()) {
             return result;
@@ -546,13 +516,13 @@ public:
         return StatusCode::OK;
     }
 
-    bool areShapesMatching(const shape_t& tensorInputShape, const shape_t& tensorOutputShape) {
+    bool areShapesMatching(const Shape& tensorInputShape, const Shape& tensorOutputShape) {
         if (tensorInputShape.size() != tensorOutputShape.size()) {
             return false;
         }
 
         for (size_t i = 0; i < tensorInputShape.size(); i++) {
-            if (tensorInputShape[i] != tensorOutputShape[i] && (tensorInputShape[i] != 0 && tensorOutputShape[i] != 0)) {
+            if (!tensorInputShape[i].partiallyFitsInto(tensorOutputShape[i])) {
                 return false;
             }
         }
@@ -565,8 +535,8 @@ public:
         // Affect shape by demultiplexer/gather if applies.
         const auto& tensorInput = this->inputsInfo.at(modelInputName);
         const auto& tensorOutput = this->dependencyOutputsInfo.at(modelOutputName);
-        shape_t tensorInputShape = tensorInput->getEffectiveShape();
-        shape_t tensorOutputShape = tensorOutput->getEffectiveShape();
+        Shape tensorInputShape = tensorInput->getShape();
+        Shape tensorOutputShape = tensorOutput->getShape();
         if (dependencyNodeInfo.demultiplyCount) {
             auto result = influenceShapeWithDemultiplexer(tensorOutputShape, dependencyNodeInfo);
             if (!result.ok()) {
@@ -585,7 +555,7 @@ public:
                     this->pipelineName,
                     demultiplicatorNode->demultiplyCount.value(),
                     demultiplicatorNode->nodeName,
-                    tensorInputShape[1],
+                    tensorInputShape[1].toString(),
                     dependencyNodeInfo.nodeName);
                 return result;
             }
@@ -600,10 +570,10 @@ public:
                 pipelineName,
                 dependantNodeInfo.nodeName,
                 modelInputName,
-                TensorInfo::shapeToString(tensorInputShape),
+                tensorInputShape.toString(),
                 dependencyNodeInfo.nodeName,
                 modelOutputName,
-                TensorInfo::shapeToString(tensorOutputShape));
+                tensorOutputShape.toString());
             return StatusCode::INVALID_SHAPE;
         }
         if (tensorInput->getPrecision() != tensorOutput->getPrecision()) {
@@ -735,7 +705,7 @@ public:
                 this->inputsInfo,
                 dependantNodeInfo.library.getInputsInfo,
                 this->pipelineName,
-                nodeResources.at(dependantNodeInfo.nodeName));
+                getCNLIMWrapperPtr(nodeResources.at(dependantNodeInfo.nodeName)));
             if (!result.ok()) {
                 return result;
             }
@@ -744,7 +714,7 @@ public:
                 this->outputsInfo,
                 dependantNodeInfo.library.getOutputsInfo,
                 this->pipelineName,
-                nodeResources.at(dependantNodeInfo.nodeName));
+                getCNLIMWrapperPtr(nodeResources.at(dependantNodeInfo.nodeName)));
             if (!result.ok()) {
                 return result;
             }
@@ -763,7 +733,7 @@ public:
             this->dependencyInputsInfo,
             dependencyNodeInfo.library.getInputsInfo,
             this->pipelineName,
-            nodeResources.at(dependencyNodeInfo.nodeName));
+            getCNLIMWrapperPtr(nodeResources.at(dependencyNodeInfo.nodeName)));
         if (!result.ok()) {
             return result;
         }
@@ -772,7 +742,7 @@ public:
             this->dependencyOutputsInfo,
             dependencyNodeInfo.library.getOutputsInfo,
             this->pipelineName,
-            nodeResources.at(dependencyNodeInfo.nodeName));
+            getCNLIMWrapperPtr(nodeResources.at(dependencyNodeInfo.nodeName)));
         if (!result.ok()) {
             return result;
         }
@@ -796,11 +766,6 @@ public:
                 return result;
             }
 
-            result = checkForRestrictedBatchSize();
-            if (!result.ok()) {
-                return result;
-            }
-
             prepareRemainingUnconnectedDependantInputsSet();
         }
 
@@ -815,17 +780,12 @@ public:
                 return result;
             }
 
-            result = checkForRestrictedBatchSize();
-            if (!result.ok()) {
-                return result;
-            }
-
             prepareRemainingUnconnectedDependantInputsSet();
         }
 
         if (dependantNodeInfo.kind == NodeKind::DL || dependantNodeInfo.kind == NodeKind::CUSTOM) {
             for (const auto& [name, tensorOutput] : outputsInfo) {
-                auto result = validateShapeWithDemultiplexer(tensorOutput->getEffectiveShape(), dependantNodeInfo);
+                auto result = validateShapeWithDemultiplexer(tensorOutput->getShape(), dependantNodeInfo);
                 if (!result.ok()) {
                     return result;
                 }
@@ -1082,17 +1042,17 @@ const tensor_map_t PipelineDefinition::getOutputsInfo() const {
 }
 
 std::shared_ptr<TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, uint32_t demultiplyCount) {
-    return tensorInfo->createCopyWithEffectiveDimensionPrefix(demultiplyCount);
+    return tensorInfo->createCopyWithEffectiveDimensionPrefix(demultiplyCount ? Dimension(demultiplyCount) : Dimension::any());
 }
 
-std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string& mappedName, const std::shared_ptr<TensorInfo>& tensorInfo, const shape_t& gatherShape, bool isConnectionFromDemultiplexer) {
+std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string& mappedName, const std::shared_ptr<TensorInfo>& tensorInfo, const Shape& gatherShape, bool isConnectionFromDemultiplexer) {
     std::shared_ptr<TensorInfo> newOwnedTensorInfo;
     if (gatherShape.size() == 0) {
         newOwnedTensorInfo = std::make_shared<TensorInfo>(*tensorInfo);
         newOwnedTensorInfo->setMappedName(mappedName);
         return newOwnedTensorInfo;
     }
-    shape_t newShape = tensorInfo->getEffectiveShape();
+    Shape newShape = tensorInfo->getShape();
     if (isConnectionFromDemultiplexer) {
         newShape.erase(newShape.begin());
     }
@@ -1149,9 +1109,9 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                         }
                         if (!it->second->isTensorSpecEqual(*tensorInfo) &&
                             !it->second->isTensorUnspecified()) {
-                            Status result = StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA;
-                            SPDLOG_ERROR(result.string());
-                            return result;
+                            Status status = StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA;
+                            SPDLOG_ERROR("Error validating pipeline: {}", status.string());
+                            return status;
                         }
                     }
                     inputsInfo[alias] = tensorInfo;
@@ -1165,7 +1125,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
 
                 tensor_map_t info;
                 auto status = getCustomNodeMetadata(*dependantNodeInfo, info, dependantNodeInfo->library.getInputsInfo, this->getName(),
-                    nodeResources.at(dependantNodeInfo->nodeName));
+                    getCNLIMWrapperPtr(nodeResources.at(dependantNodeInfo->nodeName)));
                 if (!status.ok()) {
                     return status;
                 }
@@ -1208,7 +1168,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const shape_t& gatherShape) const {
+Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const Shape& gatherShape) const {
     auto instance = manager.findModelInstance(dependencyNodeInfo.modelName, dependencyNodeInfo.modelVersion.value_or(0));
     if (!instance) {
         SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} outputs info fetching", dependencyNodeInfo.modelName, this->getName());
@@ -1227,13 +1187,13 @@ Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo&
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const shape_t& gatherShape) const {
+Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const Shape& gatherShape) const {
     if (!dependencyNodeInfo.library.isValid()) {
         return StatusCode::NODE_LIBRARY_MISSING;
     }
     tensor_map_t info;
     auto status = getCustomNodeMetadata(dependencyNodeInfo, info, dependencyNodeInfo.library.getOutputsInfo, this->getName(),
-        nodeResources.at(dependencyNodeInfo.nodeName));
+        getCNLIMWrapperPtr(nodeResources.at(dependencyNodeInfo.nodeName)));
     if (!status.ok()) {
         return status;
     }
@@ -1318,11 +1278,11 @@ const NodeInfo& PipelineDefinition::findNodeByName(const std::string& name) cons
     });
 }
 
-shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
+Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
     if (info.gatherFromNode.size() == 0) {
         return {};
     }
-    shape_t shape;
+    Shape shape;
     shape.reserve(info.gatherFromNode.size());
 
     std::function<void(const std::string&)> search;
@@ -1332,8 +1292,9 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
         }
         if (info.gatherFromNode.count(nodeName) > 0) {
             auto someNodeInfo = this->findNodeByName(nodeName);
-            uint32_t demultiplyCount = someNodeInfo.demultiplyCount.value_or(0);
-            if (demultiplyCount == 0) {
+            dimension_value_t demultiplyCount = static_cast<dimension_value_t>(someNodeInfo.demultiplyCount.value_or(0));
+            Dimension dim = demultiplyCount == 0 ? Dimension::any() : Dimension(demultiplyCount);
+            if (dim.isAny()) {
                 tensor_map_t nodeOutputsInfo;
                 if (someNodeInfo.kind == NodeKind::CUSTOM) {
                     auto result = PipelineDefinition::getCustomNodeMetadata(
@@ -1341,7 +1302,7 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
                         nodeOutputsInfo,
                         someNodeInfo.library.getOutputsInfo,
                         this->pipelineName,
-                        nodeResources.at(someNodeInfo.nodeName));
+                        getCNLIMWrapperPtr(nodeResources.at(someNodeInfo.nodeName)));
                     if (!result.ok()) {
                         SPDLOG_ERROR("Failed to read node: {} library metadata with error: {}", nodeName, result.string());
                         return;
@@ -1349,16 +1310,16 @@ shape_t PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
                     if (nodeOutputsInfo.size() == 0) {
                         SPDLOG_ERROR("Node: {} library metadata reports no outputs", nodeName);
                         return;
-                    } else if (nodeOutputsInfo.begin()->second->getEffectiveShape().size() < 3) {
+                    } else if (nodeOutputsInfo.begin()->second->getShape().size() < 3) {
                         SPDLOG_ERROR("Node: {} library metadata reports output with too small number of dimensions", nodeName);
                         return;
                     }
-                    demultiplyCount = nodeOutputsInfo.begin()->second->getEffectiveShape()[0];
+                    dim = nodeOutputsInfo.begin()->second->getShape()[0];
                 } else if (someNodeInfo.kind == NodeKind::ENTRY) {
-                    demultiplyCount = 0;
+                    dim = Dimension::any();
                 }
             }
-            shape.emplace_back(demultiplyCount);
+            shape.emplace_back(dim);
         }
 
         if (this->connections.at(nodeName).size() > 0) {

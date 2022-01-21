@@ -26,13 +26,13 @@
 
 #include <rapidjson/document.h>
 
+#include "layout_configuration.hpp"
 #include "model_version_policy.hpp"
-#include "shapeinfo.hpp"
+#include "shape.hpp"
 #include "status.hpp"
 
 namespace ovms {
 
-using layouts_map_t = std::unordered_map<std::string, std::string>;
 using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, std::string>;
 using custom_loader_options_config_t = std::map<std::string, std::string>;
@@ -74,7 +74,7 @@ private:
     /**
          * @brief Batch size
          */
-    size_t batchSize;
+    std::optional<Dimension> batchSize;
 
     /**
          * @brief Model version policy
@@ -129,17 +129,17 @@ private:
     /**
          * @brief Layout for single input
          */
-    std::string layout;
+    LayoutConfiguration layout;
 
     /**
          * @brief Map of shapes
          */
-    shapes_map_t shapes;
+    shapes_info_map_t shapes;
 
     /**
          * @brief Map of layouts
          */
-    layouts_map_t layouts;
+    layout_configurations_map_t layouts;
 
     /**
          * @brief Input mapping configuration
@@ -147,9 +147,18 @@ private:
     mapping_config_t mappingInputs;
 
     /**
-         * @brief Input mapping configuration
+         * @brief Output mapping configuration
          */
     mapping_config_t mappingOutputs;
+
+    /**
+         * @brief Reversed input mapping configuration
+         */
+    mapping_config_t reversedMappingInputs;
+    /**
+         * @brief Reversed output mapping configuration
+         */
+    mapping_config_t reversedMappingOutputs;
 
     /**
          * @brief Shape left opening bracket in string format
@@ -241,6 +250,24 @@ public:
          * @return true if customloader configuration has changed
          */
     bool isCustomLoaderConfigChanged(const ModelConfig& rhs) const;
+
+    /**
+         * @brief Compares two ModelConfig instances for batch size configuration
+         * 
+         * @param rhs
+         *  
+         * @return true if configurations are equal false otherwise
+         */
+    bool isBatchSizeConfigurationEqual(const ModelConfig& rhs) const;
+
+    /**
+         * @brief Compares two ModelConfig instances for layout configuration
+         * 
+         * @param rhs
+         *  
+         * @return true if configurations are equal false otherwise
+         */
+    bool isLayoutConfigurationEqual(const ModelConfig& rhs) const;
 
     /**
          * @brief Compares two ModelConfig instances for shape configuration
@@ -404,7 +431,7 @@ public:
          * 
          * @return size_t 
          */
-    size_t getBatchSize() const {
+    std::optional<Dimension> getBatchSize() const {
         return this->batchSize;
     }
 
@@ -422,7 +449,7 @@ public:
          * 
          * @param batchSize 
          */
-    void setBatchSize(size_t batchSize) {
+    void setBatchSize(std::optional<Dimension> batchSize) {
         this->batchSize = batchSize;
     }
 
@@ -452,7 +479,7 @@ public:
          * 
          * @param configBatchSize 
          */
-    static std::tuple<Mode, size_t> extractBatchingParams(std::string configBatchSize);
+    static std::tuple<Mode, std::optional<Dimension>> extractBatchingParams(std::string configBatchSize);
 
     /**
          * @brief Get the model version policy
@@ -671,7 +698,7 @@ public:
          * 
          * @return const shapes_map_t& 
          */
-    const shapes_map_t& getShapes() const {
+    const shapes_info_map_t& getShapes() const {
         return this->shapes;
     }
 
@@ -680,7 +707,7 @@ public:
          * 
          * @param shapes 
          */
-    void setShapes(const shapes_map_t& shapes) {
+    void setShapes(const shapes_info_map_t& shapes) {
         this->shapes = shapes;
     }
 
@@ -740,7 +767,7 @@ public:
          * 
          * @return const std::string& 
          */
-    const std::string& getLayout() const {
+    const LayoutConfiguration& getLayout() const {
         return this->layout;
     }
 
@@ -749,7 +776,7 @@ public:
          * 
          * @param layout
          */
-    void setLayout(const std::string& layout) {
+    void setLayout(const LayoutConfiguration& layout) {
         this->layout = layout;
         this->layouts.clear();
     }
@@ -757,9 +784,9 @@ public:
     /**
          * @brief Get the layouts
          * 
-         * @return const layouts_map_t& 
+         * @return const layout_configurations_map_t& 
          */
-    const layouts_map_t& getLayouts() const {
+    const layout_configurations_map_t& getLayouts() const {
         return this->layouts;
     }
 
@@ -768,20 +795,9 @@ public:
          * 
          * @param layouts 
          */
-    void setLayouts(const layouts_map_t& layouts) {
+    void setLayouts(const layout_configurations_map_t& layouts) {
         this->layouts = layouts;
-        this->layout = "";
-    }
-
-    /**
-         * @brief Add a named layout
-         * 
-         * @param name 
-         * @param layout 
-         */
-    void addLayout(const std::string& name, const std::string& layout) {
-        this->layouts[name] = layout;
-        this->layout = "";
+        this->layout = LayoutConfiguration();
     }
 
     /**
@@ -821,6 +837,24 @@ public:
     }
 
     /**
+         * @brief Get the reversed mapping for inputs
+         * 
+         * @return const mapping_config_t& 
+         */
+    const mapping_config_t& getRealMappingInputs() const {
+        return this->reversedMappingInputs;
+    }
+
+    /**
+         * @brief Get the reversed mapping for outputs
+         * 
+         * @return const mapping_config_t& 
+         */
+    const mapping_config_t& getRealMappingOutputs() const {
+        return this->reversedMappingOutputs;
+    }
+
+    /**
          * @brief Get the mapping inputs by key
          * 
          * @param key 
@@ -843,6 +877,28 @@ public:
     }
 
     /**
+         * @brief Get the real inputs by value
+         * 
+         * @param value 
+         * @return const std::string 
+         */
+    const std::string getRealInputNameByValue(const std::string& value) const {
+        auto it = reversedMappingInputs.find(value);
+        return it != reversedMappingInputs.end() ? it->second : "";
+    }
+
+    /**
+         * @brief Get the real outputs by value
+         * 
+         * @param value 
+         * @return const std::string 
+         */
+    const std::string getRealOutputNameByValue(const std::string& value) const {
+        auto it = reversedMappingOutputs.find(value);
+        return it != reversedMappingOutputs.end() ? it->second : "";
+    }
+
+    /**
          * @brief Set the mapping inputs
          * 
          * @param mapping 
@@ -858,6 +914,24 @@ public:
          */
     void setMappingOutputs(const mapping_config_t& mapping) {
         this->mappingOutputs = mapping;
+    }
+
+    /**
+         * @brief Set the reversed mapping inputs
+         * 
+         * @param mapping 
+         */
+    void setRealMappingInputs(const mapping_config_t& mapping) {
+        this->reversedMappingInputs = mapping;
+    }
+
+    /**
+         * @brief Set the reversed mapping outputs
+         * 
+         * @param mapping 
+         */
+    void setRealMappingOutputs(const mapping_config_t& mapping) {
+        this->reversedMappingOutputs = mapping;
     }
 
     /**
@@ -909,5 +983,7 @@ public:
          * @return status
          */
     Status parseCustomLoaderOptionsConfig(const rapidjson::Value& node);
+
+    std::string layoutConfigurationToString() const;
 };
 }  // namespace ovms

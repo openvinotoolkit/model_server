@@ -18,7 +18,7 @@
 #include <memory>
 #include <string>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
 #pragma GCC diagnostic push
@@ -37,19 +37,20 @@ class OutputGetter {
 public:
     OutputGetter(T t) :
         outputSource(t) {}
-    Status get(const std::string& name, InferenceEngine::Blob::Ptr& blob);
+    Status get(const std::string& name, ov::runtime::Tensor& tensor);  // TODO replace with shared_ptr version
+    Status get(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& tensor);
 
 private:
     T outputSource;
 };
 
-Status serializeBlobToTensorProto(
+Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,
-    const std::shared_ptr<TensorInfo>& networkOutput,
-    InferenceEngine::Blob::Ptr blob);
+    const std::shared_ptr<TensorInfo>& servableOutput,
+    ov::runtime::Tensor& tensor);
 
 Status serializePredictResponse(
-    InferenceEngine::InferRequest& inferRequest,
+    ov::runtime::InferRequest& inferRequest,
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response);
 
@@ -60,13 +61,13 @@ Status serializePredictResponse(
     tensorflow::serving::PredictResponse* response) {
     Status status;
     for (const auto& [outputName, outputInfo] : outputMap) {
-        InferenceEngine::Blob::Ptr blob;
-        status = outputGetter.get(outputName, blob);
+        ov::runtime::Tensor tensor;
+        status = outputGetter.get(outputName, tensor);
         if (!status.ok()) {
             return status;
         }
         auto& tensorProto = (*response->mutable_outputs())[outputInfo->getMappedName()];
-        status = serializeBlobToTensorProto(tensorProto, outputInfo, blob);
+        status = serializeTensorToTensorProto(tensorProto, outputInfo, tensor);
         if (!status.ok()) {
             return status;
         }

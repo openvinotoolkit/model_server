@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <limits>
 #include <set>
 #include <sstream>
 
@@ -30,16 +31,6 @@
 #include "stringutils.hpp"
 
 namespace ovms {
-
-const std::set<std::string> ModelConfig::configAllowedLayouts{"NCHW", "NHWC"};
-
-ShapeInfo::operator std::string() const {
-    if (shapeMode == Mode::AUTO)
-        return std::string("auto");
-    std::stringstream shapeStream;
-    std::copy(this->shape.begin(), this->shape.end(), std::ostream_iterator<size_t>(shapeStream, " "));
-    return shapeStream.str();
-}
 
 bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
     if (this->name != rhs.name) {
@@ -74,7 +65,7 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to batching mode mismatch", this->name);
         return true;
     }
-    if (this->batchSize != rhs.batchSize) {
+    if (!isBatchSizeConfigurationEqual(rhs)) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to batch size mismatch", this->name);
         return true;
     }
@@ -86,11 +77,7 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to plugin config mismatch", this->name);
         return true;
     }
-    if (this->layout != rhs.layout) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to no named layout mismatch", this->name);
-        return true;
-    }
-    if (this->layouts != rhs.layouts) {
+    if (!isLayoutConfigurationEqual(rhs)) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to named layout mismatch", this->name);
         return true;
     }
@@ -121,42 +108,69 @@ bool ModelConfig::isCustomLoaderConfigChanged(const ModelConfig& rhs) const {
     return false;
 }
 
-bool ModelConfig::isShapeConfigurationEqual(const ModelConfig& rhs) const {
-    if (this->shapes.size() != rhs.shapes.size()) {
+bool ModelConfig::isBatchSizeConfigurationEqual(const ModelConfig& rhs) const {
+    if (this->batchSize.has_value() != rhs.batchSize.has_value()) {
         return false;
     }
-    if (this->shapes.size() > 1) {
-        return this->shapes == rhs.shapes;
+    if (this->batchSize.has_value() && this->batchSize.value() != rhs.batchSize.value()) {
+        return false;
     }
-    if (this->shapes.size() == 1) {
-        if (this->shapes.begin()->first != rhs.shapes.begin()->first) {
+    return true;
+}
+
+bool ModelConfig::isLayoutConfigurationEqual(const ModelConfig& rhs) const {
+    if (this->layout != rhs.layout) {
+        return false;
+    }
+
+    if (this->layouts.size() != rhs.layouts.size()) {
+        return false;
+    }
+    for (const auto& [name, layoutConfig] : this->layouts) {
+        auto it = rhs.layouts.find(name);
+        if (it == rhs.layouts.end()) {
             return false;
-        } else {
-            return this->shapes.begin()->second == rhs.shapes.begin()->second;
+        }
+        if (layoutConfig != it->second) {
+            return false;
         }
     }
     return true;
 }
 
-std::tuple<Mode, size_t> ModelConfig::extractBatchingParams(std::string configBatchSize) {
-    Mode batchingMode = FIXED;
-    size_t effectiveBatchSize = 0;
-    if (configBatchSize == "auto") {
-        batchingMode = AUTO;
-    } else {
-        if (configBatchSize.find_first_not_of("0123456789") != std::string::npos) {
-            SPDLOG_WARN("Wrong batch size parameter provided. Model batch size will be set to default.");
-            return std::tuple<Mode, size_t>{batchingMode, effectiveBatchSize};
+bool ModelConfig::isShapeConfigurationEqual(const ModelConfig& rhs) const {
+    if (this->shapes.size() != rhs.shapes.size()) {
+        return false;
+    }
+    for (const auto& [name, shape] : this->shapes) {
+        auto it = rhs.shapes.find(name);
+        if (it == rhs.shapes.end()) {
+            return false;
         }
-        try {
-            effectiveBatchSize = std::stoi(configBatchSize);
-        } catch (const std::invalid_argument& e) {
-            SPDLOG_WARN("Wrong batch size parameter provided. Model batch size will be set to default.");
-        } catch (const std::out_of_range& e) {
-            SPDLOG_WARN("Out of range batch size parameter provided. Model batch size will be set to default.");
+        if (shape != it->second) {
+            return false;
         }
     }
-    return std::tuple<Mode, size_t>{batchingMode, effectiveBatchSize};
+    return true;
+}
+
+std::tuple<Mode, std::optional<Dimension>> ModelConfig::extractBatchingParams(std::string configBatchSize) {
+    Mode batchingMode = FIXED;
+    std::optional<Dimension> effectiveBatchSize = std::nullopt;
+    if (configBatchSize == "auto") {
+        batchingMode = AUTO;
+    } else if (configBatchSize == "0") {
+        // do nothing
+    } else {
+        Dimension dim;
+        auto status = Dimension::fromString(configBatchSize, dim);
+        if (!status.ok()) {
+            SPDLOG_WARN("Wrong batch size parameter provided. Model batch size will be set to default.");
+        } else {
+            effectiveBatchSize = dim;
+        }
+    }
+    return std::tuple<Mode, std::optional<Dimension>>{batchingMode, effectiveBatchSize};
 }
 
 Status ModelConfig::parseModelVersionPolicy(std::string command) {
@@ -228,10 +242,15 @@ Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
     }
 
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
-        if (!it->value.IsString()) {
+        if (it->value.IsString()) {
+            pluginConfig[it->name.GetString()] = it->value.GetString();
+        } else if (it->value.IsInt64()) {
+            pluginConfig[it->name.GetString()] = std::to_string(it->value.GetInt64());
+        } else if (it->value.IsDouble()) {
+            pluginConfig[it->name.GetString()] = std::to_string(it->value.GetDouble());
+        } else {
             return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
         }
-        pluginConfig[it->name.GetString()] = it->value.GetString();
     }
 
     return StatusCode::OK;
@@ -242,7 +261,7 @@ Status ModelConfig::parseShapeParameter(const rapidjson::Value& node) {
         return StatusCode::SHAPE_WRONG_FORMAT;
     }
 
-    shapes_map_t shapes;
+    shapes_info_map_t shapes;
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
         if (!it->value.IsString()) {
             return StatusCode::SHAPE_WRONG_FORMAT;
@@ -254,7 +273,7 @@ Status ModelConfig::parseShapeParameter(const rapidjson::Value& node) {
         }
         shapes[it->name.GetString()] = shapeInfo;
     }
-    setShapes(shapes);
+    this->shapes = shapes;
 
     return StatusCode::OK;
 }
@@ -285,7 +304,6 @@ Status ModelConfig::parseShapeParameter(const std::string& command) {
     if (node.Parse(command.c_str()).HasParseError()) {
         return StatusCode::SHAPE_WRONG_FORMAT;
     }
-
     return parseShapeParameter(node);
 }
 
@@ -293,20 +311,20 @@ Status ModelConfig::parseLayoutParameter(const rapidjson::Value& node) {
     if (!node.IsObject()) {
         return StatusCode::LAYOUT_WRONG_FORMAT;
     }
-
-    layouts_map_t layouts;
+    layout_configurations_map_t layouts;
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
         if (!it->value.IsString()) {
             return StatusCode::LAYOUT_WRONG_FORMAT;
         }
-        std::string layout = it->value.GetString();
-        std::transform(layout.begin(), layout.end(), layout.begin(), ::toupper);
-        if (configAllowedLayouts.count(layout) > 0) {
-            layouts[it->name.GetString()] = layout;
-        } else {
-            SPDLOG_ERROR("Setting {} layout is not supported", layout);
-            return StatusCode::LAYOUT_WRONG_FORMAT;
+        std::string layoutStr = it->value.GetString();
+        std::transform(layoutStr.begin(), layoutStr.end(), layoutStr.begin(), ::toupper);
+
+        LayoutConfiguration layout;
+        auto status = LayoutConfiguration::fromString(layoutStr, layout);
+        if (!status.ok()) {
+            return status;
         }
+        layouts[it->name.GetString()] = layout;
     }
     setLayouts(layouts);
 
@@ -315,8 +333,7 @@ Status ModelConfig::parseLayoutParameter(const rapidjson::Value& node) {
 
 Status ModelConfig::parseLayoutParameter(const std::string& command) {
     this->layouts.clear();
-    this->layout = std::string();
-
+    this->layout = LayoutConfiguration();
     if (command.empty()) {
         return StatusCode::OK;
     }
@@ -324,8 +341,15 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
     std::string upperCaseCommand;
     std::transform(command.begin(), command.end(), std::back_inserter(upperCaseCommand), ::toupper);
 
-    if (configAllowedLayouts.count(upperCaseCommand) > 0) {
-        setLayout(upperCaseCommand);
+    erase_spaces(upperCaseCommand);
+
+    if (*upperCaseCommand.begin() != '{') {
+        LayoutConfiguration layout;
+        auto status = LayoutConfiguration::fromString(upperCaseCommand, layout);
+        if (!status.ok()) {
+            return status;
+        }
+        setLayout(layout);
         return StatusCode::OK;
     }
 
@@ -343,34 +367,9 @@ Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
         return StatusCode::OK;
     }
 
-    std::string s = str;
-    erase_spaces(s);
-
-    // quick validation of valid characters
-    if (s.find_first_not_of("0123456789(),") != std::string::npos)
-        return StatusCode::SHAPE_WRONG_FORMAT;
-
-    if (s.front() != shapeLeft || s.back() != shapeRight)
-        return StatusCode::SHAPE_WRONG_FORMAT;
-
-    s.pop_back();
-    s.erase(s.begin());
-
-    auto tokens = tokenize(s, shapeDelimeter);
-    shapeInfo.shape.clear();
-    try {
-        std::transform(tokens.begin(), tokens.end(), std::back_inserter(shapeInfo.shape),
-            [](const std::string& str) { return std::stoi(str); });
-    } catch (const std::out_of_range& e) {
-        SPDLOG_ERROR("Parsing model shape string out of range: {}, error: {}", str, e.what());
-        return StatusCode::INVALID_SHAPE;
-    } catch (...) {
-        SPDLOG_ERROR("Parsing model shape string: {}", str);
-        return StatusCode::INVALID_SHAPE;
-    }
-
     shapeInfo.shapeMode = FIXED;
-    return StatusCode::OK;
+    shapeInfo.shape = Shape();
+    return Shape::fromString(str, shapeInfo.shape);
 }
 
 Status ModelConfig::parseModelMapping() {
@@ -400,6 +399,7 @@ Status ModelConfig::parseModelMapping() {
         for (const auto& key : itr->value.GetObject()) {
             SPDLOG_DEBUG("Loaded input mapping {} => {}", key.name.GetString(), key.value.GetString());
             mappingInputs[key.name.GetString()] = key.value.GetString();
+            reversedMappingInputs[key.value.GetString()] = key.name.GetString();
         }
     }
 
@@ -411,6 +411,7 @@ Status ModelConfig::parseModelMapping() {
         for (const auto& key : it->value.GetObject()) {
             SPDLOG_DEBUG("Loaded output mapping {} => {}", key.name.GetString(), key.value.GetString());
             mappingOutputs[key.name.GetString()] = key.value.GetString();
+            reversedMappingOutputs[key.value.GetString()] = key.name.GetString();
         }
     }
 
@@ -432,8 +433,6 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     }
     if (v.HasMember("target_device"))
         this->setTargetDevice(v["target_device"].GetString());
-    if (v.HasMember("disable_caching"))
-        this->setDisableCaching(v["disable_caching"].GetBool());
     if (v.HasMember("version")) {
         this->setVersion(v["version"].GetUint64());
     }
@@ -471,7 +470,16 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                 } else {
                     for (auto& sh : s.value.GetArray()) {
                         if (sh.IsUint64()) {
-                            shapeInfo.shape.push_back(sh.GetUint64());
+                            size_t dim = sh.GetUint64();
+                            if (dim > std::numeric_limits<dimension_value_t>::max()) {
+                                SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
+                                if (!firstErrorStatus.ok()) {
+                                    firstErrorStatus = StatusCode::SHAPE_WRONG_FORMAT;
+                                }
+                                valid = false;
+                                break;
+                            }
+                            shapeInfo.shape.add(Dimension{static_cast<dimension_value_t>(dim)});
                         } else {
                             SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
                             if (!firstErrorStatus.ok()) {
@@ -513,7 +521,8 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             if (!firstErrorStatus.ok()) {
                 firstErrorStatus = status;
             }
-            SPDLOG_WARN("Couldn't parse plugin config");
+            SPDLOG_ERROR("Couldn't parse plugin config");
+            return status;
         }
     }
 
@@ -567,7 +576,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     SPDLOG_DEBUG("Specified model parameters:");
     SPDLOG_DEBUG("model_basepath: {}", getBasePath());
     SPDLOG_DEBUG("model_name: {}", getName());
-    SPDLOG_DEBUG("batch_size: {}", getBatchSize());
+    SPDLOG_DEBUG("batch_size: {}", getBatchSize().has_value() ? getBatchSize().value().toString() : "not configured");
     if (isShapeAnonymous()) {
         SPDLOG_DEBUG("shape: {}", std::string(getShapes().begin()->second));
     } else {
@@ -586,14 +595,14 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         SPDLOG_DEBUG("  {}: {}", pluginParameter, pluginValue);
     }
 
-    bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize() != 0);
+    bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize().has_value());
     bool shapeSet = (getShapes().size() > 0);
 
     SPDLOG_DEBUG("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
     if (batchSizeSet && shapeSet) {
         SPDLOG_WARN("Both shape and batch size have been defined. Batch size parameter will be ignored.");
         setBatchingMode(FIXED);
-        setBatchSize(0);
+        setBatchSize(std::nullopt);
     }
 
     SPDLOG_DEBUG("stateful: {}", isStateful());
@@ -603,11 +612,23 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         SPDLOG_DEBUG("low_latency_transformation: {}", isLowLatencyTransformationUsed());
     }
 
+    // Model Cache options
+    if (anyShapeSetToAuto())
+        this->setDisableCaching(true);
+    if (getBatchingMode() == Mode::AUTO)
+        this->setDisableCaching(true);
+    if (v.HasMember("allow_cache")) {
+        this->setDisableCaching(!v["allow_cache"].GetBool());
+        SPDLOG_DEBUG("allow_cache: {}", !isCachingDisabled());
+    }
+
     // if the config has models which require custom loader to be used, then load the same here
     if (v.HasMember("custom_loader_options")) {
         if (!parseCustomLoaderOptionsConfig(v["custom_loader_options"]).ok()) {
             SPDLOG_ERROR("Couldn't parse custom loader options config");
         }
+        // force disable caching
+        this->setDisableCaching(true);
     }
     return StatusCode::OK;
 }
@@ -628,6 +649,17 @@ Status ModelConfig::parseCustomLoaderOptionsConfig(const rapidjson::Value& node)
     customLoaderOptionsStr = buffer.GetString();
 
     return StatusCode::OK;
+}
+
+std::string ModelConfig::layoutConfigurationToString() const {
+    if (getLayout().isSet()) {
+        return getLayout().toString();
+    }
+    std::stringstream ss;
+    for (const auto& [name, layoutCfg] : getLayouts()) {
+        ss << name << " " << layoutCfg.toString() << "; ";
+    }
+    return ss.str();
 }
 
 }  // namespace ovms

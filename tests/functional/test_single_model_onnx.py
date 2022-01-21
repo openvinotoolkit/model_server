@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 
 from constants import MODEL_SERVICE, ERROR_SHAPE, NOT_TO_BE_REPORTED_IF_SKIPPED, TARGET_DEVICE_MYRIAD, \
-    TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU
+    TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA
 from config import skip_nginx_test
 from model.models_information import ResnetONNX
 from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
-@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU])
+@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA])
 class TestSingleModelInferenceOnnx:
 
     def test_run_inference(self, start_server_single_model_onnx):

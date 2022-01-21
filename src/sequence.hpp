@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
 #include "ov_utils.hpp"
@@ -29,8 +30,8 @@
 
 namespace ovms {
 
-using sequence_memory_state_t = std::unordered_map<std::string, InferenceEngine::Blob::Ptr>;
-using model_memory_state_t = std::vector<InferenceEngine::VariableState>;
+using sequence_memory_state_t = std::unordered_map<std::string, std::shared_ptr<ov::runtime::Tensor>>;
+using model_memory_state_t = std::vector<ov::runtime::VariableState>;
 
 class Sequence {
 private:

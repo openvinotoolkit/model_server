@@ -31,7 +31,7 @@ using namespace rapidjson;
 
 class GetModelMetadataResponse : public ::testing::Test {
     struct Info {
-        InferenceEngine::Precision precision;
+        ovms::Precision precision;
         ovms::shape_t shape;
     };
 
@@ -39,7 +39,7 @@ class GetModelMetadataResponse : public ::testing::Test {
 
     class MockModelInstance : public MockModelInstanceChangingStates {
     public:
-        MockModelInstance(InferenceEngine::Core& ieCore) :
+        MockModelInstance(ov::runtime::Core& ieCore) :
             MockModelInstanceChangingStates("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
             status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_MODEL_VERSION, ovms::ModelVersionState::AVAILABLE);
         }
@@ -58,8 +58,8 @@ class GetModelMetadataResponse : public ::testing::Test {
 
     tensor_desc_map_t inputTensors;
     tensor_desc_map_t outputTensors;
-    ovms::tensor_map_t networkInputs;
-    ovms::tensor_map_t networkOutputs;
+    ovms::tensor_map_t servableInputs;
+    ovms::tensor_map_t servableOutputs;
 
 protected:
     std::string modelName = "resnet";
@@ -67,29 +67,29 @@ protected:
 
     std::shared_ptr<NiceMock<MockModelInstance>> instance;
     tensorflow::serving::GetModelMetadataResponse response;
-    std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::runtime::Core> ieCore;
 
     virtual void prepare() {
         instance = std::make_shared<NiceMock<MockModelInstance>>(*ieCore);
 
         inputTensors = tensor_desc_map_t({
             {"Input_FP32_1_3_224_224", {
-                                           InferenceEngine::Precision::FP32,
+                                           ovms::Precision::FP32,
                                            {1, 3, 224, 224},
                                        }},
             {"Input_U8_1_3_62_62", {
-                                       InferenceEngine::Precision::U8,
+                                       ovms::Precision::U8,
                                        {1, 3, 62, 62},
                                    }},
         });
 
         outputTensors = tensor_desc_map_t({
             {"Output_I32_1_2000", {
-                                      InferenceEngine::Precision::I32,
+                                      ovms::Precision::I32,
                                       {1, 2000},
                                   }},
             {"Output_FP32_2_20_3", {
-                                       InferenceEngine::Precision::FP32,
+                                       ovms::Precision::FP32,
                                        {2, 20, 3},
                                    }},
         });
@@ -104,13 +104,13 @@ protected:
             }
         };
 
-        prepare(inputTensors, networkInputs);
-        prepare(outputTensors, networkOutputs);
+        prepare(inputTensors, servableInputs);
+        prepare(outputTensors, servableOutputs);
 
         ON_CALL(*instance, getInputsInfo())
-            .WillByDefault(ReturnRef(networkInputs));
+            .WillByDefault(ReturnRef(servableInputs));
         ON_CALL(*instance, getOutputsInfo())
-            .WillByDefault(ReturnRef(networkOutputs));
+            .WillByDefault(ReturnRef(servableOutputs));
         ON_CALL(*instance, getName())
             .WillByDefault(ReturnRef(modelName));
         ON_CALL(*instance, getVersion())
@@ -118,7 +118,7 @@ protected:
     }
 
     void SetUp() override {
-        ieCore = std::make_unique<InferenceEngine::Core>();
+        ieCore = std::make_unique<ov::runtime::Core>();
         this->prepare();
     }
     void TearDown() override {

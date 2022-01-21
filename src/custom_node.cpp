@@ -32,7 +32,7 @@ CustomNode::CustomNode(
     const std::unordered_map<std::string, std::string>& nodeOutputNameAlias,
     std::optional<uint32_t> demultiplyCount,
     std::set<std::string> gatherFromNode,
-    void* customNodeLibraryInternalManager) :
+    std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager) :
     Node(nodeName, demultiplyCount, gatherFromNode),
     library(library),
     parameters(parameters),
@@ -44,7 +44,7 @@ CustomNode::CustomNode(
 Status CustomNode::execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) {
     auto& nodeSession = getNodeSession(sessionKey);
     auto& customNodeSession = static_cast<CustomNodeSession&>(nodeSession);
-    return customNodeSession.execute(notifyEndQueue, *this, this->library, this->libraryParameters, this->parameters.size(), customNodeLibraryInternalManager);
+    return customNodeSession.execute(notifyEndQueue, *this, this->library, this->libraryParameters, this->parameters.size(), getCNLIMWrapperPtr(customNodeLibraryInternalManager));
 }
 
 Status CustomNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
@@ -58,14 +58,14 @@ Status CustomNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSe
         customNodeSession.release();
         return StatusCode::INTERNAL_ERROR;
     }
-    auto& metadataBlobResultsPair = it.first->second;
-    auto& blobResults = metadataBlobResultsPair.second;
+    auto& metadataTensorResultsPair = it.first->second;
+    auto& tensorResults = metadataTensorResultsPair.second;
     return this->fetchResults(
-        blobResults,
+        tensorResults,
         nodeSession.getSessionKey());
 }
 
-Status CustomNode::fetchResults(BlobMap& outputs, session_key_t sessionKey) {
+Status CustomNode::fetchResults(TensorMap& outputs, session_key_t sessionKey) {
     auto& session = static_cast<CustomNodeSession&>(this->getNodeSession(sessionKey));
     session.clearInputs();
 
@@ -79,16 +79,16 @@ Status CustomNode::fetchResults(BlobMap& outputs, session_key_t sessionKey) {
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Getting custom node output tensor with name: {}",
                 getName(), sessionKey, realOutputName);
 
-            InferenceEngine::Blob::Ptr resultBlob;
-            auto status = session.fetchResult(realOutputName, resultBlob);
+            std::shared_ptr<ov::runtime::Tensor> resultTensor;
+            auto status = session.fetchResult(realOutputName, resultTensor);
             if (!status.ok()) {
                 SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} Custom node output with name {} is missing",
                     getName(), sessionKey, realOutputName);
                 return StatusCode::NODE_LIBRARY_MISSING_OUTPUT;
             }
 
-            outputs.emplace(std::make_pair(output_name, std::move(resultBlob)));
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Blob with name {} has been prepared under alias {}",
+            outputs.emplace(std::make_pair(output_name, std::move(resultTensor)));
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Tensor with name {} has been prepared under alias {}",
                 getName(), sessionKey, realOutputName, output_name);
         }
     }

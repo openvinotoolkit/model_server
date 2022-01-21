@@ -63,6 +63,27 @@ const char* config_2_models = R"({
     }]
 })";
 
+const char* config_2_models_new = R"({
+   "model_config_list": [
+    {
+      "config": {
+        "name": "resnet",
+        "base_path": "/tmp/models/dummy1",
+        "target_device": "CPU",
+        "model_version_policy": {"all": {}}
+      }
+    },
+    {
+      "config": {
+        "name": "alpha",
+        "base_path": "/tmp/models/dummy2",
+        "target_device": "CPU",
+	"batch_size": "auto",
+        "model_version_policy": {"all": {}}
+      }
+    }]
+})";
+
 const std::string FIRST_MODEL_NAME = "resnet";
 const std::string SECOND_MODEL_NAME = "alpha";
 
@@ -73,7 +94,7 @@ class MockModel : public ovms::Model {
 public:
     MockModel() :
         Model("MOCK_NAME", false, nullptr) {}
-    MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&, InferenceEngine::Core&), (override));
+    MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&, ov::runtime::Core&), (override));
 };
 
 std::shared_ptr<MockModel> modelMock;
@@ -265,7 +286,7 @@ TEST(ModelManager, configRelodNeededManyThreads) {
 
     manager.configFileReloadNeeded(isNeeded);
     EXPECT_EQ(isNeeded, false);
-    createConfigFileWithContent(config_2_models, configFile);
+    createConfigFileWithContent(config_2_models_new, configFile);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     for (int i = 0; i < numberOfThreads; i++) {
@@ -293,7 +314,7 @@ TEST(ModelManager, configReloadNeededChange) {
     manager.configFileReloadNeeded(isNeeded);
     EXPECT_EQ(isNeeded, false);
 
-    createConfigFileWithContent(config_2_models, configFile);
+    createConfigFileWithContent(config_2_models_new, configFile);
     std::this_thread::sleep_for(std::chrono::seconds(1));
     manager.configFileReloadNeeded(isNeeded);
     EXPECT_EQ(isNeeded, true);
@@ -345,7 +366,7 @@ TEST(ModelManager, configReloadNeededBeforeConfigLoad) {
     manager.configFileReloadNeeded(isNeeded);
     EXPECT_EQ(isNeeded, false);
 
-    createConfigFileWithContent(config_2_models, configFile);
+    createConfigFileWithContent(config_2_models_new, configFile);
     std::this_thread::sleep_for(std::chrono::seconds(1));
     manager.configFileReloadNeeded(isNeeded);
     EXPECT_EQ(isNeeded, true);
@@ -511,7 +532,7 @@ TEST(ModelManager, ConfigReloadingWithWrongInputName) {
     config.parseShapeParameter("{\"wrong_input_name\": \"(1,3,224,224)\"}");
     config.setBasePath("/ovms/src/test/dummy");
     auto status = manager.reloadModelWithVersions(config);
-    ASSERT_EQ(status, ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK);
+    ASSERT_EQ(status, ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_MODEL);
 }
 
 TEST(ModelManager, ConfigReloadingStatefulDynamic) {
@@ -675,7 +696,7 @@ TEST(ModelManager, ModelVersionFailedReloadReportsFailedStatus) {
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     // force reload with wrong shape
     config.setTargetDevice("invalid");
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE);
 }
 
 TEST(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
@@ -772,7 +793,7 @@ class MockModelInstanceInStateWithConfig : public ovms::ModelInstance {
     static const ovms::model_version_t UNUSED_VERSION = 987789;
 
 public:
-    MockModelInstanceInStateWithConfig(ovms::ModelVersionState state, const ovms::ModelConfig& modelConfig, InferenceEngine::Core& ieCore) :
+    MockModelInstanceInStateWithConfig(ovms::ModelVersionState state, const ovms::ModelConfig& modelConfig, ov::runtime::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
         status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_VERSION, state);
         config = modelConfig;
@@ -781,7 +802,7 @@ public:
 
 std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> getMockedModelVersionInstances(
     std::map<ovms::ModelVersionState, ovms::model_versions_t> initialVersionStates,
-    InferenceEngine::Core& ieCore,
+    ov::runtime::Core& ieCore,
     const ovms::ModelConfig& modelConfig = ovms::ModelConfig{}) {
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> modelVersions;
     std::array<ovms::ModelVersionState, 5> states{
@@ -800,7 +821,7 @@ std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> getMockedM
 
 class ModelManagerVersionsReload : public ::testing::Test {
 protected:
-    std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::runtime::Core> ieCore;
 
 public:
     ModelManagerVersionsReload() {
@@ -809,7 +830,7 @@ public:
         versionsToStart = std::make_shared<ovms::model_versions_t>();
     }
     void SetUp() {
-        ieCore = std::make_unique<InferenceEngine::Core>();
+        ieCore = std::make_unique<ov::runtime::Core>();
         initialVersions.clear();
         versionsToRetire->clear();
         versionsToReload->clear();
@@ -1075,7 +1096,7 @@ TEST_F(ModelManagerVersionsReload, ReloadUnloadingVersion) {
 
 class ReloadAvailableModelDueToConfigChange : public ::testing::Test {
 protected:
-    std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::runtime::Core> ieCore;
 
 public:
     ReloadAvailableModelDueToConfigChange() {
@@ -1084,7 +1105,6 @@ public:
         versionsToStart = std::make_shared<ovms::model_versions_t>();
     }
     void SetUp() {
-        ieCore = std::make_unique<InferenceEngine::Core>();
         initialVersions.clear();
         versionsToRetire->clear();
         versionsToReload->clear();
@@ -1224,7 +1244,8 @@ TEST_F(ReloadAvailableModelDueToConfigChange, ExpectReloadDueToShapeConfiguratio
     EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
 }
 
-class GetModelInstanceTest : public ::testing::Test {};
+// TODO: Enable tests once the issue https://jira.devtools.intel.com/browse/CVS-71746 is resolved.
+class DISABLED_GetModelInstanceTest : public ::testing::Test {};
 
 class MockModel : public ovms::Model {};
 
@@ -1237,7 +1258,7 @@ public:
     }
 };
 
-TEST_F(GetModelInstanceTest, WithRequestedNameShouldReturnModelNameMissing) {
+TEST_F(DISABLED_GetModelInstanceTest, WithRequestedNameShouldReturnModelNameMissing) {
     MockModelManagerWith1Model manager;
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
@@ -1245,7 +1266,7 @@ TEST_F(GetModelInstanceTest, WithRequestedNameShouldReturnModelNameMissing) {
     EXPECT_EQ(status, ovms::StatusCode::MODEL_NAME_MISSING) << "Should fail with no model with such name registered";
 }
 
-TEST_F(GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturnModelVersionMissing) {
+TEST_F(DISABLED_GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturnModelVersionMissing) {
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
@@ -1258,7 +1279,7 @@ TEST_F(GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturnModelVers
 
 class MockModelInstanceFakeLoad : public ovms::ModelInstance {
 public:
-    MockModelInstanceFakeLoad(InferenceEngine::Core& ieCore) :
+    MockModelInstanceFakeLoad(ov::runtime::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
 
 protected:
@@ -1273,14 +1294,14 @@ class ModelWithModelInstanceFakeLoad : public ovms::Model {
 public:
     ModelWithModelInstanceFakeLoad(const std::string& name) :
         Model(name, false, nullptr) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, InferenceEngine::Core& ieCore) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::runtime::Core& ieCore) override {
         return std::make_shared<MockModelInstanceFakeLoad>(ieCore);
     }
 };
 
 std::shared_ptr<ModelWithModelInstanceFakeLoad> modelWithModelInstanceFakeLoad;
 
-TEST_F(GetModelInstanceTest, WithRequestedDefaultVersionUnloadedShouldReturnModelVersionMissing) {
+TEST_F(DISABLED_GetModelInstanceTest, WithRequestedDefaultVersionUnloadedShouldReturnModelVersionMissing) {
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
@@ -1294,7 +1315,7 @@ TEST_F(GetModelInstanceTest, WithRequestedDefaultVersionUnloadedShouldReturnMode
     EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_MISSING);
 }
 
-TEST_F(GetModelInstanceTest, WithRequestedVersion1ShouldReturnModelVersionNotLoadedAnymore) {
+TEST_F(DISABLED_GetModelInstanceTest, WithRequestedVersion1ShouldReturnModelVersionNotLoadedAnymore) {
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
@@ -1310,7 +1331,7 @@ TEST_F(GetModelInstanceTest, WithRequestedVersion1ShouldReturnModelVersionNotLoa
 
 class ModelInstanceLoadedStuckInLoadingState : public ovms::ModelInstance {
 public:
-    ModelInstanceLoadedStuckInLoadingState(InferenceEngine::Core& ieCore) :
+    ModelInstanceLoadedStuckInLoadingState(ov::runtime::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
 
 protected:
@@ -1325,7 +1346,7 @@ class ModelWithModelInstanceLoadedStuckInLoadingState : public ovms::Model {
 public:
     ModelWithModelInstanceLoadedStuckInLoadingState(const std::string& name) :
         Model(name, false, nullptr) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, InferenceEngine::Core& ieCore) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::runtime::Core& ieCore) override {
         return std::make_shared<ModelInstanceLoadedStuckInLoadingState>(ieCore);
     }
 };
@@ -1343,7 +1364,7 @@ const int AVAILABLE_STATE_DELAY_MILLISECONDS = 5;
 
 class ModelInstanceLoadedWaitInLoadingState : public ovms::ModelInstance {
 public:
-    ModelInstanceLoadedWaitInLoadingState(InferenceEngine::Core& ieCore, const uint modelInstanceLoadDelayInMilliseconds) :
+    ModelInstanceLoadedWaitInLoadingState(ov::runtime::Core& ieCore, const uint modelInstanceLoadDelayInMilliseconds) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore),
         modelInstanceLoadDelayInMilliseconds(modelInstanceLoadDelayInMilliseconds) {}
 
@@ -1369,7 +1390,7 @@ public:
     ModelWithModelInstanceLoadedWaitInLoadingState(const std::string& name, const uint modelInstanceLoadDelayInMilliseconds) :
         Model(name, false, nullptr),
         modelInstanceLoadDelayInMilliseconds(modelInstanceLoadDelayInMilliseconds) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string&, const ovms::model_version_t, InferenceEngine::Core& ieCore) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string&, const ovms::model_version_t, ov::runtime::Core& ieCore) override {
         return std::make_shared<ModelInstanceLoadedWaitInLoadingState>(ieCore, modelInstanceLoadDelayInMilliseconds);
     }
 

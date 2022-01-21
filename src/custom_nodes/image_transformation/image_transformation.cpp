@@ -18,8 +18,9 @@
 #include <string>
 
 #include "../../custom_node_interface.h"
+#include "../common/opencv_utils.hpp"
+#include "../common/utils.hpp"
 #include "opencv2/opencv.hpp"
-#include "utils.hpp"
 
 static constexpr const char* TENSOR_NAME = "image";
 

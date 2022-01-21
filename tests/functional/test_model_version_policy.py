@@ -20,7 +20,7 @@ from google.protobuf.json_format import Parse
 from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2  # noqa
 
-from constants import MODEL_SERVICE, TARGET_DEVICE_MYRIAD, NOT_TO_BE_REPORTED_IF_SKIPPED
+from constants import MODEL_SERVICE, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_CUDA, NOT_TO_BE_REPORTED_IF_SKIPPED
 from config import target_device, skip_nginx_test
 from conftest import devices_not_supported_for_test
 from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2
@@ -34,7 +34,7 @@ from utils.rest import get_metadata_url, get_status_url, get_model_status_respon
 logger = logging.getLogger(__name__)
 
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
-@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD])
+@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_CUDA])
 class TestModelVerPolicy:
 
     @pytest.mark.parametrize("model_name, throw_error", [

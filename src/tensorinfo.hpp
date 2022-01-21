@@ -18,9 +18,10 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -28,7 +29,9 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "shapeinfo.hpp"
+#include "layout.hpp"
+#include "precision.hpp"
+#include "shape.hpp"
 
 namespace ovms {
 
@@ -51,35 +54,22 @@ protected:
          */
     std::string mapping;
 
-    /**
-         * @brief Tensor precision data type
-         */
-    InferenceEngine::Precision precision;
+    Precision precision;
 
     /**
          * @brief Model input shape
          */
-    shape_t shape;
-
-    /**
-        * @brief Model input effective shape
-        */
-    shape_t effectiveShape;
+    Shape shape;
 
     /**
          * @brief Tensor layout
          */
-    InferenceEngine::Layout layout;
+    Layout layout;
 
     /**
          * @brief Information if influenced by demultiplexer
          */
     bool influencedByDemultiplexer = false;
-
-    /**
-         * @brief TensorDesc
-         */
-    InferenceEngine::TensorDesc tensorDesc;
 
 public:
     /**
@@ -97,8 +87,11 @@ public:
          * @param shape
          */
     TensorInfo(const std::string& name,
-        const InferenceEngine::Precision& precision,
+        const Precision& precision,
         const shape_t& shape);
+    TensorInfo(const std::string& name,
+        const Precision& precision,
+        const Shape& shape);
 
     /**
          * @brief Construct a new Tensor Info object
@@ -109,12 +102,13 @@ public:
          * @param layout 
          */
     TensorInfo(const std::string& name,
-        const InferenceEngine::Precision& precision,
+        const Precision& precision,
         const shape_t& shape,
-        const InferenceEngine::Layout& layout);
-
+        const Layout& layout);
     TensorInfo(const std::string& name,
-        const InferenceEngine::TensorDesc& tensorDesc);
+        const Precision& precision,
+        const Shape& shape,
+        const Layout& layout);
 
     /**
          * @brief Construct a new Tensor Info object
@@ -126,9 +120,18 @@ public:
          */
     TensorInfo(const std::string& name,
         const std::string& mapping,
-        const InferenceEngine::Precision& precision,
+        const Precision& precision,
         const shape_t& shape,
-        const InferenceEngine::Layout& layout);
+        const Layout& layout);
+    TensorInfo(const std::string& name,
+        const std::string& mapping,
+        const Precision& precision,
+        const Shape& shape,
+        const Layout& layout);
+    TensorInfo(const std::string& name,
+        const std::string& mapping,
+        const Precision& precision,
+        const shape_t& shape);
 
     /**
          * @brief Get the Name object
@@ -138,7 +141,7 @@ public:
     const std::string& getName() const;
 
     /**
-         * @brief Get the tensor name - as in network model or mapped name
+         * @brief Get the tensor name - as in model or mapped name
          * 
          * @return const std::string& 
          */
@@ -150,93 +153,76 @@ public:
          * 
          * @return const InferenceEngine::Precision
          */
-    const InferenceEngine::Precision getPrecision() const;
+    const Precision getPrecision() const;
 
     /**
          * @brief Set the Precision object
          * 
          * @return const InferenceEngine::Precision
          */
-    void setPrecision(const InferenceEngine::Precision& requestedPrecision);
+    void setPrecision(const ovms::Precision& requestedPrecision);
 
     /**
          * @brief Set the Layout object
-         * 
-         * @return const InferenceEngine::Layout
          */
-    void setLayout(InferenceEngine::Layout layout);
+    void setLayout(const Layout& layout);
 
     /**
          * @brief Get the Precision As DataType object
          * 
          * @return const tensorflow::DataType
          */
-    const tensorflow::DataType getPrecisionAsDataType() const;
+    tensorflow::DataType getPrecisionAsDataType() const;
 
-    static const tensorflow::DataType getPrecisionAsDataType(InferenceEngine::Precision precision);
+    static tensorflow::DataType getPrecisionAsDataType(Precision precision);
+    ov::element::Type getOvPrecision() const;
 
     /**
         * @brief Get the Precision As String object
         *
         * @return const std::string
         */
-    const std::string getPrecisionAsString() const;
+    std::string getPrecisionAsString() const;
 
-    static const std::string getPrecisionAsString(const InferenceEngine::Precision precision);
+    /**
+        * @brief Get the string representation of TensorInfo object
+        *
+        * @return String representation
+        */
+    std::string asString() const;
+
+    static std::string getPrecisionAsString(Precision precision);
 
     static const std::string getDataTypeAsString(tensorflow::DataType dataType);
 
     /**
-         * @brief Get the InferenceEngine Layout From String 
-         * 
-         * @param layout 
-         * @return InferenceEngine::Layout 
-         */
-    static InferenceEngine::Layout getLayoutFromString(const std::string& layout);
-
-    /**
-         * @brief Get the layout name from InferenceEngine Layout
+         * @brief Get the layout name from Layout
          *
-         * @param InferenceEngine::Layout
+         * @param Layout
          * @return std::string
          */
-    static std::string getStringFromLayout(const InferenceEngine::Layout layout);
+    static std::string getStringFromLayout(const Layout& layout);
 
     /**
-         * @brief Get the Layout enum
+         * @brief Get the Layout string
          *
-         * @return const InferenceEngine::Layout
+         * @return const Layout&
          */
-    const InferenceEngine::Layout& getLayout() const;
+    const Layout& getLayout() const;
 
     /**
          * @brief Gets input shape
          *
          * @return shape
          */
-    const shape_t& getShape() const;
-
-    /**
-         * @brief Gets input effective shape
-         *
-         * @return shape
-         */
-    const shape_t& getEffectiveShape() const;
-
-    void setShape(const shape_t& shape);
+    const Shape& getShape() const;
+    void setShape(const Shape& shape);
 
     bool isInfluencedByDemultiplexer() const;
 
-    std::shared_ptr<TensorInfo> createCopyWithNewShape(const shape_t& shape) const;
+    std::shared_ptr<TensorInfo> createCopyWithNewShape(const Shape& shape) const;
 
-    std::shared_ptr<TensorInfo> createCopyWithEffectiveDimensionPrefix(size_t dim) const;
-
-    /**
-         * @brief Get the Tensor Desc object
-         *
-         * @return const InferenceEngine::TensorDesc&
-         */
-    const InferenceEngine::TensorDesc getTensorDesc() const;
+    std::shared_ptr<TensorInfo> createCopyWithEffectiveDimensionPrefix(const Dimension& dim) const;
 
     bool isTensorUnspecified() const;
 
@@ -248,11 +234,8 @@ public:
 
     static std::shared_ptr<TensorInfo> getUnspecifiedTensorInfo();
 
-    static std::string tensorDescToString(const InferenceEngine::TensorDesc& desc);
+    const std::optional<Dimension> getBatchSize() const;
 
-    const size_t getBatchSize() const;
-
-private:
-    void updateEffectiveShape();
+    static const Layout& getDefaultLayout();
 };
 }  // namespace ovms

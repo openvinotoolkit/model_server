@@ -45,6 +45,7 @@
 #include "localfilesystem.hpp"
 #include "logging.hpp"
 #include "node_library.hpp"
+#include "openssl/md5.h"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
 #include "pipelinedefinition.hpp"
@@ -58,7 +59,7 @@ static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
 static bool watcherStarted = false;
 
 ModelManager::ModelManager(const std::string& modelCacheDirectory) :
-    ieCore(std::make_unique<InferenceEngine::Core>()),
+    ieCore(std::make_unique<ov::runtime::Core>()),
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
     modelCacheDirectory(modelCacheDirectory) {
     // Take --cache_dir from CLI
@@ -89,15 +90,13 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory) :
     if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
         SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
         try {
-            auto extension_ptr = std::make_shared<InferenceEngine::Extension>(ovms::Config::instance().cpuExtensionLibraryPath());
-            SPDLOG_INFO("Custom CPU extention loaded. Adding it.");
-            ieCore->AddExtension(extension_ptr, "CPU");
-            SPDLOG_INFO("Extention added.");
+            ieCore->add_extension(ovms::Config::instance().cpuExtensionLibraryPath());
+            SPDLOG_INFO("Extension added.");
         } catch (std::exception& ex) {
-            SPDLOG_CRITICAL("Custom CPU extention loading has failed! Reason: {}", ex.what());
+            SPDLOG_CRITICAL("Custom CPU extension loading has failed! Reason: {}", ex.what());
             throw;
         } catch (...) {
-            SPDLOG_CRITICAL("Custom CPU extention loading has failed with an unknown error!");
+            SPDLOG_CRITICAL("Custom CPU extension loading has failed with an unknown error!");
             throw;
         }
     }
@@ -105,7 +104,7 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory) :
 }
 
 void ModelManager::logPluginConfiguration() {
-    auto availableDevices = ieCore->GetAvailableDevices();
+    auto availableDevices = ieCore->get_available_devices();
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Available devices for Open VINO: {}", joins(availableDevices, std::string(", ")));
     auto availablePlugins = availableDevices;
     availablePlugins.emplace_back("AUTO");
@@ -116,7 +115,7 @@ void ModelManager::logPluginConfiguration() {
         std::vector<std::string> supportedConfigKeys;
         try {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging plugin: {}; configuration", plugin);
-            std::vector<std::string> supportedConfigKeys2 = ieCore->GetMetric(plugin, supportedConfigKey);
+            std::vector<std::string> supportedConfigKeys2 = ieCore->get_metric(plugin, supportedConfigKey);
             supportedConfigKeys = std::move(supportedConfigKeys2);
         } catch (std::exception& e) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", plugin, supportedConfigKey, e.what());
@@ -126,7 +125,7 @@ void ModelManager::logPluginConfiguration() {
         for (auto& key : supportedConfigKeys) {
             std::string value;
             try {
-                auto paramValue = ieCore->GetConfig(plugin, key);
+                auto paramValue = ieCore->get_config(plugin, key);
                 value = paramValue.as<std::string>();
             } catch (std::exception& e) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; config key: {}; Error: {}", plugin, key, e.what());
@@ -229,7 +228,7 @@ Status ModelManager::startFromConfig() {
     if (batchSizeSet && shapeSet) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Both shape and batch size have been defined. Batch size parameter will be ignored.");
         modelConfig.setBatchingMode(FIXED);
-        modelConfig.setBatchSize(0);
+        modelConfig.setBatchSize(std::nullopt);
     }
 
     return reloadModelWithVersions(modelConfig);
@@ -413,9 +412,7 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
         SPDLOG_DEBUG("Pipeline:{} was not loaded so far. Triggering load", pipelineName);
         auto status = factory.createDefinition(pipelineName, info, connections, manager);
         pipelinesInConfigFile.insert(pipelineName);
-        if (!status.ok()) {
-            return status;
-        }
+        return status;
     }
     SPDLOG_DEBUG("Pipeline:{} is already loaded. Triggering reload", pipelineName);
     auto status = factory.reloadDefinition(pipelineName,
@@ -646,9 +643,7 @@ public:
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     configFilename = jsonFilename;
-    struct stat statTime;
-    stat(configFilename.c_str(), &statTime);
-    lastConfigChangeTime = statTime.st_ctim;
+    lastConfigFileMD5 = getConfigFileMD5();
     rapidjson::Document configJson;
 
     uint16_t counter = 0;
@@ -776,16 +771,34 @@ Status ModelManager::updateConfigurationWithoutConfigFile() {
     }
 }
 
+std::string ModelManager::getConfigFileMD5() {
+    std::ifstream ifs;
+    ifs.open(configFilename);
+    std::stringstream strStream;
+    strStream << ifs.rdbuf();
+    std::string str = strStream.str();
+    ifs.close();
+
+    unsigned char result[MD5_DIGEST_LENGTH];
+    MD5((unsigned char*)str.c_str(), str.size(), result);
+    std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
+    return (md5sum);
+}
+
 Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
-    struct stat statTime;
 
-    if (stat(configFilename.c_str(), &statTime) != 0) {
+    if (!std::ifstream(configFilename)) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Config file not found or cannot open.");
         isNeeded = false;
         return StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED;
     }
-    bool configFileModified = !(lastConfigChangeTime.tv_sec == statTime.st_ctim.tv_sec && lastConfigChangeTime.tv_nsec == statTime.st_ctim.tv_nsec);
+
+    std::string newmd5 = getConfigFileMD5();
+    bool configFileModified = false;
+    if (lastConfigFileMD5 != newmd5) {
+        configFileModified = true;
+    }
 
     if (configFilename == "" || !configFileModified) {
         isNeeded = false;
@@ -1100,7 +1113,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             return StatusCode::OK;
         }
     }
-
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     bool reloadNeeded = false;
     if (versionsToStart->size() > 0 || versionsToReload->size() > 0 || versionsToRetire->size() > 0) {

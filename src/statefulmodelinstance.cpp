@@ -15,14 +15,15 @@
 //*****************************************************************************
 #include "statefulmodelinstance.hpp"
 
+#include <openvino/openvino.hpp>
+#include <openvino/pass/low_latency.hpp>
+
 #include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
 #include "logging.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "serialization.hpp"
 #include "timer.hpp"
-
-using namespace InferenceEngine;
 
 namespace ovms {
 
@@ -128,17 +129,20 @@ Status StatefulModelInstance::loadModelImpl(const ModelConfig& config, const Dyn
     return ModelInstance::loadModelImpl(config, parameter);
 }
 
-Status StatefulModelInstance::loadOVExecutableNetwork(const ModelConfig& config) {
+Status StatefulModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     if (performLowLatencyTransformation) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "[Model: {} version: {}] Performing Low Latency Transformation on the network", getName(), getVersion());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "[Model: {} version: {}] Performing Low Latency Transformation on the model", getName(), getVersion());
         try {
-            InferenceEngine::lowLatency2(*network);
+            ov::pass::LowLatency2().run_on_model(model);
+        } catch (ov::Exception& ex) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error: {}; occurred during low latency transformation on model: {} version: {}", ex.what(), getName(), getVersion());
+            return StatusCode::INTERNAL_ERROR;
         } catch (std::exception& ex) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error: {}; occurred during low latency transformation on model: {} version: {}", ex.what(), getName(), getVersion());
             return StatusCode::INTERNAL_ERROR;
         }
     }
-    return ModelInstance::loadOVExecutableNetwork(config);
+    return ModelInstance::loadOVCompiledModel(config);
 }
 
 const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec) {
@@ -211,7 +215,8 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     timer.start("get infer request");
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
     int executingInferId = executingStreamIdGuard.getId();
-    InferenceEngine::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    (void)executingInferId;
+    ov::runtime::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     timer.stop("get infer request");
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
@@ -225,7 +230,7 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("preprocess") / 1000);
 
     timer.start("deserialize");
-    InputSink<InferRequest&> inputSink(inferRequest);
+    InputSink<ov::runtime::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
     timer.stop("deserialize");
@@ -269,36 +274,36 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     return StatusCode::OK;
 }
 
-const Status StatefulModelInstance::preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, Sequence& sequence,
+const Status StatefulModelInstance::preInferenceProcessing(ov::runtime::InferRequest& inferRequest, Sequence& sequence,
     SequenceProcessingSpec& sequenceProcessingSpec) {
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_START) {
         // On SEQUENCE_START reset memory state of infer request to default
-        for (auto&& state : inferRequest.QueryState()) {
-            state.Reset();
+        for (auto&& state : inferRequest.query_state()) {
+            state.reset();
         }
     } else {
         // For next requests in the sequence set infer request memory state to the last state saved by the sequence
         const sequence_memory_state_t& sequenceMemoryState = sequence.getMemoryState();
-        for (auto&& state : inferRequest.QueryState()) {
-            auto stateName = state.GetName();
+        for (auto&& state : inferRequest.query_state()) {
+            auto stateName = state.get_name();
             if (!sequenceMemoryState.count(stateName))
                 return StatusCode::INTERNAL_ERROR;
-            state.SetState(sequenceMemoryState.at(stateName));
+            state.set_state(*sequenceMemoryState.at(stateName));
         }
     }
     return StatusCode::OK;
 }
 
 const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving::PredictResponse* response,
-    InferenceEngine::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec) {
+    ov::runtime::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec) {
     // Reset inferRequest states on SEQUENCE_END
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
         spdlog::debug("Received SEQUENCE_END signal. Reseting model state and removing sequence");
-        for (auto&& state : inferRequest.QueryState()) {
-            state.Reset();
+        for (auto&& state : inferRequest.query_state()) {
+            state.reset();
         }
     } else {
-        auto modelState = inferRequest.QueryState();
+        auto modelState = inferRequest.query_state();
         sequence.updateMemoryState(modelState);
     }
 

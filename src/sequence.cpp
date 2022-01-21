@@ -39,14 +39,14 @@ void Sequence::setIdle(bool idle) {
 
 Status Sequence::updateMemoryState(model_memory_state_t& newState) {
     for (auto&& state : newState) {
-        auto stateName = state.GetName();
-        Blob::CPtr originalBlobPtr = state.GetState();
-        Blob::Ptr copyBlobPtr;
-        auto status = blobClone<InferenceEngine::Blob::CPtr>(copyBlobPtr, originalBlobPtr);
+        auto stateName = state.get_name();
+        ov::runtime::Tensor tensor = state.get_state();
+        std::shared_ptr<ov::runtime::Tensor> copyTensor;
+        auto status = tensorClone(copyTensor, tensor);
         if (!status.ok()) {
             return status;
         }
-        memoryState[stateName] = copyBlobPtr;
+        memoryState[stateName] = copyTensor;
     }
     setIdle(false);
     return StatusCode::OK;

@@ -22,7 +22,7 @@ A few key features:
 - Online deployment of new [model versions](docs/model_version_policy.md).
 - [Configuration updates in a runtime](docs/docker_container.md#updating-configuration-file)
 - Support for AI accelerators including [Intel Movidius Myriad VPUs](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html), 
-[GPU](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CL_DNN.html) and [HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html). 
+[GPU](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_GPU.html) and [HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html). 
 - The server can be enabled both on [Bare Metal Hosts](docs/host.md) or in
 [Docker containers](docs/docker_container.md).
 - [Model reshaping](docs/shape_batch_size_and_layout.md). The server supports reshaping models in runtime.
@@ -30,6 +30,7 @@ A few key features:
 - [Custom nodes in DAG pipelines](docs/custom_node_development.md) Model inference or data transformations can be implemented by a custom node C/C++ implementation loaded as an external library.
 - [Serving stateful models](docs/stateful_models.md). Serve models that operate on sequences of data and maintain state between inference requests.
 - [Binary format of the input data](docs/binary_input.md). Input data can be sent in JPEG or PNG format to reduce traffic and offload the client applications.
+- [Model caching](docs/model_cache.md). Cache the models on first load and re-use models from cache on subsequent loads.
 
 **Note:** OVMS has been tested on RedHat*, CentOS* and Ubuntu*. Latest publicly released docker images are based on Ubuntu and UBI.
 They are stored in:

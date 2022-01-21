@@ -63,12 +63,261 @@ TEST(EnsembleMetadata, OneNode) {
     ASSERT_NE(outputs.find("request_output_name"), outputs.end());
 
     const auto& input = inputs.at("request_input_name");
-    EXPECT_EQ(input->getEffectiveShape(), shape_t({1, DUMMY_MODEL_INPUT_SIZE}));
-    EXPECT_EQ(input->getPrecision(), InferenceEngine::Precision::FP32);
+    EXPECT_EQ(input->getShape(), Shape({1, DUMMY_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(input->getPrecision(), ovms::Precision::FP32);
 
     const auto& output = outputs.at("request_output_name");
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({1, DUMMY_MODEL_OUTPUT_SIZE}));
-    EXPECT_EQ(output->getPrecision(), InferenceEngine::Precision::FP32);
+    EXPECT_EQ(output->getShape(), Shape({1, DUMMY_MODEL_OUTPUT_SIZE}));
+    EXPECT_EQ(output->getPrecision(), ovms::Precision::FP32);
+}
+
+TEST(EnsembleMetadata, OneModelNodeWithShapeRange) {
+    /*
+        This test creates pipeline definition with one DL model node which has dimensions accepting range of dimensions.
+        Test ensures we receive correct metadata - one input and one output for the DL model node.
+    */
+
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchSize(std::nullopt);
+    config.parseShapeParameter("(1:20, 3:17)");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name"}}}};
+
+    auto def = std::make_unique<PipelineDefinition>(
+        "my_new_pipeline", info, connections);
+
+    ASSERT_EQ(def->validate(manager), StatusCode::OK);
+
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
+
+    ASSERT_EQ(inputs.size(), 1);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_NE(inputs.find("request_input_name"), inputs.end());
+    ASSERT_NE(outputs.find("request_output_name"), outputs.end());
+
+    const auto& input = inputs.at("request_input_name");
+    EXPECT_EQ(input->getShape(), Shape({{1, 20}, {3, 17}}));
+    EXPECT_EQ(input->getPrecision(), ovms::Precision::FP32);
+
+    const auto& output = outputs.at("request_output_name");
+    EXPECT_EQ(output->getShape(), Shape({{1, 20}, {3, 17}}));
+    EXPECT_EQ(output->getPrecision(), ovms::Precision::FP32);
+}
+
+// TODO: To enable when final DAG implementation is finished.
+TEST(EnsembleMetadata, DISABLED_TwoParallelModelsShapeRangeIntersection) {
+    /*
+        This test creates pipeline definition with two parallel DL model nodes which has dimensions accepting different ranges of dimensions.
+        Test ensures we receive correct metadata - intersection of both dimensions.
+    */
+
+    ConstructorEnabledModelManager manager;
+
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setName("dummy_A");
+    config.setBatchSize(std::nullopt);
+    config.parseShapeParameter("(1:20, 3:17)");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
+
+    config = DUMMY_MODEL_CONFIG;
+    config.setName("dummy_B");
+    config.setBatchSize(std::nullopt);
+    config.parseShapeParameter("(15:30, 1:4)");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
+        {NodeKind::DL, "dummy_node_A", "dummy_A", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "dummy_node_B", "dummy_B", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node_A"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections["dummy_node_B"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node_A", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name_A"}}},
+        {"dummy_node_B", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name_B"}}}};
+
+    auto def = std::make_unique<PipelineDefinition>(
+        "my_new_pipeline", info, connections);
+
+    ASSERT_EQ(def->validate(manager), StatusCode::OK);
+
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
+
+    ASSERT_EQ(inputs.size(), 1);
+    ASSERT_EQ(outputs.size(), 2);
+    ASSERT_NE(inputs.find("request_input_name"), inputs.end());
+    ASSERT_NE(outputs.find("request_output_name_A"), outputs.end());
+    ASSERT_NE(outputs.find("request_output_name_B"), outputs.end());
+
+    const auto& input = inputs.at("request_input_name");
+    EXPECT_EQ(input->getShape(), Shape({{15, 20}, {3, 4}}));
+    EXPECT_EQ(input->getPrecision(), ovms::Precision::FP32);
+
+    const auto& output_A = outputs.at("request_output_name_A");
+    EXPECT_EQ(output_A->getShape(), Shape({{1, 20}, {3, 17}}));  // ?
+    EXPECT_EQ(output_A->getPrecision(), ovms::Precision::FP32);
+
+    const auto& output_B = outputs.at("request_output_name_B");
+    EXPECT_EQ(output_B->getShape(), Shape({{15, 30}, {1, 4}}));  // ?
+    EXPECT_EQ(output_B->getPrecision(), ovms::Precision::FP32);
+}
+
+// TODO: To enable when final DAG implementation is finished.
+TEST(EnsembleMetadata, DISABLED_TwoParallelModelsOneShapeRangeOneStaticIntersection) {
+    /*
+        This test creates pipeline definition with two parallel DL model nodes, which one of them have dimensions accepting ranges of dimensions.
+        Test ensures we receive correct metadata - intersection of both dimensions, meaning the final input shape is static.
+    */
+
+    ConstructorEnabledModelManager manager;
+
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setName("dummy_A");
+    config.setBatchSize(std::nullopt);
+    config.parseShapeParameter("(17, 3)");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
+
+    config = DUMMY_MODEL_CONFIG;
+    config.setName("dummy_B");
+    config.setBatchSize(std::nullopt);
+    config.parseShapeParameter("(15:30, 1:4)");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
+        {NodeKind::DL, "dummy_node_A", "dummy_A", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "dummy_node_B", "dummy_B", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node_A"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections["dummy_node_B"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node_A", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name_A"}}},
+        {"dummy_node_B", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name_B"}}}};
+
+    auto def = std::make_unique<PipelineDefinition>(
+        "my_new_pipeline", info, connections);
+
+    ASSERT_EQ(def->validate(manager), StatusCode::OK);
+
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
+
+    ASSERT_EQ(inputs.size(), 1);
+    ASSERT_EQ(outputs.size(), 2);
+    ASSERT_NE(inputs.find("request_input_name"), inputs.end());
+    ASSERT_NE(outputs.find("request_output_name_A"), outputs.end());
+    ASSERT_NE(outputs.find("request_output_name_B"), outputs.end());
+
+    const auto& input = inputs.at("request_input_name");
+    EXPECT_EQ(input->getShape(), Shape({17, 3}));
+    EXPECT_EQ(input->getPrecision(), ovms::Precision::FP32);
+
+    const auto& output_A = outputs.at("request_output_name_A");
+    EXPECT_EQ(output_A->getShape(), Shape({17, 3}));  // ?
+    EXPECT_EQ(output_A->getPrecision(), ovms::Precision::FP32);
+
+    const auto& output_B = outputs.at("request_output_name_B");
+    EXPECT_EQ(output_B->getShape(), Shape({{15, 30}, {1, 4}}));  // ?
+    EXPECT_EQ(output_B->getPrecision(), ovms::Precision::FP32);
+}
+
+// TODO: To enable when final DAG implementation is finished.
+TEST(EnsembleMetadata, DISABLED_TwoParallelModelsOneShapeAnyOneStaticIntersection) {
+    /*
+        This test creates pipeline definition with two parallel DL model nodes, which one of them have dimensions accepting any dimensions.
+        Test ensures we receive correct metadata - intersection of both dimensions, meaning the final input shape is static.
+    */
+
+    ConstructorEnabledModelManager manager;
+
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setName("dummy_A");
+    config.setBatchSize(std::nullopt);
+    config.parseShapeParameter("(17, 3)");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
+
+    config = DUMMY_MODEL_CONFIG;
+    config.setName("dummy_B");
+    config.setBatchSize(std::nullopt);
+    config.parseShapeParameter("(-1, -1)");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
+        {NodeKind::DL, "dummy_node_A", "dummy_A", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "dummy_node_B", "dummy_B", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node_A"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections["dummy_node_B"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node_A", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name_A"}}},
+        {"dummy_node_B", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name_B"}}}};
+
+    auto def = std::make_unique<PipelineDefinition>(
+        "my_new_pipeline", info, connections);
+
+    ASSERT_EQ(def->validate(manager), StatusCode::OK);
+
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
+
+    ASSERT_EQ(inputs.size(), 1);
+    ASSERT_EQ(outputs.size(), 2);
+    ASSERT_NE(inputs.find("request_input_name"), inputs.end());
+    ASSERT_NE(outputs.find("request_output_name_A"), outputs.end());
+    ASSERT_NE(outputs.find("request_output_name_B"), outputs.end());
+
+    const auto& input = inputs.at("request_input_name");
+    EXPECT_EQ(input->getShape(), Shape({17, 3}));
+    EXPECT_EQ(input->getPrecision(), ovms::Precision::FP32);
+
+    const auto& output_A = outputs.at("request_output_name_A");
+    EXPECT_EQ(output_A->getShape(), Shape({17, 3}));  // ?
+    EXPECT_EQ(output_A->getPrecision(), ovms::Precision::FP32);
+
+    const auto& output_B = outputs.at("request_output_name_B");
+    EXPECT_EQ(output_B->getShape(), Shape({Dimension::any(), Dimension::any()}));  // ?
+    EXPECT_EQ(output_B->getPrecision(), ovms::Precision::FP32);
 }
 
 TEST(EnsembleMetadata, MultipleNodesOnDifferentLevelsUsingTheSamePipelineInputs) {
@@ -132,24 +381,24 @@ TEST(EnsembleMetadata, MultipleNodesOnDifferentLevelsUsingTheSamePipelineInputs)
     ASSERT_NE(outputs.find("original_input_for_N2"), outputs.end());
 
     const auto& request_input_for_N1 = inputs.at("request_input_for_N1");
-    EXPECT_EQ(request_input_for_N1->getEffectiveShape(), shape_t({1, INCREMENT_MODEL_INPUT_SIZE}));
-    EXPECT_EQ(request_input_for_N1->getPrecision(), InferenceEngine::Precision::FP32);
+    EXPECT_EQ(request_input_for_N1->getShape(), Shape({1, INCREMENT_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(request_input_for_N1->getPrecision(), ovms::Precision::FP32);
 
     const auto& request_input_for_N2_and_exit = inputs.at("request_input_for_N2_and_exit");
-    EXPECT_EQ(request_input_for_N2_and_exit->getEffectiveShape(), shape_t({1, SUM_MODEL_INPUT_SIZE}));
-    EXPECT_EQ(request_input_for_N2_and_exit->getPrecision(), InferenceEngine::Precision::FP32);
+    EXPECT_EQ(request_input_for_N2_and_exit->getShape(), Shape({1, SUM_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(request_input_for_N2_and_exit->getPrecision(), ovms::Precision::FP32);
 
     const auto& intermediate_result_from_increment = outputs.at("intermediate_result_from_increment");
-    EXPECT_EQ(intermediate_result_from_increment->getEffectiveShape(), shape_t({1, INCREMENT_MODEL_OUTPUT_SIZE}));
-    EXPECT_EQ(intermediate_result_from_increment->getPrecision(), InferenceEngine::Precision::FP32);
+    EXPECT_EQ(intermediate_result_from_increment->getShape(), Shape({1, INCREMENT_MODEL_OUTPUT_SIZE}));
+    EXPECT_EQ(intermediate_result_from_increment->getPrecision(), ovms::Precision::FP32);
 
     const auto& intermediate_result_from_sum = outputs.at("intermediate_result_from_sum");
-    EXPECT_EQ(intermediate_result_from_sum->getEffectiveShape(), shape_t({1, SUM_MODEL_OUTPUT_SIZE}));
-    EXPECT_EQ(intermediate_result_from_sum->getPrecision(), InferenceEngine::Precision::FP32);
+    EXPECT_EQ(intermediate_result_from_sum->getShape(), Shape({1, SUM_MODEL_OUTPUT_SIZE}));
+    EXPECT_EQ(intermediate_result_from_sum->getPrecision(), ovms::Precision::FP32);
 
     const auto& original_input_for_N2 = outputs.at("original_input_for_N2");
-    EXPECT_EQ(original_input_for_N2->getEffectiveShape(), shape_t({}));
-    EXPECT_EQ(original_input_for_N2->getPrecision(), InferenceEngine::Precision::UNSPECIFIED);
+    EXPECT_EQ(original_input_for_N2->getShape(), Shape({}));
+    EXPECT_EQ(original_input_for_N2->getPrecision(), ovms::Precision::UNDEFINED);
 }
 
 TEST(EnsembleMetadata, EmptyPipelineReturnsCorrectInputAndOutputInfo) {
@@ -184,12 +433,12 @@ TEST(EnsembleMetadata, EmptyPipelineReturnsCorrectInputAndOutputInfo) {
     ASSERT_NE(outputs.find("name_for_response"), outputs.end());
 
     const auto& name_from_entry = inputs.at("name_from_entry");
-    EXPECT_EQ(name_from_entry->getEffectiveShape(), shape_t({}));
-    EXPECT_EQ(name_from_entry->getPrecision(), InferenceEngine::Precision::UNSPECIFIED);
+    EXPECT_EQ(name_from_entry->getShape(), Shape({}));
+    EXPECT_EQ(name_from_entry->getPrecision(), ovms::Precision::UNDEFINED);
 
     const auto& name_for_response = outputs.at("name_for_response");
-    EXPECT_EQ(name_for_response->getEffectiveShape(), shape_t({}));
-    EXPECT_EQ(name_for_response->getPrecision(), InferenceEngine::Precision::UNSPECIFIED);
+    EXPECT_EQ(name_for_response->getShape(), Shape({}));
+    EXPECT_EQ(name_for_response->getPrecision(), ovms::Precision::UNDEFINED);
 }
 
 TEST(EnsembleMetadata, ParallelDLModelNodesReferingToManyPipelineInputs) {
@@ -276,16 +525,16 @@ TEST(EnsembleMetadata, ParallelDLModelNodesReferingToManyPipelineInputs) {
         ASSERT_NE(inputs.find(name_a), inputs.end());
         ASSERT_NE(inputs.find(name_b), inputs.end());
 
-        EXPECT_EQ(inputs.find(name_a)->second->getEffectiveShape(), shape_t({1, SUM_MODEL_INPUT_SIZE}));
-        EXPECT_EQ(inputs.find(name_a)->second->getPrecision(), InferenceEngine::Precision::FP32);
-        EXPECT_EQ(inputs.find(name_b)->second->getEffectiveShape(), shape_t({1, SUM_MODEL_INPUT_SIZE}));
-        EXPECT_EQ(inputs.find(name_b)->second->getPrecision(), InferenceEngine::Precision::FP32);
+        EXPECT_EQ(inputs.find(name_a)->second->getShape(), Shape({1, SUM_MODEL_INPUT_SIZE}));
+        EXPECT_EQ(inputs.find(name_a)->second->getPrecision(), ovms::Precision::FP32);
+        EXPECT_EQ(inputs.find(name_b)->second->getShape(), Shape({1, SUM_MODEL_INPUT_SIZE}));
+        EXPECT_EQ(inputs.find(name_b)->second->getPrecision(), ovms::Precision::FP32);
     }
 
     ASSERT_EQ(outputs.size(), 1);
     ASSERT_NE(outputs.find("final_sum"), outputs.end());
-    EXPECT_EQ(outputs.find("final_sum")->second->getEffectiveShape(), shape_t({1, SUM_MODEL_INPUT_SIZE}));
-    EXPECT_EQ(outputs.find("final_sum")->second->getPrecision(), InferenceEngine::Precision::FP32);
+    EXPECT_EQ(outputs.find("final_sum")->second->getShape(), Shape({1, SUM_MODEL_INPUT_SIZE}));
+    EXPECT_EQ(outputs.find("final_sum")->second->getPrecision(), ovms::Precision::FP32);
 }
 
 TEST(EnsembleMetadata, OneUnavailableNodeBeforeRevalidationShouldWork) {
@@ -392,12 +641,12 @@ TEST(EnsembleMetadata, OneCustomNode) {
     ASSERT_NE(outputs.find("request_output_name"), outputs.end());
 
     const auto& input = inputs.at("request_input_name");
-    EXPECT_EQ(input->getEffectiveShape(), shape_t({1, 0}));
-    EXPECT_EQ(input->getPrecision(), InferenceEngine::Precision::FP32);
+    EXPECT_EQ(input->getShape(), Shape({1, -1}));
+    EXPECT_EQ(input->getPrecision(), ovms::Precision::FP32);
 
     const auto& output = outputs.at("request_output_name");
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({1, 0}));
-    EXPECT_EQ(output->getPrecision(), InferenceEngine::Precision::FP32);
+    EXPECT_EQ(output->getShape(), Shape({1, -1}));
+    EXPECT_EQ(output->getPrecision(), ovms::Precision::FP32);
 }
 
 TEST(EnsembleMetadata, ParallelCustomNodes) {
@@ -450,13 +699,13 @@ TEST(EnsembleMetadata, ParallelCustomNodes) {
     ASSERT_NE(outputs.find("request_output_name_2"), outputs.end());
 
     const auto& input = inputs.at("request_input_name");
-    EXPECT_EQ(input->getEffectiveShape(), shape_t({1, 0}));
-    EXPECT_EQ(input->getPrecision(), InferenceEngine::Precision::FP32);
+    EXPECT_EQ(input->getShape(), Shape({1, -1}));
+    EXPECT_EQ(input->getPrecision(), ovms::Precision::FP32);
 
     for (int i = 0; i < 3; i++) {
         const auto& output = outputs.at("request_output_name_" + std::to_string(i));
-        EXPECT_EQ(output->getEffectiveShape(), shape_t({1, 0}));
-        EXPECT_EQ(output->getPrecision(), InferenceEngine::Precision::FP32);
+        EXPECT_EQ(output->getShape(), Shape({1, -1}));
+        EXPECT_EQ(output->getPrecision(), ovms::Precision::FP32);
     }
 }
 
@@ -627,16 +876,16 @@ TEST(EnsembleMetadata, CustomNodeMultipleDemultiplexers) {
     ASSERT_NE(outputs.find("request_output_name"), outputs.end());
 
     const auto& input_A = inputs.at("request_input_name_A");
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 1000}));
-    EXPECT_EQ(input_A->getPrecision(), InferenceEngine::Precision::FP32);
+    EXPECT_EQ(input_A->getShape(), Shape({1, 1000}));
+    EXPECT_EQ(input_A->getPrecision(), ovms::Precision::FP32);
 
     const auto& input_B = inputs.at("request_input_name_B");
-    EXPECT_EQ(input_B->getEffectiveShape(), shape_t({1, 400}));
-    EXPECT_EQ(input_B->getPrecision(), InferenceEngine::Precision::FP32);
+    EXPECT_EQ(input_B->getShape(), Shape({1, 400}));
+    EXPECT_EQ(input_B->getPrecision(), ovms::Precision::FP32);
 
     const auto& output = outputs.at("request_output_name");
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({3, 4, 1, 10}));
-    EXPECT_EQ(output->getPrecision(), InferenceEngine::Precision::FP32);
+    EXPECT_EQ(output->getShape(), Shape({3, 4, 1, 10}));
+    EXPECT_EQ(output->getPrecision(), ovms::Precision::FP32);
 }
 
 TEST(EnsembleMetadata, GatherFromNotExistingNode) {

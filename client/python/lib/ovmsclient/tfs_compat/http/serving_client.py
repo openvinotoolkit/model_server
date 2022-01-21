@@ -19,9 +19,9 @@ import requests
 
 from ovmsclient.util.ovmsclient_export import ovmsclient_export
 from ovmsclient.tfs_compat.base.serving_client import ServingClient
-from ovmsclient.tfs_compat.http.requests import (HttpModelStatusRequest, make_status_request,
-                                                 HttpModelMetadataRequest,
-                                                 HttpPredictRequest)
+from ovmsclient.tfs_compat.http.requests import (make_status_request,
+                                                 make_metadata_request,
+                                                 make_predict_request)
 from ovmsclient.tfs_compat.http.responses import (HttpModelStatusResponse,
                                                   HttpModelMetadataResponse,
                                                   HttpPredictResponse)
@@ -37,87 +37,52 @@ class HttpClient(ServingClient):
         self.client_key = client_key
         self.server_cert = server_cert
 
-    def predict(self, request):
-        '''
-        Send HttpPredictRequest to the server and return response.
-
-        Args:
-            request: HttpPredictRequest object.
-
-        Returns:
-            HttpPredictResponse object
-
-        Raises:
-            TypeError:  if provided argument is of wrong type.
-            Many more for different serving reponses...
-
-        Examples:
-
-            >>> config = {
-            ...     "address": "localhost",
-            ...     "port": 5555
-            ... }
-            >>> client = make_serving_client(config)
-            >>> request = make_predict_request({"input": [1, 2, 3]}, "model")
-            >>> response = client.predict(request)
-            >>> type(response)
-        '''
-
-        HttpClient._check_predict_request(request)
-
+    def predict(self, inputs, model_name, model_version=0, timeout=10.0):
+        self._validate_timeout(timeout)
+        request = make_predict_request(inputs, model_name, model_version)
         raw_response = None
         try:
             raw_response = self.session.post(f"http://{self.url}"
                                              f"/v1/models/{request.model_name}"
                                              f"/versions/{request.model_version}:predict",
                                              data=request.parsed_inputs,
-                                             cert=self.client_key, verify=self.server_cert)
-        except requests.exceptions.RequestException as e_info:
-            raise ConnectionError('There was an error during sending PredictRequest. '
-                                  f'Http exited with:\n{e_info}')
+                                             cert=self.client_key, verify=self.server_cert,
+                                             timeout=timeout)
+        except requests.exceptions.RequestException as http_error:
+            raise_from_http(http_error)
 
-        return HttpPredictResponse(raw_response)
+        try:
+            response = HttpPredictResponse(raw_response).to_dict()
+        except ModelServerError as model_server_error:
+            raise model_server_error
+        except (JSONDecodeError, ValueError) as parsing_error:
+            raise BadResponseError("Received response is malformed and could not be parsed."
+                                   f"Details: {str(parsing_error)}")
+        return response["outputs"]
 
-    def get_model_metadata(self, request):
-        '''
-        Send HttpModelMetadataRequest to the server and return response..
-
-        Args:
-            request: HttpModelMetadataRequest object.
-
-        Returns:
-            HttpModelMetadataResponse object
-
-        Raises:
-            TypeError:  if provided argument is of wrong type.
-            Many more for different serving reponses...
-
-        Examples:
-
-            >>> config = {
-            ...     "address": "localhost",
-            ...     "port": 5555
-            ... }
-            >>> client = make_serving_client(config)
-            >>> request = make_model_metadata_request("model")
-            >>> response = client.get_model_metadata(request)
-            >>> type(response)
-        '''
-
-        HttpClient._check_model_metadata_request(request)
-
+    def get_model_metadata(self, model_name, model_version=0, timeout=10.0):
+        self._validate_timeout(timeout)
+        request = make_metadata_request(model_name, model_version)
         raw_response = None
+
         try:
             raw_response = self.session.get(f"http://{self.url}"
                                             f"/v1/models/{request.model_name}"
                                             f"/versions/{request.model_version}"
                                             f"/metadata",
-                                            cert=self.client_key, verify=self.server_cert)
-        except requests.exceptions.RequestException as e_info:
-            raise ConnectionError('There was an error during sending ModelMetadataRequest. '
-                                  f'Http exited with:\n{e_info}')
+                                            cert=self.client_key, verify=self.server_cert,
+                                            timeout=timeout)
+        except requests.exceptions.RequestException as http_error:
+            raise_from_http(http_error)
 
-        return HttpModelMetadataResponse(raw_response)
+        try:
+            response = HttpModelMetadataResponse(raw_response).to_dict()
+        except ModelServerError as model_server_error:
+            raise model_server_error
+        except (JSONDecodeError, KeyError, ValueError) as parsing_error:
+            raise BadResponseError("Received response is malformed and could not be parsed."
+                                   f"Details: {str(parsing_error)}")
+        return response
 
     def get_model_status(self, model_name, model_version=0, timeout=10.0):
         self._validate_timeout(timeout)
@@ -155,24 +120,6 @@ class HttpClient(ServingClient):
         session = requests.Session()
         return cls(url, session, client_cert, server_cert)
 
-    @classmethod
-    def _check_model_status_request(cls, request):
-        if not isinstance(request, HttpModelStatusRequest):
-            raise TypeError('request type should be HttpModelStatusRequest, '
-                            f'but is {type(request).__name__}')
-
-    @classmethod
-    def _check_model_metadata_request(cls, request):
-        if not isinstance(request, HttpModelMetadataRequest):
-            raise TypeError('request type should be HttpModelMetadataRequest, '
-                            f'but is {type(request).__name__}')
-
-    @classmethod
-    def _check_predict_request(cls, request):
-        if not isinstance(request, HttpPredictRequest):
-            raise TypeError('request type should be HttpPredictRequest, '
-                            f'but is {type(request).__name__}')
-
 
 @ovmsclient_export("make_http_client", httpclient="make_client")
 def make_http_client(url, tls_config=None):
@@ -180,61 +127,42 @@ def make_http_client(url, tls_config=None):
     Create HttpClient object.
 
     Args:
-        config: Python dictionary with client configuration. The accepted format is:
+        url - Model Server URL as a string in format `<address>:<port>`
+        tls_config (optional): dictionary with TLS configuration. The accepted format is:
 
             .. code-block::
 
                 {
-                    "address": <IP address of the serving>,
-                    "port": <Port number used by the HTTP interface of the server>,
-                        ...more connection options...
-                    "tls_config": {
-                        "client_key_path": <Path to client key file>,
-                        "client_cert_path": <Path to client certificate file>,
-                        "server_cert_path": <Path to server certificate file>
-                    }
+                    "client_key_path": <Path to client key file>,
+                    "client_cert_path": <Path to client certificate file>,
+                    "server_cert_path": <Path to server certificate file>
                 }
 
             With following types accepted:
 
             ==================  ==========
-            address             string
-            port                integer
             client_key_path     string
             client_cert_path    string
             server_cert_path    string
             ==================  ==========
 
-            The minimal config must contain address and port.
-
     Returns:
         HttpClient object
 
     Raises:
-        ValueError:  if provided config is invalid.
+        ValueError, TypeError:  if provided config is invalid.
 
     Examples:
         Create minimal HttpClient:
-
-        >>> config = {
-        ...     "address": "localhost",
-        ...     "port": 9000
-        ... }
-        >>> client = make_http_client(config)
-        >>> print(client)
+        >>> client = make_http_client("localhost:9000")
 
         Create HttpClient with TLS:
 
-        >>> config = {
-        ...     "address": "localhost",
-        ...     "port": 9000,
-        ...     "tls_config": {
-        ...         "client_key_path": "/opt/tls/client.key",
-        ...         "client_cert_path": "/opt/tls/client.crt",
-        ...         "server_cert_path": "/opt/tls/server.crt"
-        ...      }
+        >>> tls_config = {
+        ...     "client_key_path": "/opt/tls/client.key",
+        ...     "client_cert_path": "/opt/tls/client.crt",
+        ...     "server_cert_path": "/opt/tls/server.crt"
         ... }
-        >>> client = make_http_client(config)
-        >>> print(client)
+        >>> client = make_http_client("localhost:9000", tls_config)
     '''
     return HttpClient._build(url, tls_config)

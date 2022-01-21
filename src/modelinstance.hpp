@@ -23,7 +23,7 @@
 #include <string>
 #include <vector>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -72,7 +72,7 @@ private:
 class PipelineDefinition;
 
 /**
-     * @brief This class contains all the information about inference engine model
+     * @brief This class contains all the information about model
      */
 class ModelInstance {
 protected:
@@ -86,17 +86,17 @@ protected:
     /**
          * @brief Inference Engine core object
          */
-    InferenceEngine::Core& ieCore;
+    ov::runtime::Core& ieCore;
 
     /**
          * @brief Inference Engine CNNNetwork object
          */
-    std::unique_ptr<InferenceEngine::CNNNetwork> network;
+    std::shared_ptr<ov::Model> model;
 
     /**
-         * @brief Inference Engine device network
+         * @brief Inference Engine device model
          */
-    std::shared_ptr<InferenceEngine::ExecutableNetwork> execNetwork;
+    std::shared_ptr<ov::runtime::CompiledModel> compiledModel;
 
     /**
          * @brief Model name
@@ -159,7 +159,7 @@ protected:
          *
          * @return CNNNetwork ptr
          */
-    virtual std::unique_ptr<InferenceEngine::CNNNetwork> loadOVCNNNetworkPtr(const std::string& modelFile);
+    virtual std::shared_ptr<ov::Model> loadOVModelPtr(const std::string& modelFile);
 
     /**
          * @brief Lock to disable concurrent modelinstance load/unload/reload
@@ -176,19 +176,19 @@ protected:
          *
          * @return Status
          */
-    Status loadOVCNNNetwork();
+    Status loadOVModel();
 
     /**
-         * @brief Sets OV ExecutableNetworkPtr
+         * @brief Sets OV CompiledModelPtr
          */
-    virtual void loadExecutableNetworkPtr(const plugin_config_t& pluginConfig);
+    virtual void loadCompiledModelPtr(const plugin_config_t& pluginConfig);
 
     /**
-         * @brief Loads OV ExecutableNetwork
+         * @brief Loads OV CompiledModel
          *
          * @return Status
          */
-    virtual Status loadOVExecutableNetwork(const ModelConfig& config);
+    virtual Status loadOVCompiledModel(const ModelConfig& config);
 
     /**
          * @brief Prepares inferenceRequestsQueue
@@ -214,7 +214,7 @@ protected:
          *
          * @return Status
          */
-    Status loadOVCNNNetworkUsingCustomLoader();
+    Status loadOVModelUsingCustomLoader();
 
     virtual const Status validate(const tensorflow::serving::PredictRequest* request);
 
@@ -247,6 +247,13 @@ private:
     std::atomic<uint64_t> predictRequestsHandlesCount = 0;
 
     /**
+         * @brief Internal method for loading tensors
+         *
+         * @param config
+         */
+    Status loadTensors(const ModelConfig& config, bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter = DynamicModelParameter());
+
+    /**
          * @brief Internal method for loading inputs
          *
          * @param config
@@ -258,7 +265,7 @@ private:
          *
          * @param config
          */
-    void loadOutputTensors(const ModelConfig& config);
+    Status loadOutputTensors(const ModelConfig& config);
 
     /**
          * @brief Configures batchsize
@@ -278,7 +285,7 @@ private:
     Status recoverFromReloadingError(const Status& status);
 
     /**
-         * @brief Perform full engine/network reload with dynamic parameter
+         * @brief Perform full model reload with dynamic parameter
          * 
          * @param status returned from reload operation
          * @param parameter requested dynamic parameter
@@ -296,7 +303,7 @@ public:
     /**
          * @brief A default constructor
          */
-    ModelInstance(const std::string& name, model_version_t version, InferenceEngine::Core& ieCore) :
+    ModelInstance(const std::string& name, model_version_t version, ov::runtime::Core& ieCore) :
         ieCore(ieCore),
         name(name),
         version(version),
@@ -378,9 +385,11 @@ public:
          *
          * @return batch size
          */
-    virtual size_t getBatchSize() const {
-        return network->getBatchSize();
+    virtual Dimension getBatchSize() const {
+        return Dimension(ov::get_batch(model));
     }
+
+    const size_t getBatchSizeIndex() const;
 
     /**
          * @brief Gets model config
@@ -412,7 +421,7 @@ public:
     /**
          * @brief Check if can unload infer requests
          *
-         * @return bool 
+         * @return bool
          */
     virtual bool canUnloadInstance() const {
         return 0 == predictRequestsHandlesCount;
@@ -420,7 +429,7 @@ public:
 
     /**
          * @brief Get OV streams pool
-         * 
+         *
          * @return OVStreamsQueue
          */
     OVInferRequestsQueue& getInferRequestsQueue() {
@@ -435,7 +444,7 @@ public:
     static plugin_config_t prepareDefaultPluginConfig(const ModelConfig& config);
 
     /**
-         * @brief Loads model version, reads CNN network model from files (*.xml and *.bin files) and creates inference engine
+         * @brief Loads model version
          *
          * @param config model configuration
          *
@@ -444,7 +453,7 @@ public:
     virtual Status loadModel(const ModelConfig& config);
 
     /**
-         * @brief Reloads model version, reads CNN network model from files (*.xml and *.bin files) and creates inference engine
+         * @brief Reloads model version
          *
          * @param config model configuration
          *
@@ -453,15 +462,15 @@ public:
     virtual Status reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
 
     /**
-         * @brief Reloads model version with different batch size or shape, reads CNN network model from files (*.xml and *.bin files) and recreates inference engine
+         * @brief Reloads model version with different batch size or shape
          *
          * @param batchSize new batch size
          * @param shape new shape
          * @param unloadGuard unloadGuardPtr
-         * 
+         *
          * @return Status
          */
-    virtual Status reloadModel(size_t batchSize, std::map<std::string, shape_t> shape, std::unique_ptr<ModelInstanceUnloadGuard>& unloadGuardPtr);
+    virtual Status reloadModel(std::optional<Dimension> batchSize, std::map<std::string, shape_t> shape, std::unique_ptr<ModelInstanceUnloadGuard>& unloadGuardPtr);
 
     /**
          * @brief Reloads model version if status of request validation indicates there's a need for reshape or batch size change
@@ -507,7 +516,7 @@ public:
 
     const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
 
-    Status performInference(InferenceEngine::InferRequest& inferRequest);
+    Status performInference(ov::runtime::InferRequest& inferRequest);
 
     virtual Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,

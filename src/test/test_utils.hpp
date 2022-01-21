@@ -26,7 +26,6 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <inference_engine.hpp>
 #include <spdlog/spdlog.h>
 
 #pragma GCC diagnostic push
@@ -111,8 +110,8 @@ constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to t
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 ovms::tensor_map_t prepareTensors(
-    const std::unordered_map<std::string, ovms::shape_t>&& tensors,
-    InferenceEngine::Precision precision = InferenceEngine::Precision::FP32);
+    const std::unordered_map<std::string, ovms::Shape>&& tensors,
+    ovms::Precision precision = ovms::Precision::FP32);
 
 static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t requestInputs, const std::vector<float>& data = {}) {
     tensorflow::serving::PredictRequest request;
@@ -140,6 +139,7 @@ static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t r
 }
 
 tensorflow::serving::PredictRequest prepareBinaryPredictRequest(const std::string& inputName, const int batchSize = 1);
+tensorflow::serving::PredictRequest prepareBinary4x4PredictRequest(const std::string& inputName, const int batchSize = 1);
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
@@ -148,6 +148,10 @@ void checkDummyResponse(const std::string outputName,
 void checkIncrement4DimResponse(const std::string outputName,
     const std::vector<float>& expectedData,
     tensorflow::serving::PredictRequest& request,
+    tensorflow::serving::PredictResponse& response,
+    const std::vector<size_t>& expectedShape);
+
+void checkIncrement4DimShape(const std::string outputName,
     tensorflow::serving::PredictResponse& response,
     const std::vector<size_t>& expectedShape);
 

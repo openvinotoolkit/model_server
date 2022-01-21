@@ -236,9 +236,9 @@ TEST(SequenceManager, RemoveOneIdleSequence) {
     DummyStatefulModel realModel;
     std::vector<float> state{10};
 
-    InferenceEngine::InferRequest auxInferRequest = realModel.createInferRequest();
+    ov::runtime::InferRequest auxInferRequest = realModel.createInferRequest();
     realModel.setVariableState(auxInferRequest, state);
-    InferenceEngine::VariableState memoryState = realModel.getVariableState(auxInferRequest);
+    ov::runtime::VariableState memoryState = realModel.getVariableState(auxInferRequest);
     newState.push_back(memoryState);
 
     MockedSequenceManager sequenceManager(24, "dummy", 1);

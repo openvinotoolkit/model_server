@@ -32,6 +32,7 @@
 #pragma GCC diagnostic pop
 
 #include "aliases.hpp"
+#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "modelversion.hpp"
 #include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"
@@ -72,7 +73,7 @@ class PipelineDefinition {
 
     const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
-    std::map<std::string, void*> nodeResources = {};
+    std::map<std::string, std::shared_ptr<CNLIMWrapper>> nodeResources = {};
     pipeline_connections_t connections;
 
 protected:
@@ -98,7 +99,7 @@ private:
     Status validateNode(ModelManager& manager, const NodeInfo& node, const bool isMultiBatchAllowed);
 
     const NodeInfo& findNodeByName(const std::string& name) const;
-    shape_t getNodeGatherShape(const NodeInfo& info) const;
+    Shape getNodeGatherShape(const NodeInfo& info) const;
 
 public:
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 10000;
@@ -159,14 +160,14 @@ private:
         const ModelManager& manager,
         tensor_map_t& outputsInfo,
         const Aliases& aliases,
-        const shape_t& gatherShape) const;
+        const Shape& gatherShape) const;
 
     Status populateOutputsInfoWithCustomNodeOutputs(
         const NodeInfo& dependencyNodeInfo,
         const ModelManager& manager,
         tensor_map_t& outputsInfo,
         const Aliases& aliases,
-        const shape_t& gatherShape) const;
+        const Shape& gatherShape) const;
 
     void increaseRequestsHandlesCount() {
         ++requestsHandlesCounter;

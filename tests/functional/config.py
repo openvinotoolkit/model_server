@@ -16,7 +16,7 @@
 
 import os
 
-from constants import TARGET_DEVICE_CPU, TARGET_DEVICE_GPU, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL
+from constants import TARGET_DEVICE_CPU, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL
 from utils.helpers import get_int, get_bool
 from utils.parametrization import generate_test_object_name
 
@@ -92,6 +92,9 @@ default_infer_timeout = get_int("TT_DEFAULT_INFER_TIMEOUT", 10)
 """ TT_DEFAULT_GPU_INFER_TIMEOUT - Timeout for CPU target device"""
 default_gpu_infer_timeout = get_int("TT_DEFAULT_GPU_INFER_TIMEOUT", 10*default_infer_timeout)
 
+""" TT_DEFAULT_GPU_INFER_TIMEOUT - Timeout for CPU target device"""
+default_cuda_infer_timeout = get_int("TT_DEFAULT_CUDA_INFER_TIMEOUT", 10*default_infer_timeout)
+
 """ TT_DEFAULT_HDDL_INFER_TIMEOUT - Timeout for CPU target device"""
 default_hddl_infer_timeout = get_int("TT_DEFAULT_HDDL_INFER_TIMEOUT", 3*default_infer_timeout)
 
@@ -102,6 +105,7 @@ default_myriad_infer_timeout = get_int("TT_DEFAULT_MYRIAD_INFER_TIMEOUT", 5*defa
 infer_timeouts = {
     TARGET_DEVICE_CPU : default_infer_timeout,
     TARGET_DEVICE_GPU : default_gpu_infer_timeout,
+    TARGET_DEVICE_CUDA : default_cuda_infer_timeout,
     TARGET_DEVICE_HDDL : default_hddl_infer_timeout,
     TARGET_DEVICE_MYRIAD : default_myriad_infer_timeout,
 }

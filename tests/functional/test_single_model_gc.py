@@ -18,7 +18,7 @@ import pytest
 import numpy as np
 
 from constants import MODEL_SERVICE, ERROR_SHAPE, NOT_TO_BE_REPORTED_IF_SKIPPED, TARGET_DEVICE_MYRIAD, \
-    TARGET_DEVICE_HDDL
+    TARGET_DEVICE_HDDL, TARGET_DEVICE_CUDA
 from config import skip_nginx_test
 from conftest import devices_not_supported_for_test
 from model.models_information import Resnet, ResnetGS
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
-@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL])
+@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL, TARGET_DEVICE_CUDA])
 class TestSingleModelInferenceGc:
 
     def test_run_inference(self, start_server_single_model_from_gc):
