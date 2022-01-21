@@ -116,9 +116,9 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
         // If batch size is incorrect, perform model batch size change if allowed (shape mode=auto or batch size=auto)
         if (status == StatusCode::INVALID_BATCH_SIZE) {
             if (this->model->getModelConfig().getBatchingMode() == Mode::AUTO) {
-                requestedBatchSize = tensor->get_shape()[0];
+                requestedBatchSize = tensor.get_shape()[0];
             } else if (this->model->getModelConfig().isShapeAuto(name)) {
-                requestedReshapes[name] = tensor->get_shape();
+                requestedReshapes[name] = tensor.get_shape();
             } else {
                 return status;
             }
@@ -129,7 +129,7 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
             if (!this->model->getModelConfig().isShapeAuto(name)) {
                 return status;
             }
-            requestedReshapes[name] = tensor->get_shape();
+            requestedReshapes[name] = tensor.get_shape();
         }
     }
     if (requestedReshapes.size() > 0) {
@@ -146,20 +146,20 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
     return StatusCode::OK;
 }
 
-Status DLNodeSession::validate(const std::shared_ptr<ov::runtime::Tensor>& tensor, const TensorInfo& tensorInfo) {
-    if (ovmsPrecisionToIE2Precision(tensorInfo.getPrecision()) != tensor->get_element_type()) {
+Status DLNodeSession::validate(const ov::runtime::Tensor& tensor, const TensorInfo& tensorInfo) {
+    if (ovmsPrecisionToIE2Precision(tensorInfo.getPrecision()) != tensor.get_element_type()) {
         std::stringstream ss;
         ss << "Node: " << getName() << " input: " << tensorInfo.getName()
            << " Invalid precision -"
            << " Expected: " << tensorInfo.getPrecisionAsString()
-           << "; Actual: " << toString(ovElementTypeToOvmsPrecision(tensor->get_element_type()));
+           << "; Actual: " << toString(ovElementTypeToOvmsPrecision(tensor.get_element_type()));
         const std::string details = ss.str();
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
         return Status(StatusCode::INVALID_PRECISION, details);
     }
 
     // If batch size differs, check if remaining dimensions are equal
-    const auto& dims = tensor->get_shape();
+    const auto& dims = tensor.get_shape();
     const auto batchIndex = tensorInfo.getLayout().getBatchIndex();
     if (!batchIndex.has_value() || batchIndex.value() >= tensorInfo.getShape().size() || batchIndex.value() >= dims.size()) {
         std::stringstream ss;
@@ -255,7 +255,7 @@ Status DLNodeSession::setInputsForInference(ov::runtime::InferRequest& inferRequ
                     __FUNCTION__, getName(), name);
                 return StatusCode::INTERNAL_ERROR;
             }
-            inferRequest.set_tensor(realModelInputName, *tensor);
+            inferRequest.set_tensor(realModelInputName, tensor);
         }
         // OV implementation the ov::Exception is not
         // a base class for all other exceptions thrown from OV.

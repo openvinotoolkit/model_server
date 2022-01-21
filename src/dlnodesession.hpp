@@ -58,7 +58,7 @@ private:
 
 public:
     Status prepareInputsAndModelForInference();
-    Status validate(const std::shared_ptr<ov::runtime::Tensor>& tensor, const TensorInfo& info);
+    Status validate(const ov::runtime::Tensor& tensor, const TensorInfo& info);
     Status execute(PipelineEventQueue& notifyEndQueue, uint waitForStreamIdTimeoutMicroseconds, Node& node);
     Status executeInference(PipelineEventQueue& notifyEndQueue, ov::runtime::InferRequest&, Node& node);
     Status setInputsForInference(ov::runtime::InferRequest& inferRequest);

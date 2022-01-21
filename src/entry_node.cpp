@@ -72,14 +72,9 @@ Status EntryNode::fetchResults(TensorMap& outputs) {
     bool isPipeline = true;
     return deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, inputsInfo, inputSink, isPipeline);
 }
-template <>  // TODO remove
-Status InputSink<TensorMap&>::give(const std::string& name, ov::runtime::Tensor& tensor) {
-    requester[name] = std::make_shared<ov::runtime::Tensor>(tensor);
-    return StatusCode::OK;
-}
 
 template <>
-Status InputSink<TensorMap&>::give(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& tensor) {
+Status InputSink<TensorMap&>::give(const std::string& name, ov::runtime::Tensor& tensor) {
     requester[name] = tensor;
     return StatusCode::OK;
 }
@@ -94,7 +89,7 @@ Status EntryNode::isInputBinary(const std::string& name, bool& isBinary) const {
     return StatusCode::OK;
 }
 
-Status EntryNode::createShardedTensor(std::shared_ptr<ov::runtime::Tensor>& dividedTensor, Precision precision, const shape_t& shape, std::shared_ptr<ov::runtime::Tensor> tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
+Status EntryNode::createShardedTensor(ov::runtime::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::runtime::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
     bool isBinary = false;
     auto status = this->isInputBinary(tensorName, isBinary);
     if (!status.ok()) {
@@ -112,7 +107,7 @@ Status EntryNode::createShardedTensor(std::shared_ptr<ov::runtime::Tensor>& divi
         (precision == Precision::I8) ||
         (precision == Precision::U8) ||
         (precision == Precision::I16)) {
-        dividedTensor = createSharedTensor(ovmsPrecisionToIE2Precision(precision), shape, (void*)((char*)(tensor->data()) + i * step));
+        dividedTensor = createSharedTensor(ovmsPrecisionToIE2Precision(precision), shape, (void*)((char*)(tensor.data()) + i * step));
     } else {
         return Node::createShardedTensor(dividedTensor, precision, shape, tensor, i, step, metadata, tensorName);
     }

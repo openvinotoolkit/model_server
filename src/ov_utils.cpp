@@ -24,14 +24,14 @@
 #include "tensorinfo.hpp"
 
 namespace ovms {
-std::shared_ptr<ov::runtime::Tensor> createSharedTensor(ov::element::Type_t precision, const shape_t& shape, void* data) {
-    auto tensor = std::make_shared<ov::runtime::Tensor>(precision, shape);
-    std::memcpy(tensor->data(), data, std::accumulate(shape.begin(), shape.end(), ov::element::Type(precision).size(), std::multiplies<size_t>()));
+ov::runtime::Tensor createSharedTensor(ov::element::Type_t precision, const shape_t& shape, void* data) {
+    auto tensor = ov::runtime::Tensor(precision, shape);
+    std::memcpy(tensor.data(), data, std::accumulate(shape.begin(), shape.end(), ov::element::Type(precision).size(), std::multiplies<size_t>()));
     return tensor;
 }
 
-Status createSharedTensor(std::shared_ptr<ov::runtime::Tensor>& destinationTensor, ov::element::Type_t precision, const ov::Shape& shape) {
-    destinationTensor = std::make_shared<ov::runtime::Tensor>(precision, shape);
+Status createSharedTensor(ov::runtime::Tensor& destinationTensor, ov::element::Type_t precision, const ov::Shape& shape) {
+    destinationTensor = ov::runtime::Tensor(precision, shape);
     return StatusCode::OK;
 }
 
@@ -53,17 +53,16 @@ std::string getTensorMapString(const std::map<std::string, std::shared_ptr<Tenso
     return stringStream.str();
 }
 
-Status tensorClone(std::shared_ptr<ov::runtime::Tensor>& destinationTensor, const ov::runtime::Tensor& sourceTensor) {
-    destinationTensor = std::make_shared<ov::runtime::Tensor>(sourceTensor.get_element_type(), sourceTensor.get_shape());
+Status tensorClone(ov::runtime::Tensor& destinationTensor, const ov::runtime::Tensor& sourceTensor) {
+    destinationTensor = ov::runtime::Tensor(sourceTensor.get_element_type(), sourceTensor.get_shape());
 
-    if (destinationTensor->get_byte_size() != sourceTensor.get_byte_size()) {
-        destinationTensor = nullptr;
+    if (destinationTensor.get_byte_size() != sourceTensor.get_byte_size()) {
         SPDLOG_ERROR("tensorClone byte size mismatch destination:{}; source:{}",
-            destinationTensor->get_byte_size(),
+            destinationTensor.get_byte_size(),
             sourceTensor.get_byte_size());
         return StatusCode::OV_CLONE_TENSOR_ERROR;
     }
-    std::memcpy(destinationTensor->data(), sourceTensor.data(), sourceTensor.get_byte_size());
+    std::memcpy(destinationTensor.data(), sourceTensor.data(), sourceTensor.get_byte_size());
     return StatusCode::OK;
 }
 

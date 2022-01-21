@@ -35,17 +35,17 @@ GatherNodeInputHandler::GatherNodeInputHandler(uint32_t inputsMissingCount, cons
         std::multiplies<session_id_t>());
 }
 
-Status GatherNodeInputHandler::setInput(const std::string& inputName, std::shared_ptr<ov::runtime::Tensor>& ptr, session_id_t shardId) {
+Status GatherNodeInputHandler::setInput(const std::string& inputName, ov::runtime::Tensor& tensor, session_id_t shardId) {
     auto inputsShardsIt = shardsStorage.find(inputName);
     if (inputsShardsIt == shardsStorage.end()) {
-        shard_map_t shardMap{{shardId, ptr}};
+        shard_map_t shardMap{{shardId, tensor}};
         auto itDidInsertPair = shardsStorage.emplace(inputName, std::move(shardMap));
         if (!itDidInsertPair.second) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to insert the same input: {} twice with the same shardId: {}", inputName, shardId);
             return StatusCode::INTERNAL_ERROR;
         }
     } else {
-        auto itDidEmplacePair = inputsShardsIt->second.emplace(shardId, ptr);
+        auto itDidEmplacePair = inputsShardsIt->second.emplace(shardId, tensor);
         if (!itDidEmplacePair.second) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to put the same input: {} shard: {} twice", inputName, shardId);
             return StatusCode::INTERNAL_ERROR;
@@ -64,37 +64,37 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Consolidating: {} shards for input: {}", shardsCount, inputName);
         session_id_t firstShardId = 0;
         auto firstShard = shardMap.at(firstShardId);
-        auto firstShardDims = firstShard->get_shape();
-        auto precision = firstShard->get_element_type();
+        auto firstShardDims = firstShard.get_shape();
+        auto precision = firstShard.get_element_type();
         auto newDims = firstShardDims;
         newDims.insert(newDims.begin(),
             collapsingDetails->collapsedSessionSizes.begin(),
             collapsingDetails->collapsedSessionSizes.end());
-        std::shared_ptr<ov::runtime::Tensor> consolidatedTensor;
+        ov::runtime::Tensor consolidatedTensor;
         auto status = createSharedTensor(consolidatedTensor, precision, newDims);
         if (!status.ok()) {
             return status;
         }
         for (auto& [shardId, tensor] : shardMap) {
-            if ((tensor->get_element_type() != precision) ||
-                (tensor->get_shape() != firstShardDims)) {
+            if ((tensor.get_element_type() != precision) ||
+                (tensor.get_shape() != firstShardDims)) {
                 std::stringstream firstShardShapeStream;
                 firstShardShapeStream << firstShardDims;
-                auto currentShardShape = tensor->get_shape();
+                auto currentShardShape = tensor.get_shape();
                 std::stringstream currentShardShapeStream;
                 currentShardShapeStream << currentShardShape;
                 SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to consolidate tensor: {}; shards in gather node. First shard has different tensor precision: {}; or shape: {}; than current shard precision: {}; shape: {};",
                     inputName,
                     toString(ovElementTypeToOvmsPrecision(precision)),
                     firstShardShapeStream.str(),
-                    toString(ovElementTypeToOvmsPrecision(tensor->get_element_type())),
+                    toString(ovElementTypeToOvmsPrecision(tensor.get_element_type())),
                     currentShardShapeStream.str());
                 return StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS;
             }
-            const auto memstep = tensor->get_byte_size();
+            const auto memstep = tensor.get_byte_size();
             size_t offset = shardId * memstep;
-            memcpy((char*)consolidatedTensor->data() + offset,
-                tensor->data(),
+            memcpy((char*)consolidatedTensor.data() + offset,
+                tensor.data(),
                 memstep);
         }
         inputTensors.insert({inputName, consolidatedTensor});

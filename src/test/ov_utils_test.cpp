@@ -23,6 +23,42 @@
 
 using testing::ElementsAre;
 
+TEST(OVUtils, CopyTensorDoesNotAllocateNewData) {
+    const std::vector<size_t> shape{2, 3, 4, 5};
+    const auto elementType = ov::element::Type(ov::element::Type_t::f32);
+    const size_t elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
+    const size_t totalByteSize = elementsCount * elementType.size();
+
+    std::vector<float> data(elementsCount);
+    std::iota(data.begin(), data.end(), 0);
+
+    ov::runtime::Tensor originalTensor(elementType, shape, data.data());
+    ov::runtime::Tensor copyTensor = originalTensor;
+
+    ASSERT_EQ(originalTensor.get_shape(), shape);
+    ASSERT_EQ(copyTensor.get_shape(), shape);
+
+    ASSERT_EQ(originalTensor.get_element_type(), elementType);
+    ASSERT_EQ(copyTensor.get_element_type(), elementType);
+
+    ASSERT_EQ(originalTensor.get_byte_size(), totalByteSize);
+    ASSERT_EQ(copyTensor.get_byte_size(), totalByteSize);
+
+    ASSERT_EQ(copyTensor.get_strides(), originalTensor.get_strides());
+
+    std::vector<float> originalTensorActualData;
+    originalTensorActualData.assign(static_cast<float*>(originalTensor.data()), static_cast<float*>(originalTensor.data()) + elementsCount);
+
+    std::vector<float> copyTensorActualData;
+    copyTensorActualData.assign(static_cast<float*>(copyTensor.data()), static_cast<float*>(copyTensor.data()) + elementsCount);
+
+    EXPECT_EQ(originalTensorActualData, data);
+    EXPECT_EQ(copyTensorActualData, data);
+
+    // Expect memory addresses to be the same and no new buffers were allocated
+    EXPECT_EQ(originalTensor.data(), copyTensor.data());
+}
+
 TEST(OVUtils, CopyTensor) {
     const std::vector<size_t> shape{2, 3, 4, 5};
     const auto elementType = ov::element::Type(ov::element::Type_t::f32);
@@ -33,32 +69,32 @@ TEST(OVUtils, CopyTensor) {
     std::iota(data.begin(), data.end(), 0);
 
     ov::runtime::Tensor originalTensor(elementType, shape, data.data());
-    std::shared_ptr<ov::runtime::Tensor> copyTensor = nullptr;
+    ov::runtime::Tensor copyTensor;
 
     ASSERT_EQ(ovms::tensorClone(copyTensor, originalTensor), ovms::StatusCode::OK);
 
     ASSERT_EQ(originalTensor.get_shape(), shape);
-    ASSERT_EQ(copyTensor->get_shape(), shape);
+    ASSERT_EQ(copyTensor.get_shape(), shape);
 
     ASSERT_EQ(originalTensor.get_element_type(), elementType);
-    ASSERT_EQ(copyTensor->get_element_type(), elementType);
+    ASSERT_EQ(copyTensor.get_element_type(), elementType);
 
     ASSERT_EQ(originalTensor.get_byte_size(), totalByteSize);
-    ASSERT_EQ(copyTensor->get_byte_size(), totalByteSize);
+    ASSERT_EQ(copyTensor.get_byte_size(), totalByteSize);
 
-    ASSERT_EQ(copyTensor->get_strides(), originalTensor.get_strides());
+    ASSERT_EQ(copyTensor.get_strides(), originalTensor.get_strides());
 
     std::vector<float> originalTensorActualData;
     originalTensorActualData.assign(static_cast<float*>(originalTensor.data()), static_cast<float*>(originalTensor.data()) + elementsCount);
 
     std::vector<float> copyTensorActualData;
-    copyTensorActualData.assign(static_cast<float*>(copyTensor->data()), static_cast<float*>(copyTensor->data()) + elementsCount);
+    copyTensorActualData.assign(static_cast<float*>(copyTensor.data()), static_cast<float*>(copyTensor.data()) + elementsCount);
 
     EXPECT_EQ(originalTensorActualData, data);
     EXPECT_EQ(copyTensorActualData, data);
 
     // Expect memory addresses to differ since cloning should allocate new memory space for the cloned tensor
-    EXPECT_NE(originalTensor.data(), copyTensor->data());
+    EXPECT_NE(originalTensor.data(), copyTensor.data());
 }
 
 TEST(OVUtils, ConstCopyTensor) {
@@ -71,31 +107,31 @@ TEST(OVUtils, ConstCopyTensor) {
     std::iota(data.begin(), data.end(), 0);
 
     ov::runtime::Tensor originalTensor(elementType, shape, data.data());
-    std::shared_ptr<ov::runtime::Tensor> copyTensor = nullptr;
+    ov::runtime::Tensor copyTensor;
 
     ASSERT_EQ(ovms::tensorClone(copyTensor, originalTensor), ovms::StatusCode::OK);
 
     ASSERT_EQ(originalTensor.get_shape(), shape);
-    ASSERT_EQ(copyTensor->get_shape(), shape);
+    ASSERT_EQ(copyTensor.get_shape(), shape);
 
     ASSERT_EQ(originalTensor.get_element_type(), elementType);
-    ASSERT_EQ(copyTensor->get_element_type(), elementType);
+    ASSERT_EQ(copyTensor.get_element_type(), elementType);
 
     ASSERT_EQ(originalTensor.get_byte_size(), totalByteSize);
-    ASSERT_EQ(copyTensor->get_byte_size(), totalByteSize);
+    ASSERT_EQ(copyTensor.get_byte_size(), totalByteSize);
 
-    ASSERT_EQ(copyTensor->get_strides(), originalTensor.get_strides());
+    ASSERT_EQ(copyTensor.get_strides(), originalTensor.get_strides());
 
     std::vector<float> originalTensorActualData;
     const void* start = (const void*)(originalTensor.data());
     originalTensorActualData.assign((float*)start, (float*)start + elementsCount);
 
     std::vector<float> copyTensorActualData;
-    copyTensorActualData.assign(static_cast<float*>(copyTensor->data()), static_cast<float*>(copyTensor->data()) + elementsCount);
+    copyTensorActualData.assign(static_cast<float*>(copyTensor.data()), static_cast<float*>(copyTensor.data()) + elementsCount);
 
     EXPECT_EQ(originalTensorActualData, data);
     EXPECT_EQ(copyTensorActualData, data);
 
     // Expect memory addresses to differ since cloning should allocate new memory space for the cloned tensor
-    EXPECT_NE(originalTensor.data(), copyTensor->data());
+    EXPECT_NE(originalTensor.data(), copyTensor.data());
 }

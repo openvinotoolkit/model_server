@@ -200,7 +200,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         return StatusCode::INTERNAL_ERROR;
     }
     auto& [metadata, tensorMap] = nodeSessionOutputs.begin()->second;
-    auto firstTensorShape = tensorMap.begin()->second->get_shape();
+    auto firstTensorShape = tensorMap.begin()->second.get_shape();
     uint32_t resultsDemultiplyCount = firstTensorShape[0];
     if (firstTensorShape[0] > DEMULTIPLY_LIMIT) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} - too large dim[0] size: {} of tensor: {}. Maximum allowed is: {}",
@@ -216,7 +216,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         return StatusCode::INTERNAL_ERROR;
     }
     for (auto& [tensorName, tensor] : tensorMap) {
-        auto newDims = tensor->get_shape();
+        auto newDims = tensor.get_shape();
         if (newDims.size() < 3) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong number of dimensions: {} to demultiply. Must be at least 3", newDims.size());
             return StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY;
@@ -234,13 +234,13 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         }
 
         newDims.erase(newDims.begin());
-        const auto step = tensor->get_byte_size() / resultsDemultiplyCount;
+        const auto step = tensor.get_byte_size() / resultsDemultiplyCount;
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
-            std::shared_ptr<ov::runtime::Tensor> dividedTensor;
-            this->createShardedTensor(dividedTensor, ovElementTypeToOvmsPrecision(tensor->get_element_type()), newDims, tensor, i, step, metadata, tensorName);
+            ov::runtime::Tensor dividedTensor;
+            this->createShardedTensor(dividedTensor, ovElementTypeToOvmsPrecision(tensor.get_element_type()), newDims, tensor, i, step, metadata, tensorName);
             std::stringstream ss;
             ss << "Node: " << getName() << " input demultiplied: " << tensorName
-               << "; Actual: " << TensorInfo::shapeToString(dividedTensor->get_shape());
+               << "; Actual: " << TensorInfo::shapeToString(dividedTensor.get_shape());
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
             auto it = nodeSessionOutputs.find(newSessionMetadatas[i].getSessionKey());
             if (it == nodeSessionOutputs.end()) {
@@ -254,17 +254,17 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     return StatusCode::OK;
 }
 
-Status Node::createShardedTensor(std::shared_ptr<ov::runtime::Tensor>& dividedTensor, Precision precision, const shape_t& shape, std::shared_ptr<ov::runtime::Tensor> tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
+Status Node::createShardedTensor(ov::runtime::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::runtime::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
     auto status = createSharedTensor(dividedTensor, ovmsPrecisionToIE2Precision(precision), shape);
     if (!status.ok()) {
         return status;
     }
-    if (dividedTensor->get_byte_size() != step) {
+    if (dividedTensor.get_byte_size() != step) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created tensor: {} have wrong byte size: {}, expected: {}",
-            getName(), metadata.getSessionKey(), tensorName, dividedTensor->get_byte_size(), step);
+            getName(), metadata.getSessionKey(), tensorName, dividedTensor.get_byte_size(), step);
         return StatusCode::UNKNOWN_ERROR;
     }
-    memcpy(dividedTensor->data(), (char*)(tensor->data()) + i * step, step);
+    memcpy(dividedTensor.data(), (char*)(tensor.data()) + i * step, step);
     return StatusCode::OK;
 }
 }  // namespace ovms

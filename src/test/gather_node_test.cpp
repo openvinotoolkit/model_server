@@ -53,7 +53,7 @@ TEST_F(GatherNodeInputHandlerTest, ThreePredecessorNodesWithSubsessionSize2) {
     std::vector<std::vector<size_t>> shapes{{1, 10}, {1, 2}};
     std::vector<ov::element::Type_t> precisions{ov::element::Type_t::f32, ov::element::Type_t::f32};
     std::vector<std::vector<float>> tensorsData{{-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67}, {1., 3}};
-    std::vector<std::shared_ptr<ov::runtime::Tensor>> inputTensors{createSharedTensor(precisions[0], shapes[0], tensorsData[0].data()), createSharedTensor(precisions[1], shapes[1], tensorsData[1].data())};
+    std::vector<ov::runtime::Tensor> inputTensors{createSharedTensor(precisions[0], shapes[0], tensorsData[0].data()), createSharedTensor(precisions[1], shapes[1], tensorsData[1].data())};
     NodeSessionMetadata meta;
     const std::string demultiplexerName = "NOT_IMPORTANT_NAME";
     auto newMeta = meta.generateSubsessions(demultiplexerName, shardsCount)[0];
@@ -79,9 +79,9 @@ TEST_F(GatherNodeInputHandlerTest, ThreePredecessorNodesWithSubsessionSize2) {
     }
     for (size_t i = 0; i < inputNames.size(); ++i) {
         const auto& tensor = tensorMap.at(inputNames[i]);
-        EXPECT_EQ(tensor->get_size(), tensorsData[i].size() * shardsCount);
-        EXPECT_THAT(tensor->get_shape(), ElementsAre(shardsCount, 1, tensorsData[i].size()));
-        EXPECT_EQ(std::memcmp((char*)((const void*)(tensor->data())), resultTensorsData[i].data(), resultTensorsData[i].size() * sizeof(float)), 0);
+        EXPECT_EQ(tensor.get_size(), tensorsData[i].size() * shardsCount);
+        EXPECT_THAT(tensor.get_shape(), ElementsAre(shardsCount, 1, tensorsData[i].size()));
+        EXPECT_EQ(std::memcmp((char*)((const void*)(tensor.data())), resultTensorsData[i].data(), resultTensorsData[i].size() * sizeof(float)), 0);
     }
 }
 
@@ -124,9 +124,9 @@ TEST_F(GatherNodeInputHandlerTest, GatheringOnTwoDemultiplexersAtOnce) {
     const auto tensorMap = gInputHandler.getInputs();
     ASSERT_EQ(tensorMap.size(), 1);
     const auto& tensor = tensorMap.at(inputName);
-    EXPECT_EQ(tensor->get_size(), tensorsData.size());
-    EXPECT_THAT(tensor->get_shape(), ElementsAre(demultiplyCounts[0], demultiplyCounts[1], 1, elementCountPerShard));
-    EXPECT_EQ(std::memcmp((char*)((const void*)(tensor->data())), tensorsData.data(), tensorsData.size() * sizeof(float)), 0);
+    EXPECT_EQ(tensor.get_size(), tensorsData.size());
+    EXPECT_THAT(tensor.get_shape(), ElementsAre(demultiplyCounts[0], demultiplyCounts[1], 1, elementCountPerShard));
+    EXPECT_EQ(std::memcmp((char*)((const void*)(tensor.data())), tensorsData.data(), tensorsData.size() * sizeof(float)), 0);
 }
 
 TEST_F(GatherNodeInputHandlerTest, SetInputsWithShardsHavingDifferentShapesShouldReturnErrorWhenGathering) {
@@ -134,7 +134,7 @@ TEST_F(GatherNodeInputHandlerTest, SetInputsWithShardsHavingDifferentShapesShoul
     std::vector<std::vector<size_t>> shapes{{1, 10}, {1, 9}};
     ov::element::Type_t precision{ov::element::Type_t::f32};
     std::vector<float> tensorsData{-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67};
-    std::vector<std::shared_ptr<ov::runtime::Tensor>> inputTensors{createSharedTensor(precision, shapes[0], tensorsData.data()), createSharedTensor(precision, shapes[1], tensorsData.data())};
+    std::vector<ov::runtime::Tensor> inputTensors{createSharedTensor(precision, shapes[0], tensorsData.data()), createSharedTensor(precision, shapes[1], tensorsData.data())};
     const session_id_t shardsCount = 2;  // subsessionSize/demultiplyCount
     CollapseDetails collapsingDetails{{std::string("NOT_IMPORTANT_DEMULTIPLEXER_NAME")}, {shardsCount}};
     GatherNodeInputHandler gInputHandler(inputNames.size(), collapsingDetails);
@@ -252,9 +252,9 @@ TEST_F(GatherNodeTest, FullFlowGatherInNonExitNode) {
     EXPECT_EQ(inputs.size(), 1);
     ASSERT_NE(inputs.find(DUMMY_MODEL_INPUT_NAME), inputs.end());
     const auto& gatheredTensor = inputs.at(DUMMY_MODEL_INPUT_NAME);
-    EXPECT_EQ(gatheredTensor->get_size(), nodeRawResults1.size() * shardsCount);
+    EXPECT_EQ(gatheredTensor.get_size(), nodeRawResults1.size() * shardsCount);
     std::vector<float> resultTensorData(nodeRawResults1.size() * shardsCount);
     std::copy(nodeRawResults1.begin(), nodeRawResults1.end(), resultTensorData.begin());
     std::copy(nodeRawResults2.begin(), nodeRawResults2.end(), resultTensorData.begin() + nodeRawResults1.size());
-    EXPECT_EQ(memcmp((char*)((const void*)gatheredTensor->data()), resultTensorData.data(), resultTensorData.size() * sizeof(float)), 0);
+    EXPECT_EQ(memcmp((char*)((const void*)gatheredTensor.data()), resultTensorData.data(), resultTensorData.size() * sizeof(float)), 0);
 }

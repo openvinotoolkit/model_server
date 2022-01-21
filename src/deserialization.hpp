@@ -100,8 +100,7 @@ class InputSink {
 public:
     InputSink(Requester requester) :
         requester(requester) {}
-    Status give(const std::string& name, ov::runtime::Tensor& tensor);  // TODO replace with one below
-    Status give(const std::string& name, std::shared_ptr<ov::runtime::Tensor>& tensor);
+    Status give(const std::string& name, ov::runtime::Tensor& tensor);
 };
 
 template <class TensorProtoDeserializator, class Sink>

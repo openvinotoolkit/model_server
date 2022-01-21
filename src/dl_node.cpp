@@ -97,7 +97,7 @@ Status DLNode::fetchResults(TensorMap& outputs, ov::runtime::InferRequest& infer
                 const auto tensor = inferRequest.get_tensor(realModelOutputName);
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Creating copy of tensor from model: {}, tensorName: {}",
                     getName(), sessionKey, modelName, realModelOutputName);
-                std::shared_ptr<ov::runtime::Tensor> copiedTensor;
+                ov::runtime::Tensor copiedTensor;
                 auto status = tensorClone(copiedTensor, tensor);
                 if (!status.ok()) {
                     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Could not clone result tensor; node: {}; session: {}; model name: {}; output: {}",

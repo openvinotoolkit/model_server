@@ -41,7 +41,7 @@ Status Sequence::updateMemoryState(model_memory_state_t& newState) {
     for (auto&& state : newState) {
         auto stateName = state.get_name();
         ov::runtime::Tensor tensor = state.get_state();
-        std::shared_ptr<ov::runtime::Tensor> copyTensor;
+        ov::runtime::Tensor copyTensor;
         auto status = tensorClone(copyTensor, tensor);
         if (!status.ok()) {
             return status;
