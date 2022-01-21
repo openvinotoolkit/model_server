@@ -301,6 +301,8 @@ ov::PartialShape Shape::createPartialShape() const {
     for (const Dimension& dim : *this) {
         if (dim.isStatic()) {
             shape.push_back(ov::Dimension(dim.getStaticValue()));
+        } else if (dim.isAny()) {
+            shape.push_back(ov::Dimension::dynamic());
         } else {
             shape.push_back(ov::Dimension{dim.getMinValue(), dim.getMaxValue()});
         }

@@ -100,6 +100,18 @@ void checkIncrement4DimResponse(const std::string outputName,
         << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
 }
 
+void checkIncrement4DimShape(const std::string outputName,
+    PredictResponse& response,
+    const std::vector<size_t>& expectedShape) {
+    ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
+    const auto& output_proto = response.outputs().at(outputName);
+
+    ASSERT_EQ(output_proto.tensor_shape().dim_size(), expectedShape.size());
+    for (size_t i = 0; i < expectedShape.size(); i++) {
+        ASSERT_EQ(output_proto.tensor_shape().dim(i).size(), expectedShape[i]);
+    }
+}
+
 bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vector<int64_t>&& expected) {
     bool same = true;
     if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
@@ -140,12 +152,31 @@ void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
     return readImage("/ovms/src/test/binaryutils/rgb.jpg", filesize, image_bytes);
 }
 
+void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
+    return readImage("/ovms/src/test/binaryutils/rgb4x4.jpg", filesize, image_bytes);
+}
+
 tensorflow::serving::PredictRequest prepareBinaryPredictRequest(const std::string& inputName, const int batchSize) {
     tensorflow::serving::PredictRequest request;
     auto& tensor = (*request.mutable_inputs())[inputName];
     size_t filesize = 0;
     std::unique_ptr<char[]> image_bytes = nullptr;
     readRgbJpg(filesize, image_bytes);
+
+    for (int i = 0; i < batchSize; i++) {
+        tensor.add_string_val(image_bytes.get(), filesize);
+    }
+    tensor.set_dtype(tensorflow::DataType::DT_STRING);
+    tensor.mutable_tensor_shape()->add_dim()->set_size(batchSize);
+    return request;
+}
+
+tensorflow::serving::PredictRequest prepareBinary4x4PredictRequest(const std::string& inputName, const int batchSize) {
+    tensorflow::serving::PredictRequest request;
+    auto& tensor = (*request.mutable_inputs())[inputName];
+    size_t filesize = 0;
+    std::unique_ptr<char[]> image_bytes = nullptr;
+    read4x4RgbJpg(filesize, image_bytes);
 
     for (int i = 0; i < batchSize; i++) {
         tensor.add_string_val(image_bytes.get(), filesize);
