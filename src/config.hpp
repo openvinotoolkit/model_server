@@ -363,7 +363,7 @@ public:
      * @return uint32_t
      */
     uint32_t resourcesCleanerPollWaitSeconds() {
-        return result->operator[]("resources_cleaner_poll_wait_seconds").as<uint32_t>();
+        return result->operator[]("custom_node_resources_cleaner_interval").as<uint32_t>();
     }
 
     /**

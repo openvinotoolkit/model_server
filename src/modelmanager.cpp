@@ -149,7 +149,7 @@ Status ModelManager::start() {
     sequenceCleaupIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
     resourcesCleanupIntervalSec = config.resourcesCleanerPollWaitSeconds();
     if (resourcesCleanupIntervalSec < 1) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Parameter: resources_cleaner_poll_wait_seconds has to be greater than 0. Applying default value(1 second)");
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Parameter: custom_node_resources_cleaner_interval has to be greater than 0. Applying default value(1 second)");
         resourcesCleanupIntervalSec = 1;
     }
     Status status;
