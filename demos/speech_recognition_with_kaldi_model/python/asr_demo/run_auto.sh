@@ -35,7 +35,7 @@ for i in *.wav; do
     fi
 
     rm -rf $ASPIRE_PATH/data/conversion* || true
-    cd $OVMS_PATH/example_client/stateful
+    cd $OVMS_PATH/demos/speech_recognition_with_kaldi_model/python
     ./asr_demo/prepare_model_inputs.sh $i
     python grpc_stateful_client.py --input_path $DATA_PATH/feats.ark,$DATA_PATH/ivectors.ark --output_path $DATA_PATH/scores.ark --grpc_address $1 --grpc_port $2 --input_name input,ivector --output_name Final_affine --model_name aspire --cw_l 17 --cw_r 12
     ./asr_demo/read_model_output.sh $i

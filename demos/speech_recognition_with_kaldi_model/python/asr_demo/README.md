@@ -118,12 +118,12 @@ As you start the container, the working directory is `/opt/workspace`
 Download the sample audio file for speech recognition:
 
 ```
-wget https://github.com/openvinotoolkit/model_server/raw/main/example_client/stateful/asr_demo/sample.wav
+wget https://github.com/openvinotoolkit/model_server/raw/main/demos/speech_recognition_with_kaldi_model/python/asr_demo/sample.wav
 ```
 
 Run speech recognition:
 ```
-/opt/model_server/example_client/stateful/asr_demo/run.sh /opt/workspace/sample.wav localhost 9000
+/opt/model_server/demos/speech_recognition_with_kaldi_model/python/asr_demo/run.sh /opt/workspace/sample.wav localhost 9000
 ```
 
 The `run.sh` script takes 3 arguments, first is the absolute path to the `wav` file, second is the OVMS address and the third is the port on which model server listens.
@@ -155,7 +155,7 @@ The run_auto.sh script works as the run.sh script from step 6. However instead o
 it detects wav files in $DATA_DIR and then runs the speech recognition on them.
 Run speech recognition loop on the server:
 ```
-/opt/model_server/example_client/stateful/asr_demo/run_auto.sh localhost 9000
+/opt/model_server/demos/speech_recognition_with_kaldi_model/python/asr_demo/run_auto.sh localhost 9000
 ```
 
 Install the required packages on client side.
@@ -170,7 +170,7 @@ Checkout the repository with demo script:
 ```
 CLIENT SIDE:
 git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server\example_client\stateful\asr_demo
+cd model_server/demos/speech_recognition_with_kaldi_model/python/asr_demo
 ```
 
 The live-demo.py script is a modified version of the script from https://github.com/kaldi-asr/kaldi.git repository from the \kaldi\egs\vystadial_cz\online_demo\live-demo.py path.

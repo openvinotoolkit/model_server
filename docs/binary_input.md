@@ -53,33 +53,23 @@ docker run -d --rm -p 8000:8000 -p 9000:9000 openvino/model_server:latest \
 
 Prepare the client:
 ```bash
-cd model_server/example_client/
-pip install -r client_requirements.txt
+cd model_server/client/python/ovmsclient/samples
+pip install -r requirements.txt
 ```
 
 Run the gRPC client sending the binary input:
 ```
-python grpc_binary_client.py --grpc_address localhost --model_name resnet --input_name 0 --output_name 1463 --grpc_port 9000 --images input_images.txt  --batchsize 2
-Start processing:
-	Model name: resnet
-	Images list file: input_images.txt
-Batch: 0; Processing time: 22.04 ms; speed 45.38 fps
-	 1 airliner 404 ; Incorrect match. Should be 279 Arctic fox, white fox, Alopex lagopus
-	 2 white wolf, Arctic wolf, Canis lupus tundrarum 270 ; Incorrect match. Should be 279 Arctic fox, white fox, Alopex lagopus
-Batch: 1; Processing time: 15.58 ms; speed 64.16 fps
-	 3 bee 309 ; Correct match.
-	 4 golden retriever 207 ; Correct match.
-Batch: 2; Processing time: 17.93 ms; speed 55.79 fps
-	 5 gorilla, Gorilla gorilla 366 ; Correct match.
-	 6 magnetic compass 635 ; Correct match.
-Batch: 3; Processing time: 17.14 ms; speed 58.36 fps
-	 7 peacock 84 ; Correct match.
-	 8 pelican 144 ; Correct match.
-Batch: 4; Processing time: 15.56 ms; speed 64.25 fps
-	 9 snail 113 ; Correct match.
-	 10 zebra 340 ; Correct match.
-Overall accuracy= 80.0 %
-Average latency= 17.2 ms
+python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet
+Image images/magnetic_compass.jpeg has been classified as magnetic compass
+Image images/pelican.jpeg has been classified as pelican
+Image images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
+Image images/snail.jpeg has been classified as snail
+Image images/zebra.jpeg has been classified as zebra
+Image images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
+Image images/bee.jpeg has been classified as bee
+Image images/peacock.jpeg has been classified as peacock
+Image images/airliner.jpeg has been classified as warplane, military plane
+Image images/golden_retriever.jpeg has been classified as golden retriever
 ```
 
 Run the REST API client sending the binary input:

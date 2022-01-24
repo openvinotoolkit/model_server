@@ -13,7 +13,7 @@ It covers following topics:
 
 **Note**: Provided examples and their dependencies are updated and validated for Python 3.6+ version. For older versions of Python, dependencies versions adjustment might be required.
 
-Install client dependencies using the command below in the example_client directory:
+Install client dependencies:
 ```
 pip3 install -r requirements.txt
 ```

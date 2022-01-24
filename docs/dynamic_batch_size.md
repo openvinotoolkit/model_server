@@ -91,10 +91,10 @@ docker run --rm -d -v $(pwd)/models:/models -v $(pwd)/config.json:/config.json -
 
 #### Checking metadata
 ```Bash
-cd example_client
+cd client/python/tensorflow-serving-api/samples
 virtualenv .venv
 . .venv/bin/activate
-pip install -r client_requirements.txt
+pip install -r requirements.txt
 
 python get_serving_meta.py --grpc_port 9000 --model_name resnet50DAG
 ```

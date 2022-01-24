@@ -194,10 +194,10 @@ The service name deployed via the helm chart is defined by the application name.
 gets a suffix `-ovms`, in case the application name doesn't include `ovms` phrase. It avoids a risk of the service name
 conflicts with other application.
 
-Follow the [instructions](https://github.com/openvinotoolkit/model_server/tree/main/example_client#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files) 
+Follow the [instructions](https://github.com/openvinotoolkit/model_server/tree/main/demos/image_classification/python) 
 to create an image classification client that can be used to perform inference with models being exposed by the server. For example:
 ```shell script
-$ python jpeg_classification.py --grpc_port 8080 --grpc_address 1.2.3.4 --input_name 0 --output_name 1463
+$ python image_classification.py --grpc_port 8080 --grpc_address 1.2.3.4 --input_name 0 --output_name 1463
 Start processing:
 	Model name: resnet
 	Images list file: input_images.txt

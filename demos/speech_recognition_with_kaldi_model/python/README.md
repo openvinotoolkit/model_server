@@ -8,7 +8,7 @@ It covers following topics:
 
 ## Requirement
 
-Install client dependencies using the command below in the example_client directory:
+Install client dependencies:
 ```
 pip3 install -r requirements.txt
 ```
@@ -39,7 +39,7 @@ To run this example you will need to download the rm_lstm4f model with input and
 
     ```docker run -d --rm -v $(pwd)/rm_lstm4f/:/tmp/model -p 9000:9000 -p 5555:5555 openvino/model_server:latest --stateful --port 9000 --rest_port 5555 --model_name rm_lstm4f --model_path /tmp/model ```
 
- 4. Return to the example_client/stateful directory
+ 4. Return to the demo root directory
     ```cd .. ```
 
 ## gRPC API Client Example <a name="grpc-api"></a>

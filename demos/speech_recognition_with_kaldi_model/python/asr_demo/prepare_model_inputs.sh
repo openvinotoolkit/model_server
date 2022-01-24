@@ -47,7 +47,7 @@ steps/online/nnet2/extract_ivectors_online.sh --cmd "$train_cmd" --nj "${nspk}" 
 cd $ASPIRE_PATH/exp/nnet3/ivectors_conversion_hires
 $KALDI_PATH/src/featbin/copy-feats --binary=False ark:ivector_online.1.ark ark,t:ivector_online.1.ark.txt
 
-cp /opt/model_server/example_client/stateful/asr_demo/expand_ivectors.py .
+cp /opt/model_server/demo/speech_recognition_with_kaldi_model/python/asr_demo/expand_ivectors.py .
 python3 expand_ivectors.py
 
 $KALDI_PATH/src/featbin/copy-feats --binary=True ark,t:ivector_online_ie.ark.txt ark:ivector_online_ie.ark

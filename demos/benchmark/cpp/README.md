@@ -2,7 +2,11 @@
 
 This demo provides a benchmark client that uses asynchronous gRPC API and tests performance with synthetic data (stripped out of OpenCV dependency).
 
-To build the client, run `make` command in this directory. It will build docker image named `ovms_cpp_benchmark` with all dependencies. The application can be used with any model or pipeline served in OVMS, by requesting `GetModelMetadata` endpoint and using such information to prepare synthetic inputs with matching shape and precision.
+To build the client, run `make` command in this directory. It will build docker image named `ovms_cpp_benchmark` with all dependencies.
+
+The application can be used with any model or pipeline served in OVMS, by requesting `GetModelMetadata` endpoint and using such information to prepare synthetic inputs with matching shape and precision.
+
+>**Note**: In this directory you can only see the code specific to the benchmark client. The code shared with other C++ demos as well as all building utilities are placed in the [common C++ directory](../../common/cpp).
 
 > **Note**: It is required that endpoint does not use dynamic shape.
 
