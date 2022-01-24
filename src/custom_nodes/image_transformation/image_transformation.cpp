@@ -19,7 +19,6 @@
 #include <string>
 
 #include "../../custom_node_interface.h"
-#include "../common/buffersqueue.hpp"
 #include "../common/custom_node_library_internal_manager.hpp"
 #include "../common/opencv_utils.hpp"
 #include "../common/utils.hpp"
@@ -51,7 +50,7 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
     int queue_size = get_int_parameter("queue_size", params, paramsCount, 24);
 
     // creating BuffersQueues for output tensor
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, 4 * sizeof(CustomNodeTensor), queue_size), "buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, 1 * sizeof(CustomNodeTensor), queue_size), "buffer creation failed");
 
     // creating BuffersQueues for output: image_out
     // create buffer unless size of image is unknown or targetImage properties are incorrect

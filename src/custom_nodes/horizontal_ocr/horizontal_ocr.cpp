@@ -19,7 +19,6 @@
 #include <vector>
 
 #include "../../custom_node_interface.h"
-#include "../common/buffersqueue.hpp"
 #include "../common/custom_node_library_internal_manager.hpp"
 #include "../common/opencv_utils.hpp"
 #include "../common/utils.hpp"
@@ -28,7 +27,7 @@
 using CustomNodeLibraryInternalManager = ovms::custom_nodes_common::CustomNodeLibraryInternalManager;
 
 static constexpr const char* INPUT_IMAGE_TENSOR_NAME = "image";
-static constexpr const char* INPUT_GEOMETRY_TENSOR_NAME = "boxes";
+static constexpr const char* INPUT_BOXES_TENSOR_NAME = "boxes";
 static constexpr const char* INPUT_TENSOR_INFO_NAME = "input_info";
 static constexpr const char* INPUT_IMAGE_INFO_DIMS_NAME = "image_info_dims";
 static constexpr const char* INPUT_GEOMETRY_INFO_DIMS_NAME = "boxes_info_dims";
@@ -231,7 +230,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     for (int i = 0; i < inputsCount; i++) {
         if (std::strcmp(inputs[i].name, INPUT_IMAGE_TENSOR_NAME) == 0) {
             imageTensor = &(inputs[i]);
-        } else if (std::strcmp(inputs[i].name, INPUT_GEOMETRY_TENSOR_NAME) == 0) {
+        } else if (std::strcmp(inputs[i].name, INPUT_BOXES_TENSOR_NAME) == 0) {
             boxesTensor = &(inputs[i]);
         } else {
             std::cout << "Unrecognized input: " << inputs[i].name << std::endl;
@@ -380,7 +379,7 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     }
     (*info)[0].precision = FP32;
 
-    (*info)[1].name = INPUT_GEOMETRY_TENSOR_NAME;
+    (*info)[1].name = INPUT_BOXES_TENSOR_NAME;
     (*info)[1].dimsCount = 2;
     if (!get_buffer<uint64_t>(internalManager, &((*info)[1].dims), INPUT_GEOMETRY_INFO_DIMS_NAME, (*info)[1].dimsCount * sizeof(uint64_t))) {
         release((*info)[0].dims, internalManager);

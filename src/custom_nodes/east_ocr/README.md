@@ -55,3 +55,4 @@ make BASE_OS=redhat
 | box_width_adjustment | Horizontal size expansion level for text images to compensate cut letter. Letters might be cut on the edges in case of the EAST model accuracy problems. That parameter defines how much horizontal size should be expanded comparing to the original width | 0 | |
 | box_height_adjustment | Vertical size expansion level for text images to compensate cut letter. Letters might be cut on the edges in case of the EAST model accuracy problems. That parameter defines how much vertical size should be expanded comparing to the original height | 0 | |
 | rotation_angle_threshold | For detections with angled text boxes node applies rotation to display text vertically. Parameters allows disabling rotation for angles below this value.  | 0 | |
+| queue_size  | Defines the amount of allocated buffers. | 24 | |

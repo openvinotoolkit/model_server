@@ -48,5 +48,6 @@ make BASE_OS=redhat
 | scale_values  | Scale values to be used for the input image per channel. Input data will be divided by those values. Values should be provided in the same order as output image color order. [read more](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_Converting_Model_General.html) | | |
 | mean_values  | Mean values to be used for the input image per channel. Values will be substracted from each input image data value. Values should be provided in the same order as output image color order. [read more](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_Converting_Model_General.html) | | |
 | debug  | Defines if debug messages should be displayed | false | |
+| queue_size  | Defines the amount of allocated buffers. | 24 | |
 
 > **_NOTE:_**  Substracting mean values is performed before division by scale values.
