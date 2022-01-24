@@ -83,7 +83,7 @@ model.mapping
 model.xml
 ```
 Converted east-reasnet50 model will have the following interface:
-- Input name: `input_images` ; shape: `[1 3 1024 1920]` ; precision: `FP32`, layout: `NCHW`
+- Input name: `input_images` ; shape: `[1 3 1024 1920]` ; precision: `FP32`, layout: `N...`
 - Output name: `feature_fusion/Conv_7/Sigmoid` ; shape: `[1 1 256 480]` ; precision: `FP32`
 - Output name: `feature_fusion/concat_3` ; shape: `[1 5 256 480]` ; precision: `FP32`
 
@@ -95,7 +95,7 @@ chmod -R 755 text-recognition/
 ```
 
 text-recognition model will have the following interface:
-- Input name: `imgs`;  shape: `[1 1 32 128]` ; precision: `FP32`, layout: `NCHW`
+- Input name: `imgs`;  shape: `[1 1 32 128]` ; precision: `FP32`, layout: `N...`
 - Output name: `logits` ; shape: `[16 1 37]` ; precision: `FP32`
 
 ## Building the Custom Node "east_ocr" Library 

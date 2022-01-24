@@ -1,6 +1,6 @@
 # Batch Processing in OpenVINO&trade; Model Server
 
-- `batch_size` parameter is optional. By default, is accepted the batch size derived from the model. It is set by the model optimizer tool.
+- `batch_size` parameter is optional. By default, is the batch size is derived from the model. It is set by the model optimizer tool.
 - When that parameter is set to numerical value, it is changing the model batch size at service start up. 
 It accepts also a value `auto` - this special phrase make the served model to set the batch size automatically based on the incoming data at run time.
 - Each time the input data change the batch size, the model is reloaded. It might have extra response delay for the first request.
@@ -31,17 +31,33 @@ In case the model can't be reshaped, it will remain in the original parameters a
 will get an error. The model server will also report such problem in the logs.
 
 # Changing model input/output layout
-**DEPRECATED** TODO: Suggest converting model to NHWC model (possible with Model Optimizer in 2022.1).
+OpenVINO™ models can be exported to IR format with arbitrary input/output layout using Model Optimizer. Models which process image data are usually exported with NCHW or NHWC layout. Image transformation libraries like OpenCV or Pillow use NHWC layout. To minimize amount of overhead caused by transposition operation, it is suggested to export your model with NHWC layout.
 
-OpenVINO models which process image data are generated via the model optimizer with NCHW layout. Image transformation libraries like OpenCV or Pillow use NHWC layout. This makes it required to transpose the data in the client application before it can be sent to OVMS. Custom node example implementations internally also use NHWC format to perform image transformations. Transposition operations increase the overall processing latency. Layout parameter reduces the latency by changing the model in runtime to accept NHWC layout instead of NCHW. That way the whole processing cycle is more effective by avoiding unnecessary data transpositions. That is especially beneficial for models with high resolution images, where data transposition could be more expensive in processing.<br><br>
+In case this is not possible, or you already have model with NCHW layout and are not willing to re-export it, OpenVINO™ Model Server allows changing input/output layout at runtime with `--layout` parameter via CLI or `config.json`. Please note that it modifies the model by adding transposition operations as pre-processing step.
 
-Layout parameter is optional. By default layout is inherited from OpenVINO™ model. You can specify layout during conversion to IR format via Model Optimizer. You can also use this parameter for ONNX models.<br>
+Layout parameter is optional. By default layout is inherited from OpenVINO™ model. You can also use this parameter for ONNX models. In case no layout was specified during model export, default layout is `N...` which means that there is only one known dimension which is batch (`N`) and it is on first position.
 
-Layout change is only supported to `NCHW` or `NHWC`. You can specify 2 forms of values:
-  * string - either `NCHW` or `NHWC`; applicable only for models with single input tensor
-  * dictionary of strings - e.g. `{"input1":"NHWC", "input2":"NCHW", "output1":"NHWC"}`; allows to specify layout for multiple inputs and outputs by name.
+Layout change is supported for variety of combinations with `N`, `C`, `H`, `W`, `D`, `?` and letter `...` combinations. Each dimension can appear only once. The exception is `?` which can appear multiple times meaning that there is unknown dimension on given position.
 
-After the model layout is changed, the requests must match the new updated shape in order NHWC instead of NCHW. For NCHW inputs it should be: `(batch, channels, height, width)` but for NHWC this is: `(batch, height, width, channels)`.
+Examples:
+- `NHW` - means there are 3 dimensions: _batch_, _height_ and _width_.
+- `N??C` - means there are 4 dimensions: first being _batch_, 4th being the _channels_ and 2 unknown dimensions on second and third position
+- `NC...W` - means there are undefined amount of dimensions: first being _batch_, second being the _channels_ and the last dimension is _width_.
 
-Changing layout is not supported for models with input names the same as output names.<br>
+You can specify 2 forms of values:
+  * string - e.g. `NCHW` (which expands to `NCHW:NCHW`) or `NHWC:NCHW`; applicable only for models with single input tensor
+  * dictionary of strings - e.g. `{"input1":"NHWC:NCHW", "input2":"NHWC:NCHW", "output1":"CN:NC"}`; allows to specify layout for multiple inputs and outputs by name.
+
+The `LAYOUT_A:LAYOUT_B` notation means `[A=input data layout : B=expected layout by model]`. If both layouts are different, OpenVINO™ takes care of applying additional transposition step.
+
+After the model layout is changed, the requests must match the new, (updated by transposition) shape matching `LAYOUT_A` parameter.
+
+Example, given the parameter `--layout NHWC:NCHW`:
+
+| | Inherited from model  | New expected metadata |
+|---|---|---|
+| shape | `(1, 3, 224, 224)` | `(1, 224, 224, 3)`  |
+| layout | `N...` | `NHWC` |
+
+Changing layout is not supported for models with input names the same as output names. <br>
 For model included in DAG, layouts of subsequent nodes must match similary to network shape and precision.
