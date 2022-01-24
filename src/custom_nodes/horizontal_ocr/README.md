@@ -51,4 +51,4 @@ make BASE_OS=redhat
 | confidence_threshold | Number in a range of 0-1 |  | &check; |
 | debug  | Defines if debug messages should be displayed | false | |
 | max_output_batch  | Prevents too big batches with incorrect confidence level. It can avoid exceeding RAM resources | 100 | |
-| queue_size  | Defines the amount of allocated buffers. | 4 | |
+| queue_size  | Defines the amount of preallocated buffers to allocate during library initialize | 4 | |
