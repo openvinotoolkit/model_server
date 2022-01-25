@@ -24,20 +24,22 @@
 
 using InternalManager = ovms::custom_nodes_common::AddOneInternalManager;
 
-static constexpr const char* INPUT_TENSOR_NAME = "input_numbers";
-static constexpr const char* INPUT_INFO_NAME = "input_info";
-static constexpr const char* INPUT_INFO_DIMS_NAME = "input_info_dims";
+static constexpr const char* INPUT_NUMBERS_TENSOR_NAME = "input_numbers";
+static constexpr const char* INPUT_TENSOR_INFO_NAME = "input_info";
+static constexpr const char* INPUT_NUMBERS_INFO_DIMS_NAME = "input_info_dims";
 
-static constexpr const char* OUTPUT_NAME = "output";
-static constexpr const char* OUTPUT_TENSOR_NAME = "output_numbers";
-static constexpr const char* OUTPUT_TENSOR_DIMS_NAME = "output_dims";
-static constexpr const char* OUTPUT_INFO_NAME = "output_info";
-static constexpr const char* OUTPUT_INFO_DIMS_NAME = "output_info_dims";
+static constexpr const char* OUTPUT_TENSOR_NAME = "output";
+static constexpr const char* OUTPUT_NUMBERS_TENSOR_NAME = "output_numbers";
+static constexpr const char* OUTPUT_NUMBERS_DIMS_NAME = "output_dims";
+static constexpr const char* OUTPUT_TENSOR_INFO_NAME = "output_info";
+static constexpr const char* OUTPUT_NUMBERS_INFO_DIMS_NAME = "output_info_dims";
 
 int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+    // creating InternalManager instance
     std::unique_ptr<InternalManager> internalManager = std::make_unique<InternalManager>();
     NODE_ASSERT(internalManager != nullptr, "internalManager allocation failed");
 
+    // reading parameters to determine size of pre-allocated buffers
     int output_queue_size = get_int_parameter("output_queue_size", params, paramsCount, internalManager->getCurrentOutputQueueSize());
     NODE_ASSERT(output_queue_size > 0, "output_queue_size should be greater than 0");
     internalManager->setCurrentOutputQueueSize(output_queue_size);
@@ -46,18 +48,23 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
     NODE_ASSERT(info_queue_size > 0, "info_queue_size should be greater than 0");
     internalManager->setCurrentInfoQueueSize(info_queue_size);
 
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_NAME, 1 * sizeof(CustomNodeTensor), output_queue_size), "output buffer creation failed");
+    // creating BuffersQueues for output tensor
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, 1 * sizeof(CustomNodeTensor), output_queue_size), "output buffer creation failed");
 
+    // creating BuffersQueues for output: output_numbers
     uint64_t byteSize = sizeof(float) * internalManager->getOutputSize();
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_NAME, byteSize, output_queue_size), "output tensor buffer creation failed");
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_DIMS_NAME, 2 * sizeof(uint64_t), output_queue_size), "output tensor dims buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_NUMBERS_TENSOR_NAME, byteSize, output_queue_size), "output tensor buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_NUMBERS_DIMS_NAME, 2 * sizeof(uint64_t), output_queue_size), "output tensor dims buffer creation failed");
 
-    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), info_queue_size), "input info buffer creation failed");
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), info_queue_size), "output info buffer creation failed");
+    // creating BuffersQueues for info tensors
+    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_TENSOR_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), info_queue_size), "input info buffer creation failed");
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_TENSOR_INFO_NAME, 1 * sizeof(CustomNodeTensorInfo), info_queue_size), "output info buffer creation failed");
 
-    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_INFO_DIMS_NAME, 2 * sizeof(uint64_t), info_queue_size), "input info dims buffer creation failed");
+    // creating BuffersQueues for inputs dims in getInputsInfo
+    NODE_ASSERT(internalManager->createBuffersQueue(INPUT_NUMBERS_INFO_DIMS_NAME, 2 * sizeof(uint64_t), info_queue_size), "input info dims buffer creation failed");
 
-    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_INFO_DIMS_NAME, 2 * sizeof(uint64_t), info_queue_size), "output info dims buffer creation failed");
+    // creating BuffersQueues for outputs dims in getOutputsInfo
+    NODE_ASSERT(internalManager->createBuffersQueue(OUTPUT_NUMBERS_INFO_DIMS_NAME, 2 * sizeof(uint64_t), info_queue_size), "output info dims buffer creation failed");
 
     *customNodeLibraryInternalManager = internalManager.release();
     return 0;
@@ -75,7 +82,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     std::shared_lock<std::shared_timed_mutex> lock(internalManager->getInternalManagerLock());
 
     NODE_ASSERT(inputsCount == 1, "too many inputs provided");
-    NODE_ASSERT(std::strcmp(inputs[0].name, INPUT_TENSOR_NAME) == 0, "invalid input name");
+    NODE_ASSERT(std::strcmp(inputs[0].name, INPUT_NUMBERS_TENSOR_NAME) == 0, "invalid input name");
 
     const CustomNodeTensor* inputTensor = &(inputs[0]);
 
@@ -90,15 +97,15 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(sub_number >= 0, "sub_number should be equal or greater than 0");
 
     *outputsCount = 1;
-    if (!get_buffer<struct CustomNodeTensor>(internalManager, outputs, OUTPUT_NAME, *outputsCount * sizeof(CustomNodeTensor))) {
+    if (!get_buffer<struct CustomNodeTensor>(internalManager, outputs, OUTPUT_TENSOR_NAME, *outputsCount * sizeof(CustomNodeTensor))) {
         return 1;
     }
 
     struct CustomNodeTensor* outputTensor = (&(*outputs))[0];
-    outputTensor->name = OUTPUT_TENSOR_NAME;
+    outputTensor->name = OUTPUT_NUMBERS_TENSOR_NAME;
 
     float* buffer = nullptr;
-    if (!get_buffer<float>(internalManager, &buffer, OUTPUT_TENSOR_NAME, inputTensor->dataBytes * sizeof(uint8_t))) {
+    if (!get_buffer<float>(internalManager, &buffer, OUTPUT_NUMBERS_TENSOR_NAME, inputTensor->dataBytes * sizeof(uint8_t))) {
         release(*outputs, internalManager);
         return 1;
     }
@@ -107,7 +114,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     outputTensor->dataBytes = inputTensor->dataBytes;
 
     outputTensor->dimsCount = inputTensor->dimsCount;
-    if (!get_buffer<uint64_t>(internalManager, &(outputTensor->dims), OUTPUT_TENSOR_DIMS_NAME, outputTensor->dimsCount * sizeof(uint64_t))) {
+    if (!get_buffer<uint64_t>(internalManager, &(outputTensor->dims), OUTPUT_NUMBERS_DIMS_NAME, outputTensor->dimsCount * sizeof(uint64_t))) {
         release(buffer, internalManager);
         release(*outputs, internalManager);
         return 1;
@@ -129,12 +136,12 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     std::shared_lock<std::shared_timed_mutex> lock(internalManager->getInternalManagerLock());
 
     *infoCount = 1;
-    if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, INPUT_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {
+    if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, INPUT_TENSOR_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {
         return 1;
     }
-    (*info)->name = INPUT_TENSOR_NAME;
+    (*info)->name = INPUT_NUMBERS_TENSOR_NAME;
     (*info)->dimsCount = 2;
-    if (!get_buffer<uint64_t>(internalManager, &((*info)->dims), INPUT_INFO_DIMS_NAME, (*info)->dimsCount * sizeof(uint64_t))) {
+    if (!get_buffer<uint64_t>(internalManager, &((*info)->dims), INPUT_NUMBERS_INFO_DIMS_NAME, (*info)->dimsCount * sizeof(uint64_t))) {
         release(*info, internalManager);
         return 1;
     }
@@ -150,12 +157,12 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     std::shared_lock<std::shared_timed_mutex> lock(internalManager->getInternalManagerLock());
 
     *infoCount = 1;
-    if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, OUTPUT_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {
+    if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, OUTPUT_TENSOR_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {
         return 1;
     }
     (*info)->name = "output_numbers";
     (*info)->dimsCount = 2;
-    if (!get_buffer<uint64_t>(internalManager, &((*info)->dims), OUTPUT_INFO_DIMS_NAME, (*info)->dimsCount * sizeof(uint64_t))) {
+    if (!get_buffer<uint64_t>(internalManager, &((*info)->dims), OUTPUT_NUMBERS_INFO_DIMS_NAME, (*info)->dimsCount * sizeof(uint64_t))) {
         release(*info, internalManager);
         return 1;
     }
