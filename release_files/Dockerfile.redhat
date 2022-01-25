@@ -15,6 +15,7 @@
 #
 
 ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.4
+ARG RHEL_VERSION=8.4
 FROM $BASE_IMAGE as base_build
 RUN yum install -y xz
 WORKDIR /
@@ -46,23 +47,27 @@ WORKDIR /
 
 RUN     set -e ; \
         set -x ; \
-        microdnf install --refresh -y ; \
+        microdnf install -y pkg-config; \
         if [ "$GPU" == "1" ] ; then \
-                case $INSTALL_DRIVER_VERSION in \
-                "21.49.21786") \
-                       intel-igc-opencl-1.0.9441-i643.el8.x86_64 \
-                       intel-media-21.4.1-i643.el8.x86_64 \
-                       level-zero-1.6.2-i643.el8.x86_64 \
-                       intel-level-zero-gpu-1.2.21786-i643.el8.x86_64 \
-                       intel-opencl-21.49.21786-i643.el8.x86_64 \
-                       intel-igc-core-1.0.9441-i643.el8.x86_64 \
-                       intel-ocloc-21.49.21786-i643.el8.x86_64 \
-                       ocl-icd-2.2.12-1.el8.x86_64 \
-                       intel-gmmlib-21.3.3-i643.el8.x86_64"
-                        *) \
-                        echo "ERROR: Unrecognized driver ${INSTALL_DRIVER_VERSION}." ; \
-                        exit 1 ; \
-                esac ; \
+                        microdnf install -y dnf ;\
+                        dnf install -y dnf-plugins-core ;\
+                        dnf copr enable -y jdanecki/intel-opencl ;\
+                        dnf install -y intel-opencl;\
+        fi ; \
+        if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
+                rpm -ivh http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/numactl-libs-2.0.12-11.el8.x86_64.rpm; \
+                rpm -ivh http://mirror.centos.org/centos/8/BaseOS/x86_64/os/Packages/numactl-2.0.12-11.el8.x86_64.rpm; \
+                rpm -ivh http://mirror.centos.org/centos/8/AppStream/x86_64/os/Packages/ocl-icd-2.2.12-1.el8.x86_64.rpm; \
+        else  \
+                microdnf install tar gzip; \
+                mkdir /tmp_ovms ; \
+                cd /tmp_ovms ; \
+                curl -L --fail -o deps.tar.xz "$INSTALL_RPMS_FROM_URL" ; \
+                tar -xf deps.tar.xz ; \
+                ls -Rahl . ; \
+                rpm -vi pkg/bin/*.rpm ; \
+                cd / ; \
+                rm -rf /tmp_ovms ; \
         fi ; \
         microdnf install shadow-utils; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
