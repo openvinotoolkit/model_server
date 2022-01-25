@@ -216,6 +216,14 @@ public:
         ModelManager::updateConfigurationWithoutConfigFile();
     }
 };
+
+class ResourcesAccessModelManager : public ConstructorEnabledModelManager {
+public:
+    int getResourcesSize() {
+        return resources.size();
+    }
+};
+
 class TestWithTempDir : public ::testing::Test {
 protected:
     void SetUp() override {
@@ -239,6 +247,7 @@ protected:
 };
 
 void waitForOVMSConfigReload(ovms::ModelManager& manager);
+void waitForOVMSResourcesCleanup(ovms::ModelManager& manager);
 
 template <typename T>
 static ovms::NodeLibrary createLibraryMock() {

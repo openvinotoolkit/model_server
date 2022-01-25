@@ -28,7 +28,6 @@
 
 namespace ovms {
 
-static bool sequenceCleanerStarted = false;
 static std::string separator = "_";
 
 Status GlobalSequencesViewer::registerForCleanup(std::string modelName, model_version_t modelVersion, std::shared_ptr<SequenceManager> sequenceManager) {
@@ -71,38 +70,4 @@ Status GlobalSequencesViewer::removeIdleSequences() {
 
     return ovms::StatusCode::OK;
 }
-
-void GlobalSequencesViewer::sequenceCleanerRoutine(uint32_t sequenceCleanerIntervalMinutes, std::future<void> exitSignal) {
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Started sequence cleaner thread");
-
-    while (exitSignal.wait_for(std::chrono::minutes(sequenceCleanerIntervalMinutes)) == std::future_status::timeout) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence cleaner scan begin");
-
-        removeIdleSequences();
-
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Sequence cleaner scan end");
-    }
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped sequence cleaner thread");
-}
-
-void GlobalSequencesViewer::join() {
-    if (sequenceCleanerStarted) {
-        exitTrigger.set_value();
-        if (sequenceCleanerThread.joinable()) {
-            sequenceCleanerThread.join();
-            sequenceCleanerStarted = false;
-            SPDLOG_INFO("Shutdown sequence cleaner");
-        }
-    }
-}
-
-void GlobalSequencesViewer::startCleanerThread(uint32_t sequenceCleanerIntervalMinutes) {
-    if ((!sequenceCleanerStarted) && (sequenceCleanerIntervalMinutes > 0)) {
-        std::future<void> exitSignal = exitTrigger.get_future();
-        std::thread t(std::thread(&GlobalSequencesViewer::sequenceCleanerRoutine, this, sequenceCleanerIntervalMinutes, std::move(exitSignal)));
-        sequenceCleanerStarted = true;
-        sequenceCleanerThread = std::move(t);
-    }
-}
-
 }  // namespace ovms

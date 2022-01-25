@@ -23,6 +23,7 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <openvino/openvino.hpp>
@@ -32,6 +33,7 @@
 
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
+#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "customloaders.hpp"
 #include "filesystem.hpp"
 #include "global_sequences_viewer.hpp"
@@ -46,6 +48,8 @@ const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 
 class IVersionReader;
 class CustomNodeLibraryManager;
+struct FunctorSequenceCleaner;
+struct FunctorResourcesCleaner;
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
@@ -72,6 +76,8 @@ protected:
     PipelineFactory pipelineFactory;
 
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
+
+    std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
 
     GlobalSequencesViewer globalSequencesViewer;
     uint32_t waitForModelLoadedTimeoutMs;
@@ -105,6 +111,16 @@ private:
     void watcher(std::future<void> exitSignal);
 
     /**
+     * @brief Cleaner thread for sequence and resources cleanup
+     */
+    void cleanerRoutine(uint32_t resourcesCleanupIntervalSec, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal);
+
+    /**
+     * @brief Mutex for blocking concurrent add & remove of resources
+     */
+    std::shared_mutex resourcesMtx;
+
+    /**
      * @brief A JSON configuration filename
      */
     std::string configFilename;
@@ -115,9 +131,19 @@ private:
     std::thread monitor;
 
     /**
+     * @brief A thread object used for cleanup
+     */
+    std::thread cleanerThread;
+
+    /**
      * @brief An exit trigger to notify watcher thread to exit
      */
     std::promise<void> exitTrigger;
+
+    /**
+     * @brief An exit trigger to notify cleaner thread to exit
+     */
+    std::promise<void> cleanerExitTrigger;
 
     /**
      * @brief A current configurations of models
@@ -143,9 +169,14 @@ private:
     uint watcherIntervalSec = 1;
 
     /**
-     * Time interval between two consecutive sequence cleaner scans (in minutes)
+     * Time interval between two consecutive sequence cleanup scans (in minutes)
      */
-    uint32_t sequenceCleanerIntervalMinutes = 5;
+    uint32_t sequenceCleaupIntervalMinutes = 5;
+
+    /**
+     * Time interval between two consecutive resources cleanup scans (in seconds)
+     */
+    uint32_t resourcesCleanupIntervalSec = 1;
 
     /**
       * @brief last md5sum of configfile
@@ -179,6 +210,21 @@ public:
     }
 
     /**
+     *  @brief Gets the cleaner resources interval timestep in seconds
+     */
+    uint32_t getResourcesCleanupIntervalSec() {
+        return resourcesCleanupIntervalSec;
+    }
+
+    /**
+     *  @brief Adds new resource to watch by the cleaner thread
+     */
+    void addResourceToCleaner(std::shared_ptr<CNLIMWrapper> resource) {
+        std::unique_lock resourcesLock(resourcesMtx);
+        resources.emplace(resources.end(), std::move(resource));
+    }
+
+    /**
      * @brief Destroy the Model Manager object
      * 
      */
@@ -202,7 +248,10 @@ public:
         return models;
     }
 
-    void startSequenceCleaner();
+    /**
+     * @brief Starts monitoring cleanup as new thread
+     */
+    void startCleaner();
 
     const PipelineFactory& getPipelineFactory() const {
         return pipelineFactory;
@@ -367,6 +416,13 @@ public:
      * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions
      */
     Status updateConfigurationWithoutConfigFile();
+
+    /**
+     * @brief Cleaner thread procedure to cleanup resources that are not used
+     */
+    void cleanupResources();
 };
+
+void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal);
 
 }  // namespace ovms

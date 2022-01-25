@@ -35,6 +35,7 @@
 #include <unistd.h>
 
 #include "azurefilesystem.hpp"
+#include "cleaner_utils.hpp"
 #include "config.hpp"
 #include "custom_node_library_manager.hpp"
 #include "customloaders.hpp"
@@ -57,6 +58,7 @@ namespace ovms {
 
 static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
 static bool watcherStarted = false;
+static bool cleanerStarted = false;
 
 ModelManager::ModelManager(const std::string& modelCacheDirectory) :
     ieCore(std::make_unique<ov::runtime::Core>()),
@@ -144,7 +146,12 @@ ModelManager::~ModelManager() = default;
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
     watcherIntervalSec = config.filesystemPollWaitSeconds();
-    sequenceCleanerIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
+    sequenceCleaupIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
+    resourcesCleanupIntervalSec = config.resourcesCleanerPollWaitSeconds();
+    if (resourcesCleanupIntervalSec < 1) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Parameter: custom_node_resources_cleaner_interval has to be greater than 0. Applying default value(1 second)");
+        resourcesCleanupIntervalSec = 1;
+    }
     Status status;
     if (config.configPath() != "") {
         status = startFromFile(config.configPath());
@@ -156,6 +163,7 @@ Status ModelManager::start() {
         return status;
     }
     startWatcher();
+    startCleaner();
     return status;
 }
 
@@ -166,12 +174,15 @@ void ModelManager::startWatcher() {
         watcherStarted = true;
         monitor = std::move(t);
     }
-
-    startSequenceCleaner();
 }
 
-void ModelManager::startSequenceCleaner() {
-    globalSequencesViewer.startCleanerThread(sequenceCleanerIntervalMinutes);
+void ModelManager::startCleaner() {
+    if ((!cleanerStarted)) {
+        std::future<void> exitSignal = cleanerExitTrigger.get_future();
+        std::thread t(std::thread(&ModelManager::cleanerRoutine, this, resourcesCleanupIntervalSec, sequenceCleaupIntervalMinutes, std::move(exitSignal)));
+        cleanerStarted = true;
+        cleanerThread = std::move(t);
+    }
 }
 
 Status ModelManager::startFromConfig() {
@@ -828,6 +839,62 @@ void ModelManager::watcher(std::future<void> exitSignal) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
 }
 
+void ModelManager::cleanerRoutine(uint32_t resourcesCleanupIntervalSec, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal) {
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Started cleaner thread");
+
+    uint32_t resourcesCleanupIntervalMiliseconds = resourcesCleanupIntervalSec * 1000;
+    uint32_t sequenceCleanerIntervalMiliseconds = sequenceCleanerIntervalMinutes * 60 * 1000;
+
+    FunctorResourcesCleaner functorResourcesCleaner{*this};
+    FunctorSequenceCleaner functorSequenceCleaner{globalSequencesViewer};
+
+    ovms::cleanerRoutine(resourcesCleanupIntervalMiliseconds, functorResourcesCleaner, sequenceCleanerIntervalMiliseconds, functorSequenceCleaner, cleanerExitSignal);
+
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped cleaner thread");
+}
+
+void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal) {
+    uint32_t currentResourcesWaitTime = resourcesCleanupInterval;
+    uint32_t currentSequenceWaitTime = sequenceCleanerInterval;
+    bool shouldCheckForSequenceCleanup = sequenceCleanerInterval != 0;
+    uint32_t currentWaitTime = (!shouldCheckForSequenceCleanup || currentResourcesWaitTime < currentSequenceWaitTime) ? currentResourcesWaitTime : currentSequenceWaitTime;
+
+    while (cleanerExitSignal.wait_for(std::chrono::milliseconds(currentWaitTime)) == std::future_status::timeout) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleanup check cycle begin");
+
+        currentResourcesWaitTime = (currentResourcesWaitTime - currentWaitTime) == 0 ? resourcesCleanupInterval : currentResourcesWaitTime - currentWaitTime;
+        if (shouldCheckForSequenceCleanup)
+            currentSequenceWaitTime = (currentSequenceWaitTime - currentWaitTime) == 0 ? sequenceCleanerInterval : currentSequenceWaitTime - currentWaitTime;
+        currentWaitTime = (!shouldCheckForSequenceCleanup || currentResourcesWaitTime < currentSequenceWaitTime) ? currentResourcesWaitTime : currentSequenceWaitTime;
+
+        if (currentResourcesWaitTime == resourcesCleanupInterval)
+            functorResourcesCleaner.cleanup();
+        if (currentSequenceWaitTime == sequenceCleanerInterval && shouldCheckForSequenceCleanup)
+            functorSequenceCleaner.cleanup();
+
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleanup check cycle end");
+    }
+}
+
+void ModelManager::cleanupResources() {
+    std::vector<std::shared_ptr<CNLIMWrapper>> toBeRemoved;
+    std::unique_lock resourcesLock(resourcesMtx);
+    // Move all resources that should be destroyed to temporary container
+    std::copy_if(resources.begin(),
+        resources.end(),
+        std::back_inserter(toBeRemoved),
+        [](auto& resource) { return resource.use_count() == 1; });
+    resources.erase(
+        std::remove_if(
+            resources.begin(),
+            resources.end(),
+            [toBeRemoved](auto& resource) { return std::find(toBeRemoved.begin(), toBeRemoved.end(), resource) != toBeRemoved.end(); }),
+        resources.end());
+    // Unlock mutex so new resources can be put into container owned by ModelManager
+    resourcesLock.unlock();
+    // Temporary container will fall out of scope and therefore deinitialize should be called on every resource inside of it
+}
+
 void ModelManager::join() {
     if (watcherStarted) {
         exitTrigger.set_value();
@@ -838,7 +905,14 @@ void ModelManager::join() {
         }
     }
 
-    globalSequencesViewer.join();
+    if (cleanerStarted) {
+        cleanerExitTrigger.set_value();
+        if (cleanerThread.joinable()) {
+            cleanerThread.join();
+            cleanerStarted = false;
+            SPDLOG_INFO("Shutdown cleaner thread");
+        }
+    }
 }
 
 void ModelManager::getVersionsToChange(

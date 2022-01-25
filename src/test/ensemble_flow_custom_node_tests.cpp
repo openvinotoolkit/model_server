@@ -4886,7 +4886,9 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnR
     // request   custom    custom_2   custom_3    response
     //  O--------->O--------->O--------->O---------->O
     //          add-sub    add-sub    add-sub
-    ConstructorEnabledModelManager manager;
+    ResourcesAccessModelManager manager;
+    manager.startCleaner();
+    ASSERT_EQ(manager.getResourcesSize(), 0);
     PipelineFactory factory;
 
     // mocking custom node library and copying crucial functions from add_sub_lib in order to
@@ -4928,8 +4930,13 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnR
         {"custom_node_3", {{customNodeOutputName, pipelineOutputName}}}};
 
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
+    waitForOVMSResourcesCleanup(manager);
+    ASSERT_EQ(manager.getResourcesSize(), 3);
 
     factory.retireOtherThan({}, manager);
+    waitForOVMSResourcesCleanup(manager);
+    ASSERT_EQ(manager.getResourcesSize(), 0);
+    manager.join();
     // Each custom node has effectively 1 internalManager initialized, because they use same library instance
     // in order to count whether deinitialize has been called expected number of times
     ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 3);
@@ -4940,7 +4947,9 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
     // request   custom    custom_2   custom_3    response
     //  O--------->O--------->O--------->O---------->O
     //          add-sub    add-sub    add-sub
-    ConstructorEnabledModelManager manager;
+    ResourcesAccessModelManager manager;
+    manager.startCleaner();
+    ASSERT_EQ(manager.getResourcesSize(), 0);
     PipelineFactory factory;
 
     // mocking custom node library and copying crucial functions from add_sub_lib in order to
@@ -4982,6 +4991,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
         {"custom_node_3", {{customNodeOutputName, pipelineOutputName}}}};
 
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
+    waitForOVMSResourcesCleanup(manager);
+    ASSERT_EQ(manager.getResourcesSize(), 3);
 
     // Nodes
     // request   custom    custom_2    response
@@ -4992,6 +5003,9 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{customNodeOutputName, pipelineOutputName}}}};
     ASSERT_EQ(factory.reloadDefinition("my_new_pipeline", std::move(info), std::move(connections), manager), StatusCode::OK);
+    waitForOVMSResourcesCleanup(manager);
+    ASSERT_EQ(manager.getResourcesSize(), 2);
+    manager.join();
     // Each custom node has effectively 1 internalManager initialized, because they use same library instance
     // in order to count whether deinitialize has been called expected number of times
     ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 3);
