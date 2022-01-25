@@ -58,7 +58,7 @@
                         "confidence_threshold": "0.3",
                         "max_output_batch": "100",
                         "debug": "true",
-                        "queue_size": "4"
+                        "buffer_queue_size": "4"
                     },
                     "inputs": [
                         {"image": {"node_name": "request",

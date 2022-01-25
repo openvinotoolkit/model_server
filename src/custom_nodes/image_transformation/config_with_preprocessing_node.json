@@ -39,7 +39,7 @@
                         "target_image_layout": "NHWC",
 
                         "debug": "true",
-                        "queue_size": "24"
+                        "buffer_queue_size": "24"
                     },
                     "inputs": [
                         {"image_in": {

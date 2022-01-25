@@ -29,7 +29,7 @@
                         "mean_values": "[-2,-2,-2]",
 
                         "debug": "true",
-                        "queue_size": "24"
+                        "buffer_queue_size": "24"
 
                     },
                     "inputs": [
