@@ -31,11 +31,11 @@ In case the model can't be reshaped, it will remain in the original parameters a
 will get an error. The model server will also report such problem in the logs.
 
 # Changing model input/output layout
-Starting from 2022.1, Model Optimizer by default preserves the layout of original model. If the model accepted NHWC layout before conversion to IR format, it will preserved after conversion. Model Optimizer can also be used to add transposition step to change the layout to desired one. Models which process image data are usually exported with NCHW or NHWC layout. Image transformation libraries like OpenCV or Pillow use NHWC layout. To minimize amount of overhead caused by transposition operation, it is suggested to export your model with NHWC layout.
+Starting from 2022.1, Model Optimizer by default preserves the layout of original model. If the model uses NHWC layout before conversion to IR format, it will be preserved after conversion. Model Optimizer can also be used to add transposition step to change the layout to desired one. Models which process image data are usually exported with NCHW or NHWC layout. Image transformation libraries like OpenCV or Pillow use NHWC layout. To minimize amount of overhead caused by transposition operation, it is suggested to export your model with NHWC layout.
 
 In case you already have model with NCHW layout and are not willing to re-export it, OpenVINO™ Model Server allows changing input/output layout at runtime with `--layout` parameter via CLI or `config.json`. Please note that it modifies the model by adding transposition operations as pre-processing step.
 
-Layout parameter is optional. By default layout is inherited from OpenVINO™ model. You can also use this parameter for ONNX models. In case no layout was specified during model export phase, the default layout OpenVINO™ Model Server sets is `N...`. This means that there is only one known dimension which is batch (`N`) and it is on first position.
+Layout parameter is optional. By default layout is inherited from OpenVINO™ model. You can use this parameter to adjust models both in ONNX and Intermediate Representation format. In case no layout was specified during model export phase, the default layout OpenVINO™ Model Server sets is `N...`. This means, there is known only the first dimension - the batch (`N`).
 
 Layout change is supported for variety of combinations accepting following characters: `N`, `C`, `H`, `W`, `D`, `?`, `...`. Each dimension can appear only once. The exception is `?` which can appear multiple times meaning that there is unknown dimension on given position. `...` means that there is unknown number of dimensions in between given dimensions.
 
