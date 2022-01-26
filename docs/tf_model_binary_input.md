@@ -60,38 +60,20 @@ docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_ser
 ### Running the inference requests from the client
 
 ```Bash
-cd example_client
+cd client/python/ovmsclient/samples
 virtualenv .venv
 . .venv/bin/activate
-pip install -r client_requirements.txt
+pip install -r requirements.txt
 
-python grpc_binary_client.py --images_list input_images.txt --grpc_port 9000 --input_name input_tensor --output_name  softmax_tensor --model_name resnet
-```
-
-```Bash
-Start processing:
-        Model name: resnet
-        Images list file: input_images.txt
-Batch: 0; Processing time: 36.33 ms; speed 27.52 fps
-         1 airliner 404 ; Correct match.
-Batch: 1; Processing time: 18.39 ms; speed 54.38 fps
-         2 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
-Batch: 2; Processing time: 15.51 ms; speed 64.47 fps
-         3 bee 309 ; Correct match.
-Batch: 3; Processing time: 12.71 ms; speed 78.68 fps
-         4 golden retriever 207 ; Correct match.
-Batch: 4; Processing time: 13.15 ms; speed 76.04 fps
-         5 gorilla, Gorilla gorilla 366 ; Correct match.
-Batch: 5; Processing time: 12.87 ms; speed 77.69 fps
-         6 magnetic compass 635 ; Correct match.
-Batch: 6; Processing time: 12.22 ms; speed 81.85 fps
-         7 peacock 84 ; Correct match.
-Batch: 7; Processing time: 13.73 ms; speed 72.84 fps
-         8 pelican 144 ; Correct match.
-Batch: 8; Processing time: 13.15 ms; speed 76.05 fps
-         9 snail 113 ; Correct match.
-Batch: 9; Processing time: 13.74 ms; speed 72.76 fps
-         10 zebra 340 ; Correct match.
-Overall accuracy= 100.0 %
-Average latency= 15.7 ms
+python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet
+Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
+Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican
+Image ../../../../demos/common/static/images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
+Image ../../../../demos/common/static/images/snail.jpeg has been classified as snail
+Image ../../../../demos/common/static/images/zebra.jpeg has been classified as zebra
+Image ../../../../demos/common/static/images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
+Image ../../../../demos/common/static/images/bee.jpeg has been classified as bee
+Image ../../../../demos/common/static/images/peacock.jpeg has been classified as peacock
+Image ../../../../demos/common/static/images/airliner.jpeg has been classified as warplane, military plane
+Image ../../../../demos/common/static/images/golden_retriever.jpeg has been classified as golden retriever
 ```

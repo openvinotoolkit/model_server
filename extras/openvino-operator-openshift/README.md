@@ -176,13 +176,13 @@ There are a few different ways to use the AI inference endpoints created by the 
   or [`ingress` resource](https://kubernetes.io/docs/concepts/services-networking/ingress/) in opensource Kubernetes linked with the ModelServer service.
   In OpenShift, this operation could be done from the web console.
   
-Check out the [exemple clients](../../example_client) code samples to see how your applications can generate gRPC or REST API calls to the AI inference endpoints.
+Check out the [client code samples](../../client/python/tensorflow-serving-api/samples) to see how your applications can generate gRPC or REST API calls to the AI inference endpoints.
 
-The output below shows the [jpeg_classification.py](../../example_client/jpeg_classification.py) example client connecting to a `ModelServer` resource serving a ResNet image classification model. The command below takes --grpc_address set to the service name so it will work from the cluster pod.
+The output below shows the [image_classification.py](../../demos/image_classification/python/image_classification.py) example client connecting to a `ModelServer` resource serving a ResNet image classification model. The command below takes --grpc_address set to the service name so it will work from the cluster pod.
 If the client is external to the OpenShift cluster, replace the address with the external DNS name or external IP and adjust the --grpc_port parameter as needed.
 
 ```bash
-$ python jpeg_classification.py --grpc_port 8080 --grpc_address ovms-sample --input_name 0 --output_name 1463
+$ python image_classification.py --grpc_port 8080 --grpc_address ovms-sample --input_name 0 --output_name 1463
 Start processing:
 	Model name: resnet
 	Images list file: input_images.txt
