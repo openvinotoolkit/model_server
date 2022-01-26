@@ -31,8 +31,8 @@ docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 
 - Command
 
 ```bash
-python get_model_status.py --help
-usage: get_model_status.py [-h] [--grpc_address GRPC_ADDRESS]
+python grpc_get_model_status.py --help
+usage: grpc_get_model_status.py [-h] [--grpc_address GRPC_ADDRESS]
                            [--grpc_port GRPC_PORT] [--model_name MODEL_NAME]
                            [--model_version MODEL_VERSION]
 
@@ -52,7 +52,7 @@ usage: get_model_status.py [-h] [--grpc_address GRPC_ADDRESS]
 - Usage Example
 
 ```bash
-python get_model_status.py --grpc_port 9000 --model_name resnet
+python grpc_get_model_status.py --grpc_port 9000 --model_name resnet
 
 Getting model status for model: resnet
 
@@ -69,8 +69,8 @@ Error message:
 - Command
 
 ```bash
-python get_serving_meta.py --help
-usage: get_serving_meta.py [-h] [--grpc_address GRPC_ADDRESS]
+python grpc_get_model_metadata.py --help
+usage: grpc_get_model_metadata.py [-h] [--grpc_address GRPC_ADDRESS]
                            [--grpc_port GRPC_PORT] [--model_name MODEL_NAME]
                            [--model_version MODEL_VERSION]
 
@@ -90,7 +90,7 @@ usage: get_serving_meta.py [-h] [--grpc_address GRPC_ADDRESS]
 - Usage Example
 
 ```bash
-python get_serving_meta.py --grpc_port 9000 --model_name resnet --model_version 1
+python grpc_get_model_metadata.py --grpc_port 9000 --model_name resnet --model_version 1
 
 Getting model metadata for model: resnet
 Inputs metadata:
@@ -106,7 +106,7 @@ Outputs metadata:
 - Command
 
 ```bash
-usage: grpc_serving_client.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
+usage: grpc_predict_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
                               [--labels_numpy_path LABELS_NUMPY_PATH]
                               [--grpc_address GRPC_ADDRESS]
                               [--grpc_port GRPC_PORT]
@@ -150,7 +150,7 @@ usage: grpc_serving_client.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
 - Usage example
 
 ```bash
-python grpc_serving_client.py --grpc_port 9000 --images_numpy_path imgs.npy --input_name data --output_name prob --transpose_input False --labels_numpy_path lbs.npy
+python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path imgs.npy --input_name data --output_name prob --transpose_input False --labels_numpy_path lbs.npy
 Start processing:
 	Model name: resnet
 	Iterations: 10
@@ -201,77 +201,63 @@ Classification accuracy: 100.00
 
 ```
 
-#### **Submitting gRPC requests based on a dataset from a list of jpeg files:**
-
-- Command
-
+#### **Submitting gRPC requests with data in binary format:**
 ```bash
-usage: jpeg_classification.py [-h] [--images_list IMAGES_LIST]
-                              [--grpc_address GRPC_ADDRESS]
-                              [--grpc_port GRPC_PORT]
-                              [--input_name INPUT_NAME]
-                              [--output_name OUTPUT_NAME]
-                              [--model_name MODEL_NAME] [--size SIZE]
-                              [--rgb_image RGB_IMAGE]
+usage: grpc_predict_binary_resnet.py [-h] [--images_list IMAGES_LIST]
+                                     [--grpc_address GRPC_ADDRESS]
+                                     [--grpc_port GRPC_PORT]
+                                     [--input_name INPUT_NAME]
+                                     [--output_name OUTPUT_NAME]
+                                     [--model_name MODEL_NAME]
+                                     [--batchsize BATCHSIZE]
 ```
 
 - Arguments
 
-| Argument      | Description |
-| :---        |    :----   |
-| -h, --help       | Show help message and exit       |
-| --images_list   |   Path to a file with a list of labeled images      |
-| --grpc_address GRPC_ADDRESS | Specify url to grpc service. Default:localhost | 
-| --grpc_port GRPC_PORT | Specify port to grpc service. Default: 9000 |
-| --input_name | Specify input tensor name. Default: input |
-| --output_name | Specify output name. Default: resnet_v1_50/predictions/Reshape_1 |
-| --model_name | Define model name, must be same as is in service. Default: resnet|
-| --size SIZE  | The size of the image in the model|
-| --rgb_image RGB_IMAGE | Convert BGR channels to RGB channels in the input image |
+```bash
+  -h, --help            show this help message and exit
+  --images_list IMAGES_LIST
+                        path to a file with a list of labeled images
+  --grpc_address GRPC_ADDRESS
+                        Specify url to grpc service. default:localhost
+  --grpc_port GRPC_PORT
+                        Specify port to grpc service. default: 9000
+  --input_name INPUT_NAME
+                        Specify input tensor name. default: image_bytes
+  --output_name OUTPUT_NAME
+                        Specify output name. default: probabilities
+  --model_name MODEL_NAME
+                        Define model name, must be same as is in service.
+                        default: resnet
+  --batchsize BATCHSIZE
+                        Number of images in a single request. default: 1
+```
 
 - Usage example
-
 ```bash
-python jpeg_classification.py --grpc_port 9000 --input_name data --output_name prob
-	Model name: resnet
-	Images list file: input_images.txt
-
+python grpc_predict_binary_resnet.py --grpc_address localhost --model_name resnet --input_name 0 --output_name 1463 --grpc_port 9000 --images input_images.txt  --batchsize 2
 Start processing:
 	Model name: resnet
 	Images list file: input_images.txt
-images/airliner.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 23.40 ms; speed 42.73 fps
-	 1 airliner 404 ; Correct match.
-images/arctic-fox.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 21.09 ms; speed 47.42 fps
-	 2 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
-images/bee.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 21.04 ms; speed 47.52 fps
+Batch: 0; Processing time: 22.04 ms; speed 45.38 fps
+	 1 airliner 404 ; Incorrect match. Should be 279 Arctic fox, white fox, Alopex lagopus
+	 2 white wolf, Arctic wolf, Canis lupus tundrarum 270 ; Incorrect match. Should be 279 Arctic fox, white fox, Alopex lagopus
+Batch: 1; Processing time: 15.58 ms; speed 64.16 fps
 	 3 bee 309 ; Correct match.
-images/golden_retriever.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 20.03 ms; speed 49.92 fps
 	 4 golden retriever 207 ; Correct match.
-images/gorilla.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 21.95 ms; speed 45.57 fps
+Batch: 2; Processing time: 17.93 ms; speed 55.79 fps
 	 5 gorilla, Gorilla gorilla 366 ; Correct match.
-images/magnetic_compass.jpeg (1, 3, 224, 224) ; data range: 0.0 : 247.0
-Processing time: 21.51 ms; speed 46.48 fps
 	 6 magnetic compass 635 ; Correct match.
-images/peacock.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 20.81 ms; speed 48.05 fps
+Batch: 3; Processing time: 17.14 ms; speed 58.36 fps
 	 7 peacock 84 ; Correct match.
-images/pelican.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 21.90 ms; speed 45.66 fps
 	 8 pelican 144 ; Correct match.
-images/snail.jpeg (1, 3, 224, 224) ; data range: 0.0 : 248.0
-Processing time: 22.38 ms; speed 44.68 fps
+Batch: 4; Processing time: 15.56 ms; speed 64.25 fps
 	 9 snail 113 ; Correct match.
-images/zebra.jpeg (1, 3, 224, 224) ; data range: 0.0 : 255.0
-Processing time: 22.22 ms; speed 45.00 fps
 	 10 zebra 340 ; Correct match.
-Overall accuracy= 100.0 %
-Average latency= 21.2 ms
+Overall accuracy= 80.0 %
+Average latency= 17.2 ms
 ```
+
 
 ## REST API Client Examples<a name="rest-api"></a>
 
@@ -314,8 +300,8 @@ python rest_get_model_status.py --rest_port 8000 --model_version 1
 ### Model Metadata API
 - Command
 ```Bash
-python get_serving_meta.py --help
-usage: get_serving_meta.py [-h] [--grpc_address GRPC_ADDRESS]
+python grpc_get_model_metadata.py --help
+usage: grpc_get_model_metadata.py [-h] [--grpc_address GRPC_ADDRESS]
                            [--grpc_port GRPC_PORT] [--model_name MODEL_NAME]
                            [--model_version MODEL_VERSION]
 ```
@@ -331,7 +317,7 @@ usage: get_serving_meta.py [-h] [--grpc_address GRPC_ADDRESS]
 
 - Usage Example
 ```Bash
-python rest_get_serving_meta.py --rest_port 8000
+python rest_get_model_metadata.py --rest_port 8000
 {
  "modelSpec": {
   "name": "resnet",
@@ -401,8 +387,8 @@ python rest_get_serving_meta.py --rest_port 8000
 
 - Command :
 ```bash
-python rest_serving_client.py --help
-usage: rest_serving_client.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
+python rest_predict_resnet.py --help
+usage: rest_predict_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
                               [--labels_numpy_path LABELS_NUMPY_PATH]
                               [--rest_url REST_URL] [--rest_port REST_PORT]
                               [--input_name INPUT_NAME]
@@ -445,7 +431,7 @@ usage: rest_serving_client.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
 
 - Usage Example
 ```bash
-python rest_serving_client.py --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name data --output_name prob --rest_port 8000 --transpose_input False
+python rest_predict_resnet.py --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name data --output_name prob --rest_port 8000 --transpose_input False
 ('Image data range:', 0, ':', 255)
 Start processing:
 	Model name: resnet
@@ -504,4 +490,67 @@ time percentile 50: 59.00 ms; speed percentile 50: 16.95 fps
 time standard deviation: 2.61
 time variance: 6.81
 Classification accuracy: 100.00
+```
+#### **Submitting gRPC requests with data in binary format:**
+```bash
+usage: rest_predict_binary_resnet.py [-h] [--images_list IMAGES_LIST]
+                                     [--rest_url REST_URL]
+                                     [--input_name INPUT_NAME]
+                                     [--output_name OUTPUT_NAME]
+                                     [--model_name MODEL_NAME]
+                                     [--request_format {row_noname,row_name,column_noname,column_name}]
+                                     [--batchsize BATCHSIZE]
+```
+
+- Arguments
+
+```bash
+  -h, --help            show this help message and exit
+  --images_list IMAGES_LIST
+                        path to a file with a list of labeled images
+  --rest_url REST_URL   Specify url to REST API service. default:
+                        http://localhost:8000
+  --input_name INPUT_NAME
+                        Specify input tensor name. default: image_bytes
+  --output_name OUTPUT_NAME
+                        Specify output name. default: probabilities
+  --model_name MODEL_NAME
+                        Define model name, must be same as is in service.
+                        default: resnet
+  --request_format {row_noname,row_name,column_noname,column_name}
+                        Request format according to TF Serving API:
+                        row_noname,row_name,column_noname,column_name
+  --batchsize BATCHSIZE
+                        Number of images in a single request. default: 1
+
+```
+
+- Usage example
+```bash
+python rest_predict_binary_resnet.py --rest_url http://localhost:8000 --model_name resnet --input_name 0 --output_name 1463  --images input_images.txt  --batchsize 2
+Start processing:
+	Model name: resnet
+	Images list file: input_images.txt
+Batch: 0; Processing time: 17.73 ms; speed 56.42 fps
+output shape: (2, 1000)
+	 1 airliner 404 ; Incorrect match. Should be 279 Arctic fox, white fox, Alopex lagopus
+	 2 white wolf, Arctic wolf, Canis lupus tundrarum 270 ; Incorrect match. Should be 279 Arctic fox, white fox, Alopex lagopus
+Batch: 1; Processing time: 14.06 ms; speed 71.11 fps
+output shape: (2, 1000)
+	 3 bee 309 ; Correct match.
+	 4 golden retriever 207 ; Correct match.
+Batch: 2; Processing time: 14.78 ms; speed 67.66 fps
+output shape: (2, 1000)
+	 5 gorilla, Gorilla gorilla 366 ; Correct match.
+	 6 magnetic compass 635 ; Correct match.
+Batch: 3; Processing time: 20.56 ms; speed 48.64 fps
+output shape: (2, 1000)
+	 7 peacock 84 ; Correct match.
+	 8 pelican 144 ; Correct match.
+Batch: 4; Processing time: 23.04 ms; speed 43.41 fps
+output shape: (2, 1000)
+	 9 snail 113 ; Correct match.
+	 10 zebra 340 ; Correct match.
+Overall accuracy= 80.0 %
+Average latency= 17.6 ms
 ```

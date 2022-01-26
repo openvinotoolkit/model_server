@@ -164,7 +164,7 @@ Input images can be sent to the service requesting resource name `image_classifi
 ~$ cd model_server
 ~/model_server$ make venv
 ~/model_server$ . .venv/bin/activate && cd client/python/tensorflow-serving-api/samples
-(.venv) ~/model_server/client/python/tensorflow-serving-api/samples$ python3 grpc_serving_client.py --pipeline_name image_classification_pipeline --images_numpy_path ../../imgs.npy \
+(.venv) ~/model_server/client/python/tensorflow-serving-api/samples$ python3 grpc_predict_resnet.py --pipeline_name image_classification_pipeline --images_numpy_path ../../imgs.npy \
     --labels_numpy_path ../../lbs.npy --grpc_port 9100 --input_name image --output_name label --transpose_input False --iterations 10
 Image data range: 0.0 : 255.0
 Start processing:
@@ -233,7 +233,7 @@ By analyzing logs and timestamps it is seen that GoogleNet and ResNet model infe
 
 We can use the same gRPC/REST example client as we use for requesting model metadata. The only difference is we specify pipeline name instead of model name.
 ```
-(.venv) ~/model_server/client/python/tensorflow-serving-api/samples$ python3 get_serving_meta.py --grpc_port 9100 --model_name image_classification_pipeline
+(.venv) ~/model_server/client/python/tensorflow-serving-api/samples$ python3 grpc_get_model_metadata.py --grpc_port 9100 --model_name image_classification_pipeline
 Getting model metadata for model: image_classification_pipeline
 Inputs metadata:
         Input name: image; shape: [1, 3, 224, 224]; dtype: DT_FLOAT

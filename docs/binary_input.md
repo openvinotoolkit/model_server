@@ -60,46 +60,32 @@ pip install -r requirements.txt
 Run the gRPC client sending the binary input:
 ```
 python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet
-Image images/magnetic_compass.jpeg has been classified as magnetic compass
-Image images/pelican.jpeg has been classified as pelican
-Image images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
-Image images/snail.jpeg has been classified as snail
-Image images/zebra.jpeg has been classified as zebra
-Image images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
-Image images/bee.jpeg has been classified as bee
-Image images/peacock.jpeg has been classified as peacock
-Image images/airliner.jpeg has been classified as warplane, military plane
-Image images/golden_retriever.jpeg has been classified as golden retriever
+Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
+Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican
+Image ../../../../demos/common/static/images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
+Image ../../../../demos/common/static/images/snail.jpeg has been classified as snail
+Image ../../../../demos/common/static/images/zebra.jpeg has been classified as zebra
+Image ../../../../demos/common/static/images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
+Image ../../../../demos/common/static/images/bee.jpeg has been classified as bee
+Image ../../../../demos/common/static/images/peacock.jpeg has been classified as peacock
+Image ../../../../demos/common/static/images/airliner.jpeg has been classified as warplane, military plane
+Image ../../../../demos/common/static/images/golden_retriever.jpeg has been classified as golden retriever
 ```
 
-Run the REST API client sending the binary input:
+
+Run the REST client sending the binary input:
 ```
-python rest_binary_client.py --rest_url http://localhost:8000 --model_name resnet --input_name 0 --output_name 1463  --images input_images.txt  --batchsize 2
-Start processing:
-	Model name: resnet
-	Images list file: input_images.txt
-Batch: 0; Processing time: 17.73 ms; speed 56.42 fps
-output shape: (2, 1000)
-	 1 airliner 404 ; Incorrect match. Should be 279 Arctic fox, white fox, Alopex lagopus
-	 2 white wolf, Arctic wolf, Canis lupus tundrarum 270 ; Incorrect match. Should be 279 Arctic fox, white fox, Alopex lagopus
-Batch: 1; Processing time: 14.06 ms; speed 71.11 fps
-output shape: (2, 1000)
-	 3 bee 309 ; Correct match.
-	 4 golden retriever 207 ; Correct match.
-Batch: 2; Processing time: 14.78 ms; speed 67.66 fps
-output shape: (2, 1000)
-	 5 gorilla, Gorilla gorilla 366 ; Correct match.
-	 6 magnetic compass 635 ; Correct match.
-Batch: 3; Processing time: 20.56 ms; speed 48.64 fps
-output shape: (2, 1000)
-	 7 peacock 84 ; Correct match.
-	 8 pelican 144 ; Correct match.
-Batch: 4; Processing time: 23.04 ms; speed 43.41 fps
-output shape: (2, 1000)
-	 9 snail 113 ; Correct match.
-	 10 zebra 340 ; Correct match.
-Overall accuracy= 80.0 %
-Average latency= 17.6 ms
+python http_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet
+Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
+Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican
+Image ../../../../demos/common/static/images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
+Image ../../../../demos/common/static/images/snail.jpeg has been classified as snail
+Image ../../../../demos/common/static/images/zebra.jpeg has been classified as zebra
+Image ../../../../demos/common/static/images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
+Image ../../../../demos/common/static/images/bee.jpeg has been classified as bee
+Image ../../../../demos/common/static/images/peacock.jpeg has been classified as peacock
+Image ../../../../demos/common/static/images/airliner.jpeg has been classified as warplane, military plane
+Image ../../../../demos/common/static/images/golden_retriever.jpeg has been classified as golden retriever
 ```
 
 ## Error handling:
