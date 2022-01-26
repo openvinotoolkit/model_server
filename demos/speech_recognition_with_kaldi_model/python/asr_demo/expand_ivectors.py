@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
-import subprocess
-subprocess.run(["/opt/kaldi/src/featbin/feat-to-len", "scp:/tmp/feats.scp", "ark,t:feats_length.txt"])
+import subprocess # nosec
+subprocess.run(["/opt/kaldi/src/featbin/feat-to-len", "scp:/tmp/feats.scp", "ark,t:feats_length.txt"]) # nosec
  
 f = open("ivector_online.1.ark.txt", "r")
 g = open("ivector_online_ie.ark.txt", "w")

@@ -200,7 +200,7 @@ class LiveDemo(object):
                         f.close()
                 break
             except:
-                continue
+                print("Response not ready yet...")
 
 def print_help():
     print("The live-demo.py script is a modified version of the script from https://github.com/kaldi-asr/kaldi.git repository from the \kaldi\egs\vystadial_cz\online_demo\live-demo.py path.")

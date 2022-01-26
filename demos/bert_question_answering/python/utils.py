@@ -147,7 +147,7 @@ def predict_bert(question):
         # check that answers list does not have duplicates (because of context windows overlapping)
         same = [i for i, a in enumerate(answers) if a[1] == max_s and a[2] == max_e]
         if same:
-            assert len(same) == 1
+            assert len(same) == 1 # nosec
             # update existing answer record
             a = answers[same[0]]
             answers[same[0]] = (max(max_score, a[0]), max_s, max_e)

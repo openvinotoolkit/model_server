@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+import validators
 import urllib.request
 import re
 from html.parser import HTMLParser
@@ -44,7 +45,10 @@ def get_paragraphs(url_list):
     paragraphs_all = []
     for url in url_list:
         log.info("Get paragraphs from {}".format(url))
-        with urllib.request.urlopen(url) as response:
+        if not validators.url(url):
+            print("{} - is not valid")
+            continue
+        with urllib.request.urlopen(url) as response: # nosec
             parser = HTMLDataExtractor(['title', 'p'])
             charset='utf-8'
             if 'Content-type' in response.headers:

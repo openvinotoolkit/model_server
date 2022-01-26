@@ -126,7 +126,7 @@ sdl-check: venv
 	@bash -c "if [ $$(find . -type f -name 'Dockerfile.*' -exec grep ADD {} \; | wc -l | xargs ) -eq 0 ]; then echo 'ok'; else echo 'replace ADD with COPY in dockerfiles'; exit 1 ; fi"
 
 	@echo "Checking python files..."
-	@. $(ACTIVATE); bash -c "bandit demos/*/python/*.py > bandit.txt"
+	@. $(ACTIVATE); bash -c "bandit -x demos/benchmark/python -r demos/*/python > bandit.txt"
 	@if ! grep -FRq "No issues identified." bandit.txt; then\
 		error Run bandit on demos/*/python/*.py to fix issues.;\
 	fi
