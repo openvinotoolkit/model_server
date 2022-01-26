@@ -334,7 +334,7 @@ test_functional: venv
 # Client library make style target, by default uses Python 3 env in .venv path
 # This fact is used in test_client_lib, where make build runs in .venv Python 3 environment
 test_client_lib:
-	@cd client/python/lib && \
+	@cd client/python/ovmsclient/lib && \
 		make style || exit 1 && \
 		. .venv/bin/activate; make build || exit 1 && \
 		make test || exit 1 && \
