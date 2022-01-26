@@ -30,6 +30,7 @@
 
 namespace ovms {
 
+// in case we change behaviour for this constructor we may need to write additionall tests for TensorInfo intersection / DAGs
 TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
     const Shape& shape) :
@@ -232,13 +233,51 @@ std::shared_ptr<TensorInfo> TensorInfo::createCopyWithEffectiveDimensionPrefix(c
     return copy;
 }
 
+std::shared_ptr<TensorInfo> TensorInfo::createIntersection(const TensorInfo& other) {
+    if (this->isTensorUnspecified())
+        return std::make_shared<TensorInfo>(other);
+    if (other.isTensorUnspecified())
+        return std::make_shared<TensorInfo>(*this);
+    if ((this->getName() != other.getName()) ||              // TODO do we want
+        (this->getMappedName() != other.getMappedName())) {  // TODO do we want
+        return nullptr;
+    }
+    Precision precision;
+    if (this->getPrecision() != other.getPrecision()) {
+        if (this->getPrecision() == Precision::UNDEFINED) {
+            precision = other.getPrecision();
+        } else if (other.getPrecision() == Precision::UNDEFINED) {
+            precision = this->getPrecision();
+        } else {
+            return nullptr;
+        }
+    } else {
+        precision = this->getPrecision();
+    }
+    if (this->getLayout() != other.getLayout()) {
+        return nullptr;
+    }
+    if (this->influencedByDemultiplexer != other.influencedByDemultiplexer)
+        return nullptr;
+    auto newShape = this->getShape().createIntersection(other.getShape());
+    if (newShape == std::nullopt)
+        return nullptr;  // TODO demulti
+    return std::make_shared<TensorInfo>(this->getName(),
+        this->getMappedName(),
+        precision,
+        std::move(newShape.value()),
+        this->getLayout());
+}
+
 bool TensorInfo::isTensorSpecEqual(const TensorInfo& other) const {
     return (this->getShape() == other.getShape()) &&
            (this->getPrecision() == other.getPrecision());
 }
 
 bool TensorInfo::isTensorUnspecified() const {
-    return this->getPrecision() == Precision::UNDEFINED;
+    return (this->getPrecision() == Precision::UNDEFINED) &&
+           (this->getName() == "") &&
+           (this->getShape() == Shape());
 }
 
 std::string TensorInfo::shapeToString(const shape_t& shape) {
@@ -297,6 +336,7 @@ std::string TensorInfo::asString() const {
     return ss.str();
 }
 
+// in case we change behaviour for this constructor we may need to write additionall tests for TensorInfo intersection / DAGs
 const Layout& TensorInfo::getDefaultLayout() {
     static const Layout defaultLayout{"N..."};
     return defaultLayout;

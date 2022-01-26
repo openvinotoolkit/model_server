@@ -247,6 +247,26 @@ Dimension Dimension::any() {
     return Dimension();
 }
 
+dimension_value_t Dimension::getMinValueRegardless() const {  // TODO throw if any
+    return isStatic() ? getStaticValue() : getMinValue();
+}
+
+dimension_value_t Dimension::getMaxValueRegardless() const {
+    return isStatic() ? getStaticValue() : getMaxValue();
+}
+
+std::optional<Dimension> Dimension::createIntersection(const Dimension& other) const {
+    if (*this == Dimension::any())
+        return other;
+    if (other == Dimension::any())
+        return *this;
+    auto start = std::max(this->getMinValueRegardless(), other.getMinValueRegardless());
+    auto end = std::min(this->getMaxValueRegardless(), other.getMaxValueRegardless());
+    if (end < start)
+        return std::nullopt;
+    return Dimension{start, end};
+}
+
 Shape::Shape() {
 }
 
@@ -351,6 +371,21 @@ bool Shape::match(const ov::Shape& ovShape, const size_t skipPosition) const {
         }
     }
     return true;
+}
+
+std::optional<Shape> Shape::createIntersection(const Shape& other) const {
+    if (this->size() != other.size())
+        return std::nullopt;
+    Shape intersected;
+    intersected.reserve(this->size());
+    for (size_t i = 0; i < this->size(); ++i) {
+        auto intersectedDim = (*this)[i].createIntersection(other[i]);
+        if (intersectedDim == std::nullopt) {
+            return std::nullopt;
+        }
+        intersected.emplace_back(std::move(intersectedDim.value()));
+    }
+    return intersected;
 }
 
 std::string Shape::toString() const {

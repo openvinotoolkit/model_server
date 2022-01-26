@@ -48,8 +48,30 @@ TEST(Layout, BatchPositionInvalid) {
     EXPECT_EQ(Layout{"N.CH"}.getBatchIndex(), std::nullopt);
     EXPECT_EQ(Layout{"..NHW."}.getBatchIndex(), std::nullopt);
     EXPECT_EQ(Layout{"N...N"}.getBatchIndex(), std::nullopt);
-    EXPECT_EQ(Layout{"N...C...H"}.getBatchIndex(), std::nullopt);
+    EXPECT_EQ(Layout{"N...C...H"}.getBatchIndex(), std::nullopt);  // TODO validate as incorrect
     EXPECT_EQ(Layout{"N???N"}.getBatchIndex(), std::nullopt);
     EXPECT_EQ(Layout{"C??H"}.getBatchIndex(), std::nullopt);
     EXPECT_EQ(Layout{""}.getBatchIndex(), std::nullopt);
+}
+TEST(Layout, DISABLED_CreateIntersection) {
+    // TODO add JIRA
+    // handling variety of possible layoyts can be cumbersome
+    // we should at least assume that there is only one ETC as then it should be feasible to validate such layouts. For now we assume that we just return N...
+    EXPECT_EQ(Layout("NCHW").createIntersection(
+                  Layout("NCHW")),
+        Layout("NCHW"));
+    EXPECT_EQ(Layout("NCHWD").createIntersection(
+                  Layout("NCHW?")),
+        Layout("NCHWD"));
+    EXPECT_EQ(Layout("NCHW?").createIntersection(  // test symmetry
+                  Layout("NCHWD")),
+        Layout("NCHWD"));
+    EXPECT_EQ(Layout("NCHWD").createIntersection(
+                                 Layout("NCHW"))
+                  .validate(),
+        StatusCode::LAYOUT_WRONG_FORMAT);
+    EXPECT_EQ(Layout("NCHW").createIntersection(
+                                Layout("NCHWD"))
+                  .validate(),
+        StatusCode::LAYOUT_WRONG_FORMAT);
 }

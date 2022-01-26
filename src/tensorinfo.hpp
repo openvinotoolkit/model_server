@@ -223,6 +223,7 @@ public:
     std::shared_ptr<TensorInfo> createCopyWithNewShape(const Shape& shape) const;
 
     std::shared_ptr<TensorInfo> createCopyWithEffectiveDimensionPrefix(const Dimension& dim) const;
+    std::shared_ptr<TensorInfo> createIntersection(const TensorInfo& other);
 
     bool isTensorUnspecified() const;
 

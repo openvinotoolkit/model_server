@@ -67,6 +67,11 @@ public:
     bool match(dimension_value_t value) const;
     bool partiallyFitsInto(const Dimension& value) const;
     bool isAny() const;
+    std::optional<Dimension> createIntersection(const Dimension& other) const;
+
+private:
+    dimension_value_t getMinValueRegardless() const;
+    dimension_value_t getMaxValueRegardless() const;
 };
 
 class Shape : public std::vector<Dimension> {
@@ -95,9 +100,9 @@ public:
 
     bool match(const ov::Shape& rhs) const;
     bool match(const ov::Shape& rhs, const size_t skipPosition) const;
+    std::optional<Shape> createIntersection(const Shape& other) const;
 
     std::string toString() const;
-
     static Status fromString(const std::string& strIn, Shape& shapeOut);
 };
 

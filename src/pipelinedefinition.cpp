@@ -1064,6 +1064,36 @@ std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string&
     return newOwnedTensorInfo;
 }
 
+Status updateInputsInfoWithNodeConnection(tensor_map_t& inputsInfo, const TensorInfo& tensorInfo, const std::string& alias) {
+    auto newTensorInfo = std::make_shared<TensorInfo>(tensorInfo);
+    auto it = inputsInfo.find(alias);
+    if (it != inputsInfo.end()) {
+        if (!it->second->isTensorSpecEqual(*newTensorInfo)) {
+            auto intersectionTensorInfo = it->second->createIntersection(*newTensorInfo);
+            if (intersectionTensorInfo == nullptr) {
+                Status status = StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA;
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error validating pipeline: {}", status.string());  // TODO pipeline Name
+                return status;
+            }
+            inputsInfo[alias] = intersectionTensorInfo;
+            return StatusCode::OK;
+        }
+    }
+    inputsInfo[alias] = newTensorInfo;
+    return StatusCode::OK;
+}
+
+template <typename Extractor>
+Status updateInputsInfoWithNodeConnections(tensor_map_t& inputsInfo, const Aliases& specificDependencyMapping, Extractor extractor) {
+    for (const auto& [alias, realName] : specificDependencyMapping) {
+        auto status = updateInputsInfoWithNodeConnection(inputsInfo, extractor(realName), alias);
+        if (!status.ok()) {
+            return status;
+        }
+    }
+    return StatusCode::OK;
+}
+
 Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
     // Assumptions: this can only be called on available pipeline definition.
     // Add check if available when pipeline status will be implemented.
@@ -1100,23 +1130,13 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                     SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} inputs info fetching", instance->getName(), this->getName());
                     return status;
                 }
-
-                for (const auto& [alias, realName] : specificDependencyMapping) {
-                    auto tensorInfo = std::make_shared<TensorInfo>(*instance->getInputsInfo().at(realName));
-                    auto it = inputsInfo.find(alias);
-                    if (it != inputsInfo.end()) {
-                        // Already exists in map
-                        if (tensorInfo->isTensorUnspecified()) {
-                            continue;
-                        }
-                        if (!it->second->isTensorSpecEqual(*tensorInfo) &&
-                            !it->second->isTensorUnspecified()) {
-                            Status status = StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA;
-                            SPDLOG_ERROR("Error validating pipeline: {}", status.string());
-                            return status;
-                        }
-                    }
-                    inputsInfo[alias] = tensorInfo;
+                status = updateInputsInfoWithNodeConnections(inputsInfo,
+                    specificDependencyMapping,
+                    [&instance](const std::string& realName) {
+                        return *instance->getInputsInfo().at(realName);
+                    });
+                if (!status.ok()) {
+                    return status;
                 }
                 break;
             }
@@ -1132,23 +1152,13 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                     return status;
                 }
 
-                for (const auto& [alias, realName] : specificDependencyMapping) {
-                    auto tensorInfo = std::make_shared<TensorInfo>(*info.at(realName));
-                    auto it = inputsInfo.find(alias);
-                    if (it != inputsInfo.end()) {
-                        // Already exists in map
-                        if (tensorInfo->isTensorUnspecified()) {
-                            continue;
-                        }
-                        if (!it->second->isTensorSpecEqual(*tensorInfo) &&
-                            !it->second->isTensorUnspecified()) {
-                            Status result = StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA;
-                            SPDLOG_ERROR(result.string());
-                            return result;
-                        }
-                    } else {
-                        inputsInfo[alias] = tensorInfo;
-                    }
+                status = updateInputsInfoWithNodeConnections(inputsInfo,
+                    specificDependencyMapping,
+                    [&info](const std::string& realName) {
+                        return *info.at(realName);
+                    });
+                if (!status.ok()) {
+                    return status;
                 }
                 break;
             }

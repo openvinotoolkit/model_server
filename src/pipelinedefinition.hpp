@@ -44,7 +44,7 @@ namespace ovms {
 
 class ModelManager;
 class Pipeline;
-
+// TODO dispose multiple using
 using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 
 class NodeValidator;
