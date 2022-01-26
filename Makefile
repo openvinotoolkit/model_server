@@ -41,7 +41,6 @@ BASE_OS_TAG_CLEARLINUX ?= latest
 BASE_OS_TAG_REDHAT ?= 8.4
 
 INSTALL_RPMS_FROM_URL ?=
-INSTALL_DRIVER_VERSION ?= "21.49.21786"
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
@@ -69,6 +68,7 @@ ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
   DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2022.1.0.510_offline.sh
+  INSTALL_DRIVER_VERSION ?= "21.48.21782"  
 endif
 ifeq ($(BASE_OS),centos)
   BASE_OS_TAG=$(BASE_OS_TAG_CENTOS)
@@ -85,6 +85,7 @@ ifeq ($(BASE_OS),redhat)
   DIST_OS=redhat
   DIST_OS_TAG=$(BASE_OS_TAG_REDHAT)
   DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2022.1.0.510.tgz
+  INSTALL_DRIVER_VERSION ?= "21.49.21786"
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
