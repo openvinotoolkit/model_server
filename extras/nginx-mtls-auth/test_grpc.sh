@@ -27,6 +27,6 @@ else
 	set +e
 fi
 
-python3 ../../example_client/face_detection.py --grpc_port $GRPC_PORT --batch_size 1 --width 600 --height 400 --input_images_dir images --output_dir results --tls \
+python3 ../../demos/face_detection/python/face_detection.py --grpc_port $GRPC_PORT --batch_size 1 --width 600 --height 400 --input_images_dir ../../demos/common/static/images --output_dir results --tls \
 	--server_cert server.pem --client_cert client.pem --client_key client.key
 

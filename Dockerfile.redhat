@@ -152,7 +152,8 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflo
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
 WORKDIR /example_cpp_client
-COPY example_client/cpp/ /example_cpp_client/cpp
+COPY demos/common/cpp /example_cpp_client/cpp
+COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classification/cpp/*.cpp /example_cpp_client/cpp/src/
 
 WORKDIR /ovms
 

@@ -23,7 +23,7 @@ Gets information about the status of served models including Model Version
 
  [Get Model Status proto](https://github.com/tensorflow/serving/blob/master/tensorflow_serving/apis/get_model_status.proto) defines three message definitions used while calling Status endpoint: *GetModelStatusRequest*, *ModelVersionStatus*, *GetModelStatusResponse* that are used to report all exposed versions including their state in their lifecycle.
 
- Read more about [*Get Model Status API* usage](./../example_client/README.md#model-status-api).     
+ Read more about [*Get Model Status API* usage](./../client/python/tensorflow-serving-api/samples/README.md#model-status-api).     
 
 ## Model MetaData API <a name="model-metadata"></a>
 
@@ -33,7 +33,7 @@ Gets information about the served models. A function call GetModelMetadata accep
  
 [Get Model Metadata proto](https://github.com/tensorflow/serving/blob/master/tensorflow_serving/apis/get_model_metadata.proto) has three message definitions: *SignatureDefMap*, *GetModelMetadataRequest*, *GetModelMetadataResponse*. 
 
-Read more about [*Get Model Metadata API* usage](./../example_client/README.md#model-metadata-api).     
+Read more about [*Get Model Metadata API* usage](./../client/python/tensorflow-serving-api/samples/README.md#model-metadata-api).     
 
 
 ## Predict API <a name="predict"></a>
@@ -49,13 +49,13 @@ To send images in binary format data should be placed in dt_string field of tens
  * *PredictResponse* includes a map of outputs serialized by 
 [TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) and information about the used model spec.
 
-Read more about *Predict API* usage [here](./../example_client/README.md#predict-api)
+Read more about *Predict API* usage [here](./../client/python/tensorflow-serving-api/samples/README.md#predict-api)
 
 Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
 
 ## See Also
 
-- [Example client code](./../example_client/README.md) shows how to use GRPC API and REST API.
+- [Example client code](./../client/python/tensorflow-serving-api/samples/README.md) shows how to use GRPC API and REST API.
 - [TensorFlow Serving](https://github.com/tensorflow/serving)
 - [gRPC](https://grpc.io/)
 

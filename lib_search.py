@@ -66,7 +66,7 @@ def check_dir(start_dir):
     not_ok = []
     no_header = []
 
-    exclude_files = ['__pycache__', '.venv', '.pytest_cache', '.vscode', 'ovms-c/dist', '.git', '.tar.gz', 'docx',
+    exclude_files = ['__pycache__', '.bandit', '.venv', '.pytest_cache', '.vscode', 'ovms-c/dist', '.git', '.tar.gz', 'docx',
                      '.npy', '.png', '.svg', '.bin', '.jpeg', '.jpg', 'license.txt', 'md', '.groovy', '.json', '.proto', 'bazel-',
                      'Doxyfile', 'clang-format','net_http.patch', 'tftext.patch', 'tf.patch', 'client_requirements.txt',
                      'openvino.LICENSE.txt', 'c-ares.LICENSE.txt', 'zlib.LICENSE.txt', 'boost.LICENSE.txt',

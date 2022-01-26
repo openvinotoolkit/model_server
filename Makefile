@@ -22,7 +22,7 @@ STYLE_CHECK_OPTS := --extensions=hpp,cc,cpp,h \
 	--recursive \
 	--linelength=120 \
 	--filter=-build/c++11,-runtime/references,-whitespace/braces,-whitespace/indent,-build/include_order,-runtime/indentation_namespace,-build/namespaces,-whitespace/line_length,-runtime/string,-readability/casting,-runtime/explicit,-readability/todo
-STYLE_CHECK_DIRS := src example_client/cpp
+STYLE_CHECK_DIRS := src demos/common/cpp/src demos/image_classification/cpp demos/benchmark/cpp
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
@@ -67,8 +67,8 @@ DIST_OS_TAG ?= $(BASE_OS_TAG)
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2022.1.0.510_offline.sh
   INSTALL_DRIVER_VERSION ?= "21.48.21782"  
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2022.1.0.539_offline.sh
 endif
 ifeq ($(BASE_OS),centos)
   BASE_OS_TAG=$(BASE_OS_TAG_CENTOS)
@@ -84,8 +84,8 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   DIST_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2022.1.0.510.tgz
   INSTALL_DRIVER_VERSION ?= "21.49.21786"
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2022.1.0.539.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -127,14 +127,14 @@ sdl-check: venv
 	@bash -c "if [ $$(find . -type f -name 'Dockerfile.*' -exec grep ADD {} \; | wc -l | xargs ) -eq 0 ]; then echo 'ok'; else echo 'replace ADD with COPY in dockerfiles'; exit 1 ; fi"
 
 	@echo "Checking python files..."
-	@. $(ACTIVATE); bash -c "bandit example_client/*.py > bandit.txt"
+	@. $(ACTIVATE); bash -c "bandit -x demos/benchmark/python -r demos/*/python > bandit.txt"
 	@if ! grep -FRq "No issues identified." bandit.txt; then\
-		error Run bandit on src/*.py and example_client/*.py to fix issues.;\
+		error Run bandit on demos/*/python/*.py to fix issues.;\
 	fi
 	@rm bandit.txt
-	@. $(ACTIVATE); bash -c "bandit -r client/python/lib/ovmsclient/ > bandit2.txt"
+	@. $(ACTIVATE); bash -c "bandit -r client/python/ > bandit2.txt"
 	@if ! grep -FRq "No issues identified." bandit2.txt; then\
-		error Run bandit on  client/python/lib/ovmsclient/ to fix issues.;\
+		error Run bandit on  client/python/ to fix issues.;\
 	fi
 	@rm bandit2.txt
 	@echo "Checking license headers in files..."
@@ -335,7 +335,7 @@ test_functional: venv
 # Client library make style target, by default uses Python 3 env in .venv path
 # This fact is used in test_client_lib, where make build runs in .venv Python 3 environment
 test_client_lib:
-	@cd client/python/lib && \
+	@cd client/python/ovmsclient/lib && \
 		make style || exit 1 && \
 		. .venv/bin/activate; make build || exit 1 && \
 		make test || exit 1 && \

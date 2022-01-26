@@ -86,22 +86,22 @@ Model scripts are available to provide an easy way to access the Model Server. T
 1. Use this command to download all necessary components:
 
 ```
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/face_detection.py -o face_detection.py  https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_requirements.txt -o client_requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/face_detection/python/face_detection.py -o face_detection.py  https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/requirements.txt -o client_requirements.txt
 ```
 
 For more information:
 
-- [Information about the face detection script](../example_client/face_detection.md). 
-- [More Model Server client scripts](../example_client).
+- [Information about the face detection script](../demos/face_detection/python/face_detection.md). 
+- [More Model Server demos](../demos).
 
 
 ### Step 6: Download Data for Inference
 
-1. Download [example images for inference](../example_client/images/people). This example uses a file named [people1.jpeg](../example_client/images/people/people1.jpeg). 
+1. Download [example images for inference](../demos/common/static/images/people). This example uses a file named [people1.jpeg](../demos/common/static/images/people/people1.jpeg). 
 2. Put the image in a folder by itself. The script runs inference on all images in the folder.
 
 ```
-curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/images/people/people1.jpeg -o images/people1.jpeg
+curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/people/people1.jpeg -o images/people1.jpeg
 ```
 
 ### Step 7: Run Inference
@@ -132,4 +132,4 @@ In the `results` folder, look for an image that contains the inference results.
 The result is the modified input image with bounding boxes indicating detected faces.
 
 
-Note: Similar steps can be repeated also for the model with ONNX model. Check the inference [use case example with a public ResNet model in ONNX format](ovms_onnx_example.md). 
+Note: Similar steps can be repeated also for the model with ONNX model. Check the inference [use case example with a public ResNet model in ONNX format](../demos/using_onnx_model/python). 

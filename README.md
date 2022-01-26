@@ -71,17 +71,17 @@ More detailed guides to using Model Server in various scenarios can be found her
 
 Learn more about [GRPC API](docs/model_server_grpc_api.md)
 
-Refer to the [GRPC example client code](example_client/README.md#grpc-api-client-examples) to learn how to use and submit the requests using the gRPC interface.
+Refer to the [GRPC example client code](client/python/ovmsclient/samples/README.md#grpc-api) to learn how to use and submit the requests using the gRPC interface.
 
 ### REST
 
 Learn more about [REST API](docs/model_server_rest_api.md)
 
-Refer to the [REST API example client code](./example_client/README.md#rest-api-client-examples) to learn how to use REST API 
+Refer to the [REST API example client code](client/python/ovmsclient/samples/README.md#http-api) to learn how to use REST API 
 
 ### OVMS Python Client Library
 
-For simplified interaction with the model server API, the [Python client library](client/python/lib) has been introduced. It's a set of Python functions and objects that wrap things like:
+For simplified interaction with the model server API, the [Python client library](client/python/ovmsclient/lib) has been introduced. It's a set of Python functions and objects that wrap things like:
 - setting connection with the server
 - creating `TensorProto` from data
 - creating requests for model status, model metadata and prediction

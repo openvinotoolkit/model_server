@@ -1,0 +1,10 @@
+    ../../../../demos/common/static/images/airliner.jpeg 404
+    ../../../../demos/common/static/images/arctic-fox.jpeg 279
+    ../../../../demos/common/static/images/bee.jpeg 309
+    ../../../../demos/common/static/images/golden_retriever.jpeg 207
+    ../../../../demos/common/static/images/gorilla.jpeg 366
+    ../../../../demos/common/static/images/magnetic_compass.jpeg 635
+    ../../../../demos/common/static/images/peacock.jpeg 84
+    ../../../../demos/common/static/images/pelican.jpeg 144
+    ../../../../demos/common/static/images/snail.jpeg 113
+    ../../../../demos/common/static/images/zebra.jpeg 340

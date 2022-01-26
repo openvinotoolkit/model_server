@@ -18,4 +18,4 @@ __pycache__
 *.swp
 dist/
 lib/
-!client/python/lib
+!client/python/ovmsclient/lib
