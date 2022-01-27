@@ -56,6 +56,8 @@ def build_argparser():
                       default=8, required=False, type=int)
     args.add_argument("--max_answer_token_num", help="Optional. Maximum number of tokens in answer",
                       default=15, required=False, type=int)
+    args.add_argument("--min_paragraph_token_num", help="Optional. Minimum number of tokens in paragraph",
+                      default=1, required=False, type=int)
     args.add_argument('-c', '--colors', action='store_true',
                       help="Optional. Nice coloring of the questions/answers. "
                            "Might not work on some terminals (like Windows* cmd console)")
@@ -99,22 +101,21 @@ def main():
         COLOR_RED = ""
         COLOR_RESET = ""
 
+    # check input and output names
+    input_names = list(i.strip() for i in args.input_names.split(','))
+    output_names = list(o.strip() for o in args.output_names.split(','))
+
     # load vocabulary file for model
     log.info("Loading vocab file:\t{}".format(args.vocab))
     vocab = load_vocab_file(args.vocab)
     log.info("{} tokens loaded".format(len(vocab)))
 
-    # get context as a string (as we might need it's length for the sequence reshape)
+    # get context as a string for visual purposes
     paragraphs = get_paragraphs(args.input_url)
     context = '\n'.join(paragraphs)
     log.info("Size: {} chars".format(len(context)))
     log.info("Context: " + COLOR_RED + context + COLOR_RESET)
-    # encode context into token ids list
-    c_tokens_id, c_tokens_se = text_to_tokens(context.lower(), vocab)
 
-    # check input and output names
-    input_names = list(i.strip() for i in args.input_names.split(','))
-    output_names = list(o.strip() for o in args.output_names.split(','))
     loop = True
     print("arg", args.loop)
     # loop on user's questions
@@ -127,42 +128,30 @@ def main():
 
         q_tokens_id, _ = text_to_tokens(question.lower(), vocab)
 
-        # maximum number of tokens that can be processed by network at once
-        max_length = 384
-
-        # calculate number of tokens for context in each inference request.
-        # reserve 3 positions for special tokens
-        # [CLS] q_tokens [SEP] c_tokens [SEP]
-        c_wnd_len = max_length - (len(q_tokens_id) + 3)
-
-        # token num between two neighbour context windows
-        # 1/2 means that context windows are overlapped by half
-        c_stride = c_wnd_len // 2
-
         t0 = time.perf_counter()
         t_count = 0
 
-        # array of answers from each window
+        # array of answers from each paragraph
         answers = []
 
-        # init a window to iterate over context
-        c_s, c_e = 0, min(c_wnd_len, len(c_tokens_id))
+        # iterate over context in a loop in order to save answers properly
+        c_s = 0
 
         # iterate while context window is not empty
-        while c_e > c_s:
-            print("c_e",c_e,"c_s",c_s)
+        for paragraph in paragraphs:
+            # encode paragraph into token ids list
+            p_tokens_id, p_tokens_se = text_to_tokens(paragraph.lower(), vocab)
+            # skip paragraphs that has not enough tokens
+            if len(p_tokens_id) < args.min_paragraph_token_num:
+                c_s += len(paragraph) + 1
+                continue
+
             # form the request
             tok_cls = vocab['[CLS]']
             tok_sep = vocab['[SEP]']
-            input_ids = [tok_cls] + q_tokens_id + [tok_sep] + c_tokens_id[c_s:c_e] + [tok_sep]
-            token_type_ids = [0] + [0] * len(q_tokens_id) + [0] + [1] * (c_e - c_s) + [0]
+            input_ids = [tok_cls] + q_tokens_id + [tok_sep] + p_tokens_id + [tok_sep]
+            token_type_ids = [0] + [0] * len(q_tokens_id) + [0] + [1] * len(p_tokens_id) + [0]
             attention_mask = [1] * len(input_ids)
-
-            # pad the rest of the request
-            pad_len = max_length - len(input_ids)
-            input_ids += [0] * pad_len
-            token_type_ids += [0] * pad_len
-            attention_mask += [0] * pad_len
 
             # create numpy inputs for IE
             inputs = {
@@ -193,14 +182,14 @@ def main():
 
             t_count += 1
             log.info("Sequence of length {} is processed with {:0.2f} requests/sec ({:0.2} sec per request)".format(
-                max_length,
+                len(p_tokens_id),
                 1 / (t_end - t_start),
                 t_end - t_start
             ))
 
             # get start-end scores for context
             def get_score(name):
-                out = np.exp(res[name].reshape((max_length,)))
+                out = np.exp(res[name].reshape((len(input_ids),)))
                 return out / out.sum(axis=-1)
 
             score_s = get_score(output_names[0])
@@ -214,10 +203,10 @@ def main():
 
             # find product of all start-end combinations to find the best one
             c_s_idx = len(q_tokens_id) + 2  # index of first context token in tensor
-            c_e_idx = max_length - (1 + pad_len)  # index of last+1 context token in tensor
+            c_e_idx = len(input_ids) - 1  # index of last+1 context token in tensor
             score_mat = np.matmul(
-                score_s[c_s_idx:c_e_idx].reshape((c_e - c_s, 1)),
-                score_e[c_s_idx:c_e_idx].reshape((1, c_e - c_s))
+                score_s[c_s_idx:c_e_idx].reshape((len(p_tokens_id), 1)),
+                score_e[c_s_idx:c_e_idx].reshape((1, len(p_tokens_id)))
             )
             # reset candidates with end before start
             score_mat = np.triu(score_mat)
@@ -227,42 +216,25 @@ def main():
             max_s, max_e = divmod(score_mat.flatten().argmax(), score_mat.shape[1])
             max_score = score_mat[max_s, max_e] * (1 - score_na)
 
-            # convert to context text start-end index
-            max_s = c_tokens_se[c_s + max_s][0]
-            max_e = c_tokens_se[c_s + max_e][1]
+            max_s = p_tokens_se[max_s][0]
+            max_e = p_tokens_se[max_e][1]
 
-            # check that answers list does not have duplicates (because of context windows overlapping)
-            same = [i for i, a in enumerate(answers) if a[1] == max_s and a[2] == max_e]
-            if same:
-                assert len(same) == 1 # nosec
-                # update existing answer record
-                a = answers[same[0]]
-                answers[same[0]] = (max(max_score, a[0]), max_s, max_e)
-            else:
-                # add new record
-                answers.append((max_score, max_s, max_e))
-
-            # check that context window reached the end
-            if c_e == len(c_tokens_id):
-                break
-
-            # move to next window position
-            c_s = min(c_s + c_stride, len(c_tokens_id))
-            c_e = min(c_s + c_wnd_len, len(c_tokens_id))
+            answers.append((max_score, max_s + c_s, max_e + c_s))
+            # add paragraph length to iterator and /n character
+            c_s += len(paragraph) + 1
 
         t1 = time.perf_counter()
         log.info("The performance below is reported only for reference purposes, "
                  "please use the benchmark_app tool (part of the OpenVINO samples) for any actual measurements.")
-        log.info("{} requests of {} length were processed in {:0.2f}sec ({:0.2}sec per request)".format(
+        log.info("{} requests were processed in {:0.2f}sec ({:0.2}sec per request)".format(
             t_count,
-            max_length,
             t1 - t0,
             (t1 - t0) / t_count
         ))
 
-        # print top 3 results
+        # print top 5 results
         answers = sorted(answers, key=lambda x: -x[0])
-        for score, s, e in answers[:3]:
+        for score, s, e in answers[:5]:
             log.info("---answer: {:0.2f} {}".format(score, context[s:e]))
             c_s, c_e = find_sentence_range(context, s, e)
             log.info("   " + context[c_s:s] + COLOR_RED + context[s:e] + COLOR_RESET + context[e:c_e])
