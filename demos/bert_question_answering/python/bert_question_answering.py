@@ -85,6 +85,12 @@ def find_sentence_range(context, s, e):
 
     return c_s, c_e
 
+def append_offset(tokens_se, s_value, e_value):
+    tokens_with_offset = []
+    for i in range(len(tokens_se)):
+        tokens_with_offset.append((tokens_se[i][0] + s_value, tokens_se[i][1] + e_value))
+    return tokens_with_offset
+
 def main():
 
     log.basicConfig(format="[ %(levelname)s ] %(message)s", level=log.INFO, stream=sys.stdout)
@@ -134,8 +140,11 @@ def main():
 
         # array of concatenated paragraphs(size >= args.min_paragraph_token_num)
         concatenated_paragraphs = []
+        # iterator
         cur_paragraph = 0
-        paragraph_tokens_ids = []
+        # array of encoded tokens from concatenated paragraphs
+        paragraph_tokens_id = []
+        # array of (start, end) tuples for tokens
         paragraph_tokens_se = []
 
         # array of answers from each concatenated paragraph
@@ -147,23 +156,24 @@ def main():
             p_tokens_id, p_tokens_se = text_to_tokens(paragraph.lower(), vocab)
             if len(p_tokens_id) == 0: continue
             # concatenate paragraphs so their size >= args.min_paragraph_token_num
+            # and append tokens and (s,e) to arrays
             if len(concatenated_paragraphs) == cur_paragraph:
                 concatenated_paragraphs.append(paragraph)
-                paragraph_tokens_ids.append(p_tokens_id)
+                paragraph_tokens_id.append(p_tokens_id)
                 paragraph_tokens_se.append(p_tokens_se)
             else:
-                concatenated_paragraphs[cur_paragraph].join(paragraph)
-                paragraph_tokens_ids[cur_paragraph] += p_tokens_id
-                paragraph_tokens_se[cur_paragraph] += p_tokens_se
+                paragraph_tokens_id[cur_paragraph] += p_tokens_id
+                paragraph_tokens_se[cur_paragraph] += append_offset(p_tokens_se, len(concatenated_paragraphs[cur_paragraph]), len(concatenated_paragraphs[cur_paragraph]))
+                concatenated_paragraphs[cur_paragraph] += paragraph
             # if paragraph has not enough tokens then continue and append another one to it
-            p_tokens_length = len(paragraph_tokens_ids[cur_paragraph])
+            p_tokens_length = len(paragraph_tokens_id[cur_paragraph])
             if p_tokens_length < args.min_paragraph_token_num:
                 continue
 
             # form the request
             tok_cls = vocab['[CLS]']
             tok_sep = vocab['[SEP]']
-            input_ids = [tok_cls] + q_tokens_id + [tok_sep] + paragraph_tokens_ids[cur_paragraph] + [tok_sep]
+            input_ids = [tok_cls] + q_tokens_id + [tok_sep] + paragraph_tokens_id[cur_paragraph] + [tok_sep]
             input_ids_length = len(input_ids)
             token_type_ids = [0] + [0] * q_tokens_length + [0] + [1] * p_tokens_length + [0]
             attention_mask = [1] * input_ids_length
