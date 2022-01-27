@@ -57,7 +57,7 @@ def build_argparser():
     args.add_argument("--max_answer_token_num", help="Optional. Maximum number of tokens in answer",
                       default=15, required=False, type=int)
     args.add_argument("--min_paragraph_token_num", help="Optional. Minimum number of tokens in paragraph",
-                      default=1, required=False, type=int)
+                      default=150, required=False, type=int)
     args.add_argument('-c', '--colors', action='store_true',
                       help="Optional. Nice coloring of the questions/answers. "
                            "Might not work on some terminals (like Windows* cmd console)")
@@ -110,7 +110,7 @@ def main():
     vocab = load_vocab_file(args.vocab)
     log.info("{} tokens loaded".format(len(vocab)))
 
-    # get context as a string for answers presentation
+    # get context as a string for answers visualization
     paragraphs = get_paragraphs(args.input_url)
     context = '\n'.join(paragraphs)
     log.info("Size: {} chars".format(len(context)))
@@ -132,20 +132,23 @@ def main():
         t0 = time.perf_counter()
         t_count = 0
 
-        # array of answers from each paragraph
+        # array of concatenated paragraphs(size >= args.min_paragraph_token_num)
+        concatenated_paragraphs = []
+        cur_paragraph = 0
+
+        # array of answers from each concatenated paragraph
         answers = []
 
-        # iterate over context in a loop in order to save answers properly
-        c_s = 0
-
-        # iterate while context window is not empty
+        # iterate through paragraphs
         for paragraph in paragraphs:
+            # concatenate paragraphs so their size >= args.min_paragraph_token_num
+            concatenated_paragraphs.append(paragraph) if len(concatenated_paragraphs) == cur_paragraph else concatenated_paragraphs[cur_paragraph].join(paragraph)
+            concatenated_paragraphs[cur_paragraph] += paragraph
             # encode paragraph into token ids list
-            p_tokens_id, p_tokens_se = text_to_tokens(paragraph.lower(), vocab)
-            # skip paragraphs that has not enough tokens
+            p_tokens_id, p_tokens_se = text_to_tokens(concatenated_paragraphs[cur_paragraph].lower(), vocab)
+            # if paragraph has not enough tokens then continue and append another one to it
             p_tokens_length = len(p_tokens_id)
             if p_tokens_length < args.min_paragraph_token_num:
-                c_s += len(paragraph) + 1
                 continue
 
             # form the request
@@ -222,9 +225,8 @@ def main():
             max_s = p_tokens_se[max_s][0]
             max_e = p_tokens_se[max_e][1]
 
-            answers.append((max_score, max_s + c_s, max_e + c_s))
-            # add paragraph length to iterator and /n character
-            c_s += len(paragraph) + 1
+            answers.append((max_score, max_s, max_e, cur_paragraph))
+            cur_paragraph += 1
 
         t1 = time.perf_counter()
         log.info("The performance below is reported only for reference purposes, "
@@ -235,12 +237,12 @@ def main():
             (t1 - t0) / t_count
         ))
 
-        # print top 5 results
+        # print top 3 results
         answers = sorted(answers, key=lambda x: -x[0])
-        for score, s, e in answers[:5]:
-            log.info("---answer: {:0.2f} {}".format(score, context[s:e]))
-            c_s, c_e = find_sentence_range(context, s, e)
-            log.info("   " + context[c_s:s] + COLOR_RED + context[s:e] + COLOR_RESET + context[e:c_e])
+        for score, s, e, paragraph_number in answers[:3]:
+            log.info("---answer: {:0.2f} {}".format(score, concatenated_paragraphs[paragraph_number][s:e]))
+            # c_s, c_e = find_sentence_range(context, s, e)
+            log.info("   " + concatenated_paragraphs[paragraph_number][:s] + COLOR_RED + concatenated_paragraphs[paragraph_number][s:e] + COLOR_RESET + concatenated_paragraphs[paragraph_number][e:])
         if args.loop == False:
             loop = False
 
