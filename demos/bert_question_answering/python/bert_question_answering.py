@@ -57,7 +57,7 @@ def build_argparser():
     args.add_argument("--max_answer_token_num", help="Optional. Maximum number of tokens in answer",
                       default=15, required=False, type=int)
     args.add_argument("--min_paragraph_token_num", help="Optional. Minimum number of tokens in paragraph",
-                      default=150, required=False, type=int)
+                      default=300, required=False, type=int)
     args.add_argument('-c', '--colors', action='store_true',
                       help="Optional. Nice coloring of the questions/answers. "
                            "Might not work on some terminals (like Windows* cmd console)")
@@ -258,7 +258,7 @@ def main():
 
         # print top 3 results
         answers = sorted(answers, key=lambda x: -x[0])
-        for score, s, e, paragraph_number in answers[:3]:
+        for score, s, e, paragraph_number in answers[:10]:
             log.info("---answer: {:0.2f} {}".format(score, concatenated_paragraphs[paragraph_number][s:e]))
             # c_s, c_e = find_sentence_range(context, s, e)
             log.info("   " + concatenated_paragraphs[paragraph_number][:s] + COLOR_RED + concatenated_paragraphs[paragraph_number][s:e] + COLOR_RESET + concatenated_paragraphs[paragraph_number][e:])
