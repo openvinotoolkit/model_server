@@ -20,6 +20,7 @@
 #include <exception>
 #include <limits>
 #include <sstream>
+#include <utility>
 
 #include "logging.hpp"
 #include "stringutils.hpp"
