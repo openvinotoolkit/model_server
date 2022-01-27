@@ -135,26 +135,35 @@ def main():
         # array of concatenated paragraphs(size >= args.min_paragraph_token_num)
         concatenated_paragraphs = []
         cur_paragraph = 0
+        paragraph_tokens_ids = []
+        paragraph_tokens_se = []
 
         # array of answers from each concatenated paragraph
         answers = []
 
         # iterate through paragraphs
         for paragraph in paragraphs:
-            # concatenate paragraphs so their size >= args.min_paragraph_token_num
-            concatenated_paragraphs.append(paragraph) if len(concatenated_paragraphs) == cur_paragraph else concatenated_paragraphs[cur_paragraph].join(paragraph)
-            concatenated_paragraphs[cur_paragraph] += paragraph
             # encode paragraph into token ids list
-            p_tokens_id, p_tokens_se = text_to_tokens(concatenated_paragraphs[cur_paragraph].lower(), vocab)
+            p_tokens_id, p_tokens_se = text_to_tokens(paragraph.lower(), vocab)
+            if len(p_tokens_id) == 0: continue
+            # concatenate paragraphs so their size >= args.min_paragraph_token_num
+            if len(concatenated_paragraphs) == cur_paragraph:
+                concatenated_paragraphs.append(paragraph)
+                paragraph_tokens_ids.append(p_tokens_id)
+                paragraph_tokens_se.append(p_tokens_se)
+            else:
+                concatenated_paragraphs[cur_paragraph].join(paragraph)
+                paragraph_tokens_ids[cur_paragraph] += p_tokens_id
+                paragraph_tokens_se[cur_paragraph] += p_tokens_se
             # if paragraph has not enough tokens then continue and append another one to it
-            p_tokens_length = len(p_tokens_id)
+            p_tokens_length = len(paragraph_tokens_ids[cur_paragraph])
             if p_tokens_length < args.min_paragraph_token_num:
                 continue
 
             # form the request
             tok_cls = vocab['[CLS]']
             tok_sep = vocab['[SEP]']
-            input_ids = [tok_cls] + q_tokens_id + [tok_sep] + p_tokens_id + [tok_sep]
+            input_ids = [tok_cls] + q_tokens_id + [tok_sep] + paragraph_tokens_ids[cur_paragraph] + [tok_sep]
             input_ids_length = len(input_ids)
             token_type_ids = [0] + [0] * q_tokens_length + [0] + [1] * p_tokens_length + [0]
             attention_mask = [1] * input_ids_length
@@ -222,8 +231,8 @@ def main():
             max_s, max_e = divmod(score_mat.flatten().argmax(), score_mat.shape[1])
             max_score = score_mat[max_s, max_e] * (1 - score_na)
 
-            max_s = p_tokens_se[max_s][0]
-            max_e = p_tokens_se[max_e][1]
+            max_s = paragraph_tokens_se[cur_paragraph][max_s][0]
+            max_e = paragraph_tokens_se[cur_paragraph][max_e][1]
 
             answers.append((max_score, max_s, max_e, cur_paragraph))
             cur_paragraph += 1
