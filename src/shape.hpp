@@ -70,8 +70,8 @@ public:
     std::optional<Dimension> createIntersection(const Dimension& other) const;
 
 private:
-    dimension_value_t getMinValueRegardless() const;
-    dimension_value_t getMaxValueRegardless() const;
+    dimension_value_t getLowerBound() const;
+    dimension_value_t getUpperBound() const;
 };
 
 class Shape : public std::vector<Dimension> {

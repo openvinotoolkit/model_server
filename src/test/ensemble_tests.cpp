@@ -4172,14 +4172,13 @@ static const char* pipelineInnerNodeConnectionShapeRangeNotMatch = R"(
     ]
 })";
 
-// TODO: Enable once implementation is ready.
 TEST_F(EnsembleFlowTest, InnerNodeConnectionShapeRangeNotMatch) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineInnerNodeConnectionShapeRangeNotMatch, fileToReload);
     ConstructorEnabledModelManager manager;
 
     auto status = manager.loadConfig(fileToReload);
-    ASSERT_EQ(status, StatusCode::INVALID_SHAPE) << status.string();  // TODO: Fill with proper error once implemented
+    ASSERT_EQ(status, StatusCode::INVALID_SHAPE) << status.string();
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);

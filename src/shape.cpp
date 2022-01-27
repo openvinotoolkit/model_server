@@ -191,7 +191,6 @@ bool Dimension::isAny() const {
            (this->minimum == DYNAMIC_DIMENSION);
 }
 
-// TODO decide during DAG task how it should look like & potentially fix
 bool Dimension::partiallyFitsInto(const Dimension& next) const {
     if (next.isAny() || isAny()) {
         return true;
@@ -248,11 +247,11 @@ Dimension Dimension::any() {
     return Dimension();
 }
 
-dimension_value_t Dimension::getMinValueRegardless() const {  // TODO throw if any
+dimension_value_t Dimension::getLowerBound() const {
     return isStatic() ? getStaticValue() : getMinValue();
 }
 
-dimension_value_t Dimension::getMaxValueRegardless() const {
+dimension_value_t Dimension::getUpperBound() const {
     return isStatic() ? getStaticValue() : getMaxValue();
 }
 
@@ -261,8 +260,8 @@ std::optional<Dimension> Dimension::createIntersection(const Dimension& other) c
         return other;
     if (other == Dimension::any())
         return *this;
-    auto start = std::max(this->getMinValueRegardless(), other.getMinValueRegardless());
-    auto end = std::min(this->getMaxValueRegardless(), other.getMaxValueRegardless());
+    auto start = std::max(this->getLowerBound(), other.getLowerBound());
+    auto end = std::min(this->getUpperBound(), other.getUpperBound());
     if (end < start)
         return std::nullopt;
     return Dimension{start, end};
@@ -381,7 +380,7 @@ std::optional<Shape> Shape::createIntersection(const Shape& other) const {
     intersected.reserve(this->size());
     for (size_t i = 0; i < this->size(); ++i) {
         auto intersectedDim = (*this)[i].createIntersection(other[i]);
-        if (intersectedDim == std::nullopt) {
+        if (!intersectedDim.has_value()) {
             return std::nullopt;
         }
         intersected.emplace_back(std::move(intersectedDim.value()));

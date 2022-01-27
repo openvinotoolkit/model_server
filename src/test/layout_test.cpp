@@ -48,7 +48,7 @@ TEST(Layout, BatchPositionInvalid) {
     EXPECT_EQ(Layout{"N.CH"}.getBatchIndex(), std::nullopt);
     EXPECT_EQ(Layout{"..NHW."}.getBatchIndex(), std::nullopt);
     EXPECT_EQ(Layout{"N...N"}.getBatchIndex(), std::nullopt);
-    EXPECT_EQ(Layout{"N...C...H"}.getBatchIndex(), std::nullopt);  // TODO validate as incorrect
+    EXPECT_EQ(Layout{"N...C...H"}.getBatchIndex(), std::nullopt);
     EXPECT_EQ(Layout{"N???N"}.getBatchIndex(), std::nullopt);
     EXPECT_EQ(Layout{"C??H"}.getBatchIndex(), std::nullopt);
     EXPECT_EQ(Layout{""}.getBatchIndex(), std::nullopt);
@@ -62,50 +62,22 @@ TEST(Layout, Validate) {
 TEST(Layout, CreateIntersection) {
     // handling variety of possible layoyts can be cumbersome
     // we should at least assume that there is only one ETC as then it should be feasible to validate such layouts. For now we assume that we just return N...
-    auto intersect = Layout("NCHW").createIntersection(Layout("NCHW")).value();
-    EXPECT_EQ(intersect, Layout("NCHW")) << intersect;
-    EXPECT_EQ(Layout("NCHWD").createIntersection(
-                  Layout("NCHW")),
-        std::nullopt);
-    EXPECT_EQ(Layout("NCHW").createIntersection(
-                  Layout("NCHWD")),
-        std::nullopt);
-    EXPECT_EQ(Layout("NCHW").createIntersection(
-                  Layout("N...")),
-        Layout("NCHW"));
-    EXPECT_EQ(Layout("N...").createIntersection(
-                  Layout("NCHW")),
-        Layout("NCHW"));
+    EXPECT_EQ(Layout("NCHW").createIntersection(Layout("NCHW")), Layout("NCHW"));
+    EXPECT_EQ(Layout("NCHWD").createIntersection(Layout("NCHW")), std::nullopt);
+    EXPECT_EQ(Layout("NCHW").createIntersection(Layout("NCHWD")), std::nullopt);
+    EXPECT_EQ(Layout("NCHW").createIntersection(Layout("N...")), Layout("NCHW"));
+    EXPECT_EQ(Layout("N...").createIntersection(Layout("NCHW")), Layout("NCHW"));
 }
 TEST(Layout, DISABLED_CreateIntersection2) {
     // handling variety of possible layoyts can be cumbersome
     // we should at least assume that there is only one ETC as then it should be feasible to validate such layouts. For now we assume that we just return N...
-    EXPECT_EQ(Layout("NCHWD").createIntersection(
-                  Layout("NCHW?")),
-        Layout("NCHWD"));
-    EXPECT_EQ(Layout("NCHW?").createIntersection(  // test symmetry
-                  Layout("NCHWD")),
-        Layout("NCHWD"));
-    EXPECT_EQ(Layout("NCHWD").createIntersection(
-                  Layout("NCHW")),
-        std::nullopt);
-    EXPECT_EQ(Layout("NCHW").createIntersection(
-                  Layout("NCHWD")),
-        std::nullopt);
-    EXPECT_EQ(Layout("NC??").createIntersection(
-                                Layout("??DH"))
-                  .value(),
-        Layout("NCDH"));
-    EXPECT_EQ(Layout("NC...").createIntersection(
-                                 Layout("??DH"))
-                  .value(),
-        Layout("NCDH"));
-    EXPECT_EQ(Layout("N...").createIntersection(
-                                Layout("...D"))
-                  .value(),
-        Layout("N...D"));
-    EXPECT_EQ(Layout("N...").createIntersection(
-                                Layout("??D"))
-                  .value(),
-        Layout("N?D"));
+    EXPECT_EQ(Layout("NCHWD").createIntersection(Layout("NCHW?")), Layout("NCHWD"));
+    // test symmetry
+    EXPECT_EQ(Layout("NCHW?").createIntersection(Layout("NCHWD")), Layout("NCHWD"));
+    EXPECT_EQ(Layout("NCHWD").createIntersection(Layout("NCHW")), std::nullopt);
+    EXPECT_EQ(Layout("NCHW").createIntersection(Layout("NCHWD")), std::nullopt);
+    EXPECT_EQ(Layout("NC??").createIntersection(Layout("??DH")), Layout("NCDH"));
+    EXPECT_EQ(Layout("NC...").createIntersection(Layout("??DH")), Layout("NCDH"));
+    EXPECT_EQ(Layout("N...").createIntersection(Layout("...D")), Layout("N...D"));
+    EXPECT_EQ(Layout("N...").createIntersection(Layout("??D")), Layout("N?D"));
 }

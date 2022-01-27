@@ -30,7 +30,7 @@
 
 namespace ovms {
 
-// in case we change behaviour for this constructor we may need to write additionall tests for TensorInfo intersection / DAGs
+// in case we change behaviour for this constructor we may need to write additional tests for TensorInfo intersection / DAGs
 TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
     const Shape& shape) :
@@ -255,10 +255,10 @@ std::shared_ptr<TensorInfo> TensorInfo::createIntersection(const TensorInfo& oth
         precision = this->getPrecision();
     }
     auto layout = this->getLayout().createIntersection(other.getLayout());
-    if (layout == std::nullopt)
+    if (!layout.has_value())
         return nullptr;
     auto newShape = this->getShape().createIntersection(other.getShape());
-    if (newShape == std::nullopt)
+    if (!newShape.has_value())
         return nullptr;
     return std::make_shared<TensorInfo>(this->getName(),
         this->getMappedName(),
@@ -333,6 +333,4 @@ std::string TensorInfo::asString() const {
         << "layout: " << getStringFromLayout(getLayout());
     return ss.str();
 }
-
-// in case we change behaviour for this constructor we may need to write additionall tests for TensorInfo intersection / DAGs
 }  // namespace ovms

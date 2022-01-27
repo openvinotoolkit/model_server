@@ -84,18 +84,11 @@ Status Layout::validate() const {
 }
 
 std::optional<Layout> Layout::createIntersection(const Layout& other) const {
-    Layout layout;
-    if (*this != other) {
-        if ((*this != Layout::getDefaultLayout()) &&
-            (other == Layout::getDefaultLayout())) {
-            layout = *this;
-        } else if (*this == Layout::getDefaultLayout()) {
-            layout = other;
-        } else {
-            return std::nullopt;
-        }
-        return layout;
-    }
-    return *this;
+    if (*this == other ||
+        other == Layout::getDefaultLayout())
+        return *this;
+    if (*this == Layout::getDefaultLayout())
+        return other;
+    return std::nullopt;
 }
 }  // namespace ovms
