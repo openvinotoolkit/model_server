@@ -997,7 +997,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
 
     bool isAnyNodeDynamicDemultiplexer = (std::find_if(this->nodeInfos.begin(), this->nodeInfos.end(), [](const NodeInfo& info) {
         if (info.demultiplyCount) {
-            if(info.demultiplyCount.value() == -1)
+            if (info.demultiplyCount.value() == -1)
                 return true;
             return false;
         }
