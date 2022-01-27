@@ -53,7 +53,11 @@ class TestSingleModelInferenceGc:
         - response contains proper numpy shape
 
         """
-
+        from subprocess import check_output
+        output = check_output(['env'], encoding='utf-8').splitlines()
+        logger.info(f"[JS]: ====================================================")
+        logger.info(f"[JS]: ENV: {output}")
+        logger.info(f"[JS]: ====================================================")
         # Connect to grpc service
         _, ports = start_server_single_model_from_gc
         stub = create_channel(port=ports["grpc_port"])
