@@ -1,0 +1,61 @@
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "emotions-recognition",
+                "base_path": "/workspace/emotions-recognition-retail-0003"
+            }
+        },
+        {
+            "config": {
+                "name": "age-gender-recognition",
+                "base_path": "/workspace/age-gender-recognition-retail-0013",
+                "shape": "(1, 3, 64, 64)"
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "single_face_analysis",
+            "inputs": ["image"],
+            "nodes": [
+                {
+                    "name": "emotions",
+                    "model_name": "emotions-recognition",
+                    "type": "DL model",
+                    "inputs": [
+                        {"data": {"node_name": "request",
+                                   "data_item": "image"}}
+                    ], 
+                    "outputs": [
+                        {"data_item": "prob_emotion",
+                         "alias": "emotion"}
+                    ] 
+                },
+                {
+                    "name": "age-gender",
+                    "model_name": "age-gender-recognition",
+                    "type": "DL model",
+                    "inputs": [
+                        {"data": {"node_name": "request",
+                                  "data_item": "image"}}
+                    ], 
+                    "outputs": [
+                        {"data_item": "age_conv3",
+                         "alias": "age"},
+                        {"data_item": "prob",
+                         "alias": "gender"}
+                    ] 
+                }
+            ],
+            "outputs": [
+                {"age": {"node_name": "age-gender",
+                           "data_item": "age"}},
+                {"gender": {"node_name": "age-gender",
+                           "data_item": "gender"}},
+                {"emotion": {"node_name": "emotions",
+                           "data_item": "emotion"}}
+            ]
+        }
+    ]
+}
