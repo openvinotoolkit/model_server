@@ -4880,7 +4880,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     // Prepare pipeline
-    std::optional<int32_t> demultiplyCount = 0;
+    std::optional<int32_t> demultiplyCount = -1;
     std::set<std::string> gather = {"image_demultiplexer_node"};
     std::unordered_map<std::string, std::string> aliases{{"custom_node_output", "custom_node_output"}};
 
