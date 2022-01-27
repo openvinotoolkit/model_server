@@ -41,7 +41,7 @@ public:
 
     const std::optional<size_t>& getBatchIndex() const;
     Status validate() const;
-    Layout createIntersection(const Layout& other) const;
+    std::optional<Layout> createIntersection(const Layout& other) const;
     static const Layout& getDefaultLayout();
 };
 

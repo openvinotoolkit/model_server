@@ -101,53 +101,19 @@ std::vector<std::tuple<char, int, int>> calculateDefinedDimensionsMinMaxPosition
     return dimensionPosThis;
 }
 
-Layout Layout::createIntersection(const Layout& other) const {
-    return Layout("N...");  // TODO
-    if (!this->validate().ok() ||
-        !other.validate().ok()) {
-        return Layout("");  // TODO
-    }
-    std::cout << "this: ";
-    std::cout << std::endl;
-    auto dimensionPosThis = calculateDefinedDimensionsMinMaxPositions(*this);
-    for (auto [c, min, max] : dimensionPosThis) {
-        std::cout << "c:" << c << " [" << min << "," << max << "]" << std::endl;
-    }
-    std::cout << std::endl;
-    std::cout << "other: ";
-    std::cout << std::endl;
-    auto dimensionPosOther = calculateDefinedDimensionsMinMaxPositions(*this);
-    for (auto [c, min, max] : dimensionPosOther) {
-        std::cout << "c:" << c << " [" << min << "," << max << "]" << std::endl;
-    }
-    std::cout << std::endl;
-    // final
-    std::vector<std::tuple<char, int, int>> finalPos;
-    // znajdz pierwszy
-    auto itThis = dimensionPosThis.begin();
-    auto itOther = dimensionPosOther.begin();
-    int fmin = -1;
-    int fmax = -1;
-    // both share first char
-    if (std::get<0>(*itThis) == std::get<0>(*itOther)) {
-        // both begin at the same position
-        fmin = std::max(std::get<1>(*itThis), std::get<1>(*itOther));
-        fmax = std::min(std::get<2>(*itThis), std::get<2>(*itOther));
-        // to do check if that fmax >= fmin
-        if (fmin > fmax) {
-            // there is no overlap position for both
-            return Layout("");
+std::optional<Layout> Layout::createIntersection(const Layout& other) const {
+    Layout layout;
+    if (*this != other) {
+        if ((*this != Layout::getDefaultLayout()) &&
+            (other == Layout::getDefaultLayout())) {
+            layout = *this;
+        } else if (*this == Layout::getDefaultLayout()) {
+            layout = other;
+        } else {
+            return std::nullopt;
         }
-        char c = std::get<0>(*itThis);
-        finalPos.emplace_back(std::make_tuple(c, fmin, fmax));
-        ++itThis;
-        ++itOther;
-    } else {
-        // first chars are different
-        if (std::get<1>(*itThis) == std::get<1>(*itOther)) {
-            fmin = std::get<1>(*itThis);
-        }
+        return layout;
     }
-    return other;
+    return *this;
 }
 }  // namespace ovms

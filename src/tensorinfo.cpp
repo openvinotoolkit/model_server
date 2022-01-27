@@ -254,18 +254,8 @@ std::shared_ptr<TensorInfo> TensorInfo::createIntersection(const TensorInfo& oth
     } else {
         precision = this->getPrecision();
     }
-    Layout layout;
-    if (this->getLayout() != other.getLayout()) {
-        if ((this->getLayout() != Layout::getDefaultLayout()) &&
-            (other.getLayout() == Layout::getDefaultLayout())) {
-            layout = this->getLayout();
-        } else if (this->getLayout() == Layout::getDefaultLayout()) {
-            layout = other.getLayout();
-        } else {
-            return nullptr;
-        }
-    }
-    if (this->influencedByDemultiplexer != other.influencedByDemultiplexer)
+    auto layout = this->getLayout().createIntersection(other.getLayout());
+    if (layout == std::nullopt)
         return nullptr;
     auto newShape = this->getShape().createIntersection(other.getShape());
     if (newShape == std::nullopt)
@@ -274,7 +264,7 @@ std::shared_ptr<TensorInfo> TensorInfo::createIntersection(const TensorInfo& oth
         this->getMappedName(),
         precision,
         std::move(newShape.value()),
-        this->getLayout());
+        layout.value());
 }
 
 bool TensorInfo::isTensorSpecEqual(const TensorInfo& other) const {
