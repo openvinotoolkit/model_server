@@ -110,7 +110,7 @@ def main():
     vocab = load_vocab_file(args.vocab)
     log.info("{} tokens loaded".format(len(vocab)))
 
-    # get context as a string for visual purposes
+    # get context as a string for answers presentation
     paragraphs = get_paragraphs(args.input_url)
     context = '\n'.join(paragraphs)
     log.info("Size: {} chars".format(len(context)))
@@ -127,6 +127,7 @@ def main():
             break
 
         q_tokens_id, _ = text_to_tokens(question.lower(), vocab)
+        q_tokens_length = len(q_tokens_id)
 
         t0 = time.perf_counter()
         t_count = 0
@@ -142,7 +143,8 @@ def main():
             # encode paragraph into token ids list
             p_tokens_id, p_tokens_se = text_to_tokens(paragraph.lower(), vocab)
             # skip paragraphs that has not enough tokens
-            if len(p_tokens_id) < args.min_paragraph_token_num:
+            p_tokens_length = len(p_tokens_id)
+            if p_tokens_length < args.min_paragraph_token_num:
                 c_s += len(paragraph) + 1
                 continue
 
@@ -150,8 +152,9 @@ def main():
             tok_cls = vocab['[CLS]']
             tok_sep = vocab['[SEP]']
             input_ids = [tok_cls] + q_tokens_id + [tok_sep] + p_tokens_id + [tok_sep]
-            token_type_ids = [0] + [0] * len(q_tokens_id) + [0] + [1] * len(p_tokens_id) + [0]
-            attention_mask = [1] * len(input_ids)
+            input_ids_length = len(input_ids)
+            token_type_ids = [0] + [0] * q_tokens_length + [0] + [1] * p_tokens_length + [0]
+            attention_mask = [1] * input_ids_length
 
             # create numpy inputs for IE
             inputs = {
@@ -160,7 +163,7 @@ def main():
                 input_names[2]: np.array([token_type_ids], dtype=np.int32),
             }
             if len(input_names)>3:
-                inputs[input_names[3]] = np.arange(len(input_ids), dtype=np.int32)[None,:]
+                inputs[input_names[3]] = np.arange(input_ids_length, dtype=np.int32)[None,:]
 
 
             #print("inputs:",inputs)
@@ -182,14 +185,14 @@ def main():
 
             t_count += 1
             log.info("Sequence of length {} is processed with {:0.2f} requests/sec ({:0.2} sec per request)".format(
-                len(p_tokens_id),
+                p_tokens_length,
                 1 / (t_end - t_start),
                 t_end - t_start
             ))
 
             # get start-end scores for context
             def get_score(name):
-                out = np.exp(res[name].reshape((len(input_ids),)))
+                out = np.exp(res[name].reshape((input_ids_length,)))
                 return out / out.sum(axis=-1)
 
             score_s = get_score(output_names[0])
@@ -202,11 +205,11 @@ def main():
                 score_na = score_s[0] * score_e[0]
 
             # find product of all start-end combinations to find the best one
-            c_s_idx = len(q_tokens_id) + 2  # index of first context token in tensor
-            c_e_idx = len(input_ids) - 1  # index of last+1 context token in tensor
+            c_s_idx = q_tokens_length + 2  # index of first context token in tensor
+            c_e_idx = input_ids_length - 1  # index of last+1 context token in tensor
             score_mat = np.matmul(
-                score_s[c_s_idx:c_e_idx].reshape((len(p_tokens_id), 1)),
-                score_e[c_s_idx:c_e_idx].reshape((1, len(p_tokens_id)))
+                score_s[c_s_idx:c_e_idx].reshape((p_tokens_length, 1)),
+                score_e[c_s_idx:c_e_idx].reshape((1, p_tokens_length))
             )
             # reset candidates with end before start
             score_mat = np.triu(score_mat)
