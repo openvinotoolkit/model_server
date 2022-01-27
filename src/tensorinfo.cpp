@@ -238,8 +238,8 @@ std::shared_ptr<TensorInfo> TensorInfo::createIntersection(const TensorInfo& oth
         return std::make_shared<TensorInfo>(other);
     if (other.isTensorUnspecified())
         return std::make_shared<TensorInfo>(*this);
-    if ((this->getName() != other.getName()) ||              // TODO do we want
-        (this->getMappedName() != other.getMappedName())) {  // TODO do we want
+    if ((this->getName() != other.getName()) ||
+        (this->getMappedName() != other.getMappedName())) {
         return nullptr;
     }
     Precision precision;
@@ -254,14 +254,22 @@ std::shared_ptr<TensorInfo> TensorInfo::createIntersection(const TensorInfo& oth
     } else {
         precision = this->getPrecision();
     }
+    Layout layout;
     if (this->getLayout() != other.getLayout()) {
-        return nullptr;
+        if ((this->getLayout() != TensorInfo::getDefaultLayout()) &&
+            (other.getLayout() == TensorInfo::getDefaultLayout())) {
+                layout = this->getLayout();
+        } else if (this->getLayout() == TensorInfo::getDefaultLayout()) {
+            layout = other.getLayout();
+        } else {
+            return nullptr;
+        }
     }
     if (this->influencedByDemultiplexer != other.influencedByDemultiplexer)
         return nullptr;
     auto newShape = this->getShape().createIntersection(other.getShape());
     if (newShape == std::nullopt)
-        return nullptr;  // TODO demulti
+        return nullptr;
     return std::make_shared<TensorInfo>(this->getName(),
         this->getMappedName(),
         precision,
