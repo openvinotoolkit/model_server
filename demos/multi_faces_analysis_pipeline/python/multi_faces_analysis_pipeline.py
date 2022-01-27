@@ -22,7 +22,7 @@ from tensorflow import make_tensor_proto, make_ndarray
 import argparse
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
-parser = argparse.ArgumentParser(description='Client for detailed faces analysis pipeline')
+parser = argparse.ArgumentParser(description='Client for detailed multi faces analysis pipeline')
 parser.add_argument('--grpc_address', required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port', required=False, default=9178, help='Specify port to grpc service. default: 9178')
 parser.add_argument('--pipeline_name', required=False, default='ocr', help='Pipeline name to request. default: ocr')
