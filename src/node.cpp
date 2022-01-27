@@ -30,14 +30,17 @@ const uint64_t DEMULTIPLY_LIMIT = 10'000;
 
 namespace ovms {
 
-static std::string demultiplyCountSettingToString(std::optional<uint32_t> demultiplyCount) {
+static std::string demultiplyCountSettingToString(std::optional<int32_t> demultiplyCount) {
     if (!demultiplyCount) {
         return "NA";
     }
-    return demultiplyCount.value() != 0 ? std::to_string(demultiplyCount.value()) : "dynamic";
+    if(demultiplyCount.value() == 0 || demultiplyCount.value() == -1){
+        return "dynamic";
+    }
+    return std::to_string(demultiplyCount.value());
 }
 
-Node::Node(const std::string& nodeName, std::optional<uint32_t> demultiplyCount, std::set<std::string> gatherFromNode) :
+Node::Node(const std::string& nodeName, std::optional<int32_t> demultiplyCount, std::set<std::string> gatherFromNode) :
     nodeName(nodeName),
     demultiplexCount(demultiplyCount),
     gatherFrom(!gatherFromNode.empty() ? std::optional<std::set<std::string>>(gatherFromNode) : std::nullopt) {
@@ -221,7 +224,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong number of dimensions: {} to demultiply. Must be at least 3", newDims.size());
             return StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY;
         }
-        if ((demultiplexCount.value() != 0) &&
+        if ((demultiplexCount.value() != 0 && demultiplexCount.value() != -1) &&
             (newDims[0] != demultiplexCount.value())) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[0] size: {} of tensor: {} expected: {} to demultiply",
                 newDims[0], tensorName, demultiplexCount.value());

@@ -335,7 +335,7 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Reading pipeline: {} configuration", pipelineName);
     std::set<std::string> demultiplexerNodes;
     std::set<std::string> gatheredDemultiplexerNodes;
-    std::optional<uint32_t> demultiplyCountEntry = std::nullopt;
+    std::optional<int32_t> demultiplyCountEntry = std::nullopt;
     auto demultiplyCountEntryIt = pipelineConfig.FindMember("demultiply_count");
     if (demultiplyCountEntryIt != pipelineConfig.MemberEnd()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Pipeline: {} does have demultiply at entry node", pipelineName);

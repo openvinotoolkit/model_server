@@ -479,7 +479,7 @@ public:
                 shape.size());
             return StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY;
         }
-        if (demultiplicatorNodeInfo.demultiplyCount.value() != 0) {
+        if (demultiplicatorNodeInfo.demultiplyCount.value() != 0 && demultiplicatorNodeInfo.demultiplyCount.value() != -1) {
             // TODO -1 vs 0 as demultiplexing value
             if (!shape[0].isAny()) {
                 auto demultiplyDimension = Dimension(demultiplicatorNodeInfo.demultiplyCount.value());
