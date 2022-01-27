@@ -53,6 +53,12 @@ TEST(Layout, BatchPositionInvalid) {
     EXPECT_EQ(Layout{"C??H"}.getBatchIndex(), std::nullopt);
     EXPECT_EQ(Layout{""}.getBatchIndex(), std::nullopt);
 }
+TEST(Layout, Validate) {
+    EXPECT_EQ(Layout{"N.CH"}.validate(), StatusCode::LAYOUT_WRONG_FORMAT);
+    EXPECT_EQ(Layout{"..NHW."}.validate(), StatusCode::LAYOUT_WRONG_FORMAT);
+    EXPECT_EQ(Layout{"N...N"}.validate(), StatusCode::LAYOUT_WRONG_FORMAT);
+    EXPECT_EQ(Layout{"N...C...H"}.validate(), StatusCode::LAYOUT_WRONG_FORMAT);
+}
 TEST(Layout, CreateIntersection) {
     // handling variety of possible layoyts can be cumbersome
     // we should at least assume that there is only one ETC as then it should be feasible to validate such layouts. For now we assume that we just return N...

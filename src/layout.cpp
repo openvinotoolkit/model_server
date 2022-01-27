@@ -83,24 +83,6 @@ Status Layout::validate() const {
     return StatusCode::OK;
 }
 
-bool Layout::containsEtc() const {
-    return this->find(ETC_LAYOUT_DELIMETER) != std::string::npos;
-}
-
-const int DUMB = 1000;
-
-std::vector<std::tuple<char, int, int>> calculateDefinedDimensionsMinMaxPositions(const Layout& l) {
-    std::vector<std::tuple<char, int, int>> dimensionPosThis;
-    int etcCount = 0;
-    for (int i = 0; i < l.size(); ++i) {
-        char currentChar = l[i];
-        if (ALLOWED_DIMENSION_LETTERS.find(currentChar) != std::string::npos) {
-            dimensionPosThis.emplace_back(std::make_tuple(currentChar, i - 3 * etcCount, etcCount > 0 ? DUMB : i));
-        }
-    }
-    return dimensionPosThis;
-}
-
 std::optional<Layout> Layout::createIntersection(const Layout& other) const {
     Layout layout;
     if (*this != other) {
