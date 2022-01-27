@@ -34,7 +34,7 @@ static std::string demultiplyCountSettingToString(std::optional<int32_t> demulti
     if (!demultiplyCount) {
         return "NA";
     }
-    if(demultiplyCount.value() == 0 || demultiplyCount.value() == -1){
+    if(demultiplyCount.value() == -1){
         return "dynamic";
     }
     return std::to_string(demultiplyCount.value());
