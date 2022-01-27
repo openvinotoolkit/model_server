@@ -340,7 +340,7 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
     if (demultiplyCountEntryIt != pipelineConfig.MemberEnd()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Pipeline: {} does have demultiply at entry node", pipelineName);
         int32_t parsedDemultiplyCount = pipelineConfig["demultiply_count"].GetInt();
-        if(parsedDemultiplyCount == 0){
+        if (parsedDemultiplyCount == 0) {
             parsedDemultiplyCount = -1;
             SPDLOG_LOGGER_WARN(modelmanager_logger, "demultiply_count 0 will be deprecated. For dynamic count use -1.");
         }
@@ -393,7 +393,7 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
         std::optional<int32_t> demultiplyCount;
         if (nodeConfig.HasMember("demultiply_count")) {
             int32_t parsedDemultiplyCount = nodeConfig["demultiply_count"].GetInt();
-            if(parsedDemultiplyCount == 0){
+            if (parsedDemultiplyCount == 0) {
                 parsedDemultiplyCount = -1;
                 SPDLOG_LOGGER_WARN(modelmanager_logger, "demultiply_count 0 will be deprecated. For dynamic count use -1.");
             }
