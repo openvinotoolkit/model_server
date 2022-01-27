@@ -236,7 +236,5 @@ public:
     static std::shared_ptr<TensorInfo> getUnspecifiedTensorInfo();
 
     const std::optional<Dimension> getBatchSize() const;
-
-    static const Layout& getDefaultLayout();
 };
 }  // namespace ovms

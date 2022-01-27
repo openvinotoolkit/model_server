@@ -142,7 +142,7 @@ Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::share
 }
 
 const Layout getReportedTensorLayout(const ModelConfig& config, const std::string& name, bool isInput) {
-    auto layout = TensorInfo::getDefaultLayout();
+    auto layout = Layout::getDefaultLayout();
     if (isInput && config.getLayout().isSet()) {
         layout = config.getLayout().getTensorLayout();
     } else if (config.getLayouts().size() > 0) {

@@ -38,7 +38,7 @@ TensorInfo::TensorInfo(const std::string& name,
     mapping(""),
     precision(precision),
     shape(shape),
-    layout(getDefaultLayout()) {}
+    layout(Layout::getDefaultLayout()) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
@@ -47,7 +47,7 @@ TensorInfo::TensorInfo(const std::string& name,
     mapping(""),
     precision(precision),
     shape(shape),
-    layout(getDefaultLayout()) {
+    layout(Layout::getDefaultLayout()) {
 }
 
 TensorInfo::TensorInfo(const std::string& name,
@@ -102,7 +102,7 @@ TensorInfo::TensorInfo(const std::string& name,
     mapping(mapping),
     precision(precision),
     shape(shape),
-    layout(getDefaultLayout()) {
+    layout(Layout::getDefaultLayout()) {
 }
 
 const std::string& TensorInfo::getName() const {
@@ -222,7 +222,7 @@ void TensorInfo::setLayout(const Layout& layout) {
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const Shape& shape) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->shape = shape;
-    copy->layout = getDefaultLayout();
+    copy->layout = Layout::getDefaultLayout();
     return copy;
 }
 
@@ -256,10 +256,10 @@ std::shared_ptr<TensorInfo> TensorInfo::createIntersection(const TensorInfo& oth
     }
     Layout layout;
     if (this->getLayout() != other.getLayout()) {
-        if ((this->getLayout() != TensorInfo::getDefaultLayout()) &&
-            (other.getLayout() == TensorInfo::getDefaultLayout())) {
-                layout = this->getLayout();
-        } else if (this->getLayout() == TensorInfo::getDefaultLayout()) {
+        if ((this->getLayout() != Layout::getDefaultLayout()) &&
+            (other.getLayout() == Layout::getDefaultLayout())) {
+            layout = this->getLayout();
+        } else if (this->getLayout() == Layout::getDefaultLayout()) {
             layout = other.getLayout();
         } else {
             return nullptr;
@@ -345,9 +345,4 @@ std::string TensorInfo::asString() const {
 }
 
 // in case we change behaviour for this constructor we may need to write additionall tests for TensorInfo intersection / DAGs
-const Layout& TensorInfo::getDefaultLayout() {
-    static const Layout defaultLayout{"N..."};
-    return defaultLayout;
-}
-
 }  // namespace ovms

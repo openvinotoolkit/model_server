@@ -18,6 +18,10 @@
 #include <tuple>
 
 namespace ovms {
+const Layout& Layout::getDefaultLayout() {
+    static const Layout defaultLayout{"N..."};
+    return defaultLayout;
+}
 
 Layout::Layout(const std::string& str) :
     std::string(str) {

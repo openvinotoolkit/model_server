@@ -86,7 +86,7 @@ Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision 
 }
 
 bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != TensorInfo::getDefaultLayout()) {
+    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != Layout::getDefaultLayout()) {
         return false;
     }
     Dimension cols = Dimension::any();
@@ -113,7 +113,7 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
 }
 
 Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != TensorInfo::getDefaultLayout()) {
+    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != Layout::getDefaultLayout()) {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
     Dimension cols = Dimension::any();
@@ -162,7 +162,7 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
 Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     const cv::Mat input,
     cv::Mat* firstBatchImage) {
-    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != TensorInfo::getDefaultLayout()) {
+    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != Layout::getDefaultLayout()) {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
 
@@ -213,7 +213,7 @@ Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Ma
     // With unknown layout, there is no way to deduce pipeline input resolution.
     // This forces binary utility to create tensors with resolution inherited from input binary image from request.
     // To achieve it, in this specific case we require all binary images to have the same resolution.
-    if (firstBatchImage && tensorInfo->getLayout() == TensorInfo::getDefaultLayout()) {
+    if (firstBatchImage && tensorInfo->getLayout() == Layout::getDefaultLayout()) {
         auto status = validateResolutionAgainstFirstBatchImage(input, firstBatchImage);
         if (!status.ok()) {
             return status;
@@ -224,7 +224,7 @@ Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Ma
 
 Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     const tensorflow::TensorProto& src) {
-    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != TensorInfo::getDefaultLayout()) {
+    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != Layout::getDefaultLayout()) {
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
 
