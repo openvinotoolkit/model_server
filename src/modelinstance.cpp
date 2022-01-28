@@ -501,7 +501,7 @@ uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& mo
     }
     std::string key = METRIC_KEY(OPTIMAL_NUMBER_OF_INFER_REQUESTS);
     try {
-        numberOfParallelInferRequests = compiledModel->get_metric(key).as<unsigned int>();
+        numberOfParallelInferRequests = compiledModel->get_property(key).as<unsigned int>();
     } catch (const ov::Exception& ex) {
         SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
         numberOfParallelInferRequests = 1u;
@@ -636,7 +636,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     for (const auto pair : pluginConfig) {
         const auto key = pair.first;
         const auto value = pair.second;
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, value);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, value.as<std::string>());
     }
 
     const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);

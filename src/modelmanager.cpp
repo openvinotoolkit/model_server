@@ -117,7 +117,7 @@ void ModelManager::logPluginConfiguration() {
         std::vector<std::string> supportedConfigKeys;
         try {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging plugin: {}; configuration", plugin);
-            std::vector<std::string> supportedConfigKeys2 = ieCore->get_metric(plugin, supportedConfigKey);
+            std::vector<std::string> supportedConfigKeys2 = ieCore->get_property(plugin, supportedConfigKey);
             supportedConfigKeys = std::move(supportedConfigKeys2);
         } catch (std::exception& e) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", plugin, supportedConfigKey, e.what());
@@ -127,7 +127,7 @@ void ModelManager::logPluginConfiguration() {
         for (auto& key : supportedConfigKeys) {
             std::string value;
             try {
-                auto paramValue = ieCore->get_config(plugin, key);
+                auto paramValue = ieCore->get_property(plugin, key);
                 value = paramValue.as<std::string>();
             } catch (std::exception& e) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; config key: {}; Error: {}", plugin, key, e.what());
