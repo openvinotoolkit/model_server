@@ -335,11 +335,16 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Reading pipeline: {} configuration", pipelineName);
     std::set<std::string> demultiplexerNodes;
     std::set<std::string> gatheredDemultiplexerNodes;
-    std::optional<uint32_t> demultiplyCountEntry = std::nullopt;
+    std::optional<int32_t> demultiplyCountEntry = std::nullopt;
     auto demultiplyCountEntryIt = pipelineConfig.FindMember("demultiply_count");
     if (demultiplyCountEntryIt != pipelineConfig.MemberEnd()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Pipeline: {} does have demultiply at entry node", pipelineName);
-        demultiplyCountEntry = pipelineConfig["demultiply_count"].GetUint64();
+        int32_t parsedDemultiplyCount = pipelineConfig["demultiply_count"].GetInt();
+        if (parsedDemultiplyCount == 0) {
+            parsedDemultiplyCount = -1;
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "demultiply_count 0 will be deprecated. For dynamic count use -1.");
+        }
+        demultiplyCountEntry = parsedDemultiplyCount;
         demultiplexerNodes.insert(ENTRY_NODE_NAME);
     } else {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Pipeline: {} does not have demultiply at entry node", pipelineName);
@@ -385,9 +390,14 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
         }
         std::unordered_map<std::string, std::string> nodeOutputNameAlias;  // key:alias, value realName
         processNodeOutputs(nodeOutputsItr, nodeName, dlNodeInfo.modelName, nodeOutputNameAlias);
-        std::optional<size_t> demultiplyCount;
+        std::optional<int32_t> demultiplyCount;
         if (nodeConfig.HasMember("demultiply_count")) {
-            demultiplyCount = nodeConfig["demultiply_count"].GetUint64();
+            int32_t parsedDemultiplyCount = nodeConfig["demultiply_count"].GetInt();
+            if (parsedDemultiplyCount == 0) {
+                parsedDemultiplyCount = -1;
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "demultiply_count 0 will be deprecated. For dynamic count use -1.");
+            }
+            demultiplyCount = parsedDemultiplyCount;
             demultiplexerNodes.insert(nodeName);
         }
         std::set<std::string> gatherFromNode;

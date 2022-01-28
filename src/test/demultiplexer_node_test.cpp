@@ -30,7 +30,7 @@ static const std::string mockerDemutliplexerNodeOutputName2 = "mockedDemultiplex
 
 class DemultiplexerDLNode : public DLNode {
 public:
-    DemultiplexerDLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager, std::unordered_map<std::string, std::string> nodeOutputNameAlias, std::optional<uint32_t> demultiplyCount, const NodeSessionMetadata& meta) :
+    DemultiplexerDLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager, std::unordered_map<std::string, std::string> nodeOutputNameAlias, std::optional<int32_t> demultiplyCount, const NodeSessionMetadata& meta) :
         DLNode(nodeName, modelName, modelVersion, modelManager, nodeOutputNameAlias, demultiplyCount.value_or(0)) {
         // createSession to have source session for fetchResults()
         CollapseDetails collapsingDetails;

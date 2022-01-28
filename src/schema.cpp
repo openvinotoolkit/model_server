@@ -204,7 +204,7 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				},
 				"demultiply_count": {
 			"type": "integer",
-			"minimum": 0,
+			"minimum": -1,
 			"maximum": 10000
 				},
 				"gather_from_node": {
@@ -240,7 +240,7 @@ const char* MODELS_CONFIG_SCHEMA = R"({
 				},
         "demultiply_count" : {
 			"type": "integer",
-			"minimum": 0,
+			"minimum": -1,
 			"maximum": 10000
         }
 			},

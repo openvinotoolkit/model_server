@@ -40,7 +40,7 @@ class EntryNode : public Node {
 public:
     EntryNode(const tensorflow::serving::PredictRequest* request,
         const tensor_map_t& inputsInfo,
-        std::optional<uint32_t> demultiplyCount = std::nullopt) :
+        std::optional<int32_t> demultiplyCount = std::nullopt) :
         Node(ENTRY_NODE_NAME, demultiplyCount),
         request(request),
         inputsInfo(inputsInfo) {}
