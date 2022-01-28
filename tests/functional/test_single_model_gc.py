@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 @devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL, TARGET_DEVICE_CUDA])
 class TestSingleModelInferenceGc:
 
-    def test_run_inference(self, start_server_single_model_from_gc):
+    def test_run_inference(self): #, start_server_single_model_from_gc):
         """
         <b>Description</b>
         Submit request to gRPC interface serving a single resnet model
@@ -59,7 +59,17 @@ class TestSingleModelInferenceGc:
         logger.info(f"[JS]: ENV: {output}")
         logger.info(f"[JS]: ====================================================")
         # Connect to grpc service
-        _, ports = start_server_single_model_from_gc
+        from object_model.server import Server
+        import os
+        import config
+        start_server_command_args = {"model_name": Resnet.name, "model_path": ResnetGS.model_path}
+        container_name_infix = "test-single-gs"
+        envs = ['https_proxy=' + os.getenv('https_proxy', "")]
+        server = Server(None, start_server_command_args,
+                          container_name_infix, config.start_container_command, envs,
+                          target_device=config.target_device)
+        _, ports = server.start()
+
         stub = create_channel(port=ports["grpc_port"])
 
         imgs_v1_224 = np.ones(ResnetGS.input_shape, ResnetGS.dtype)
@@ -70,6 +80,7 @@ class TestSingleModelInferenceGc:
                        output_tensors=[out_name])
         logger.info("Output shape: ".format(output[out_name].shape))
         assert output[out_name].shape == ResnetGS.output_shape, ERROR_SHAPE
+        server.stop()
 
     def test_get_model_metadata(self, start_server_single_model_from_gc):
 

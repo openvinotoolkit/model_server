@@ -36,7 +36,7 @@ class Server:
         self.container_log_line = container_log_line
         self.server_log_level = server_log_level
         self.target_device = target_device
-        self.started_by_fixture = request.fixturename
+        self.started_by_fixture = request.fixturename if request is not None else None
 
     def start(self):
         assert self not in Server.running_instances

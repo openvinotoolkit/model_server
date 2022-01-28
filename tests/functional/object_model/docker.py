@@ -138,8 +138,12 @@ class Docker:
         if config.log_level == "DEBUG":
             logger.info(logs)
         if config.artifacts_dir != "":
-            location = getattr(self.request.node, "location", None)
-            self.save_container_logs_to_file(logs=logs, location=location)
+            if self.request:
+                location = getattr(self.request.node, "location", None)
+                self.save_container_logs_to_file(logs=logs, location=location)
+            else:
+                logger.info(f"[JS]: Unable to execute operation - request is none see location - logs:")
+                logger.info(logs)
 
     def get_logs(self):
         self.logs = self.container.logs().decode()
