@@ -44,7 +44,7 @@ public:
     NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
     virtual ~NodeSession();
     const std::string& getName() const { return nodeName; }
-    Status setInput(const std::string& inputName, ov::runtime::Tensor& tensor, session_id_t shardId);
+    Status setInput(const std::string& inputName, ov::Tensor& tensor, session_id_t shardId);
     const NodeSessionMetadata& getNodeSessionMetadata() const;
     const session_key_t& getSessionKey() const { return sessionKey; }
     bool isReady() const;

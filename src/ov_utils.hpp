@@ -29,13 +29,13 @@ namespace ovms {
 
 class TensorInfo;
 
-Status createSharedTensor(ov::runtime::Tensor& destinationTensor, ov::element::Type_t precision, const ov::Shape& shape);
+Status createSharedTensor(ov::Tensor& destinationTensor, ov::element::Type_t precision, const ov::Shape& shape);
 /**
  *  Creates new tensor that copies data and owns the copy
  **/
-ov::runtime::Tensor createSharedTensor(ov::element::Type_t precision, const shape_t& shape, void* data);
+ov::Tensor createSharedTensor(ov::element::Type_t precision, const shape_t& shape, void* data);
 
 std::string getTensorMapString(const std::map<std::string, std::shared_ptr<TensorInfo>>& tensorMap);
 
-Status tensorClone(ov::runtime::Tensor& destinationTensor, const ov::runtime::Tensor& sourceTensor);
+Status tensorClone(ov::Tensor& destinationTensor, const ov::Tensor& sourceTensor);
 }  // namespace ovms

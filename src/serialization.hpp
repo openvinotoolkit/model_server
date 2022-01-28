@@ -37,7 +37,7 @@ class OutputGetter {
 public:
     OutputGetter(T t) :
         outputSource(t) {}
-    Status get(const std::string& name, ov::runtime::Tensor& tensor);
+    Status get(const std::string& name, ov::Tensor& tensor);
 
 private:
     T outputSource;
@@ -46,10 +46,10 @@ private:
 Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
-    ov::runtime::Tensor& tensor);
+    ov::Tensor& tensor);
 
 Status serializePredictResponse(
-    ov::runtime::InferRequest& inferRequest,
+    ov::InferRequest& inferRequest,
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response);
 
@@ -60,7 +60,7 @@ Status serializePredictResponse(
     tensorflow::serving::PredictResponse* response) {
     Status status;
     for (const auto& [outputName, outputInfo] : outputMap) {
-        ov::runtime::Tensor tensor;
+        ov::Tensor tensor;
         status = outputGetter.get(outputName, tensor);
         if (!status.ok()) {
             return status;

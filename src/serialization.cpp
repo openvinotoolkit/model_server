@@ -22,7 +22,7 @@ namespace ovms {
 Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
-    ov::runtime::Tensor& tensor) {
+    ov::Tensor& tensor) {
     responseOutput.Clear();
     if (servableOutput->getOvPrecision() != tensor.get_element_type()) {
         SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in precision expected:{} vs actual:{}",
@@ -77,7 +77,7 @@ Status serializeTensorToTensorProto(
 }
 
 template <>
-Status OutputGetter<ov::runtime::InferRequest&>::get(const std::string& name, ov::runtime::Tensor& tensor) {
+Status OutputGetter<ov::InferRequest&>::get(const std::string& name, ov::Tensor& tensor) {
     try {
         tensor = outputSource.get_tensor(name);
     } catch (const ov::Exception& e) {
@@ -89,14 +89,14 @@ Status OutputGetter<ov::runtime::InferRequest&>::get(const std::string& name, ov
 }
 
 Status serializePredictResponse(
-    ov::runtime::InferRequest& inferRequest,
+    ov::InferRequest& inferRequest,
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response) {
     Status status;
     for (const auto& pair : outputMap) {
         auto servableOutput = pair.second;
-        ov::runtime::Tensor tensor;
-        OutputGetter<ov::runtime::InferRequest&> outputGetter(inferRequest);
+        ov::Tensor tensor;
+        OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
         status = outputGetter.get(servableOutput->getName(), tensor);
         if (!status.ok()) {
             return status;

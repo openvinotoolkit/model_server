@@ -23,7 +23,7 @@ NodeInputHandler::NodeInputHandler(uint32_t inputsMissingCount) :
     remainingDependencies(inputsMissingCount) {
 }
 
-Status NodeInputHandler::setInput(const std::string& inputName, ov::runtime::Tensor& tensor, session_id_t shardId) {
+Status NodeInputHandler::setInput(const std::string& inputName, ov::Tensor& tensor, session_id_t shardId) {
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Setting input: {}, shardId: {}", inputName, shardId);
     if (shardId > 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to set input: {}, with shardId: {} >0 in NodeInputHandler.", inputName, shardId);

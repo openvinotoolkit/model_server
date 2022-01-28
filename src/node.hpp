@@ -67,7 +67,7 @@ public:
 protected:
     virtual Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) = 0;
     Status demultiplyOutputs(SessionResults& nodeSessionOutputs);
-    virtual Status createShardedTensor(ov::runtime::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::runtime::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
+    virtual Status createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
 
 public:
     Status setInputs(const Node& dependency, TensorMap& inputs, NodeSessionMetadata& metadata);

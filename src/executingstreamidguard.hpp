@@ -28,12 +28,12 @@ struct ExecutingStreamIdGuard {
         inferRequestsQueue_.returnStream(id_);
     }
     int getId() { return id_; }
-    ov::runtime::InferRequest& getInferRequest() { return inferRequest; }
+    ov::InferRequest& getInferRequest() { return inferRequest; }
 
 private:
     ovms::OVInferRequestsQueue& inferRequestsQueue_;
     const int id_;
-    ov::runtime::InferRequest& inferRequest;
+    ov::InferRequest& inferRequest;
 };
 
 }  //  namespace ovms

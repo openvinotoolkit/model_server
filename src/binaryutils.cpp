@@ -299,10 +299,10 @@ shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const std::shared
     return dims;
 }
 
-ov::runtime::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     ov::Shape shape = getShapeFromImages(images, tensorInfo);
     ov::element::Type precision = tensorInfo->getOvPrecision();
-    ov::runtime::Tensor tensor(precision, shape);
+    ov::Tensor tensor(precision, shape);
     char* ptr = (char*)tensor.data();
     for (cv::Mat image : images) {
         memcpy(ptr, (char*)image.data, image.total() * image.elemSize());
@@ -311,7 +311,7 @@ ov::runtime::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, con
     return tensor;
 }
 
-ov::runtime::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     switch (tensorInfo->getPrecision()) {
     case ovms::Precision::FP32:
     case ovms::Precision::I32:
@@ -328,11 +328,11 @@ ov::runtime::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std:
     case ovms::Precision::BOOL:
     case ovms::Precision::CUSTOM:
     default:
-        return ov::runtime::Tensor();
+        return ov::Tensor();
     }
 }
 
-Status convertStringValToTensor(const tensorflow::TensorProto& src, ov::runtime::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+Status convertStringValToTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
     auto status = validateTensor(tensorInfo, src);
     if (status != StatusCode::OK) {
         return status;

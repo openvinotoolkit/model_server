@@ -61,7 +61,7 @@ static bool watcherStarted = false;
 static bool cleanerStarted = false;
 
 ModelManager::ModelManager(const std::string& modelCacheDirectory) :
-    ieCore(std::make_unique<ov::runtime::Core>()),
+    ieCore(std::make_unique<ov::Core>()),
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
     modelCacheDirectory(modelCacheDirectory) {
     // Take --cache_dir from CLI

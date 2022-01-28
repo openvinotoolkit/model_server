@@ -40,7 +40,7 @@ class MockModelInstanceInState : public ovms::ModelInstance {
     static const ovms::model_version_t UNUSED_VERSION = 987789;
 
 public:
-    MockModelInstanceInState(ov::runtime::Core& ieCore, ovms::ModelVersionState state) :
+    MockModelInstanceInState(ov::Core& ieCore, ovms::ModelVersionState state) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
         status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_VERSION, state);
     }
@@ -48,7 +48,7 @@ public:
 
 class MockModelInstance : public ovms::ModelInstance {
 public:
-    MockModelInstance(ov::runtime::Core& ieCore) :
+    MockModelInstance(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
     MOCK_METHOD(bool, canUnloadInstance, (), (const));
 };
@@ -57,9 +57,9 @@ public:
 
 class TestUnloadModel : public ::testing::Test {
 protected:
-    std::unique_ptr<ov::runtime::Core> ieCore;
+    std::unique_ptr<ov::Core> ieCore;
     void SetUp() {
-        ieCore = std::make_unique<ov::runtime::Core>();
+        ieCore = std::make_unique<ov::Core>();
     }
 };
 
@@ -96,7 +96,7 @@ TEST_F(TestUnloadModel, UnloadWaitsUntilMetadataResponseIsBuilt) {
 
     class MockModelInstanceTriggeringUnload : public ovms::ModelInstance {
     public:
-        MockModelInstanceTriggeringUnload(ov::runtime::Core& ieCore) :
+        MockModelInstanceTriggeringUnload(ov::Core& ieCore) :
             ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
         // This is to trigger model unloading in separate thread during GetModelMetadataImpl::buildResponse call.
         const ovms::tensor_map_t& getInputsInfo() const override {
@@ -142,7 +142,7 @@ TEST_F(TestUnloadModel, CheckIfCanUnload) {
 
 class MockModelInstanceCheckingUnloadingState : public ovms::ModelInstance {
 public:
-    MockModelInstanceCheckingUnloadingState(ov::runtime::Core& ieCore) :
+    MockModelInstanceCheckingUnloadingState(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
     virtual bool canUnloadInstance() const {
         EXPECT_EQ(ovms::ModelVersionState::UNLOADING, getStatus().getState());
@@ -160,15 +160,15 @@ TEST_F(TestUnloadModel, CheckIfStateIsUnloadingDuringUnloading) {
 
 class TestLoadModel : public ::testing::Test {
 protected:
-    std::unique_ptr<ov::runtime::Core> ieCore;
+    std::unique_ptr<ov::Core> ieCore;
     void SetUp() {
-        ieCore = std::make_unique<ov::runtime::Core>();
+        ieCore = std::make_unique<ov::Core>();
     }
 };
 
 class MockModelInstanceThrowingFileNotFoundForLoadingCNN : public ovms::ModelInstance {
 public:
-    MockModelInstanceThrowingFileNotFoundForLoadingCNN(ov::runtime::Core& ieCore) :
+    MockModelInstanceThrowingFileNotFoundForLoadingCNN(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
 
 protected:
@@ -187,7 +187,7 @@ TEST_F(TestLoadModel, CheckIfOVNonExistingXMLFileErrorIsCatched) {
 
 class MockModelInstanceThrowingFileNotFoundForLoadingCompiledModel : public ovms::ModelInstance {
 public:
-    MockModelInstanceThrowingFileNotFoundForLoadingCompiledModel(ov::runtime::Core& ieCore) :
+    MockModelInstanceThrowingFileNotFoundForLoadingCompiledModel(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
 
 protected:
@@ -403,9 +403,9 @@ TEST_F(TestLoadModelWithMapping, UnSuccessfulLoadOldOutputLayoutName) {
 
 class TestReloadModel : public ::testing::Test {
 protected:
-    std::unique_ptr<ov::runtime::Core> ieCore;
+    std::unique_ptr<ov::Core> ieCore;
     void SetUp() {
-        ieCore = std::make_unique<ov::runtime::Core>();
+        ieCore = std::make_unique<ov::Core>();
     }
 };
 

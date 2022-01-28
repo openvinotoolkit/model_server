@@ -69,21 +69,21 @@ static bool CheckSequenceIdResponse(tensorflow::serving::PredictResponse& respon
 
 class DummyStatefulModel {
 private:
-    ov::runtime::Core ieCore;
+    ov::Core ieCore;
     const std::string MODEL_PATH = std::filesystem::current_path().u8string() + "/src/test/summator/1/summator.xml";
 
     std::shared_ptr<ov::Model> model;
-    std::shared_ptr<ov::runtime::CompiledModel> compiledModel;
+    std::shared_ptr<ov::CompiledModel> compiledModel;
 
     const std::string stateName = "state";
 
 public:
     DummyStatefulModel() {
         model = ieCore.read_model(MODEL_PATH);
-        compiledModel = std::make_shared<ov::runtime::CompiledModel>(ieCore.compile_model(model, "CPU"));
+        compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(model, "CPU"));
     }
 
-    ov::runtime::InferRequest createInferRequest() {
+    ov::InferRequest createInferRequest() {
         return compiledModel->create_infer_request();
     }
 
@@ -91,21 +91,21 @@ public:
         return stateName;
     }
 
-    static ov::runtime::VariableState getVariableState(ov::runtime::InferRequest& inferRequest) {
-        std::vector<ov::runtime::VariableState> memoryState = inferRequest.query_state();
+    static ov::VariableState getVariableState(ov::InferRequest& inferRequest) {
+        std::vector<ov::VariableState> memoryState = inferRequest.query_state();
         return memoryState[0];
     }
 
-    static void resetVariableState(ov::runtime::InferRequest& inferRequest) {
-        std::vector<ov::runtime::VariableState> memoryState = inferRequest.query_state();
+    static void resetVariableState(ov::InferRequest& inferRequest) {
+        std::vector<ov::VariableState> memoryState = inferRequest.query_state();
         memoryState[0].reset();
     }
 
-    static void setVariableState(ov::runtime::InferRequest& inferRequest, std::vector<float> values) {
+    static void setVariableState(ov::InferRequest& inferRequest, std::vector<float> values) {
         DummyStatefulModel::resetVariableState(inferRequest);
         std::vector<size_t> shape{1, 1};
 
-        ov::runtime::Tensor tensor(
+        ov::Tensor tensor(
             ov::element::Type_t::f32,
             shape,
             values.data());

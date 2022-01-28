@@ -32,8 +32,8 @@ TEST(OVUtils, CopyTensorDoesNotAllocateNewData) {
     std::vector<float> data(elementsCount);
     std::iota(data.begin(), data.end(), 0);
 
-    ov::runtime::Tensor originalTensor(elementType, shape, data.data());
-    ov::runtime::Tensor copyTensor = originalTensor;
+    ov::Tensor originalTensor(elementType, shape, data.data());
+    ov::Tensor copyTensor = originalTensor;
 
     ASSERT_EQ(originalTensor.get_shape(), shape);
     ASSERT_EQ(copyTensor.get_shape(), shape);
@@ -68,8 +68,8 @@ TEST(OVUtils, CopyTensor) {
     std::vector<float> data(elementsCount);
     std::iota(data.begin(), data.end(), 0);
 
-    ov::runtime::Tensor originalTensor(elementType, shape, data.data());
-    ov::runtime::Tensor copyTensor;
+    ov::Tensor originalTensor(elementType, shape, data.data());
+    ov::Tensor copyTensor;
 
     ASSERT_EQ(ovms::tensorClone(copyTensor, originalTensor), ovms::StatusCode::OK);
 
@@ -106,8 +106,8 @@ TEST(OVUtils, ConstCopyTensor) {
     std::vector<float> data(elementsCount);
     std::iota(data.begin(), data.end(), 0);
 
-    ov::runtime::Tensor originalTensor(elementType, shape, data.data());
-    ov::runtime::Tensor copyTensor;
+    ov::Tensor originalTensor(elementType, shape, data.data());
+    ov::Tensor copyTensor;
 
     ASSERT_EQ(ovms::tensorClone(copyTensor, originalTensor), ovms::StatusCode::OK);
 
