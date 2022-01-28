@@ -27,7 +27,7 @@
 namespace ovms {
 
 class StatefulModelInstance : public ModelInstance {
-    static const std::set<const char*> SPECIAL_INPUT_NAMES;
+    static const std::set<std::string> SPECIAL_INPUT_NAMES;
 
 public:
     /**

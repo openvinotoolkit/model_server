@@ -380,7 +380,7 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorNumberOfInputs)
     proto2.Clear();
 }
 
-TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorMissingInput) {
+TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationAcceptsAnyName) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.reloadModelWithVersions(config);
 
@@ -388,7 +388,7 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorMissingInput) {
     auto& proto1 = (*request.mutable_inputs())["input1"];
 
     auto pipeline = createDummyPipeline(managerWithDummyModel);
-    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_MISSING_INPUT);
+    ASSERT_NE(pipeline->execute(), StatusCode::INVALID_MISSING_INPUT);
     proto1.Clear();
 }
 

@@ -38,7 +38,7 @@ Status validate(
     const tensor_map_t& inputsInfo,
     const std::string& servableName,
     const model_version_t servableVersion,
-    const std::set<const char*>& optionalAllowedInputNames = {},
+    const std::set<std::string>& optionalAllowedInputNames = {},
     const Mode batchingMode = Mode::FIXED,
     const shapes_info_map_t& shapeInfo = shapes_info_map_t());
 

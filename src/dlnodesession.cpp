@@ -24,7 +24,6 @@
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "nodeinputhandler.hpp"
-#include "nodeoutputhandler.hpp"
 #include "nodestreamidguard.hpp"
 #include "ov_utils.hpp"
 #include "shape.hpp"
