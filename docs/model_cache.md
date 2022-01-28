@@ -63,8 +63,8 @@ Logs from the first initialization - model loading takes ~3.5s
 [2021-11-12 16:03:43.325][1][serving][info][modelversionstatus.hpp:155] STATUS CHANGE: Version 1 of model model status change. New status: ( "state": "START", "error_code": "OK" )
 [2021-11-12 16:03:43.325][1][serving][info][modelversionstatus.hpp:155] STATUS CHANGE: Version 1 of model model status change. New status: ( "state": "LOADING", "error_code": "OK" )
 [2021-11-12 16:03:43.342][1][serving][info][modelinstance.cpp:175] Final network inputs:
-Input name: data; mapping_name: ; shape: (1,3,300,300); effective shape: (1,3,300,300); precision: FP32; layout: NCHW
-[2021-11-12 16:03:43.342][1][serving][info][modelinstance.cpp:209] Output name: detection_out; mapping name: ; shape: 1 1 200 7 ; effective shape 1 1 200 7 ; precision: FP32; layout: NCHW
+Input name: data; mapping_name: ; shape: (1,3,300,300); effective shape: (1,3,300,300); precision: FP32; layout: N...
+[2021-11-12 16:03:43.342][1][serving][info][modelinstance.cpp:209] Output name: detection_out; mapping name: ; shape: 1 1 200 7 ; effective shape 1 1 200 7 ; precision: FP32; layout: N...
 [2021-11-12 16:03:46.905][1][modelmanager][info][modelinstance.cpp:394] Plugin config for device GPU:
 [2021-11-12 16:03:46.905][1][modelmanager][info][modelinstance.cpp:398] OVMS set plugin settings key:GPU_THROUGHPUT_STREAMS; value:GPU_THROUGHPUT_AUTO;
 [2021-11-12 16:03:46.911][1][serving][info][modelinstance.cpp:477] Loaded model model; version: 1; batch size: 1; No of InferRequests: 4
@@ -77,8 +77,8 @@ Sequential model server initialization is faster. Based on logs below, it is ~40
 [2021-11-12 16:06:08.377][1][serving][info][modelversionstatus.hpp:155] STATUS CHANGE: Version 1 of model model status change. New status: ( "state": "START", "error_code": "OK" )
 [2021-11-12 16:06:08.377][1][serving][info][modelversionstatus.hpp:155] STATUS CHANGE: Version 1 of model model status change. New status: ( "state": "LOADING", "error_code": "OK" )
 [2021-11-12 16:06:08.384][1][serving][info][modelinstance.cpp:175] Final network inputs:
-Input name: data; mapping_name: ; shape: (1,3,300,300); effective shape: (1,3,300,300); precision: FP32; layout: NCHW
-[2021-11-12 16:06:08.384][1][serving][info][modelinstance.cpp:209] Output name: detection_out; mapping name: ; shape: 1 1 200 7 ; effective shape 1 1 200 7 ; precision: FP32; layout: NCHW
+Input name: data; mapping_name: ; shape: (1,3,300,300); effective shape: (1,3,300,300); precision: FP32; layout: N...
+[2021-11-12 16:06:08.384][1][serving][info][modelinstance.cpp:209] Output name: detection_out; mapping name: ; shape: 1 1 200 7 ; effective shape 1 1 200 7 ; precision: FP32; layout: N...
 [2021-11-12 16:06:08.783][1][modelmanager][info][modelinstance.cpp:394] Plugin config for device GPU:
 [2021-11-12 16:06:08.783][1][modelmanager][info][modelinstance.cpp:398] OVMS set plugin settings key:GPU_THROUGHPUT_STREAMS; value:GPU_THROUGHPUT_AUTO;
 [2021-11-12 16:06:08.790][1][serving][info][modelinstance.cpp:477] Loaded model model; version: 1; batch size: 1; No of InferRequests: 4

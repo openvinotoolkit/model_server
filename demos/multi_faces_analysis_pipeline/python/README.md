@@ -1,15 +1,21 @@
-# Face Analysis Pipeline Demo with OVMS
+# Multi Faces Analysis Pipeline Demo with OVMS
+
+
 This document demonstrates how to create complex pipelines using object detection and object recognition models from OpenVINO Model Zoo. As an example, we will use [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/face-detection-retail-0004/README.md) to detect multiple faces on the image. Then, for each detected face we will crop it using [model_zoo_intel_object_detection](../../../src/custom_nodes/model_zoo_intel_object_detection) example custom node. Finally, each image face image will be forwarded to [age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/age-gender-recognition-retail-0013/README.md) and [emotion-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/emotions-recognition-retail-0003/README.md) models.
 
-![Faces analysis graph](faces_analysis.png)
+![Multi Faces Analysis Graph](multi_faces_analysis.png)
 
 Using such pipeline, a single request to OVMS can perform a complex set of operations to determine all faces and its properties.
+
+### See also
+
+For simpler use case with single face analysis see [single_face_analysis_pipeline](../../single_face_analysis_pipeline/python) demo.
 
 ## Pipeline Configuration Graph
 
 Below is depicted graph implementing faces analysis pipeline execution. 
 
-![Faces Analysis Pipeline Graph](faces_analysis_graph.svg)
+![Multi Faces Analysis Pipeline Graph](multi_faces_analysis_graph.svg)
 
 It includes the following Nodes:
 - Model `face-detection` - deep learning model which takes user image as input. Its outputs contain information about face coordinates and confidence levels.
@@ -68,7 +74,7 @@ docker run -p 9000:9000 -d -v ${PWD}/workspace:/workspace openvino/model_server 
 
 ## Requesting the Service
 
-Exemplary client [faces_analysis_pipeline.py](faces_analysis_pipeline.py) can be used to request pipeline deployed in previous step.
+Exemplary client [multi_faces_analysis_pipeline.py](multi_faces_analysis_pipeline.py) can be used to request pipeline deployed in previous step.
 
 ```bash
 pip3 install -r requirements.txt
@@ -79,7 +85,7 @@ Now you can create directory for text images and run the client:
 mkdir results
 ```
 ```bash
-python3 faces_analysis_pipeline.py --pipeline_name find_face_images --grpc_port 9000 --image_input_path ./images/people/people1.jpeg --face_images_output_name face_images --face_images_save_path ./results --image_width 600 --image_height 400 --input_image_layout NHWC
+python3 multi_faces_analysis_pipeline.py --pipeline_name find_face_images --grpc_port 9000 --image_input_path ./images/people/people1.jpeg --face_images_output_name face_images --face_images_save_path ./results --image_width 600 --image_height 400 --input_image_layout NHWC
 Output: name[genders]
     numpy => shape[(10, 1, 2, 1, 1)] data[float32]
 Output: name[ages]

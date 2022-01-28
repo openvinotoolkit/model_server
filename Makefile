@@ -38,7 +38,7 @@ BASE_OS_TAG ?= latest
 BASE_OS_TAG_UBUNTU ?= 20.04
 BASE_OS_TAG_CENTOS ?= 7
 BASE_OS_TAG_CLEARLINUX ?= latest
-BASE_OS_TAG_REDHAT ?= 8.4
+BASE_OS_TAG_REDHAT ?= 8.5
 
 INSTALL_RPMS_FROM_URL ?=
 
@@ -83,7 +83,6 @@ ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  DIST_OS_TAG=$(BASE_OS_TAG_REDHAT)
   INSTALL_DRIVER_VERSION ?= "21.49.21786"
   DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2022.1.0.539.tgz
 endif
