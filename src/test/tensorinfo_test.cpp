@@ -69,4 +69,5 @@ TEST(TensorInfo, Intersection) {
     first = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
     second = std::make_shared<TensorInfo>("a", "b2", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
     EXPECT_EQ(first->createIntersection(*second), nullptr);
+    // layout
 }

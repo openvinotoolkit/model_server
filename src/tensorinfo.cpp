@@ -270,6 +270,7 @@ std::shared_ptr<TensorInfo> TensorInfo::createIntersection(const TensorInfo& oth
 bool TensorInfo::isTensorSpecEqual(const TensorInfo& other) const {
     return (this->getShape() == other.getShape()) &&
            (this->getPrecision() == other.getPrecision());
+           (this->getLayout() == other.getLayout());
 }
 
 bool TensorInfo::isTensorUnspecified() const {

@@ -113,7 +113,8 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
 }
 
 Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != Layout::getDefaultLayout()) {
+    //if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != Layout::getAnyLayout()) { // obecnie Any == N...  ANy to obecnie default // TODO check vs any & default model layout
+    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != Layout::getDefaultLayout()) { // obecnie Any == N...  ANy to obecnie default
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
     Dimension cols = Dimension::any();
