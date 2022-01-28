@@ -87,7 +87,7 @@ Additionally you can set version of GPU driver used by the produced image. Curre
 
 Provide version from the list above as INSTALL_DRIVER_VERSION argument in make command to build image with specific version of the driver like 
 `make docker_build INSTALL_DRIVER_VERSION=21.49.21786`.
-If not provided, version 21.49.21786 is used for Redhat os and 21.48.21782 is used for Ubuntu os.
+If not provided, version 21.49.21786 is used for Redhat and 21.48.21782 is used for Ubuntu.
 
 ### Running the OpenVINO&trade; Model Server Image for **Single** Model <a name="singlemodel"></a>
 
