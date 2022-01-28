@@ -51,11 +51,11 @@ protected:
     // Input/Output name mapping and list of required inputs from previous nodes
     std::unordered_map<std::string, Aliases> tensorNamesMapping;
 
-    const std::optional<uint32_t> demultiplexCount;
+    const std::optional<int32_t> demultiplexCount;
     const std::optional<std::set<std::string>> gatherFrom;
 
 public:
-    Node(const std::string& nodeName, std::optional<uint32_t> demultiplyCount = std::nullopt, std::set<std::string> gatherFromNode = {});
+    Node(const std::string& nodeName, std::optional<int32_t> demultiplyCount = std::nullopt, std::set<std::string> gatherFromNode = {});
 
     virtual ~Node() = default;
 

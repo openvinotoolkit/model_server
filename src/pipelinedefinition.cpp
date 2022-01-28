@@ -479,8 +479,7 @@ public:
                 shape.size());
             return StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY;
         }
-        if (demultiplicatorNodeInfo.demultiplyCount.value() != 0) {
-            // TODO -1 vs 0 as demultiplexing value
+        if (demultiplicatorNodeInfo.demultiplyCount.value() != -1) {
             if (!shape[0].isAny()) {
                 auto demultiplyDimension = Dimension(demultiplicatorNodeInfo.demultiplyCount.value());
                 if (!shape[0].partiallyFitsInto(demultiplyDimension)) {
@@ -998,7 +997,9 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
 
     bool isAnyNodeDynamicDemultiplexer = (std::find_if(this->nodeInfos.begin(), this->nodeInfos.end(), [](const NodeInfo& info) {
         if (info.demultiplyCount) {
-            return !info.demultiplyCount.value();
+            if (info.demultiplyCount.value() == -1)
+                return true;
+            return false;
         }
         return false;
     }) != this->nodeInfos.end());
@@ -1042,7 +1043,7 @@ const tensor_map_t PipelineDefinition::getOutputsInfo() const {
     return copy;
 }
 
-std::shared_ptr<TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, uint32_t demultiplyCount) {
+std::shared_ptr<TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, int32_t demultiplyCount) {
     return tensorInfo->createCopyWithEffectiveDimensionPrefix(demultiplyCount ? Dimension(demultiplyCount) : Dimension::any());
 }
 
@@ -1161,7 +1162,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
     }
     auto it = std::find_if(nodeInfos.begin(), nodeInfos.end(), [](const NodeInfo& info) { return info.kind == NodeKind::ENTRY && info.demultiplyCount; });
     if (it != nodeInfos.end()) {
-        uint32_t demultiplyCount = it->demultiplyCount.value();
+        int32_t demultiplyCount = it->demultiplyCount.value();
         for (auto& [inputName, inputTensorInfo] : inputsInfo) {
             inputTensorInfo = applyDemultiplexerShapeForTensor(inputTensorInfo, demultiplyCount);
         }

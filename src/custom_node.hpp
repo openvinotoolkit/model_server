@@ -45,7 +45,7 @@ public:
         const NodeLibrary& library,
         const parameters_t& parameters,
         const std::unordered_map<std::string, std::string>& nodeOutputNameAlias = {},
-        std::optional<uint32_t> demultiplyCount = std::nullopt,
+        std::optional<int32_t> demultiplyCount = std::nullopt,
         std::set<std::string> gatherFromNode = {},
         std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager = nullptr);
 
