@@ -49,10 +49,17 @@ RUN     set -e ; \
         set -x ; \
         microdnf install -y pkg-config; \
         if [ "$GPU" == "1" ] ; then \
+                case $INSTALL_DRIVER_VERSION in \
+                "21.49.21786") \
                         microdnf install -y dnf ;\
                         dnf install -y dnf-plugins-core ;\
                         dnf copr enable -y jdanecki/intel-opencl ;\
                         dnf install -y intel-opencl;\
+                ;; \
+                        *) \
+                        echo "ERROR: Unrecognized driver ${INSTALL_DRIVER_VERSION}." ; \
+                        exit 1 ; \
+                esac ; \
         fi ; \
         if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
                 rpm -ivh http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/numactl-libs-2.0.12-11.el8.x86_64.rpm; \
