@@ -82,12 +82,12 @@ as well as a release package (.tar.gz, with ovms binary and necessary libraries)
 Use command `make docker_build BASE_OS=redhat` or `make docker_build BASE_OS=centos`. OVMS with ubi base image doesn't support NCS and HDDL accelerators.
 
 Additionally you can set version of GPU driver used by the produced image. Currently following versions are available:
-- 21.49.21786 - Redhat
+- 21.38.21026 - Redhat
 - 21.48.21782 - Ubuntu
 
 Provide version from the list above as INSTALL_DRIVER_VERSION argument in make command to build image with specific version of the driver like 
-`make docker_build INSTALL_DRIVER_VERSION=21.49.21786`.
-If not provided, version 21.49.21786 is used for Redhat and 21.48.21782 is used for Ubuntu.
+`make docker_build INSTALL_DRIVER_VERSION=21.38.21026`.
+If not provided, version 21.38.21026 is used for Redhat and 21.48.21782 is used for Ubuntu.
 
 ### Running the OpenVINO&trade; Model Server Image for **Single** Model <a name="singlemodel"></a>
 
@@ -463,7 +463,7 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
 ```
 
-*Note:* The public docker image includes the OpenCL drivers for GPU in version 21.49.21786.
+*Note:* The public docker image includes the OpenCL drivers for GPU in version 21.38.21026.
 </details>
 
 <details><summary>Using Multi-Device Plugin</summary>

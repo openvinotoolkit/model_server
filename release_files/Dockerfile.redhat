@@ -27,7 +27,7 @@ RUN groupadd --gid 5000 ovms && \
 RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-licenses /licenses/thirdparty-licenses
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.4 as release
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5 as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
 LABEL "version"="2021.4"
@@ -38,7 +38,7 @@ LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI mode
 ARG INSTALL_RPMS_FROM_URL=
 ENV INSTALL_RPMS_FROM_URL=$INSTALL_RPMS_FROM_URL
 
-ARG INSTALL_DRIVER_VERSION="21.49.21786"
+ARG INSTALL_DRIVER_VERSION="21.38.21026"
 ENV INSTALL_DRIVER_VERSION=$INSTALL_DRIVER_VERSION
 ARG GPU=1
 ENV GPU=$GPU
@@ -49,7 +49,7 @@ RUN     set -e ; \
         microdnf install -y pkg-config; \
         if [ "$GPU" == "1" ] ; then \
                 case $INSTALL_DRIVER_VERSION in \
-                "21.49.21786") \
+                "21.38.21026") \
                         microdnf install -y dnf ;\
                         dnf install -y dnf-plugins-core ;\
                         dnf copr enable -y jdanecki/intel-opencl ;\
@@ -59,6 +59,8 @@ RUN     set -e ; \
                         echo "ERROR: Unrecognized driver ${INSTALL_DRIVER_VERSION}." ; \
                         exit 1 ; \
                 esac ; \
+                echo "Installed opencl driver version:" ;\
+                echo `rpm -qa | grep intel-opencl` ; \ 
         fi ; \
         if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
                 rpm -ivh http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/numactl-libs-2.0.12-11.el8.x86_64.rpm; \
