@@ -54,7 +54,7 @@ ModelInstance& DLNodeSession::getModelInstance() {
     return *this->model;
 }
 
-ov::runtime::InferRequest& DLNodeSession::getInferRequest(const uint microseconds) {
+ov::InferRequest& DLNodeSession::getInferRequest(const uint microseconds) {
     auto& inferRequestsQueue = this->model->getInferRequestsQueue();
     auto streamIdOpt = this->nodeStreamIdGuard->tryGetId(microseconds);
     if (!streamIdOpt) {
@@ -146,7 +146,7 @@ Status DLNodeSession::prepareInputsAndModelForInference() {
     return StatusCode::OK;
 }
 
-Status DLNodeSession::validate(const ov::runtime::Tensor& tensor, const TensorInfo& tensorInfo) {
+Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tensorInfo) {
     if (ovmsPrecisionToIE2Precision(tensorInfo.getPrecision()) != tensor.get_element_type()) {
         std::stringstream ss;
         ss << "Node: " << getName() << " input: " << tensorInfo.getName()
@@ -244,7 +244,7 @@ Status DLNodeSession::getRealInputName(const std::string& alias, std::string* re
     return StatusCode::OK;
 }
 
-Status DLNodeSession::setInputsForInference(ov::runtime::InferRequest& inferRequest) {
+Status DLNodeSession::setInputsForInference(ov::InferRequest& inferRequest) {
     Status status = StatusCode::OK;
     try {
         // Prepare inference request, fill with input tensors
@@ -273,7 +273,7 @@ Status DLNodeSession::setInputsForInference(ov::runtime::InferRequest& inferRequ
     return status;
 }
 
-Status DLNodeSession::executeInference(PipelineEventQueue& notifyEndQueue, ov::runtime::InferRequest& inferRequest, Node& node) {
+Status DLNodeSession::executeInference(PipelineEventQueue& notifyEndQueue, ov::InferRequest& inferRequest, Node& node) {
     try {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Setting completion callback for node name: {}", this->getName());
         inferRequest.set_callback([this, &notifyEndQueue, &inferRequest, &node](std::exception_ptr exception_ptr) {

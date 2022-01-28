@@ -239,7 +239,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         newDims.erase(newDims.begin());
         const auto step = tensor.get_byte_size() / resultsDemultiplyCount;
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
-            ov::runtime::Tensor dividedTensor;
+            ov::Tensor dividedTensor;
             this->createShardedTensor(dividedTensor, ovElementTypeToOvmsPrecision(tensor.get_element_type()), newDims, tensor, i, step, metadata, tensorName);
             std::stringstream ss;
             ss << "Node: " << getName() << " input demultiplied: " << tensorName
@@ -257,7 +257,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     return StatusCode::OK;
 }
 
-Status Node::createShardedTensor(ov::runtime::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::runtime::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
+Status Node::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
     auto status = createSharedTensor(dividedTensor, ovmsPrecisionToIE2Precision(precision), shape);
     if (!status.ok()) {
         return status;

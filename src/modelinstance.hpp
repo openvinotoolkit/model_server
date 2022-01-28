@@ -86,7 +86,7 @@ protected:
     /**
          * @brief Inference Engine core object
          */
-    ov::runtime::Core& ieCore;
+    ov::Core& ieCore;
 
     /**
          * @brief Inference Engine CNNNetwork object
@@ -96,7 +96,7 @@ protected:
     /**
          * @brief Inference Engine device model
          */
-    std::shared_ptr<ov::runtime::CompiledModel> compiledModel;
+    std::shared_ptr<ov::CompiledModel> compiledModel;
 
     /**
          * @brief Model name
@@ -303,7 +303,7 @@ public:
     /**
          * @brief A default constructor
          */
-    ModelInstance(const std::string& name, model_version_t version, ov::runtime::Core& ieCore) :
+    ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore) :
         ieCore(ieCore),
         name(name),
         version(version),
@@ -516,7 +516,7 @@ public:
 
     const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
 
-    Status performInference(ov::runtime::InferRequest& inferRequest);
+    Status performInference(ov::InferRequest& inferRequest);
 
     virtual Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,

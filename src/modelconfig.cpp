@@ -592,7 +592,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     SPDLOG_DEBUG("target_device: {}", getTargetDevice());
     SPDLOG_DEBUG("plugin_config:");
     for (auto& [pluginParameter, pluginValue] : getPluginConfig()) {
-        SPDLOG_DEBUG("  {}: {}", pluginParameter, pluginValue);
+        SPDLOG_DEBUG("  {}: {}", pluginParameter, pluginValue.as<std::string>());
     }
 
     bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize().has_value());

@@ -35,7 +35,7 @@ GatherNodeInputHandler::GatherNodeInputHandler(uint32_t inputsMissingCount, cons
         std::multiplies<session_id_t>());
 }
 
-Status GatherNodeInputHandler::setInput(const std::string& inputName, ov::runtime::Tensor& tensor, session_id_t shardId) {
+Status GatherNodeInputHandler::setInput(const std::string& inputName, ov::Tensor& tensor, session_id_t shardId) {
     auto inputsShardsIt = shardsStorage.find(inputName);
     if (inputsShardsIt == shardsStorage.end()) {
         shard_map_t shardMap{{shardId, tensor}};
@@ -70,7 +70,7 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
         newDims.insert(newDims.begin(),
             collapsingDetails->collapsedSessionSizes.begin(),
             collapsingDetails->collapsedSessionSizes.end());
-        ov::runtime::Tensor consolidatedTensor;
+        ov::Tensor consolidatedTensor;
         auto status = createSharedTensor(consolidatedTensor, precision, newDims);
         if (!status.ok()) {
             return status;

@@ -97,12 +97,12 @@ TEST(CustomNodeOutputAllocator, TensorDeallocationCallsReleaseBuffer) {
         NodeLibraryCheckingReleaseCalled::release};
     void* customNodeLibraryInternalManager = nullptr;
     std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocatorCheckingFreeCalled>(tensor, library, customNodeLibraryInternalManager);
-    ov::runtime::Allocator alloc(customNodeOutputAllocator);
+    ov::Allocator alloc(customNodeOutputAllocator);
     EXPECT_FALSE(NodeLibraryCheckingReleaseCalled::releaseBufferCalled);
     {
         auto elemType = ovmsPrecisionToIE2Precision(Precision::FP32);
         shape_t shape{data.size()};
-        auto tensorIE2 = std::make_shared<ov::runtime::Tensor>(elemType, shape, alloc);
+        auto tensorIE2 = std::make_shared<ov::Tensor>(elemType, shape, alloc);
     }
     EXPECT_TRUE(NodeLibraryCheckingReleaseCalled::releaseBufferCalled);
 }
@@ -150,9 +150,9 @@ TEST(CustomNodeOutputAllocator, TensorReturnsCorrectPointer) {
         release};
     void* customNodeLibraryInternalManager = nullptr;
     std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocator>(tensor, library, customNodeLibraryInternalManager);
-    ov::runtime::Allocator alloc(customNodeOutputAllocator);
+    ov::Allocator alloc(customNodeOutputAllocator);
     auto elemType = ovmsPrecisionToIE2Precision(Precision::FP32);
     shape_t shape{10};
-    auto tensorIE2 = std::make_shared<ov::runtime::Tensor>(elemType, shape, alloc);
+    auto tensorIE2 = std::make_shared<ov::Tensor>(elemType, shape, alloc);
     EXPECT_EQ(tensorIE2->data(), tensor.data);
 }

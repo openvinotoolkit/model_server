@@ -501,7 +501,7 @@ uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& mo
     }
     std::string key = METRIC_KEY(OPTIMAL_NUMBER_OF_INFER_REQUESTS);
     try {
-        numberOfParallelInferRequests = compiledModel->get_metric(key).as<unsigned int>();
+        numberOfParallelInferRequests = compiledModel->get_property(key).as<unsigned int>();
     } catch (const ov::Exception& ex) {
         SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
         numberOfParallelInferRequests = 1u;
@@ -571,11 +571,11 @@ Status ModelInstance::loadOVModelUsingCustomLoader() {
         std::string strModel(modelBinary.begin(), modelBinary.end());
 
         if (res == CustomLoaderStatus::MODEL_TYPE_IR) {
-            ov::runtime::Tensor tensorWts(ov::element::u8, ov::Shape{weights.size()});
+            ov::Tensor tensorWts(ov::element::u8, ov::Shape{weights.size()});
             std::memcpy(tensorWts.data(), weights.data(), weights.size());
             model = ieCore.read_model(strModel, tensorWts);
         } else if (res == CustomLoaderStatus::MODEL_TYPE_ONNX) {
-            model = ieCore.read_model(strModel, ov::runtime::Tensor());
+            model = ieCore.read_model(strModel, ov::Tensor());
         } else if (res == CustomLoaderStatus::MODEL_TYPE_BLOB) {
             return StatusCode::INTERNAL_ERROR;
         }
@@ -590,7 +590,7 @@ Status ModelInstance::loadOVModelUsingCustomLoader() {
 }
 
 void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
-    compiledModel = std::make_shared<ov::runtime::CompiledModel>(ieCore.compile_model(model, targetDevice, pluginConfig));
+    compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(model, targetDevice, pluginConfig));
 }
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
@@ -636,13 +636,13 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     for (const auto pair : pluginConfig) {
         const auto key = pair.first;
         const auto value = pair.second;
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, value);
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, value.as<std::string>());
     }
 
     const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
     std::vector<std::string> supportedConfigKeys;
     try {
-        std::vector<std::string> supportedConfigKeys2 = compiledModel->get_metric(supportedConfigKey);
+        std::vector<std::string> supportedConfigKeys2 = compiledModel->get_property(supportedConfigKey);
         supportedConfigKeys = std::move(supportedConfigKeys2);
     } catch (std::exception& e) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}; Error: {}", targetDevice, supportedConfigKey, e.what());
@@ -655,7 +655,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     for (auto& key : supportedConfigKeys) {
         std::string value;
         try {
-            auto paramValue = compiledModel->get_config(key);
+            auto paramValue = compiledModel->get_property(key);
             value = paramValue.as<std::string>();
         } catch (std::exception& e) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel config key: {}; Error: {}", targetDevice, key, e.what());
@@ -748,10 +748,10 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     try {
         if (!this->config.getCacheDir().empty()) {
             if (this->config.isCachingDisabled()) {
-                this->ieCore.set_config({{CONFIG_KEY(CACHE_DIR), ""}});
+                this->ieCore.set_property({{CONFIG_KEY(CACHE_DIR), ""}});
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has disabled caching", this->getName());
             } else {
-                this->ieCore.set_config({{CONFIG_KEY(CACHE_DIR), config.getCacheDir()}});
+                this->ieCore.set_property({{CONFIG_KEY(CACHE_DIR), config.getCacheDir()}});
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has enabled caching", this->getName());
             }
         }
@@ -1024,7 +1024,7 @@ const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* 
         getModelConfig().getShapes());
 }
 
-Status ModelInstance::performInference(ov::runtime::InferRequest& inferRequest) {
+Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
     try {
         inferRequest.start_async();
         inferRequest.wait();
@@ -1049,13 +1049,13 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     timer.start("get infer request");
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
     int executingInferId = executingStreamIdGuard.getId();
-    ov::runtime::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     timer.stop("get infer request");
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
 
     timer.start("deserialize");
-    InputSink<ov::runtime::InferRequest&> inputSink(inferRequest);
+    InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
     timer.stop("deserialize");

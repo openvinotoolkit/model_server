@@ -112,7 +112,7 @@ class SerializeTFTensorProto : public TensorflowGRPCPredict {
 public:
     std::tuple<
         std::shared_ptr<ovms::TensorInfo>,
-        ov::runtime::Tensor>
+        ov::Tensor>
     getInputs(ovms::Precision precision) {
         std::shared_ptr<ovms::TensorInfo> servableOutput =
             std::make_shared<ovms::TensorInfo>(
@@ -120,7 +120,7 @@ public:
                 precision,
                 ovms::Shape{2},
                 Layout{"C"});
-        ov::runtime::Tensor mockTensor = ov::runtime::Tensor(
+        ov::Tensor mockTensor = ov::Tensor(
             ovmsPrecisionToIE2Precision(precision), ov::Shape{2});
         return std::make_tuple(servableOutput, mockTensor);
     }
@@ -132,7 +132,7 @@ TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndTensorPre
     auto layout = Layout{"NCHW"};
     const std::string name = "NOT_IMPORTANT";
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
-    ov::runtime::Tensor tensor(ov::element::i32, tensorInfoShape);
+    ov::Tensor tensor(ov::element::i32, tensorInfoShape);
     TensorProto responseOutput;
     auto status = serializeTensorToTensorProto(responseOutput,
         tensorInfo,
@@ -147,7 +147,7 @@ TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndTensorSha
     auto layout = Layout{"NCHW"};
     const std::string name = "NOT_IMPORTANT";
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
-    ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), tensorShape);
+    ov::Tensor tensor(tensorInfo->getOvPrecision(), tensorShape);
     TensorProto responseOutput;
     auto status = serializeTensorToTensorProto(responseOutput,
         tensorInfo,
@@ -159,7 +159,7 @@ TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
     TensorProto responseOutput;
-    ov::runtime::Tensor mockTensor = std::get<1>(inputs);
+    ov::Tensor mockTensor = std::get<1>(inputs);
     // EXPECT_CALL(*mockTensor, get_byte_size()); // TODO: Mock it properly with templates
     auto status = serializeTensorToTensorProto(responseOutput,
         std::get<0>(inputs),
@@ -187,10 +187,10 @@ TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldSucceedForPreci
 
 TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     PredictResponse response;
-    ov::runtime::Core ieCore;
+    ov::Core ieCore;
     std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
-    ov::runtime::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
-    ov::runtime::InferRequest inferRequest = compiledModel.create_infer_request();
+    ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
+    ov::InferRequest inferRequest = compiledModel.create_infer_request();
     ovms::tensor_map_t tenMap;
     std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
         DUMMY_MODEL_INPUT_NAME,
@@ -198,7 +198,7 @@ TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
         ovms::Shape{1, 10},
         Layout{"NC"});
     tenMap[DUMMY_MODEL_OUTPUT_NAME] = tensorInfo;
-    ov::runtime::Tensor tensor(tensorInfo->getOvPrecision(), ov::Shape{1, 10});
+    ov::Tensor tensor(tensorInfo->getOvPrecision(), ov::Shape{1, 10});
     inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
     auto status = serializePredictResponse(inferRequest, tenMap, &response);
     EXPECT_TRUE(status.ok());

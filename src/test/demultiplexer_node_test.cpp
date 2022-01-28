@@ -38,14 +38,14 @@ public:
         auto emplacePair = nodeSessions.emplace(meta.getSessionKey(), std::move(nodeSession));
         EXPECT_TRUE(emplacePair.second);
     }
-    void setFetchResult(ov::runtime::Tensor& intermediateResultTensor) {
+    void setFetchResult(ov::Tensor& intermediateResultTensor) {
         this->intermediateResultTensor = intermediateResultTensor;
     }
     using Node::fetchResults;
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
         const auto& sessionMetadata = nodeSession.getNodeSessionMetadata();
         const auto sessionKey = sessionMetadata.getSessionKey();
-        ov::runtime::Tensor secondOutput;
+        ov::Tensor secondOutput;
         EXPECT_EQ(tensorClone(secondOutput, intermediateResultTensor), StatusCode::OK);
         TensorMap tensors{{mockerDemutliplexerNodeOutputName, intermediateResultTensor},
             {mockerDemutliplexerNodeOutputName2, secondOutput}};
@@ -55,7 +55,7 @@ public:
     }
 
 private:
-    ov::runtime::Tensor intermediateResultTensor;
+    ov::Tensor intermediateResultTensor;
 };
 
 using ::testing::AnyOf;
@@ -72,7 +72,7 @@ TEST(DemultiplexerTest, CheckDemultipliedTensorsMultipleOutputs) {
     std::vector<float> tensorDataNonDemultiplexed(tensorsData[0].size() * demultiplyCount);
     std::copy(tensorsData[0].begin(), tensorsData[0].end(), tensorDataNonDemultiplexed.begin());
     std::copy(tensorsData[1].begin(), tensorsData[1].end(), tensorDataNonDemultiplexed.begin() + tensorsData[0].size());
-    ov::runtime::Tensor intermediateResultTensor = createSharedTensor(precision, shape, tensorDataNonDemultiplexed.data());
+    ov::Tensor intermediateResultTensor = createSharedTensor(precision, shape, tensorDataNonDemultiplexed.data());
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;
@@ -108,7 +108,7 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenWrongOutputDimensions) {
     // imitate (1, 2, 3) but shoudl be (1,3,x1, ..., xN)
     const std::vector<size_t> shape{1, demultiplyCount - 1, 3};
     const auto precision{ov::element::Type_t::f32};
-    ov::runtime::Tensor intermediateResultTensor = createSharedTensor(precision, shape, tensorData.data());
+    ov::Tensor intermediateResultTensor = createSharedTensor(precision, shape, tensorData.data());
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;
@@ -128,7 +128,7 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenNotEnoughDimensionsInOutp
     // imitate (1, 3) but should be at least (1,3,x1, ..., xN) N >= 1
     const std::vector<size_t> shape{1, demultiplyCount};
     const auto precision{ov::element::Type_t::f32};
-    ov::runtime::Tensor intermediateResultTensor = createSharedTensor(precision, shape, tensorData.data());
+    ov::Tensor intermediateResultTensor = createSharedTensor(precision, shape, tensorData.data());
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;

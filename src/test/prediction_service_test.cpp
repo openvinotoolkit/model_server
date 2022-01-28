@@ -38,7 +38,7 @@ using testing::Each;
 using testing::Eq;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnarrowing"
-void serializeAndCheck(int outputSize, ov::runtime::InferRequest& inferRequest, const std::string& outputName, const ovms::tensor_map_t& outputsInfo) {
+void serializeAndCheck(int outputSize, ov::InferRequest& inferRequest, const std::string& outputName, const ovms::tensor_map_t& outputsInfo) {
     std::vector<float> output(10);
     tensorflow::serving::PredictResponse response;
     auto status = serializePredictResponse(inferRequest, outputsInfo, &response);
@@ -208,7 +208,7 @@ public:
 
 class MockModelInstance : public ovms::ModelInstance {
 public:
-    MockModelInstance(ov::runtime::Core& ieCore) :
+    MockModelInstance(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", 42, ieCore) {}
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
         return validate(request);
@@ -251,8 +251,8 @@ void performPrediction(const std::string modelName,
     ASSERT_EQ(modelInstance->reloadModelIfRequired(validationStatus, &request, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 
     ovms::ExecutingStreamIdGuard executingStreamIdGuard(modelInstance->getInferRequestsQueue());
-    ov::runtime::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
-    ovms::InputSink<ov::runtime::InferRequest&> inputSink(inferRequest);
+    ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    ovms::InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
 
     auto status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(request, modelInstance->getInputsInfo(), inputSink, isPipeline);

@@ -32,7 +32,7 @@ using ::testing::ReturnRef;
 
 class MockModelInstance : public ovms::ModelInstance {
 public:
-    MockModelInstance(ov::runtime::Core& ieCore) :
+    MockModelInstance(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", 42, ieCore) {}
     MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
     MOCK_METHOD(ovms::Dimension, getBatchSize, (), (const, override));
@@ -44,14 +44,14 @@ public:
 
 class PredictValidation : public ::testing::Test {
 protected:
-    std::unique_ptr<ov::runtime::Core> ieCore;
+    std::unique_ptr<ov::Core> ieCore;
     std::unique_ptr<NiceMock<MockModelInstance>> instance;
     tensorflow::serving::PredictRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t servableInputs;
 
     void SetUp() override {
-        ieCore = std::make_unique<ov::runtime::Core>();
+        ieCore = std::make_unique<ov::Core>();
         instance = std::make_unique<NiceMock<MockModelInstance>>(*ieCore);
 
         servableInputs = ovms::tensor_map_t({

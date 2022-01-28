@@ -98,7 +98,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
     // ov::Tensor destructor is responsible for cleaning up resources.
     Status status = StatusCode::OK;
     for (int i = 0; i < outputTensorsCount; i++) {
-        ov::runtime::Tensor resultTensor;
+        ov::Tensor resultTensor;
         auto result = this->createTensor(&outputTensors[i], resultTensor, library, customNodeLibraryInternalManager);
         if (outputTensors[i].name == nullptr) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed tensor conversion - missing output name", getName(), getSessionKey());
@@ -120,7 +120,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
     return status;
 }
 
-Status CustomNodeSession::fetchResult(const std::string& name, ov::runtime::Tensor& resultTensor) {
+Status CustomNodeSession::fetchResult(const std::string& name, ov::Tensor& resultTensor) {
     auto it = resultTensors.find(name);
     if (it == resultTensors.end()) {
         return StatusCode::NODE_LIBRARY_MISSING_OUTPUT;
@@ -162,7 +162,7 @@ public:
     }
 };
 
-Status CustomNodeSession::createTensor(const struct CustomNodeTensor* tensor, ov::runtime::Tensor& resultTensor, const NodeLibrary& library, void* customNodeLibraryInternalManager) {
+Status CustomNodeSession::createTensor(const struct CustomNodeTensor* tensor, ov::Tensor& resultTensor, const NodeLibrary& library, void* customNodeLibraryInternalManager) {
     TensorResourcesGuard tensorResourcesGuard(tensor, library, customNodeLibraryInternalManager);
 
     auto precision = ovmsPrecisionToIE2Precision(toInferenceEnginePrecision(tensor->precision));
@@ -206,7 +206,7 @@ Status CustomNodeSession::createTensor(const struct CustomNodeTensor* tensor, ov
         return StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE;
     }
     auto allocatorImpl = std::make_shared<CustomNodeOutputAllocator>(*tensor, library, customNodeLibraryInternalManager);
-    auto allocator = ov::runtime::Allocator(allocatorImpl);
+    auto allocator = ov::Allocator(allocatorImpl);
     try {
         switch (tensor->precision) {
         case CustomNodeTensorPrecision::FP32:
@@ -216,7 +216,7 @@ Status CustomNodeSession::createTensor(const struct CustomNodeTensor* tensor, ov
         case CustomNodeTensorPrecision::FP16:
         case CustomNodeTensorPrecision::I16:
         case CustomNodeTensorPrecision::U16:
-            resultTensor = ov::runtime::Tensor(ov::element::Type(ovmsPrecisionToIE2Precision(toInferenceEnginePrecision(tensor->precision))), ov::Shape(shape), allocator);
+            resultTensor = ov::Tensor(ov::element::Type(ovmsPrecisionToIE2Precision(toInferenceEnginePrecision(tensor->precision))), ov::Shape(shape), allocator);
             break;
         case CustomNodeTensorPrecision::UNSPECIFIED:
             return StatusCode::INTERNAL_ERROR;

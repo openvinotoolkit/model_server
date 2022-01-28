@@ -35,7 +35,7 @@ bool CustomReluOp::visit_attributes(ov::AttributeVisitor& visitor) {
 //! [op:visit_attributes]
 
 //! [op:evaluate]
-bool CustomReluOp::evaluate(ov::runtime::TensorVector& outputs, const ov::runtime::TensorVector& inputs) const {
+bool CustomReluOp::evaluate(ov::TensorVector& outputs, const ov::TensorVector& inputs) const {
     auto in = inputs[0];
     auto out = outputs[0];
     static bool wasCalled = false;

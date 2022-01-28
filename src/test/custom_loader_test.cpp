@@ -322,9 +322,9 @@ public:
         std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance = nullptr,
         std::unique_ptr<std::future<void>> waitBeforePerformInference = nullptr);
 
-    void deserialize(const std::vector<float>& input, ov::runtime::InferRequest& inferRequest, std::shared_ptr<ovms::ModelInstance> modelInstance) {
+    void deserialize(const std::vector<float>& input, ov::InferRequest& inferRequest, std::shared_ptr<ovms::ModelInstance> modelInstance) {
         try {
-            ov::runtime::Tensor tensor(
+            ov::Tensor tensor(
                 modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getOvPrecision(),
                 modelInstance->getInputsInfo().at(DUMMY_MODEL_INPUT_NAME)->getShape().createPartialShape().get_shape(),
                 const_cast<float*>(reinterpret_cast<const float*>(input.data())));
@@ -334,7 +334,7 @@ public:
         }
     }
 
-    void serializeAndCheck(int outputSize, ov::runtime::InferRequest& inferRequest) {
+    void serializeAndCheck(int outputSize, ov::InferRequest& inferRequest) {
         std::vector<float> output(outputSize);
         ASSERT_THAT(output, Each(Eq(0.)));
         auto tensorOutput = inferRequest.get_tensor(DUMMY_MODEL_OUTPUT_NAME);
@@ -369,7 +369,7 @@ public:
 
 class MockModelInstance : public ovms::ModelInstance {
 public:
-    MockModelInstance(ov::runtime::Core& ieCore) :
+    MockModelInstance(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", 42, ieCore) {}
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
         return validate(request);
@@ -410,7 +410,7 @@ void TestCustomLoader::performPredict(const std::string modelName,
     ASSERT_EQ(modelInstance->reloadModelIfRequired(validationStatus, &request, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 
     ovms::ExecutingStreamIdGuard executingStreamIdGuard(modelInstance->getInferRequestsQueue());
-    ov::runtime::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     std::vector<float> input(inputSize);
     std::generate(input.begin(), input.end(), []() { return 1.; });
     ASSERT_THAT(input, Each(Eq(1.)));

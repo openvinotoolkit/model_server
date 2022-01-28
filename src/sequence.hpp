@@ -30,8 +30,8 @@
 
 namespace ovms {
 
-using sequence_memory_state_t = std::unordered_map<std::string, ov::runtime::Tensor>;
-using model_memory_state_t = std::vector<ov::runtime::VariableState>;
+using sequence_memory_state_t = std::unordered_map<std::string, ov::Tensor>;
+using model_memory_state_t = std::vector<ov::VariableState>;
 
 class Sequence {
 private:
