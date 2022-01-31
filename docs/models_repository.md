@@ -7,7 +7,7 @@ This guide will help you to create a model repository for serving with OpenVINO&
 ## Create a Repository
 The AI models to be served must be in [OpenVINO IR](https://docs.openvino.ai/latest/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets) (where the model is represented in .bin and .xml files) or in [ONNX](https://onnx.ai/) format. 
 
-Models trained in deep learning frameworks like TensorFlow, Caffe and MXNet can be converted to OpenVINO IR format using [Model Optimizer](https://docs.openvino.ai/latest/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html). Models trained in PyTorch can also be exported to ONNX and loaded in Model Server. 
+Models trained in deep learning frameworks like TensorFlow, Caffe, and MXNet can be converted to OpenVINO IR format using [Model Optimizer](https://docs.openvino.ai/latest/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html). Models trained in PyTorch can also be exported to ONNX and loaded in Model Server. 
 
 ONNX model format can be also converted from other frameworks using [converters](https://onnx.ai/supported-tools.html). 
 

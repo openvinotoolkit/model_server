@@ -1,7 +1,7 @@
 # RESTful API {#ovms_docs_rest_api}
 
 ## Introduction
-In addition with [gRPC APIs](./model_server_grpc_api.md) OpenVINO&trade; model server also supports RESTful APIs which follows the documentation from [tensorflow serving REST API](https://www.tensorflow.org/tfx/serving/api_rest). Both row and column format of the request are implemented in these APIs. REST API is recommended when the primary goal is in reducing the number of client side python dependencies and simpler application code.
+In addition with [gRPC APIs](./model_server_grpc_api.md) OpenVINO&trade; model server also supports RESTful APIs which follows the documentation from [tensorflow serving REST API](https://www.tensorflow.org/tfx/serving/api_rest). Both row and column formats of the request are implemented in these APIs. REST API is recommended when the primary goal is in reducing the number of client-side python dependencies and simpler application code.
 
 > **Note** : Only numerical data type is supported.
 
@@ -13,7 +13,7 @@ This document covers following API:
 * <a href="#config-status">Config Status API </a>
 
 
-> **Note** : The implementations for Predict, GetModelMetadata and GetModelStatus function calls are currently available. These are the most generic function calls and should address most of the usage scenarios.
+> **NOTE** : The implementations for Predict, GetModelMetadata and GetModelStatus function calls are currently available. These are the most generic function calls and should address most of the usage scenarios.
 
 ## Model Status API <a name="model-status"></a>
 **Description**
@@ -171,7 +171,7 @@ POST http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VE
 }
 ``` 
 
-> Note: Read [How to specify input tensors in row format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_row_format) and [How to specify input tensors in column format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_column_format) for more details.
+Read [How to specify input tensors in row format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_row_format) and [How to specify input tensors in column format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_column_format) for more details.
 
 **Response**
 
@@ -212,8 +212,8 @@ Read more about [Predict API usage](./../example_client/README.md#predict-api-1)
 ## Config Reload API <a name="config-reload"></a>
 **Description**
 
-Sends requests via RESTful API to trigger config reloading and gets models and [DAGs](./dag_scheduler.md) statuses as a response.This endpoint can be used with disabled automatic config reload to ensure changes in configuration are applied in a specific time and also to get confirmation about reload operation status. Typically this option is to be used when OVMS is started with a parameter `--file_system_poll_wait_seconds 0`.
-Reload operation does not pass new configuration to OVMS server. The configuration file changes needs to be applied by the OVMS administrator. The REST API call just initiate applying the configuration file which is already present.
+Sends requests via RESTful API to trigger config reloading and gets models and [DAGs](./dag_scheduler.md) statuses as a response. This endpoint can be used with disabled automatic config reload to ensure configuration changes are applied in a specific time and also to get confirmation about reload operation status. Typically this option is to be used when OVMS is started with a parameter `--file_system_poll_wait_seconds 0`.
+Reload operation does not pass new configuration to OVMS server. The configuration file changes need to be applied by the OVMS administrator. The REST API call just initiate applying the configuration file which is already present.
 
 **URL** 
 ```
@@ -224,13 +224,13 @@ POST http://${REST_URL}:${REST_PORT}/v1/config/reload
 
 Flow after receiving request:
 1) If config file was changed - reload config.
-2) If any model version directory was changed or new version was added - reload this model.
-3) If any model that is part of a DAG was changed or new version was added - reload this pipeline.
-4) In case there are no errors in the reload operation, the response includes the status of all models and DAGs, otherwise error message is returned.
+2) If any model version directory was changed or a new version was added - reload this model.
+3) If any model that is part of a DAG was changed or a new version was added - reload this pipeline.
+4) In case there are no errors in the reload operation, the response includes the status of all models and DAGs, otherwise the error message is returned.
 
 **Request**
 
-To trigger reload, HTTP POST request with empty body should be sent on given URL. Example `curl` command:
+To trigger reload, an HTTP POST request with the empty body should be sent on the given URL. Example `curl` command:
 
 ```Bash
 curl --request POST http://${REST_URL}:${REST_PORT}/v1/config/reload
@@ -238,7 +238,7 @@ curl --request POST http://${REST_URL}:${REST_PORT}/v1/config/reload
 
 **Response**
 
-In case of config reload success, response contains JSON with aggregation of getModelStatus responses for all models and DAGs after reload is finished, along with operation status: 
+In case of config reload success, the response contains JSON with aggregation of getModelStatus responses for all models and DAGs after reload is finished, along with operation status: 
 ```JSON
 { 
 "<model name>": 

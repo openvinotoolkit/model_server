@@ -216,7 +216,7 @@ For complete usage examples see [ovmsclient samples](../client/python/samples/RE
     <div id="switcher-cpp" class="switcher-anchor">C++</div>
 @endsphinxdirective
 
-Creating a client application in C++ follows the same principles as Python, but using C++ adds some complexity. There's no package or library available with convenient functions for interacting with OpenVINO Model Server.
+Creating a client application in C++ follows the same principles as Python, but using C++ adds some complexity. There is no package or library available with convenient functions for interacting with OpenVINO Model Server.
 
 To successfully set up communication with the model server you need to implement the logic to communicate with endpoints specified in the [API](api_reference_guide.md). For gRPC, download and compile protos, then link and use them in your application according to the [gRPC API specification](model_server_grpc_api.md). For REST, prepare your data and pack it into the appropriate JSON structure according to the [REST API specification](model_server_rest_api.md).
 
@@ -230,8 +230,8 @@ See our [C++ demo](../example_client/cpp/README.md) to learn how to build a samp
     <div id="switcher-go" class="switcher-anchor">Go</div>
 @endsphinxdirective
 
-Creating a client application in [Go ](https://go.dev/) follows the same principals as Python, but Go adds complexity. There's no Go package or library available with convenient functions for interacting with OpenVINO Model Server..
+Creating a client application in [Go ](https://go.dev/) follows the same principals as Python, but Go adds complexity. There's no Go package or library available with convenient functions for interacting with OpenVINO Model Server.
 
-To successfully set up communication with the model server you need to implement the logic to communicate with endpoints specified in the [API](api_reference_guide.md). For gRPC, download and compile protos, then link and use them in your application according to the [gRPC API specification](model_server_grpc_api.md). For REST, prepare your data and pack it into the appropriate JSON structure according to the [REST API specification](model_server_rest_api.md).
+To successfully set up communication with the model server, you need to implement the logic to communicate with endpoints specified in the [API](api_reference_guide.md). For gRPC, download and compile protos, then link and use them in your application according to the [gRPC API specification](model_server_grpc_api.md). For REST, prepare your data and pack it into the appropriate JSON structure according to the [REST API specification](model_server_rest_api.md).
 
 See our [Go demo](../example_client/go/README.md) to learn how to build a sample Go-based client application in a Docker container and get predictions via the gRPC API.

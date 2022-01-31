@@ -12,11 +12,11 @@ Configuration reload triggers the following operations:
 - changes to the configured model storage (e.g. new model version is added) are applied. 
 - changes to the configuration of deployed models and [DAGs](./dag_scheduler.md) are applied. 
 - all model versions will be reloaded when there is a change to the model configuration.
-- when a deployed model or [DAG](./dag_scheduler.md) is deleted from `config.json`, it will be unloaded completely from the server after already running inference operations have completed.
+- when a deployed model or [DAG](./dag_scheduler.md) is deleted from `config.json`, it will be unloaded completely from the server after already running inference operations have been completed.
 - [DAGs](./dag_scheduler.md) that depend on changed or removed models are reloaded.
 - changes to [custom loaders](./custom_model_loader.md) and custom node library configs are applied.
 
-Model Server behavior if there are errors during configuration reloading:
+Model Server behavior in case of errors during configuration reloading:
 
 - if a new `config.json` is not compliant with JSON schema, no changes are applied to the served models.
 - if the new model, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) has an invalid configuration, it will be ignored until the next configuration reload. Configurations may be invalid due to incorrect paths (leading to non-existent directories), forbidden values in the config, invalid [DAG](./dag_scheduler.md) structure (e.g. cycle found in a graph), etc.

@@ -1,18 +1,18 @@
 # Dynamic Batch Size with Automatic Model Reloading{#ovms_docs_dynamic_bs_auto_reload}
 
 ## Introduction
-This guide shows how to configure a model to accept input data with different batch sizes. In this example, it is done by reloading the model with new batch size each time a request is received with a batch size different than what is currently set. 
+This guide shows how to configure a model to accept input data with different batch sizes. In this example, it is done by reloading the model with a new batch size each time a request is received with a batch size different than what is currently set. 
 
-Enabling dynamic batch size via model reload is as simple as setting the `batch_size` parameter to `auto`. To configure dynamic batch size and use of it, let's take advantage of:
+Enabling dynamic batch size via model reload is as simple as setting the `batch_size` parameter to `auto`. To configure and use the dynamic batch size, take advantage of:
 
 - An example client in Python [grpc_serving_client.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/grpc_serving_client.py) that can be used to request inference with the desired batch size.
 
 - A sample [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/resnet50-binary-0001/README.md) model.
 
-- When using the resnet model with `grpc_serving_client.py`, the script processes the output from the server and displays the inference results using the previously prepared file containing labels. Inside this file each image has assigned number, which indicates the correct classification result.  
+ When using the resnet model with `grpc_serving_client.py`, the script processes the output from the server and displays the inference results using the previously prepared file containing labels. Inside this file, each image has an assigned number, which indicates the correct classification result.  
 
 ## Steps
-Clone OpenVINO&trade; Model Server github repository and enter `model_server` directory.
+Clone OpenVINO&trade; Model Server GitHub repository and enter `model_server` directory.
 ```
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
@@ -45,7 +45,7 @@ pip install -r client_requirements.txt
 
 python grpc_serving_client.py --grpc_port 9000 --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --batchsize 1 > b1.txt && python grpc_serving_client.py --grpc_port 9000 --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --batchsize 8 > b8.txt;
 ```
-*Note:* Results of running the client will be available in .txt files in current directory.
+*NOTE*: Results of running the client will be available in .txt files in the current directory.
 
 #### Script Output
 Output with `batchsize 1` stored in `b1.txt`:

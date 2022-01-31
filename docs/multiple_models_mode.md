@@ -2,7 +2,7 @@
 
 ### Starting Docker Container with a Configuration File for **Multiple** Models <a name="configfile"></a>
 
-To use a container that has several models, you must use a model server configuration file that defines each model. The configuration file is in JSON format.
+To use a container that has several models, you must use a Model Server configuration file that defines each model. The configuration file is in JSON format.
 In the configuration file, provide an array, `model_config_list`, that includes a collection of config objects for each served model. For each config object include, at a minimum, values for the model name and the base_path attributes.
 
 Example configuration file:
@@ -56,7 +56,7 @@ Example configuration file:
 }
 ```
 
-When the config file is present, the Docker container can be started similar to a single model. Keep in mind that models with cloud storage paths require setting specific environmental variables. Refer to the cloud storage requirements below for more details.
+When the config file is present, the Docker container can be started similarly to a single model. Note that models with cloud storage paths require setting specific environmental variables. Refer to the cloud storage requirements below for more details.
 
 ```bash
 

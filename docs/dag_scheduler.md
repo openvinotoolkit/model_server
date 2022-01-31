@@ -15,7 +15,7 @@
 ## Introduction
 The Directed Acyclic Graph (DAG) Scheduler makes it possible to create a pipeline of models for execution in a single client request. 
 Pipeline is a Directed Acyclic Graph with different nodes which define how to process each step of predict request. 
-By using such pipeline, there is no need to return intermediate results of every model to the client. This allows avoiding the network overhead by minimizing the number of requests sent to model server. 
+By using a pipeline, there is no need to return intermediate results of every model to the client. This allows avoiding the network overhead by minimizing the number of requests sent to the Model Server. 
 Each model output can be mapped to another model input. Since intermediate results are kept in server's RAM these can be reused by subsequent inferences which reduces overall latency.
 
 This guide gives information about following:
@@ -179,7 +179,7 @@ section. It includes:
 |Option|Type|Description|Required|
 |:---|:---|:---|:---|
 |`"name"`|string|The name of the custom node library - it will be used as a reference in the custom node pipeline definition |Yes|
-|`"base_path"`|string|Path the the dynamic library with the custom node implementation|Yes|
+|`"base_path"`|string|Path the dynamic library with the custom node implementation|Yes|
 
 Custom node definition in a pipeline configuration is similar to a model node. Node inputs and outputs are configurable in 
 the same way. Custom node functions are just like a standard node in that respect. The differences are in the extra parameters:

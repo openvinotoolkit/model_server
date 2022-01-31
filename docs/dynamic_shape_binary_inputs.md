@@ -3,7 +3,7 @@
 ## Introduction
 This guide shows how to use the binary inputs feature to send data in binary format. This means you can load just a JPEG or PNG image and run inference on it without any data preprocessing.
 
-To run inference on binary encoded data, make sure your model accepts NHWC layout. When preparing the request, we need to let Model Server know that the data is in binary format.
+To run inference on binary encoded data, make sure your model accepts the NHWC layout. When preparing the request, we need to let the Model Server know that the data is in binary format.
 
 Learn more about the [binary inputs](binary_input.md) feature.
 

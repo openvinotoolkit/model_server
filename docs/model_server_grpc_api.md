@@ -10,7 +10,7 @@ This document covers following API:
 * <a href="#predict">Predict API </a>
 
 
-> **Note:** The implementations for *Predict*, *GetModelMetadata* and *GetModelStatus* function calls are currently available. 
+> **NOTE**: The implementations for *Predict*, *GetModelMetadata* and *GetModelStatus* function calls are currently available. 
 These are the most generic function calls and should address most of the usage scenarios.
 
 
@@ -27,7 +27,7 @@ Gets information about the status of served models including Model Version
 
 ## Model Metadata API <a name="model-metadata"></a>
 
-Gets information about the served models. A function call GetModelMetadata accepts model spec information as input and returns Signature Definition content in the format similar to TensorFlow Serving.
+Gets information about the served models. A function called GetModelMetadata accepts model spec information as input and returns Signature Definition content in a format similar to TensorFlow Serving.
  
 [Get Model Metadata proto](https://github.com/tensorflow/serving/blob/master/tensorflow_serving/apis/get_model_metadata.proto) has three message definitions: *SignatureDefMap*, *GetModelMetadataRequest*, *GetModelMetadataResponse*. 
 

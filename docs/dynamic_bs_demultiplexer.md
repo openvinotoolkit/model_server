@@ -1,22 +1,22 @@
 # Dynamic batch size with OpenVINO&trade; Model Server Demultiplexer {#ovms_docs_dynamic_bs_demultiplexer}
 
 ## Introduction
-This document guides how to configure DAG Scheduler pipeline to be able to send predict request with arbitrary batch size without model reloading.
+This document guides how to configure DAG Scheduler pipeline to be able to send predict requests with arbitrary batch size without model reloading.
 
 With OpenVINO&trade; Model Server Demultiplexing infer request sent from client application can have various batch sizes and changing batch size does not require model reload.
 
 More information about this feature can be found in [dynamic batch size in demultiplexing](./demultiplexing.md)
 
-> Note: When using `demultiply_count` parameters, only one demultiplexer can exist in pipeline.
+> **NOTE**: When using `demultiply_count` parameters, only one demultiplexer can exist in pipeline.
 
-- Example client in python grpc_serving_client.py can be used to request the pipeline. Use `--dag-batch-size-auto` flag to add additional dimension to the input shape which is required for demultiplexing feature.
+- Example client in python grpc_serving_client.py can be used to request the pipeline. Use `--dag-batch-size-auto` flag to add an additional dimension to the input shape which is required for demultiplexing feature.
 
 - The example uses model [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/resnet50-binary-0001/README.md).
 
 - While using resnet model with grpc_serving_client.py the script processes the output from the server and displays the inference results using previously prepared file with labels. Inside this file each image has assigned number, which indicates the correct recognition answer.  
 
 ## Steps
-Clone OpenVINO&trade; Model Server github repository and enter `model_server` directory.
+Clone OpenVINO&trade; Model Server GitHub repository and enter `model_server` directory.
 ```
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
@@ -35,12 +35,12 @@ docker pull openvino/model_server:latest
 ```
 
 #### OVMS configuration file
-Go to `models` directory:
+Go to the `models` directory:
 ```
 cd models
 ```
 
-Create new file named `config.json` there:
+Create a new file named `config.json` there:
 ```json
 {
    "model_config_list": [

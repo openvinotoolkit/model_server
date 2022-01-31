@@ -1,6 +1,6 @@
 # Model Version Policy {#ovms_docs_model_version_policy}
 
-The model version policy determines which versions of a model or models will be served by OpenVINO Model Server. 
+The model version policy determines which versions of a model or models will be served by the OpenVINO Model Server. 
 This parameter enables controlling memory consumption of the server and deciding which versions will be used regardless of what exists
 in the model repository when the server is started. The `model_version_policy` parameter is optional. 
 By default, the server serves only the latest version of a model. The accepted format for parameters using the CLI and in the configuration file is JSON.
