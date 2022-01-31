@@ -21,13 +21,46 @@ from argparse import ArgumentParser, SUPPRESS
 
 import numpy as np
 
-from tokens_bert import text_to_tokens, load_vocab_file
+from tokens_bert import text_to_tokens, load_vocab_file, Token
 from html_reader import get_paragraphs
 import grpc
 import numpy as np
 from tensorflow import make_tensor_proto, make_ndarray
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
+
+class ConcatenatedParagraph():
+    def __init__(self, text="", tokens=[]):
+        self.text = text
+        self.tokens = tokens
+        self.tokens_length = len(tokens)
+
+    def append_paragraph(self, text, tokens):
+        self.append_tokens(tokens)
+        self.append_text(text)
+
+    def append_text(self, text):
+        self.text += text
+
+    def append_tokens(self, tokens):
+        self.tokens += self.append_offset(tokens, len(self.text), len(self.text))
+        self.tokens_length = len(self.tokens)
+
+    def append_offset(self, tokens, s_offset, e_offset):
+        return list(map(lambda token: Token(token.id, token.start + s_offset, token.end + e_offset), tokens))
+    
+    def get_tokens_id(self):
+        return [token.id for token in self.tokens]
+
+    def get_tokens_se(self):
+        return [(token.start, token.end) for token in self.tokens]
+
+    def get_start(self, token_index):
+        return self.tokens[token_index].start
+
+    def get_end(self, token_index):
+        return self.tokens[token_index].end
+
 
 def build_argparser():
     parser = ArgumentParser(add_help=False)
@@ -68,12 +101,6 @@ def build_argparser():
                     dest='model_name'),
     args.add_argument('--loop', action='store_true', help='Set true to loop the questions')
     return parser
-
-def append_offset(tokens_se, s_value, e_value):
-    tokens_with_offset = []
-    for i in range(len(tokens_se)):
-        tokens_with_offset.append((tokens_se[i][0] + s_value, tokens_se[i][1] + e_value))
-    return tokens_with_offset
 
 def main():
 
@@ -116,49 +143,41 @@ def main():
         if not question:
             break
 
-        q_tokens_id, _ = text_to_tokens(question.lower(), vocab)
-        q_tokens_length = len(q_tokens_id)
+        q_tokens = text_to_tokens(question.lower(), vocab)
+        q_tokens_length = len(q_tokens)
 
         t0 = time.perf_counter()
         t_count = 0
 
-        # array of concatenated paragraphs(size >= args.min_request_token_num)
+        # array of ConcatenatedParagraphs(size >= args.min_request_token_num)
         concatenated_paragraphs = []
-        # iterator
-        cur_paragraph = 0
-        # array of encoded tokens from concatenated paragraphs
-        paragraph_tokens_id = []
-        # array of (start, end) tuples for tokens
-        paragraph_tokens_se = []
-
+        # number of current concatenated paragraph
+        cp_number = 0
         # array of answers from each concatenated paragraph
         answers = []
 
         # iterate through paragraphs
         for i in range(len(paragraphs)):
-            p_tokens_id, p_tokens_se = text_to_tokens(paragraphs[i].lower(), vocab)
-            if len(p_tokens_id) == 0: continue
+            p_tokens = text_to_tokens(paragraphs[i].lower(), vocab)
+            if len(p_tokens) == 0: continue
             # concatenate paragraphs
-            if len(concatenated_paragraphs) == cur_paragraph:
-                concatenated_paragraphs.append(paragraphs[i])
-                paragraph_tokens_id.append(p_tokens_id)
-                paragraph_tokens_se.append(p_tokens_se)
+            if len(concatenated_paragraphs) == cp_number:
+                concatenated_paragraphs.append(ConcatenatedParagraph(paragraphs[i], p_tokens))
             else:
-                paragraph_tokens_id[cur_paragraph] += p_tokens_id
-                paragraph_tokens_se[cur_paragraph] += append_offset(p_tokens_se, len(concatenated_paragraphs[cur_paragraph]), len(concatenated_paragraphs[cur_paragraph]))
-                concatenated_paragraphs[cur_paragraph] += paragraphs[i]
+                concatenated_paragraphs[cp_number].append_paragraph(paragraphs[i], p_tokens)
             
-            p_tokens_length = len(paragraph_tokens_id[cur_paragraph])
-            if p_tokens_length < args.min_request_token_num:
+            cur_cp = concatenated_paragraphs[cp_number]
+
+            if cur_cp.tokens_length < args.min_request_token_num:
                 if i != len(paragraphs) - 1:
                     continue
 
             # form the request
             tok_cls = vocab['[CLS]']
             tok_sep = vocab['[SEP]']
-            input_ids = [tok_cls] + q_tokens_id + [tok_sep] + paragraph_tokens_id[cur_paragraph] + [tok_sep]
+            input_ids = [tok_cls] + [token.id for token in q_tokens] + [tok_sep] + cur_cp.get_tokens_id() + [tok_sep]
             input_ids_length = len(input_ids)
-            token_type_ids = [0] + [0] * q_tokens_length + [0] + [1] * p_tokens_length + [0]
+            token_type_ids = [0] + [0] * q_tokens_length + [0] + [1] * cur_cp.tokens_length + [0]
             attention_mask = [1] * input_ids_length
 
             # create numpy inputs for IE
@@ -190,7 +209,7 @@ def main():
 
             t_count += 1
             log.info("Sequence of length {} is processed with {:0.2f} requests/sec ({:0.2} sec per request)".format(
-                p_tokens_length,
+                cur_cp.tokens_length,
                 1 / (t_end - t_start),
                 t_end - t_start
             ))
@@ -213,8 +232,8 @@ def main():
             c_s_idx = q_tokens_length + 2  # index of first context token in tensor
             c_e_idx = input_ids_length - 1  # index of last+1 context token in tensor
             score_mat = np.matmul(
-                score_s[c_s_idx:c_e_idx].reshape((p_tokens_length, 1)),
-                score_e[c_s_idx:c_e_idx].reshape((1, p_tokens_length))
+                score_s[c_s_idx:c_e_idx].reshape((cur_cp.tokens_length, 1)),
+                score_e[c_s_idx:c_e_idx].reshape((1, cur_cp.tokens_length))
             )
             # reset candidates with end before start
             score_mat = np.triu(score_mat)
@@ -224,11 +243,11 @@ def main():
             max_s, max_e = divmod(score_mat.flatten().argmax(), score_mat.shape[1])
             max_score = score_mat[max_s, max_e] * (1 - score_na)
 
-            max_s = paragraph_tokens_se[cur_paragraph][max_s][0]
-            max_e = paragraph_tokens_se[cur_paragraph][max_e][1]
+            max_s = cur_cp.get_start(max_s)
+            max_e = cur_cp.get_end(max_e)
 
-            answers.append((max_score, max_s, max_e, cur_paragraph))
-            cur_paragraph += 1
+            answers.append((max_score, max_s, max_e, cp_number))
+            cp_number += 1
 
         t1 = time.perf_counter()
         log.info("The performance below is reported only for reference purposes, "
@@ -241,9 +260,10 @@ def main():
 
         # print top 3 results
         answers = sorted(answers, key=lambda x: -x[0])
-        for score, s, e, paragraph_number in answers[:3]:
-            log.info("---answer: {:0.2f} {}".format(score, concatenated_paragraphs[paragraph_number][s:e]))
-            log.info("   " + concatenated_paragraphs[paragraph_number][:s] + COLOR_RED + concatenated_paragraphs[paragraph_number][s:e] + COLOR_RESET + concatenated_paragraphs[paragraph_number][e:])
+        for score, s, e, par_number in answers[:3]:
+            paragraph = concatenated_paragraphs[par_number]
+            log.info("---answer: {:0.2f} {}".format(score, paragraph.text[s:e]))
+            log.info("   " + paragraph.text[:s] + COLOR_RED + paragraph.text[s:e] + COLOR_RESET + paragraph.text[e:])
         if args.loop == False:
             loop = False
 
