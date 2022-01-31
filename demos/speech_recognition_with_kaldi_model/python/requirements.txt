@@ -1,2 +1,2 @@
--r ../client_requirements.txt
+-r ../../common/python/requirements.txt
 kaldi-python-io==1.2.1

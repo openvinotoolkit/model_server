@@ -3,7 +3,7 @@
 ## Overview
 
 The script [face_detection.py](face_detection.py) run face detection inference requests for all the images
-saved in `image_input_dir` directory. 
+saved in `input_images_dir` directory. 
 
 The script can adjust the input image size and change the batch size in the request. It demonstrates how to use
 the functionality of dynamic shape in OpenVINO Model Server and how to process the output from the server.
@@ -56,7 +56,7 @@ Start the OVMS service locally:
 mkdir -p model/1
 wget -P model/1 https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin
 wget -P model/1 https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml
-docker run -d -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name face-detection --port 9000  --shape auto --log_level DEBUG
+docker run -d -u $(id -u):$(id -g) -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name face-detection --port 9000  --shape auto --log_level DEBUG
 ```
 
 Run the client:
@@ -66,7 +66,7 @@ mkdir results
 
 python face_detection.py --batch_size 1 --width 300 --height 300
 
-python face_detection.py --batch_size 4 --width 600 --height 400 --input_images_dir images/people --output_dir results
+python face_detection.py --batch_size 4 --width 600 --height 400 --input_images_dir ../../common/static/images/people --output_dir results
 ```
 
 The scipt will visualize the inference results on the images saved in the directory `output_dir`. Saved images have the

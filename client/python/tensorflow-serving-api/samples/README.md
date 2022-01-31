@@ -150,7 +150,7 @@ usage: grpc_predict_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
 - Usage example
 
 ```bash
-python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path imgs.npy --input_name data --output_name prob --transpose_input False --labels_numpy_path lbs.npy
+python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --input_name data --output_name prob --transpose_input False --labels_numpy_path ../../lbs.npy
 Start processing:
 	Model name: resnet
 	Iterations: 10
@@ -214,24 +214,17 @@ usage: grpc_predict_binary_resnet.py [-h] [--images_list IMAGES_LIST]
 
 - Arguments
 
-```bash
-  -h, --help            show this help message and exit
-  --images_list IMAGES_LIST
-                        path to a file with a list of labeled images
-  --grpc_address GRPC_ADDRESS
-                        Specify url to grpc service. default:localhost
-  --grpc_port GRPC_PORT
-                        Specify port to grpc service. default: 9000
-  --input_name INPUT_NAME
-                        Specify input tensor name. default: image_bytes
-  --output_name OUTPUT_NAME
-                        Specify output name. default: probabilities
-  --model_name MODEL_NAME
-                        Define model name, must be same as is in service.
-                        default: resnet
-  --batchsize BATCHSIZE
-                        Number of images in a single request. default: 1
-```
+| Argument      | Description |
+| :---        |    :----   |
+|  -h, --help | show this help message and exit
+|  --images_list IMAGES_LIST | path to a file with a list of labeled images |
+|  --grpc_address GRPC_ADDRESS | Specify url to grpc service. default:localhost |
+|  --grpc_port GRPC_PORT | Specify port to grpc service. default: 9000 |
+|  --input_name INPUT_NAME | Specify input tensor name. default: image_bytes |
+|  --output_name OUTPUT_NAME | Specify output name. default: probabilities |
+|  --model_name MODEL_NAME | Define model name, must be same as is in service default: resnet |
+|  --batchsize BATCHSIZE | Number of images in a single request. default: 1 |
+
 
 - Usage example
 ```bash
@@ -269,9 +262,13 @@ usage: rest_get_model_status.py [-h] [--rest_url REST_URL]
                                 [--rest_port REST_PORT]
                                 [--model_name MODEL_NAME]
                                 [--model_version MODEL_VERSION]
+                                [--client_cert CLIENT_CERT]
+                                [--client_key CLIENT_KEY]
+                                [--ignore_server_verification]
+                                [--server_cert SERVER_CERT]
 ```
 - Arguments 
-
+```
 | Argument      | Description |
 | :---        |    :----   |
 | -h, --help | Show help message and exit|
@@ -279,6 +276,7 @@ usage: rest_get_model_status.py [-h] [--rest_url REST_URL]
 | --rest_port REST_PORT | Specify port to REST API service. Default: 5555|
 | --model_name MODEL_NAME| Model name to query, must be same as is in service. Default : resnet|
 | --model_version MODEL_VERSION | Model version to query - must be numerical. List all version if omitted|
+```
 
 - Usage Example 
 ```bash
@@ -300,20 +298,29 @@ python rest_get_model_status.py --rest_port 8000 --model_version 1
 ### Model Metadata API
 - Command
 ```Bash
-python grpc_get_model_metadata.py --help
-usage: grpc_get_model_metadata.py [-h] [--grpc_address GRPC_ADDRESS]
-                           [--grpc_port GRPC_PORT] [--model_name MODEL_NAME]
-                           [--model_version MODEL_VERSION]
+python rest_get_model_metadata.py --help
+usage: rest_get_model_metadata.py [-h] [--rest_url REST_URL]
+                                  [--rest_port REST_PORT]
+                                  [--model_name MODEL_NAME]
+                                  [--model_version MODEL_VERSION]
+                                  [--client_cert CLIENT_CERT]
+                                  [--client_key CLIENT_KEY]
+                                  [--ignore_server_verification]
+                                  [--server_cert SERVER_CERT]
 ```
 - Arguments 
 
 | Argument      | Description |
 | :---        |    :----   |
-| -h, --help | Show help message and exit|
-| --rest_url REST_URL | Specify url to REST API service. Default: http://localhost|
-| --rest_port REST_PORT | Specify port to REST API service. Default: 9000|
-| --model_name MODEL_NAME| Model name to query, must be same as is in service. Default: resnet|
-| --model_version MODEL_VERSION | Model version to query - must be numerical. List all version if omitted|
+|  -h, --help | show this help message and exit |
+|  --rest_url REST_URL | Specify url to REST API service. default: http://localhost |
+|  --rest_port REST_PORT | Specify port to REST API service. default: 5555 |
+|  --model_name MODEL_NAME | Define model name, must be same as is in service. default: resnet |
+|  --model_version MODEL_VERSION | Define model version - must be numerical |
+|  --client_cert CLIENT_CERT | Specify mTLS client certificate file. Default: None. |
+|  --client_key CLIENT_KEY | Specify mTLS client key file. Default: None. |
+|  --ignore_server_verification | Skip TLS host verification. Do not use in production. Default: False. |
+|  --server_cert SERVER_CERT | Path to a custom directory containing trusted CA certificates, server certificate, or a CA_BUNDLE file. |
 
 - Usage Example
 ```Bash
@@ -431,7 +438,7 @@ usage: rest_predict_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
 
 - Usage Example
 ```bash
-python rest_predict_resnet.py --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name data --output_name prob --rest_port 8000 --transpose_input False
+python rest_predict_resnet.py --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name data --output_name prob --rest_port 8000 --transpose_input False
 ('Image data range:', 0, ':', 255)
 Start processing:
 	Model name: resnet
@@ -504,26 +511,18 @@ usage: rest_predict_binary_resnet.py [-h] [--images_list IMAGES_LIST]
 
 - Arguments
 
-```bash
-  -h, --help            show this help message and exit
-  --images_list IMAGES_LIST
-                        path to a file with a list of labeled images
-  --rest_url REST_URL   Specify url to REST API service. default:
-                        http://localhost:8000
-  --input_name INPUT_NAME
-                        Specify input tensor name. default: image_bytes
-  --output_name OUTPUT_NAME
-                        Specify output name. default: probabilities
-  --model_name MODEL_NAME
-                        Define model name, must be same as is in service.
-                        default: resnet
-  --request_format {row_noname,row_name,column_noname,column_name}
-                        Request format according to TF Serving API:
-                        row_noname,row_name,column_noname,column_name
-  --batchsize BATCHSIZE
-                        Number of images in a single request. default: 1
 
-```
+| Argument      | Description |
+| :---        |    :----   |
+|  -h, --help | show this help message and exit |
+|  --images_list IMAGES_LIST | path to a file with a list of labeled images |
+|  --rest_url REST_URL | Specify url to REST API service. default: http://localhost:8000 |
+|  --input_name INPUT_NAME | Specify input tensor name. default: image_bytes |
+|  --output_name OUTPUT_NAME | Specify output name. default: probabilities |
+|  --model_name MODEL_NAME | Define model name, must be same as is in service default: resnet |
+|  --request_format {row_noname,row_name,column_noname,column_name} | Request format according to TF Serving API: row_noname,row_name,column_noname,column_name |
+|  --batchsize BATCHSIZE | Number of images in a single request. default: 1 |
+
 
 - Usage example
 ```bash

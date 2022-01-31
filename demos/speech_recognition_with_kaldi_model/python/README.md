@@ -18,7 +18,7 @@ pip3 install -r requirements.txt
 To run this example you will need to download the rm_lstm4f model with input and score ark files and convert it to IR format.
  1. Download the model from [rm_lstm4f](https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/)
      
-     ```mkdir models & cd models```
+     ```mkdir models && cd models```
 
      ```wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/ ```
 

@@ -34,7 +34,7 @@ setup_repository:
 # Build custom node
 	cd ../../../src/custom_nodes/model_zoo_intel_object_detection && \
 	make && \
-	mv lib ../../../demos/face_analysis_pipeline/python/workspace/lib
+	mv lib ../../../demos/multi_face_analysis_pipeline/python/workspace/lib
 # Copy configuration file to workspace directory
 	cp config.json workspace/.
 

@@ -46,7 +46,7 @@ usage: image_classification.py [-h] [--images_list IMAGES_LIST]
 ### Usage example
 
 ```bash
-python image_classification.py --grpc_port 9000 --input_name data --output_name prob --image_list ../input_images.txt
+python image_classification.py --grpc_port 9000 --input_name 0 --output_name prob --images_list ../input_images.txt
 
 Start processing:
 	Model name: resnet
