@@ -15,7 +15,6 @@
 #
 
 import logging as log
-import os
 import sys
 import time
 from argparse import ArgumentParser, SUPPRESS
@@ -69,21 +68,6 @@ def build_argparser():
                     dest='model_name'),
     args.add_argument('--loop', action='store_true', help='Set true to loop the questions')
     return parser
-
-# return entire sentence as start-end positions for a given answer (within the sentence).
-def find_sentence_range(context, s, e):
-    # find start of sentence
-    for c_s in range(s, max(-1, s - 200), -1):
-        if context[c_s] in "\n\.":
-            c_s += 1
-            break
-
-    # find end of sentence
-    for c_e in range(max(0, e - 1), min(len(context), e + 200), +1):
-        if context[c_e] in "\n\.":
-            break
-
-    return c_s, c_e
 
 def append_offset(tokens_se, s_value, e_value):
     tokens_with_offset = []
@@ -151,24 +135,23 @@ def main():
         answers = []
 
         # iterate through paragraphs
-        for paragraph in paragraphs:
-            # encode paragraph into token ids list
-            p_tokens_id, p_tokens_se = text_to_tokens(paragraph.lower(), vocab)
+        for i in range(len(paragraphs)):
+            p_tokens_id, p_tokens_se = text_to_tokens(paragraphs[i].lower(), vocab)
             if len(p_tokens_id) == 0: continue
-            # concatenate paragraphs so their size >= args.min_paragraph_token_num
-            # and append tokens and (s,e) to arrays
+            # concatenate paragraphs
             if len(concatenated_paragraphs) == cur_paragraph:
-                concatenated_paragraphs.append(paragraph)
+                concatenated_paragraphs.append(paragraphs[i])
                 paragraph_tokens_id.append(p_tokens_id)
                 paragraph_tokens_se.append(p_tokens_se)
             else:
                 paragraph_tokens_id[cur_paragraph] += p_tokens_id
                 paragraph_tokens_se[cur_paragraph] += append_offset(p_tokens_se, len(concatenated_paragraphs[cur_paragraph]), len(concatenated_paragraphs[cur_paragraph]))
-                concatenated_paragraphs[cur_paragraph] += paragraph
-            # if paragraph has not enough tokens then continue and append another one to it
+                concatenated_paragraphs[cur_paragraph] += paragraphs[i]
+            
             p_tokens_length = len(paragraph_tokens_id[cur_paragraph])
             if p_tokens_length < args.min_paragraph_token_num:
-                continue
+                if i != len(paragraphs) - 1:
+                    continue
 
             # form the request
             tok_cls = vocab['[CLS]']
@@ -258,9 +241,8 @@ def main():
 
         # print top 3 results
         answers = sorted(answers, key=lambda x: -x[0])
-        for score, s, e, paragraph_number in answers[:10]:
+        for score, s, e, paragraph_number in answers[:3]:
             log.info("---answer: {:0.2f} {}".format(score, concatenated_paragraphs[paragraph_number][s:e]))
-            # c_s, c_e = find_sentence_range(context, s, e)
             log.info("   " + concatenated_paragraphs[paragraph_number][:s] + COLOR_RED + concatenated_paragraphs[paragraph_number][s:e] + COLOR_RESET + concatenated_paragraphs[paragraph_number][e:])
         if args.loop == False:
             loop = False
