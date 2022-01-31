@@ -5048,7 +5048,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedF
 
     // Prepare model
     ConstructorEnabledModelManager manager;
-    ModelConfig config = DUMMY_FP64_MODEL_CONFIG;  // TODO: Change F64 to FP64
+    ModelConfig config = DUMMY_FP64_MODEL_CONFIG;
     config.setBatchingParams("0");
     ASSERT_EQ(config.parseShapeParameter("(1,2,1,2)"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);

@@ -80,7 +80,7 @@ cv::Mat convertStringValToMat(const std::string& stringVal) {
 Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision requestedPrecision) {
     int type = getMatTypeFromTensorPrecision(requestedPrecision);
     if (type == -1) {
-        SPDLOG_ERROR("Error during binary input conversion: not supported precision: {}", toString(requestedPrecision));
+        SPDLOG_DEBUG("Error during binary input conversion: not supported precision: {}", toString(requestedPrecision));
         return StatusCode::INVALID_PRECISION;
     }
 
