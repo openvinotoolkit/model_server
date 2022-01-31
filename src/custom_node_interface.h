@@ -25,7 +25,9 @@ typedef enum {
     I8,
     I16,
     U16,
-    I32
+    I32,
+    FP64,
+    I64
 } CustomNodeTensorPrecision;
 
 struct CustomNodeTensor {

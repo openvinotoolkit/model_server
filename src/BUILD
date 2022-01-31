@@ -489,6 +489,8 @@ cc_test(
     data = [
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
+        "test/dummy_fp64/1/saved_model.xml",
+        "test/dummy_fp64/1/saved_model.bin",
         "test/add_two_inputs_model/1/add.xml",
         "test/add_two_inputs_model/1/add.bin",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.xml",

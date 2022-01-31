@@ -26,8 +26,12 @@ CustomNodeTensorPrecision toCustomNodeTensorPrecision(ov::element::Type_t precis
     switch (precision) {
     case ov::element::Type_t::f32:
         return CustomNodeTensorPrecision::FP32;
+    case ov::element::Type_t::f64:
+        return CustomNodeTensorPrecision::FP64;
     case ov::element::Type_t::i32:
         return CustomNodeTensorPrecision::I32;
+    case ov::element::Type_t::i64:
+        return CustomNodeTensorPrecision::I64;
     case ov::element::Type_t::i8:
         return CustomNodeTensorPrecision::I8;
     case ov::element::Type_t::u8:
@@ -44,10 +48,11 @@ CustomNodeTensorPrecision toCustomNodeTensorPrecision(ov::element::Type_t precis
 }
 
 Precision toInferenceEnginePrecision(CustomNodeTensorPrecision precision) {
-    // TODO should we add new precisions now into CN header?
     static std::unordered_map<CustomNodeTensorPrecision, Precision> precisionMap{
         {CustomNodeTensorPrecision::FP32, Precision::FP32},
+        {CustomNodeTensorPrecision::FP64, Precision::FP64},
         {CustomNodeTensorPrecision::I32, Precision::I32},
+        {CustomNodeTensorPrecision::I64, Precision::I64},
         {CustomNodeTensorPrecision::I8, Precision::I8},
         {CustomNodeTensorPrecision::U8, Precision::U8},
         {CustomNodeTensorPrecision::FP16, Precision::FP16},

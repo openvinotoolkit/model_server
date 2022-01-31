@@ -109,6 +109,7 @@ inline static Precision fromString(const std::string& s) {
 
 inline static ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision) {
     static std::unordered_map<Precision, ov::element::Type_t> precisionMap{
+        {Precision::FP64, ov::element::Type_t::f64},
         {Precision::FP32, ov::element::Type_t::f32},
         {Precision::FP16, ov::element::Type_t::f16},
         {Precision::I64, ov::element::Type_t::i64},

@@ -132,6 +132,7 @@ tensorflow::DataType TensorInfo::getPrecisionAsDataType() const {
 tensorflow::DataType TensorInfo::getPrecisionAsDataType(Precision precision) {
     static std::unordered_map<Precision, tensorflow::DataType> precisionMap{
         {Precision::FP32, tensorflow::DataType::DT_FLOAT},
+        {Precision::FP64, tensorflow::DataType::DT_DOUBLE},
         {Precision::FP16, tensorflow::DataType::DT_HALF},
         {Precision::I64, tensorflow::DataType::DT_INT64},
         {Precision::I32, tensorflow::DataType::DT_INT32},
@@ -170,6 +171,8 @@ const std::string TensorInfo::getDataTypeAsString(tensorflow::DataType dataType)
     switch (dataType) {
     case tensorflow::DataType::DT_FLOAT:
         return "FP32";
+    case tensorflow::DataType::DT_DOUBLE:
+        return "FP64";
     case tensorflow::DataType::DT_INT32:
         return "I32";
     case tensorflow::DataType::DT_INT8:

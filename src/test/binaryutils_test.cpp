@@ -16,8 +16,10 @@
 
 #include <fstream>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "../binaryutils.hpp"
-#include "gtest/gtest.h"
 #include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
 
@@ -349,4 +351,100 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_one_any_one_static_shape) {
     EXPECT_EQ(tensorDims[2], expectedColsNumber);
     ASSERT_EQ(tensor.get_size(), 12);
 }
+
+class BinaryUtilsPrecisionTest : public ::testing::TestWithParam<ovms::Precision> {
+protected:
+    void SetUp() override {
+        readRgbJpg(filesize, image_bytes);
+        stringVal.set_dtype(tensorflow::DataType::DT_STRING);
+        stringVal.add_string_val(image_bytes.get(), filesize);
+    }
+
+    size_t filesize;
+    std::unique_ptr<char[]> image_bytes;
+    tensorflow::TensorProto stringVal;
+};
+
+class BinaryUtilsValidPrecisionTest : public BinaryUtilsPrecisionTest {};
+class BinaryUtilsInvalidPrecisionTest : public BinaryUtilsPrecisionTest {};
+
+TEST_P(BinaryUtilsValidPrecisionTest, Valid) {
+    ovms::Precision testedPrecision = GetParam();
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("",
+        testedPrecision,
+        ovms::Shape{1, 1, 1, 3},
+        Layout{"NHWC"});
+
+    ov::runtime::Tensor tensor;
+    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::OK);
+    ASSERT_EQ(tensor.get_shape(), (ov::Shape{1, 1, 1, 3}));
+    ASSERT_EQ(tensor.get_size(), 3);
+    ASSERT_EQ(tensor.get_element_type(), ovmsPrecisionToIE2Precision(testedPrecision));
+}
+
+TEST_P(BinaryUtilsInvalidPrecisionTest, Invalid) {
+    ovms::Precision testedPrecision = GetParam();
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("",
+        testedPrecision,
+        ovms::Shape{1, 1, 1, 3},
+        Layout{"NHWC"});
+
+    ov::runtime::Tensor tensor;
+    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo, false), ovms::StatusCode::INVALID_PRECISION);
+}
+
+const std::vector<ovms::Precision> BINARY_SUPPORTED_INPUT_PRECISIONS{
+    // ovms::Precision::UNSPECIFIED,
+    // ovms::Precision::MIXED,
+    ovms::Precision::FP64,
+    ovms::Precision::FP32,
+    ovms::Precision::FP16,
+    // InferenceEngine::Precision::Q78,
+    ovms::Precision::I16,
+    ovms::Precision::U8,
+    ovms::Precision::I8,
+    ovms::Precision::U16,
+    ovms::Precision::I32,
+    // ovms::Precision::I64,
+    // ovms::Precision::BIN,
+    // ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    Test,
+    BinaryUtilsValidPrecisionTest,
+    ::testing::ValuesIn(BINARY_SUPPORTED_INPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<BinaryUtilsValidPrecisionTest::ParamType>& info) {
+        return toString(info.param);
+    });
+
+static const std::vector<ovms::Precision> BINARY_UNSUPPORTED_INPUT_PRECISIONS{
+    ovms::Precision::UNDEFINED,
+    ovms::Precision::MIXED,
+    // ovms::Precision::FP64,
+    // ovms::Precision::FP32,
+    // ovms::Precision::FP16,
+    ovms::Precision::Q78,
+    // ovms::Precision::I16,
+    // ovms::Precision::U8,
+    // ovms::Precision::I8,
+    // ovms::Precision::U16,
+    // ovms::Precision::I32,
+    ovms::Precision::I64,
+    ovms::Precision::BIN,
+    ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    Test,
+    BinaryUtilsInvalidPrecisionTest,
+    ::testing::ValuesIn(BINARY_UNSUPPORTED_INPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<BinaryUtilsInvalidPrecisionTest::ParamType>& info) {
+        return toString(info.param);
+    });
+
 }  // namespace

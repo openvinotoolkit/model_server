@@ -216,6 +216,8 @@ Status CustomNodeSession::createTensor(const struct CustomNodeTensor* tensor, ov
         case CustomNodeTensorPrecision::FP16:
         case CustomNodeTensorPrecision::I16:
         case CustomNodeTensorPrecision::U16:
+        case CustomNodeTensorPrecision::FP64:
+        case CustomNodeTensorPrecision::I64:
             resultTensor = ov::Tensor(ov::element::Type(ovmsPrecisionToIE2Precision(toInferenceEnginePrecision(tensor->precision))), ov::Shape(shape), allocator);
             break;
         case CustomNodeTensorPrecision::UNSPECIFIED:
