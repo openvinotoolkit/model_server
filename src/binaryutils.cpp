@@ -95,10 +95,6 @@ Status validateLayout(const std::shared_ptr<TensorInfo>& tensorInfo) {
 }
 
 bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    auto status = validateLayout(tensorInfo);  // TODO unnecessary since checked earlier on
-    if (!status.ok()) {
-        return false;
-    }
     Dimension cols = Dimension::any();
     Dimension rows = Dimension::any();
     if (tensorInfo->getShape().size() == 4) {
@@ -123,10 +119,6 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
 }
 
 Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    auto status = validateLayout(tensorInfo);  // TODO unnecessary since checked earlier
-    if (!status.ok()) {
-        return status;
-    }
     Dimension cols = Dimension::any();
     Dimension rows = Dimension::any();
     if (tensorInfo->getShape().size() == 4) {
@@ -173,10 +165,6 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
 Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     const cv::Mat input,
     cv::Mat* firstBatchImage) {
-    auto status = validateLayout(tensorInfo);
-    if (!status.ok()) {
-        return status;
-    }
 
     // At this point we can either have nhwc format or pretendant to be nhwc but with ANY layout in pipeline info
     Dimension numberOfChannels;
@@ -226,8 +214,7 @@ Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Ma
     // This forces binary utility to create tensors with resolution inherited from input binary image from request.
     // To achieve it, in this specific case we require all binary images to have the same resolution.
     if (firstBatchImage &&
-        ((tensorInfo->getLayout() == Layout::getDefaultLayout()) ||
-            (tensorInfo->getLayout() == Layout::getUnspecifiedLayout()))) {
+        (tensorInfo->getLayout() == Layout::getUnspecifiedLayout())) {
         auto status = validateResolutionAgainstFirstBatchImage(input, firstBatchImage);
         if (!status.ok()) {
             return status;
@@ -243,9 +230,9 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         return status;
     }
     // 4 for default pipelines, 5 for pipelines with demultiplication at entry
-    bool isShapeDimensionValid = tensorInfo->getShape().size() == 4 ||
-                                 (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5);
-    if (!isShapeDimensionValid) {
+    bool isShapeLengthValid = tensorInfo->getShape().size() == 4 ||
+                              (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5);
+    if (!isShapeLengthValid) {
         return StatusCode::INVALID_SHAPE;
     }
 
