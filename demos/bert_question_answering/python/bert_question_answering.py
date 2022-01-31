@@ -55,7 +55,7 @@ def build_argparser():
                       default=8, required=False, type=int)
     args.add_argument("--max_answer_token_num", help="Optional. Maximum number of tokens in answer",
                       default=15, required=False, type=int)
-    args.add_argument("--min_paragraph_token_num", help="Optional. Minimum number of tokens in paragraph",
+    args.add_argument("--min_request_token_num", help="Optional. Minimum number of tokens in paragraph",
                       default=300, required=False, type=int)
     args.add_argument('-c', '--colors', action='store_true',
                       help="Optional. Nice coloring of the questions/answers. "
@@ -122,7 +122,7 @@ def main():
         t0 = time.perf_counter()
         t_count = 0
 
-        # array of concatenated paragraphs(size >= args.min_paragraph_token_num)
+        # array of concatenated paragraphs(size >= args.min_request_token_num)
         concatenated_paragraphs = []
         # iterator
         cur_paragraph = 0
@@ -149,7 +149,7 @@ def main():
                 concatenated_paragraphs[cur_paragraph] += paragraphs[i]
             
             p_tokens_length = len(paragraph_tokens_id[cur_paragraph])
-            if p_tokens_length < args.min_paragraph_token_num:
+            if p_tokens_length < args.min_request_token_num:
                 if i != len(paragraphs) - 1:
                     continue
 
