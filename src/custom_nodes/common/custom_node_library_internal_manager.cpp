@@ -18,7 +18,6 @@
 
 #include <iostream>
 #include <memory>
-#include <shared_mutex>
 #include <string>
 
 namespace ovms {
@@ -46,10 +45,6 @@ bool CustomNodeLibraryInternalManager::releaseBuffer(void* ptr) {
         }
     }
     return false;
-}
-
-std::shared_timed_mutex& CustomNodeLibraryInternalManager::getInternalManagerLock() {
-    return this->internalManagerLock;
 }
 }  // namespace custom_nodes_common
 }  // namespace ovms

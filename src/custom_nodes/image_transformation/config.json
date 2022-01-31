@@ -33,11 +33,11 @@
 
                     },
                     "inputs": [
-                        {"image_in": {
+                        {"image": {
                                 "node_name": "request",
                                 "data_item": "image"}}],
                     "outputs": [
-                        {"data_item": "image_out",
+                        {"data_item": "image",
                             "alias": "transformed_image"}]
                 }
             ],

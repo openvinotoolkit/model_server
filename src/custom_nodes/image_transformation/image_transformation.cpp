@@ -15,7 +15,6 @@
 //*****************************************************************************
 #include <iostream>
 #include <map>
-#include <shared_mutex>
 #include <string>
 
 #include "../../custom_node_interface.h"
@@ -27,12 +26,12 @@
 using CustomNodeLibraryInternalManager = ovms::custom_nodes_common::CustomNodeLibraryInternalManager;
 using BuffersQueue = ovms::custom_nodes_common::BuffersQueue;
 
-static constexpr const char* INPUT_IMAGE_TENSOR_NAME = "image_in";
+static constexpr const char* INPUT_IMAGE_TENSOR_NAME = "image";
 static constexpr const char* INPUT_TENSOR_INFO_NAME = "input_info";
 static constexpr const char* INPUT_IMAGE_INFO_DIMS_NAME = "image_in_info_dims";
 
 static constexpr const char* OUTPUT_TENSOR_NAME = "output";
-static constexpr const char* OUTPUT_IMAGE_TENSOR_NAME = "image_out";
+static constexpr const char* OUTPUT_IMAGE_TENSOR_NAME = "image";
 static constexpr const char* OUTPUT_IMAGE_DIMS_NAME = "image_out_dims";
 static constexpr const char* OUTPUT_TENSOR_INFO_NAME = "output_info";
 static constexpr const char* OUTPUT_IMAGE_INFO_DIMS_NAME = "image_out_info_dims";
@@ -253,7 +252,6 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     }
 
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
-    std::shared_lock lock(internalManager->getInternalManagerLock());
 
     // Prepare output tensor
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * targetImageColorChannels;
@@ -300,7 +298,6 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
 int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
-    std::shared_lock lock(internalManager->getInternalManagerLock());
 
     *infoCount = 1;
     if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, INPUT_TENSOR_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {
@@ -341,7 +338,6 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     NODE_ASSERT(targetImageLayout == "NCHW" || targetImageLayout == "NHWC", "target image layout must be NCHW or NHWC");
 
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
-    std::shared_lock lock(internalManager->getInternalManagerLock());
 
     *infoCount = 1;
     if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, OUTPUT_TENSOR_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {

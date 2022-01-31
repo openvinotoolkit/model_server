@@ -42,11 +42,11 @@
                         "buffer_queue_size": "24"
                     },
                     "inputs": [
-                        {"image_in": {
+                        {"image": {
                                 "node_name": "request",
                                 "data_item": "0"}}],
                     "outputs": [
-                        {"data_item": "image_out",
+                        {"data_item": "image",
                             "alias": "transformed_image"}]
                 },
                 {

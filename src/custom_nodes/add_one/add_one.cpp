@@ -15,7 +15,6 @@
 //*****************************************************************************
 #include <cstring>
 #include <iostream>
-#include <shared_mutex>
 
 #include "../../custom_node_interface.h"
 #include "../common/custom_node_library_internal_manager.hpp"
@@ -79,7 +78,6 @@ int deinitialize(void* customNodeLibraryInternalManager) {
 int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     InternalManager* internalManager = static_cast<InternalManager*>(customNodeLibraryInternalManager);
     NODE_ASSERT(internalManager != nullptr, "internalManager is not initialized");
-    std::shared_lock<std::shared_timed_mutex> lock(internalManager->getInternalManagerLock());
 
     NODE_ASSERT(inputsCount == 1, "too many inputs provided");
     NODE_ASSERT(std::strcmp(inputs[0].name, INPUT_NUMBERS_TENSOR_NAME) == 0, "invalid input name");
@@ -133,7 +131,6 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     InternalManager* internalManager = static_cast<InternalManager*>(customNodeLibraryInternalManager);
     NODE_ASSERT(internalManager != nullptr, "internalManager is not initialized");
-    std::shared_lock<std::shared_timed_mutex> lock(internalManager->getInternalManagerLock());
 
     *infoCount = 1;
     if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, INPUT_TENSOR_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {
@@ -154,7 +151,6 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
 int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     InternalManager* internalManager = static_cast<InternalManager*>(customNodeLibraryInternalManager);
     NODE_ASSERT(internalManager != nullptr, "internalManager is not initialized");
-    std::shared_lock<std::shared_timed_mutex> lock(internalManager->getInternalManagerLock());
 
     *infoCount = 1;
     if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, OUTPUT_TENSOR_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {

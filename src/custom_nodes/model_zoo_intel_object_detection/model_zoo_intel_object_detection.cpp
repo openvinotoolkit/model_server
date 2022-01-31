@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #include <iostream>
-#include <shared_mutex>
 #include <string>
 #include <vector>
 
@@ -354,7 +353,6 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     }
 
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
-    std::shared_lock lock(internalManager->getInternalManagerLock());
 
     *outputsCount = 4;
     if (!get_buffer<struct CustomNodeTensor>(internalManager, outputs, OUTPUT_TENSOR_NAME, *outputsCount * sizeof(CustomNodeTensor))) {
@@ -407,7 +405,6 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     NODE_ASSERT(originalImageLayout == "NCHW" || originalImageLayout == "NHWC", "original image layout must be NCHW or NHWC");
 
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
-    std::shared_lock lock(internalManager->getInternalManagerLock());
 
     *infoCount = 2;
     if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, INPUT_TENSOR_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {
@@ -457,7 +454,6 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
 
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
-    std::shared_lock lock(internalManager->getInternalManagerLock());
 
     *infoCount = 4;
     if (!get_buffer<struct CustomNodeTensorInfo>(internalManager, info, OUTPUT_TENSOR_INFO_NAME, *infoCount * sizeof(CustomNodeTensorInfo))) {
