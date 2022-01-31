@@ -222,14 +222,15 @@ void TensorInfo::setLayout(const Layout& layout) {
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const Shape& shape) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->shape = shape;
-    copy->layout = Layout::getDefaultLayout();
+    // copy->layout = Layout::getUnspecifiedLayout(); TODO CVS-77193
     return copy;
 }
 
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithEffectiveDimensionPrefix(const Dimension& dim) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->influencedByDemultiplexer = true;
-    copy->shape.emplace(copy->shape.begin(), dim);  // TODO check together with pipeline definiton apply demultiplexer to shape
+    copy->shape.emplace(copy->shape.begin(), dim);
+    // copy->layout = Layout::getUnspecifiedLayout(); TODO CVS-77193
     return copy;
 }
 

@@ -196,7 +196,8 @@ Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* fi
     if (input.cols == firstBatchImage->cols && input.rows == firstBatchImage->rows) {
         return StatusCode::OK;
     }
-    SPDLOG_ERROR("Each binary image in request need to have resolution matched");
+    SPDLOG_ERROR("Each binary image in request need to have resolution matched. First cols: {}, rows: {}, current cols: {}, rows: {}",
+        firstBatchImage->cols, firstBatchImage->rows, input.cols, input.rows);
     return StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH;
 }
 
@@ -213,6 +214,7 @@ Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Ma
     // With unknown layout, there is no way to deduce pipeline input resolution.
     // This forces binary utility to create tensors with resolution inherited from input binary image from request.
     // To achieve it, in this specific case we require all binary images to have the same resolution.
+    // TODO check if H/W is undefined and only then check this CVS-77193
     if (firstBatchImage &&
         (tensorInfo->getLayout() == Layout::getUnspecifiedLayout())) {
         auto status = validateResolutionAgainstFirstBatchImage(input, firstBatchImage);
@@ -264,7 +266,6 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
         if (status != StatusCode::OK) {
             return status;
         }
-
         if (!isPrecisionEqual(image.depth(), tensorInfo->getPrecision())) {
             cv::Mat imageCorrectPrecision;
             status = convertPrecision(image, imageCorrectPrecision, tensorInfo->getPrecision());
