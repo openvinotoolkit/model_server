@@ -85,8 +85,18 @@ Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision 
     return StatusCode::OK;
 }
 
+Status validateLayout(const std::shared_ptr<TensorInfo>& tensorInfo) {
+    if ((tensorInfo->getLayout() != "NHWC") &&
+        (tensorInfo->getLayout() != Layout::getUnspecifiedLayout()) &&  // handle DAG
+        (tensorInfo->getLayout() != Layout::getDefaultLayout())) {      // handle model without Layout set
+        return StatusCode::UNSUPPORTED_LAYOUT;
+    }
+    return StatusCode::OK;
+}
+
 bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != Layout::getDefaultLayout()) {
+    auto status = validateLayout(tensorInfo);  // TODO unnecessary since checked earlier on
+    if (!status.ok()) {
         return false;
     }
     Dimension cols = Dimension::any();
@@ -113,9 +123,9 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
 }
 
 Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    //if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != Layout::getAnyLayout()) { // obecnie Any == N...  ANy to obecnie default // TODO check vs any & default model layout
-    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != Layout::getDefaultLayout()) { // obecnie Any == N...  ANy to obecnie default
-        return StatusCode::UNSUPPORTED_LAYOUT;
+    auto status = validateLayout(tensorInfo);  // TODO unnecessary since checked earlier
+    if (!status.ok()) {
+        return status;
     }
     Dimension cols = Dimension::any();
     Dimension rows = Dimension::any();
@@ -163,8 +173,9 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
 Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     const cv::Mat input,
     cv::Mat* firstBatchImage) {
-    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != Layout::getDefaultLayout()) {
-        return StatusCode::UNSUPPORTED_LAYOUT;
+    auto status = validateLayout(tensorInfo);
+    if (!status.ok()) {
+        return status;
     }
 
     // At this point we can either have nhwc format or pretendant to be nhwc but with ANY layout in pipeline info
@@ -210,11 +221,13 @@ bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
 }
 
 Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage) {
-    // For pipelines with only custom nodes entry, there is no way to deduce layout.
+    // For pipelines with only custom nodes entry, or models with default layout there is no way to deduce layout.
     // With unknown layout, there is no way to deduce pipeline input resolution.
     // This forces binary utility to create tensors with resolution inherited from input binary image from request.
     // To achieve it, in this specific case we require all binary images to have the same resolution.
-    if (firstBatchImage && tensorInfo->getLayout() == Layout::getDefaultLayout()) {
+    if (firstBatchImage &&
+        ((tensorInfo->getLayout() == Layout::getDefaultLayout()) ||
+            (tensorInfo->getLayout() == Layout::getUnspecifiedLayout()))) {
         auto status = validateResolutionAgainstFirstBatchImage(input, firstBatchImage);
         if (!status.ok()) {
             return status;
@@ -225,10 +238,10 @@ Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Ma
 
 Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     const tensorflow::TensorProto& src) {
-    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != Layout::getDefaultLayout()) {
-        return StatusCode::UNSUPPORTED_LAYOUT;
+    auto status = validateLayout(tensorInfo);
+    if (!status.ok()) {
+        return status;
     }
-
     // 4 for default pipelines, 5 for pipelines with demultiplication at entry
     bool isShapeDimensionValid = tensorInfo->getShape().size() == 4 ||
                                  (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5);

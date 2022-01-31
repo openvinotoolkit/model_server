@@ -128,7 +128,7 @@ Status createTensorInfoMap(struct CustomNodeTensorInfo* info, int infoCount, std
         }
 
         freeCallback(info[i].dims, customNodeLibraryInternalManager);
-        out.emplace(name, std::make_shared<TensorInfo>(name, precision, std::move(shape)));
+        out.emplace(name, std::make_shared<TensorInfo>(name, precision, std::move(shape), Layout::getUnspecifiedLayout()));
     }
     freeCallback(info, customNodeLibraryInternalManager);
     return StatusCode::OK;

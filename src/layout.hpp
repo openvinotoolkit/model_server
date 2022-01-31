@@ -43,6 +43,7 @@ public:
     Status validate() const;
     std::optional<Layout> createIntersection(const Layout& other) const;
     static const Layout& getDefaultLayout();
+    static const Layout& getUnspecifiedLayout();
 };
 
 }  // namespace ovms

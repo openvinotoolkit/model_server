@@ -33,6 +33,7 @@ TEST(Layout, BatchPositionValid) {
     EXPECT_EQ(Layout{"??N..."}.getBatchIndex(), 2);
     EXPECT_EQ(Layout{"?C???N..."}.getBatchIndex(), 5);
     EXPECT_EQ(Layout{"...NC"}.getBatchIndex(), std::nullopt);
+    EXPECT_EQ(Layout{"..."}.getBatchIndex(), 0);
 }
 
 TEST(Layout, BatchPositionInvalid) {
@@ -54,6 +55,8 @@ TEST(Layout, BatchPositionInvalid) {
     EXPECT_EQ(Layout{""}.getBatchIndex(), std::nullopt);
 }
 TEST(Layout, Validate) {
+    EXPECT_EQ(Layout{"..."}.validate(), StatusCode::OK);   // unspecified layout used in DAG
+    EXPECT_EQ(Layout{"N..."}.validate(), StatusCode::OK);  // default model layout
     EXPECT_EQ(Layout{"N.CH"}.validate(), StatusCode::LAYOUT_WRONG_FORMAT);
     EXPECT_EQ(Layout{"..NHW."}.validate(), StatusCode::LAYOUT_WRONG_FORMAT);
     EXPECT_EQ(Layout{"N...N"}.validate(), StatusCode::LAYOUT_WRONG_FORMAT);

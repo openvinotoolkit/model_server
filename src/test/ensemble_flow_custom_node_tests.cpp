@@ -3449,13 +3449,13 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomNodeWithDemultiplexerA
     auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
         ovms::Precision::FP32,
         ovms::Shape{7, 5, 10},
-        Layout::getDefaultLayout());
+        Layout::getUnspecifiedLayout());
     const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
         ovms::Precision::FP32,
         ovms::Shape{7, 5, 10},
-        Layout::getDefaultLayout());
+        Layout::getUnspecifiedLayout());
     const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo, gather);
     auto custom_node = std::make_unique<CustomNode>(

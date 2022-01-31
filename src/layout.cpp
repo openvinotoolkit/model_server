@@ -17,10 +17,18 @@
 
 #include <tuple>
 
+const char* DEFAULT_LAYOUT = "N...";
+const char* UNSPECIFIED_LAYOUT = "...";
+
 namespace ovms {
 const Layout& Layout::getDefaultLayout() {
-    static const Layout defaultLayout{"N..."};
+    static const Layout defaultLayout{DEFAULT_LAYOUT};
     return defaultLayout;
+}
+
+const Layout& Layout::getUnspecifiedLayout() {
+    static const Layout unspecifiedLayout{UNSPECIFIED_LAYOUT};
+    return unspecifiedLayout;
 }
 
 Layout::Layout(const std::string& str) :
@@ -39,6 +47,12 @@ std::optional<size_t> Layout::retrieveBatchIndex() const {
     }
     auto batchPos = this->find(BATCH_DIMENSION_LETTER);
     auto etcPos = this->find(ETC_LAYOUT_DELIMETER);
+    if (static_cast<std::string>(*this) == UNSPECIFIED_LAYOUT) {
+        // we want to treat ANY layout as having BS on 0 position
+        // otherwise in any case we extract this we have to check
+        // against layout ...
+        return 0;
+    }
     if (batchPos == std::string::npos) {
         return std::nullopt;
     }
