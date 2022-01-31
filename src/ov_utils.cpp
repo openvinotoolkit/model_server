@@ -24,14 +24,14 @@
 #include "tensorinfo.hpp"
 
 namespace ovms {
-ov::runtime::Tensor createSharedTensor(ov::element::Type_t precision, const shape_t& shape, void* data) {
-    auto tensor = ov::runtime::Tensor(precision, shape);
+ov::Tensor createSharedTensor(ov::element::Type_t precision, const shape_t& shape, void* data) {
+    auto tensor = ov::Tensor(precision, shape);
     std::memcpy(tensor.data(), data, std::accumulate(shape.begin(), shape.end(), ov::element::Type(precision).size(), std::multiplies<size_t>()));
     return tensor;
 }
 
-Status createSharedTensor(ov::runtime::Tensor& destinationTensor, ov::element::Type_t precision, const ov::Shape& shape) {
-    destinationTensor = ov::runtime::Tensor(precision, shape);
+Status createSharedTensor(ov::Tensor& destinationTensor, ov::element::Type_t precision, const ov::Shape& shape) {
+    destinationTensor = ov::Tensor(precision, shape);
     return StatusCode::OK;
 }
 
@@ -53,8 +53,8 @@ std::string getTensorMapString(const std::map<std::string, std::shared_ptr<Tenso
     return stringStream.str();
 }
 
-Status tensorClone(ov::runtime::Tensor& destinationTensor, const ov::runtime::Tensor& sourceTensor) {
-    destinationTensor = ov::runtime::Tensor(sourceTensor.get_element_type(), sourceTensor.get_shape());
+Status tensorClone(ov::Tensor& destinationTensor, const ov::Tensor& sourceTensor) {
+    destinationTensor = ov::Tensor(sourceTensor.get_element_type(), sourceTensor.get_shape());
 
     if (destinationTensor.get_byte_size() != sourceTensor.get_byte_size()) {
         SPDLOG_ERROR("tensorClone byte size mismatch destination:{}; source:{}",

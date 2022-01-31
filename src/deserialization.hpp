@@ -33,12 +33,12 @@
 
 namespace ovms {
 
-ov::runtime::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
+ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo);
 
 class ConcreteTensorProtoDeserializator {
 public:
-    static ov::runtime::Tensor deserializeTensorProto(
+    static ov::Tensor deserializeTensorProto(
         const tensorflow::TensorProto& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo) {
         switch (tensorInfo->getPrecision()) {
@@ -55,7 +55,7 @@ public:
             for (std::int64_t i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
                 shape.push_back(requestInput.tensor_shape().dim(i).size());
             }
-            ov::runtime::Tensor tensor(ov::element::f16, shape);
+            ov::Tensor tensor(ov::element::f16, shape);
             // Needs conversion due to zero padding for each value:
             // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
             uint16_t* ptr = (uint16_t*)tensor.data();
@@ -70,7 +70,7 @@ public:
             for (std::int64_t i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
                 shape.push_back(requestInput.tensor_shape().dim(i).size());
             }
-            ov::runtime::Tensor tensor(ov::element::u16, shape);
+            ov::Tensor tensor(ov::element::u16, shape);
             // Needs conversion due to zero padding for each value:
             // https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto#L55
             uint16_t* ptr = (uint16_t*)tensor.data();
@@ -81,13 +81,13 @@ public:
             return tensor;
         }
         default:
-            return ov::runtime::Tensor();
+            return ov::Tensor();
         }
     }
 };
 
 template <class TensorProtoDeserializator>
-ov::runtime::Tensor deserializeTensorProto(
+ov::Tensor deserializeTensorProto(
     const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo) {
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo);
@@ -100,7 +100,7 @@ class InputSink {
 public:
     InputSink(Requester requester) :
         requester(requester) {}
-    Status give(const std::string& name, ov::runtime::Tensor& tensor);
+    Status give(const std::string& name, ov::Tensor& tensor);
 };
 
 template <class TensorProtoDeserializator, class Sink>
@@ -119,7 +119,7 @@ Status deserializePredictRequest(
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
             }
             auto& requestInput = requestInputItr->second;
-            ov::runtime::Tensor tensor;
+            ov::Tensor tensor;
 
             if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
                 SPDLOG_DEBUG("Request contains binary input: {}", name);

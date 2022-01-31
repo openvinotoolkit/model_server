@@ -26,9 +26,9 @@
 
 class ModelDefaultVersions : public ::testing::Test {
 protected:
-    std::unique_ptr<ov::runtime::Core> ieCore;
+    std::unique_ptr<ov::Core> ieCore;
     void SetUp() {
-        ieCore = std::make_unique<ov::runtime::Core>();
+        ieCore = std::make_unique<ov::Core>();
     }
     void TearDown() {
         ieCore.reset();

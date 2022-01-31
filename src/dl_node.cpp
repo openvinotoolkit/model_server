@@ -56,7 +56,7 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
     return status;
 }
 
-Status DLNode::fetchResults(TensorMap& outputs, ov::runtime::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey) {
+Status DLNode::fetchResults(TensorMap& outputs, ov::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey) {
     ReleaseSessionGuard releaseSessionGuard(this->getNodeSession(sessionKey));
     // Wait for tensor results
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Waiting for infer request to finish", getName(), sessionKey);
@@ -97,7 +97,7 @@ Status DLNode::fetchResults(TensorMap& outputs, ov::runtime::InferRequest& infer
                 const auto tensor = inferRequest.get_tensor(realModelOutputName);
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Creating copy of tensor from model: {}, tensorName: {}",
                     getName(), sessionKey, modelName, realModelOutputName);
-                ov::runtime::Tensor copiedTensor;
+                ov::Tensor copiedTensor;
                 auto status = tensorClone(copiedTensor, tensor);
                 if (!status.ok()) {
                     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Could not clone result tensor; node: {}; session: {}; model name: {}; output: {}",

@@ -34,7 +34,7 @@
 namespace ovms {
 
 using mapping_config_t = std::unordered_map<std::string, std::string>;
-using plugin_config_t = std::map<std::string, std::string>;
+using plugin_config_t = std::map<std::string, ov::Any>;
 using custom_loader_options_config_t = std::map<std::string, std::string>;
 
 const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";

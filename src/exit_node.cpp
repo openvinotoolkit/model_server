@@ -41,13 +41,13 @@ Status ExitNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQ
 }
 
 template <>
-Status OutputGetter<const TensorMap&>::get(const std::string& name, ov::runtime::Tensor& tensor) {
+Status OutputGetter<const TensorMap&>::get(const std::string& name, ov::Tensor& tensor) {
     auto it = outputSource.find(name);
     if (it == outputSource.end()) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Failed to find expected pipeline output when serializing response: {}", name);
         return StatusCode::INTERNAL_ERROR;
     }
-    ov::runtime::Tensor finalTensor;
+    ov::Tensor finalTensor;
     auto status = tensorClone(finalTensor, it->second);
     if (!status.ok()) {
         return status;

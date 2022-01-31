@@ -42,7 +42,7 @@ protected:
 TEST_F(BinaryUtilsTest, tensorWithNonMatchingBatchsize) {
     tensorflow::TensorProto stringValDummy;
     stringValDummy.add_string_val("dummy");
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
     auto tensorInfo = std::make_shared<TensorInfo>();
     tensorInfo->setShape({5, 1, 1, 1});
     tensorInfo->setLayout(Layout{"NHWC"});
@@ -52,7 +52,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonMatchingBatchsize) {
 
 TEST_F(BinaryUtilsTest, tensorWithInvalidImage) {
     tensorflow::TensorProto stringValInvalidImage;
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
     stringValInvalidImage.set_dtype(tensorflow::DataType::DT_STRING);
     std::string invalidImage = "INVALID_IMAGE";
     stringValInvalidImage.add_string_val(invalidImage);
@@ -64,7 +64,7 @@ TEST_F(BinaryUtilsTest, tensorWithInvalidImage) {
 
 TEST_F(BinaryUtilsTest, tensorWithEmptyStringVal) {
     tensorflow::TensorProto stringValEmptyImage;
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
     stringValEmptyImage.set_dtype(tensorflow::DataType::DT_STRING);
     std::string invalidImage = "";
     stringValEmptyImage.add_string_val(invalidImage);
@@ -75,7 +75,7 @@ TEST_F(BinaryUtilsTest, tensorWithEmptyStringVal) {
 }
 
 TEST_F(BinaryUtilsTest, tensorWithNonSupportedLayout) {
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NCHW"});
 
@@ -83,7 +83,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonSupportedLayout) {
 }
 
 TEST_F(BinaryUtilsTest, tensorWithNonSupportedPrecision) {
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::MIXED, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
 
@@ -91,7 +91,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonSupportedPrecision) {
 }
 
 TEST_F(BinaryUtilsTest, tensorWithNonMatchingShapeSize) {
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1}, Layout{"NC"});
 
@@ -99,7 +99,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonMatchingShapeSize) {
 }
 
 TEST_F(BinaryUtilsTest, tensorWithNonMatchingNumberOfChannelsNHWC) {
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 1}, Layout{"NHWC"});
 
@@ -109,7 +109,7 @@ TEST_F(BinaryUtilsTest, tensorWithNonMatchingNumberOfChannelsNHWC) {
 TEST_F(BinaryUtilsTest, positive_rgb) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
 
@@ -131,7 +131,7 @@ TEST_F(BinaryUtilsTest, positive_grayscale) {
     DataFile.read(grayscale_image_bytes.get(), grayscale_filesize);
 
     tensorflow::TensorProto grayscaleStringVal;
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
     grayscaleStringVal.set_dtype(tensorflow::DataType::DT_STRING);
     grayscaleStringVal.add_string_val(grayscale_image_bytes.get(), grayscale_filesize);
 
@@ -146,7 +146,7 @@ TEST_F(BinaryUtilsTest, positive_grayscale) {
 TEST_F(BinaryUtilsTest, positive_batch_size_2) {
     uint8_t rgb_batchsize_2_tensor[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
     stringVal.add_string_val(image_bytes.get(), filesize);
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{2, 1, 1, 3}, Layout{"NHWC"});
@@ -160,7 +160,7 @@ TEST_F(BinaryUtilsTest, positive_batch_size_2) {
 TEST_F(BinaryUtilsTest, positive_precision_changed) {
     uint8_t rgb_precision_changed_expected_tensor[] = {0x24, 0x00, 0x00, 0x00, 0x1b, 0x00, 0x00, 0x00, 0xed, 0x00, 0x00, 0x00};
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::I32, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
 
@@ -174,7 +174,7 @@ TEST_F(BinaryUtilsTest, positive_precision_changed) {
 TEST_F(BinaryUtilsTest, positive_nhwc_layout) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
 
@@ -188,7 +188,7 @@ TEST_F(BinaryUtilsTest, positive_nhwc_layout) {
 TEST_F(BinaryUtilsTest, positive_resizing) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 2, 2, 3}, Layout{"NHWC"});
 
@@ -201,7 +201,7 @@ TEST_F(BinaryUtilsTest, positive_resizing) {
 TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_smaller) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, {2, 5}, 3}, Layout{"NHWC"});
 
@@ -229,7 +229,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_bigger) {
     stringVal2x2.set_dtype(tensorflow::DataType::DT_STRING);
     stringVal2x2.add_string_val(image_bytes.get(), filesize);
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, {1, 3}, 3}, Layout{"NHWC"});
 
@@ -245,7 +245,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_bigger) {
 TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_in_range) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, {1, 3}, 3}, Layout{"NHWC"});
 
@@ -261,7 +261,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_cols_in_range) {
 TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_smaller) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, {2, 5}, 1, 3}, Layout{"NHWC"});
 
@@ -289,7 +289,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_bigger) {
     stringVal2x2.set_dtype(tensorflow::DataType::DT_STRING);
     stringVal2x2.add_string_val(image_bytes.get(), filesize);
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, {1, 3}, 1, 3}, Layout{"NHWC"});
 
@@ -305,7 +305,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_bigger) {
 TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_in_range) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, {1, 3}, 1, 3}, Layout{"NHWC"});
 
@@ -321,7 +321,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_dynamic_shape_rows_in_range) {
 TEST_F(BinaryUtilsTest, positive_resizing_with_any_shape) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed};
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, ovms::Dimension::any(), ovms::Dimension::any(), 3}, Layout{"NHWC"});
 
@@ -337,7 +337,7 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_any_shape) {
 }
 
 TEST_F(BinaryUtilsTest, positive_resizing_with_one_any_one_static_shape) {
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, ovms::Dimension::any(), 4, 3}, Layout{"NHWC"});
 

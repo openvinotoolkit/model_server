@@ -74,7 +74,7 @@ Status EntryNode::fetchResults(TensorMap& outputs) {
 }
 
 template <>
-Status InputSink<TensorMap&>::give(const std::string& name, ov::runtime::Tensor& tensor) {
+Status InputSink<TensorMap&>::give(const std::string& name, ov::Tensor& tensor) {
     requester[name] = tensor;
     return StatusCode::OK;
 }
@@ -89,7 +89,7 @@ Status EntryNode::isInputBinary(const std::string& name, bool& isBinary) const {
     return StatusCode::OK;
 }
 
-Status EntryNode::createShardedTensor(ov::runtime::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::runtime::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
+Status EntryNode::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
     bool isBinary = false;
     auto status = this->isInputBinary(tensorName, isBinary);
     if (!status.ok()) {

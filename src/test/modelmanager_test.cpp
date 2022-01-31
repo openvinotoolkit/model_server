@@ -96,7 +96,7 @@ class MockModel : public ovms::Model {
 public:
     MockModel() :
         Model("MOCK_NAME", false, nullptr) {}
-    MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&, ov::runtime::Core&), (override));
+    MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&, ov::Core&), (override));
 };
 
 std::shared_ptr<MockModel> modelMock;
@@ -978,7 +978,7 @@ class MockModelInstanceInStateWithConfig : public ovms::ModelInstance {
     static const ovms::model_version_t UNUSED_VERSION = 987789;
 
 public:
-    MockModelInstanceInStateWithConfig(ovms::ModelVersionState state, const ovms::ModelConfig& modelConfig, ov::runtime::Core& ieCore) :
+    MockModelInstanceInStateWithConfig(ovms::ModelVersionState state, const ovms::ModelConfig& modelConfig, ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
         status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_VERSION, state);
         config = modelConfig;
@@ -987,7 +987,7 @@ public:
 
 std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> getMockedModelVersionInstances(
     std::map<ovms::ModelVersionState, ovms::model_versions_t> initialVersionStates,
-    ov::runtime::Core& ieCore,
+    ov::Core& ieCore,
     const ovms::ModelConfig& modelConfig = ovms::ModelConfig{}) {
     std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> modelVersions;
     std::array<ovms::ModelVersionState, 5> states{
@@ -1006,7 +1006,7 @@ std::map<ovms::model_version_t, std::shared_ptr<ovms::ModelInstance>> getMockedM
 
 class ModelManagerVersionsReload : public ::testing::Test {
 protected:
-    std::unique_ptr<ov::runtime::Core> ieCore;
+    std::unique_ptr<ov::Core> ieCore;
 
 public:
     ModelManagerVersionsReload() {
@@ -1015,7 +1015,7 @@ public:
         versionsToStart = std::make_shared<ovms::model_versions_t>();
     }
     void SetUp() {
-        ieCore = std::make_unique<ov::runtime::Core>();
+        ieCore = std::make_unique<ov::Core>();
         initialVersions.clear();
         versionsToRetire->clear();
         versionsToReload->clear();
@@ -1281,7 +1281,7 @@ TEST_F(ModelManagerVersionsReload, ReloadUnloadingVersion) {
 
 class ReloadAvailableModelDueToConfigChange : public ::testing::Test {
 protected:
-    std::unique_ptr<ov::runtime::Core> ieCore;
+    std::unique_ptr<ov::Core> ieCore;
 
 public:
     ReloadAvailableModelDueToConfigChange() {
@@ -1464,7 +1464,7 @@ TEST_F(DISABLED_GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturn
 
 class MockModelInstanceFakeLoad : public ovms::ModelInstance {
 public:
-    MockModelInstanceFakeLoad(ov::runtime::Core& ieCore) :
+    MockModelInstanceFakeLoad(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
 
 protected:
@@ -1479,7 +1479,7 @@ class ModelWithModelInstanceFakeLoad : public ovms::Model {
 public:
     ModelWithModelInstanceFakeLoad(const std::string& name) :
         Model(name, false, nullptr) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::runtime::Core& ieCore) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore) override {
         return std::make_shared<MockModelInstanceFakeLoad>(ieCore);
     }
 };
@@ -1516,7 +1516,7 @@ TEST_F(DISABLED_GetModelInstanceTest, WithRequestedVersion1ShouldReturnModelVers
 
 class ModelInstanceLoadedStuckInLoadingState : public ovms::ModelInstance {
 public:
-    ModelInstanceLoadedStuckInLoadingState(ov::runtime::Core& ieCore) :
+    ModelInstanceLoadedStuckInLoadingState(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
 
 protected:
@@ -1531,7 +1531,7 @@ class ModelWithModelInstanceLoadedStuckInLoadingState : public ovms::Model {
 public:
     ModelWithModelInstanceLoadedStuckInLoadingState(const std::string& name) :
         Model(name, false, nullptr) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::runtime::Core& ieCore) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore) override {
         return std::make_shared<ModelInstanceLoadedStuckInLoadingState>(ieCore);
     }
 };
@@ -1549,7 +1549,7 @@ const int AVAILABLE_STATE_DELAY_MILLISECONDS = 5;
 
 class ModelInstanceLoadedWaitInLoadingState : public ovms::ModelInstance {
 public:
-    ModelInstanceLoadedWaitInLoadingState(ov::runtime::Core& ieCore, const uint modelInstanceLoadDelayInMilliseconds) :
+    ModelInstanceLoadedWaitInLoadingState(ov::Core& ieCore, const uint modelInstanceLoadDelayInMilliseconds) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore),
         modelInstanceLoadDelayInMilliseconds(modelInstanceLoadDelayInMilliseconds) {}
 
@@ -1575,7 +1575,7 @@ public:
     ModelWithModelInstanceLoadedWaitInLoadingState(const std::string& name, const uint modelInstanceLoadDelayInMilliseconds) :
         Model(name, false, nullptr),
         modelInstanceLoadDelayInMilliseconds(modelInstanceLoadDelayInMilliseconds) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string&, const ovms::model_version_t, ov::runtime::Core& ieCore) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string&, const ovms::model_version_t, ov::Core& ieCore) override {
         return std::make_shared<ModelInstanceLoadedWaitInLoadingState>(ieCore, modelInstanceLoadDelayInMilliseconds);
     }
 

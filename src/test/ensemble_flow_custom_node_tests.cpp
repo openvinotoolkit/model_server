@@ -3262,7 +3262,7 @@ class DummyModelWithMockedMetadata : public ovms::ModelInstance {
     ovms::tensor_map_t mockedInputsInfo, mockedOutputsInfo;
 
 public:
-    DummyModelWithMockedMetadata(ov::runtime::Core& ieCore, const ovms::tensor_map_t& inputsInfo, const ovms::tensor_map_t& outputsInfo) :
+    DummyModelWithMockedMetadata(ov::Core& ieCore, const ovms::tensor_map_t& inputsInfo, const ovms::tensor_map_t& outputsInfo) :
         ovms::ModelInstance("dummy", 1, ieCore),
         mockedInputsInfo(inputsInfo),
         mockedOutputsInfo(outputsInfo) {}
@@ -3291,7 +3291,7 @@ public:
     ModelWithDummyModelWithMockedMetadata(const std::string& name, std::shared_ptr<DummyModelWithMockedMetadata> modelInstance) :
         Model(name, false, nullptr),
         modelInstance(modelInstance) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::runtime::Core& ieCore) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore) override {
         return modelInstance;
     }
 };
@@ -3401,7 +3401,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, CustomNodeWithDemultipl
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
 
-    auto ieCore2 = std::make_unique<ov::runtime::Core>();
+    auto ieCore2 = std::make_unique<ov::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore2,
         tensor_map_t{
@@ -3509,7 +3509,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenDL
 
     connections[EXIT_NODE_NAME] = {
         {"custom_node", {{"out", pipelineOutputName}}}};
-    auto ieCore = std::make_unique<ov::runtime::Core>();
+    auto ieCore = std::make_unique<ov::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore,
         tensor_map_t{
@@ -3733,7 +3733,7 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{"out", pipelineOutputName}}}};
 
-    auto ieCore = std::make_unique<ov::runtime::Core>();
+    auto ieCore = std::make_unique<ov::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore,
         tensor_map_t{
@@ -3786,7 +3786,7 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
 
-    auto ieCore = std::make_unique<ov::runtime::Core>();
+    auto ieCore = std::make_unique<ov::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore,
         tensor_map_t{
@@ -3882,7 +3882,7 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenDLModelAn
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{"out", pipelineOutputName}}}};
 
-    auto ieCore = std::make_unique<ov::runtime::Core>();
+    auto ieCore = std::make_unique<ov::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore,
         tensor_map_t{
@@ -3935,7 +3935,7 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenCustomNod
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
 
-    auto ieCore = std::make_unique<ov::runtime::Core>();
+    auto ieCore = std::make_unique<ov::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore,
         tensor_map_t{

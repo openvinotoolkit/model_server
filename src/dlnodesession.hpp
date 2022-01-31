@@ -50,7 +50,7 @@ public:
     DLNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion);
     virtual ~DLNodeSession();
 
-    ov::runtime::InferRequest& getInferRequest(const uint microseconds);
+    ov::InferRequest& getInferRequest(const uint microseconds);
     ModelInstance& getModelInstance();
 
 private:
@@ -58,10 +58,10 @@ private:
 
 public:
     Status prepareInputsAndModelForInference();
-    Status validate(const ov::runtime::Tensor& tensor, const TensorInfo& info);
+    Status validate(const ov::Tensor& tensor, const TensorInfo& info);
     Status execute(PipelineEventQueue& notifyEndQueue, uint waitForStreamIdTimeoutMicroseconds, Node& node);
-    Status executeInference(PipelineEventQueue& notifyEndQueue, ov::runtime::InferRequest&, Node& node);
-    Status setInputsForInference(ov::runtime::InferRequest& inferRequest);
+    Status executeInference(PipelineEventQueue& notifyEndQueue, ov::InferRequest&, Node& node);
+    Status setInputsForInference(ov::InferRequest& inferRequest);
     Status getRealInputName(const std::string& alias, std::string* result) const;
     void release() override;
 

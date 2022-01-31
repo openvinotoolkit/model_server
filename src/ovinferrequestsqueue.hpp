@@ -31,9 +31,9 @@
 
 namespace ovms {
 
-class OVInferRequestsQueue : public Queue<ov::runtime::InferRequest> {
+class OVInferRequestsQueue : public Queue<ov::InferRequest> {
 public:
-    OVInferRequestsQueue(ov::runtime::CompiledModel& compiledModel, int streamsLength) :
+    OVInferRequestsQueue(ov::CompiledModel& compiledModel, int streamsLength) :
         Queue(streamsLength) {
         for (int i = 0; i < streamsLength; ++i) {
             streams[i] = i;

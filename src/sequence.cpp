@@ -40,8 +40,8 @@ void Sequence::setIdle(bool idle) {
 Status Sequence::updateMemoryState(model_memory_state_t& newState) {
     for (auto&& state : newState) {
         auto stateName = state.get_name();
-        ov::runtime::Tensor tensor = state.get_state();
-        ov::runtime::Tensor copyTensor;
+        ov::Tensor tensor = state.get_state();
+        ov::Tensor copyTensor;
         auto status = tensorClone(copyTensor, tensor);
         if (!status.ok()) {
             return status;

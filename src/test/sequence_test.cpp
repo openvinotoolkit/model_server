@@ -39,10 +39,10 @@ TEST(Sequence, UpdateSequenceState) {
     ovms::model_memory_state_t newState;
     DummyStatefulModel model;
     std::vector<float> expectedState{10};
-    ov::runtime::InferRequest auxInferRequest = model.createInferRequest();
+    ov::InferRequest auxInferRequest = model.createInferRequest();
 
     model.setVariableState(auxInferRequest, expectedState);
-    ov::runtime::VariableState memoryState = model.getVariableState(auxInferRequest);
+    ov::VariableState memoryState = model.getVariableState(auxInferRequest);
     newState.push_back(memoryState);
     uint64_t sequenceId = 3;
     ovms::Sequence sequence(sequenceId);

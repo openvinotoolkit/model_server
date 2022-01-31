@@ -36,7 +36,7 @@ protected:
 
 public:
     NodeInputHandler(uint32_t inputsMissingCount);
-    virtual Status setInput(const std::string& inputName, ov::runtime::Tensor& tensor, session_id_t shardId);
+    virtual Status setInput(const std::string& inputName, ov::Tensor& tensor, session_id_t shardId);
     const TensorMap& getInputs() {
         isUsed = true;
         return inputTensors;

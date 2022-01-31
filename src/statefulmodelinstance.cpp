@@ -216,7 +216,7 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
     int executingInferId = executingStreamIdGuard.getId();
     (void)executingInferId;
-    ov::runtime::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     timer.stop("get infer request");
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
@@ -230,7 +230,7 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("preprocess") / 1000);
 
     timer.start("deserialize");
-    InputSink<ov::runtime::InferRequest&> inputSink(inferRequest);
+    InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
     timer.stop("deserialize");
@@ -274,7 +274,7 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
     return StatusCode::OK;
 }
 
-const Status StatefulModelInstance::preInferenceProcessing(ov::runtime::InferRequest& inferRequest, Sequence& sequence,
+const Status StatefulModelInstance::preInferenceProcessing(ov::InferRequest& inferRequest, Sequence& sequence,
     SequenceProcessingSpec& sequenceProcessingSpec) {
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_START) {
         // On SEQUENCE_START reset memory state of infer request to default
@@ -295,7 +295,7 @@ const Status StatefulModelInstance::preInferenceProcessing(ov::runtime::InferReq
 }
 
 const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving::PredictResponse* response,
-    ov::runtime::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec) {
+    ov::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec) {
     // Reset inferRequest states on SEQUENCE_END
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
         spdlog::debug("Received SEQUENCE_END signal. Reseting model state and removing sequence");
