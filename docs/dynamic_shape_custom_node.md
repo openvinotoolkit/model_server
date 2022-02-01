@@ -131,7 +131,7 @@ Create a new file named `config.json` in the `models` directory:
 ```
 
 #### Start Model Server Container with Downloaded Model
-Start the container with the image pulled in the previous step and mount <models_dir> :
+Start the container with the image pulled in the previous step and mount `<models_dir>` :
 ```Bash
 docker run --rm -d -v <models_dir>:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config.json --port 9000
 ```

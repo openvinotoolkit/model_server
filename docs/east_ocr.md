@@ -182,15 +182,15 @@ if the image was analyzed correctly.
 The custom node generates the following text images retrieved from the original input to CRNN model:
 | #| Image | CRNN Recognition | Decoded Word |                     
 | --- | --- | --- | --- |
-| text 0 |![text0](../src/custom_nodes/east_ocr/demo_images/text_images_0.jpg)| p##erformaance## | performance |
-| text 1 |![text1](../src/custom_nodes/east_ocr/demo_images/text_images_1.jpg)| g####d#a#n#s#k## | gdansk |
-| text 2 |![text2](../src/custom_nodes/east_ocr/demo_images/text_images_2.jpg)| s###e#rrv##e#r## | server |
-| text 3 |![text3](../src/custom_nodes/east_ocr/demo_images/text_images_3.jpg)| m####oo#d##ee#l# | model |
-| text 4 |![text4](../src/custom_nodes/east_ocr/demo_images/text_images_4.jpg)| oo##pe#n#vi#n#o# | openvino |
-| text 5 |![text5](../src/custom_nodes/east_ocr/demo_images/text_images_5.jpg)| p###i#peelinne## | pipeline |
-| text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_6.jpg)| 2####0##2###1### | 2021 |
-| text 7 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_7.jpg)| i###n##t##e###l# | intel |
-| text 8 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_8.jpg)| r###ot#atiion#s# | rotations |
+| text 0 |![text0](../src/custom_nodes/east_ocr/demo_images/text_images_0.jpg)| `p##erformaance##` | `performance` |
+| text 1 |![text1](../src/custom_nodes/east_ocr/demo_images/text_images_1.jpg)| `g####d#a#n#s#k##` | `gdansk` |
+| text 2 |![text2](../src/custom_nodes/east_ocr/demo_images/text_images_2.jpg)| `s###e#rrv##e#r##` | `server` |
+| text 3 |![text3](../src/custom_nodes/east_ocr/demo_images/text_images_3.jpg)| `m####oo#d##ee#l#` | `model` |
+| text 4 |![text4](../src/custom_nodes/east_ocr/demo_images/text_images_4.jpg)| `oo##pe#n#vi#n#o#` | `openvino` |
+| text 5 |![text5](../src/custom_nodes/east_ocr/demo_images/text_images_5.jpg)| `p###i#peelinne##` | `pipeline` |
+| text 6 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_6.jpg)| `2####0##2###1###` | `2021` |
+| text 7 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_7.jpg)| `i###n##t##e###l#` | `intel` |
+| text 8 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_8.jpg)| `r###ot#atiion#s#` | `rotations` |
 
 ## Accurracy
 Please note that it is possible to swap the models included in DAG with your own to adjust pipeline accuracy for various scenarios and datasets.
