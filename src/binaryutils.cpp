@@ -196,7 +196,7 @@ Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* fi
     if (input.cols == firstBatchImage->cols && input.rows == firstBatchImage->rows) {
         return StatusCode::OK;
     }
-    SPDLOG_ERROR("Each binary image in request need to have resolution matched. First cols: {}, rows: {}, current cols: {}, rows: {}",
+    SPDLOG_ERROR("Each binary image in request needs to have resolution matched. First cols: {}, rows: {}, current cols: {}, rows: {}",
         firstBatchImage->cols, firstBatchImage->rows, input.cols, input.rows);
     return StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH;
 }
