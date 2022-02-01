@@ -106,7 +106,7 @@ Recommended method for testing the custom library is via OVMS execution:
 - Submit a request to OVMS endpoint using a gRPC or REST client
 - Analyse the logs on the OVMS server
 
-For debugging steps refer the OVMS [developer guide](developer_guide.md)
+For debugging steps refer the OVMS [developer guide](https://github.com/openvinotoolkit/model_server/blob/main/docs/developer_guide.md)
 
 
 ## Custom node examples 
