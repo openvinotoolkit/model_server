@@ -67,7 +67,7 @@ else:
         img = f.read()
     input_name = "0"
 
-client = make_grpc_client("localhost:9001")
+client = make_grpc_client(args["service_url"])
 output = client.predict({input_name: img}, "resnet")
 
 max = np.argmax(output)

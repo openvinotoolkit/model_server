@@ -268,7 +268,7 @@ usage: rest_get_model_status.py [-h] [--rest_url REST_URL]
                                 [--server_cert SERVER_CERT]
 ```
 - Arguments 
-```
+
 | Argument      | Description |
 | :---        |    :----   |
 | -h, --help | Show help message and exit|
@@ -276,7 +276,7 @@ usage: rest_get_model_status.py [-h] [--rest_url REST_URL]
 | --rest_port REST_PORT | Specify port to REST API service. Default: 5555|
 | --model_name MODEL_NAME| Model name to query, must be same as is in service. Default : resnet|
 | --model_version MODEL_VERSION | Model version to query - must be numerical. List all version if omitted|
-```
+
 
 - Usage Example 
 ```bash
