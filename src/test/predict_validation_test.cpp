@@ -21,6 +21,7 @@
 
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
+#include "../predict_request_validation_utils.hpp"
 #include "test_utils.hpp"
 
 using ::testing::NiceMock;
@@ -636,5 +637,38 @@ TEST_F(PredictValidationDynamicModel, RequestDimensionInRangeWrongTensorContent)
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE);
 }
+
+class PredictValidationPrecision : public ::testing::TestWithParam<ovms::Precision> {
+protected:
+    void SetUp() override {
+        auto precision = ovms::Precision::FP32;
+        mockedInputsInfo[tensorName] = std::make_shared<ovms::TensorInfo>(tensorName, precision, ovms::shape_t{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Layout{"NC"});
+    }
+    tensorflow::serving::PredictRequest request;
+    const char* tensorName = DUMMY_MODEL_INPUT_NAME;
+    ovms::tensor_map_t mockedInputsInfo;
+};
+
+TEST_P(PredictValidationPrecision, ValidPrecisions) {
+    ovms::Precision testedPrecision = GetParam();
+    mockedInputsInfo[tensorName]->setPrecision(testedPrecision);
+    request = preparePredictRequest(
+        {
+            {tensorName,
+                std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::TensorInfo::getPrecisionAsDataType(testedPrecision)}},
+        });
+    auto status = ovms::request_validation_utils::validate(request, mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::OK) << "Precision validation failed:"
+                                            << toString(testedPrecision)
+                                            << " should pass validation";
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    Test,
+    PredictValidationPrecision,
+    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<PredictValidationPrecision::ParamType>& info) {
+        return toString(info.param);
+    });
 
 #pragma GCC diagnostic pop

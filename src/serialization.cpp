@@ -34,6 +34,7 @@ Status serializeTensorToTensorProto(
     switch (servableOutput->getPrecision()) {
     case ovms::Precision::FP32:
     case ovms::Precision::I32:
+    case ovms::Precision::FP64:
     case ovms::Precision::I8:
     case ovms::Precision::U8:
     case ovms::Precision::I16:  // 2 byte padding [v1, v0, 0, 0, u1, u0, 0, 0, ...]

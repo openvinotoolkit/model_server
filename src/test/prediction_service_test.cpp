@@ -1026,7 +1026,6 @@ TEST_F(TestPredict, ChangeBatchSizeViaRequestAndConfigChangeArbitraryPosition) {
 TEST_F(TestPredict, PerformInferenceDummyAllDimensionsAny) {
     using namespace ovms;
 
-    // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("0");
     ASSERT_EQ(config.parseShapeParameter("(-1,-1)"), ovms::StatusCode::OK);
@@ -1048,13 +1047,12 @@ TEST_F(TestPredict, PerformInferenceDummyAllDimensionsAny) {
  * No model reload performed between requests.
  *
  * 1. Load model with input shape (-1, 10)
- * 2. Do the X inferences with (x, 10) shape, expect correct output shapes. x=(0; 100]
+ * 2. Do the X inferences with (x, 10) shape, expect correct output shapes. x=[1, 3, 5, 7, 11, 17, 21, 57, 99]
  */
 
 TEST_F(TestPredict, PerformInferenceDummyBatchSizeAny) {
     using namespace ovms;
 
-    // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("-1");
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -1065,6 +1063,28 @@ TEST_F(TestPredict, PerformInferenceDummyBatchSizeAny) {
         ASSERT_EQ(performInferenceWithShape(response, {i, 10}), ovms::StatusCode::OK);
         checkOutputShape(response, {i, 10}, DUMMY_MODEL_OUTPUT_NAME);
     }
+}
+
+/**
+ * Scenario - inference with dummy precision fp32.
+ *
+ * 1. Load model with input shape (-1, 10)
+ * 2. Do the inferences with (3, 10) shape, expect correct output shapes and precision
+ */
+
+TEST_F(TestPredict, PerformInferenceDummyFp32) {
+    using namespace ovms;
+
+    ModelConfig config = DUMMY_FP64_MODEL_CONFIG;
+    config.setBatchingParams("3");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    tensorflow::serving::PredictResponse response;
+
+    auto request = preparePredictRequest({{"input:0", std::tuple<ovms::shape_t, tensorflow::DataType>{{3, 10}, tensorflow::DataType::DT_DOUBLE}}});
+    ASSERT_EQ(performInferenceWithRequest(request, response, "dummy_fp64"), ovms::StatusCode::OK);
+    checkOutputShape(response, {3, 10}, "output:0");
+    ASSERT_EQ(response.outputs().at("output:0").dtype(), tensorflow::DataType::DT_DOUBLE);
 }
 
 /**
@@ -1083,7 +1103,6 @@ TEST_F(TestPredict, PerformInferenceDummyBatchSizeAny) {
 TEST_F(TestPredict, PerformInferenceDummyAllDimensionsHaveRange) {
     using namespace ovms;
 
-    // Prepare model with changed layout to nhwc (internal layout=nchw)
     ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setBatchingParams("0");
     ASSERT_EQ(config.parseShapeParameter("(2:4,1:5)"), ovms::StatusCode::OK);

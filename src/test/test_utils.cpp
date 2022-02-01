@@ -85,29 +85,6 @@ void checkDummyResponse(const std::string outputName,
         << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
 }
 
-void checkIncrement4DimResponse(const std::string outputName,
-    const std::vector<float>& expectedData,
-    PredictRequest& request,
-    PredictResponse& response,
-    const std::vector<size_t>& expectedShape) {
-    ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
-    const auto& output_proto = response.outputs().at(outputName);
-
-    auto elementsCount = std::accumulate(expectedShape.begin(), expectedShape.end(), 1, std::multiplies<size_t>());
-
-    ASSERT_EQ(output_proto.tensor_content().size(), elementsCount * sizeof(float));
-    ASSERT_EQ(output_proto.tensor_shape().dim_size(), expectedShape.size());
-    for (size_t i = 0; i < expectedShape.size(); i++) {
-        ASSERT_EQ(output_proto.tensor_shape().dim(i).size(), expectedShape[i]);
-    }
-
-    float* actual_output = (float*)output_proto.tensor_content().data();
-    float* expected_output = (float*)expectedData.data();
-    const int dataLengthToCheck = elementsCount * sizeof(float);
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
-        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
-}
-
 void checkIncrement4DimShape(const std::string outputName,
     PredictResponse& response,
     const std::vector<size_t>& expectedShape) {

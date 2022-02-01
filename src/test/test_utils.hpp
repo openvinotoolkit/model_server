@@ -16,6 +16,7 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <memory>
 #include <sstream>
@@ -40,6 +41,7 @@
 using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;
 
 const std::string dummy_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy";
+const std::string dummy_fp64_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_fp64";
 const std::string sum_model_location = std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model";
 const std::string increment_1x3x4x5_model_location = std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5";
 
@@ -56,6 +58,21 @@ const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "",                    // cache directory
     1,                     // model_version unused since version are read from path
     dummy_model_location,  // local path
+};
+
+const ovms::ModelConfig DUMMY_FP64_MODEL_CONFIG{
+    "dummy_fp64",
+    dummy_fp64_model_location,  // base path
+    "CPU",                      // target device
+    "1",                        // batchsize
+    1,                          // NIREQ
+    false,                      // is stateful
+    true,                       // idle sequence cleanup enabled
+    false,                      // low latency transformation enabled
+    500,                        // steteful sequence max number
+    "",                         // cache directory
+    1,                          // model_version unused since version are read from path
+    dummy_fp64_model_location,  // local path
 };
 
 const ovms::ModelConfig SUM_MODEL_CONFIG{
@@ -95,6 +112,9 @@ constexpr const int DUMMY_MODEL_OUTPUT_SIZE = 10;
 constexpr const float DUMMY_ADDITION_VALUE = 1.0;
 const std::vector<size_t> DUMMY_MODEL_SHAPE{1, 10};
 
+constexpr const char* DUMMY_FP64_MODEL_INPUT_NAME = "input:0";
+constexpr const char* DUMMY_FP64_MODEL_OUTPUT_NAME = "output:0";
+
 constexpr const char* SUM_MODEL_INPUT_NAME_1 = "input1";
 constexpr const char* SUM_MODEL_INPUT_NAME_2 = "input2";
 constexpr const char* SUM_MODEL_OUTPUT_NAME = "sum";
@@ -126,6 +146,30 @@ static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t r
             input.mutable_tensor_shape()->add_dim()->set_size(dim);
             numberOfElements *= dim;
         }
+        if (dtype == tensorflow::DataType::DT_HALF) {
+            if (data.size() == 0) {
+                for (size_t i = 0; i < numberOfElements; i++) {
+                    input.add_half_val('1');
+                }
+            } else {
+                for (size_t i = 0; i < data.size(); i++) {
+                    input.add_half_val(data[i]);
+                }
+            }
+            break;
+        }
+        if (dtype == tensorflow::DataType::DT_UINT16) {
+            if (data.size() == 0) {
+                for (size_t i = 0; i < numberOfElements; i++) {
+                    input.add_int_val('1');
+                }
+            } else {
+                for (size_t i = 0; i < data.size(); i++) {
+                    input.add_int_val(data[i]);
+                }
+            }
+            break;
+        }
         if (data.size() == 0) {
             *input.mutable_tensor_content() = std::string(numberOfElements * tensorflow::DataTypeSize(dtype), '1');
         } else {
@@ -145,11 +189,41 @@ void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
     tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1);
 
+template <typename T>
+std::string readableError(const T* expected_output, const T* actual_output, const size_t size) {
+    std::stringstream ss;
+    for (size_t i = 0; i < size; ++i) {
+        if (actual_output[i] != expected_output[i]) {
+            ss << "Expected:" << expected_output[i] << ", actual:" << actual_output[i] << " at place:" << i << std::endl;
+            break;
+        }
+    }
+    return ss.str();
+}
+
+template <typename T>
 void checkIncrement4DimResponse(const std::string outputName,
-    const std::vector<float>& expectedData,
+    const std::vector<T>& expectedData,
     tensorflow::serving::PredictRequest& request,
     tensorflow::serving::PredictResponse& response,
-    const std::vector<size_t>& expectedShape);
+    const std::vector<size_t>& expectedShape) {
+    ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
+    const auto& output_proto = response.outputs().at(outputName);
+
+    auto elementsCount = std::accumulate(expectedShape.begin(), expectedShape.end(), 1, std::multiplies<size_t>());
+
+    ASSERT_EQ(output_proto.tensor_content().size(), elementsCount * sizeof(T));
+    ASSERT_EQ(output_proto.tensor_shape().dim_size(), expectedShape.size());
+    for (size_t i = 0; i < expectedShape.size(); i++) {
+        ASSERT_EQ(output_proto.tensor_shape().dim(i).size(), expectedShape[i]);
+    }
+
+    T* actual_output = (T*)output_proto.tensor_content().data();
+    T* expected_output = (T*)expectedData.data();
+    const int dataLengthToCheck = elementsCount * sizeof(T);
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(T));
+}
 
 void checkIncrement4DimShape(const std::string outputName,
     tensorflow::serving::PredictResponse& response,
@@ -167,17 +241,6 @@ static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedF
     std::vector<google::protobuf::int32> result(container->size(), 0);
     std::memcpy(result.data(), container->mutable_data(), result.size() * sizeof(google::protobuf::int32));
     return result;
-}
-
-static std::string readableError(const float* expected_output, const float* actual_output, const size_t size) {
-    std::stringstream ss;
-    for (size_t i = 0; i < size; ++i) {
-        if (actual_output[i] != expected_output[i]) {
-            ss << "Expected:" << expected_output[i] << ", actual:" << actual_output[i] << " at place:" << i << std::endl;
-            break;
-        }
-    }
-    return ss.str();
 }
 
 // returns path to a file.
@@ -264,3 +327,39 @@ extern bool isShapeTheSame(const tensorflow::TensorShapeProto&, const std::vecto
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);
 void readImage(const std::string& path, size_t& filesize, std::unique_ptr<char[]>& image_bytes);
+
+static const std::vector<ovms::Precision> SUPPORTED_INPUT_PRECISIONS{
+    // ovms::Precision::UNSPECIFIED,
+    // ovms::Precision::MIXED,
+    ovms::Precision::FP64,
+    ovms::Precision::FP32,
+    ovms::Precision::FP16,
+    // InferenceEngine::Precision::Q78,
+    ovms::Precision::I16,
+    ovms::Precision::U8,
+    ovms::Precision::I8,
+    ovms::Precision::U16,
+    ovms::Precision::I32,
+    ovms::Precision::I64,
+    // ovms::Precision::BIN,
+    // ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
+};
+
+static const std::vector<ovms::Precision> UNSUPPORTED_INPUT_PRECISIONS{
+    ovms::Precision::UNDEFINED,
+    ovms::Precision::MIXED,
+    // ovms::Precision::FP64,
+    // ovms::Precision::FP32,
+    // ovms::Precision::FP16,
+    ovms::Precision::Q78,
+    // ovms::Precision::I16,
+    // ovms::Precision::U8,
+    // ovms::Precision::I8,
+    // ovms::Precision::U16,
+    // ovms::Precision::I32,
+    // ovms::Precision::I64,
+    ovms::Precision::BIN,
+    ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
+};

@@ -47,6 +47,7 @@ using testing::Throw;
 const std::vector<ovms::Precision> SUPPORTED_OUTPUT_PRECISIONS{
     // ovms::Precision::UNDEFINED,
     // ovms::Precision::MIXED,
+    ovms::Precision::FP64,
     ovms::Precision::FP32,
     ovms::Precision::FP16,
     // ovms::Precision::Q78,
@@ -64,6 +65,7 @@ const std::vector<ovms::Precision> SUPPORTED_OUTPUT_PRECISIONS{
 const std::vector<ovms::Precision> UNSUPPORTED_OUTPUT_PRECISIONS{
     // ovms::Precision::UNDEFINED, // Cannot create tensor with such precision
     // ovms::Precision::MIXED, // Cannot create tensor with such precision
+    // ovms::Precision::FP64,
     // ovms::Precision::FP32,
     // ovms::Precision::FP16,
     // ovms::Precision::Q78, // Cannot create tensor with such precision

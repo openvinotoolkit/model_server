@@ -38,6 +38,8 @@ int getMatTypeFromTensorPrecision(ovms::Precision tensorPrecision) {
     switch (tensorPrecision) {
     case ovms::Precision::FP32:
         return CV_32F;
+    case ovms::Precision::FP64:
+        return CV_64F;
     case ovms::Precision::FP16:
         return CV_16F;
     case ovms::Precision::I16:
@@ -78,6 +80,7 @@ cv::Mat convertStringValToMat(const std::string& stringVal) {
 Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision requestedPrecision) {
     int type = getMatTypeFromTensorPrecision(requestedPrecision);
     if (type == -1) {
+        SPDLOG_DEBUG("Error during binary input conversion: not supported precision: {}", toString(requestedPrecision));
         return StatusCode::INVALID_PRECISION;
     }
 
@@ -317,13 +320,13 @@ ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::shared_p
     switch (tensorInfo->getPrecision()) {
     case ovms::Precision::FP32:
     case ovms::Precision::I32:
+    case ovms::Precision::FP64:
     case ovms::Precision::I8:
     case ovms::Precision::U8:
     case ovms::Precision::FP16:
     case ovms::Precision::U16:
     case ovms::Precision::I16:
         return createTensorFromMats(images, tensorInfo, isPipeline);
-    case ovms::Precision::I64:
     case ovms::Precision::MIXED:
     case ovms::Precision::Q78:
     case ovms::Precision::BIN:
@@ -349,7 +352,7 @@ Status convertStringValToTensor(const tensorflow::TensorProto& src, ov::Tensor& 
 
     tensor = convertMatsToTensor(images, tensorInfo, isPipeline);
     if (!tensor) {
-        return StatusCode::IMAGE_PARSING_FAILED;  // TODO: Add unit test.
+        return StatusCode::IMAGE_PARSING_FAILED;
     }
     return StatusCode::OK;
 }

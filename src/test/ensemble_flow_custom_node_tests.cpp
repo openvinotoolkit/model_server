@@ -4855,8 +4855,57 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
 
     // Execute
     ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
-    checkIncrement4DimResponse(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
+    checkIncrement4DimResponse<float>(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
 }
+
+struct LibraryProduceImages5DimensionsInFP32OutFP64 {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        const CustomNodeTensor& input = *inputs;
+        std::vector<float> inputData((float*)input.data, ((float*)input.data) + (input.dataBytes / sizeof(float)));
+
+        *outputsCount = 1;
+        int elements = 3 * 1 * 1 * 2 * 3;
+        *outputs = (struct CustomNodeTensor*)malloc(*outputsCount * sizeof(CustomNodeTensor));
+        double* result = (double*)malloc(elements * sizeof(double));
+        std::vector<double> data;
+        for (size_t i = 0; i < 3; i++) {
+            for (float v : inputData) {
+                data.push_back(double(v) + double(i) + 1.0);
+            }
+        }
+        std::memcpy(result, data.data(), elements * sizeof(double));
+
+        CustomNodeTensor& resultTensor = (*outputs)[0];
+        resultTensor.name = "custom_node_output";
+        resultTensor.data = reinterpret_cast<uint8_t*>(result);
+        resultTensor.dimsCount = 5;
+        resultTensor.dims = (uint64_t*)malloc(resultTensor.dimsCount * sizeof(uint64_t));
+        resultTensor.dims[0] = 3;
+        resultTensor.dims[1] = 1;
+        resultTensor.dims[2] = 1;
+        resultTensor.dims[3] = 2;
+        resultTensor.dims[4] = 3;
+        resultTensor.dataBytes = elements * sizeof(double);
+        resultTensor.precision = FP64;
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwcNode) {
     // Prepare request
@@ -4912,7 +4961,128 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
 
     // Execute
     ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
-    checkIncrement4DimResponse(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
+    checkIncrement4DimResponse<float>(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
+}
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedFP64TensorsFromCustomNode) {
+    /*
+        Description:
+
+        Entry (1x3x1x2, fp32) ----------> (1x3x1x2, fp32) CustomNode (3x1x3x1x2, fp64) --- demultiplexer -------> (1x3x1x2, fp64) 3x ModelNode (1x3x1x2, fp64) ----- gather -----> (3x1x3x1x2, fp64) Exit
+    */
+
+    // Prepare request
+    const std::vector<float> inputValues{1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+    PredictRequest request;
+    PredictResponse response;
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[pipelineInputName];
+    proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+    proto.mutable_tensor_content()->assign((char*)inputValues.data(), inputValues.size() * sizeof(float));
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.mutable_tensor_shape()->add_dim()->set_size(3);
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.mutable_tensor_shape()->add_dim()->set_size(2);
+
+    // Prepare model
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_FP64_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare pipeline
+    std::optional<int32_t> demultiplyCount = -1;
+    std::set<std::string> gather = {"image_demultiplexer_node"};
+    std::unordered_map<std::string, std::string> aliases{{"custom_node_output", "custom_node_output"}};
+
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        Precision::FP32,
+        Shape{Dimension::any(), 3, 1, 2});
+    const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        Precision::FP64,
+        Shape{Dimension::any(), 1, 1, 2, 3});
+    const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo, gather);
+    auto custom_node = std::make_unique<CustomNode>(
+        "image_demultiplexer_node",
+        createLibraryMock<LibraryProduceImages5DimensionsInFP32OutFP64>(),
+        parameters_t{}, aliases, demultiplyCount);
+    auto model_node = std::make_unique<DLNode>("increment_node", "dummy_fp64", std::nullopt, manager);
+
+    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+    pipeline->connect(*input_node, *custom_node, {{pipelineInputName, "any"}});
+    pipeline->connect(*custom_node, *model_node, {{"custom_node_output", "input:0"}});
+    pipeline->connect(*model_node, *output_node, {{"output:0", pipelineOutputName}});
+
+    pipeline->push(std::move(input_node));
+    pipeline->push(std::move(custom_node));
+    pipeline->push(std::move(model_node));
+    pipeline->push(std::move(output_node));
+
+    // Execute
+    ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
+    checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, request, response, {3, 1, 1, 2, 3});
+}
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedFP64TensorsFromEntryNode) {
+    /*
+        Description:
+
+        Entry (2x1x2x1x2, fp64) --- demultiplexer --------> (1x2x1x2, fp64) 2x ModelNode (1x2x1x2, fp64) -------> (1x2x1x2, fp64) 2x ModelNode (1x2x1x2, fp64) ----- gather -----> (2x1x2x1x2, fp64) Exit
+    */
+
+    // Prepare request
+    const std::vector<double> inputValues{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
+    PredictRequest request;
+    PredictResponse response;
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[pipelineInputName];
+    proto.set_dtype(tensorflow::DataType::DT_DOUBLE);
+    proto.mutable_tensor_content()->assign((char*)inputValues.data(), inputValues.size() * sizeof(double));
+    proto.mutable_tensor_shape()->add_dim()->set_size(2);
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.mutable_tensor_shape()->add_dim()->set_size(2);
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.mutable_tensor_shape()->add_dim()->set_size(2);
+
+    // Prepare model
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_FP64_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    ASSERT_EQ(config.parseShapeParameter("(1,2,1,2)"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare pipeline
+    std::optional<int32_t> demultiplyCount = -1;
+    std::set<std::string> gather = {"request"};
+
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        Precision::FP64,
+        Shape{Dimension::any(), 1, 2, 1, 2});
+    const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo, demultiplyCount);
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        Precision::FP64,
+        Shape{Dimension::any(), 1, 2, 1, 2});
+    const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo, gather);
+    auto model_node_1 = std::make_unique<DLNode>("increment_node_1", "dummy_fp64", std::nullopt, manager);
+    auto model_node_2 = std::make_unique<DLNode>("increment_node_2", "dummy_fp64", std::nullopt, manager);
+
+    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+    pipeline->connect(*input_node, *model_node_1, {{pipelineInputName, "input:0"}});
+    pipeline->connect(*model_node_1, *model_node_2, {{"output:0", "input:0"}});
+    pipeline->connect(*model_node_2, *output_node, {{"output:0", pipelineOutputName}});
+
+    pipeline->push(std::move(input_node));
+    pipeline->push(std::move(model_node_1));
+    pipeline->push(std::move(model_node_2));
+    pipeline->push(std::move(output_node));
+
+    // Execute
+    ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
+    checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, request, response, {2, 1, 2, 1, 2});
 }
 
 struct LibraryCountDeinitialize {
