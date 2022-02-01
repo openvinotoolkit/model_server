@@ -119,8 +119,7 @@ TEST(EnsembleMetadata, OneModelNodeWithShapeRange) {
     EXPECT_EQ(output->getPrecision(), ovms::Precision::FP32);
 }
 
-// TODO: To enable when final DAG implementation is finished.
-TEST(EnsembleMetadata, DISABLED_TwoParallelModelsShapeRangeIntersection) {
+TEST(EnsembleMetadata, TwoParallelModelsShapeRangeIntersection) {
     /*
         This test creates pipeline definition with two parallel DL model nodes which has dimensions accepting different ranges of dimensions.
         Test ensures we receive correct metadata - intersection of both dimensions.
@@ -186,8 +185,7 @@ TEST(EnsembleMetadata, DISABLED_TwoParallelModelsShapeRangeIntersection) {
     EXPECT_EQ(output_B->getPrecision(), ovms::Precision::FP32);
 }
 
-// TODO: To enable when final DAG implementation is finished.
-TEST(EnsembleMetadata, DISABLED_TwoParallelModelsOneShapeRangeOneStaticIntersection) {
+TEST(EnsembleMetadata, TwoParallelModelsOneShapeRangeOneStaticIntersection) {
     /*
         This test creates pipeline definition with two parallel DL model nodes, which one of them have dimensions accepting ranges of dimensions.
         Test ensures we receive correct metadata - intersection of both dimensions, meaning the final input shape is static.
@@ -253,13 +251,11 @@ TEST(EnsembleMetadata, DISABLED_TwoParallelModelsOneShapeRangeOneStaticIntersect
     EXPECT_EQ(output_B->getPrecision(), ovms::Precision::FP32);
 }
 
-// TODO: To enable when final DAG implementation is finished.
-TEST(EnsembleMetadata, DISABLED_TwoParallelModelsOneShapeAnyOneStaticIntersection) {
+TEST(EnsembleMetadata, TwoParallelModelsOneShapeAnyOneStaticIntersection) {
     /*
         This test creates pipeline definition with two parallel DL model nodes, which one of them have dimensions accepting any dimensions.
         Test ensures we receive correct metadata - intersection of both dimensions, meaning the final input shape is static.
     */
-
     ConstructorEnabledModelManager manager;
 
     ModelConfig config = DUMMY_MODEL_CONFIG;

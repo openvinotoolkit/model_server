@@ -30,6 +30,7 @@
 
 namespace ovms {
 
+// in case we change behaviour for this constructor we may need to write additional tests for TensorInfo intersection / DAGs
 TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
     const Shape& shape) :
@@ -37,7 +38,7 @@ TensorInfo::TensorInfo(const std::string& name,
     mapping(""),
     precision(precision),
     shape(shape),
-    layout(getDefaultLayout()) {}
+    layout(Layout::getDefaultLayout()) {}
 
 TensorInfo::TensorInfo(const std::string& name,
     const Precision& precision,
@@ -46,7 +47,7 @@ TensorInfo::TensorInfo(const std::string& name,
     mapping(""),
     precision(precision),
     shape(shape),
-    layout(getDefaultLayout()) {
+    layout(Layout::getDefaultLayout()) {
 }
 
 TensorInfo::TensorInfo(const std::string& name,
@@ -101,7 +102,7 @@ TensorInfo::TensorInfo(const std::string& name,
     mapping(mapping),
     precision(precision),
     shape(shape),
-    layout(getDefaultLayout()) {
+    layout(Layout::getDefaultLayout()) {
 }
 
 const std::string& TensorInfo::getName() const {
@@ -221,24 +222,62 @@ void TensorInfo::setLayout(const Layout& layout) {
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const Shape& shape) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->shape = shape;
-    copy->layout = getDefaultLayout();
+    // copy->layout = Layout::getUnspecifiedLayout(); TODO CVS-77193
     return copy;
 }
 
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithEffectiveDimensionPrefix(const Dimension& dim) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->influencedByDemultiplexer = true;
-    copy->shape.emplace(copy->shape.begin(), dim);  // TODO check together with pipeline definiton apply demultiplexer to shape
+    copy->shape.emplace(copy->shape.begin(), dim);
+    // copy->layout = Layout::getUnspecifiedLayout(); TODO CVS-77193
     return copy;
+}
+
+std::shared_ptr<TensorInfo> TensorInfo::createIntersection(const TensorInfo& other) {
+    if (this->isTensorUnspecified())
+        return std::make_shared<TensorInfo>(other);
+    if (other.isTensorUnspecified())
+        return std::make_shared<TensorInfo>(*this);
+    if ((this->getName() != other.getName()) ||
+        (this->getMappedName() != other.getMappedName())) {
+        return nullptr;
+    }
+    Precision precision;
+    if (this->getPrecision() != other.getPrecision()) {
+        if (this->getPrecision() == Precision::UNDEFINED) {
+            precision = other.getPrecision();
+        } else if (other.getPrecision() == Precision::UNDEFINED) {
+            precision = this->getPrecision();
+        } else {
+            return nullptr;
+        }
+    } else {
+        precision = this->getPrecision();
+    }
+    auto layout = this->getLayout().createIntersection(other.getLayout());
+    if (!layout.has_value())
+        return nullptr;
+    auto newShape = this->getShape().createIntersection(other.getShape());
+    if (!newShape.has_value())
+        return nullptr;
+    return std::make_shared<TensorInfo>(this->getName(),
+        this->getMappedName(),
+        precision,
+        std::move(newShape.value()),
+        layout.value());
 }
 
 bool TensorInfo::isTensorSpecEqual(const TensorInfo& other) const {
     return (this->getShape() == other.getShape()) &&
            (this->getPrecision() == other.getPrecision());
+    (this->getLayout() == other.getLayout());
 }
 
 bool TensorInfo::isTensorUnspecified() const {
-    return this->getPrecision() == Precision::UNDEFINED;
+    return (this->getPrecision() == Precision::UNDEFINED) &&
+           (this->getName() == "") &&
+           (this->getShape() == Shape());
 }
 
 std::string TensorInfo::shapeToString(const shape_t& shape) {
@@ -296,10 +335,4 @@ std::string TensorInfo::asString() const {
         << "layout: " << getStringFromLayout(getLayout());
     return ss.str();
 }
-
-const Layout& TensorInfo::getDefaultLayout() {
-    static const Layout defaultLayout{"N..."};
-    return defaultLayout;
-}
-
 }  // namespace ovms

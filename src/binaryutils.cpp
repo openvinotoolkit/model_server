@@ -85,10 +85,16 @@ Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision 
     return StatusCode::OK;
 }
 
-bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != TensorInfo::getDefaultLayout()) {
-        return false;
+Status validateLayout(const std::shared_ptr<TensorInfo>& tensorInfo) {
+    if ((tensorInfo->getLayout() != "NHWC") &&
+        (tensorInfo->getLayout() != Layout::getUnspecifiedLayout()) &&  // handle DAG
+        (tensorInfo->getLayout() != Layout::getDefaultLayout())) {      // handle model without Layout set
+        return StatusCode::UNSUPPORTED_LAYOUT;
     }
+    return StatusCode::OK;
+}
+
+bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tensorInfo) {
     Dimension cols = Dimension::any();
     Dimension rows = Dimension::any();
     if (tensorInfo->getShape().size() == 4) {
@@ -113,9 +119,6 @@ bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tenso
 }
 
 Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != TensorInfo::getDefaultLayout()) {
-        return StatusCode::UNSUPPORTED_LAYOUT;
-    }
     Dimension cols = Dimension::any();
     Dimension rows = Dimension::any();
     if (tensorInfo->getShape().size() == 4) {
@@ -162,9 +165,6 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorI
 Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     const cv::Mat input,
     cv::Mat* firstBatchImage) {
-    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != TensorInfo::getDefaultLayout()) {
-        return StatusCode::UNSUPPORTED_LAYOUT;
-    }
 
     // At this point we can either have nhwc format or pretendant to be nhwc but with ANY layout in pipeline info
     Dimension numberOfChannels;
@@ -196,7 +196,8 @@ Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* fi
     if (input.cols == firstBatchImage->cols && input.rows == firstBatchImage->rows) {
         return StatusCode::OK;
     }
-    SPDLOG_ERROR("Each binary image in request need to have resolution matched");
+    SPDLOG_ERROR("Each binary image in request needs to have resolution matched. First cols: {}, rows: {}, current cols: {}, rows: {}",
+        firstBatchImage->cols, firstBatchImage->rows, input.cols, input.rows);
     return StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH;
 }
 
@@ -209,11 +210,13 @@ bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
 }
 
 Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage) {
-    // For pipelines with only custom nodes entry, there is no way to deduce layout.
+    // For pipelines with only custom nodes entry, or models with default layout there is no way to deduce layout.
     // With unknown layout, there is no way to deduce pipeline input resolution.
     // This forces binary utility to create tensors with resolution inherited from input binary image from request.
     // To achieve it, in this specific case we require all binary images to have the same resolution.
-    if (firstBatchImage && tensorInfo->getLayout() == TensorInfo::getDefaultLayout()) {
+    // TODO check if H/W is undefined and only then check this CVS-77193
+    if (firstBatchImage &&
+        (tensorInfo->getLayout() == Layout::getUnspecifiedLayout())) {
         auto status = validateResolutionAgainstFirstBatchImage(input, firstBatchImage);
         if (!status.ok()) {
             return status;
@@ -224,14 +227,14 @@ Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Ma
 
 Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     const tensorflow::TensorProto& src) {
-    if (tensorInfo->getLayout() != "NHWC" && tensorInfo->getLayout() != TensorInfo::getDefaultLayout()) {
-        return StatusCode::UNSUPPORTED_LAYOUT;
+    auto status = validateLayout(tensorInfo);
+    if (!status.ok()) {
+        return status;
     }
-
     // 4 for default pipelines, 5 for pipelines with demultiplication at entry
-    bool isShapeDimensionValid = tensorInfo->getShape().size() == 4 ||
-                                 (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5);
-    if (!isShapeDimensionValid) {
+    bool isShapeLengthValid = tensorInfo->getShape().size() == 4 ||
+                              (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5);
+    if (!isShapeLengthValid) {
         return StatusCode::INVALID_SHAPE;
     }
 
@@ -263,7 +266,6 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
         if (status != StatusCode::OK) {
             return status;
         }
-
         if (!isPrecisionEqual(image.depth(), tensorInfo->getPrecision())) {
             cv::Mat imageCorrectPrecision;
             status = convertPrecision(image, imageCorrectPrecision, tensorInfo->getPrecision());
