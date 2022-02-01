@@ -17,8 +17,7 @@
 import numpy as np
 import argparse
 from ovmsclient import make_http_client
-from utils.common import get_model_io_names
-from utils.resnet_utils import resnet_postprocess
+from utils.resnet_utils import resnet_postprocess, get_model_io_names
 
 
 parser = argparse.ArgumentParser(description='Make prediction using images in numerical format')
