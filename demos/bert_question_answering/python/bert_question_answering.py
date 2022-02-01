@@ -52,14 +52,8 @@ class ConcatenatedParagraph():
     def get_tokens_id(self):
         return [token.id for token in self.tokens]
 
-    def get_tokens_se(self):
-        return [(token.start, token.end) for token in self.tokens]
-
-    def get_start(self, token_index):
-        return self.tokens[token_index].start
-
-    def get_end(self, token_index):
-        return self.tokens[token_index].end
+    def get_token(self, token_index):
+        return self.tokens[token_index]
 
 
 def build_argparser():
@@ -243,8 +237,8 @@ def main():
             max_s, max_e = divmod(score_mat.flatten().argmax(), score_mat.shape[1])
             max_score = score_mat[max_s, max_e] * (1 - score_na)
 
-            max_s = cur_cp.get_start(max_s)
-            max_e = cur_cp.get_end(max_e)
+            max_s = cur_cp.get_token(max_s).get_start_position()
+            max_e = cur_cp.get_token(max_e).get_end_position()
 
             answers.append((max_score, max_s, max_e, cp_number))
             cp_number += 1

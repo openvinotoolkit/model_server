@@ -28,6 +28,12 @@ class Token():
         self.start += s_offset
         self.end += e_offset
 
+    def get_start_position(self):
+        return self.start
+
+    def get_end_position(self):
+        return self.end
+
 # load vocabulary file for encoding
 def load_vocab_file(vocab_file_name):
     with open(vocab_file_name, "r", encoding="utf-8") as r:
