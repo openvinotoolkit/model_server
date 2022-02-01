@@ -45,7 +45,7 @@ Review the [Architecture concept](docs/architecture.md) document for more detail
 A few key features: 
 - Support for multiple frameworks. Serve models trained in popular formats such as Caffe*, TensorFlow*, MXNet* and ONNX*.
 - Online deployment of new [model versions](docs/model_version_policy.md).
-- [Configuration updates in a runtime](docs/docker_container.md#updating-configuration-file)
+- [Configuration updates in a runtime](docs/online_config_changes.md)
 - Support for AI accelerators including [Intel Movidius Myriad VPUs](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html), 
 [GPU](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_GPU.html) and [HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html). 
 - The server can be enabled both on [Bare Metal Hosts](docs/host.md) or in

@@ -1,4 +1,4 @@
-# Batch Processing in OpenVINO&trade; Model Server
+# Batch Processing in OpenVINO&trade; Model Server  {#ovms_docs_shape_batch_layout}
 
 - `batch_size` parameter is optional. By default, is accepted the batch size derived from the model. It is set by the model optimizer tool.
 - When that parameter is set to numerical value, it is changing the model batch size at service start up. 

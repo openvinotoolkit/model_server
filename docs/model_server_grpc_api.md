@@ -52,7 +52,7 @@ Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
 
 ## See Also
 
-- [Example client code](../example_client/README.md) shows how to use GRPC API and REST API.
+- [Example client code](https://github.com/openvinotoolkit/model_server/blob/main/example_client/README.md) shows how to use GRPC API and REST API.
 - [TensorFlow Serving](https://github.com/tensorflow/serving)
 - [gRPC](https://grpc.io/)
 
