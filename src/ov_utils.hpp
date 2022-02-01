@@ -18,6 +18,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
@@ -38,4 +39,7 @@ ov::Tensor createSharedTensor(ov::element::Type_t precision, const shape_t& shap
 std::string getTensorMapString(const std::map<std::string, std::shared_ptr<TensorInfo>>& tensorMap);
 
 Status tensorClone(ov::Tensor& destinationTensor, const ov::Tensor& sourceTensor);
+
+std::optional<ov::Layout> getLayoutFromRTMap(const ov::RTMap& rtMap);
+
 }  // namespace ovms

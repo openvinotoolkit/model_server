@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "layout.hpp"
 
+#include <algorithm>
+#include <string>
 #include <tuple>
 
 const char* DEFAULT_LAYOUT = "N...";
@@ -105,4 +107,15 @@ std::optional<Layout> Layout::createIntersection(const Layout& other) const {
         return other;
     return std::nullopt;
 }
+
+Layout Layout::fromOvLayout(const ov::Layout& layout) {
+    std::string strCopy = layout.to_string();
+    strCopy.erase(std::remove_if(strCopy.begin(), strCopy.end(),
+                      [](char c) -> bool {
+                          return c == '[' || c == ']' || c == ',';
+                      }),
+        strCopy.end());
+    return Layout(strCopy);
+}
+
 }  // namespace ovms
