@@ -1429,8 +1429,7 @@ TEST_F(ReloadAvailableModelDueToConfigChange, ExpectReloadDueToShapeConfiguratio
     EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
 }
 
-// TODO: Enable tests once the issue https://jira.devtools.intel.com/browse/CVS-71746 is resolved.
-class DISABLED_GetModelInstanceTest : public ::testing::Test {};
+class GetModelInstanceTest : public ::testing::Test {};
 
 class MockModel : public ovms::Model {};
 
@@ -1443,7 +1442,7 @@ public:
     }
 };
 
-TEST_F(DISABLED_GetModelInstanceTest, WithRequestedNameShouldReturnModelNameMissing) {
+TEST_F(GetModelInstanceTest, WithRequestedNameShouldReturnModelNameMissing) {
     MockModelManagerWith1Model manager;
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
@@ -1451,7 +1450,7 @@ TEST_F(DISABLED_GetModelInstanceTest, WithRequestedNameShouldReturnModelNameMiss
     EXPECT_EQ(status, ovms::StatusCode::MODEL_NAME_MISSING) << "Should fail with no model with such name registered";
 }
 
-TEST_F(DISABLED_GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturnModelVersionMissing) {
+TEST_F(GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturnModelVersionMissing) {
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
@@ -1486,7 +1485,7 @@ public:
 
 std::shared_ptr<ModelWithModelInstanceFakeLoad> modelWithModelInstanceFakeLoad;
 
-TEST_F(DISABLED_GetModelInstanceTest, WithRequestedDefaultVersionUnloadedShouldReturnModelVersionMissing) {
+TEST_F(GetModelInstanceTest, WithRequestedDefaultVersionUnloadedShouldReturnModelVersionMissing) {
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
@@ -1500,7 +1499,7 @@ TEST_F(DISABLED_GetModelInstanceTest, WithRequestedDefaultVersionUnloadedShouldR
     EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_MISSING);
 }
 
-TEST_F(DISABLED_GetModelInstanceTest, WithRequestedVersion1ShouldReturnModelVersionNotLoadedAnymore) {
+TEST_F(GetModelInstanceTest, WithRequestedVersion1ShouldReturnModelVersionNotLoadedAnymore) {
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
