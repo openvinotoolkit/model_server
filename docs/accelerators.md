@@ -5,19 +5,19 @@
 Using the [Intel Movidius Neural Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick) with the server is possible with the [MYRIAD
 plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_MYRIAD.html). 
 
-The Intel Movidius Neural Compute Stick must be visible and accessible on host machine. 
+The Intel Movidius Neural Compute Stick must be visible and accessible on the host machine. 
 
 NCS devices should be reported by `lsusb` command, which should print out `ID 03e7:2485`.<br>
 
-To start server with Neural Compute Stick using one of the options below:
+To start the server with Neural Compute Stick, use one of the options below:
 
-1) More secure without docker privileged mode and mounting only the usb devices:
+1) More secure option: without docker privileged mode and mounting only the USB devices:
    ```
    docker run --rm -it -u 0 --device-cgroup-rule='c 189:* rmw' -v /opt/model:/opt/model -v /dev/bus/usb:/dev/bus/usb -p 9001:9001 openvino/model_server \
    --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
    ```
 
-2) less secure in docker privileged mode wth mounted all devices:
+2) Less secure option: in docker privileged mode with mounting all devices:
    ```
    docker run --rm -it --net=host -u root --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 openvino/model_server \
    --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
@@ -25,9 +25,9 @@ To start server with Neural Compute Stick using one of the options below:
 
 ## Starting a Docker Container with HDDL
 
-In order to run container that is using HDDL accelerator, _hddldaemon_ must
- run on host machine. It's required to set up environment 
- (the OpenVINO package must be pre-installed) and start _hddldaemon_ on the
+A container using HDDL accelerator, _hddldaemon_ must
+ run on the host machine. Set up the environment 
+ (pre-install the OpenVINO package) and start _hddldaemon_ on the
  host before starting a container. Refer to the steps from [OpenVINO documentation](https://docs.openvinotoolkit.org/2021.4/_docs_install_guides_installing_openvino_docker_linux.html#build_docker_image_for_intel_vision_accelerator_design_with_intel_movidius_vpus).
 
 To start the server with HDDL device(s) you can use a command similar to the following:
@@ -77,7 +77,7 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 ```
 
 *Note:* The Docker image (`openvino/model_server:latest-gpu`) includes OpenCL for GPU driver version 20.35.17767. Older versions can be used 
-by building the image from source with a parameter `INSTALL_DRIVER_VERSION:`
+by building the image from the source with a parameter `INSTALL_DRIVER_VERSION:`
 `make docker_build INSTALL_DRIVER_VERSION=19.41.14441`. The older GPU drivers are not supported with the latest Intel® Iris® Xe Graphics, and Intel® Iris® Xe MAX graphics (starting with codename Tiger Lake).
 
 ## Using Multi-Device Plugin

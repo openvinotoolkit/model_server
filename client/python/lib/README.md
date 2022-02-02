@@ -1,6 +1,6 @@
 # ovmsclient python library {#ovms_client_python_lib_readme}
 
-The Model Server client library is a set of objects and methods designed to simplify user interaction with instances of OpenVINO Model Server. The library contains functions that conceal API specific details, so a user does not need to know about creating protos, preparing requests, parsing responses, etc. so they can focus on deploying their application.
+The Model Server client library is a set of objects and methods designed to simplify user interaction with instances of OpenVINO Model Server. The library contains functions that conceal API-specific details. Users do not need to know about creating protos, preparing requests, parsing responses, and other details, so they can focus on deploying the application.
 
 OVMS client library contains only the necessary dependencies, so the whole package is light. That makes it more friendly for deployments with restricted resources as well as for the use cases that require applications to scale well.
 
