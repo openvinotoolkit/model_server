@@ -66,7 +66,7 @@ python face_detection.py --batch_size 4 --width 600 --height 400 --input_images_
 
 - The script will visualize the inference results on the images saved in the directory `output_dir`. Saved images have the following naming convention:
 
-<#iteration>_<#image_in_batch>.jpeg
+`<#iteration>_<#image_in_batch>.jpeg`
 
 # Running Person-Vehicle-Detection with Example Script<a name="persondetection"></a>
 
@@ -91,7 +91,7 @@ Refer to [Preparation of Models](./models_repository.md) to place your downloade
 
 ### Run the OpenVINO&trade; Model Server Docker Container
 
-Run the OpenVINO&trade; Model Server with the downloaded models. Adjust the shape and batch_size parameter according to the requirement of model. Refer [this guide](./shape_batch_size_and_layout.md) to know more about the parameters.
+Run the OpenVINO&trade; Model Server with the downloaded models. Adjust the shape and batch_size parameter according to the requirement of model. Refer [this guide](shape_batch_size_and_layout.md) to know more about the parameters.
 
 - Run following command on your terminal
 
@@ -107,7 +107,7 @@ Check if the container is running with :
 ```bash
 docker ps
 ```
-If the container is not running , check out the [troubleshooting guide](./troubleshooting.md)
+If the container is not running , check out the [troubleshooting guide](troubleshooting.md)
 
 
 ### Run the example script

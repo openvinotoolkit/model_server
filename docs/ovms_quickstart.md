@@ -91,17 +91,17 @@ curl https://raw.githubusercontent.com/openvinotoolkit/model_server/master/examp
 
 For more information:
 
-- [Information about the face detection script](../example_client/face_detection.md). 
-- [More Model Server client scripts](../example_client).
+- [Information about the face detection script](https://github.com/openvinotoolkit/model_server/blob/main/example_client/face_detection.md). 
+- [More Model Server client scripts](https://github.com/openvinotoolkit/model_server/tree/main/example_client).
 
 
 ### Step 6: Download Data for Inference
 
-1. Download [example images for inference](../example_client/images/people). This example uses a file named [people1.jpeg](../example_client/images/people/people1.jpeg). 
+1. Download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/main/example_client/images/people). This example uses a file named [people1.jpeg](https://github.com/openvinotoolkit/model_server/blob/main/example_client/images/people/people1.jpeg). 
 2. Put the image in a folder by itself. The script runs inference on all images in the folder.
 
 ```
-curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/images/people/people1.jpeg -o images/people1.jpeg
+curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/images/people/people1.jpeg -o images/people1.jpeg
 ```
 
 ### Step 7: Run Inference
