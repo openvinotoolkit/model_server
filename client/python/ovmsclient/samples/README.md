@@ -95,7 +95,7 @@ optional arguments:
 
 ```
 python grpc_get_model_metadata.py --model_name resnet --model_version 1
-{'inputs': {'map/TensorArrayStack/TensorArrayGatherV3': {'shape': [1, 224, 224, 3], 'dtype': 'DT_FLOAT'}}, 'outputs': {'softmax_tensor': {'shape': [1, 1001], 'dtype': 'DT_FLOAT'}}}
+{'inputs': {'map/TensorArrayStack/TensorArrayGatherV3': {'shape': [1, 3, 224, 224], 'dtype': 'DT_FLOAT'}}, 'outputs': {'softmax_tensor': {'shape': [1, 1001], 'dtype': 'DT_FLOAT'}}}
 ```
 
 
@@ -106,41 +106,44 @@ python grpc_get_model_metadata.py --model_name resnet --model_version 1
 - Command
 
 ```bash
-usage: grpc_predict_resnet.py [-h] [--images_numpy IMAGES_NUMPY]
+python grpc_predict_resnet.py --help
+usage: grpc_predict_resnet.py [-h] --images_numpy IMAGES_NUMPY
                               [--service_url SERVICE_URL]
                               [--model_name MODEL_NAME]
                               [--model_version MODEL_VERSION]
-                              [--timeout TIMEOUT]
+                              [--iterations ITERATIONS] [--timeout TIMEOUT]
 
 
 optional arguments:
-  -h, --help            show this help message and exit 
+  -h, --help            show this help message and exit
   --images_numpy IMAGES_NUMPY Path to a .npy file with data to infer
   --service_url SERVICE_URL Specify url to grpc service. default:localhost:9000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. default: latest available
+  --iterations ITERATIONS Total number of requests to be sent. default: 0 - all elements in numpy
   --timeout TIMEOUT Request timeout. default: 10.0
+
 ```
 - Usage example
 
 ```
-python grpc_predict_resnet.py --images_dir images --model_name resnet
-Image images/magnetic_compass.jpeg has been classified as magnetic compass
-Image images/pelican.jpeg has been classified as pelican
-Image images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
-Image images/snail.jpeg has been classified as snail
-Image images/zebra.jpeg has been classified as zebra
-Image images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
-Image images/bee.jpeg has been classified as bee
-Image images/peacock.jpeg has been classified as peacock
-Image images/airliner.jpeg has been classified as airliner
-Image images/golden_retriever.jpeg has been classified as golden retriever
+python grpc_predict_resnet.py --images_numpy ../../imgs.npy --model_name resnet
+Image #0 has been classified as airliner
+Image #1 has been classified as Arctic fox, white fox, Alopex lagopus
+Image #2 has been classified as bee
+Image #3 has been classified as golden retriever
+Image #4 has been classified as gorilla, Gorilla gorilla
+Image #5 has been classified as magnetic compass
+Image #6 has been classified as peacock
+Image #7 has been classified as pelican
+Image #8 has been classified as snail
+Image #9 has been classified as zebra
 ```
 
-To serve Resnet with support for binary input data, the model needs to be configured with NHWC layout. That can be acheived by starting the OVMS container with `--layout NHWC` parameter.
-new OVMS instance with --layout MHWC parameter.
+To serve Resnet with support for binary input data, the model needs to be configured with NHWC layout. That can be acheived by starting the OVMS container with `--layout NHWC:NCHW` parameter.
+new OVMS instance with `--layout NHWC:NCHW` parameter.
 ```bash
-docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 --layout NHWC
+docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 --layout NHWC:NCHW
 ```
 
 ### Predict binary format<a name="grpc-predict-binary">
@@ -150,6 +153,7 @@ docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50
 - Command
 
 ```bash
+python grpc_predict_binary_resnet.py --help
 usage: grpc_predict_binary_resnet.py [-h] [--images_dir IMAGES_DIR]
                               [--service_url SERVICE_URL]
                               [--model_name MODEL_NAME]
@@ -168,7 +172,7 @@ optional arguments:
 - Usage example
 
 ```
-python grpc_predict_binary_resnet.py --images_dir images --model_name resnet
+python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet
 Image images/magnetic_compass.jpeg has been classified as magnetic compass
 Image images/pelican.jpeg has been classified as pelican
 Image images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
@@ -192,7 +196,7 @@ chmod -R 755 ${PWD}/models/vehicle-detection
 ```
 OVMS container can be started using a command:
 ```bash
-docker run -d --rm -v ${PWD}/models/vehicle-detection:/models/vehicle-detection -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name vehicle-detection --model_path /models/vehicle-detection --port 9000 --rest_port 8000 --layout NHWC
+docker run -d --rm -v ${PWD}/models/vehicle-detection:/models/vehicle-detection -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name vehicle-detection --model_path /models/vehicle-detection --port 9000 --rest_port 8000 --layout NHWC:NCHW
 ```
 
 
@@ -204,6 +208,7 @@ docker run -d --rm -v ${PWD}/models/vehicle-detection:/models/vehicle-detection 
 - Command
 
 ```bash
+python grpc_predict_binary_vehicle_detection.py --help
 usage: grpc_predict_binary_vehicle_detection.py [-h] [--images_dir IMAGES_DIR]
                                            [--service_url SERVICE_URL]
                                            [--model_name MODEL_NAME]
@@ -225,7 +230,7 @@ optional arguments:
 - Usage example
 
 ```bash
-python grpc_predict_binary_vehicle_detection.py --images_dir ./images/cars/ --output_dir ./output
+python grpc_predict_binary_vehicle_detection.py --images_dir ../../../../demos/common/static/images/cars/ --output_dir ./output
 Making directory for output: ./output
 Detection results in file:  ./output/road1.jpg
 ```
@@ -239,7 +244,7 @@ Detection results in file:  ./output/road1.jpg
 - Command
 
 ```bash
-python http_get_model_status.py -h
+python http_get_model_status.py --help
 usage: http_get_model_status.py [-h] [--service_url SERVICE_URL]
                                 [--model_name MODEL_NAME]
                                 [--model_version MODEL_VERSION]
@@ -248,7 +253,7 @@ usage: http_get_model_status.py [-h] [--service_url SERVICE_URL]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --service_url SERVICE_URL Specify url to http service. default:localhost:9000
+  --service_url SERVICE_URL Specify url to http service. default:localhost:8000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. Lists all versions if omitted
   --timeout TIMEOUT Request timeout. default: 10.0
@@ -278,7 +283,7 @@ usage: http_get_model_metadata.py [-h] [--service_url SERVICE_URL]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --service_url SERVICE_URL Specify url to http service. default:localhost:9000
+  --service_url SERVICE_URL Specify url to http service. default:localhost:8000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. If ommited or set to 0 returns result for latest version
   --timeout TIMEOUT Request timeout. default: 10.0
@@ -287,7 +292,7 @@ optional arguments:
 
 ```
 python http_get_model_metadata.py --model_name resnet --model_version 1
-{'inputs': {'map/TensorArrayStack/TensorArrayGatherV3': {'shape': [1, 224, 224, 3], 'dtype': 'DT_FLOAT'}}, 'outputs': {'softmax_tensor': {'shape': [1, 1001], 'dtype': 'DT_FLOAT'}}}
+{'inputs': {'map/TensorArrayStack/TensorArrayGatherV3': {'shape': [1, 3, 224, 224], 'dtype': 'DT_FLOAT'}}, 'outputs': {'softmax_tensor': {'shape': [1, 1001], 'dtype': 'DT_FLOAT'}}}
 ```
 
 
@@ -298,41 +303,42 @@ python http_get_model_metadata.py --model_name resnet --model_version 1
 - Command
 
 ```bash
-usage: http_predict_resnet.py [-h] [--images_numpy IMAGES_NUMPY]
+python http_predict_resnet.py --help
+usage: http_predict_resnet.py [-h] --images_numpy IMAGES_NUMPY
                               [--service_url SERVICE_URL]
                               [--model_name MODEL_NAME]
                               [--model_version MODEL_VERSION]
-                              [--timeout TIMEOUT]
-
+                              [--iterations ITERATIONS] [--timeout TIMEOUT]
 
 optional arguments:
   -h, --help            show this help message and exit 
   --images_numpy IMAGES_NUMPY Path to a .npy file with data to infer
-  --service_url SERVICE_URL Specify url to http service. default:localhost:9000
+  --service_url SERVICE_URL Specify url to http service. default:localhost:8000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. default: latest available
+  --iterations ITERATIONS Total number of requests to be sent. default: 0 - all elements in numpy
   --timeout TIMEOUT Request timeout. default: 10.0
 ```
 - Usage example
 
 ```
-python http_predict_resnet.py --images_dir images --model_name resnet
-Image images/magnetic_compass.jpeg has been classified as magnetic compass
-Image images/pelican.jpeg has been classified as pelican
-Image images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
-Image images/snail.jpeg has been classified as snail
-Image images/zebra.jpeg has been classified as zebra
-Image images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
-Image images/bee.jpeg has been classified as bee
-Image images/peacock.jpeg has been classified as peacock
-Image images/airliner.jpeg has been classified as airliner
-Image images/golden_retriever.jpeg has been classified as golden retriever
+python http_predict_resnet.py --images_numpy ../../imgs.npy --model_name resnet
+Image #0 has been classified as airliner
+Image #1 has been classified as Arctic fox, white fox, Alopex lagopus
+Image #2 has been classified as bee
+Image #3 has been classified as golden retriever
+Image #4 has been classified as gorilla, Gorilla gorilla
+Image #5 has been classified as magnetic compass
+Image #6 has been classified as peacock
+Image #7 has been classified as pelican
+Image #8 has been classified as snail
+Image #9 has been classified as zebra
 ```
 
-To serve Resnet with support for binary input data, the model needs to be configured with NHWC layout. That can be acheived by starting the OVMS container with `--layout NHWC` parameter.
-new OVMS instance with --layout MHWC parameter.
+To serve Resnet with support for binary input data, the model needs to be configured with NHWC layout. That can be acheived by starting the OVMS container with `--layout NHWC:NCHW` parameter.
+new OVMS instance with `--layout NHWC:NCHW` parameter.
 ```bash
-docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 --layout NHWC
+docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 --layout NHWC:NCHW
 ```
 
 ### Predict binary format<a name="http-predict-binary">
@@ -342,17 +348,19 @@ docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50
 - Command
 
 ```bash
-usage: http_predict_binary_resnet.py [-h] [--images_dir IMAGES_DIR]
-                              [--service_url SERVICE_URL]
-                              [--model_name MODEL_NAME]
-                              [--model_version MODEL_VERSION]
-                              [--timeout TIMEOUT]
+python http_predict_binary_resnet.py --help
+usage: http_predict_binary_resnet.py [-h] --images_dir IMAGES_DIR
+                                     [--service_url SERVICE_URL]
+                                     [--model_name MODEL_NAME]
+                                     [--model_version MODEL_VERSION]
+                                     [--timeout TIMEOUT]
+
 
 
 optional arguments:
   -h, --help            show this help message and exit 
   --images_dir IMAGES_DIR Path to a directory with images in JPG or PNG format
-  --service_url SERVICE_URL Specify url to http service. default:localhost:9000
+  --service_url SERVICE_URL Specify url to http service. default:localhost:8000
   --model_name MODEL_NAME Model name to query. default: resnet
   --model_version MODEL_VERSION Model version to query. default: latest available
   --timeout TIMEOUT Request timeout. default: 10.0
@@ -360,17 +368,17 @@ optional arguments:
 - Usage example
 
 ```
-python http_predict_binary_resnet.py --images_dir images --model_name resnet
-Image images/magnetic_compass.jpeg has been classified as magnetic compass
-Image images/pelican.jpeg has been classified as pelican
-Image images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
-Image images/snail.jpeg has been classified as snail
-Image images/zebra.jpeg has been classified as zebra
-Image images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
-Image images/bee.jpeg has been classified as bee
-Image images/peacock.jpeg has been classified as peacock
-Image images/airliner.jpeg has been classified as warplane, military plane
-Image images/golden_retriever.jpeg has been classified as golden retriever
+python http_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet
+Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
+Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican
+Image ../../../../demos/common/static/images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
+Image ../../../../demos/common/static/images/snail.jpeg has been classified as snail
+Image ../../../../demos/common/static/images/zebra.jpeg has been classified as zebra
+Image ../../../../demos/common/static/images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
+Image ../../../../demos/common/static/images/bee.jpeg has been classified as bee
+Image ../../../../demos/common/static/images/peacock.jpeg has been classified as peacock
+Image ../../../../demos/common/static/images/airliner.jpeg has been classified as warplane, military plane
+Image ../../../../demos/common/static/images/golden_retriever.jpeg has been classified as golden retriever
 ```
 
 ## Prepare the model from OpenVINO Model Zoo
@@ -384,7 +392,7 @@ chmod -R 755 ${PWD}/models/vehicle-detection
 ```
 OVMS container can be started using a command:
 ```bash
-docker run -d --rm -v ${PWD}/models/vehicle-detection:/models/vehicle-detection -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name vehicle-detection --model_path /models/vehicle-detection --port 9000 --rest_port 8000 --layout NHWC
+docker run -d --rm -v ${PWD}/models/vehicle-detection:/models/vehicle-detection -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name vehicle-detection --model_path /models/vehicle-detection --port 9000 --rest_port 8000 --layout NHWC:NCHW
 ```
 
 
@@ -396,18 +404,20 @@ docker run -d --rm -v ${PWD}/models/vehicle-detection:/models/vehicle-detection 
 - Command
 
 ```bash
-usage: http_predict_binary_vehicle_detection.py [-h] [--images_dir IMAGES_DIR]
-                                           [--service_url SERVICE_URL]
-                                           [--model_name MODEL_NAME]
-                                           [--model_version MODEL_VERSION]
-                                           [--output_dir OUTPUT_DIR]
-                                           [--timeout TIMEOUT]
+python http_predict_binary_vehicle_detection.py --help
+usage: http_predict_binary_vehicle_detection.py [-h] --images_dir IMAGES_DIR
+                                                [--service_url SERVICE_URL]
+                                                [--model_name MODEL_NAME]
+                                                [--model_version MODEL_VERSION]
+                                                --output_dir OUTPUT_DIR
+                                                [--timeout TIMEOUT]
+
 
 
 optional arguments:
   -h, --help            show this help message and exit
   --images_dir IMAGES_DIR Path to a directory with images in JPG or PNG format
-  --service_url SERVICE_URL Specify url to http service. default:localhost:9000
+  --service_url SERVICE_URL Specify url to http service. default:localhost:8000
   --model_name MODEL_NAME Model name to query. default: vehicle-detection
   --model_version MODEL_VERSION Model version to query. default: latest available
   --output_dir OUTPUT_DIR Path to store output.
@@ -417,7 +427,7 @@ optional arguments:
 - Usage example
 
 ```bash
-python http_predict_binary_vehicle_detection.py --images_dir ./images/cars/ --output_dir ./output
+python http_predict_binary_vehicle_detection.py --images_dir ../../../../demos/common/static/images/cars/ --output_dir ./output
 Making directory for output: ./output
 Detection results in file:  ./output/road1.jpg
 ```
