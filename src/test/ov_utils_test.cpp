@@ -135,3 +135,28 @@ TEST(OVUtils, ConstCopyTensor) {
     // Expect memory addresses to differ since cloning should allocate new memory space for the cloned tensor
     EXPECT_NE(originalTensor.data(), copyTensor.data());
 }
+
+TEST(OVUtils, GetLayoutFromRTMap) {
+    const std::string layoutStr = "N?...CH";
+
+    // Empty rtmap
+    ov::RTMap rtMap;
+    auto layout = ovms::getLayoutFromRTMap(rtMap);
+    EXPECT_EQ(layout, std::nullopt);
+
+    // Rtmap with layout
+    rtMap.insert(std::make_pair("param", ov::LayoutAttribute(ov::Layout(layoutStr))));
+    layout = ovms::getLayoutFromRTMap(rtMap);
+    EXPECT_EQ(layout, ov::Layout(layoutStr));
+
+    // Rtmap with unknown param
+    rtMap = ov::RTMap();
+    rtMap.insert(std::make_pair("param_str", std::string{"string param"}));
+    layout = ovms::getLayoutFromRTMap(rtMap);
+    EXPECT_EQ(layout, std::nullopt);
+
+    // Rtmap with both unknown and layout param
+    rtMap.insert(std::make_pair("param", ov::LayoutAttribute(ov::Layout(layoutStr))));
+    layout = ovms::getLayoutFromRTMap(rtMap);
+    EXPECT_EQ(layout, ov::Layout(layoutStr));
+}

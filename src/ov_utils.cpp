@@ -66,4 +66,14 @@ Status tensorClone(ov::Tensor& destinationTensor, const ov::Tensor& sourceTensor
     return StatusCode::OK;
 }
 
+std::optional<ov::Layout> getLayoutFromRTMap(const ov::RTMap& rtMap) {
+    for (const auto& [k, v] : rtMap) {
+        try {
+            return v.as<ov::LayoutAttribute>().value;
+        } catch (ov::Exception& e) {
+        }
+    }
+    return std::nullopt;
+}
+
 }  // namespace ovms

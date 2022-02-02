@@ -18,6 +18,8 @@
 #include <string>
 #include <utility>
 
+#include <openvino/openvino.hpp>
+
 #include "status.hpp"
 
 namespace ovms {
@@ -38,6 +40,8 @@ class Layout : public std::string {
 public:
     Layout() = default;
     Layout(const std::string& str);
+
+    static Layout fromOvLayout(const ov::Layout& layout);
 
     const std::optional<size_t>& getBatchIndex() const;
     Status validate() const;

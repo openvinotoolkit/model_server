@@ -54,6 +54,7 @@ TEST(Layout, BatchPositionInvalid) {
     EXPECT_EQ(Layout{"C??H"}.getBatchIndex(), std::nullopt);
     EXPECT_EQ(Layout{""}.getBatchIndex(), std::nullopt);
 }
+
 TEST(Layout, Validate) {
     EXPECT_EQ(Layout{"..."}.validate(), StatusCode::OK);   // unspecified layout used in DAG
     EXPECT_EQ(Layout{"N..."}.validate(), StatusCode::OK);  // default model layout
@@ -83,4 +84,27 @@ TEST(Layout, DISABLED_CreateIntersection2) {
     EXPECT_EQ(Layout("NC...").createIntersection(Layout("??DH")), Layout("NCDH"));
     EXPECT_EQ(Layout("N...").createIntersection(Layout("...D")), Layout("N...D"));
     EXPECT_EQ(Layout("N...").createIntersection(Layout("??D")), Layout("N?D"));
+}
+
+TEST(Layout, ConversionBetweenOvLayout) {
+    for (const auto& layoutStr : std::vector<std::string>{
+             {"NHWC"},
+             {"HWCN"},
+             {"NC"},
+             {"NCHW"},
+             {"CHW"},
+             {"N..."},
+             {"N...CH"},
+             {"??N..."},
+             {"?C???N..."},
+             {"...NC"},
+             {"..."},
+         }) {
+        EXPECT_EQ(
+            ovms::Layout::fromOvLayout(
+                ov::Layout(
+                    ovms::Layout{layoutStr})),
+            ovms::Layout{layoutStr})
+            << "error converting layout: " << layoutStr;
+    }
 }

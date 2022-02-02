@@ -141,17 +141,37 @@ Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::share
     return StatusCode::OK;
 }
 
-const Layout getReportedTensorLayout(const ModelConfig& config, const std::string& name, bool isInput) {
+const Layout ModelInstance::getReportedTensorLayout(const ModelConfig& config, const std::string& name, bool isInput) {
+    if (isInput) {
+        const auto& input = this->model->input(name);
+        auto networkSpecifiedLayout = getLayoutFromRTMap(input.get_rt_info());
+        if (networkSpecifiedLayout.has_value()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting input layout from RTMap: {}; for tensor name: {}", networkSpecifiedLayout.value().to_string(), name);
+            return Layout::fromOvLayout(networkSpecifiedLayout.value());
+        }
+    } else {
+        const auto& output = this->model->output(name);
+        auto networkSpecifiedLayout = getLayoutFromRTMap(output.get_rt_info());
+        if (networkSpecifiedLayout.has_value()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting output layout from RTMap: {}; for tensor name: {}", networkSpecifiedLayout.value().to_string(), name);
+            return Layout::fromOvLayout(networkSpecifiedLayout.value());
+        }
+    }
     auto layout = Layout::getDefaultLayout();
     if (isInput && config.getLayout().isSet()) {
         layout = config.getLayout().getTensorLayout();
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting layout from ModelConfig: {}; for tensor name: {}", layout, name);
+        return layout;
     } else if (config.getLayouts().size() > 0) {
         auto mappedName = config.getMappingInputByKey(name);
         auto it = config.getLayouts().find(mappedName == "" ? name : mappedName);
         if (it != config.getLayouts().end()) {
             layout = it->second.getTensorLayout();
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting layout from ModelConfig: {}; for tensor name: {}", layout, name);
+            return layout;
         }
     }
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reporting default layout: {}; for tensor name: {}", layout, name);
     return layout;
 }
 
@@ -187,13 +207,17 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::M
                 preproc.input(name).tensor().set_layout(ov::Layout(layout.getTensorLayout()));
                 preproc.input(name).model().set_layout(ov::Layout(layout.getModelLayout()));
             } else {
-                std::string guessedModelLayout{"N..."};
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding auto preprocessing step: Tensor Layout:; Network Layout:{}; input name: {}",
-                    modelName,
-                    modelVersion,
-                    guessedModelLayout,
-                    name);
-                preproc.input(name).model().set_layout(ov::Layout(guessedModelLayout));
+                auto inheritedModelLayout = getLayoutFromRTMap(input.get_rt_info());
+                auto guessedModelLayout = Layout::getDefaultLayout();
+
+                ov::Layout targetModelLayout = inheritedModelLayout.has_value() ? inheritedModelLayout.value() : ov::Layout(guessedModelLayout);
+
+                if (inheritedModelLayout.has_value()) {
+                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Configuring layout: Tensor Layout:; Network Layout:{} (inherited from network); input name: {}", modelName, modelVersion, targetModelLayout.to_string(), name);
+                } else {
+                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Configuring layout: Tensor Layout:; Network Layout:{} (default); input name: {}", modelName, modelVersion, targetModelLayout.to_string(), name);
+                }
+                preproc.input(name).model().set_layout(targetModelLayout);
             }
         } catch (const ov::Exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input layout for model:{}; version:{}; from OpenVINO with error:{}",
@@ -229,6 +253,18 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::M
                     name);
                 preproc.output(name).tensor().set_layout(ov::Layout(layout.getTensorLayout()));
                 preproc.output(name).model().set_layout(ov::Layout(layout.getModelLayout()));
+            } else {
+                auto inheritedModelLayout = getLayoutFromRTMap(output.get_rt_info());
+                auto guessedModelLayout = Layout::getDefaultLayout();
+
+                ov::Layout targetModelLayout = inheritedModelLayout.has_value() ? inheritedModelLayout.value() : ov::Layout(guessedModelLayout);
+
+                if (inheritedModelLayout.has_value()) {
+                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Configuring layout: Tensor Layout:; Network Layout:{} (inherited from network); output name: {}", modelName, modelVersion, targetModelLayout.to_string(), name);
+                } else {
+                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Configuring layout: Tensor Layout:; Network Layout:{} (default); output name: {}", modelName, modelVersion, targetModelLayout.to_string(), name);
+                }
+                preproc.output(name).model().set_layout(targetModelLayout);
             }
         } catch (const ov::Exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure output layout for model:{}; version:{}; from OpenVINO with error:{}",

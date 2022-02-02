@@ -166,6 +166,71 @@ protected:
     }
 };
 
+class MockModelInstanceWithRTMap : public ovms::ModelInstance {
+private:
+    ov::RTMap inputRtMap;
+    ov::RTMap outputRtMap;
+
+protected:
+    std::shared_ptr<ov::Model> loadOVModelPtr(const std::string& modelFile) override {
+        auto model = ovms::ModelInstance::loadOVModelPtr(modelFile);
+        model->input(DUMMY_MODEL_INPUT_NAME).get_rt_info() = this->inputRtMap;
+        model->output(DUMMY_MODEL_OUTPUT_NAME).get_rt_info() = this->outputRtMap;
+        return model;
+    }
+
+public:
+    MockModelInstanceWithRTMap(ov::Core& ieCore, const ov::RTMap& inputRtMap, const ov::RTMap& outputRtMap) :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore),
+        inputRtMap(inputRtMap),
+        outputRtMap(outputRtMap) {
+    }
+};
+
+// The RTMap is not populated with layout info by Model Optimizer.
+// This test ensures that default layout is picked by OVMS and it is "N...".
+TEST_F(TestLoadModel, LoadModelWithEmptyRTMapLayoutSetsDefaultLayout) {
+    auto inputRtMap = ov::RTMap();
+    auto outputRtMap = ov::RTMap();
+    MockModelInstanceWithRTMap mockModelInstance(*ieCore, inputRtMap, outputRtMap);
+    auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    ASSERT_EQ(mockModelInstance.getInputsInfo().size(), 1);
+    ASSERT_EQ(mockModelInstance.getOutputsInfo().size(), 1);
+    EXPECT_EQ(mockModelInstance.getInputsInfo().begin()->second->getLayout(), ovms::Layout::getDefaultLayout());
+    EXPECT_EQ(mockModelInstance.getOutputsInfo().begin()->second->getLayout(), ovms::Layout::getDefaultLayout());
+}
+
+// The RTMap is populated with layout info by Model Optimizer.
+// This test ensures the data is read as default when nothing is specified otherwise in ModelConfig.
+TEST_F(TestLoadModel, LoadModelWithRTMapLayout) {
+    auto inputRtMap = ov::RTMap({{"param", ov::LayoutAttribute(ov::Layout("NC"))}});
+    auto outputRtMap = ov::RTMap({{"param", ov::LayoutAttribute(ov::Layout("CN"))}});
+    MockModelInstanceWithRTMap mockModelInstance(*ieCore, inputRtMap, outputRtMap);
+    auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    ASSERT_EQ(mockModelInstance.getInputsInfo().size(), 1);
+    ASSERT_EQ(mockModelInstance.getOutputsInfo().size(), 1);
+    EXPECT_EQ(mockModelInstance.getInputsInfo().begin()->second->getLayout(), ovms::Layout("NC"));
+    EXPECT_EQ(mockModelInstance.getOutputsInfo().begin()->second->getLayout(), ovms::Layout("CN"));
+}
+
+// The RTMap is populated with layout info by Model Optimizer.
+// This test ensures the data is not read from .xml file but rather overwritten by --layout parameter.
+TEST_F(TestLoadModel, LoadModelWithRTMapLayoutOverwriteByParameter) {
+    auto inputRtMap = ov::RTMap({{"param", ov::LayoutAttribute(ov::Layout("NC"))}});
+    auto outputRtMap = ov::RTMap({{"param", ov::LayoutAttribute(ov::Layout("CN"))}});
+    MockModelInstanceWithRTMap mockModelInstance(*ieCore, inputRtMap, outputRtMap);
+    auto config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(config.parseLayoutParameter("{\"b\":\"CN\",\"a\":\"NC\"}"), ovms::StatusCode::OK);
+    auto status = mockModelInstance.loadModel(config);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    ASSERT_EQ(mockModelInstance.getInputsInfo().size(), 1);
+    ASSERT_EQ(mockModelInstance.getOutputsInfo().size(), 1);
+    EXPECT_EQ(mockModelInstance.getInputsInfo().begin()->second->getLayout(), ovms::Layout("CN"));
+    EXPECT_EQ(mockModelInstance.getOutputsInfo().begin()->second->getLayout(), ovms::Layout("NC"));
+}
+
 class MockModelInstanceThrowingFileNotFoundForLoadingCNN : public ovms::ModelInstance {
 public:
     MockModelInstanceThrowingFileNotFoundForLoadingCNN(ov::Core& ieCore) :

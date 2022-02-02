@@ -202,6 +202,8 @@ protected:
          */
     Status fetchModelFilepaths();
 
+    const Layout getReportedTensorLayout(const ModelConfig& config, const std::string& name, bool isInput);
+
     /**
          * @brief Find file path with extension in model path
          *
