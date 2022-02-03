@@ -20,6 +20,7 @@
 
 #include <openvino/openvino.hpp>
 
+#include "shape.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -37,6 +38,8 @@ class Layout : public std::string {
     std::optional<size_t> retrieveBatchIndex() const;
     bool containsEtc() const;
 
+    std::string::size_type getNumberOfKnownDimensions() const;
+
 public:
     Layout() = default;
     Layout(const std::string& str);
@@ -48,6 +51,8 @@ public:
     std::optional<Layout> createIntersection(const Layout& other) const;
     static const Layout& getDefaultLayout();
     static const Layout& getUnspecifiedLayout();
+
+    bool isCompatible(const Shape& shape) const;
 };
 
 }  // namespace ovms

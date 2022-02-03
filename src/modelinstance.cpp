@@ -397,6 +397,11 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
             std::string mappingName = config.getMappingInputByKey(name);
             const Layout layout = getReportedTensorLayout(config, name, true);
 
+            if (!layout.isCompatible(shape)) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Layout: {}; incompatible with shape: {}; for input name: {}", layout, shape.toString(), name);
+                return StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE;
+            }
+
             std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
                 name,
                 mappingName,
@@ -442,6 +447,11 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
             Shape shape(output.get_partial_shape());
             std::string mappingName = config.getMappingOutputByKey(name);
             const Layout layout = getReportedTensorLayout(config, name, false);
+
+            if (!layout.isCompatible(shape)) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Layout: {}; incompatible with shape: {}; for output name: {}", layout, shape.toString(), name);
+                return StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE;
+            }
 
             std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
                 name,

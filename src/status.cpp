@@ -71,6 +71,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_MAX_SEQUENCE_NUMBER, "Sequence max number parameter too high"},
     {StatusCode::CANNOT_CONVERT_FLAT_SHAPE, "Cannot convert flat shape to Shape object"},
     {StatusCode::INVALID_BATCH_DIMENSION, "Invalid batch dimension in shape"},
+    {StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE, "Layout incompatible with given shape"},
     {StatusCode::UNKNOWN_ERROR, "Unknown error"},
 
     // Sequence management
