@@ -95,7 +95,7 @@ optional arguments:
 
 ```
 python grpc_get_model_metadata.py --model_name resnet --model_version 1
-{'inputs': {'map/TensorArrayStack/TensorArrayGatherV3': {'shape': [1, 3, 224, 224], 'dtype': 'DT_FLOAT'}}, 'outputs': {'softmax_tensor': {'shape': [1, 1001], 'dtype': 'DT_FLOAT'}}}
+{'model_version': 1, 'inputs': {'map/TensorArrayStack/TensorArrayGatherV3': {'shape': [1, 3, 224, 224], 'dtype': 'DT_FLOAT'}}, 'outputs': {'softmax_tensor': {'shape': [1, 1001], 'dtype': 'DT_FLOAT'}}}
 ```
 
 
@@ -173,16 +173,16 @@ optional arguments:
 
 ```
 python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet
-Image images/magnetic_compass.jpeg has been classified as magnetic compass
-Image images/pelican.jpeg has been classified as pelican
-Image images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
-Image images/snail.jpeg has been classified as snail
-Image images/zebra.jpeg has been classified as zebra
-Image images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
-Image images/bee.jpeg has been classified as bee
-Image images/peacock.jpeg has been classified as peacock
-Image images/airliner.jpeg has been classified as warplane, military plane
-Image images/golden_retriever.jpeg has been classified as golden retriever
+Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
+Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican
+Image ../../../../demos/common/static/images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
+Image ../../../../demos/common/static/images/snail.jpeg has been classified as snail
+Image ../../../../demos/common/static/images/zebra.jpeg has been classified as zebra
+Image ../../../../demos/common/static/images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
+Image ../../../../demos/common/static/images/bee.jpeg has been classified as bee
+Image ../../../../demos/common/static/images/peacock.jpeg has been classified as peacock
+Image ../../../../demos/common/static/images/airliner.jpeg has been classified as warplane, military plane
+Image ../../../../demos/common/static/images/golden_retriever.jpeg has been classified as golden retriever
 ```
 
 ## Prepare the model from OpenVINO Model Zoo
@@ -292,7 +292,7 @@ optional arguments:
 
 ```
 python http_get_model_metadata.py --model_name resnet --model_version 1
-{'inputs': {'map/TensorArrayStack/TensorArrayGatherV3': {'shape': [1, 3, 224, 224], 'dtype': 'DT_FLOAT'}}, 'outputs': {'softmax_tensor': {'shape': [1, 1001], 'dtype': 'DT_FLOAT'}}}
+{'inputs': {'map/TensorArrayStack/TensorArrayGatherV3': {'dtype': 'DT_FLOAT', 'shape': [1, 3, 224, 224]}}, 'outputs': {'softmax_tensor': {'dtype': 'DT_FLOAT', 'shape': [1, 1001]}}, 'model_version': 1}
 ```
 
 

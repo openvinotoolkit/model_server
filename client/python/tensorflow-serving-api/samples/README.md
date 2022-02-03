@@ -154,54 +154,55 @@ usage: grpc_predict_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
 
 ```bash
 python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --input_name data --output_name prob --transpose_input False --labels_numpy_path ../../lbs.npy
-Start processing:
-	Model name: resnet
-	Iterations: 10
-	Images numpy path: imgs.npy
-	Images in shape: (10, 3, 224, 224)
 
-Iteration 1; Processing time: 26.54 ms; speed 37.67 fps
+Image data range: 0.0 : 255.0
+Start processing:
+        Model name: resnet
+        Iterations: 10
+        Images numpy path: ../../imgs.npy
+        Numpy file shape: (10, 3, 224, 224)
+
+Iteration 1; Processing time: 29.75 ms; speed 33.62 fps
 imagenet top results in a single batch:
-	 0 airliner 404 ; Correct match.
-Iteration 2; Processing time: 22.23 ms; speed 44.99 fps
+         0 airliner 404 ; Correct match.
+Iteration 2; Processing time: 27.06 ms; speed 36.96 fps
 imagenet top results in a single batch:
-	 0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
-Iteration 3; Processing time: 21.72 ms; speed 46.03 fps
+         0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
+Iteration 3; Processing time: 26.81 ms; speed 37.30 fps
 imagenet top results in a single batch:
-	 0 bee 309 ; Correct match.
-Iteration 4; Processing time: 20.71 ms; speed 48.28 fps
+         0 bee 309 ; Correct match.
+Iteration 4; Processing time: 27.25 ms; speed 36.70 fps
 imagenet top results in a single batch:
-	 0 golden retriever 207 ; Correct match.
-Iteration 5; Processing time: 20.53 ms; speed 48.71 fps
+         0 golden retriever 207 ; Correct match.
+Iteration 5; Processing time: 25.64 ms; speed 39.00 fps
 imagenet top results in a single batch:
-	 0 gorilla, Gorilla gorilla 366 ; Correct match.
-Iteration 6; Processing time: 20.37 ms; speed 49.08 fps
+         0 gorilla, Gorilla gorilla 366 ; Correct match.
+Iteration 6; Processing time: 34.41 ms; speed 29.06 fps
 imagenet top results in a single batch:
-	 0 magnetic compass 635 ; Correct match.
-Iteration 7; Processing time: 20.97 ms; speed 47.68 fps
+         0 magnetic compass 635 ; Correct match.
+Iteration 7; Processing time: 23.39 ms; speed 42.75 fps
 imagenet top results in a single batch:
-	 0 peacock 84 ; Correct match.
-Iteration 8; Processing time: 22.82 ms; speed 43.83 fps
+         0 peacock 84 ; Correct match.
+Iteration 8; Processing time: 23.82 ms; speed 41.98 fps
 imagenet top results in a single batch:
-	 0 pelican 144 ; Correct match.
-Iteration 9; Processing time: 22.16 ms; speed 45.13 fps
+         0 pelican 144 ; Correct match.
+Iteration 9; Processing time: 25.66 ms; speed 38.97 fps
 imagenet top results in a single batch:
-	 0 snail 113 ; Correct match.
-Iteration 10; Processing time: 21.17 ms; speed 47.24 fps
+         0 snail 113 ; Correct match.
+Iteration 10; Processing time: 22.44 ms; speed 44.57 fps
 imagenet top results in a single batch:
-	 0 zebra 340 ; Correct match.
+         0 zebra 340 ; Correct match.
 
 processing time for all iterations
-average time: 21.40 ms; average speed: 46.73 fps
-median time: 21.00 ms; median speed: 47.62 fps
-max time: 26.00 ms; min speed: 38.46 fps
-min time: 20.00 ms; max speed: 50.00 fps
-time percentile 90: 22.40 ms; speed percentile 90: 44.64 fps
-time percentile 50: 21.00 ms; speed percentile 50: 47.62 fps
-time standard deviation: 1.74
-time variance: 3.04
+average time: 26.10 ms; average speed: 38.31 fps
+median time: 25.50 ms; median speed: 39.22 fps
+max time: 34.00 ms; min speed: 29.41 fps
+min time: 22.00 ms; max speed: 45.45 fps
+time percentile 90: 29.50 ms; speed percentile 90: 33.90 fps
+time percentile 50: 25.50 ms; speed percentile 50: 39.22 fps
+time standard deviation: 3.33
+time variance: 11.09
 Classification accuracy: 100.00
-
 ```
 
 #### **Submitting gRPC requests with data in binary format:**
@@ -457,63 +458,64 @@ usage: rest_predict_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
 - Usage Example
 ```bash
 python rest_predict_resnet.py --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name data --output_name prob --rest_port 8000 --transpose_input False
-('Image data range:', 0, ':', 255)
+
+Image data range: 0 : 255
 Start processing:
-	Model name: resnet
-	Iterations: 10
-	Images numpy path: imgs.npy
-	Images in shape: (10, 3, 224, 224)
+        Model name: resnet
+        Iterations: 10
+        Images numpy path: ../../imgs.npy
+        Images in shape: (10, 3, 224, 224)
 
 output shape: (1, 1000)
-Iteration 1; Processing time: 57.42 ms; speed 17.41 fps
+Iteration 1; Processing time: 54.98 ms; speed 18.19 fps
 imagenet top results in a single batch:
-('\t', 0, 'airliner', 404, '; Correct match.')
+         0 airliner 404 ; Correct match.
 output shape: (1, 1000)
-Iteration 2; Processing time: 57.65 ms; speed 17.35 fps
+Iteration 2; Processing time: 46.54 ms; speed 21.49 fps
 imagenet top results in a single batch:
-('\t', 0, 'Arctic fox, white fox, Alopex lagopus', 279, '; Correct match.')
+         0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
 output shape: (1, 1000)
-Iteration 3; Processing time: 59.21 ms; speed 16.89 fps
+Iteration 3; Processing time: 50.70 ms; speed 19.73 fps
 imagenet top results in a single batch:
-('\t', 0, 'bee', 309, '; Correct match.')
+         0 bee 309 ; Correct match.
 output shape: (1, 1000)
-Iteration 4; Processing time: 59.64 ms; speed 16.77 fps
+Iteration 4; Processing time: 46.89 ms; speed 21.33 fps
 imagenet top results in a single batch:
-('\t', 0, 'golden retriever', 207, '; Correct match.')
+         0 golden retriever 207 ; Correct match.
 output shape: (1, 1000)
-Iteration 5; Processing time: 59.96 ms; speed 16.68 fps
+Iteration 5; Processing time: 45.78 ms; speed 21.84 fps
 imagenet top results in a single batch:
-('\t', 0, 'gorilla, Gorilla gorilla', 366, '; Correct match.')
+         0 gorilla, Gorilla gorilla 366 ; Correct match.
 output shape: (1, 1000)
-Iteration 6; Processing time: 59.41 ms; speed 16.83 fps
+Iteration 6; Processing time: 48.72 ms; speed 20.53 fps
 imagenet top results in a single batch:
-('\t', 0, 'magnetic compass', 635, '; Correct match.')
+         0 magnetic compass 635 ; Correct match.
 output shape: (1, 1000)
-Iteration 7; Processing time: 59.45 ms; speed 16.82 fps
+Iteration 7; Processing time: 45.20 ms; speed 22.12 fps
 imagenet top results in a single batch:
-('\t', 0, 'peacock', 84, '; Correct match.')
+         0 peacock 84 ; Correct match.
 output shape: (1, 1000)
-Iteration 8; Processing time: 59.91 ms; speed 16.69 fps
+Iteration 8; Processing time: 45.50 ms; speed 21.98 fps
 imagenet top results in a single batch:
-('\t', 0, 'pelican', 144, '; Correct match.')
+         0 pelican 144 ; Correct match.
 output shape: (1, 1000)
-Iteration 9; Processing time: 63.17 ms; speed 15.83 fps
+Iteration 9; Processing time: 45.30 ms; speed 22.08 fps
 imagenet top results in a single batch:
-('\t', 0, 'snail', 113, '; Correct match.')
+         0 snail 113 ; Correct match.
 output shape: (1, 1000)
-Iteration 10; Processing time: 52.59 ms; speed 19.01 fps
+Iteration 10; Processing time: 44.19 ms; speed 22.63 fps
 imagenet top results in a single batch:
-('\t', 0, 'zebra', 340, '; Correct match.')
+         0 zebra 340 ; Correct match.
 
 processing time for all iterations
-average time: 58.30 ms; average speed: 17.15 fps
-median time: 59.00 ms; median speed: 16.95 fps
-max time: 63.00 ms; max speed: 15.00 fps
-min time: 52.00 ms; min speed: 19.00 fps
-time percentile 90: 59.40 ms; speed percentile 90: 16.84 fps
-time percentile 50: 59.00 ms; speed percentile 50: 16.95 fps
-time standard deviation: 2.61
-time variance: 6.81
+average time: 46.80 ms; average speed: 21.37 fps
+median time: 45.50 ms; median speed: 21.98 fps
+max time: 54.00 ms; min speed: 18.52 fps
+min time: 44.00 ms; max speed: 22.73 fps
+time percentile 90: 50.40 ms; speed percentile 90: 19.84 fps
+time percentile 50: 45.50 ms; speed percentile 50: 21.98 fps
+time standard deviation: 2.93
+time variance: 8.56
 Classification accuracy: 100.00
 ```
 #### **Submitting gRPC requests with data in binary format:**

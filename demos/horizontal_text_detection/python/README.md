@@ -34,7 +34,7 @@ pip3 install -r requirements.txt
 
 Start the client
 ```bash
-python3 horizontal_text_detection.py --grpc_address [hostname] --grpc_port 9000
+python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000
 
 Initializing requesting thread index: 0
 Initializing requesting thread index: 1
@@ -53,11 +53,11 @@ ThreadID:   3; Current FPS:    30.30; Average FPS:    25.73; Average latency:   
 
 You can also change the camera ID:
 ```
-python3 horizontal_text_detection.py --grpc_address [hostname] --grpc_port 9000 --video_source 0
+python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --video_source 0
 ```
 Or choose to work with video file as well:
 ```
-python3 horizontal_text_detection.py --grpc_address [hostname] --grpc_port 9000 --video_source ~/video.mp4
+python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --video_source ~/video.mp4
 ```
 
 > **NOTE**: Video source is cropped to 704x704 resolution to match model input size.
@@ -118,7 +118,7 @@ pip3 install -r requirements.txt
 
 Start the client
 ```bash
-python3 horizontal_text_detection.py --grpc_address [hostname] --grpc_port 9000 --use_case ocr
+python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --use_case ocr
 
 Initializing requesting thread index: 0
 Initializing requesting thread index: 1
