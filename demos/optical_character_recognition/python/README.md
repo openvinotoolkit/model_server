@@ -59,10 +59,10 @@ def export_model(input_checkpoint, output_graph):
         sess.run(init_op)
         saver.restore(sess, input_checkpoint)
         output_graph_def = graph_util.convert_variables_to_constants(sess=sess, input_graph_def=input_graph_def, output_node_names=['feature_fusion/concat_3','feature_fusion/Conv_7/Sigmoid'])
-        with tf.gfile.GFile(output_graph, "wb") as f:
+        with tf.gfile.GFile(output_graph, 'wb') as f:
             f.write(output_graph_def.SerializeToString())
 
-export_model('./east_icdar2015_resnet_v1_50_rbox/model.ckpt-49491',"./model.pb")
+export_model('./east_icdar2015_resnet_v1_50_rbox/model.ckpt-49491','./model.pb')
 ```
 Freeze the model in checkpoint format and save it in proto buffer format in `model.pb`:
 

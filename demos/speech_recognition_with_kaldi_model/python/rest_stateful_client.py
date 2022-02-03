@@ -26,7 +26,7 @@ import json
 import requests
 import importlib
 
-spec = importlib.util.spec_from_loader('client_utils', importlib.machinery.SourceFileLoader('client_utils', '../client_utils.py'))
+spec = importlib.util.spec_from_loader('client_utils', importlib.machinery.SourceFileLoader('client_utils', '../../common/python/client_utils.py'))
 client_utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(client_utils)
 
@@ -376,7 +376,7 @@ def main():
 
             start_time = datetime.datetime.now()
             # result includes a dictionary with all model outputs
-            result = session.post("{}:{}/v1/models/{}{}:predict".format(args['rest_url'], args['rest_port'], args['model_name'], version), data=data_json, cert=certs, verify=verify_server)
+            result = session.post("http://{}:{}/v1/models/{}{}:predict".format(args['rest_url'], args['rest_port'], args['model_name'], version), data=data_json, cert=certs, verify=verify_server)
             end_time = datetime.datetime.now()
 
             try:

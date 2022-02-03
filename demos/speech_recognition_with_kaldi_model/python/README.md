@@ -84,7 +84,7 @@ usage: grpc_stateful_client.py [--input_path INPUT_PATH]
 - Usage example
 
 ```bash
-python3 grpc_stateful_client.py --input_path $(pwd)/models/test_feat_1_10.ark --score_path $(pwd)/models/rm_lstm4f/test_score_1_10.ark --grpc_address localhost --grpc_port 9000 --input_name Parameter --output_name affinetransform/Fused_Add_ --model_name rm_lstm4f --sequence_id 1
+python3 grpc_stateful_client.py --input_path $(pwd)/models/test_feat_1_10.ark --score_path $(pwd)/models/test_score_1_10.ark --grpc_address localhost --grpc_port 9000 --input_name Parameter --output_name affinetransform/Fused_Add_ --model_name rm_lstm4f --sequence_id 1
 
 ### Starting grpc_stateful_client.py client ###
 Context window left width cw_l: 0
