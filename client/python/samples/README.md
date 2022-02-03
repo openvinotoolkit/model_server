@@ -23,7 +23,7 @@ Install client dependencies using the command below:
 ```
 pip3 install -r requirements.txt
 ```
-Build and install [Model Server Client Library](../lib)
+Build and install [Model Server Client Library](https://github.com/openvinotoolkit/model_server/blob/main/client/python/lib)
 `pip3 install dist/ovmsclient-0.1-py3-none-any.whl`
 
 Download [Resnet50-tf Model](https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html) and convert it into Intermediate Representation format:

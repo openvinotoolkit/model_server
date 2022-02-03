@@ -104,7 +104,7 @@ Detected class name: bee
 
 Create configuration file with DAG containing two sequential nodes: one being the _image transformation node_ and one _DL model node_ resnet. The job of image transformation node will be to preprocess the image data to match format required by ONNX model `resnet50-caffe2-v1-9.onnx`.
 
-The example [configuration file](../src/custom_nodes/image_transformation/config_with_preprocessing_node.json) is available in _image transformation_ custom node directory.  
+The example [configuration file](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes/image_transformation/config_with_preprocessing_node.json) is available in _image transformation_ custom node directory.  
 Image transformation custom node library building steps can be found [here](../src/custom_nodes/image_transformation).
 
 Prepare workspace with the model, preprocessing node library and configuration file.

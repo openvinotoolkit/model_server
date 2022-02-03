@@ -134,7 +134,7 @@ print("Gender results: Famale:", gender_results[0,0,0,0], "; Male:", gender_resu
 print("Emotion results: Natural:", emotion_results[0,0,0,0], "; Happy:", emotion_results[0,1,0,0], "; Sad:", emotion_results[0,2,0,0], "; Surprise:", emotion_results[0,3,0,0], "; Angry:", emotion_results[0,4,0,0] )
 ```
 
-Make sure there are installed python dependencies from [client_requirements.txt](../example_client/client_requirements.txt)
+Make sure there are installed python dependencies from [client_requirements.txt](https://github.com/openvinotoolkit/model_server/blob/main/example_client/client_requirements.txt)
 
 ```bash
 python combined_model_client.py

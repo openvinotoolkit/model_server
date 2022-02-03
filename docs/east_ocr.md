@@ -14,12 +14,12 @@ Below is depicted the graph implementing a complete OCR pipelines.
 
 It includes the following nodes:
 - Model east-resnet50 - inference execution which takes the user image as input. It returns two outputs including information about all detected boxes, their location and scores.
-- Custom node east_ocr - it includes C++ implementation of east-resnet50 model results processing. It analyses the detected boxes coordinates, filters the results
-based on the configurable score level threshold and and applies non-max suppression algorithm to remove overlaping boxes. Finally the custom node east-ocr crops all detected boxes
-from the original image, resize them to the target resolution and combines into a single output of a dynamic batch size. The output batch size is determined by the number of detected
-boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [east_ocr custom node](../src/custom_nodes/east_ocr)
-- demultiplexer - output from the Custom node east_ocr have variable batch size. In order to match it with the sequential text detection model, the data is split into individuial images with batch size 1 each.
-Such smaller requests can be submitted for inference in parallel to the next Model Node. Learn more about the [demultiplexing](./demultiplexing.md)
+- Custom node east_ocr - it includes C++ implementation of east-resnet50 model results processing. It analyses the detected boxes coordinates, filters the results.
+based on the configurable score level threshold and and applies non-max suppression algorithm to remove overlaping boxes. Finally the custom node east-ocr crops all detected boxes.
+from the original image, resize them to the target resolution and combines into a single output of a dynamic batch size. The output batch size is determined by the number of detected.
+boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [east_ocr custom node](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes/east_ocr).
+- demultiplexer - output from the custom node east_ocr have variable batch size. In order to match it with the sequential text detection model, the data is split into individuial images with batch size 1 each.
+Such smaller requests can be submitted for inference in parallel to the next Model Node. Learn more about the [demultiplexing](./demultiplexing.md).
 - Model text-recognition - this model recognizes characters included in the input image. 
 - Response - the output of the whole pipeline combines the recognized `image_texts` with their metadata. 
 The metadata are the `text_coordinates` and the `confidence_level` outputs.
@@ -100,11 +100,11 @@ text-recognition model will have the following interface:
 
 ## Building the Custom Node "east_ocr" Library 
 
-Custom nodes are loaded into OVMS as dynamic library implementing OVMS API from [custom_node_interface.h](../src/custom_node_interface.h).
+Custom nodes are loaded into OVMS as dynamic library implementing OVMS API from [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_node_interface.h).
 It can use OpenCV libraries included in OVMS or it could use other thirdparty components.
 
 The custom node east_ocr can be built inside a docker container via the following procedure:
-- go to the custom node source code folder [src/custom_nodes/east_ocr](../src/custom_nodes/east_ocr)
+- go to the custom node source code folder [src/custom_nodes/east_ocr](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes/east_ocr)
 - run `make` command
 
 This command will export the compiled library in `./lib` folder.
@@ -112,7 +112,7 @@ Copy this `lib` folder to the same location with `text-recognition` and `east_ic
 
 ## OVMS Configuration File
 
-The configuration file for running the OCR demo is stored in [config.json](../src/custom_nodes/east_ocr/config.json)
+The configuration file for running the OCR demo is stored in [config.json](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes/east_ocr/config.json)
 Copy this file along with the model files and the custom node library like presented below:
 ```bash
 OCR
@@ -139,9 +139,9 @@ docker run -p 9000:9000 -d -v ${PWD}/OCR:/OCR openvino/model_server --config_pat
 
 ## Requesting the Service
 
-Exemplary client [easr_orc_client.py](../example_client/east_ocr_client.py) can be used to request pipeline deployed in previous step.
+Exemplary client [easr_orc_client.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/east_ocr_client.py) can be used to request pipeline deployed in previous step.
 
-From the context of [example_client](../example_client) folder install python3 requirements:
+From the context of [example_client](https://github.com/openvinotoolkit/model_server/blob/main/example_client) folder install python3 requirements:
 ```bash
 pip install -r client_requirements.txt
 ``` 

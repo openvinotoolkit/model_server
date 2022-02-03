@@ -9,7 +9,7 @@ More information about this feature can be found in [dynamic batch size in demul
 
 > **NOTE**: When using `demultiply_count` parameters, only one demultiplexer can exist in pipeline.
 
-- Example client in python grpc_serving_client.py can be used to request the pipeline. Use `--dag-batch-size-auto` flag to add an additional dimension to the input shape which is required for demultiplexing feature.
+- Example client in python [grpc_serving_client.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/grpc_serving_client.py) can be used to request the pipeline. Use `--dag-batch-size-auto` flag to add an additional dimension to the input shape which is required for demultiplexing feature.
 
 - The example uses model [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/resnet50-binary-0001/README.md).
 

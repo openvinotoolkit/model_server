@@ -3,7 +3,7 @@
 This guide includes an example script to run face detection inference with OpenVINO&trade; Model Server.
 
 
-- The script [face_detection.py](../example_client/face_detection.py) runs face detection inference requests for all the images
+- The script [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/face_detection.py) runs face detection inference requests for all the images
 saved in `image_input_dir` directory. 
 
 - The script can adjust the input image size and change the batch size in the request. It demonstrates how to use
@@ -70,7 +70,7 @@ python face_detection.py --batch_size 4 --width 600 --height 400 --input_images_
 
 # Running Person-Vehicle-Detection with Example Script<a name="persondetection"></a>
 
-The Face Detection Example script can be a reference script to run various other Detection models. Run through the following steps to use Person-Vehicle OpenVINO&trade; Model with OpenVINO&trade; Model Server
+The Face Detection Example script can be a reference script to run various other Detection models. Run through the following steps to use Person-Vehicle OpenVINO&trade; Model with OpenVINO&trade; Model Server.
 
 
 ### Download the model from OpenVINO&trade; Model Zoo.
@@ -112,7 +112,7 @@ If the container is not running , check out the [troubleshooting guide](troubles
 
 ### Run the example script
 
-Run the face detection example script - [FaceDetection.py](../example_client/face_detection.py). Make changes to the input shape as required by the model you are running. Refer to the API reference Guide to obtain the input and output shape of the model - [gRPC reference guide](./model_server_grpc_api.md) and [REST API reference guide ](./model_server_rest_api.md).
+Run the face detection example script - [FaceDetection.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/face_detection.py). Make changes to the input shape as required by the model you are running. Refer to the API reference Guide to obtain the input and output shape of the model - [gRPC reference guide](./model_server_grpc_api.md) and [REST API reference guide ](./model_server_rest_api.md).
 
 Run the example script in terminal :
 

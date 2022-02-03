@@ -42,7 +42,7 @@ docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/mode
 `-v /var/tmp:/var/tmp` enables communication with _hddldaemon_ running on the
  host machine
 
-Check out our recommendations for [throughput optimization on HDDL](performance_tuning.md#hddl-accelerators)
+Check out our recommendations for [throughput optimization on HDDL](performance_tuning.md)
 
 >Note: OpenVINO Model Server process in the container communicates with hddldaemon via unix sockets in /var/tmp folder.
 It requires RW permissions in the docker container security context. It is recommended to start docker container in the

@@ -18,7 +18,7 @@ This document covers following API:
 ## Model Status API <a name="model-status"></a>
 **Description**
 
-Get information about the status of served models
+Get information about the status of served models.
 
 **URL**
 
@@ -62,7 +62,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1
   ]
 }
 ```
-Read more about [Get Model Status API usage](../example_client/README.md#model-status-api-1)
+Read more about [Get Model Status API usage](https://github.com/openvinotoolkit/model_server/blob/main/example_client/README.md#model-status-api-1)
 
 ## Model Metadata API <a name="model-metadata"></a>
 **Description**
@@ -145,7 +145,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1/metadata
 }
 ```
 
-Read more about [Get Model Metadata API usage](./../example_client/README.md#model-metadata-api-1)
+Read more about [Get Model Metadata API usage](https://github.com/openvinotoolkit/model_server/blob/main/example_client/README.md#model-metadata-api-1)
 
 ## Predict API <a name="predict"></a>
 **Description**
@@ -207,7 +207,7 @@ Beside numerical values, it is possible to pass binary inputs. They must be Base
 
 Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
 
-Read more about [Predict API usage](./../example_client/README.md#predict-api-1)
+Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/main/example_client/README.md#predict-api-1)
 
 ## Config Reload API <a name="config-reload"></a>
 **Description**
@@ -307,7 +307,7 @@ Possible messages returned on error:
   "error": "Serializing model statuses to json failed. Check server logs for more info."
 }
 ```
-Even if one of models reload failed other may be working properly. To check state of loaded models use [Config Status API](./model_server_rest_api.md#config-status). To detect exact cause of errors described above analyzing sever logs may be necessary.
+Even if one of models reload failed other may be working properly. To check state of loaded models use [Config Status API](./model_server_rest_api.md#config-status-api). To detect exact cause of errors described above analyzing sever logs may be necessary.
 
 ## Config Status API <a name="config-status"></a>
 **Description**
