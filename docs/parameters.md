@@ -4,7 +4,7 @@
 ## Model Configuration Options
 
 | Option  | Value format | Description |
-|---|---|---|---|
+|---|---|---|
 | `"model_name"/"name"` | `string` | Model name exposed over gRPC and REST API.(use `model_name` in command line, `name` in json config)   |
 | `"model_path"/"base_path"` | `string` | If using a Google Cloud Storage, Azure Storage or S3 path, see [cloud storage guide](./using_cloud_storage.md). The path may look as follows:<br>`"/opt/ml/models/model"`<br>`"gs://bucket/models/model"`<br>`"s3://bucket/models/model"`<br>`"azure://bucket/models/model"`<br>(use `model_path` in command line, `base_path` in json config)  |
 | `"shape"` | `tuple/json/"auto"` | `shape` is optional and takes precedence over `batch_size`. The `shape` argument changes the model that is enabled in the model server to fit the parameters. `shape` accepts three forms of the values:* `auto` - The model server reloads the model with the shape that matches the input data matrix.* a tuple, such as `(1,3,224,224)` - The tuple defines the shape to use for all incoming requests for models with a single input.* A dictionary of shapes, such as `{"input1":"(1,3,224,224)","input2":"(1,3,50,50)", "input3":"auto"}` - This option defines the shape of every included input in the model.Some models don't support the reshape operation.If the model can't be reshaped, it remains in the original parameters and all requests with incompatible input format result in an error. See the logs for more information about specific errors.Learn more about supported model graph layers including all limitations at [Shape Inference Document](https://docs.openvinotoolkit.org/2021.4/_docs_IE_DG_ShapeInference.html). |
@@ -15,7 +15,7 @@
 | `"nireq"` | `integer` | The size of internal request queue. When set to 0 or no value is set value is calculated automatically based on available resources.|
 | `"target_device"` | `string` | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"HDDL"/"GPU"/"MYRIAD"/"MULTI"/"HETERO"` |
 | `stateful` | `bool` | If set to true, model is loaded as stateful. | No |
-| `idle_sequence_cleanup` | `bool` | If set to true, model will be subject to periodic sequence cleaner scans.  See [idle sequence cleanup](stateful_models.md#idle-sequence-cleanup). |
+| `idle_sequence_cleanup` | `bool` | If set to true, model will be subject to periodic sequence cleaner scans.  See [idle sequence cleanup](stateful_models.md). |
 | `max_sequence_number` | `uint32` | Determines how many sequences can be handled concurrently by a model instance. | No |
 | `low_latency_transformation` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_network_state_intro.html#lowlatency_transformation) on model load. |
 
@@ -27,7 +27,7 @@ It also accepts a value `auto` - this makes the served model set the batch size 
 - Each time the input data change the batch size, the model is reloaded. It might have an extra response delay for the first request.
 This feature is useful for sequential inference requests of the same batch size.
 
-*NOTE*: In case of frequent batch size changes in predict requests, consider using [demultiplexing feature](demultiplexing.md#dynamic-batch-handling-with-demultiplexing) from [Directed Acyclic Graph Scheduler](./dag_scheduler.md) which is more
+*NOTE*: In case of frequent batch size changes in predict requests, consider using [demultiplexing feature](demultiplexing.md) from [Directed Acyclic Graph Scheduler](./dag_scheduler.md) which is more
 performant in such situations because it is not adding extra overhead with model reloading between requests like --batch_size auto setting. Examplary usage of this feature can be found in [dynamic_batch_size](./dynamic_bs_demultiplexer.md) document.
 
 - OpenVINO&trade; Model Server determines the batch size based on the size of the first dimension in the first input.
@@ -79,7 +79,7 @@ Configuration options for server are defined only via command line options and d
 | `grpc_workers` | `integer` | Number of the gRPC server instances (must be from 1 to CPU core count). Default value is 1 and it's optimal for most use cases. Consider setting higher value while expecting heavy load. |
 | `rest_workers` | `integer` | Number of HTTP server threads. Effective when `rest_port` > 0. Default value is set based on the number of CPUs. |
 | `file_system_poll_wait_seconds` | `integer` | Time interval between config and model versions changes detection in seconds. Default value is 1. Zero value disables changes monitoring. |
-| `sequence_cleaner_poll_wait_minutes` | `integer` | Time interval (in minutes) between next sequence cleaner scans. Sequences of the models that are subjects to idle sequence cleanup that have been inactive since the last scan are removed. Zero value disables sequence cleaner. See [idle sequence cleanup](stateful_models.md#idle-sequence-cleanup). |
+| `sequence_cleaner_poll_wait_minutes` | `integer` | Time interval (in minutes) between next sequence cleaner scans. Sequences of the models that are subjects to idle sequence cleanup that have been inactive since the last scan are removed. Zero value disables sequence cleaner. See [idle sequence cleanup](stateful_models.md). |
 | `cpu_extension` | `string` | Optional path to a library with [custom layers implementation](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_Extensibility_DG_Intro.html) (preview feature in OVMS). |
 | `log_level` | `"DEBUG"/"INFO"/"ERROR"` | Serving logging level |
 | `log_path` | `string` | Optional path to the log file. |

@@ -97,7 +97,7 @@ Get the sample image:
 ```
 wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/2021.4/models/intel/age-gender-recognition-retail-0013/assets/age-gender-recognition-retail-0001.jpg
 ```
-![image](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/age-gender-recognition-retail-0013/assets/age-gender-recognition-retail-0001.jpg)
+![image](age-gender-recognition-retail-0001.jpg)
 
 Use the following code snippet to submit a request via gRPC to the serving and display the response:
 

@@ -21,7 +21,7 @@ Each model version subfolder must include its model files.
 
 Model repository can be hosted in the cloud storage, Kubernetes persistent volume or on the local drives.
 
-Learn more about the [model repository](https://github.com/openvinotoolkit/model_server/blob/main/docs/models_repository.md)
+Learn more about the [model repository](https://github.com/openvinotoolkit/model_server/blob/main/docs/models_repository.md).
 
 For example, you can 
 use a Google Cloud Storage (GCS) bucket:
@@ -134,7 +134,7 @@ of the node IP address. `ClusterIP` would keep the OVMS service internal to the 
     
 ## Deploy OpenVINO Model Server with a Single Model
 
-Deploy Model Server using _helm_. Please include the required model name and model path. You can also adjust other parameters defined in [values.yaml](ovms/values.yaml).
+Deploy Model Server using _helm_. Please include the required model name and model path. You can also adjust other parameters defined in [values.yaml](https://github.com/openvinotoolkit/model_server/tree/main/deploy/ovms/values.yaml).
 ```shell script
 helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository
 ```
@@ -155,8 +155,7 @@ helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs:/
 
 ## Deploy OpenVINO Model Server with Multiple Models Defined in a Configuration File
 
-To serve multiple models you can run Model Server with a configuration file as described here:
-https://github.com/openvinotoolkit/model_server/blob/main/docs/docker_container.md#configfile
+To serve multiple models you can run Model Server with a configuration file as described in [Config File](https://github.com/openvinotoolkit/model_server/blob/main/docs/docker_container.md#configfile).
 
 Follow the above documentation to create a configuration file named _config.json_ and fill it with proper information.
 
@@ -260,11 +259,11 @@ release "ovms-app" uninstalled
 | grpc_port      | Service port for REST API interface | - | 8081 |
 | file_system_poll_wait_seconds      | Time interval in seconds between new version detection. 0 disables the version updates | - | 1 |
 | model_name      | Model name, start OVMS with a single model, excluding with config_configmap_name and config_path parameter | - | - |
-| model_path      | model path, start OVMS with a single model, excluding with config_configmap_name and config_path parameter | - | - |
+| model_path      | Model path, start OVMS with a single model, excluding with config_configmap_name and config_path parameter | - | - |
 | target_device      | Target device to run inference operations | Non CPU device require the device plugin to be deployed | CPU |
 | stateful      | If set to any non empty value, enables stateful model execution | Model must be stateful | Stateless model execution |
-| nireq      | Size of inference queue  | - | set automatically by OpenVINO|
-| batch_size      | Change the model batch size  | - | defined by the model attributes |
+| nireq      | Size of inference queue  | - | Set automatically by OpenVINO|
+| batch_size      | Change the model batch size  | - | Defined by the model attributes |
 | layout      | Change layout of the model input or output with image data. NCHW or NHWC  | - | Defined in the model |
 | shape      | Change the model input shape  | - | defined by the model attributes |
 | model_version_policy      | Set the model version policy  | - | {\"latest\": { \"num_versions\":1 }} The latest version is served |
@@ -280,7 +279,7 @@ release "ovms-app" uninstalled
 | service_type      | k8s service type | - | LoadBalancer |
 | resources      | Compute resource limits | - | All CPU and memory on the node |
 | node_selector      | Target node label condition | - | All available nodes |
-| annotations      | Defined annotations to be set in the pods | - | none |
+| annotations      | Defined annotations to be set in the pods | - | None |
 | security_context     | OVMS security context | - | 5000:5000 |
 | models_host_path      | Mounts node local path in container as /models folder | Path should be created on all nodes and populated with the data | - |
 | models_volume_claim      | Mounts k8s persistent volume claim in the container as /models | Persistent Volume Claim should be create in the same namespace and populated with the data | - |

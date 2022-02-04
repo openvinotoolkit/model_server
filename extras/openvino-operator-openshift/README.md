@@ -46,7 +46,7 @@ Adjust the parameters according to your needs. See the [full list of parameters]
 
 Alternatively, after installing the Operator, you may deploy and manage deployments by creating `ModelServer` resources using the `oc` [OpenShift command line tool](https://docs.openshift.com/container-platform/4.7/cli_reference/openshift_cli/getting-started-cli.html).
 
-Modify the [sample resource](config/samples/intel_v1alpha1_ovms.yaml) and run the following command:
+Modify the [sample resource](https://github.com/openvinotoolkit/model_server/tree/main/extras/openvino-operator-openshift/config/samples/intel_v1alpha1_ovms.yaml) and run the following command:
 
 ```bash
 oc apply -f config/samples/intel_v1alpha1_ovms.yaml
@@ -172,8 +172,8 @@ There are a few different ways to use the AI inference endpoints created by the 
 - Deploy a client inside a `pod` in the cluster. A client inside the cluster can access the endpoints via the service name or the service cluster ip
 - Configure the service type as `NodePort` - this will expose the service on the Kubernetes `node` external IP address
 - In a managed cloud deployment use the service type `LoadBalancer` - this exposes the service as external IP address
-- Configure OpenShift [`route` resource](https://docs.openshift.com/container-platform/4.6/networking/routes/route-configuration.html) 
-  or [`ingress` resource](https://kubernetes.io/docs/concepts/services-networking/ingress/) in opensource Kubernetes linked with the ModelServer service.
+- Configure OpenShift `route` [resource](https://docs.openshift.com/container-platform/4.6/networking/routes/route-configuration.html) 
+  or `ingress` [resource](https://kubernetes.io/docs/concepts/services-networking/ingress/) in opensource Kubernetes linked with the ModelServer service.
   In OpenShift, this operation could be done from the web console.
   
 Check out the [exemple clients](https://github.com/openvinotoolkit/model_server/blob/main/example_client) code samples to see how your applications can generate gRPC or REST API calls to the AI inference endpoints.

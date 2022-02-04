@@ -307,7 +307,7 @@ Possible messages returned on error:
   "error": "Serializing model statuses to json failed. Check server logs for more info."
 }
 ```
-Even if one of models reload failed other may be working properly. To check state of loaded models use [Config Status API](./model_server_rest_api.md#config-status-api). To detect exact cause of errors described above analyzing sever logs may be necessary.
+Even if one of models reload failed other may be working properly. To check state of loaded models use [Config Status API](#config-status-api). To detect exact cause of errors described above analyzing sever logs may be necessary.
 
 ## Config Status API <a name="config-status"></a>
 **Description**
