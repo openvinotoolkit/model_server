@@ -108,3 +108,22 @@ TEST(Layout, ConversionBetweenOvLayout) {
             << "error converting layout: " << layoutStr;
     }
 }
+
+TEST(Layout, IsCompatibleWithShape) {
+    EXPECT_TRUE(Layout("NCHW").isCompatible(Shape{1, 3, 224, 224}));
+    EXPECT_TRUE(Layout("NCHW...").isCompatible(Shape{1, 3, 224, 224}));
+    EXPECT_TRUE(Layout("N?HW...").isCompatible(Shape{1, 3, 224, 224}));
+    EXPECT_TRUE(Layout("N...").isCompatible(Shape{1}));
+    EXPECT_TRUE(Layout("N...").isCompatible(Shape{1, 5, 9, 100}));
+    EXPECT_TRUE(Layout("...").isCompatible(Shape{1, 5, 9, 100}));
+    EXPECT_TRUE(Layout("NC...H").isCompatible(Shape{1, 5, 9}));
+    EXPECT_TRUE(Layout("NC...H").isCompatible(Shape{1, 5, 9, 100}));
+}
+
+TEST(Layout, IsIncompatibleWithShape) {
+    EXPECT_FALSE(Layout("NCHW").isCompatible(Shape{1, 3, 224, 224, 10}));  // to many dims in shape
+    EXPECT_FALSE(Layout("NCHW").isCompatible(Shape{1, 224, 224}));         // too few dims in shape
+    EXPECT_FALSE(Layout("N...H").isCompatible(Shape{1}));                  // too few dims in shape
+    EXPECT_FALSE(Layout("N?HW").isCompatible(Shape{1, 224, 224}));         // too few dims in shape
+    EXPECT_FALSE(Layout("N?HW").isCompatible(Shape{1, 224, 224, 3, 1}));   // too many dims in shape
+}

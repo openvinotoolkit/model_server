@@ -118,4 +118,19 @@ Layout Layout::fromOvLayout(const ov::Layout& layout) {
     return Layout(strCopy);
 }
 
+bool Layout::containsEtc() const {
+    return (*this).find(ETC_LAYOUT_DELIMETER) != std::string::npos;
+}
+
+std::string::size_type Layout::getNumberOfKnownDimensions() const {
+    return std::count_if((*this).begin(), (*this).end(), [](char c) { return ALLOWED_DIMENSION_LETTERS.find(c) != std::string::npos || c == UNDEFINED_DIMENSION_CHAR; });
+}
+
+bool Layout::isCompatible(const Shape& shape) const {
+    if (this->containsEtc()) {
+        return this->getNumberOfKnownDimensions() <= shape.size();
+    }
+    return this->getNumberOfKnownDimensions() == shape.size();
+}
+
 }  // namespace ovms

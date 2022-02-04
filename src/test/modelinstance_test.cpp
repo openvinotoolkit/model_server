@@ -231,6 +231,25 @@ TEST_F(TestLoadModel, LoadModelWithRTMapLayoutOverwriteByParameter) {
     EXPECT_EQ(mockModelInstance.getOutputsInfo().begin()->second->getLayout(), ovms::Layout("NC"));
 }
 
+// The RTMap is populated with layout info by Model Optimizer.
+// This test ensures that OVMS refuses to load model with Model Optimizer layout set to invalid layout.
+// Invalid layout, meaning the number of dimensions in shape does not match number of dimensions in layout.
+TEST_F(TestLoadModel, LoadModelWithRTMapParameterInputLayoutIncompatible) {
+    auto inputRtMap = ov::RTMap({{"param", ov::LayoutAttribute(ov::Layout("NCHW"))}});
+    auto outputRtMap = ov::RTMap();
+    MockModelInstanceWithRTMap mockModelInstance(*ieCore, inputRtMap, outputRtMap);
+    auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
+    ASSERT_EQ(status, ovms::StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE) << status.string();
+}
+
+TEST_F(TestLoadModel, LoadModelWithRTMapParameterOutputLayoutIncompatible) {
+    auto inputRtMap = ov::RTMap();
+    auto outputRtMap = ov::RTMap({{"param", ov::LayoutAttribute(ov::Layout("NCHW"))}});
+    MockModelInstanceWithRTMap mockModelInstance(*ieCore, inputRtMap, outputRtMap);
+    auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
+    ASSERT_EQ(status, ovms::StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE) << status.string();
+}
+
 class MockModelInstanceThrowingFileNotFoundForLoadingCNN : public ovms::ModelInstance {
 public:
     MockModelInstanceThrowingFileNotFoundForLoadingCNN(ov::Core& ieCore) :
@@ -359,6 +378,22 @@ TEST_F(TestLoadModel, UnSuccessfulLoadWhenLayoutIncorrect) {
     auto config = DUMMY_MODEL_CONFIG;
     config.parseLayoutParameter("nchw:nc");
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::MODEL_NOT_LOADED);
+    EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
+}
+
+TEST_F(TestLoadModel, UnSuccessfulLoadWhenInputLayoutIncompatible) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    auto config = DUMMY_MODEL_CONFIG;
+    config.parseLayoutParameter("{\"b\":\"nchw\"}");
+    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE);
+    EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
+}
+
+TEST_F(TestLoadModel, UnSuccessfulLoadWhenOutputLayoutIncompatible) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    auto config = DUMMY_MODEL_CONFIG;
+    config.parseLayoutParameter("{\"a\":\"nchw\"}");
+    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
 }
 
