@@ -68,7 +68,7 @@ ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
   INSTALL_DRIVER_VERSION ?= "21.48.21782"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2022.1.0.553_offline.sh
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2022.1.0.571_offline.sh
 endif
 ifeq ($(BASE_OS),centos)
   BASE_OS_TAG=$(BASE_OS_TAG_CENTOS)
@@ -84,14 +84,14 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "21.38.21026"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2022.1.0.553.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2022.1.0.571.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= latest
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2021.4.1"
+PRODUCT_VERSION ?= "2022.1"
 
 OVMS_CPP_CONTAINTER_NAME ?= server-test
 OVMS_CPP_CONTAINTER_PORT ?= 9178
