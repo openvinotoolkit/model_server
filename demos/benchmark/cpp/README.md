@@ -28,7 +28,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet50-binary:/model -p 9001:9001
 ```bash
 docker run --rm --network host -e "no_proxy=localhost" ovms_cpp_benchmark ./synthetic_client_async_benchmark --grpc_port=9001 --iterations=2000 --max_parallel_requests=100 --consumers=8 --producers=1
 
-Address: localhost:11337
+Address: localhost:9001
 Model name: resnet
 Synthetic inputs:
         0: (1,3,224,224); DT_FLOAT

@@ -26,7 +26,7 @@ The client also tests server responses for accurracy.
 ## Prepare the server
 ```bash
 docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet50-binary:/model -p 9001:9001 openvino/model_server:latest \
---model_path /model --model_name resnet --port 9001 --layout NHWC
+--model_path /model --model_name resnet --port 9001 --layout NHWC:NCHW
 ```
 
 ## Start the client:

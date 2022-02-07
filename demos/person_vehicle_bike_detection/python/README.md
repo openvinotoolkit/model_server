@@ -10,7 +10,7 @@ mkdir -p model/1
 
 wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.bin
 
-wget -P model/1https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.xml
+wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.xml
 ```
 
 ### Run OpenVINO Model Server
@@ -43,7 +43,7 @@ python person_vehicle_bike_detection.py --help
 
 Set `camera` count to `0` with `-c 0` and provide path to the video file with `-f` parameter.
 ```
-python person_vehicle_bike_detection.py -n person-vehicle-detection -l input -o output -d 1024 -c 0 -f <path_to_video_file> -i 127.0.0.1 -p 9000
+python person_vehicle_bike_detection.py -n person-vehicle-detection -l data -o detection_out -d 1024 -c 0 -f <path_to_video_file> -i localhost -p 9000
 ```
 Output:
 ```
@@ -58,7 +58,7 @@ Output:
 
 Set `camera` count to `1` with `-c 1` and provide path to the video file with `-f` parameter.
 ```
-python person_vehicle_bike_detection.py -n person-vehicle-detection -l input -o output -d 1024 -c 0 -f <path_to_video_file> -i 127.0.0.1 -p 9000
+python person_vehicle_bike_detection.py -n person-vehicle-detection -l data -o detection_out -d 1024 -c 0 -f <path_to_video_file> -i localhost -p 9000
 ```
 
 Console logs:

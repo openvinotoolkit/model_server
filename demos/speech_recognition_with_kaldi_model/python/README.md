@@ -18,7 +18,7 @@ pip3 install -r requirements.txt
 To run this example you will need to download the rm_lstm4f model with input and score ark files and convert it to IR format.
  1. Download the model from [rm_lstm4f](https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/)
      
-     ```mkdir models & cd models```
+     ```mkdir models && cd models```
 
      ```wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/ ```
 
@@ -84,7 +84,7 @@ usage: grpc_stateful_client.py [--input_path INPUT_PATH]
 - Usage example
 
 ```bash
-python3 grpc_stateful_client.py --input_path $(pwd)/models/test_feat_1_10.ark --score_path $(pwd)/models/rm_lstm4f/test_score_1_10.ark --grpc_address localhost --grpc_port 9000 --input_name Parameter --output_name affinetransform/Fused_Add_ --model_name rm_lstm4f --sequence_id 1
+python3 grpc_stateful_client.py --input_path $(pwd)/models/test_feat_1_10.ark --score_path $(pwd)/models/test_score_1_10.ark --grpc_address localhost --grpc_port 9000 --input_name Parameter --output_name affinetransform/Fused_Add_ --model_name rm_lstm4f --sequence_id 1
 
 ### Starting grpc_stateful_client.py client ###
 Context window left width cw_l: 0

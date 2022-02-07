@@ -16,8 +16,8 @@
 
 import argparse
 from ovmsclient import make_grpc_client
-from utils.common import read_image_paths, load_image, get_model_io_names
-from utils.resnet_utils import resnet_postprocess
+from utils.common import read_image_paths, load_image
+from utils.resnet_utils import resnet_postprocess, get_model_io_names
 
 
 parser = argparse.ArgumentParser(description='Make prediction using images in binary format')
