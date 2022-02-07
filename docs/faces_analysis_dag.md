@@ -5,7 +5,7 @@ This guide demonstrates how to create complex pipelines using object detection a
 
 ![Faces analysis graph](faces_analysis.png)
 
-Using such pipeline, a single request to OVMS can perform a complex set of operations to determine all faces and its properties.
+Using such a pipeline, a single request to OVMS can perform a complex set of operations to determine all faces and their properties.
 
 ## Pipeline Configuration Graph
 
@@ -15,13 +15,13 @@ Below is depicted graph implementing faces analysis pipeline execution.
 
 It includes the following Nodes:
 - Model `face-detection` - deep learning model which takes user image as input. Its outputs contain information about face coordinates and confidence levels.
-- Custom node `model_zoo_intel_object_detection` - it includes C++ implementation of common object detection models results processing. By analysing the output it produces cropped face images based on the configurable score level threshold. Custom node also resizes them to the target resolution and combines into a single output of a dynamic batch size. The output batch size is determined by the number of detected
+- Custom node `model_zoo_intel_object_detection` - it includes C++ implementation of common object detection models results processing. By analyzing the output it produces cropped face images based on the configurable score level threshold. Custom node also resizes them to the target resolution and combines them into a single output of dynamic batch size. The output batch size is determined by the number of detected
 boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [model_zoo_intel_object_detection custom node](../src/custom_nodes/model_zoo_intel_object_detection).
-- demultiplexer - outputs from the custom node model_zoo_intel_object_detection have variable batch size. In order to match it with the sequential recognition models, data is split into individuial images with each batch size equal to 1.
+- demultiplexer - outputs from the custom node model_zoo_intel_object_detection have variable batch size. To match it with the sequential recognition models, data is split into individual images with each batch size equal to 1.
 Such smaller requests can be submitted for inference in parallel to the next Model Nodes. Learn more about the [demultiplexing](./demultiplexing.md).
 - Model `age-gender-recognition` - this model recognizes age and gender on given face image
-- Model `emotion-recognition` - this model outputs emotion probability for emotions: neutral, happy, sad, surprised and angry
-- Response - the output of the whole pipeline combines the recognized face images with their metadata: coordinates, age, gender, emotions and detection confidence level. 
+- Model `emotion-recognition` - this model outputs emotion probability for emotions: neutral, happy, sad, surprised, and angry
+- Response - the output of the whole pipeline combines the recognized face images with their metadata: coordinates, age, gender, emotions, and detection confidence level. 
 
 ## Prepare the models from OpenVINO Model Zoo
 ### Face detection model
@@ -88,14 +88,14 @@ docker run -p 9000:9000 -d -v ${PWD}/workspace:/workspace openvino/model_server 
 
 ## Requesting the Service
 
-Exemplary client [faces_analysis_pipeline_client.py](../example_client/faces_analysis_pipeline_client.py) can be used to request pipeline deployed in previous step.
+Exemplary client [faces_analysis_pipeline_client.py](../example_client/faces_analysis_pipeline_client.py) can be used to request pipeline deployed in the previous step.
 
 From the context of [example_client](../example_client) folder install python3 requirements:
 ```bash
 pip install -r client_requirements.txt
 ``` 
 
-Now you can create directory for text images and run the client:
+Now you can create a directory for text images and run the client:
 ```bash
 mkdir results
 ```

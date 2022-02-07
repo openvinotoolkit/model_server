@@ -5,7 +5,7 @@ In addition with [gRPC APIs](./model_server_grpc_api.md) OpenVINO&trade; model s
 
 > **Note** : Only numerical data type is supported.
 
-This document covers following API:
+This document covers the following API:
 * <a href="#model-status">Model Status API</a>
 * <a href="#model-metadata">Model MetaData API </a>
 * <a href="#predict">Predict API </a>
@@ -150,7 +150,7 @@ Read more about [Get Model Metadata API usage](./../example_client/README.md#mod
 ## Predict API <a name="predict"></a>
 **Description**
 
-Sends requests via TensorFlow Serving RESTful API using images in numpy array or binary format. It displays performance statistics and optionally the model accuracy.
+Sends requests via TensorFlow Serving RESTful API using images in NumPy array or binary format. It displays performance statistics and optionally the model accuracy.
 
 **URL**
 ```
@@ -190,7 +190,7 @@ A request in [column format](https://www.tensorflow.org/tfx/serving/api_rest#spe
 }
 ```
 
-Beside numerical values, it is possible to pass binary inputs. They must be Base64 encoded in passed in `b64` key like below:
+Besides numerical values, it is possible to pass binary inputs. They must be Base64 encoded in passed in `b64` key like below:
 
 ```
 {
@@ -222,7 +222,7 @@ POST http://${REST_URL}:${REST_PORT}/v1/config/reload
 
 **Flow**
 
-Flow after receiving request:
+Flow after receiving the request:
 1) If config file was changed - reload config.
 2) If any model version directory was changed or a new version was added - reload this model.
 3) If any model that is part of a DAG was changed or a new version was added - reload this pipeline.
@@ -267,14 +267,14 @@ In case of any failure during execution:
   "error": <error message>|<string> 
 } 
 ```
-When operation succeeds HTTP response status code is
+When an operation succeeds HTTP response status code is
   - `201` when config(config file or model version) was reloaded 
   - `200` when reload was not required, already applied or OVMS was started in single model mode
-When operation fails another status code is returned.
+When an operation fails another status code is returned.
 
 Possible messages returned on error:
 
-- obtaining config file change time failed (file is not exisiting or cannot be accessed):
+- obtaining config file change time failed (file is not existing or cannot be accessed):
 ```JSON
 {
   "error": "Config file not found or cannot open."
@@ -294,39 +294,39 @@ Possible messages returned on error:
 }
 ```
 
-- retrieving status of one of the models failed:
+- retrieving the status of one of the models failed:
 ```JSON
 {
   "error": "Retrieving all model statuses failed. Check server logs for more info."
 }
 ```
 
-- converting model status responses to json failed:
+- converting model status responses to JSON failed:
 ```JSON
 {
-  "error": "Serializing model statuses to json failed. Check server logs for more info."
+  "error": "Serializing model statuses to JSON failed. Check server logs for more info."
 }
 ```
-Even if one of models reload failed other may be working properly. To check state of loaded models use [Config Status API](./model_server_rest_api.md#config-status). To detect exact cause of errors described above analyzing sever logs may be necessary.
+Even if one of the models reload failed, others may be working properly. To check state of loaded models use [Config Status API](./model_server_rest_api.md#config-status). To detect the exact cause of errors described above analyzing server logs may be necessary.
 
 ## Config Status API <a name="config-status"></a>
 **Description**
 
-Sends requests via RESTful API to get response that contains aggregation of getModelStatus responses for all models and [DAGs](./dag_scheduler.md).
+Sends requests via RESTful API to get a response that contains an aggregation of getModelStatus responses for all models and [DAGs](./dag_scheduler.md).
 
 **URL** 
 ```
 GET http://${REST_URL}:${REST_PORT}/v1/config
 ```
 **Request**  
-To trigger this API HTTP GET request should be sent on given URL.Example `curl` command:
+To trigger this API HTTP GET request should be sent on a given URL. Example `curl` command:
 
 ```Bash
 curl --request GET http://${REST_URL}:${REST_PORT}/v1/config
 ```
 
 **Response**  
-In case of success, response contains JSON with aggregation of getModelStatus responses for all models and DAGs, along with operation status: 
+In case of success, the response contains JSON with aggregation of getModelStatus responses for all models and DAGs, along with operation status: 
 
 ```JSON
 { 
@@ -356,17 +356,17 @@ In case of any failure during execution:
   "error": <error message>|<string> 
 } 
 ```
-When operation succeeded HTTP response status code is 200, otherwise another code is returned.
+When operation succeeded HTTP response status code is 200, otherwise, another code is returned.
 Possible messages returned on error:
 
-- retrieving status of one of the models failed:
+- retrieving the status of one of the models failed:
 ```JSON
 {
   "error": "Retrieving all model statuses failed. Check server logs for more info."
 }
 ```
 
-- converting model status responses to json failed:
+- converting model status responses to JSON failed:
 ```JSON
 {
   "error": "Serializing model statuses to json failed. Check server logs for more info."

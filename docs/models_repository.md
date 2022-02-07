@@ -53,7 +53,7 @@ output_tensorname = 'resnet_v1_50/predictions/Reshape_1'
 predictions = make_ndarray(result.outputs[output_tensorname])
 ```
 
-- It is possible to adjust this behavior by adding an optional json file with name `mapping_config.json` 
+- It is possible to adjust this behavior by adding an optional JSON file with name `mapping_config.json` 
 which can map the input and output keys to the appropriate tensors.
 
 ```json
@@ -67,7 +67,7 @@ which can map the input and output keys to the appropriate tensors.
        }
 }
 ```
-- This extra mapping can be handy to enable model `user friendly` names on the client when the model has cryptic tensor names.
+- This extra mapping can be handy to enable model `user-friendly` names on the client when the model has cryptic tensor names.
 
 - OpenVINO&trade; model server enables the versions present in the configured model folder according to the defined [version policy](./model_version_policy.md).
 

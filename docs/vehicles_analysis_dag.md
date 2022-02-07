@@ -5,7 +5,7 @@ This document demonstrates how to create complex pipelines using object detectio
 
 ![Vehicles analysis visualization](vehicles_analysis.png)
 
-Using such pipeline, a single request to OVMS can perform a complex set of operations to determine all vehicles and its properties.
+Using such pipeline, a single request to OVMS can perform a complex set of operations to determine all vehicles and their properties.
 
 ## Pipeline Configuration Graph
 
@@ -15,12 +15,12 @@ Below is depicted graph implementing vehicles analysis pipeline execution.
 
 It includes the following Nodes:
 - Model `vehicle_detection` - deep learning model which takes user image as input. Its outputs contain information about vehicle coordinates and confidence levels.
-- Custom node `model_zoo_intel_object_detection` - it includes C++ implementation of common object detection models results processing. By analysing the output it produces cropped vehicle images based on the configurable score level threshold. Custom node also resizes them to the target resolution and combines into a single output of a dynamic batch size. The output batch size is determined by the number of detected
+- Custom node `model_zoo_intel_object_detection` - it includes C++ implementation of common object detection models results processing. By analyzing the output, it produces cropped vehicle images based on the configurable score level threshold. Custom node also resizes them to the target resolution and combines them into a single output of  dynamic batch size. The output batch size is determined by the number of detected
 boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [model_zoo_intel_object_detection custom node](../src/custom_nodes/model_zoo_intel_object_detection).
-- demultiplexer - outputs from the custom node model_zoo_intel_object_detection have variable batch size. In order to match it with the sequential recognition models, data is split into individuial images with each batch size equal to 1.
+- demultiplexer - outputs from the custom node model_zoo_intel_object_detection have variable batch size. To match it with the sequential recognition models, data is split into individual images with each batch size equal to 1.
 Such smaller requests can be submitted for inference in parallel to the next Model Nodes. Learn more about the [demultiplexing](./demultiplexing.md).
 - Model `vehicle_attributes_recognition` - this model recognizes type and color for given vehicle image
-- Response - the output of the whole pipeline combines the recognized vehicle images with their metadata: coordinates, type, color and detection confidence level. 
+- Response - the output of the whole pipeline combines the recognized vehicle images with their metadata: coordinates, type, color, and detection confidence level. 
 
 ## Prepare the models from OpenVINO Model Zoo
 ### Vehicle detection model
@@ -84,7 +84,7 @@ From the context of [example_client](../example_client) folder install python3 r
 pip install -r client_requirements.txt
 ``` 
 
-Now you can create directory for text images and run the client:
+Now you can create a directory for text images and run the client:
 ```bash
 mkdir results
 ```
@@ -141,5 +141,5 @@ Found 37 vehicles:
 36 Type: car Color: red
 ```
 
-With additional parameter `--vehicle_images_save_path` the client script saves all detected vehicle images to jpeg files into directory path to confirm
+With additional parameter `--vehicle_images_save_path`, the client script saves all detected vehicle images to jpeg files into directory path to confirm
 if the image was analyzed correctly.

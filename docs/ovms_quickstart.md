@@ -75,7 +75,7 @@ models/
 ``` 
 
 
-Use these links for more information about the folder structure and how to deploy more than one model at the time: 
+Use these links for more information about the folder structure and how to deploy more than one model at a time: 
 - [Prepare models](./models_repository.md#preparing-the-models-repository)
 - [Deploy multiple models at once and to start a Docker container with a configuration file](./docker_container.md#step-3-start-the-docker-container)
 
@@ -132,4 +132,4 @@ In the `results` folder, look for an image that contains the inference results.
 The result is the modified input image with bounding boxes indicating detected faces.
 
 
-Note: Similar steps can be repeated also for the model with ONNX model. Check the inference [use case example with a public ResNet model in ONNX format](ovms_onnx_example.md). 
+Note: Similar steps can be repeated also for the model with the ONNX model. Check the inference [use case example with a public ResNet model in ONNX format](ovms_onnx_example.md). 

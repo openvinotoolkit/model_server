@@ -50,7 +50,7 @@ By default, the `https_proxy` variable will be used. If you want to use `http_pr
 @endsphinxdirective
 
 Add the Google Cloud Storage path as the model_path and pass the Google Cloud Storage credentials to the Docker container.
-Exception: This is not required if you use GKE kubernetes cluster. GKE kubernetes clusters handle authorization.
+Exception: This is not required if you use GKE Kubernetes cluster. GKE Kubernetes clusters handle authorization.
 
 To start a Docker container with support for Google Cloud Storage paths to your model use the GOOGLE_APPLICATION_CREDENTIALS variable. This variable contains the path to the GCP authentication key.
 
@@ -96,7 +96,7 @@ openvino/model_server:latest \
 --model_path s3://public_bucket/model_path --model_name s3_model --port 9001
 ```
 
-or setup a profile credentials file in the docker image described here
+or set up a profile credentials file in the docker image described here
 [AWS Named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html)
 
 Example command with `s3://<bucket>/<model_path>:`

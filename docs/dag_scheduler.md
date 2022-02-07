@@ -14,11 +14,11 @@
 
 ## Introduction
 The Directed Acyclic Graph (DAG) Scheduler makes it possible to create a pipeline of models for execution in a single client request. 
-Pipeline is a Directed Acyclic Graph with different nodes which define how to process each step of predict request. 
+The pipeline is a Directed Acyclic Graph with different nodes which define how to process each step of predict request. 
 By using a pipeline, there is no need to return intermediate results of every model to the client. This allows avoiding the network overhead by minimizing the number of requests sent to the Model Server. 
-Each model output can be mapped to another model input. Since intermediate results are kept in server's RAM these can be reused by subsequent inferences which reduces overall latency.
+Each model output can be mapped to another model input. Since intermediate results are kept in the server's RAM these can be reused by subsequent inferences which reduce overall latency.
 
-This guide gives information about following:
+This guide gives information about:
 
 * <a href="#node-type">Node Types</a>
 * <a href="#configuration-file">Configuration file</a>
@@ -34,12 +34,12 @@ There are two special kinds of nodes - Request and Response node. Both of them a
 *  Request node
     - This node defines which inputs are required to be sent via gRPC/REST request for pipeline usage. You can refer to it by node name: `request`.
 * Response node
-    - This node defines which outputs will be fetched from final pipeline state and packed into gRPC/REST response. 
+    - This node defines which outputs will be fetched from the final pipeline state and packed into gRPC/REST response. 
     You cannot refer to it in your pipeline configuration since it is the pipeline final stage. To define final outputs fill `outputs` field. 
 
 ### Deep Learning node type
 
-* DL model - this node contains underlying OpenVINO&trade; model and performs inference on selected target device. This can be defined in configuration file. 
+* DL model - this node contains underlying OpenVINO&trade; model and performs inference on the selected target device. This can be defined in the configuration file. 
     Each model input needs to be mapped to some node's `data_item` - input from gRPC/REST `request` or another `DL model` output. 
     Outputs of the node may be mapped to another node's inputs or the `response` node, meaning it will be exposed in gRPC/REST response. 
 
@@ -48,14 +48,14 @@ There are two special kinds of nodes - Request and Response node. Both of them a
 * custom - that node can be used to implement all operations on the data which can not be handled by the neural network model. It is represented by
 a C++ dynamic library implementing OVMS API defined in [custom_node_interface.h](../src/custom_node_interface.h). Custom nodes can run the data
 processing using OpenCV, which is included in OVMS, or include other third-party components. Custom node libraries are loaded into OVMS
- by adding its definition to the pipeline configuration. The configuration includes a path to the compiled binary with `.so` extension. 
+ by adding their definition to the pipeline configuration. The configuration includes a path to the compiled binary with the `.so` extension. 
 Custom nodes are not versioned, meaning one custom node library is bound to one name. To load another version, another name needs to be used.
 
 Learn more about developing custom node in the [custom node developer guide](custom_node_development.md)
 
 ## Demultiplexing data
 
-During the pipeline execution, it is possible to split a request with mulitple batches into a set of branches with a single batch.
+During the pipeline execution, it is possible to split a request with multiple batches into a set of branches with a single batch.
 That way a model configured with a batch size 1, can process requests with arbitrary batch size. Internally, OVMS demultiplexer will
 divide the data, process them in parallel and combine the results. 
 
@@ -150,11 +150,11 @@ Below is depicted a basic pipeline section template:
 |:---|:---|:---|:---|
 |`"name"`|string|Node name so you can refer to it from other nodes|Yes|
 |`"model_name"`|string|You can specify underlying model (needs to be defined in `model_config_list`), available only for `DL model` nodes|required for `DL model` nodes|
-|`"version"`|integer|You can specify model version for inference, available only for `DL model` nodes|No|
+|`"version"`|integer|You can specify a model version for inference, available only for `DL model` nodes|No|
 |`"type"`|string|Node kind, currently there is only `DL model` kind available|Yes|
 |`"demultiply_count"`|integer|Splits node outputs to desired chunks and branches pipeline execution|No|
 |`"gather_from_node"`|string|Setups node to converge pipeline and collect results into one input before execution|No|
-|`"inputs"`|array|Defines list of input/output mappings between this and dependency nodes, **IMPORTANT**: Please note that output shape, precision and layout of previous node/request needs to match input of current node's model|Yes|
+|`"inputs"`|array|Defines the list of input/output mappings between this and dependency nodes, **IMPORTANT**: Please note that output shape, precision, and layout of previous node/request needs to match input of current node's model|Yes|
 |`"outputs"`|array|Defines model output name alias mapping - you can rename model output names for easier use in subsequent nodes|Yes|
 
 ### Node Input Options
@@ -162,14 +162,14 @@ Below is depicted a basic pipeline section template:
 |Option|Type|Description|Required|
 |:---|:---|:---|:---|
 |`"node_name"`|string|Defines which node we refer to|Yes|
-|`"data_item"`|string|Defines which resource of node we point to|Yes|
+|`"data_item"`|string|Defines which resource of the node we point to|Yes|
 
 ### Node Output Options
 
 |Option|Type|Description|Required|
 |:---|:---|:---|:---|
 |`"data_item"`|string|Is the name of resource exposed by node - for `DL model` nodes it means model output|Yes|
-|`"alias"`|string|Is a name assigned to data item, makes it easier to refer to results of this node in subsequent nodes|Yes|
+|`"alias"`|string|Is a name assigned to a data item, makes it easier to refer to results of this node in subsequent nodes|Yes|
 
 
 ### Custom Node Options
@@ -192,18 +192,18 @@ the same way. Custom node functions are just like a standard node in that respec
 
 ## Using Pipelines <a name="using-pipelines"></a>
 
-Pipelines can use the same API like the models. There are exactly the same calls for running 
+Pipelines can use the same API as the models. There are exactly the same calls for running 
 the predictions. The request format must match the pipeline definition inputs.
 
 The pipeline configuration can be queried using [gRPC GetModelMetadata](model_server_grpc_api.md#model-metadata) calls and
 [REST Metadata](model_server_rest_api.md#model-metadata).
-It returns the definition of the pipelines inputs and outputs. 
+It returns the definition of the pipelines' inputs and outputs. 
 
 Similarly, pipelines can be queried for their state using the calls [GetModelStatus](model_server_grpc_api.md#model-status)
 and [REST Model Status](model_server_rest_api.md#model-status)
 
 The only difference in using the pipelines and individual models is in version management. In all calls to the pipelines, 
-version parameter is ignored. Pipelines are not versioned. Though, they can reference a particular version of the models in the graph.
+the version parameter is ignored. Pipelines are not versioned. Though, they can reference a particular version of the models in the graph.
 
 ## Pipelines Examples <a name="pipeline-examples"></a>
 

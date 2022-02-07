@@ -4,7 +4,7 @@
 OpenVINO Model Server monitors changes to the configuration file and applies required modifications during runtime using two different methods:
 
 1. Automatically, with an interval defined by the parameter `--file_system_poll_wait_seconds`. (introduced in version 2021.1)
-2. On demand, using the [Config Reload API](./model_server_rest_api.md#config-reload). (introduced in version 2021.3)
+2. On-demand, using the [Config Reload API](./model_server_rest_api.md#config-reload). (introduced in version 2021.3)
 
 Configuration reload triggers the following operations:
 

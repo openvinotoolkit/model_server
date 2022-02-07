@@ -18,7 +18,7 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 ```
 #### Download the Pretrained Model
-Download the model files and store in `models` directory
+Download the model files and store them in the `models` directory
 ```Bash
 mkdir -p models/resnet/1
 curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
@@ -132,6 +132,6 @@ time variance: 0.00
 Classification accuracy: 100.00
 
 ```
-Each iteration presents the results of each infer request and details for each image in the batch.
+Each iteration presents the results of each inference request and details for each image in the batch.
 
 > Note that reloading the model takes time and during the reload new requests get queued up. Therefore, frequent model reloading may negatively affect overall performance. 

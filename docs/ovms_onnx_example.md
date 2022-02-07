@@ -13,7 +13,7 @@ resnet/
 └── 1
     └── resnet50-caffe2-v1-9.onnx
 ```
-Note that the downloaded model requires additional [preprocessing function](https://github.com/onnx/models/tree/master/vision/classification/resnet#preprocessing). Preprocessing can be performed in the client by manipulating data before sending the request. Preprocessing can be also delegated to the server by creating a DAG and using a custom processing node. Both methods will be explained below.
+Note that the downloaded model requires an additional [preprocessing function](https://github.com/onnx/models/tree/master/vision/classification/resnet#preprocessing). Preprocessing can be performed in the client by manipulating data before sending the request. Preprocessing can be also delegated to the server by creating a DAG, and using a custom processing node. Both methods will be explained below.
 
 <a href="#client-side">Option 1: Adding preprocessing to the client side</a>  
 <a href="#server-side">Option 2: Adding preprocessing to the server side (building DAG)</a>
@@ -102,7 +102,7 @@ Detected class name: bee
 
 ## Option 2: Adding preprocessing to the server side (building a DAG) <a name="server-side"></a>
 
-Create configuration file with DAG containing two sequential nodes: one being the _image transformation node_ and one _DL model node_ resnet. The job of image transformation node will be to preprocess the image data to match format required by ONNX model `resnet50-caffe2-v1-9.onnx`.
+Create a configuration file with DAG containing two sequential nodes: one being the _image transformation node_ and one _DL model node_ resnet. The job of the image transformation node will be to preprocess the image data to match format required by the ONNX model `resnet50-caffe2-v1-9.onnx`.
 
 The example [configuration file](../src/custom_nodes/image_transformation/config_with_preprocessing_node.json) is available in _image transformation_ custom node directory.  
 Image transformation custom node library building steps can be found [here](../src/custom_nodes/image_transformation).
@@ -172,4 +172,4 @@ Additional preprocessing step applies a division and an subtraction to each pixe
   ...
 }
 ```
-For each pixel, the custom node subtractes `123.675` from blue value, `116.28` from green value and `103.53` from red value. Next, it divides in the same color order using `58.395`, `57.12`, `57.375` values. This way we match the image data to the input required by onnx model.
+For each pixel, the custom node subtracts `123.675` from blue value, `116.28` from green value and `103.53` from red value. Next, it divides in the same color order using `58.395`, `57.12`, `57.375` values. This way we match the image data to the input required by the ONNX model.

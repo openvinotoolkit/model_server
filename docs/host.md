@@ -24,12 +24,12 @@ Look at VPU Plugins to see if your model is supported and use [OpenVINO Model Op
 
 
 ## Model Server Installation<a name="model-server-installation"></a>
-1. Clone model server git repository using command :
+1. Clone model server git repository using the command:
    ```Bash
    git clone https://github.com/openvinotoolkit/model_server
    ```
 
-2. Navigate to model server directory using command :
+2. Navigate to model server directory using the command:
    ```Bash
    cd model_server
    ```
@@ -49,9 +49,9 @@ Look at VPU Plugins to see if your model is supported and use [OpenVINO Model Op
 ```Bash
 ./ovms/bin/ovms --help
 ```
-2. The server can be started in interactive mode, as  a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements.
+2. The server can be started in interactive mode, as a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements.
 
-Refer to [Running Model Server using Docker Container](./docker_container.md) to get more details about the ovms parameters and configuration.
+Refer to [Running Model Server using Docker Container](./docker_container.md) to get more details about the OVMS parameters and configuration.
 
 
 **Note** When AI accelerators are used for inference execution, there might be needed additional steps to install their drivers and dependencies. 

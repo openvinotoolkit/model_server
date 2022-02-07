@@ -6,7 +6,7 @@ This document gives an overview of various parameters that can be configured to 
 
 ## Adjusting the number of Inference Engine streams in CPU and GPU target devices
 
-OpenVINO Model Server can be tuned to a single client use case or to a high concurrency. It is done via setting the number of
+OpenVINO Model Server can be tuned to a single client use case or a high concurrency. It is done via setting the number of
 execution streams. They split the available resources to perform parallel execution of multiple requests.
 It is particularly efficient for models which can not consume effectively all CPU cores or for CPUs with high number of cores.
 

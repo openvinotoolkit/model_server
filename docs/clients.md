@@ -8,7 +8,7 @@
     <div id="switcher-python" class="switcher-anchor">Python</div>
 @endsphinxdirective
 
-When creating a Python-based client application, there are two packages on PyPi that can be used to interact with OpenVINO Model Server:
+When creating a Python-based client application, there are two packages on PyPi that can be used with OpenVINO Model Server:
 - [tensorflow-serving-api](https://pypi.org/project/tensorflow-serving-api/)
 - [ovmsclient](https://pypi.org/project/ovmsclient/)
 

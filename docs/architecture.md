@@ -4,9 +4,9 @@
 
 - OpenVINO&trade; Model Server uses [Inference Engine](https://docs.openvinotoolkit.org/2021.4/index.html) libraries from OpenVINO&trade; toolkit in the backend, which speeds up the execution on CPU and enables it on AI accelerators like [Neural Compute Stick 2](https://software.intel.com/content/www/us/en/develop/hardware/neural-compute-stick.html), iGPU(Integrated Graphics Processing Unit) and [HDDL](https://docs.openvinotoolkit.org/2021.4/openvino_docs_install_guides_movidius_setup_guide.html).
 
-- API requests in gRPC code skeleton are created based on [TensorFlow Serving Core Framework](https://www.tensorflow.org/tfx/guide/serving) with tuned implementation of requests handling.
+- API requests in gRPC code skeleton are created based on [TensorFlow Serving Core Framework](https://www.tensorflow.org/tfx/guide/serving) with the tuned implementation of requests handling.
 
-- Services are designed via set of C++ classes managing AI models in Intermediate Representation format. [OpenVINO&trade; Inference Engine](https://docs.openvinotoolkit.org/2021.4/index.html) component executes the graphs operations.
+- Services are designed via a set of C++ classes managing AI models in Intermediate Representation format. [OpenVINO&trade; Inference Engine](https://docs.openvinotoolkit.org/2021.4/index.html) component executes the graphs operations.
 
 ![serving](serving-c.png)
 

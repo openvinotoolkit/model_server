@@ -1,24 +1,24 @@
 #  Optical Character Recognition with Directed Acyclic Graph {#ovms_docs_demo_ocr}
 
-This document demonstrate how to create and use an Optical Character Recognition (OCR) pipeline based on [east-resnet50](https://github.com/argman/EAST) text detection model,
+This document demonstrates how to create and use an Optical Character Recognition (OCR) pipeline based on [east-resnet50](https://github.com/argman/EAST) text detection model,
 [text-recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/text-recognition-0014) combined with a custom node implementation.
 
-Using such pipeline, a single request to OVMS can perform a complex set of operations with a response containing
+Using such a pipeline, a single request to OVMS can perform a complex set of operations with a response containing
 recognized characters for all detected text boxes. 
 
 ## OCR Graph
 
-Below is depicted the graph implementing a complete OCR pipelines. 
+Below is depicted the graph implementing complete OCR pipelines. 
 
 ![OCR graph](east_ocr.png)
 
 It includes the following nodes:
-- Model east-resnet50 - inference execution which takes the user image as input. It returns two outputs including information about all detected boxes, their location and scores.
+- Model east-resnet50 - inference execution which takes the user image as input. It returns two outputs including information about all detected boxes, their location, and scores.
 - Custom node east_ocr - it includes C++ implementation of east-resnet50 model results processing. It analyses the detected boxes coordinates, filters the results
-based on the configurable score level threshold and and applies non-max suppression algorithm to remove overlaping boxes. Finally the custom node east-ocr crops all detected boxes
-from the original image, resize them to the target resolution and combines into a single output of a dynamic batch size. The output batch size is determined by the number of detected
+based on the configurable score level threshold and applies a non-max suppression algorithm to remove overlapping boxes. Finally, the custom node east-ocr crops all detected boxes
+from the original image, resize them to the target resolution, and combines them into a single output of dynamic batch size. The output batch size is determined by the number of detected
 boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [east_ocr custom node](../src/custom_nodes/east_ocr)
-- demultiplexer - output from the Custom node east_ocr have variable batch size. In order to match it with the sequential text detection model, the data is split into individuial images with batch size 1 each.
+- demultiplexer - output from the Custom node east_ocr have variable batch size. To match it with the sequential text detection model, the data is split into individual images with batch size 1 each.
 Such smaller requests can be submitted for inference in parallel to the next Model Node. Learn more about the [demultiplexing](./demultiplexing.md)
 - Model text-recognition - this model recognizes characters included in the input image. 
 - Response - the output of the whole pipeline combines the recognized `image_texts` with their metadata. 
@@ -30,12 +30,12 @@ The metadata are the `text_coordinates` and the `confidence_level` outputs.
 
 The original pretrained model for east-resnet50 topology is stored on https://github.com/argman/EAST in TensorFlow checkpoint format.
 
-Clone github repository:
+Clone GitHub repository:
 ```bash
 git clone https://github.com/argman/EAST 
 cd EAST 
 ```
-Download and unzip the file east_icdar2015_resnet_v1_50_rbox.zip as instructed in readme.md file to EAST folder with the github repository.
+Download and unzip the file east_icdar2015_resnet_v1_50_rbox.zip as instructed in the Readme.md file to EAST folder with the GitHub repository.
 ```bash
 unzip ./east_icdar2015_resnet_v1_50_rbox.zip
 ```
@@ -139,14 +139,14 @@ docker run -p 9000:9000 -d -v ${PWD}/OCR:/OCR openvino/model_server --config_pat
 
 ## Requesting the Service
 
-Exemplary client [easr_orc_client.py](../example_client/east_ocr_client.py) can be used to request pipeline deployed in previous step.
+Exemplary client [easr_orc_client.py](../example_client/east_ocr_client.py) can be used to request pipeline deployed in the previous step.
 
 From the context of [example_client](../example_client) folder install python3 requirements:
 ```bash
 pip install -r client_requirements.txt
 ``` 
 
-Now you can create directory for text images and run the client:
+Now you can create a directory for text images and run the client:
 ```bash
 mkdir results
 ```
@@ -192,5 +192,5 @@ The custom node generates the following text images retrieved from the original 
 | text 7 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_7.jpg)| `i###n##t##e###l#` | `intel` |
 | text 8 |![text6](../src/custom_nodes/east_ocr/demo_images/text_images_8.jpg)| `r###ot#atiion#s#` | `rotations` |
 
-## Accurracy
+## Accuracy
 Please note that it is possible to swap the models included in DAG with your own to adjust pipeline accuracy for various scenarios and datasets.
