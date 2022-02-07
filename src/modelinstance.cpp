@@ -688,7 +688,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
     std::vector<std::string> supportedConfigKeys;
     try {
-        std::vector<std::string> supportedConfigKeys2 = compiledModel->get_property(supportedConfigKey);
+        std::vector<std::string> supportedConfigKeys2 = compiledModel->get_property(supportedConfigKey).as<std::vector<std::string>>();
         supportedConfigKeys = std::move(supportedConfigKeys2);
     } catch (std::exception& e) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}; Error: {}", targetDevice, supportedConfigKey, e.what());
