@@ -18,6 +18,22 @@
 import unicodedata
 import string
 
+class Token():
+    def __init__(self, id, start, end):
+        self.id = id
+        self.start = start
+        self.end = end
+
+    def append_offset(self, s_offset, e_offset):
+        self.start += s_offset
+        self.end += e_offset
+
+    def get_start_position(self):
+        return self.start
+
+    def get_end_position(self):
+        return self.end
+
 # load vocabulary file for encoding
 def load_vocab_file(vocab_file_name):
     with open(vocab_file_name, "r", encoding="utf-8") as r:
@@ -74,11 +90,9 @@ def split_to_words(text):
 
 # get big text and return list of token id and start-end positions for each id in original texts
 def text_to_tokens(text, vocab):
-    tokens_id = []
-    tokens_se = []
+    tokens = []
     for s, e in split_to_words(text):
         for tok in encode_by_voc(text[s:e], vocab):
-            tokens_id.append(tok)
-            tokens_se.append((s, e))
+            tokens.append(Token(tok, s, e))
 
-    return tokens_id, tokens_se
+    return tokens
