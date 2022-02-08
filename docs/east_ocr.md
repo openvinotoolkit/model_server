@@ -174,23 +174,55 @@ Output: name[text_coordinates]
 With additional parameter `--text_images_save_path` the client script saves all detected text images to jpeg files into directory path to confirm
 if the image was analyzed correctly.
 
-| ![image](demo_images/input.jpg)|
-| --- |
-| Exemplary input image |
-
+![image](demo_images/input.jpg)
 
 The custom node generates the following text images retrieved from the original input to CRNN model:
-| #| Image | CRNN Recognition | Decoded Word |                     
-| --- | --- | --- | --- |
-| text 0 |![text0](demo_images/text_images_0.jpg)| `p##erformaance##` | `performance` |
-| text 1 |![text1](demo_images/text_images_1.jpg)| `g####d#a#n#s#k##` | `gdansk` |
-| text 2 |![text2](demo_images/text_images_2.jpg)| `s###e#rrv##e#r##` | `server` |
-| text 3 |![text3](demo_images/text_images_3.jpg)| `m####oo#d##ee#l#` | `model` |
-| text 4 |![text4](demo_images/text_images_4.jpg)| `oo##pe#n#vi#n#o#` | `openvino` |
-| text 5 |![text5](demo_images/text_images_5.jpg)| `p###i#peelinne##` | `pipeline` |
-| text 6 |![text6](demo_images/text_images_6.jpg)| `2####0##2###1###` | `2021` |
-| text 7 |![text6](demo_images/text_images_7.jpg)| `i###n##t##e###l#` | `intel` |
-| text 8 |![text6](demo_images/text_images_8.jpg)| `r###ot#atiion#s#` | `rotations` |
+@shinxdirective
+.. list-table::
+    :header-rows: 1
+
+    * - #
+      - Image
+      - CRNN Recognition
+      - Decoded Word
+    * - text 0
+      - ![text0](demo_images/text_images_0.jpg)
+      - `p##erformaance##`
+      - `performance`
+    * - text 1
+      - ![text1](demo_images/text_images_1.jpg)
+      - `g####d#a#n#s#k##`
+      - `gdansk`
+    * - text 2
+      - ![text2](demo_images/text_images_2.jpg)
+      - `s###e#rrv##e#r##`
+      - `server`
+    * - text 3
+      - ![text3](demo_images/text_images_3.jpg)
+      - `m####oo#d##ee#l#`
+      - `model`
+    * - text 4
+      - ![text4](demo_images/text_images_4.jpg)
+      - `oo##pe#n#vi#n#o#`
+      - `openvino`
+    * - text 5
+      - ![text5](demo_images/text_images_5.jpg)
+      - `p###i#peelinne##`
+      - `pipeline`
+    * - text 6
+      - ![text6](demo_images/text_images_6.jpg)
+      - `2####0##2###1###`
+      - `2021`
+    * - text 7
+      - ![text7](demo_images/text_images_7.jpg)
+      - `i###n##t##e###l#`
+      - `intel`
+    * - text 8
+      - ![text8](demo_images/text_images_8.jpg)
+      - `r###ot#atiion#s#`
+      - `rotations`
+
+@endshinxdirective
 
 ## Accurracy
 Please note that it is possible to swap the models included in DAG with your own to adjust pipeline accuracy for various scenarios and datasets.
