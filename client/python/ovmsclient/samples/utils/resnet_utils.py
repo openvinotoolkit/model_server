@@ -20,6 +20,21 @@ sys.path.append("../../../../demos/common/python")
 import numpy as np
 from classes import imagenet_classes
 
+# get input and output name from model metadata
+def get_model_io_names(client, model_name, model_version):
+    metadata = client.get_model_metadata(model_name, model_version)
+    if len(metadata['inputs']) > 1:
+        raise ValueError("Unexpected multiple model inputs")
+    input_name = next(iter(metadata['inputs']))  # by default resnet has only one input and one output in shape (1,1000) or (1,1001)
+    output_name = None
+    for name, meta in metadata['outputs'].items():
+        if meta["shape"] in [[1,1001], [1, 1000]]:
+            if output_name is not None:
+                raise ValueError("Unexpected multiple models outputs with shapes in [(1,1001), (1, 1000)]")
+            output_name = name
+    if output_name is None:
+        raise ValueError("Could not find output with shape (1,1001) or (1, 1000) among model outputs")
+    return input_name, output_name
 
 def resnet_postprocess(response, output_name):
     if isinstance(response, dict):

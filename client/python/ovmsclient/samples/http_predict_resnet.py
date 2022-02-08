@@ -17,15 +17,14 @@
 import numpy as np
 import argparse
 from ovmsclient import make_http_client
-from utils.common import get_model_io_names
-from utils.resnet_utils import resnet_postprocess
+from utils.resnet_utils import resnet_postprocess, get_model_io_names
 
 
 parser = argparse.ArgumentParser(description='Make prediction using images in numerical format')
 parser.add_argument('--images_numpy', required=True,
                     help='Path to a .npy file with data to infer')
-parser.add_argument('--service_url', required=False, default='localhost:9000',
-                    help='Specify url to http service. default:localhost:9000', dest='service_url')
+parser.add_argument('--service_url', required=False, default='localhost:8000',
+                    help='Specify url to http service. default:localhost:8000', dest='service_url')
 parser.add_argument('--model_name', default='resnet', help='Model name to query. default: resnet',
                     dest='model_name')
 parser.add_argument('--model_version', default=0, type=int, help='Model version to query. default: latest available',

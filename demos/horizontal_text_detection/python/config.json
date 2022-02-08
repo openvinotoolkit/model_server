@@ -3,7 +3,7 @@
         {
             "config": {
                 "name": "text-detection",
-                "base_path": "/OCR/horizontal-text-detection",
+                "base_path": "/workspace/horizontal-text-detection-0001",
                 "layout": "NHWC:NCHW",
                 "plugin_config": {
                     "CPU_THROUGHPUT_STREAMS":  "1"
@@ -14,14 +14,14 @@
             "config": {
                 "name": "text-recognition",
                 "layout": "NHWC:NCHW",
-                "base_path": "/OCR/text-recognition"
+                "base_path": "/workspace/text-recognition-0014"
             }
         }
     ],
     "custom_node_library_config_list": [
         {
             "name": "ocr_image_extractor",
-            "base_path": "/OCR/lib/libcustom_node_horizontal_ocr.so"
+            "base_path": "/workspace/lib/libcustom_node_horizontal_ocr.so"
         }
     ],
     "pipeline_config_list": [

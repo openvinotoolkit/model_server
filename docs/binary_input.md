@@ -45,7 +45,7 @@ Examples below assumes OVMS has been started with ResNet50 binary model:
 
 ```bash
 docker run -d --rm -p 8000:8000 -p 9000:9000 openvino/model_server:latest \
---model_name resnet --model_path gs://ovms-public-eu/resnet50-binary --layout NHWC:NCHW --batch_size 2 --plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}' \
+--model_name resnet --model_path gs://ovms-public-eu/resnet50-binary --layout NHWC:NCHW --plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}' \
 --port 9000 --rest_port 8000
 ```
 
@@ -66,7 +66,7 @@ Image ../../../../demos/common/static/images/zebra.jpeg has been classified as z
 Image ../../../../demos/common/static/images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
 Image ../../../../demos/common/static/images/bee.jpeg has been classified as bee
 Image ../../../../demos/common/static/images/peacock.jpeg has been classified as peacock
-Image ../../../../demos/common/static/images/airliner.jpeg has been classified as warplane, military plane
+Image ../../../../demos/common/static/images/airliner.jpeg has been classified as airliner
 Image ../../../../demos/common/static/images/golden_retriever.jpeg has been classified as golden retriever
 ```
 
@@ -82,8 +82,9 @@ Image ../../../../demos/common/static/images/zebra.jpeg has been classified as z
 Image ../../../../demos/common/static/images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
 Image ../../../../demos/common/static/images/bee.jpeg has been classified as bee
 Image ../../../../demos/common/static/images/peacock.jpeg has been classified as peacock
-Image ../../../../demos/common/static/images/airliner.jpeg has been classified as warplane, military plane
+Image ../../../../demos/common/static/images/airliner.jpeg has been classified as airliner
 Image ../../../../demos/common/static/images/golden_retriever.jpeg has been classified as golden retriever
+
 ```
 
 ## Error handling:

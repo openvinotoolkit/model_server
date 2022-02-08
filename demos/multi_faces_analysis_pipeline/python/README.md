@@ -85,31 +85,31 @@ Now you can create directory for text images and run the client:
 mkdir results
 ```
 ```bash
-python3 multi_faces_analysis_pipeline.py --pipeline_name find_face_images --grpc_port 9000 --image_input_path ./images/people/people1.jpeg --face_images_output_name face_images --face_images_save_path ./results --image_width 600 --image_height 400 --input_image_layout NHWC
-Output: name[genders]
-    numpy => shape[(10, 1, 2, 1, 1)] data[float32]
-Output: name[ages]
-    numpy => shape[(10, 1, 1, 1, 1)] data[float32]
-Output: name[face_images]
-    numpy => shape[(10, 1, 3, 64, 64)] data[float32]
-Output: name[confidence_levels]
-    numpy => shape[(10, 1, 1)] data[float32]
-Output: name[face_coordinates]
-    numpy => shape[(10, 1, 4)] data[float32]
+python3 multi_faces_analysis_pipeline.py --pipeline_name find_face_images --grpc_port 9000 --image_input_path ../../common/static/images/people/people1.jpeg --face_images_output_name face_images --face_images_save_path ./results --image_width 600 --image_height 400 --input_image_layout NHWC
 Output: name[emotions]
     numpy => shape[(10, 1, 5, 1, 1)] data[float32]
+Output: name[ages]
+    numpy => shape[(10, 1, 1, 1, 1)] data[float32]
+Output: name[confidence_levels]
+    numpy => shape[(10, 1, 1)] data[float32]
+Output: name[genders]
+    numpy => shape[(10, 1, 2, 1, 1)] data[float32]
+Output: name[face_images]
+    numpy => shape[(10, 1, 64, 64, 3)] data[float32]
+Output: name[face_coordinates]
+    numpy => shape[(10, 1, 4)] data[float32]
 
 Found 10 faces:
-Age: 36 ; Gender: male ; Emotion: happy ; Original image coordinate: [0.5524015  0.3024714  0.5912314  0.39167267]
+Age: 36 ; Gender: male ; Emotion: happy ; Original image coordinate: [0.5524015  0.30247137 0.5912314  0.39167264]
 Age: 24 ; Gender: male ; Emotion: neutral ; Original image coordinate: [0.33651015 0.6238419  0.38452235 0.7109271 ]
 Age: 22 ; Gender: male ; Emotion: happy ; Original image coordinate: [0.2273316  0.34603435 0.26951137 0.44243896]
-Age: 46 ; Gender: male ; Emotion: happy ; Original image coordinate: [0.44218776 0.29372305 0.48234263 0.3778239 ]
+Age: 46 ; Gender: male ; Emotion: happy ; Original image coordinate: [0.44218776 0.29372302 0.48234263 0.37782392]
 Age: 41 ; Gender: female ; Emotion: happy ; Original image coordinate: [0.51707435 0.5602793  0.56729674 0.65029866]
-Age: 26 ; Gender: male ; Emotion: happy ; Original image coordinate: [0.79853094 0.35693872 0.8411772  0.42878723]
+Age: 26 ; Gender: male ; Emotion: happy ; Original image coordinate: [0.798531   0.35693872 0.8411773  0.42878723]
 Age: 26 ; Gender: female ; Emotion: happy ; Original image coordinate: [0.6506455  0.5917437  0.69963944 0.6924231 ]
-Age: 30 ; Gender: male ; Emotion: happy ; Original image coordinate: [0.67255247 0.32400367 0.72031224 0.41411582]
-Age: 22 ; Gender: female ; Emotion: happy ; Original image coordinate: [0.13879137 0.3621901  0.18784638 0.45262757]
-Age: 22 ; Gender: female ; Emotion: happy ; Original image coordinate: [0.33016038 0.37727407 0.36954236 0.44583443]
+Age: 30 ; Gender: male ; Emotion: happy ; Original image coordinate: [0.67255247 0.3240037  0.72031224 0.4141158 ]
+Age: 22 ; Gender: female ; Emotion: happy ; Original image coordinate: [0.13879135 0.36219013 0.18784639 0.4526276 ]
+Age: 22 ; Gender: female ; Emotion: happy ; Original image coordinate: [0.33016038 0.37727404 0.36954236 0.44583446]
 ```
 
 With additional parameter `--face_images_save_path` the client script saves all detected text images to jpeg files into directory path to confirm

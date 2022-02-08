@@ -66,6 +66,7 @@ virtualenv .venv
 pip install -r requirements.txt
 
 python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet
+
 Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
 Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican
 Image ../../../../demos/common/static/images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
@@ -74,6 +75,6 @@ Image ../../../../demos/common/static/images/zebra.jpeg has been classified as z
 Image ../../../../demos/common/static/images/arctic-fox.jpeg has been classified as Arctic fox, white fox, Alopex lagopus
 Image ../../../../demos/common/static/images/bee.jpeg has been classified as bee
 Image ../../../../demos/common/static/images/peacock.jpeg has been classified as peacock
-Image ../../../../demos/common/static/images/airliner.jpeg has been classified as warplane, military plane
+Image ../../../../demos/common/static/images/airliner.jpeg has been classified as airliner
 Image ../../../../demos/common/static/images/golden_retriever.jpeg has been classified as golden retriever
 ```

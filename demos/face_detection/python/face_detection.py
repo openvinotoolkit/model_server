@@ -41,7 +41,7 @@ parser = argparse.ArgumentParser(description='Demo for face detection requests v
                                              'analyses input images and saves with with detected faces.'
                                              'it relies on model face_detection...')
 
-parser.add_argument('--input_images_dir', required=False, help='Directory with input images', default="images/people")
+parser.add_argument('--input_images_dir', required=False, help='Directory with input images', default="../../common/static/images/people")
 parser.add_argument('--output_dir', required=False, help='Directory for storing images with detection results', default="results")
 parser.add_argument('--batch_size', required=False, help='How many images should be grouped in one batch', default=1, type=int)
 parser.add_argument('--width', required=False, help='How the input image width should be resized in pixels', default=1200, type=int)

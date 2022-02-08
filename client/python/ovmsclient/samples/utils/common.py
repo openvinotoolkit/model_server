@@ -31,7 +31,7 @@ def load_image(path):
 # get input and output name from model metadata
 def get_model_io_names(client, model_name, model_version):
     metadata = client.get_model_metadata(model_name, model_version)
-    input_name = next(iter(metadata['inputs']))  # by default resnet has one input and one output
+    input_name = next(iter(metadata['inputs']))
     output_name = next(iter(metadata['outputs']))
     return input_name, output_name
 

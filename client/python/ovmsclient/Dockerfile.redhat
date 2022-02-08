@@ -44,7 +44,7 @@ RUN microdnf install shadow-utils wget python38 && \
 COPY --from=base_build /ovmsclient/lib/dist/ovmsclient-0.2-py3-none-any.whl ${OVMSCLIENT_DIR}/ovmsclient-0.2-py3-none-any.whl
 COPY samples ${OVMSCLIENT_DIR}/samples
 # Remove samples that require heavy dependencies
-RUN rm ${OVMSCLIENT_DIR}/samples/vehicle_detection_predict_binary.py ${OVMSCLIENT_DIR}/samples/requirements.txt && \
+RUN rm ${OVMSCLIENT_DIR}/samples/*_predict_binary_vehicle_detection.py ${OVMSCLIENT_DIR}/samples/requirements.txt && \
     wget https://github.com/openvinotoolkit/model_server/raw/v2021.4.1/example_client/imgs.npy -O ${OVMSCLIENT_DIR}/samples/imgs.npy
 
 RUN pip3 install ${OVMSCLIENT_DIR}/ovmsclient-0.2-py3-none-any.whl && \

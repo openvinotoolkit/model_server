@@ -22,7 +22,7 @@ import requests
 
 parser = argparse.ArgumentParser(description='Get information about served models')
 parser.add_argument('--rest_url', required=False, default='http://localhost',  help='Specify url to REST API service. default: http://localhost')
-parser.add_argument('--rest_port', required=False, default=5555, help='Specify port to REST API service. default: 5555')
+parser.add_argument('--rest_port', required=False, default=8000, help='Specify port to REST API service. default: 8000')
 parser.add_argument('--model_name', default='resnet', help='Define model name, must be same as is in service. default: resnet',
                     dest='model_name')
 parser.add_argument('--model_version', default=None, type=int, help='Define model version - must be numerical',
