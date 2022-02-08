@@ -397,6 +397,15 @@ TEST_F(TestLoadModel, UnSuccessfulLoadWhenOutputLayoutIncompatible) {
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
 }
 
+TEST_F(TestLoadModel, UnSuccessfulLoadWhenAllowCacheIsUsedWithCustomLoaders) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    auto config = DUMMY_MODEL_CONFIG;
+    config.setAllowCache(true);
+    config.setDisableCaching(true);
+    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER);
+    EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
+}
+
 TEST_F(TestLoadModel, SuccessfulLoadDummyAllDimensionsAny) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;

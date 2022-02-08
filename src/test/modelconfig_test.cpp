@@ -1091,6 +1091,7 @@ TEST(ModelConfig, ConfigParseCacheCannotForceEnableForCustomLoaders) {
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
     EXPECT_TRUE(modelConfig.isCachingDisabled());
+    EXPECT_TRUE(modelConfig.shouldCacheBeAllowed());
 }
 
 TEST(ModelConfig, ConfigParseCacheCanForceEnableForBatchAuto) {
@@ -1118,6 +1119,7 @@ TEST(ModelConfig, ConfigParseCacheCanForceEnableForBatchAuto) {
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
     EXPECT_FALSE(modelConfig.isCachingDisabled());
+    EXPECT_TRUE(modelConfig.shouldCacheBeAllowed());
 }
 
 TEST(ModelConfig, ConfigParseCacheCanForceEnableForShapeAuto) {
@@ -1145,6 +1147,7 @@ TEST(ModelConfig, ConfigParseCacheCanForceEnableForShapeAuto) {
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
     EXPECT_FALSE(modelConfig.isCachingDisabled());
+    EXPECT_TRUE(modelConfig.shouldCacheBeAllowed());
 }
 
 static std::string config_low_latency_no_stateful = R"#(
