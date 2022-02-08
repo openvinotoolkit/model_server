@@ -14,8 +14,7 @@
 # limitations under the License.
 #
 
-ARG BUILD_IMAGE=ovms-centos:latest
-ARG BASE_OS=centos
+ARG BUILD_IMAGE=ovms-redhat:latest
 
 FROM $BUILD_IMAGE
 

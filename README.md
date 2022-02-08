@@ -32,7 +32,7 @@ A few key features:
 - [Binary format of the input data](docs/binary_input.md). Input data can be sent in JPEG or PNG format to reduce traffic and offload the client applications.
 - [Model caching](docs/model_cache.md). Cache the models on first load and re-use models from cache on subsequent loads.
 
-**Note:** OVMS has been tested on RedHat*, CentOS* and Ubuntu*. Latest publicly released docker images are based on Ubuntu and UBI.
+**Note:** OVMS has been tested on RedHat* and Ubuntu*. Latest publicly released docker images are based on Ubuntu and UBI.
 They are stored in:
 - [Dockerhub](https://hub.docker.com/r/openvino/model_server)
 - [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de)
