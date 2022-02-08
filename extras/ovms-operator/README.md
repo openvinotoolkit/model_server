@@ -28,7 +28,7 @@ It can be done by editing the [sample resource](https://github.com/openvinotoolk
 kubectl apply -f config/samples/intel_v1alpha1_ovms.yaml
 ```
 
-The parameters are identical to [Helm chart](https://github.com/openvinotoolkit/model_server/blob/main/deploy/#helm-options-references).
+The parameters are identical to [Helm chart](../../deploy/#helm-options-references).
 
 <b>Note</b>: Some deployment configurations have prerequisites like creating relevant resources in Kubernetes. For example a secret with credentials,
 persistent volume claim or configmap with OVMS configuration file.
