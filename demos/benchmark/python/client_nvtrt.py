@@ -24,7 +24,10 @@ import grpc
 import requests
 from retry.api import retry_call
 from tritonclient.grpc import service_pb2, service_pb2_grpc
-from ovms_benchmark_client.client import BaseClient
+try:
+    from ovms_benchmark_client.client import BaseClient
+except ModuleNotFoundError:
+    from client import BaseClient
 
 
 class NvTrtClient(BaseClient):

@@ -30,21 +30,28 @@ import multiprocessing
 import time
 import os
 
-from ovms_benchmark_client.metrics import XMetrics
-from ovms_benchmark_client.db_exporter import DBExporter
-from ovms_benchmark_client.client_ovms import OVmsClient
-from ovms_benchmark_client.client import BaseClient
-
+try:
+    from ovms_benchmark_client.metrics import XMetrics
+    from ovms_benchmark_client.db_exporter import DBExporter
+    from ovms_benchmark_client.client_ovms import OVmsClient
+    from ovms_benchmark_client.client import BaseClient
+except ModuleNotFoundError:
+    from metrics import XMetrics
+    from db_exporter import DBExporter
+    from client_ovms import OVmsClient
+    from client import BaseClient
 try:
     from ovms_benchmark_client.client_nvtrt import NvTrtClient
-except ImportError:
-    # NvTrt is optional
-    print("NvTrt is not included!")
-    NvTrtClient = None
+except ModuleNotFoundError:
+    try:
+        from client_nvtrt import NvTrtClient
+    except ImportError:
+        # NvTrt is optional
+        print("NvTrt is not included!")
+        NvTrtClient = None
 
 # Version used for print only...
-INTERNAL_VERSION="1.12"
-
+INTERNAL_VERSION="1.17"
 
 # client engine - used for single and multiple client configuration
 def run_single_client(xargs, worker_name_or_client, index, json_flag=None):
@@ -84,8 +91,24 @@ def run_single_client(xargs, worker_name_or_client, index, json_flag=None):
         dataset_length = int(xargs["dataset_length"])
     else: dataset_length = None
 
-    client.prepare_data(xargs["data"], bs_list, dataset_length, xargs["shape"])
+    forced_shape = {}
+    if xargs["shape"] is not None:
+        # --shape input-name: 1 225 225 3 input_name2: 2 3
+        # --shape layer:3: 64 64
+        # --shape 1 225 225 3
+        forced_shape[None] = []
+        for shape_item in xargs["shape"]:
+            if isinstance(shape_item, str) and shape_item and shape_item[-1] == ":":
+                curr_input = str(shape_item[:-1])
+                forced_shape[curr_input] = []
+            else:
+                dim = int(shape_item)
+                assert dim > 0, "size has to be positive"
+                forced_shape[curr_input].append(dim)
+
+    client.prepare_data(xargs["data"], bs_list, dataset_length, forced_shape)
     error_limits = xargs["error_limit"], xargs["error_exposition"]
+    client.print_info("start workload...", force=True)
     results = client.run_workload(xargs["steps_number"],
                                   xargs["duration"],
                                   xargs["step_timeout"],
@@ -186,8 +209,9 @@ def exec_many_clients(xargs, db_exporter):
 ###
 
 if __name__ == "__main__":
-    description = """
-    This is benchmarking client which uses TF API to communicate with OVMS/TFS.
+    description = f"""
+    This is a benchmarking client (version {INTERNAL_VERSION}) which uses TF API over the
+    gRPC internet protocol to communicate with serving services (like OVMS, TFS, etc.).
     """
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("-i", "--id", required=False, default="worker",
@@ -234,8 +258,8 @@ if __name__ == "__main__":
                         help="random minimal value, default: 0")
     parser.add_argument("--step_timeout", required=False, default=30,
                         help="iteration timeout in seconds, default: 30")
-    parser.add_argument("--metadata_timeout", required=False, default=30,
-                        help="metadata timeout in seconds, default: 30")
+    parser.add_argument("--metadata_timeout", required=False, default=45,
+                        help="metadata timeout in seconds, default: 45")
     parser.add_argument("-y", "--db_config", required=False, default=None,
                         help="database configuration. default: None")
     parser.add_argument("--print_all", required=False, action="store_true",

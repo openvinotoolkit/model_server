@@ -28,7 +28,10 @@ from google.protobuf.json_format import MessageToJson
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import get_model_metadata_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
-from ovms_benchmark_client.client import BaseClient
+try:
+    from ovms_benchmark_client.client import BaseClient
+except ModuleNotFoundError:
+    from client import BaseClient
 
 
 class OVmsClient(BaseClient):
