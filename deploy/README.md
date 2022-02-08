@@ -21,7 +21,7 @@ Each model version subfolder must include its model files.
 
 Model repository can be hosted in the cloud storage, Kubernetes persistent volume or on the local drives.
 
-Learn more about the [model repository](models_repository.md).
+Learn more about the [model repository](../docs/models_repository.md).
 
 For example, you can 
 use a Google Cloud Storage (GCS) bucket:
@@ -155,7 +155,7 @@ helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs:/
 
 ## Deploy OpenVINO Model Server with Multiple Models Defined in a Configuration File
 
-To serve multiple models you can run Model Server with a configuration file as described in [Config File](multiple_models_mode.md).
+To serve multiple models you can run Model Server with a configuration file as described in [Config File](../docs/multiple_models_mode.md).
 
 Follow the above documentation to create a configuration file named _config.json_ and fill it with proper information.
 
