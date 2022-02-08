@@ -792,14 +792,15 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
         return status;
     }
     try {
-        if (!this->config.getCacheDir().empty()) {
-            if (this->config.isCachingDisabled()) {
-                this->ieCore.set_property({{CONFIG_KEY(CACHE_DIR), ""}});
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has disabled caching", this->getName());
-            } else {
-                this->ieCore.set_property({{CONFIG_KEY(CACHE_DIR), config.getCacheDir()}});
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has enabled caching", this->getName());
-            }
+        if (!this->config.isCachingDisabled()) {
+            this->ieCore.set_property({{CONFIG_KEY(CACHE_DIR), config.getCacheDir()}});
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has enabled caching", this->getName());
+        } else if (this->config.shouldCacheBeAllowed()) {
+            this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
+            return StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER;
+        } else {
+            this->ieCore.set_property({{CONFIG_KEY(CACHE_DIR), ""}});
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has disabled caching", this->getName());
         }
 
         if (!this->model || isLayoutConfigurationChanged) {

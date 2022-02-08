@@ -117,6 +117,11 @@ private:
     bool disabledCaching = false;
 
     /**
+         * @brief Cache allowing parameter
+         */
+     bool allowCache = false;
+
+    /**
          * @brief Model version
          */
     model_version_t version = -1;
@@ -375,6 +380,24 @@ public:
          */
     bool isCachingDisabled() const {
         return this->disabledCaching;
+    }
+
+   /**
+         * @brief Set the allow cache flag
+         * 
+         * @param flag
+         */
+    void setAllowCache(bool flag) {
+         this->allowCache = flag;
+    }
+
+    /**
+         * @brief Check if caching should be enabled
+         * 
+         * @return bool
+         */
+    bool shouldCacheBeAllowed() const {
+         return this->allowCache;
     }
 
     /**

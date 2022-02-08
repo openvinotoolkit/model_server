@@ -66,6 +66,7 @@ enum class StatusCode {
     REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL,
     CANNOT_CONVERT_FLAT_SHAPE,
     INVALID_BATCH_DIMENSION, /*!< Invalid batch dimension in shape */
+    ALLOW_CACHE_WITH_CUSTOM_LOADER,
     LAYOUT_INCOMPATIBLE_WITH_SHAPE,
 
     // Model management

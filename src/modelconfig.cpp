@@ -619,6 +619,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         this->setDisableCaching(true);
     if (v.HasMember("allow_cache")) {
         this->setDisableCaching(!v["allow_cache"].GetBool());
+        this->setAllowCache(v["allow_cache"].GetBool());
         SPDLOG_DEBUG("allow_cache: {}", !isCachingDisabled());
     }
 

@@ -72,6 +72,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::CANNOT_CONVERT_FLAT_SHAPE, "Cannot convert flat shape to Shape object"},
     {StatusCode::INVALID_BATCH_DIMENSION, "Invalid batch dimension in shape"},
     {StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE, "Layout incompatible with given shape"},
+    {StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER, "allow_cache is set to true with custom loader usage"},
     {StatusCode::UNKNOWN_ERROR, "Unknown error"},
 
     // Sequence management
@@ -271,6 +272,7 @@ const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusM
     {StatusCode::MODEL_SPEC_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_SIGNATURE_DEF, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, grpc::StatusCode::ABORTED},
+    {StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, grpc::StatusCode::FAILED_PRECONDITION},
 
     // Sequence management
@@ -367,6 +369,7 @@ const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::htt
     {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, net_http::HTTPStatusCode::NO_CONTENT},
+    {StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, net_http::HTTPStatusCode::PRECOND_FAILED},
 
     // Sequence management
