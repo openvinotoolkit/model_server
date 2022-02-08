@@ -119,7 +119,7 @@ private:
     /**
          * @brief Cache allowing parameter
          */
-     bool allowCache = false;
+    bool allowCache = false;
 
     /**
          * @brief Model version
@@ -382,13 +382,13 @@ public:
         return this->disabledCaching;
     }
 
-   /**
+    /**
          * @brief Set the allow cache flag
          * 
          * @param flag
          */
     void setAllowCache(bool flag) {
-         this->allowCache = flag;
+        this->allowCache = flag;
     }
 
     /**
@@ -397,7 +397,7 @@ public:
          * @return bool
          */
     bool shouldCacheBeAllowed() const {
-         return this->allowCache;
+        return this->allowCache;
     }
 
     /**
