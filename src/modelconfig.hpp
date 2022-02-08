@@ -41,6 +41,12 @@ const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
 const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
 const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
 
+enum ModelCacheState {
+    CACHE_ON,
+    CACHE_OFF,
+    ALLOW_CACHE_WITH_CUSTOM_LOADER
+};
+
 /**
      * @brief This class represents model configuration
      */
@@ -112,14 +118,9 @@ private:
     std::string cacheDir;
 
     /**
-         * @brief Optional cache disable flag
+         * @brief Model cache state
          */
-    bool disabledCaching = false;
-
-    /**
-         * @brief Cache allowing parameter
-         */
-    bool allowCache = false;
+    ModelCacheState cacheState = ModelCacheState::CACHE_ON;
 
     /**
          * @brief Model version
@@ -365,39 +366,21 @@ public:
     }
 
     /**
-         * @brief Set the caching disable flag
+         * @brief Get the model cache state
          * 
-         * @param flag
+         * @return ovms::ModelCacheState
          */
-    void setDisableCaching(bool flag) {
-        this->disabledCaching = flag;
+    ModelCacheState getModelCacheState() const {
+        return this->cacheState;
     }
 
     /**
-         * @brief Check if caching is disabled
+         * @brief Set the model cache state
          * 
-         * @return bool
+         * @param cacheState
          */
-    bool isCachingDisabled() const {
-        return this->disabledCaching;
-    }
-
-    /**
-         * @brief Set the allow cache flag
-         * 
-         * @param flag
-         */
-    void setAllowCache(bool flag) {
-        this->allowCache = flag;
-    }
-
-    /**
-         * @brief Check if caching should be enabled
-         * 
-         * @return bool
-         */
-    bool shouldCacheBeAllowed() const {
-        return this->allowCache;
+    void setModelCacheState(const ModelCacheState& modelCacheState) {
+        this->cacheState = modelCacheState;
     }
 
     /**

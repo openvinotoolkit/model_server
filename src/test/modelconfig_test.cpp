@@ -977,7 +977,7 @@ TEST(ModelConfig, ConfigParseCacheNotDisabledByDefault) {
     auto status = modelConfig.parseNode(configs[0]["config"]);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_FALSE(modelConfig.isCachingDisabled());
+    EXPECT_EQ(modelConfig.getModelCacheState(), ovms::ModelCacheState::CACHE_ON);
 }
 
 TEST(ModelConfig, ConfigParseCacheDisabledForCustomLoadersByDefault) {
@@ -1007,7 +1007,7 @@ TEST(ModelConfig, ConfigParseCacheDisabledForCustomLoadersByDefault) {
     auto status = modelConfig.parseNode(configs[0]["config"]);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_TRUE(modelConfig.isCachingDisabled());
+    EXPECT_EQ(modelConfig.getModelCacheState(), ovms::ModelCacheState::CACHE_OFF);
 }
 
 TEST(ModelConfig, ConfigParseCacheDisabledForBatchAutoByDefault) {
@@ -1033,7 +1033,7 @@ TEST(ModelConfig, ConfigParseCacheDisabledForBatchAutoByDefault) {
     auto status = modelConfig.parseNode(configs[0]["config"]);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_TRUE(modelConfig.isCachingDisabled());
+    EXPECT_EQ(modelConfig.getModelCacheState(), ovms::ModelCacheState::CACHE_OFF);
 }
 
 TEST(ModelConfig, ConfigParseCacheDisabledForShapeAutoByDefault) {
@@ -1059,7 +1059,7 @@ TEST(ModelConfig, ConfigParseCacheDisabledForShapeAutoByDefault) {
     auto status = modelConfig.parseNode(configs[0]["config"]);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_TRUE(modelConfig.isCachingDisabled());
+    EXPECT_EQ(modelConfig.getModelCacheState(), ovms::ModelCacheState::CACHE_OFF);
 }
 
 TEST(ModelConfig, ConfigParseCacheCannotForceEnableForCustomLoaders) {
@@ -1090,8 +1090,7 @@ TEST(ModelConfig, ConfigParseCacheCannotForceEnableForCustomLoaders) {
     auto status = modelConfig.parseNode(configs[0]["config"]);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_TRUE(modelConfig.isCachingDisabled());
-    EXPECT_TRUE(modelConfig.shouldCacheBeAllowed());
+    EXPECT_EQ(modelConfig.getModelCacheState(), ovms::ModelCacheState::ALLOW_CACHE_WITH_CUSTOM_LOADER);
 }
 
 TEST(ModelConfig, ConfigParseCacheCanForceEnableForBatchAuto) {
@@ -1118,8 +1117,7 @@ TEST(ModelConfig, ConfigParseCacheCanForceEnableForBatchAuto) {
     auto status = modelConfig.parseNode(configs[0]["config"]);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_FALSE(modelConfig.isCachingDisabled());
-    EXPECT_TRUE(modelConfig.shouldCacheBeAllowed());
+    EXPECT_EQ(modelConfig.getModelCacheState(), ovms::ModelCacheState::CACHE_ON);
 }
 
 TEST(ModelConfig, ConfigParseCacheCanForceEnableForShapeAuto) {
@@ -1146,8 +1144,7 @@ TEST(ModelConfig, ConfigParseCacheCanForceEnableForShapeAuto) {
     auto status = modelConfig.parseNode(configs[0]["config"]);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_FALSE(modelConfig.isCachingDisabled());
-    EXPECT_TRUE(modelConfig.shouldCacheBeAllowed());
+    EXPECT_EQ(modelConfig.getModelCacheState(), ovms::ModelCacheState::CACHE_ON);
 }
 
 static std::string config_low_latency_no_stateful = R"#(

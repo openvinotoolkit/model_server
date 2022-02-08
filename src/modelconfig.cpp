@@ -88,7 +88,7 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
     if (isCustomLoaderConfigChanged(rhs)) {
         return true;
     }
-    if (this->isCachingDisabled() != rhs.isCachingDisabled()) {
+    if (this->getModelCacheState() != rhs.getModelCacheState()) {
         return true;
     }
     return false;
@@ -614,13 +614,12 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     // Model Cache options
     if (anyShapeSetToAuto())
-        this->setDisableCaching(true);
+        this->setModelCacheState(ModelCacheState::CACHE_OFF);
     if (getBatchingMode() == Mode::AUTO)
-        this->setDisableCaching(true);
+        this->setModelCacheState(ModelCacheState::CACHE_OFF);
     if (v.HasMember("allow_cache")) {
-        this->setDisableCaching(!v["allow_cache"].GetBool());
-        this->setAllowCache(v["allow_cache"].GetBool());
-        SPDLOG_DEBUG("allow_cache: {}", !isCachingDisabled());
+        this->setModelCacheState(v["allow_cache"].GetBool() ? ModelCacheState::CACHE_ON : ModelCacheState::CACHE_OFF);
+        SPDLOG_DEBUG("allow_cache: {}", v["allow_cache"].GetBool());
     }
 
     // if the config has models which require custom loader to be used, then load the same here
@@ -629,7 +628,11 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             SPDLOG_ERROR("Couldn't parse custom loader options config");
         }
         // force disable caching
-        this->setDisableCaching(true);
+        if (v.HasMember("allow_cache") && v["allow_cache"].GetBool()) {
+            this->setModelCacheState(ModelCacheState::ALLOW_CACHE_WITH_CUSTOM_LOADER);
+        } else {
+            this->setModelCacheState(ModelCacheState::CACHE_OFF);
+        }
     }
     return StatusCode::OK;
 }

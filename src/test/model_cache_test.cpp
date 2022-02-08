@@ -273,7 +273,7 @@ TEST_F(ModelCacheTest, CacheDisabledModelConfig) {
     size_t currentCacheFileCount = this->getCachedFileCount();
 
     ModelConfig config = dummyModelConfigWithCache;
-    config.setDisableCaching(true);
+    config.setModelCacheState(ovms::ModelCacheState::CACHE_OFF);
     config.setBatchSize(5);
 
     auto manager = std::make_unique<ConstructorEnabledModelManager>(modelCacheDirectory);
