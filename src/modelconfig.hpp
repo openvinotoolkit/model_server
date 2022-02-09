@@ -41,10 +41,10 @@ const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
 const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
 const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
 
-enum ModelCacheState {
+enum class ModelCacheState {
     CACHE_ON,
-    CACHE_OFF,
-    ALLOW_CACHE_WITH_CUSTOM_LOADER
+    FORCE_CACHE_OFF,
+    CACHE_USED_WITH_CUSTOM_LOADER
 };
 
 /**

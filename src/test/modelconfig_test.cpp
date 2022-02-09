@@ -1007,7 +1007,7 @@ TEST(ModelConfig, ConfigParseCacheDisabledForCustomLoadersByDefault) {
     auto status = modelConfig.parseNode(configs[0]["config"]);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_EQ(modelConfig.getModelCacheState(), ovms::ModelCacheState::CACHE_OFF);
+    EXPECT_EQ(modelConfig.getModelCacheState(), ovms::ModelCacheState::FORCE_CACHE_OFF);
 }
 
 TEST(ModelConfig, ConfigParseCacheDisabledForBatchAutoByDefault) {
@@ -1033,7 +1033,7 @@ TEST(ModelConfig, ConfigParseCacheDisabledForBatchAutoByDefault) {
     auto status = modelConfig.parseNode(configs[0]["config"]);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_EQ(modelConfig.getModelCacheState(), ovms::ModelCacheState::CACHE_OFF);
+    EXPECT_EQ(modelConfig.getModelCacheState(), ovms::ModelCacheState::FORCE_CACHE_OFF);
 }
 
 TEST(ModelConfig, ConfigParseCacheDisabledForShapeAutoByDefault) {
@@ -1059,7 +1059,7 @@ TEST(ModelConfig, ConfigParseCacheDisabledForShapeAutoByDefault) {
     auto status = modelConfig.parseNode(configs[0]["config"]);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_EQ(modelConfig.getModelCacheState(), ovms::ModelCacheState::CACHE_OFF);
+    EXPECT_EQ(modelConfig.getModelCacheState(), ovms::ModelCacheState::FORCE_CACHE_OFF);
 }
 
 TEST(ModelConfig, ConfigParseCacheCannotForceEnableForCustomLoaders) {
@@ -1090,7 +1090,7 @@ TEST(ModelConfig, ConfigParseCacheCannotForceEnableForCustomLoaders) {
     auto status = modelConfig.parseNode(configs[0]["config"]);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_EQ(modelConfig.getModelCacheState(), ovms::ModelCacheState::ALLOW_CACHE_WITH_CUSTOM_LOADER);
+    EXPECT_EQ(modelConfig.getModelCacheState(), ovms::ModelCacheState::CACHE_USED_WITH_CUSTOM_LOADER);
 }
 
 TEST(ModelConfig, ConfigParseCacheCanForceEnableForBatchAuto) {

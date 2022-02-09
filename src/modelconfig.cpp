@@ -614,11 +614,11 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     // Model Cache options
     if (anyShapeSetToAuto())
-        this->setModelCacheState(ModelCacheState::CACHE_OFF);
+        this->setModelCacheState(ModelCacheState::FORCE_CACHE_OFF);
     if (getBatchingMode() == Mode::AUTO)
-        this->setModelCacheState(ModelCacheState::CACHE_OFF);
+        this->setModelCacheState(ModelCacheState::FORCE_CACHE_OFF);
     if (v.HasMember("allow_cache")) {
-        this->setModelCacheState(v["allow_cache"].GetBool() ? ModelCacheState::CACHE_ON : ModelCacheState::CACHE_OFF);
+        this->setModelCacheState(v["allow_cache"].GetBool() ? ModelCacheState::CACHE_ON : ModelCacheState::FORCE_CACHE_OFF);
         SPDLOG_DEBUG("allow_cache: {}", v["allow_cache"].GetBool());
     }
 
@@ -629,9 +629,9 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         }
         // force disable caching
         if (v.HasMember("allow_cache") && v["allow_cache"].GetBool()) {
-            this->setModelCacheState(ModelCacheState::ALLOW_CACHE_WITH_CUSTOM_LOADER);
+            this->setModelCacheState(ModelCacheState::CACHE_USED_WITH_CUSTOM_LOADER);
         } else {
-            this->setModelCacheState(ModelCacheState::CACHE_OFF);
+            this->setModelCacheState(ModelCacheState::FORCE_CACHE_OFF);
         }
     }
     return StatusCode::OK;
