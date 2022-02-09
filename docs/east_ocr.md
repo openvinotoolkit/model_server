@@ -178,7 +178,7 @@ if the image was analyzed correctly.
 
 The custom node generates the following text images retrieved from the original input to CRNN model:
 
-@shinxdirective
+@sphinxdirective
 
 .. list-table::
 
@@ -223,7 +223,7 @@ The custom node generates the following text images retrieved from the original 
       - `r###ot#atiion#s#`
       - `rotations`
 
-@endshinxdirective
+@endsphinxdirective
 
 ## Accurracy
 Please note that it is possible to swap the models included in DAG with your own to adjust pipeline accuracy for various scenarios and datasets.
