@@ -30,6 +30,7 @@ ARG APT_OV_PACKAGE=intel-openvino-runtime-ubuntu20-2021.4.689
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
+ARG OPENVINO_OPENCV_DOWNLOAD_SERVER=""
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TF_SYSTEM_LIBS="curl"
@@ -172,7 +173,7 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 
 # install opencv
 #
-RUN cd /opt/intel/openvino && curl -s http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/ubuntu20.tgz | tar -xzf -
+RUN cd /opt/intel/openvino/extras/scripts && ./download_opencv.sh
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
