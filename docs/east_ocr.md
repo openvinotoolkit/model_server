@@ -174,20 +174,11 @@ Output: name[text_coordinates]
 With additional parameter `--text_images_save_path` the client script saves all detected text images to jpeg files into directory path to confirm
 if the image was analyzed correctly.
 
+Below is  the exemplary input image.
 ![image](input.jpg)
 
 The custom node generates the following text images retrieved from the original input to CRNN model:
-| #| Image | CRNN Recognition | Decoded Word |                     
-| --- | --- | --- | --- |
-| text 0 | performance | `p##erformaance##` | `performance` |
-| text 1 | gdansk | `g####d#a#n#s#k##` | `gdansk` |
-| text 2 | server | `s###e#rrv##e#r##` | `server` |
-| text 3 | model | `m####oo#d##ee#l#` | `model` |
-| text 4 | openvino | `oo##pe#n#vi#n#o#` | `openvino` |
-| text 5 | pipeline | `p###i#peelinne##` | `pipeline` |
-| text 6 | 2021 | `2####0##2###1###` | `2021` |
-| text 7 | intel | `i###n##t##e###l#` | `intel` |
-| text 8 | rotations | `r###ot#atiion#s#` | `rotations` |
+![image](crnn_table.png)
 
 ## Accurracy
 Please note that it is possible to swap the models included in DAG with your own to adjust pipeline accuracy for various scenarios and datasets.
