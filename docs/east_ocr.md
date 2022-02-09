@@ -179,8 +179,8 @@ if the image was analyzed correctly.
 The custom node generates the following text images retrieved from the original input to CRNN model:
 
 @shinxdirective
-.. list-table:: Examples
-    :header-rows: 1
+
+.. list-table::
 
     * - #
       - Image
