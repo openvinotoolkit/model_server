@@ -32,8 +32,8 @@ gsutil mb gs://model-repository
 You can download the model from [OpenVINO Model Zoo](https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin). and upload it to GCS:
 
 ```shell script
-wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -P 1
-wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -P 1
+wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -P 1
+wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -P 1
 gsutil cp -r 1 resnet50-binary-0001.bin gs://model-repository/resnet
 ```
 

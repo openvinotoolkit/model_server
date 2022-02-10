@@ -44,7 +44,7 @@ In case there are valid reasons to enable the model cache also for models with a
 
 ### Prepare model
 ```
-$ curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml -o model/fdsample/1/face-detection-retail-0004.bin -o model/fdsample/1/face-detection-retail-0004.xml
+$ curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml -o model/fdsample/1/face-detection-retail-0004.bin -o model/fdsample/1/face-detection-retail-0004.xml
 ```
 
 ### Starting the service
