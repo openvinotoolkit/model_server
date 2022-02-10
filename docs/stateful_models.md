@@ -71,7 +71,7 @@ docker run -d -u $(id -u):$(id -g) -v <host_model_path>:/models/stateful_model -
 |---|---|---|---|
 | `sequence_cleaner_poll_wait_minutes` | `uint32` | Time interval (in minutes) between next sequence cleaner scans. Sequences of the models that are subjects to idle sequence cleanup that have been inactive since the last scan are removed. Zero value disables sequence cleaner.<br> See [idle sequence cleanup](#stateful_cleanup). | 5 |
 
-See also [all server and model configuration options](docker_container.md#params) to have a complete setup.
+See also [all server and model configuration options](parameters.md) to have a complete setup.
 
 ## Run Inference on Stateful Model <a name="stateful_inference"></a>
 
@@ -98,7 +98,7 @@ In order to successfully infer the sequence, perform these actions:
       - add `sequence_id` with the value of your choice or
       - add `sequence_id` with 0 or do not add `sequence_id` at all - in this case, the Model Server will provide a unique id for the sequence and since it will be appended to the outputs, you will be able to read it and use with the next requests. 
 
-      If the provided `sequence_id` is already occupied, OVMS will return an [error](#stateful_errors) to avoid conflicts.
+      If the provided `sequence_id` is already occupied, OVMS will return an [error](#error-codes) to avoid conflicts.
 
 2. **Send remaining requests except the last one.**
 
@@ -113,7 +113,7 @@ In order to successfully infer the sequence, perform these actions:
 
 ### Inference via gRPC <a name="stateful_grpc"></a>
 
-Inference on stateful models via gRPC is very similar to inference on stateless models (_see [gRPC API](model_server_grpc_api.md#predict-api) for reference_). The difference is that requests to stateful models must contain additional inputs with information necessary for proper sequence handling.
+Inference on stateful models via gRPC is very similar to inference on stateless models (_see [gRPC API](model_server_grpc_api.md) for reference_). The difference is that requests to stateful models must containt additional inputs with information necessary for proper sequence handling.
 
 `sequence_id` and `sequence_control_input` must be added to gRPC request inputs as [TensorProtos](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto).
 
@@ -192,11 +192,11 @@ sequence_id = response.outputs['sequence_id'].uint64_val[0]
 
 ```
 
-See [grpc_stateful_client.py](../example_client/stateful/grpc_stateful_client.py) example client for reference.
+See [grpc_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/stateful/grpc_stateful_client.py) example client for reference.
 
 ### Inference via HTTP <a name="stateful_http"></a>
 
-Inference on stateful models via HTTP is very similar to inference on stateless models (_see [REST API](model_server_rest_api.md#predict-api) for reference_). The difference is that requests to stateful models must contain additional inputs with information necessary for proper sequence handling.
+Inference on stateful models via HTTP is very similar to inference on stateless models (_see [REST API](model_server_rest_api.md) for reference_). The difference is that requests to stateful models must containt additional inputs with information necessary for proper sequence handling.
 
 `sequence_id` and `sequence_control_input` must be added to HTTP request by adding new `key:value` pair in `inputs` field of JSON body. 
 
@@ -262,7 +262,7 @@ response_body = json.loads(response.text)
 sequence_id = response_body["outputs"]["sequence_id"]
 
 ```
-See [rest_stateful_client.py](../example_client/stateful/rest_stateful_client.py) example client for reference.
+See [rest_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/stateful/rest_stateful_client.py) example client for reference.
 
 ### Error Codes <a name="stateful_errors"></a>
 
@@ -298,10 +298,10 @@ If set to `true` sequence cleaner will check that model. Otherwise, sequence cle
 
 There are limitations for using stateful models with OVMS:
 
- - Support inference execution using only CPU as the target device.
- - Support Kaldi models with memory layers and non-Kaldi models with Tensor Iterator. See this [docs about stateful networks](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_network_state_intro.html) to learn about stateful networks representation in OpenVINO
- - [Auto batch size and shape](shape_batch_size_and_layout.md) are **not** available in stateful models
- - Stateful model instances **cannot** be used in [DAGs](dag_scheduler.md)
- - Requests ordering is guaranteed only when a single client sends subsequent requests synchronously. Concurrent interaction with the same sequence might negatively affect the accuracy of the results.
+ - Support inference execution only using CPU as the target device.
+ - Support Kaldi models with memory layers and non-Kaldi models with Tensor Iterator. See this [docs about stateful networks](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_network_state_intro.html) to learn about stateful networks representation in OpenVINO.
+ - [Auto batch size and shape](shape_batch_size_and_layout.md) are **not** available in stateful models.
+ - Stateful model instances **cannot** be used in [DAGs](dag_scheduler.md).
+ - Requests ordering is guaranteed only when a single client sends subsequent requests in a synchronous manner. Concurrent interaction with the same sequence might negatively affect the accuracy of the results.
  - When stateful model instance gets reloaded due to change in model configuration, **all ongoing sequences are dropped**.
  - Model type cannot be changed in the runtime - switching stateful flag will be rejected.

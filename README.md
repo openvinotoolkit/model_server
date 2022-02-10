@@ -27,36 +27,35 @@
 
 ![OVMS picture](docs/ovms.png)
 
-OpenVINO&trade; Model Server (OVMS) is a scalable, high-performance solution for serving machine learning models optimized for Intel&reg; architectures. 
-The server provides an inference service via gRPC or REST API - making it easy to deploy new algorithms and AI experiments using the same 
-architecture as [TensorFlow Serving](https://github.com/tensorflow/serving) for any models trained in a framework that is supported 
-by [OpenVINO](https://software.intel.com/en-us/openvino-toolkit). 
+OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving machine learning models. It is based on C++ for high scalability 
+and optimized for Intel solutions, so that you can take advantage of all the power of the Intel® Xeon® processor or Intel’s AI accelerators 
+and expose it over a network interface. OVMS uses the same architecture and API as [TensorFlow Serving](https://github.com/tensorflow/serving), 
+while applying OpenVINO for inference execution. Inference service is provided via gRPC or REST API, making it easy to deploy new algorithms and AI experiments.
 
-The server implements gRPC and REST API framework with data serialization and deserialization using TensorFlow Serving API,
- and OpenVINO&trade; as the inference execution provider. Model repositories may reside on a locally accessible file system (e.g. NFS),
-  Google Cloud Storage (GCS), Amazon S3, Minio or Azure Blob Storage.
-  
-OVMS is now implemented in C++ and provides much higher scalability compared to its predecessor in Python version.
-You can take advantage of all the power of Xeon CPU capabilities or AI accelerators and expose it over the network interface.
-Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what's new in C++ version.
+Model repositories may reside on a locally accessible file system (e.g. NFS), as well as online storage compatible with 
+Google Cloud Storage (GCS), Amazon S3, or Azure Blob Storage. 
+
+Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what’s new.
 
 Review the [Architecture concept](docs/architecture.md) document for more details.
 
-A few key features: 
-- Support for multiple frameworks. Serve models trained in popular formats such as Caffe*, TensorFlow*, MXNet* and ONNX*.
-- Online deployment of new [model versions](docs/model_version_policy.md).
-- [Configuration updates in a runtime](docs/online_config_changes.md)
-- Support for AI accelerators including [Intel Movidius Myriad VPUs](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html), 
-[GPU](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_GPU.html) and [HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html). 
-- The server can be enabled both on [Bare Metal Hosts](docs/host.md) or in
-[Docker containers](docs/docker_container.md).
-- [Model reshaping](docs/shape_batch_size_and_layout.md). The server supports reshaping models in runtime.
-- [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md) Connect multiple models to deploy complex processing solutions and reduce overhead of sending data back and forth.
-- [Custom nodes in DAG pipelines](docs/custom_node_development.md) Model inference or data transformations can be implemented by a custom node C/C++ implementation loaded as an external library.
-- [Serving stateful models](docs/stateful_models.md). Serve models that operate on sequences of data and maintain state between inference requests.
-- [Binary format of the input data](docs/binary_input.md). Input data can be sent in JPEG or PNG format to reduce traffic and offload the client applications.
+Key features: 
+- support for multiple frameworks, such as Caffe, TensorFlow, MXNet, and ONNX
+- online deployment of new [model versions](docs/model_version_policy.md)
+- [configuration updates in runtime](docs/online_config_changes.md)
+- support for AI accelerators, such as 
+[Intel Movidius Myriad VPUs](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html), 
+[GPU](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_GPU.html), and 
+[HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html) 
+- works with [Bare Metal Hosts](docs/host.md) as well as [Docker containers](docs/docker_container.md) 
+- [model reshaping](docs/shape_batch_size_and_layout.md) in runtime
+- [directed Acyclic Graph Scheduler](docs/dag_scheduler.md) - connecting multiple models to deploy complex processing solutions and reducing data transfer overheadConnect 
+- [custom nodes in DAG pipelines](docs/custom_node_development.md) - allowing model inference and data transformations to be implemented with a custom node C/C++ dynamic library
+- [serving stateful models](docs/stateful_models.md) - models that operate on sequences of data and maintain their state between inference requests
+- [binary format of the input data](docs/binary_input.md) - data can be sent in JPEG or PNG formats to reduce traffic and offload the client applications
 
-**Note:** OVMS has been tested on RedHat*, CentOS* and Ubuntu*. Latest publicly released docker images are based on Ubuntu and UBI.
+
+**Note:** OVMS has been tested on RedHat, CentOS, and Ubuntu. The latest publicly released docker images are based on Ubuntu and UBI.
 They are stored in:
 - [Dockerhub](https://hub.docker.com/r/openvino/model_server)
 - [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de)
@@ -64,11 +63,10 @@ They are stored in:
 
 ## Run OpenVINO Model Server
 
-A demonstration how to use OpenVINO Model Server can be found in [a quick start guide](docs/ovms_quickstart.md).
+A demonstration on how to use OpenVINO Model Server can be found in [our quick-start guide](docs/ovms_quickstart.md). 
+For more information on using Model Server in various scenarios you can check the following guides:
 
-More detailed guides to using Model Server in various scenarios can be found here:
-
-* [Models repository configuration](docs/models_repository.md)
+* [Model repository configuration](docs/models_repository.md)
 
 * [Using a docker container](docs/docker_container.md)
 
@@ -110,7 +108,7 @@ More detailed guides to using Model Server in various scenarios can be found her
 
 ## Contact
 
-Submit Github issue to ask question, request a feature or report a bug.
+If you have a question, a feature request, or a bug report, feel free to submit a Github issue.
 
 
 ---
@@ -122,9 +120,6 @@ Submit Github issue to ask question, request a feature or report a bug.
    :maxdepth: 1
    :hidden:
    model_server_docs_architecture
-
-
-
+   
 @endsphinxdirective
-
 

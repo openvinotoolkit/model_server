@@ -34,10 +34,10 @@ After selecting `Create ModelServer` you will see the template for creating a de
 | `models_volume_claim` | optional parameter should be defined only when using a persistent volume as your AI model repository. The [Persistent Volume Claim](https://docs.openshift.com/container-platform/4.7/storage/understanding-persistent-storage.html#using-pods_understanding-persistent-storage) (PVC) must be in the same namespace as this `ModelServer` resource. |
 | `plugin_config` | parameter defines device plugin configuration for performance tuning. For automatic tuning, set to `{"CPU_THROUGHPUT_STREAMS":"CPU_THROUGHPUT_AUTO"}`.
 | `replicas` | this required parameter defines the number of [replicas](https://docs.openshift.com/container-platform/4.7/applications/deployments/what-deployments-are.html#deployments-repliasets_what-deployments-are) for this `ModelServer` deployment. |
-| `resources` | `cpu` and `memory` | optional parameter defines compute resource limits for the [node](https://docs.openshift.com/online/pro/architecture/infrastructure_components/kubernetes_infrastructure.html#node). Limit CPU cores and memory (e.g. `250Mi` for 250MB). |
+| `resources`, `cpu` and `memory` | optional parameter defines compute resource limits for the [node](https://docs.openshift.com/online/pro/architecture/infrastructure_components/kubernetes_infrastructure.html#node). Limit CPU cores and memory (e.g. `250Mi` for 250MB). |
 | `rest_port` | required parameter defines the service port for the [REST interface](https://github.com/openvinotoolkit/model_server/blob/main/docs/model_server_rest_api.md). `8081` is the default port, but it can be modified if needed. |
 
-Adjust the parameters according to your needs. See the [full list of parameters](../../deploy/#helm-options-references) in the documentation for more details. See a screenshot of the template below: 
+Adjust the parameters according to your needs. See the [full list of parameters](https://github.com/openvinotoolkit/model_server/blob/main/deploy/#helm-options-references) in the documentation for more details. See a screenshot of the template below: 
 
 ![template](images/openshift1.png)
 
@@ -46,13 +46,13 @@ Adjust the parameters according to your needs. See the [full list of parameters]
 
 Alternatively, after installing the Operator, you may deploy and manage deployments by creating `ModelServer` resources using the `oc` [OpenShift command line tool](https://docs.openshift.com/container-platform/4.7/cli_reference/openshift_cli/getting-started-cli.html).
 
-Modify the [sample resource](config/samples/intel_v1alpha1_ovms.yaml) and run the following command:
+Modify the [sample resource](https://github.com/openvinotoolkit/model_server/tree/main/extras/openvino-operator-openshift/config/samples/intel_v1alpha1_ovms.yaml) and run the following command:
 
 ```bash
 oc apply -f config/samples/intel_v1alpha1_ovms.yaml
 ```
 
-The available [parameters](../../deploy/#helm-options-references) are the same as above.
+The available [parameters](../../deploy/README.md) are the same as above.
 
 <b>Note</b>: Some deployment configurations have prerequisites like creating relevant resources in Kubernetes. For example, a secret with credentials,
 persistent volume claim or configmap with a Model Server configuration file.
@@ -172,13 +172,13 @@ There are a few different ways to use the AI inference endpoints created by the 
 - Deploy a client inside a `pod` in the cluster. A client inside the cluster can access the endpoints via the service name or the service cluster ip
 - Configure the service type as `NodePort` - this will expose the service on the Kubernetes `node` external IP address
 - In a managed cloud deployment use the service type `LoadBalancer` - this exposes the service as external IP address
-- Configure OpenShift [`route` resource](https://docs.openshift.com/container-platform/4.6/networking/routes/route-configuration.html) 
-  or [`ingress` resource](https://kubernetes.io/docs/concepts/services-networking/ingress/) in opensource Kubernetes linked with the ModelServer service.
+- Configure OpenShift `route` [resource](https://docs.openshift.com/container-platform/4.6/networking/routes/route-configuration.html) 
+  or `ingress` [resource](https://kubernetes.io/docs/concepts/services-networking/ingress/) in opensource Kubernetes linked with the ModelServer service.
   In OpenShift, this operation could be done from the web console.
   
-Check out the [exemple clients](../../example_client) code samples to see how your applications can generate gRPC or REST API calls to the AI inference endpoints.
+Check out the [exemple clients](https://github.com/openvinotoolkit/model_server/blob/main/example_client) code samples to see how your applications can generate gRPC or REST API calls to the AI inference endpoints.
 
-The output below shows the [jpeg_classification.py](../../example_client/jpeg_classification.py) example client connecting to a `ModelServer` resource serving a ResNet image classification model. The command below takes --grpc_address set to the service name so it will work from the cluster pod.
+The output below shows the [jpeg_classification.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/jpeg_classification.py) example client connecting to a `ModelServer` resource serving a ResNet image classification model. The command below takes --grpc_address set to the service name so it will work from the cluster pod.
 If the client is external to the OpenShift cluster, replace the address with the external DNS name or external IP and adjust the --grpc_port parameter as needed.
 
 ```bash

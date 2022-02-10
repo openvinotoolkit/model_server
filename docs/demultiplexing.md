@@ -80,8 +80,9 @@ Directed Acyclic Graph Scheduler is not limited to a single demultiplexer node i
 ![diagram](multiple_demultiplexers.svg)
 
 ## Configurable gathering step
-OpenVINO&trade; Model Server provides the ability to gather results from demultiplexers before any pipeline node execution and is not limited to gathering in `response` node. This operation does not append a new dimension into the pipeline output shape. This appends a new dimension into gathering node inputs. To gather from any demultiplexer in the pipeline, specify a node name with `gather_from_node: <node_name>` parameter. This functionality is used when the pipeline shall collect responses from all branches and decide upon the gathered result. This could be a decision node for the next branching (demultiplexing). This allows creating complex pipelines without a need to send intermediate results to the client.
-As a real-life example, one could create pipeline with a face detection model detecting `N` faces, and set up an emotion recognition model for each detected face. Next, by setting up the gather node, a scheduler can collect `N` emotion results, we may trigger the next pipeline steps depending on the dominant emotion of people included in the original image.
+
+OpenVINO&trade; Model Server provides ability to gather results from demultiplexers before any pipeline node execution and is not limited to gathering in `response` node. This operation does not append new dimension into pipeline output shape. This appends new dimension into gathering node inputs. To gather from any demultiplexer in pipeline, specify node name with `gather_from_node: <node_name>` parameter. The uses of this functionality is when pipeline shall collect responses from all branches and decide upon gathered result. This could be decision node for next branching (demultiplexing). This allows creating complex pipelines without a need to send intermediate results to the client.
+As real example, one could create pipeline with face detection model detecting `N` faces and setup emotion recognition model for each detected face. Next, by setting up gather node, scheduler can collect `N` emotion results, we may trigger next pipeline steps depending of dominant emotion of people included in the original image.
 
 Example pipeline with `gather_from_node` specified before Model C execution:
 
@@ -184,14 +185,15 @@ inferences processing in OpenVINO which may increase throughput at the cost of l
 
 ## Pipeline configuration rules
 There are several rules for possible configurations in regards to demultiplexing and gathering:
-- You can gather only from nodes with `demultiply_count` specified (demultiplexer nodes)
-- When a pipeline with dynamic `demultiply_count` encounters 0 results execution is stopped and gRPC/REST response returns specific error with such information
+
+- You can gather only from nodes with `demultiply_count` specified (demultiplexer nodes).
+- When pipeline with dynamic `demultiply_count` encounters 0 results execution is stopped and gRPC/REST response returns specific error with such information.
 - For pipelines with dynamic `demultiply_count` only 1 demultiplexer node is allowed.
-- When a pipeline contains at least one demultiplexer, only gathering nodes are allowed with input batch larger than 1
-- Demultiplexer nodes and gathering nodes should be in LIFO order. Meaning you need to gather nodes starting from the closest demultiplexer going upstream in the defined directed acyclic graph.
+- When pipeline contains at least one demultiplexer, only gathering nodes are allowed with input batch larger than 1.
+- Demultiplexer nodes and gathering nodes should be in LIFO order. Meaning you need to gather nodes starting from closest demultiplexer going upstream in defined directed acyclic graph.
 
 ![diagram](demultiplexing_restriction_lifo.svg)
 
-- Node inputs must be coming from the same level of nested demultiplexing. To reduce demultiplexing levels you can gather results at any stage using `gather_from_node` parameter
+- Node inputs must be coming from the same level of nested demultiplexing. To reduce demultiplexing levels you can gather results at any stage using `gather_from_node` parameter.
 
 ![diagram](demultiplexing_restriction_session_levels.svg)

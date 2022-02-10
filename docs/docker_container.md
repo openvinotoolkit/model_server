@@ -1,36 +1,53 @@
-# Using Containers {#ovms_docs_docker_container}
+# Model Server in Docker Containers {#ovms_docs_docker_container}
 
-## Overview 
+This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Linux, using a Docker Container. Links are provided for different compatible hardware. 
 
-This guide provides step-by-step instructions for deploying OpenVINO&trade; Model Server on Linux using Docker Containers. Links are provided for different compatible hardware. 
+**Before you start, make sure you have:**
 
-## System Requirements
-
-- [Docker Engine](https://docs.docker.com/engine/) installed
-- 6th to 12th generation Intel® Core™ processors or Intel® Xeon® processors
+- [Docker Engine](https://docs.docker.com/engine/) installed ([How to Install Docker Engine](https://docs.docker.com/engine/install/))
+- Intel® Core™ processor (6-12th gen.) or Intel® Xeon® processor
 - (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html)
 - Linux, macOS or Windows via [WSL](https://docs.microsoft.com/en-us/windows/wsl/) 
 
-NOTE: accelerators are only tested on bare metal Linux hosts.
+**NOTE:** accelerators are only tested on bare-metal Linux hosts.
 
-## Quick Start Guide <a name="quickstart"></a>
 
-Start a Docker container with OpenVINO Model Server and a ResNet-50 model from public cloud storage:
+## Starting with a container <a name="quickstart"></a>
+
+- Pull OpenVINO&trade; Model Server Image.
+- Start a Docker Container with OVMS and your chosen model from cloud storage.
+- Provide the input files, (arrange an input Dataset).
+- Prepare a client package.
+- Run the prediction using ovmsclient.
+
+Here is an example of this process using a ResNet50 model for image classification:
+
+Pull an image from Docker or [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de)
+
 ```bash
+docker pull openvino/model_server:latest
+
+# or, alternatively 
+
+docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
+```
+
+Start the container
+```bash
+# start the container 
 docker run -p 9000:9000 openvino/model_server:latest \ 
 --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary \ 
 --layout NHWC --port 9000 
-```
-Download a JPEG image to classify and list of classes with label mappings:
-```
+
+# download input files, an image, and a label mapping file
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/images/zebra.jpeg 
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/classes.py 
-```
-Install the Python-based ovmsclient package:
-```
+
+# Install the Python-based ovmsclient package
 pip3 install ovmsclient
 ```
-Run predication using ovmsclient
+
+Run prediction
 ```python
 import numpy as np
 from classes import imagenet_classes
@@ -46,54 +63,39 @@ result_index = np.argmax(output[0])
 predicted_class = imagenet_classes[result_index]
 ```
 
+To learn how to set up OpenVINO Model Server, refer to the [Quick Start guide](./ovms_quickstart.md).
 
-Refer to the [Quick Start guide](./ovms_quickstart.md) to set up OpenVINO&trade; Model Server.
 
-## Steps to Build OpenVINO&trade; Model Server from Source
 
-### Install Docker
+## Building an OpenVINO&trade; Model Server Docker Image <a name="sourcecode"></a>
 
-Install Docker using the following link:
+You can build your own Docker image executing the `make docker_build` command in the [git repository root folder](https://github.com/openvinotoolkit/model_server).
+In the `./dist` directory it will generate: 
 
-- [Install Docker Engine](https://docs.docker.com/engine/install/)
+- image tagged as openvino/model_server:latest - with CPU, NCS, and HDDL support
+- image tagged as openvino/model_server-gpu:latest - with CPU, NCS, HDDL, and iGPU support
+- image tagged as openvino/model_server:latest-nginx-mtls - with CPU, NCS, and HDDL support and a reference nginx setup of mTLS integration
+- release package (.tar.gz, with ovms binary and necessary libraries)
 
-### Pulling OpenVINO&trade; Model Server Image
+**Note:** OVMS docker image can be created with ubi8-minimal base image, centos7, or the default ubuntu20. 
+Note that OVMS with the ubi base image doesn’t support NCS and HDDL accelerators.
 
-After Docker installation you can pull the OpenVINO&trade; Model Server image. Open Terminal and run following command:
-
-```bash
-docker pull openvino/model_server:latest
-```
-
-Alternatively pull the image from [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de)
-```bash
-docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
-```
-
-###  Building the OpenVINO&trade; Model Server Docker Image<a name="sourcecode"></a>
-
-To build your own image, use the following command in the [git repository root folder](https://github.com/openvinotoolkit/model_server), 
+To do so, use either of these commands:
 
 ```bash
-   make docker_build
+make docker_build BASE_OS=redhat
+
+make docker_build BASE_OS=centos
 ```
 
-It will generate the images, tagged as:
+Additionally, you can use the `INSTALL_DRIVER_VERSION` argument command to choose which GPU driver version is used by the produced image. 
+If not provided, most recent version is used.
 
-- openvino/model_server:latest - with CPU, NCS and HDDL support,
-- openvino/model_server-gpu:latest - with CPU, NCS, HDDL and iGPU support,
-- openvino/model_server:latest-nginx-mtls - with CPU, NCS and HDDL support and a reference nginx setup of mTLS integration,
-as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
-
-*Note:* Latest images include OpenVINO 2021.4 release.
-
-*Note:* OVMS docker image could be created with ubi8-minimal base image, centos7 or the default ubuntu20.
-Use command `make docker_build BASE_OS=redhat` or `make docker_build BASE_OS=centos`. OVMS with ubi base image doesn't support NCS and HDDL accelerators.
-
-Additionally you can set version of GPU driver used by the produced image. Currently following versions are available:
+Currently, the following versions are available:
 - 19.41.14441
 - 20.35.17767
 
-Provide version from the list above as INSTALL_DRIVER_VERSION argument in make command to build image with specific version of the driver like 
-`make docker_build INSTALL_DRIVER_VERSION=19.41.14441`. 
-If not provided, version 20.35.17767 is used.
+Example:
+```bash
+make docker_build INSTALL_DRIVER_VERSION=19.41.14441
+```

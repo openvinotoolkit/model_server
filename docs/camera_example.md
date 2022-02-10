@@ -26,7 +26,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/horizontal-text-detection:/model -p
 ```
 
 ### Run the client
-In the context of [example_client](../example_client) directory, run the following commands.
+In the context of [example_client](https://github.com/openvinotoolkit/model_server/blob/main/example_client) directory, run the following commands.
 
 Install python libraries:
 ```bash
