@@ -1,4 +1,4 @@
-# Using AI accelerators {#ovms_docs_target_devices}
+# Using AI Accelerators {#ovms_docs_target_devices}
 
 
 ## Starting the server with the Intel® Neural Compute Stick 2
@@ -46,12 +46,12 @@ Check out our recommendations for [throughput optimization on HDDL](performance_
 > It requires RW permissions in the docker container security context. 
 > It is recommended to start the docker container in the same context as the account starting _hddldaemon_. For example, if you start the _hddldaemon_ as root, add `--user root` to the `docker run` command.
 
-
 ## Starting a Docker Container with Intel GPU
 
 The [GPU plugin](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_GPU.html) uses the Intel Compute Library for 
 Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. For inference execution, it employs Intel® Processor Graphics including 
 Intel® HD Graphics, Intel® Iris® Graphics, Intel® Iris® Xe Graphics, and Intel® Iris® Xe MAX graphics.
+
 
 Before using GPU as OpenVINO Model Server target device, you need to:
 - install the required drivers - refer to [OpenVINO installation guide](https://docs.openvino.ai/latest/openvino_docs_install_guides_installing_openvino_linux.html#install-gpu)
@@ -147,6 +147,7 @@ The Heterogenous plugin can be configured using the `--target_device` parameter 
 The order of devices will define their priority, in this case making `device_1` the primary and `device_2` the fallback one.
 
 Here is a config example using heterogeneous plugin with GPU as the primary device and CPU as a fallback.
+
 
 ```json
 {"model_config_list": [

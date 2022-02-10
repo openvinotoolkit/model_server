@@ -5,7 +5,7 @@ This guide demonstrates how to create complex pipelines using object detection a
 
 ![Faces analysis graph](faces_analysis.png)
 
-Using such pipeline, a single request to OVMS can perform a complex set of operations to determine all faces and its properties.
+Using such a pipeline, a single request to OVMS can perform a complex set of operations to determine all faces and their properties.
 
 ## Pipeline Configuration Graph
 
@@ -90,12 +90,13 @@ docker run -p 9000:9000 -d -v ${PWD}/workspace:/workspace openvino/model_server 
 
 Exemplary client [faces_analysis_pipeline_client.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/faces_analysis_pipeline_client.py) can be used to request pipeline deployed in previous step.
 
+
 From the context of [example_client](https://github.com/openvinotoolkit/model_server/blob/main/example_client) folder install python3 requirements:
 ```bash
 pip install -r client_requirements.txt
 ``` 
 
-Now you can create directory for text images and run the client:
+Now you can create a directory for text images and run the client:
 ```bash
 mkdir results
 ```

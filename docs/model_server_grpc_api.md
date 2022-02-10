@@ -36,7 +36,7 @@ Read more about [Get Model Metadata API usage](https://github.com/openvinotoolki
 
 ## Predict API <a name="predict"></a>
 
-Sends requests via TFS gRPC API using images in base64 encoded string or numpy format. It displays performance statistics and optionally the model accuracy.
+Sends requests via TFS gRPC API using images in base64 encoded string or NumPy format. It displays performance statistics and optionally the model accuracy.
 To send images in binary format data should be placed in dt_string field of tensor.proto.
 
 [Predict proto](https://github.com/tensorflow/serving/blob/r1.14/tensorflow_serving/apis/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.  

@@ -1,7 +1,7 @@
 # OpenVINO&trade; Model Server Contributing Guidelines
 
 ## Overview
-This guide provides steps and coding standards to follow before sending merge requests. Following instructions are covered in this:
+This guide provides steps and coding standards to follow before sending merge requests:
 1. <a href="#merge-req-checklist">Merge Request Checklist</a>
 2. <a href="#coding-style">C++ Coding Style</a>
     - <a href="#var-naming-conventions">Variable Naming Conventions</a>
@@ -19,7 +19,7 @@ Before sending your merge requests, make sure you followed this list.
 - Changes are consistent with the <a href="#coding-style">Coding Style</a>
 - Each merge request should start with the corresponding Jira Ticket Number and short task description, e.g.: `CVS-3111 Implement feature XY`
 - The branches should also correspond to Jira Task Name and start with Jira Ticket Number
-- Write a short description what the merge request introduces/improves
+- Write a short description of what the merge request introduces/improves
 - Always include unit tests when contributing new features
 - Bug fixes also generally require unit tests, because the presence of bugs usually indicates insufficient tests
 - Include a license at the top of new files
@@ -79,7 +79,7 @@ Example 2
     - Other libraries headers
     - project's headers
 
-- Use `< >` for non-project libraries and `" "` for project's headers. Separate each non-empty group with one blank line.
+- Use `< >` for non-project libraries and `" "` for the project headers. Separate each non-empty group with one blank line.
 
 - Example :
 
@@ -121,7 +121,7 @@ Example 2
 - Run `make clang-format` command before you submit changes.
 
 - Prerequisites :
-Install Clang-Format 6.0 using command :
+Install Clang-Format 6.0 using the command :
     ```apt-get install clang-format-6.0```
 
 ## Compiler Security Flags <a name="flags"></a>
@@ -137,7 +137,7 @@ Install Clang-Format 6.0 using command :
 - Run `make sdl-check` command before you submit changes.
 
 - Prerequisites :
-    Install Bandit Package using command :
+    Install Bandit Package using the command :
     ```pip3 install bandit```
 
 ## Logging Policy
@@ -161,11 +161,11 @@ Log at this level information about conditions that may lead to an error or beha
 Example:
 
 - problems with configurations
-- version directories with invalid name
+- version directories with an invalid name
 </br>
 
 #### `INFO` 
-Log at this level actions that changes state of application.
+Log at this level actions that changes the state of an application.
 </br>
 Example:
 
@@ -174,7 +174,7 @@ Example:
 </br>
 
 #### `DEBUG`
-Log at this level information about what happens in the program that may help during debbuging.
+Log at this level information about what happens in the program that may help during debugging.
 </br>
 
 Example:
@@ -184,7 +184,7 @@ Example:
 </br>
 
 ####  `TRACE`
-Log at this level very specific information about what happens in the program, including code-related names. (Only for development purpose)
+Log at this level very specific information about what happens in the program, including code-related names. (Only for development purposes)
 </br>
 
 Example:
@@ -194,7 +194,7 @@ Example:
 - intermediate states of the objects
 
 ### Modules
-For OVMS modules use different logger that appends module prefix to the message. Example modules: 
+For OVMS modules, use a different logger that appends module prefix to the message. Example modules: 
 - GCS
 - S3
 - Azure

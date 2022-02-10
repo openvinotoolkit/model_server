@@ -26,5 +26,5 @@ Examples:
 
 - When the model version is deleted from the file system, it will become unavailable on the server and it will release RAM allocation. Updates in the deployed model version files will not be detected and they will not trigger changes in serving.
 
-- By default model server is detecting new and deleted versions in 1 second intervals. The frequency can be changed by setting a parameter --file_system_poll_wait_seconds. If set to zero, updates will be disabled.
+- By default model server is detecting new and deleted versions in 1-second intervals. The frequency can be changed by setting a parameter --file_system_poll_wait_seconds. If set to zero, updates will be disabled.
 

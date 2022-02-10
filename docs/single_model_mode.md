@@ -39,8 +39,9 @@ docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 9001:9001 open
 @endsphinxdirective
 
 
->NOTE:
+>**NOTE**:
 > - Publish the container's port to your host's **open ports**.
 > - In the command above, port 9000 is exposed for gRPC and port 9001 is exposed for REST API calls.
 > - For preparing and saving models to serve with OpenVINO&trade; Model Server refer to the [Model Repository](models_repository.md) article.
 > - Add model_name for the client gRPC/REST API calls.
+

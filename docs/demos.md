@@ -24,7 +24,7 @@
 
 @endsphinxdirective
 
-OpenVINO Model Server demos show how to use the model server and its features. Source code for the demos below are available on GitHub. See the demos along with steps to reproduce:
+OpenVINO Model Server demos show how to use the model server and its features. Source code for the demos below is available on GitHub. See the demos along with steps to reproduce:
 
 
 - [Age and Gender Recognition via REST API](age_gender_guide.md) - run predictions on JPEG images using an age and gender recognition model via the REST API.

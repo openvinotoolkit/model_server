@@ -53,10 +53,10 @@ output_tensorname = 'resnet_v1_50/predictions/Reshape_1'
 predictions = make_ndarray(result.outputs[output_tensorname])
 ```
 
+
 - It is possible to adjust this behavior by adding an optional .json file named `mapping_config.json`. 
 It can map the input and output keys to the appropriate tensors. This extra mapping can be used to enable user-friendly names for models with difficult tensor names.
 Here is an example of mapping_config.json:
-
 
 ```json
 {
@@ -69,3 +69,4 @@ Here is an example of mapping_config.json:
        }
 }
 ```
+

@@ -75,8 +75,8 @@ The Face Detection Example script can be a reference script to run various other
 
 ### Download the model from OpenVINO&trade; Model Zoo.
 
-- A variety of OpenVINO&trade; Models in IR format are present in OpenVINO&trade; Model Zoo. You can also convert your own model to IR format (.xml and .bin format). 
-- Refer to [Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer)  to convert your own model.
+- A variety of OpenVINO&trade; Models in IR format are present in OpenVINO&trade; Model Zoo. You can also convert your model to IR format (.xml and .bin format). 
+- Refer to [Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer)  to convert your model.
 
 Create a **model** folder and download Person-Vehicle-Detection Model:
 
@@ -87,13 +87,13 @@ curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/op
 
 ### Prepare Model Repository
 
-Refer to [Preparation of Models](./models_repository.md) to place your downloaded or converted models in a repository to mount it to the OpenVINO&trade; Model Server.
+Refer to [Preparation of Models](./models_repository.md) to place your downloaded or converted models in a repository to mount them to the OpenVINO&trade; Model Server.
 
 ### Run the OpenVINO&trade; Model Server Docker Container
 
-Run the OpenVINO&trade; Model Server with the downloaded models. Adjust the shape and batch_size parameter according to the requirement of model. Refer [this guide](shape_batch_size_and_layout.md) to know more about the parameters.
+Run the OpenVINO&trade; Model Server with the downloaded models. Adjust the shape and batch_size parameter according to the requirement of the model. Refer [this guide](shape_batch_size_and_layout.md) to know more about the parameters.
 
-- Run following command on your terminal
+- Run the following command on your terminal
 
 ```bash
 
@@ -107,7 +107,7 @@ Check if the container is running with :
 ```bash
 docker ps
 ```
-If the container is not running , check out the [troubleshooting guide](troubleshooting.md)
+If the container is not running, check out the [troubleshooting guide](troubleshooting.md)
 
 
 ### Run the example script
@@ -123,6 +123,6 @@ Run the example script in terminal :
 
 ### Output of the Script
 
-- The image with inference is stored in results folder. The inference bounding boxes are drawn around people and vehicles present in the image 
+- The image with inference is stored in the results folder. The inference bounding boxes are drawn around people and vehicles present in the image 
 
 ![image](person-detection_3_0.jpg)
