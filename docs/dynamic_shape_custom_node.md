@@ -3,7 +3,7 @@
 ## Introduction
 This guide shows how to configure a simple Directed Acyclic Graph (DAG) with a custom node that performs input resizing before passing input data to the model. 
 
-The node below is provided as a demonstration. See instructions for how to build and use the custom node: https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/image_transformation.
+The node below is provided as a demonstration. See instructions for how to build and use the custom node: [Image Transformation](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/image_transformation).
 
 
 To run inference with this setup, we will use the following:

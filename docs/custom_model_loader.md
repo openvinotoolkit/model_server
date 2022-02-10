@@ -33,16 +33,16 @@ To specifically enable a particular model to be loaded using customer loader, ad
         ]
 
 ### C++ API Interface for custom loader:
-A base class **CustomLoaderInterface** along with interface API is defined in [src/customloaderinterface.hpp](../src/customloaderinterface.hpp)
+A base class **CustomLoaderInterface** along with interface API is defined in [src/customloaderinterface.hpp](https://github.com/openvinotoolkit/model_server/blob/main/src/customloaderinterface.hpp)
 
-Refer to the this file  for API details. 
+Refer to this file  for API details. 
 
 ## Writing a Custom Loader:
-Derive the new custom loader class from base class **"CustomLoaderInterface"** and define all the virtual functions specified. The library shall contain a function with name 
+Derive the new custom loader class from base class **CustomLoaderInterface** and define all the virtual functions specified. The library shall contain a function with name 
 **CustomLoaderInterface* createCustomLoader**
 which allocates the new custom loader and return a pointer to the base class.
 
-An example customloader which reads files and returns required buffers to be loaded is implemented and provided as reference in ** src/example/SampleCustomLoader **
+An example customloader which reads files and returns required buffers to be loaded is implemented and provided as reference in **[src/example/SampleCustomLoader](https://github.com/openvinotoolkit/model_server/blob/main/src/example/SampleCustomLoader)**
 
 This customloader is build with model server build and available in the docker openvino/model_server-build:latest. Either the shared library can be copied from this docker or built using makefile. An example Makefile is provided as reference in this directory.
 

@@ -4,7 +4,7 @@
 OpenVINO Model Server monitors changes to the configuration file and applies required modifications during runtime using two different methods:
 
 1. Automatically, with an interval defined by the parameter `--file_system_poll_wait_seconds`. (introduced in version 2021.1)
-2. On demand, using the [Config Reload API](./model_server_rest_api.md#config-reload). (introduced in version 2021.3)
+2. On demand, using the [Config Reload API](./model_server_rest_api.md). (introduced in version 2021.3)
 
 Configuration reload triggers the following operations:
 
@@ -21,5 +21,5 @@ Model Server behavior in case of errors during configuration reloading:
 - if a new `config.json` is not compliant with JSON schema, no changes are applied to the served models.
 - if the new model, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) has an invalid configuration, it will be ignored until the next configuration reload. Configurations may be invalid due to incorrect paths (leading to non-existent directories), forbidden values in the config, invalid [DAG](./dag_scheduler.md) structure (e.g. cycle found in a graph), etc.
 - an error occurs when a model, [DAG](./dag_scheduler.md) or [custom loader](./custom_model_loader.md) is reloading but does not prevent the reload of the remaining updated models.
-- errors from configuration reload are triggered internally and saved in the logs. If [Config Reload API](./model_server_rest_api.md#config-reload) is used, the response will also contain an error message. 
+- errors from configuration reload are triggered internally and saved in the logs. If [Config Reload API](./model_server_rest_api.md) is used, the response will also contain an error message. 
 

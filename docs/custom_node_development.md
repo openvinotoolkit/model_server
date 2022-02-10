@@ -10,7 +10,7 @@ developed in C++ or C to perform arbitrary data transformations.
 
 ## Custom Node API
 
-The custom node library must implement the API interface defined in [custom_node_interface.h](../src/custom_node_interface.h).
+The custom node library must implement the API interface defined in [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_node_interface.h).
 The interface is defined in `C` to simplify compatibility with various compilers. The library could use third party components
 linked statically or dynamically. OpenCV is a built in component in OVMS which could be used to perform manipulation on the image
 data. 
@@ -96,15 +96,15 @@ Just add include statement like:
 
 ## Building
 Custom node library can be compiled using any tool. It is recommended to follow the example based 
-a docker container with all build dependencies included. It is described in this [Makefile](../src/custom_nodes/east_ocr/Makefile). 
+a docker container with all build dependencies included. It is described in this [Makefile](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/east_ocr/Makefile). 
 
 ## Testing 
 Recommended method for testing the custom library is via OVMS execution:
 - Compile the library using a docker container configured in the Makefile. It will be exported to `lib` folder.
-- Prepare a pipeline configuration with the path custom node library compiled in the previous step
-- Start OVMS docker container
-- Submit a request to OVMS endpoint using a gRPC or REST client
-- Analyse the logs on the OVMS server
+- Prepare a pipeline configuration with the path custom node library compiled in the previous step.
+- Start OVMS docker container.
+- Submit a request to OVMS endpoint using a gRPC or REST client.
+- Analyse the logs on the OVMS server.
 
 For debugging steps refer the OVMS [developer guide](https://github.com/openvinotoolkit/model_server/blob/main/docs/developer_guide.md)
 

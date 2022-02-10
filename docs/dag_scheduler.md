@@ -46,7 +46,7 @@ There are two special kinds of nodes - Request and Response node. Both of them a
 ### Custom node type
 
 * custom - that node can be used to implement all operations on the data which can not be handled by the neural network model. It is represented by
-a C++ dynamic library implementing OVMS API defined in [custom_node_interface.h](../src/custom_node_interface.h). Custom nodes can run the data
+a C++ dynamic library implementing OVMS API defined in [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_node_interface.h). Custom nodes can run the data
 processing using OpenCV, which is included in OVMS, or include other third-party components. Custom node libraries are loaded into OVMS
  by adding its definition to the pipeline configuration. The configuration includes a path to the compiled binary with `.so` extension. 
 Custom nodes are not versioned, meaning one custom node library is bound to one name. To load another version, another name needs to be used.
@@ -71,7 +71,7 @@ It assumes the batches are combined on the first dimension which is dropped afte
 ## Configuration file <a name="configuration-file"></a>
 
 Pipelines configuration is to be placed in the same json file like the 
-[models config file](docker_container.md#configfile).
+[models config file](multiple_models_mode.md).
 While models are defined in section `model_config_list`, pipelines are to be configured in
 section `pipeline_config_list`. 
 Nodes in the pipelines can reference only the models configured in model_config_list section.
@@ -195,12 +195,12 @@ the same way. Custom node functions are just like a standard node in that respec
 Pipelines can use the same API like the models. There are exactly the same calls for running 
 the predictions. The request format must match the pipeline definition inputs.
 
-The pipeline configuration can be queried using [gRPC GetModelMetadata](model_server_grpc_api.md#model-metadata) calls and
-[REST Metadata](model_server_rest_api.md#model-metadata).
+The pipeline configuration can be queried using [gRPC GetModelMetadata](model_server_grpc_api.md) calls and
+[REST Metadata](model_server_rest_api.md).
 It returns the definition of the pipelines inputs and outputs. 
 
-Similarly, pipelines can be queried for their state using the calls [GetModelStatus](model_server_grpc_api.md#model-status)
-and [REST Model Status](model_server_rest_api.md#model-status)
+Similarly, pipelines can be queried for their state using the calls [GetModelStatus](model_server_grpc_api.md)
+and [REST Model Status](model_server_rest_api.md)
 
 The only difference in using the pipelines and individual models is in version management. In all calls to the pipelines, 
 version parameter is ignored. Pipelines are not versioned. Though, they can reference a particular version of the models in the graph.
