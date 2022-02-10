@@ -1,11 +1,10 @@
-# Deploy Multiple Models with a Config File {#ovms_docs_multiple_models}
+# Multiple-Model mode with a Config File {#ovms_docs_multiple_models}
 
-### Starting Docker Container with a Configuration File for **Multiple** Models <a name="configfile"></a>
+To use a container that has several models, you need an additional JSON configuration file defining each of them. In the file, provide an array, 
+`model_config_list`, that includes a collection of config objects for each served model. Every such config object needs the minimum of 
+the name and the base_path attribute values provided.
 
-To use a container that has several models, you must use a Model Server configuration file that defines each model. The configuration file is in JSON format.
-In the configuration file, provide an array, `model_config_list`, that includes a collection of config objects for each served model. For each config object include, at a minimum, values for the model name and the base_path attributes.
-
-Example configuration file:
+An example of the configuration file:
 ```json
 {
    "model_config_list":[
@@ -56,7 +55,8 @@ Example configuration file:
 }
 ```
 
-When the config file is present, the Docker container can be started similarly to a single model. Note that models with cloud storage paths require setting specific environmental variables. Refer to the cloud storage requirements below for more details.
+When the Docker container has the config file mounted, it can be started - the command is minimalistic, as arguments are read from the config file. 
+Note that models with a cloud storage path require setting specific environmental variables.
 
 ```bash
 
@@ -65,22 +65,6 @@ docker run --rm -d -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 -v <config.j
 
 ```
 
->NOTE: Follow the model repository structure below to serve multiple models:
-
-```bash
-models/
-    model1
-        1
-         ir_model.bin
-         ir_model.xml
-        2
-         ir_model.bin
-         ir_model.xml
-    model2
-        1
-         ir_model.bin
-         ir_model.xml
-         mapping_config.json
-```
-
-The numerical values represent the version number of the model.
+For additional details, refer to:
+- [Model Repository](models_repository.md)
+- [Using Cloud Storage](using_cloud_storage.md)
