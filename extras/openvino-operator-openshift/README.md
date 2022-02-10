@@ -52,7 +52,7 @@ Modify the [sample resource](https://github.com/openvinotoolkit/model_server/tre
 oc apply -f config/samples/intel_v1alpha1_ovms.yaml
 ```
 
-The available [parameters](../../deploy) are the same as above.
+The available [parameters](../../deploy/README.md) are the same as above.
 
 <b>Note</b>: Some deployment configurations have prerequisites like creating relevant resources in Kubernetes. For example, a secret with credentials,
 persistent volume claim or configmap with a Model Server configuration file.
