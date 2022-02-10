@@ -89,79 +89,25 @@ Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision 
 }
 
 Status validateLayout(const std::shared_ptr<TensorInfo>& tensorInfo) {
-    if ((tensorInfo->getLayout() != "NHWC") &&
-        (tensorInfo->getLayout() != Layout::getUnspecifiedLayout()) &&  // handle DAG
-        (tensorInfo->getLayout() != Layout::getDefaultLayout())) {      // handle model without Layout set
+    static const std::string binarySupportedLayout = "N...HWC";
+    if (!tensorInfo->getLayout().createIntersection(Layout(binarySupportedLayout), tensorInfo->getShape().size()).has_value()) {
+        SPDLOG_ERROR("Endpoint needs to be compatible with {} to support binary image inputs, actual: {}",
+            binarySupportedLayout,
+            tensorInfo->getLayout());
         return StatusCode::UNSUPPORTED_LAYOUT;
     }
     return StatusCode::OK;
 }
 
-bool resizeNeeded(const cv::Mat& image, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    Dimension cols = Dimension::any();
-    Dimension rows = Dimension::any();
-    if (tensorInfo->getShape().size() == 4) {
-        cols = tensorInfo->getShape()[2];
-        rows = tensorInfo->getShape()[1];
-    } else if (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5) {
-        cols = tensorInfo->getShape()[3];
-        rows = tensorInfo->getShape()[2];
-    } else {
-        return false;
-    }
-    if (cols.isAny()) {
-        cols = image.cols;
-    }
-    if (rows.isAny()) {
-        rows = image.rows;
-    }
-    if ((!cols.match(image.cols)) || (!rows.match(image.rows))) {
+bool resizeNeeded(const cv::Mat& image, const Dimension& height, const Dimension& width) {
+    if (height != image.rows || width != image.cols) {
         return true;
     }
     return false;
 }
 
-Status resizeMat(const cv::Mat& src, cv::Mat& dst, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    Dimension cols = Dimension::any();
-    Dimension rows = Dimension::any();
-    if (tensorInfo->getShape().size() == 4) {
-        cols = tensorInfo->getShape()[2];
-        rows = tensorInfo->getShape()[1];
-    } else if (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5) {
-        cols = tensorInfo->getShape()[3];
-        rows = tensorInfo->getShape()[2];
-    } else {
-        return StatusCode::UNSUPPORTED_LAYOUT;
-    }
-    if (cols.isAny()) {
-        cols = src.cols;
-    }
-    if (rows.isAny()) {
-        rows = src.rows;
-    }
-    if (cols.isDynamic()) {
-        dimension_value_t value = src.cols;
-        if (src.cols < cols.getMinValue())
-            value = cols.getMinValue();
-
-        if (src.cols > cols.getMaxValue())
-            value = cols.getMaxValue();
-
-        if (value != src.cols)
-            cols = Dimension(value);
-    }
-    if (rows.isDynamic()) {
-        dimension_value_t value = src.rows;
-        if (src.rows < rows.getMinValue())
-            value = rows.getMinValue();
-
-        if (src.rows > rows.getMaxValue())
-            value = rows.getMaxValue();
-
-        if (value != src.rows)
-            rows = Dimension(value);
-    }
-    cv::resize(src, dst, cv::Size(cols.getStaticValue(), rows.getStaticValue()));
+Status resizeMat(const cv::Mat& src, cv::Mat& dst, const Dimension& height, const Dimension& width) {
+    cv::resize(src, dst, cv::Size(width.getStaticValue(), height.getStaticValue()));
     return StatusCode::OK;
 }
 
@@ -195,15 +141,6 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     return StatusCode::OK;
 }
 
-Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* firstBatchImage) {
-    if (input.cols == firstBatchImage->cols && input.rows == firstBatchImage->rows) {
-        return StatusCode::OK;
-    }
-    SPDLOG_ERROR("Each binary image in request needs to have resolution matched. First cols: {}, rows: {}, current cols: {}, rows: {}",
-        firstBatchImage->cols, firstBatchImage->rows, input.cols, input.rows);
-    return StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH;
-}
-
 bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     const int batchSize) {
     if (!tensorInfo->getBatchSize().has_value()) {
@@ -213,18 +150,9 @@ bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
 }
 
 Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage) {
-    // For pipelines with only custom nodes entry, or models with default layout there is no way to deduce layout.
-    // With unknown layout, there is no way to deduce pipeline input resolution.
-    // This forces binary utility to create tensors with resolution inherited from input binary image from request.
-    // To achieve it, in this specific case we require all binary images to have the same resolution.
-    // TODO check if H/W is undefined and only then check this CVS-77193
-    if (firstBatchImage &&
-        (tensorInfo->getLayout() == Layout::getUnspecifiedLayout())) {
-        auto status = validateResolutionAgainstFirstBatchImage(input, firstBatchImage);
-        if (!status.ok()) {
-            return status;
-        }
-    }
+    // Binary inputs are supported for any endpoint that is compatible with N...HWC layout.
+    // With unknown layout, there is no way to deduce expected endpoint input resolution.
+    // This forces binary utility to create tensors with resolution inherited from first batch of binary input image (request).
     return validateNumberOfChannels(tensorInfo, input, firstBatchImage);
 }
 
@@ -258,11 +186,63 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     return StatusCode::OK;
 }
 
+Dimension getTensorInfoHeightDim(const std::shared_ptr<TensorInfo>& tensorInfo) {
+    size_t numberOfShapeDimensions = tensorInfo->getShape().size();
+    if (numberOfShapeDimensions < 4 || numberOfShapeDimensions > 5) {
+        throw std::logic_error("wrong number of shape dimensions");
+    }
+    size_t position = numberOfShapeDimensions == 4 ? /*NHWC*/ 1 : /*N?HWC*/ 2;
+    return tensorInfo->getShape()[position];
+}
+
+Dimension getTensorInfoWidthDim(const std::shared_ptr<TensorInfo>& tensorInfo) {
+    size_t numberOfShapeDimensions = tensorInfo->getShape().size();
+    if (numberOfShapeDimensions < 4 || numberOfShapeDimensions > 5) {
+        throw std::logic_error("wrong number of shape dimensions");
+    }
+    size_t position = numberOfShapeDimensions == 4 ? /*NHWC*/ 2 : /*N?HWC*/ 3;
+    return tensorInfo->getShape()[position];
+}
+
+void updateAlignmentResolution(Dimension& height, Dimension& width, const cv::Mat& image) {
+    if (height.isAny()) {
+        height = image.rows;
+    } else if (height.isDynamic()) {
+        if (height.match(image.rows)) {
+            height = image.rows;
+        } else {
+            if (image.rows > height.getMaxValue()) {
+                height = height.getMaxValue();
+            } else {
+                height = height.getMinValue();
+            }
+        }
+    }
+    if (width.isAny()) {
+        width = image.cols;
+    } else if (width.isDynamic()) {
+        if (width.match(image.cols)) {
+            width = image.cols;
+        } else {
+            if (image.cols > width.getMaxValue()) {
+                width = width.getMaxValue();
+            } else {
+                width = width.getMinValue();
+            }
+        }
+    }
+}
+
 Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    Dimension tensorInfoHeightDim = getTensorInfoHeightDim(tensorInfo);
+    Dimension tensorInfoWidthDim = getTensorInfoWidthDim(tensorInfo);
+
     for (int i = 0; i < src.string_val_size(); i++) {
         cv::Mat image = convertStringValToMat(src.string_val(i));
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
+
+        updateAlignmentResolution(tensorInfoHeightDim, tensorInfoWidthDim, image);
 
         cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
         auto status = validateInput(tensorInfo, image, firstImage);
@@ -278,14 +258,20 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
             }
             image = std::move(imageCorrectPrecision);
         }
-        if (resizeNeeded(image, tensorInfo)) {
+        if (resizeNeeded(image, tensorInfoHeightDim, tensorInfoWidthDim)) {
             cv::Mat imageResized;
-            status = resizeMat(image, imageResized, tensorInfo);
+            status = resizeMat(image, imageResized, tensorInfoHeightDim, tensorInfoWidthDim);
             if (!status.ok()) {
                 return status;
             }
             image = std::move(imageResized);
         }
+
+        if (i == 0 && src.string_val_size() > 1) {
+            // TODO: CVS-78796 Check if the total bytes for tensor will not exceed 1GB.
+            // Multiply src.string_val_size() * image resolution * precision size
+        }
+
         images.push_back(image);
     }
 
@@ -304,7 +290,7 @@ shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const std::shared
     return dims;
 }
 
-ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
     ov::Shape shape = getShapeFromImages(images, tensorInfo);
     ov::element::Type precision = tensorInfo->getOvPrecision();
     ov::Tensor tensor(precision, shape);
@@ -316,7 +302,7 @@ ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const std::s
     return tensor;
 }
 
-ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
     switch (tensorInfo->getPrecision()) {
     case ovms::Precision::FP32:
     case ovms::Precision::I32:
@@ -326,7 +312,7 @@ ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::shared_p
     case ovms::Precision::FP16:
     case ovms::Precision::U16:
     case ovms::Precision::I16:
-        return createTensorFromMats(images, tensorInfo, isPipeline);
+        return createTensorFromMats(images, tensorInfo);
     case ovms::Precision::MIXED:
     case ovms::Precision::Q78:
     case ovms::Precision::BIN:
@@ -337,7 +323,7 @@ ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::shared_p
     }
 }
 
-Status convertStringValToTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline) {
+Status convertStringValToTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo) {
     auto status = validateTensor(tensorInfo, src);
     if (status != StatusCode::OK) {
         return status;
@@ -350,7 +336,7 @@ Status convertStringValToTensor(const tensorflow::TensorProto& src, ov::Tensor& 
         return status;
     }
 
-    tensor = convertMatsToTensor(images, tensorInfo, isPipeline);
+    tensor = convertMatsToTensor(images, tensorInfo);
     if (!tensor) {
         return StatusCode::IMAGE_PARSING_FAILED;
     }

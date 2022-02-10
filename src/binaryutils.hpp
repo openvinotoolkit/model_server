@@ -21,5 +21,5 @@
 #include "tensorinfo.hpp"
 
 namespace ovms {
-Status convertStringValToTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo, bool isPipeline);
+Status convertStringValToTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
 }  // namespace ovms

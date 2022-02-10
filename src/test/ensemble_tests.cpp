@@ -5465,7 +5465,8 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_Reques
     prepareMisalignedBinaryImageRequest(imagePath, imagePath2x2, request, "pipeline_input");
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimShape("pipeline_output", response, {2, 1, 1, 3});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_RequestNhwc) {
@@ -5554,10 +5555,11 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     ConstructorEnabledModelManager manager;
     std::unique_ptr<Pipeline> pipeline;
 
-    prepareMisalignedBinaryImageRequest(imagePath, imagePath2x2, request, "pipeline_input");
+    prepareMisalignedBinaryImageRequest(imagePath2x2, imagePath, request, "pipeline_input");
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
-    ASSERT_EQ(pipeline->execute(), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimShape("pipeline_output", response, {2, 1, 2, 2, 3});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemultiplexer_RequestNhwc) {

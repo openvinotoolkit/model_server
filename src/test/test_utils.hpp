@@ -326,6 +326,7 @@ static ovms::NodeLibrary createLibraryMock() {
 extern bool isShapeTheSame(const tensorflow::TensorShapeProto&, const std::vector<int64_t>&&);
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);
+void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);
 void readImage(const std::string& path, size_t& filesize, std::unique_ptr<char[]>& image_bytes);
 
 static const std::vector<ovms::Precision> SUPPORTED_INPUT_PRECISIONS{

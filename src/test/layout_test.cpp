@@ -64,26 +64,20 @@ TEST(Layout, Validate) {
     EXPECT_EQ(Layout{"N...C...H"}.validate(), StatusCode::LAYOUT_WRONG_FORMAT);
 }
 TEST(Layout, CreateIntersection) {
-    // handling variety of possible layoyts can be cumbersome
-    // we should at least assume that there is only one ETC as then it should be feasible to validate such layouts. For now we assume that we just return N...
-    EXPECT_EQ(Layout("NCHW").createIntersection(Layout("NCHW")), Layout("NCHW"));
-    EXPECT_EQ(Layout("NCHWD").createIntersection(Layout("NCHW")), std::nullopt);
-    EXPECT_EQ(Layout("NCHW").createIntersection(Layout("NCHWD")), std::nullopt);
-    EXPECT_EQ(Layout("NCHW").createIntersection(Layout("N...")), Layout("NCHW"));
-    EXPECT_EQ(Layout("N...").createIntersection(Layout("NCHW")), Layout("NCHW"));
-}
-TEST(Layout, DISABLED_CreateIntersection2) {
-    // handling variety of possible layoyts can be cumbersome
-    // we should at least assume that there is only one ETC as then it should be feasible to validate such layouts. For now we assume that we just return N...
-    EXPECT_EQ(Layout("NCHWD").createIntersection(Layout("NCHW?")), Layout("NCHWD"));
-    // test symmetry
-    EXPECT_EQ(Layout("NCHW?").createIntersection(Layout("NCHWD")), Layout("NCHWD"));
-    EXPECT_EQ(Layout("NCHWD").createIntersection(Layout("NCHW")), std::nullopt);
-    EXPECT_EQ(Layout("NCHW").createIntersection(Layout("NCHWD")), std::nullopt);
-    EXPECT_EQ(Layout("NC??").createIntersection(Layout("??DH")), Layout("NCDH"));
-    EXPECT_EQ(Layout("NC...").createIntersection(Layout("??DH")), Layout("NCDH"));
-    EXPECT_EQ(Layout("N...").createIntersection(Layout("...D")), Layout("N...D"));
-    EXPECT_EQ(Layout("N...").createIntersection(Layout("??D")), Layout("N?D"));
+    EXPECT_EQ(Layout("NCHW").createIntersection(Layout("NCHW"), 4), Layout("NCHW"));
+    EXPECT_EQ(Layout("NCHWD").createIntersection(Layout("NCHW"), 5), std::nullopt);
+    EXPECT_EQ(Layout("NCHW").createIntersection(Layout("NCHWD"), 5), std::nullopt);
+    EXPECT_EQ(Layout("NCHW").createIntersection(Layout("N..."), 4), Layout("NCHW"));
+    EXPECT_EQ(Layout("N...").createIntersection(Layout("NCHW"), 4), Layout("NCHW"));
+    EXPECT_EQ(Layout("NCHWD").createIntersection(Layout("NCHW?"), 5), Layout("NCHWD"));
+    EXPECT_EQ(Layout("NCHW?").createIntersection(Layout("NCHWD"), 5), Layout("NCHWD"));  // test symmetry
+    EXPECT_EQ(Layout("NCHWD").createIntersection(Layout("NCHW"), 5), std::nullopt);
+    EXPECT_EQ(Layout("NCHW").createIntersection(Layout("NCHWD"), 5), std::nullopt);
+    EXPECT_EQ(Layout("NC??").createIntersection(Layout("??DH"), 4), Layout("NCDH"));
+    EXPECT_EQ(Layout("NC...").createIntersection(Layout("??DH"), 4), Layout("NCDH"));
+    EXPECT_EQ(Layout("N...").createIntersection(Layout("...D"), 4), Layout("N??D"));
+    EXPECT_EQ(Layout("N...").createIntersection(Layout("??D"), 3), Layout("N?D"));
+    EXPECT_EQ(Layout("N?H...W?C").createIntersection(Layout("...HWD?"), 6), Layout("N?HWDC"));
 }
 
 TEST(Layout, ConversionBetweenOvLayout) {
