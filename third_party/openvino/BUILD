@@ -51,7 +51,7 @@ cc_library(
 cc_library(
     name = "openvino",
     srcs = glob([
-        "lib/intel64/libov_runtime.so"
+        "lib/intel64/libopenvino.so"
     ]),
     data = [ "lib/intel64/plugins.xml" ],
     strip_include_prefix = "include/ie",
