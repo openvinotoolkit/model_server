@@ -3,32 +3,12 @@
 import argparse
 from stream_reader import StreamReader
 from inference_executor import InferenceExecutor
-from postprocessor import Postprocessor
+from io_processor import IOProcessor
 from http_visualizer import HttpVisualizer
 from stream_analyzer import StreamAnalyzer
-from logger import get_logger
+from logger import LoggerConfig
+from use_cases.person_vehicle_bike_detection import PersonVehicleBikeDetection
 
-logger = get_logger(__name__)
-
-def my_custom_postprocessing(result):
-	CLASSES = ["None", "Pedestrian", "Vehicle", "Bike", "Other"]
-	CONFIDENCE_THRESHOLD = 0.75
-	for batch, data in enumerate(result):
-		pred = data[0]
-		for values in enumerate(pred):
-				index = values[0]
-				l_pred = values[1]
-
-				img_id = l_pred[0]
-				label = l_pred[1]
-				conf = l_pred[2]
-
-				if label > 4:
-					label = 4
-
-				if img_id != -1 and conf >= CONFIDENCE_THRESHOLD:
-					if CLASSES[int(label)] == "Pedestrian":
-						logger.warning("Detected pedestrian on the road") 
 
 def get_config():
 	parser = argparse.ArgumentParser(description="Client for real time video stream analysis")
@@ -38,6 +18,7 @@ def get_config():
 	parser.add_argument("--model_version", required=False, default=0, help="Version of the taget model. Default: latest available")
 	parser.add_argument("--visualizer_port", required=False, help="Port of the inferece results visualizer webservice. "
 																  "If not specified, visualizer will not be launched")
+	parser.add_argument("--log_level", required=False, default="INFO", help="Logging level - available values: INFO, DEBUG, ERROR")
 
 	args = vars(parser.parse_args())
 	return args
@@ -49,17 +30,23 @@ def main():
 	ovms_url = config["ovms_url"]
 	model_name = config["model_name"]
 	model_version = config["model_version"]
+	log_level = config["log_level"]
+
+	LoggerConfig.set_log_level(log_level)
+
+	launch_http_visualizer = False
+	if visualizer_port:
+		launch_http_visualizer = True
 
 	stream_reader = StreamReader(stream_url)
 	inference_executor = InferenceExecutor(ovms_url, model_name, model_version)
-	postprocessor = Postprocessor(enable_visualization=False)
-	http_visualizer = None
-	if visualizer_port:
-		postprocessor = Postprocessor(enable_visualization=True)
-		http_visualizer = HttpVisualizer(visualizer_port, postprocessor)
+	io_processor = IOProcessor(PersonVehicleBikeDetection, launch_http_visualizer)
+	if launch_http_visualizer:
+		http_visualizer = HttpVisualizer(visualizer_port, io_processor)
+	else:
+		http_visualizer = None
 
-	postprocessor.add_postprocessing_routine("Pedestrian alert", my_custom_postprocessing)
-	stream_analyzer = StreamAnalyzer(stream_reader, inference_executor, postprocessor, http_visualizer)
+	stream_analyzer = StreamAnalyzer(stream_reader, inference_executor, io_processor, http_visualizer)
 	stream_analyzer.run()
 
 if __name__ == "__main__":
