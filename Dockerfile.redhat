@@ -30,7 +30,6 @@ ARG JOBS
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
-ARG OPENVINO_OPENCV_DOWNLOAD_SERVER=""
 ENV TF_SYSTEM_LIBS="curl"
 
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && yum update -d6 -y && yum install -d6 -y \
@@ -132,7 +131,7 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
     ln -s /opt/intel/l_openvino_toolkit_runtime_rhel8_p* /opt/intel/openvino
 
 # install opencv
-#
+ARG OPENVINO_OPENCV_DOWNLOAD_SERVER=""
 RUN cd /opt/intel/openvino/extras/scripts && ./download_opencv.sh
 
 # Build OpenVINO Model Server
