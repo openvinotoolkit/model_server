@@ -51,7 +51,7 @@ When creating a Python-based client application, there are two packages on PyPi 
         from tensorflow_serving.apis import model_service_pb2_grpc, get_model_status_pb2
         from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
 
-        channel = grpc.insecure_channel(„10.20.30.40:9000")
+        channel = grpc.insecure_channel("10.20.30.40:9000")
         model_service_stub = model_service_pb2_grpc.ModelServiceStub(channel)
 
         status_request = get_model_status_pb2.GetModelStatusRequest()
@@ -92,7 +92,7 @@ When creating a Python-based client application, there are two packages on PyPi 
         from tensorflow_serving.apis import prediction_service_pb2_grpc, get_model_metadata_pb2
         from tensorflow.core.framework.types_pb2 import DataType
 
-        channel = grpc.insecure_channel(„10.20.30.40:9000")
+        channel = grpc.insecure_channel("10.20.30.40:9000")
         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
         metadata_request = get_model_metadata_pb2.GetModelMetadataRequest()
@@ -156,7 +156,7 @@ When creating a Python-based client application, there are two packages on PyPi 
         from tensorflow_serving.apis import prediction_service_pb2_grpc, predict_pb2
         from tensorflow import make_tensor_proto, make_ndarray
 
-        channel = grpc.insecure_channel(„10.20.30.40:9000")
+        channel = grpc.insecure_channel("10.20.30.40:9000")
         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
         with open("img.jpeg", "rb") as f:
@@ -194,7 +194,7 @@ When creating a Python-based client application, there are two packages on PyPi 
         from tensorflow_serving.apis import prediction_service_pb2_grpc, predict_pb2
         from tensorflow import make_tensor_proto
 
-        channel = grpc.insecure_channel(„10.20.30.40:9000")
+        channel = grpc.insecure_channel("10.20.30.40:9000")
         prediction_service_stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
         data = np.array([1.0, 2.0, ..., 1000.0])
