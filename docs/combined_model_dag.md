@@ -1,7 +1,7 @@
-## DAG Scheduler combining results from two models
+## DAG Scheduler: Combine Results from Two Models {#ovms_docs_demo_combined_model_dag}
 
-This document presents a models ensemble as an example of [DAG Scheduler](dag_scheduler.md) implementation.
-It describes how to combine several models to perform multiple inference operations with a single prediction call.
+This document presents an example of a model ensemble using the [DAG Scheduler](dag_scheduler.md).
+It describes how to combine several models to perform multiple inference operations from a single prediction call.
 When you need to execute several predictions on the same data, you can create a pipeline, which combines the results from several models.
 
 ![diagram](combined_model_dag.png)
@@ -97,7 +97,7 @@ Get the sample image:
 ```
 wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/2021.4/models/intel/age-gender-recognition-retail-0013/assets/age-gender-recognition-retail-0001.jpg
 ```
-![image](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/age-gender-recognition-retail-0013/assets/age-gender-recognition-retail-0001.jpg)
+![image](age-gender-recognition-retail-0001.jpg)
 
 Use the following code snippet to submit a request via gRPC to the serving and display the response:
 
@@ -134,7 +134,7 @@ print("Gender results: Famale:", gender_results[0,0,0,0], "; Male:", gender_resu
 print("Emotion results: Natural:", emotion_results[0,0,0,0], "; Happy:", emotion_results[0,1,0,0], "; Sad:", emotion_results[0,2,0,0], "; Surprise:", emotion_results[0,3,0,0], "; Angry:", emotion_results[0,4,0,0] )
 ```
 
-Make sure there are installed python dependencies from [client_requirements.txt](../example_client/client_requirements.txt)
+Make sure there are installed python dependencies from [client_requirements.txt](https://github.com/openvinotoolkit/model_server/blob/main/example_client/client_requirements.txt)
 
 ```bash
 python combined_model_client.py

@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server Performance Information
+# Performance tuning {#ovms_docs_performance_tuning}
 
 ## Introduction
 
@@ -6,7 +6,7 @@ This document gives an overview of various parameters that can be configured to 
 
 ## Adjusting the number of Inference Engine streams in CPU and GPU target devices
 
-OpenVINO Model Server can be tuned to a single client use case or to a high concurrency. It is done via setting the number of
+OpenVINO Model Server can be tuned to a single client use case or a high concurrency. It is done via setting the number of
 execution streams. They split the available resources to perform parallel execution of multiple requests.
 It is particularly efficient for models which can not consume effectively all CPU cores or for CPUs with high number of cores.
 
@@ -17,6 +17,7 @@ If this default configuration is not suitable, adjust it with the parameter `CPU
 of the device plugin configuration. 
 
 In a scenario where the number of parallel connections is close to 1, set the following parameter:
+
 `--plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}'`
 
 When the number of concurrent requests is higher, increase the number of streams. Make sure, however, the number of
@@ -24,6 +25,7 @@ streams is lower then the average volume of concurrent inference operations. Oth
 Number of streams should not exceed the number of CPU cores.
 
 For example with ~50 clients sending the requests to the server with 48 cores, set the number of streams to 24:
+
 `--plugin_config '{"CPU_THROUGHPUT_STREAMS": "24"}'`
 
 
@@ -87,9 +89,9 @@ The default value is 1 second which ensures prompt response to creating new mode
 
 ## Plugin configuration
 
-Depending on the device employed to run the inference operation, you can tune the execution behaviour with a set of parameters.
-Each device is handled by its OpenVINO plugin.
-> **NOTE:** For additional information, read [supported configuration parameters for all plugins](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html).
+Depending on the device employed to run the inference operation, you can tune the execution behaviour with a set of parameters. Each device is handled by its OpenVINO plugin.
+
+> Note: For additional information, read [supported configuration parameters for all plugins](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html).
 
 Model's plugin configuration is a dictionary of param:value pairs passed to OpenVINO Plugin on network load. It can be set with `plugin_config` parameter. 
 

@@ -1,8 +1,7 @@
-# Processing frames from camera
+# Real-Time Horizontal Text Detection {#ovms_docs_demo_camera_example}
 
-## Horizontal text detection in real-time
-This demo presents a use case with a client written in python which captures camera frames and performs text spotting analysis via gRPC requests to OVMS. The client visualizes the results as a boxes depicted on the original image frames using OpenCV in real-time.
-The client can work efficiently also over slow internet connection with long latency thanks to image data compression and parallel execution for multiple frames.
+This demo uses a client written in Python to capture web camera frames and performs text spotting analysis via gRPC requests to OpenVINO Model Server. The client visualizes the results as bounding boxes overlaid on the original image frames using OpenCV.
+The client works efficiently, even over a slow network with high latency, thanks to image data compression and parallel execution for multiple frames.
 
 ![horizontal text detection](horizontal-text-detection.gif)
 
@@ -27,7 +26,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/horizontal-text-detection:/model -p
 ```
 
 ### Run the client
-In the context of [example_client](../example_client) directory, run the following commands.
+In the context of [example_client](https://github.com/openvinotoolkit/model_server/blob/main/example_client) directory, run the following commands.
 
 Install python libraries:
 ```bash

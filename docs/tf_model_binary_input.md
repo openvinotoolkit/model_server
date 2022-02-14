@@ -1,15 +1,15 @@
-# TensorFlow model conversion to IR with scaling for binary input
+# Convert TensorFlow Models for Serving {#ovms_docs_demo_tensorflow_conversion}
 
-This document guides how to convert TensorFlow model and deploy it with the OpenVINO&trade; Model Server. It also explains how to scale the input tensors and adjust to binary JPEG and PNG input data.
+This guide shows how to convert TensorFlow models and deploy them with the OpenVINO Model Server. It also explains how to scale the input tensors and adjust to use binary JPEG or PNG input data.
 
 - In this example TensorFlow model [ResNet](https://github.com/tensorflow/models/tree/v2.2.0/official/r1/resnet) will be used.
 
-- TensorFlow model can be converted into Intermediate Representation format using model_optimizer tool. There are several formats for storing TensorFlow model. In this guide we present conversion from SavedModel format. More information about conversion process can be found on the [model optimizer documentation](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_Convert_Model_From_TensorFlow.html#savedmodel_format).
+- TensorFlow model can be converted into Intermediate Representation format using model_optimizer tool. There are several formats for storing TensorFlow model. In this guide, we present conversion from SavedModel format. More information about conversion process can be found on the [model optimizer documentation](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_Convert_Model_From_TensorFlow.html#savedmodel_format).
 
 - Binary input format has several requirements for the model and ovms configuration. More information can be found in [binary inputs documentation](binary_input.md).
 ## Steps
 
-### Prepering the Model
+### Preparing the Model
 
 Download the model
 ```Bash
@@ -20,7 +20,7 @@ tar -xvzf resnet_v2_fp32_savedmodel_NHWC.tar.gz
 mv resnet_v2_fp32_savedmodel_NHWC/1538687283/ resnet_v2
 rmdir resnet_v2_fp32_savedmodel_NHWC/
 ```
-*Note:* Directories operations are not neccessery for the prepartion, but in this guide in order to keep the commands as simple as possible the directories are simplified.
+*Note:* Directories operations are not necessary for the preparation, but in this guide the directories are simplified.
 
 Pull the latest openvino ubuntu_dev image from dockerhub
 ```Bash
@@ -34,7 +34,7 @@ docker run -u $(id -u):$(id -g) -v ${PWD}/resnet_v2/:/resnet openvino/ubuntu18_d
 
 *Note:* Some models might require other parameters such as `--scale` parameter.
 - `--reverse_input_channels` - required for models that are trained with images in RGB order.
-- `--mean_values` , `--scale` - should be provided if input pre-processing operations are not a part of a topology- and the pre-processing relies on the application providing an input data. They can be determined in several ways described in [conversion parameters guide](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_Converting_Model_General.html). In this example [model pre-processing script](https://github.com/tensorflow/models/blob/v2.2.0/official/r1/resnet/imagenet_preprocessing.py) was used to determine them.
+- `--mean_values` , `--scale` - should be provided if input pre-processing operations are not a part of topology- and the pre-processing relies on the application providing input data. They can be determined in several ways described in [conversion parameters guide](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_Converting_Model_General.html). In this example [model pre-processing script](https://github.com/tensorflow/models/blob/v2.2.0/official/r1/resnet/imagenet_preprocessing.py) was used to determine them.
 
 
 *Note:* You can find out more about [TensorFlow Model conversion into Intermediate Representation](https://docs.openvinotoolkit.org/latest/openvino_docs_MO_DG_prepare_model_convert_model_Convert_Model_From_TensorFlow.html) if your model is stored in other formats.

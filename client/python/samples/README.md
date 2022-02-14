@@ -1,6 +1,6 @@
-# OpenVINO&trade; Model Server Client Library Example Clients
+# OpenVINO&trade; Model Server Client Library Samples {#ovms_client_python_samples_readme}
 
-This document contains examples to run *GetModelStatus*, *GetModelMetadata*, *Predict* functions over gRPC API.
+This document contains examples of how to run *GetModelStatus*, *GetModelMetadata*, *Predict* functions via the gRPC API.
 
 It covers following topics:
 - <a href="#grpc-api">gRPC API Example Clients </a>

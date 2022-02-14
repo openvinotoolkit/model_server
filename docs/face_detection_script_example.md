@@ -1,9 +1,9 @@
-# Example of Face Detection with OpenVINO&trade; Model Server<a name="facedetection"></a>
+# Face Detection {#ovms_docs_demo_face_detection}
 
-This page guides you through an example script to run face detection inference with OpenVINO&trade; Model Server.
+This guide includes an example script to run face detection inference with OpenVINO&trade; Model Server.
 
 
-- The script [face_detection.py](../example_client/face_detection.py) runs face detection inference requests for all the images
+- The script [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/face_detection.py) runs face detection inference requests for all the images
 saved in `image_input_dir` directory. 
 
 - The script can adjust the input image size and change the batch size in the request. It demonstrates how to use
@@ -66,17 +66,17 @@ python face_detection.py --batch_size 4 --width 600 --height 400 --input_images_
 
 - The script will visualize the inference results on the images saved in the directory `output_dir`. Saved images have the following naming convention:
 
-<#iteration>_<#image_in_batch>.jpeg
+`<#iteration>_<#image_in_batch>.jpeg`
 
 # Running Person-Vehicle-Detection with Example Script<a name="persondetection"></a>
 
-The Face Detection Example script can be a reference script to run various other Detection models. Run through the following steps to use Person-Vehicle OpenVINO&trade; Model with OpenVINO&trade; Model Server
+The Face Detection Example script can be a reference script to run various other Detection models. Run through the following steps to use Person-Vehicle OpenVINO&trade; Model with OpenVINO&trade; Model Server.
 
 
 ### Download the model from OpenVINO&trade; Model Zoo.
 
-- A variety of OpenVINO&trade; Models in IR format are present in OpenVINO&trade; Model Zoo. You can also convert your own model to IR format (.xml and .bin format). 
-- Refer to [Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer)  to convert your own model.
+- A variety of OpenVINO&trade; Models in IR format are present in OpenVINO&trade; Model Zoo. You can also convert your model to IR format (.xml and .bin format). 
+- Refer to [Model Optimizer](https://software.intel.com/en-us/articles/OpenVINO-ModelOptimizer)  to convert your model.
 
 Create a **model** folder and download Person-Vehicle-Detection Model:
 
@@ -87,13 +87,13 @@ curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/op
 
 ### Prepare Model Repository
 
-Refer to [Preparation of Models](./models_repository.md) to place your downloaded or converted models in a repository to mount it to the OpenVINO&trade; Model Server.
+Refer to [Preparation of Models](./models_repository.md) to place your downloaded or converted models in a repository to mount them to the OpenVINO&trade; Model Server.
 
 ### Run the OpenVINO&trade; Model Server Docker Container
 
-Run the OpenVINO&trade; Model Server with the downloaded models. Adjust the shape and batch_size parameter according to the requirement of model. Refer [this guide](./shape_batch_size_and_layout.md) to know more about the parameters.
+Run the OpenVINO&trade; Model Server with the downloaded models. Adjust the shape and batch_size parameter according to the requirement of the model. Refer [this guide](shape_batch_size_and_layout.md) to know more about the parameters.
 
-- Run following command on your terminal
+- Run the following command on your terminal
 
 ```bash
 
@@ -107,12 +107,12 @@ Check if the container is running with :
 ```bash
 docker ps
 ```
-If the container is not running , check out the [troubleshooting guide](./troubleshooting.md)
+If the container is not running, check out the [troubleshooting guide](troubleshooting.md)
 
 
 ### Run the example script
 
-Run the face detection example script - [FaceDetection.py](../example_client/face_detection.py). Make changes to the input shape as required by the model you are running. Refer to the API reference Guide to obtain the input and output shape of the model - [gRPC reference guide](./model_server_grpc_api.md) and [REST API reference guide ](./model_server_rest_api.md).
+Run the face detection example script - [FaceDetection.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/face_detection.py). Make changes to the input shape as required by the model you are running. Refer to the API reference Guide to obtain the input and output shape of the model - [gRPC reference guide](./model_server_grpc_api.md) and [REST API reference guide ](./model_server_rest_api.md).
 
 Run the example script in terminal :
 
@@ -123,6 +123,6 @@ Run the example script in terminal :
 
 ### Output of the Script
 
-- The image with inference is stored in results folder. The inference bounding boxes are drawn around people and vehicles present in the image 
+- The image with inference is stored in the results folder. The inference bounding boxes are drawn around people and vehicles present in the image 
 
 ![image](person-detection_3_0.jpg)
