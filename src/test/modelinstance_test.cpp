@@ -239,7 +239,7 @@ TEST_F(TestLoadModel, LoadModelWithRTMapParameterInputLayoutIncompatible) {
     auto outputRtMap = ov::RTMap();
     MockModelInstanceWithRTMap mockModelInstance(*ieCore, inputRtMap, outputRtMap);
     auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
-    ASSERT_EQ(status, ovms::StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE) << status.string();
+    ASSERT_EQ(status, ovms::StatusCode::MODEL_NOT_LOADED) << status.string();
 }
 
 TEST_F(TestLoadModel, LoadModelWithRTMapParameterOutputLayoutIncompatible) {
@@ -247,7 +247,7 @@ TEST_F(TestLoadModel, LoadModelWithRTMapParameterOutputLayoutIncompatible) {
     auto outputRtMap = ov::RTMap({{"param", ov::LayoutAttribute(ov::Layout("NCHW"))}});
     MockModelInstanceWithRTMap mockModelInstance(*ieCore, inputRtMap, outputRtMap);
     auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
-    ASSERT_EQ(status, ovms::StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE) << status.string();
+    ASSERT_EQ(status, ovms::StatusCode::MODEL_NOT_LOADED) << status.string();
 }
 
 class MockModelInstanceThrowingFileNotFoundForLoadingCNN : public ovms::ModelInstance {
@@ -385,7 +385,7 @@ TEST_F(TestLoadModel, UnSuccessfulLoadWhenInputLayoutIncompatible) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     auto config = DUMMY_MODEL_CONFIG;
     config.parseLayoutParameter("{\"b\":\"nchw\"}");
-    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE);
+    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::MODEL_NOT_LOADED);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
 }
 
@@ -393,7 +393,7 @@ TEST_F(TestLoadModel, UnSuccessfulLoadWhenOutputLayoutIncompatible) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     auto config = DUMMY_MODEL_CONFIG;
     config.parseLayoutParameter("{\"a\":\"nchw\"}");
-    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE);
+    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::MODEL_NOT_LOADED);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
 }
 
