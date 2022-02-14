@@ -141,7 +141,7 @@ docker run -p 9000:9000 -d -v ${PWD}/OCR:/OCR openvino/model_server --config_pat
 
 ## Requesting the Service
 
-Exemplary client [easr_orc_client.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/east_ocr_client.py) can be used to request pipeline deployed in previous step.
+Exemplary client [east_orc_client.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/east_ocr_client.py) can be used to request pipeline deployed in previous step.
 
 From the context of [example_client](https://github.com/openvinotoolkit/model_server/blob/main/example_client) folder install python3 requirements:
 ```bash

@@ -39,7 +39,7 @@ docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/mode
 --model_path /opt/model --model_name my_model --port 9001 --target_device HDDL
 ```
 
-Check out our recommendations for [throughput optimization on HDDL](performance_tuning.md#hddl-accelerators).
+Check out our recommendations for [throughput optimization on HDDL](performance_tuning.md).
 
 >NOTE: 
 > the OpenVINO Model Server process within the container communicates with _hddldaemon_ via unix sockets in the `/var/tmp` folder. 
