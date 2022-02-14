@@ -18,10 +18,8 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto
 from tensorflow_serving.apis import get_model_status_pb2, get_model_metadata_pb2, predict_pb2
 
 from ovmsclient.tfs_compat.base.requests import (PredictRequest, ModelMetadataRequest,
-                                                 ModelStatusRequest)
+                                                 ModelStatusRequest, _check_model_spec)
 from ovmsclient.tfs_compat.grpc.tensors import make_tensor_proto
-
-from ovmsclient.util.ovmsclient_export import ovmsclient_export
 
 
 class GrpcPredictRequest(PredictRequest):
@@ -43,7 +41,6 @@ class GrpcModelStatusRequest(ModelStatusRequest):
         self.raw_request = raw_request
 
 
-@ovmsclient_export("make_grpc_predict_request", grpcclient="make_predict_request")
 def make_predict_request(inputs, model_name, model_version=0):
     '''
     Create GrpcPredictRequest object.
@@ -121,7 +118,7 @@ def make_predict_request(inputs, model_name, model_version=0):
 
     for input_name, input_data in inputs.items():
         if not isinstance(input_name, str):
-            raise TypeError(f'inputs keys should be type str, but found '
+            raise TypeError(f'inputs keys type should be str, but found '
                             f'{type(input_name).__name__}')
         if isinstance(input_data, TensorProto):
             request.inputs[input_name].CopyFrom(input_data)
@@ -131,7 +128,6 @@ def make_predict_request(inputs, model_name, model_version=0):
     return GrpcPredictRequest(inputs, model_name, model_version, request)
 
 
-@ovmsclient_export("make_grpc_metadata_request", grpcclient="make_metadata_request")
 def make_metadata_request(model_name, model_version=0):
     '''
     Create GrpcModelMetadataRequest object.
@@ -167,7 +163,6 @@ def make_metadata_request(model_name, model_version=0):
     return GrpcModelMetadataRequest(model_name, model_version, request)
 
 
-@ovmsclient_export("make_grpc_status_request", grpcclient="make_status_request")
 def make_status_request(model_name, model_version=0):
     '''
     Create GrpcModelStatusRequest object.
@@ -200,15 +195,3 @@ def make_status_request(model_name, model_version=0):
     request.model_spec.name = model_name
     request.model_spec.version.value = model_version
     return GrpcModelStatusRequest(model_name, model_version, request)
-
-
-def _check_model_spec(model_name, model_version):
-
-    if not isinstance(model_name, str):
-        raise TypeError(f'model_name type should be string, but is {type(model_name).__name__}')
-
-    if not isinstance(model_version, int):
-        raise TypeError(f'model_version type should be int, but is {type(model_version).__name__}')
-
-    if model_version.bit_length() > 63 or model_version < 0:
-        raise ValueError(f'model_version should be in range <0, {2**63-1}>')

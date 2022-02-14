@@ -22,6 +22,23 @@ class PredictResponse(ABC):
     def __init__(self, raw_response):
         self.raw_response = raw_response
 
+    @abstractmethod
+    def to_dict(self):
+        '''
+        Return predict response in dictionary format:
+
+        .. code-block::
+
+        {
+            ...
+            <output_name>: <output_data>,
+            ...
+        }
+
+        '''
+
+        pass
+
 
 class ModelMetadataResponse(ABC):
 
@@ -36,24 +53,21 @@ class ModelMetadataResponse(ABC):
         .. code-block::
 
             {
-                ...
-                <version_number>: {
-                    "inputs": {
-                        <input_name>: {
-                            "shape": <input_shape>,
-                            "dtype": <input_dtype>,
-                        },
-                            ...
+                "model_version": <version_number>,
+                "inputs": {
+                    <input_name>: {
+                        "shape": <input_shape>,
+                        "dtype": <input_dtype>,
                     },
-                    "outputs":
-                        <output_name>: {
-                            "shape": <output_shape>,
-                            "dtype": <output_dtype>,
-                        },
-                            ...
-                    }
+                    ...
                 },
-                ...
+                "outputs":
+                    <output_name>: {
+                        "shape": <output_shape>,
+                        "dtype": <output_dtype>,
+                    },
+                    ...
+                }
             }
 
         '''

@@ -34,29 +34,32 @@ class BuildApis(Command):
         ...
 
     def build_tfs_api(self):
-        subprocess.run(["sh", "./scripts/build_tfs_api.sh"])
+        subprocess.run(["sh", "./scripts/build_tfs_api.sh"], check=True)
     
     def build_ovmsclient_api(self):
-        subprocess.run(["sh", "./scripts/build_ovmsclient_api.sh"])
+        subprocess.run(["sh", "./scripts/build_ovmsclient_api.sh"], check=True)
 
     def run(self):
         self.build_tfs_api()
 
 
+from pathlib import Path
+this_directory = Path(__file__).parent
+long_description = (this_directory / "docs/pypi_overview.md").read_text()
+
 setuptools.setup(
-     name='ovmsclient',  
-     version='0.1',
-     scripts=[] ,
-     author="Intel",
+     name='ovmsclient',
+     version='0.2',
+     license='Apache License 2.0',
+     author="Intel Corporation",
      author_email="ovms.engineering@intel.com",
-     description="OVMS client library",
-     long_description="Python library for simplified interaction with OpenVINO Model Server",
+     description="Python client for OpenVINO Model Server",
+     long_description=long_description,
      long_description_content_type="text/markdown",
      url="https://github.com/openvinotoolkit/model_server/tree/main/client/python/lib",
      cmdclass={
         "build_apis": BuildApis,
     },
      packages=setuptools.find_namespace_packages(include=["ovmsclient*", "tensorflow*", "tensorflow_serving*"]),
-     install_requires=["grpcio>=1.21", "protobuf>=3.8", "numpy>=1.16.4", "validators>=0.18.2"],
+     install_requires=["grpcio>=1.21", "protobuf>=3.8", "numpy>=1.16.4", "validators>=0.18.2", "requests >= 2.26.0"],
  )
-
