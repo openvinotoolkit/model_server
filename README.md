@@ -114,12 +114,4 @@ If you have a question, a feature request, or a bug report, feel free to submit 
 ---
 \* Other names and brands may be claimed as the property of others.
 
-@sphinxdirective
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-   model_server_docs_architecture
-   
-@endsphinxdirective
 
