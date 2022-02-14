@@ -151,12 +151,14 @@ TEST_F(BinaryUtilsTest, positive_batch_size_2) {
     ov::Tensor tensor;
     stringVal.add_string_val(image_bytes.get(), filesize);
 
-    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{2, 1, 1, 3}, Layout{"NHWC"});
+    for (const auto layout : std::vector<Layout>{Layout("NHWC"), Layout::getDefaultLayout()}) {
+        std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{2, 1, 1, 3}, layout);
 
-    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo), ovms::StatusCode::OK);
-    ASSERT_EQ(tensor.get_size(), 6);
-    uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
-    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_batchsize_2_tensor), true);
+        ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo), ovms::StatusCode::OK);
+        ASSERT_EQ(tensor.get_size(), 6);
+        uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
+        EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_batchsize_2_tensor), true);
+    }
 }
 
 TEST_F(BinaryUtilsTest, positive_precision_changed) {
@@ -185,6 +187,12 @@ TEST_F(BinaryUtilsTest, positive_nhwc_layout) {
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
 
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
+}
+
+TEST_F(BinaryUtilsTest, layout_default_resolution_mismatch) {
+    ov::Tensor tensor;
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 3, 1, 3}, Layout::getDefaultLayout());
+    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo), ovms::StatusCode::INVALID_SHAPE);
 }
 
 TEST_F(BinaryUtilsTest, positive_resizing) {
@@ -338,18 +346,26 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_any_shape) {
     EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
 }
 
-TEST_F(BinaryUtilsTest, positive_resizing_with_one_any_one_static_shape) {
+TEST_F(BinaryUtilsTest, negative_resizing_with_one_any_one_static_shape) {
     ov::Tensor tensor;
 
     std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, ovms::Dimension::any(), 4, 3}, Layout{"NHWC"});
+
+    ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo), ovms::StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(BinaryUtilsTest, positive_resizing_with_one_any_one_static_shape) {
+    ov::Tensor tensor;
+
+    std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, ovms::Dimension::any(), 1, 3}, Layout{"NHWC"});
 
     ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo), ovms::StatusCode::OK);
     shape_t tensorDims = tensor.get_shape();
     size_t expectedRowsNumber = 1;
     EXPECT_EQ(tensorDims[1], expectedRowsNumber);
-    size_t expectedColsNumber = 4;
+    size_t expectedColsNumber = 1;
     EXPECT_EQ(tensorDims[2], expectedColsNumber);
-    ASSERT_EQ(tensor.get_size(), 12);
+    ASSERT_EQ(tensor.get_size(), 3);
 }
 
 TEST_F(BinaryUtilsTest, positive_resizing_with_demultiplexer_and_range_resolution) {

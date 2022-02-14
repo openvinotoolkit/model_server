@@ -72,7 +72,7 @@ cv::Mat convertStringValToMat(const std::string& stringVal) {
     try {
         return cv::imdecode(dataMat, cv::IMREAD_UNCHANGED);
     } catch (const cv::Exception& e) {
-        SPDLOG_ERROR("Error during string_val to mat conversion: {}", e.what());
+        SPDLOG_DEBUG("Error during string_val to mat conversion: {}", e.what());
         return cv::Mat{};
     }
 }
@@ -91,7 +91,7 @@ Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision 
 Status validateLayout(const std::shared_ptr<TensorInfo>& tensorInfo) {
     static const std::string binarySupportedLayout = "N...HWC";
     if (!tensorInfo->getLayout().createIntersection(Layout(binarySupportedLayout), tensorInfo->getShape().size()).has_value()) {
-        SPDLOG_ERROR("Endpoint needs to be compatible with {} to support binary image inputs, actual: {}",
+        SPDLOG_DEBUG("Endpoint needs to be compatible with {} to support binary image inputs, actual: {}",
             binarySupportedLayout,
             tensorInfo->getLayout());
         return StatusCode::UNSUPPORTED_LAYOUT;
@@ -141,6 +141,15 @@ Status validateNumberOfChannels(const std::shared_ptr<TensorInfo>& tensorInfo,
     return StatusCode::OK;
 }
 
+Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* firstBatchImage) {
+    if (input.cols == firstBatchImage->cols && input.rows == firstBatchImage->rows) {
+        return StatusCode::OK;
+    }
+    SPDLOG_DEBUG("Each binary image in request needs to have resolution matched. First cols: {}, rows: {}, current cols: {}, rows: {}",
+        firstBatchImage->cols, firstBatchImage->rows, input.cols, input.rows);
+    return StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH;
+}
+
 bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     const int batchSize) {
     if (!tensorInfo->getBatchSize().has_value()) {
@@ -149,10 +158,18 @@ bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     return !tensorInfo->getBatchSize().value().match(batchSize);
 }
 
-Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage) {
+Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage, bool enforceResolutionAlignment) {
     // Binary inputs are supported for any endpoint that is compatible with N...HWC layout.
     // With unknown layout, there is no way to deduce expected endpoint input resolution.
     // This forces binary utility to create tensors with resolution inherited from first batch of binary input image (request).
+    // In case of any dimension in endpoint shape is dynamic, we need to validate images against first image resolution.
+    // Otherwise we can omit that, and proceed to image resize.
+    if (firstBatchImage && enforceResolutionAlignment) {
+        auto status = validateResolutionAgainstFirstBatchImage(input, firstBatchImage);
+        if (!status.ok()) {
+            return status;
+        }
+    }
     return validateNumberOfChannels(tensorInfo, input, firstBatchImage);
 }
 
@@ -204,7 +221,7 @@ Dimension getTensorInfoWidthDim(const std::shared_ptr<TensorInfo>& tensorInfo) {
     return tensorInfo->getShape()[position];
 }
 
-void updateAlignmentResolution(Dimension& height, Dimension& width, const cv::Mat& image) {
+void updateTargetResolution(Dimension& height, Dimension& width, const cv::Mat& image) {
     if (height.isAny()) {
         height = image.rows;
     } else if (height.isDynamic()) {
@@ -233,22 +250,43 @@ void updateAlignmentResolution(Dimension& height, Dimension& width, const cv::Ma
     }
 }
 
+bool isResizeSupported(const std::shared_ptr<TensorInfo>& tensorInfo) {
+    for (const auto& dim : tensorInfo->getShape()) {
+        if (dim.isAny()) {
+            return false;
+        }
+    }
+    if (tensorInfo->getLayout() != "NHWC" &&
+        tensorInfo->getLayout() != "N?HWC" &&
+        tensorInfo->getLayout() != Layout::getUnspecifiedLayout()) {
+        return false;
+    }
+    return true;
+}
+
 Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
-    Dimension tensorInfoHeightDim = getTensorInfoHeightDim(tensorInfo);
-    Dimension tensorInfoWidthDim = getTensorInfoWidthDim(tensorInfo);
+    Dimension targetHeight = getTensorInfoHeightDim(tensorInfo);
+    Dimension targetWidth = getTensorInfoWidthDim(tensorInfo);
+
+    // Enforce resolution alignment against first image in the batch if resize is not supported.
+    bool resizeSupported = isResizeSupported(tensorInfo);
+    bool enforceResolutionAlignment = !resizeSupported;
 
     for (int i = 0; i < src.string_val_size(); i++) {
         cv::Mat image = convertStringValToMat(src.string_val(i));
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
 
-        updateAlignmentResolution(tensorInfoHeightDim, tensorInfoWidthDim, image);
-
         cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
-        auto status = validateInput(tensorInfo, image, firstImage);
+        auto status = validateInput(tensorInfo, image, firstImage, enforceResolutionAlignment);
         if (status != StatusCode::OK) {
             return status;
         }
+
+        if (i == 0) {
+            updateTargetResolution(targetHeight, targetWidth, image);
+        }
+
         if (!isPrecisionEqual(image.depth(), tensorInfo->getPrecision())) {
             cv::Mat imageCorrectPrecision;
             status = convertPrecision(image, imageCorrectPrecision, tensorInfo->getPrecision());
@@ -258,9 +296,12 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
             }
             image = std::move(imageCorrectPrecision);
         }
-        if (resizeNeeded(image, tensorInfoHeightDim, tensorInfoWidthDim)) {
+        if (resizeNeeded(image, targetHeight, targetWidth)) {
+            if (!resizeSupported) {
+                return StatusCode::INVALID_SHAPE;
+            }
             cv::Mat imageResized;
-            status = resizeMat(image, imageResized, tensorInfoHeightDim, tensorInfoWidthDim);
+            status = resizeMat(image, imageResized, targetHeight, targetWidth);
             if (!status.ok()) {
                 return status;
             }

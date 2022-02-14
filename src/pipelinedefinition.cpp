@@ -1072,7 +1072,7 @@ Status updateInputsInfoWithNodeConnection(tensor_map_t& inputsInfo, const Tensor
             auto intersectionTensorInfo = it->second->createIntersection(*newTensorInfo);
             if (intersectionTensorInfo == nullptr) {
                 Status status = StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA;
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error validating pipeline: {}; {}; {}",
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error validating pipeline: {};\n{}\n{}",
                     status.string(),
                     it->second->asString(),
                     newTensorInfo->asString());
