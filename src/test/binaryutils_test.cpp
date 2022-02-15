@@ -394,6 +394,32 @@ TEST_F(BinaryUtilsTest, positive_resizing_with_demultiplexer_and_range_resolutio
     ASSERT_EQ(tensor.get_size(), batchSize * 1 * 3 * 3 * 3);
 }
 
+TEST_F(BinaryUtilsTest, positive_range_resolution_matching_in_between) {
+    ov::Tensor tensor;
+
+    const int batchSize = 5;
+    for (const auto& batchDim : std::vector<Dimension>{Dimension::any(), Dimension(batchSize)}) {
+        std::shared_ptr<TensorInfo> tensorInfo = std::make_shared<TensorInfo>("", ovms::Precision::U8, ovms::Shape{batchDim, {1, 5}, {1, 5}, 3}, Layout{"NHWC"});
+
+        stringVal.Clear();
+        read4x4RgbJpg(filesize, image_bytes);
+
+        stringVal.set_dtype(tensorflow::DataType::DT_STRING);
+        for (int i = 0; i < batchSize; i++) {
+            stringVal.add_string_val(image_bytes.get(), filesize);
+        }
+        stringVal.mutable_tensor_shape()->add_dim()->set_size(batchSize);
+
+        ASSERT_EQ(convertStringValToTensor(stringVal, tensor, tensorInfo), ovms::StatusCode::OK);
+        shape_t tensorDims = tensor.get_shape();
+        ASSERT_EQ(tensorDims[0], batchSize);
+        EXPECT_EQ(tensorDims[1], 4);
+        EXPECT_EQ(tensorDims[2], 4);
+        EXPECT_EQ(tensorDims[3], 3);
+        ASSERT_EQ(tensor.get_size(), batchSize * 4 * 4 * 3);
+    }
+}
+
 class BinaryUtilsPrecisionTest : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     void SetUp() override {

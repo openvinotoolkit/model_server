@@ -99,15 +99,15 @@ Status validateLayout(const std::shared_ptr<TensorInfo>& tensorInfo) {
     return StatusCode::OK;
 }
 
-bool resizeNeeded(const cv::Mat& image, const Dimension& height, const Dimension& width) {
+bool resizeNeeded(const cv::Mat& image, const dimension_value_t height, const dimension_value_t width) {
     if (height != image.rows || width != image.cols) {
         return true;
     }
     return false;
 }
 
-Status resizeMat(const cv::Mat& src, cv::Mat& dst, const Dimension& height, const Dimension& width) {
-    cv::resize(src, dst, cv::Size(width.getStaticValue(), height.getStaticValue()));
+Status resizeMat(const cv::Mat& src, cv::Mat& dst, const dimension_value_t height, const dimension_value_t width) {
+    cv::resize(src, dst, cv::Size(width, height));
     return StatusCode::OK;
 }
 
@@ -296,12 +296,15 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
             }
             image = std::move(imageCorrectPrecision);
         }
-        if (resizeNeeded(image, targetHeight, targetWidth)) {
+        if (!targetHeight.isStatic() || !targetWidth.isStatic()) {
+            return StatusCode::INTERNAL_ERROR;
+        }
+        if (resizeNeeded(image, targetHeight.getStaticValue(), targetWidth.getStaticValue())) {
             if (!resizeSupported) {
                 return StatusCode::INVALID_SHAPE;
             }
             cv::Mat imageResized;
-            status = resizeMat(image, imageResized, targetHeight, targetWidth);
+            status = resizeMat(image, imageResized, targetHeight.getStaticValue(), targetWidth.getStaticValue());
             if (!status.ok()) {
                 return status;
             }

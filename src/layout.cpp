@@ -127,6 +127,8 @@ std::optional<Layout> Layout::createIntersection(const Layout& other, size_t num
     for (size_t i = 0; i < lhs.size(); i++) {
         if (lhs[i] == rhs[i])
             continue;
+        if (rhs[i] != UNDEFINED_DIMENSION_CHAR && lhs.find(rhs[i]) != std::string::npos)
+            return std::nullopt;
         if (lhs[i] == UNDEFINED_DIMENSION_CHAR) {
             lhs[i] = rhs[i];
             continue;
