@@ -82,9 +82,7 @@ TEST(Layout, CreateIntersectionNegative) {
     EXPECT_EQ(Layout("NCHWD").createIntersection(Layout("NCHW"), 5), std::nullopt);
     EXPECT_EQ(Layout("NCHW").createIntersection(Layout("NCHWD"), 5), std::nullopt);
     EXPECT_EQ(Layout("N...C").createIntersection(Layout("N...W"), 4), std::nullopt);
-    std::cout << Layout("NC??...").createIntersection(Layout("...C"), 5)->c_str() << std::endl;
     EXPECT_EQ(Layout("NC??...").createIntersection(Layout("...C"), 5), std::nullopt);
-    std::cout << Layout("...N").createIntersection(Layout("N..."), 2)->c_str() << std::endl;
     EXPECT_EQ(Layout("...N").createIntersection(Layout("N..."), 2), std::nullopt);
     EXPECT_EQ(Layout("...N").createIntersection(Layout("N..."), 10), std::nullopt);
     EXPECT_EQ(Layout("...N").createIntersection(Layout("...N?"), 4), std::nullopt);
