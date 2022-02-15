@@ -21,7 +21,7 @@ is out of range it will be adjusted to the nearer border. For example, when mode
 
 In order to use binary input functionality, model or pipeline input layout needs to be compatible with `N...HWC` and have 4 (or 5 in case of demultiplexing) shape dimensions. It means that input layout needs to resemble `NHWC` layout, e.g. default `N...` will work. On the other hand, binary image input is not supported for inputs with `NCHW` layout. 
 
-To fully utilize binary input utility, automatic image size alignment can be enforced when:
+To fully utilize binary input utility, automatic image size alignment will be done by OVMS when:
 - input shape does not include dynamic dimension value (`-1`)
 - input layout is configured to be either `...` (custom nodes) and `NHWC` or `N?HWC` (or `N?HWC`, when modified by a [demultiplexer](demultiplexing.md))
 
