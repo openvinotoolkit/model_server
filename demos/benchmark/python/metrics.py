@@ -67,6 +67,7 @@ class XMetrics(dict):
         self.calc_mean(other, f"{prefix}mean_latency")
         self.calc_max(other, f"{prefix}pass_max_latency")
         self.calc_max(other, f"{prefix}fail_max_latency")
+        self.calc_max(other, f"{prefix}first_latency")
 
         self.calc_min(other, f"{prefix}start_timestamp")
         self.calc_max(other, f"{prefix}stop_timestamp")
@@ -196,6 +197,7 @@ class XSeries:
         if hist_base is not None:
             self.hist_base = float(hist_base)
         else: self.hist_base = None
+        self.latency_first = 0
 
         self.pass_counter = 0
         self.fail_counter = 0
@@ -231,6 +233,8 @@ class XSeries:
         self.latency_sum2 += float(lat) ** 2
         self.xcounter += int(bs)
         self.counter += 1
+        if self.latency_first == 0 and status:
+            self.latency_first = lat
 
         if status:
             if self.pass_latency_max < lat:
@@ -274,6 +278,9 @@ class XSeries:
         stats[f"{prefix}pass_frames"] = self.pass_xcounter
         stats[f"{prefix}fail_frames"] = self.fail_xcounter
 
+        if self.latency_first > 0:
+            stats[f"{prefix}first_latency"] = self.latency_first
+        else: stats[f"{prefix}first_latency"] = math.inf
         stats[f"{prefix}pass_max_latency"] = self.pass_latency_max
         stats[f"{prefix}fail_max_latency"] = self.fail_latency_max
         if duration > 0.0:

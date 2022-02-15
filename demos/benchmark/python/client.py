@@ -31,7 +31,10 @@ import grpc
 import numpy
 import tensorflow
 from retry.api import retry_call
-from ovms_benchmark_client.metrics import XSeries
+try:
+    from ovms_benchmark_client.metrics import XSeries
+except ModuleNotFoundError:
+    from metrics import XSeries
 
 
 class BaseClient(metaclass=abc.ABCMeta):
@@ -95,8 +98,8 @@ class BaseClient(metaclass=abc.ABCMeta):
     ############################# End Of Abstract #############################
     ###########################################################################
 
-    def print_info(self, info):
-        if self.printall:
+    def print_info(self, info, force=False):
+        if self.printall or force:
             sys.stdout.write(f"XI {self.worker_id}: {info}\n")
 
     def print_warning(self, info):
@@ -233,14 +236,18 @@ class BaseClient(metaclass=abc.ABCMeta):
                 self.set_random_range(0, 255)
                 self.print_warning("Forced random range (0, 255) for methods png-random / png-urandom / png")
                 self.generate_png_urandom_data(input_name, dataset_length)
-            elif method_name in ("png5-random", "png5-urandom", "png5"):
+            elif method_name in ("png4-random", "png4-urandom", "png4"):
                 self.set_random_range(0, 255)
-                self.print_warning("Forced random range (0, 255) for methods png5-random / png5-urandom / png5")
-                self.generate_png_urandom_data(input_name, dataset_length, 5)
+                self.print_warning("Forced random range (0, 255) for methods png5-random / png5-urandom / png4")
+                self.generate_png_urandom_data(input_name, dataset_length, 4)
             elif method_name in ("png8-random", "png8-urandom", "png8"):
                 self.set_random_range(0, 255)
                 self.print_warning("Forced random range (0, 255) for methods png8-random / png8-urandom / png8")
                 self.generate_png_urandom_data(input_name, dataset_length, 8)
+            elif method_name in ("png16-random", "png16-urandom", "png16"):
+                self.set_random_range(0, 255)
+                self.print_warning("Forced random range (0, 255) for methods png16-random / png16-urandom / png16")
+                self.generate_png_urandom_data(input_name, dataset_length, 16)
             elif method_name in ("vehicle-jpeg", "vehicle-jpg"):
                 self.load_vehicle_jpeg_data(input_name, dataset_length)
             else: raise ValueError(f"unknown method: {method_name}")
@@ -272,17 +279,18 @@ class BaseClient(metaclass=abc.ABCMeta):
         return self.dataset_length
 
     def __fix_shape_and_type(self, input_name):
-        shape = self.inputs[input_name]["shape"]
-        if self.forced_shape is not None:
-            assert int(self.forced_shape[0]) in (-1, 0)
-            shape = [int(dim) for dim in self.forced_shape]
+        if input_name in self.forced_shape:
+            shape = self.forced_shape[input_name]
+        elif None in self.forced_shape and self.forced_shape[None]:
+            shape = self.forced_shape[None]
+        else: shape = self.inputs[input_name]["shape"]
+
         dtype = self.inputs[input_name]["dtype"]
         if dtype == self.DTYPE_FLOAT_32:
             dtype = tensorflow.dtypes.float32
         elif dtype == self.DTYPE_INT_32:
             dtype = tensorflow.dtypes.int32
-        else:
-            raise ValueError(f"not supported type: {dtype}")
+        else: raise ValueError(f"not supported type: {dtype}")
         return shape, dtype
 
     def __rand_single_png(self, width, height, radius):

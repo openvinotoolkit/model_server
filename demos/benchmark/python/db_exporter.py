@@ -19,6 +19,7 @@ import datetime
 import pymongo
 import uuid
 
+
 class DBExporter(dict):
     data_format = "%d-%b-%Y %H:%M:%S"
 
@@ -32,21 +33,13 @@ class DBExporter(dict):
         self.exec_date = datetime.datetime.now()
         self.args = args
 
-    def connect_to_collection(self):
-        db_full_address = self["endpoint"]["address"]
-        db_client = pymongo.MongoClient(db_full_address)
-        with db_client:
-            db_database = db_client[self["endpoint"]["database"]]
-            db_collection = getattr(db_database, self["endpoint"]["collection"])
-        return db_collection
-
     def upload_results(self, results, return_code):
         # if endpoint is not specified, upload is skipped
         if self.args["db_config"] is None: return
 
         # internal results are not supported by this tool
         doc = {"internal_results": []}
-        
+
         doc["final_results"] = {f"xcli_{key}": val for key, val in results.items()}
         doc["final_results"]["xcli_return_code"] = return_code
         doc["execution_date"] = self.exec_date
@@ -61,16 +54,34 @@ class DBExporter(dict):
             self["metadata"]["concurr"] = self.args["concurrency"]
         if "duration" not in self["metadata"]:
             self["metadata"]["duration"] = self.args["duration"]
+        if "window" not in self["metadata"]:
+            self["metadata"]["window"] = self.args["window"]
+        if "warmup" not in self["metadata"]:
+            self["metadata"]["warmup"] = self.args["warmup"]
         if "iterations" not in self["metadata"]:
-            self["metadata"]["iterations"] = self.args["steps_number"]            
+            self["metadata"]["iterations"] = self.args["steps_number"]
+
+        doc["xcli_version"] = "1.17"
+
+        for karg, varg in self.args.items():
+            if karg == "quantile_list": continue
+            if isinstance(varg, (str, int, float)):
+                self["metadata"][f"opt_{karg}"] = varg
+            elif isinstance(varg, (list, tuple)):
+                val = "_".join(map(str, varg))
+                self["metadata"][f"opt_{karg}"] = val
+
         doc.update(self["metadata"])
         prefix = self.get("prefix", "noprefix")
         dlist = prefix, doc["backend"], doc["model"], str(doc["batchsize"]), str(doc["concurr"])
         doc["description"] = "-".join(dlist)
 
+        db_full_address = self["endpoint"]["address"]
         try:
-            self.collection = self.connect_to_collection()
-            self.collection.insert_one(doc)
+            with pymongo.MongoClient(db_full_address) as db_client:
+                db_database = db_client[self["endpoint"]["database"]]
+                db_collection = getattr(db_database, self["endpoint"]["collection"])
+                db_collection.insert_one(doc)
         except pymongo.errors.ServerSelectionTimeoutError:
             filename = "/tmp/xcli-" + uuid.uuid4().hex + ".dump"
             print("dump file:", filename)
