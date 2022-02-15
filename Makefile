@@ -60,7 +60,7 @@ endif
 # Release image OS *must have* glibc version >= glibc version on BASE_OS:
 DIST_OS ?= $(BASE_OS)
 DIST_OS_TAG ?= $(BASE_OS_TAG)
-OPENVINO_OPENCV_DOWNLOAD_SERVER ?= 
+OPENVINO_OPENCV_DOWNLOAD_SERVER ?= http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/ 
 
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
