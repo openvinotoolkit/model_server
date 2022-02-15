@@ -60,6 +60,7 @@ endif
 # Release image OS *must have* glibc version >= glibc version on BASE_OS:
 DIST_OS ?= $(BASE_OS)
 DIST_OS_TAG ?= $(BASE_OS_TAG)
+OPENVINO_OPENCV_DOWNLOAD_SERVER ?= http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/ 
 
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
@@ -169,6 +170,7 @@ endif
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		--build-arg OPENVINO_OPENCV_DOWNLOAD_SERVER=$(OPENVINO_OPENCV_DOWNLOAD_SERVER) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg JOBS=$(JOBS)
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
