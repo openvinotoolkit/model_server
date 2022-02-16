@@ -41,12 +41,6 @@ const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
 const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
 const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
 
-enum class ModelCacheState {
-    CACHE_ON,
-    FORCE_CACHE_OFF,
-    CACHE_USED_WITH_CUSTOM_LOADER
-};
-
 /**
      * @brief This class represents model configuration
      */
@@ -118,9 +112,9 @@ private:
     std::string cacheDir;
 
     /**
-         * @brief Model cache state
+         * @brief Flag determining if allow cache option is set to true
          */
-    ModelCacheState cacheState = ModelCacheState::CACHE_ON;
+    bool isAllowCacheTrue = false;
 
     /**
          * @brief Model version
@@ -366,24 +360,6 @@ public:
     }
 
     /**
-         * @brief Get the model cache state
-         * 
-         * @return ovms::ModelCacheState
-         */
-    ModelCacheState getModelCacheState() const {
-        return this->cacheState;
-    }
-
-    /**
-         * @brief Set the model cache state
-         * 
-         * @param cacheState
-         */
-    void setModelCacheState(const ModelCacheState& modelCacheState) {
-        this->cacheState = modelCacheState;
-    }
-
-    /**
          * @brief Get the cache directory
          * 
          * @return const std::string& 
@@ -399,6 +375,24 @@ public:
          */
     void setCacheDir(const std::string& cacheDir) {
         this->cacheDir = cacheDir;
+    }
+
+    /**
+         * @brief Get the allow cache flag
+         * 
+         * @return bool
+         */
+    bool isAllowCacheSetToTrue() const {
+        return this->isAllowCacheTrue;
+    }
+
+    /**
+         * @brief Set the allow cache flag
+         * 
+         * @param allow cache flag
+         */
+    void setAllowCache(const bool& allowCache) {
+        this->isAllowCacheTrue = allowCache;
     }
 
     /**
@@ -970,6 +964,16 @@ public:
          */
     const custom_loader_options_config_t& getCustomLoaderOptionsConfigMap() const {
         return this->customLoaderOptionsConfigMap;
+    }
+
+    /**
+      * @brief Add custom loader option
+      * 
+      * @param name
+      * @param value
+      */
+    void addCustomLoaderOption(const std::string& name, const std::string& value) {
+        customLoaderOptionsConfigMap[name] = value;
     }
 
     /**

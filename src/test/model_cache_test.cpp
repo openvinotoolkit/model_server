@@ -273,13 +273,90 @@ TEST_F(ModelCacheTest, CacheDisabledModelConfig) {
     size_t currentCacheFileCount = this->getCachedFileCount();
 
     ModelConfig config = dummyModelConfigWithCache;
-    config.setModelCacheState(ovms::ModelCacheState::FORCE_CACHE_OFF);
-    config.setBatchSize(5);
-
+    config.setBatchSize(ovms::Mode::AUTO);
     auto manager = std::make_unique<ConstructorEnabledModelManager>(modelCacheDirectory);
     ASSERT_EQ(manager->reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
     size_t lastCachedFileCount = currentCacheFileCount;
     currentCacheFileCount = this->getCachedFileCount();
     ASSERT_EQ(currentCacheFileCount, lastCachedFileCount);
+}
+
+class TestModelCacheSetting : public TestWithTempDir {
+protected:
+    std::unique_ptr<ov::Core> ieCore;
+
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        ieCore = std::make_unique<ov::Core>();
+        modelCacheDirectory = this->directoryPath;
+        config = DUMMY_MODEL_CONFIG;
+        config.setCacheDir(modelCacheDirectory);
+        config.setBatchSize(std::nullopt);
+    }
+    ovms::ModelConfig config;
+    std::string modelCacheDirectory;
+};
+
+TEST_F(TestModelCacheSetting, CacheNotDisabledWithDefaultConfig) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    config.setCacheDir("");
+    EXPECT_EQ(modelInstance.setCacheOptions(config), ovms::StatusCode::OK);
+    EXPECT_FALSE(modelInstance.isCacheDisabled());
+}
+
+TEST_F(TestModelCacheSetting, CacheDisabledWithCustomLoader) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    config.addCustomLoaderOption("test", "loader");
+    EXPECT_EQ(modelInstance.setCacheOptions(config), ovms::StatusCode::OK);
+    EXPECT_TRUE(modelInstance.isCacheDisabled());
+
+    config.setAllowCache(false);
+    EXPECT_EQ(modelInstance.setCacheOptions(config), ovms::StatusCode::OK);
+    EXPECT_TRUE(modelInstance.isCacheDisabled());
+}
+
+TEST_F(TestModelCacheSetting, CacheDisabledWithBatchAuto) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    config.setBatchingMode(ovms::Mode::AUTO);
+    EXPECT_EQ(modelInstance.setCacheOptions(config), ovms::StatusCode::OK);
+    EXPECT_TRUE(modelInstance.isCacheDisabled());
+
+    config.setAllowCache(false);
+    EXPECT_EQ(modelInstance.setCacheOptions(config), ovms::StatusCode::OK);
+    EXPECT_TRUE(modelInstance.isCacheDisabled());
+}
+
+TEST_F(TestModelCacheSetting, CacheDisabledWithAnyShapeAuto) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    config.parseShapeParameter("auto");
+    EXPECT_EQ(modelInstance.setCacheOptions(config), ovms::StatusCode::OK);
+    EXPECT_TRUE(modelInstance.isCacheDisabled());
+
+    config.setAllowCache(false);
+    EXPECT_EQ(modelInstance.setCacheOptions(config), ovms::StatusCode::OK);
+    EXPECT_TRUE(modelInstance.isCacheDisabled());
+}
+
+TEST_F(TestModelCacheSetting, CacheCannotBeEnabledWithCustomLoader) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    config.addCustomLoaderOption("test", "loader");
+    config.setAllowCache(true);
+    EXPECT_EQ(modelInstance.setCacheOptions(config), ovms::StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER);
+}
+
+TEST_F(TestModelCacheSetting, CacheCanBeEnabledWithBatchAuto) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    config.setBatchingMode(ovms::Mode::AUTO);
+    config.setAllowCache(true);
+    EXPECT_EQ(modelInstance.setCacheOptions(config), ovms::StatusCode::OK);
+    EXPECT_FALSE(modelInstance.isCacheDisabled());
+}
+
+TEST_F(TestModelCacheSetting, CacheCanBeEnabledWithAnyShapeAuto) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    config.parseShapeParameter("auto");
+    config.setAllowCache(true);
+    EXPECT_EQ(modelInstance.setCacheOptions(config), ovms::StatusCode::OK);
+    EXPECT_FALSE(modelInstance.isCacheDisabled());
 }
