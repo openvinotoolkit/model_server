@@ -270,7 +270,7 @@ private:
     Status loadOutputTensors(const ModelConfig& config);
 
     /**
-      * @brief Determines if cache is disabled
+      * @brief Flag determining if cache is disabled
       */
     bool cacheDisabled = false;
 
