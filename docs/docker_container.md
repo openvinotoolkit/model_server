@@ -458,7 +458,7 @@ stat -c "group_name=%G group_id=%g" /dev/dri/render*
 The default account in the docker image is already preconfigured. In case you change the security context, use the following command
 to start the ovms container:
 ```
-docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) -u $(id -u):$(id -g) \
+docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
 -v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
 --model_path /opt/model --model_name my_model --port 9001 --target_device GPU
 ```
