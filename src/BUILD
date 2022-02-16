@@ -30,9 +30,19 @@ cc_library(
     linkstatic = 1,
     hdrs = ["custom_nodes/common/buffersqueue.hpp"],
     srcs = [
-        "queue.hpp",
+        "custom_nodes/common/utils.hpp",
+        "custom_nodes/common/utils.cpp",
+        "custom_nodes/common/opencv_utils.hpp",
+        "custom_nodes/common/opencv_utils.cpp",
         "custom_nodes/common/buffersqueue.hpp",
         "custom_nodes/common/buffersqueue.cpp",
+        "custom_nodes/common/custom_node_library_internal_manager.hpp",
+        "custom_nodes/common/custom_node_library_internal_manager.cpp",
+        "custom_node_interface.h",
+        "queue.hpp",
+    ],
+    deps = [
+        "@opencv//:opencv",
     ],
     copts = [
         "-Wall",
@@ -203,9 +213,9 @@ cc_library(
         "@awssdk//:s3",
         "@awssdk//:core",
         "@awssdk//:deps",
-	    "@azure//:storage",
-	    "@cpprest//:sdk",
-	    "@boost//:lib",
+        "@azure//:storage",
+        "@cpprest//:sdk",
+        "@boost//:lib",
         "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
@@ -302,13 +312,11 @@ cc_binary(
 cc_binary(
     name = "libcustom_node_east_ocr.so",
     srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/opencv_utils.hpp",
         "custom_nodes/east_ocr/east_ocr.cpp",
         "custom_nodes/east_ocr/nms.hpp",
-        "custom_node_interface.h",
     ],
     deps = [
+        "//src:custom_nodes_common_lib",
         "@opencv//:opencv"
     ],
     linkshared = 1,
@@ -322,15 +330,11 @@ cc_binary(
 cc_binary(
     name = "libcustom_node_add_one.so",
     srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/buffersqueue.hpp",
-        "custom_nodes/common/buffersqueue.cpp",
-        "custom_nodes/common/custom_node_library_internal_manager.hpp",
-        "custom_nodes/common/custom_node_library_internal_manager.cpp",
-        "queue.hpp",
         "custom_nodes/add_one/add_one.cpp",
-        "custom_node_interface.h",
         "custom_nodes/add_one/add_one_internal_manager.hpp"
+    ],
+    deps = [
+        "//src:custom_nodes_common_lib",
     ],
     linkshared = 1,
     copts = [
@@ -343,17 +347,10 @@ cc_binary(
 cc_binary(
     name = "libcustom_node_model_zoo_intel_object_detection.so",
     srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/opencv_utils.hpp",
-        "custom_nodes/common/buffersqueue.hpp",
-        "custom_nodes/common/buffersqueue.cpp",
-        "custom_nodes/common/custom_node_library_internal_manager.hpp",
-        "custom_nodes/common/custom_node_library_internal_manager.cpp",
-        "queue.hpp",
         "custom_nodes/model_zoo_intel_object_detection/model_zoo_intel_object_detection.cpp",
-        "custom_node_interface.h",
     ],
     deps = [
+        "//src:custom_nodes_common_lib",
         "@opencv//:opencv"
     ],
     linkshared = 1,
@@ -367,12 +364,10 @@ cc_binary(
 cc_binary(
     name = "libcustom_node_image_transformation.so",
     srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/opencv_utils.hpp",
         "custom_nodes/image_transformation/image_transformation.cpp",
-        "custom_node_interface.h",
     ],
     deps = [
+        "//src:custom_nodes_common_lib",
         "@opencv//:opencv"
     ],
     linkshared = 1,
@@ -386,12 +381,10 @@ cc_binary(
 cc_binary(
     name = "libcustom_node_horizontal_ocr.so",
     srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/opencv_utils.hpp",
         "custom_nodes/horizontal_ocr/horizontal_ocr.cpp",
-        "custom_node_interface.h",
     ],
     deps = [
+        "//src:custom_nodes_common_lib",
         "@opencv//:opencv"
     ],
     linkshared = 1,
