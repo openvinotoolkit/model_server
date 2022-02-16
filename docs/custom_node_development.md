@@ -11,7 +11,7 @@ developed in C++ or C to perform arbitrary data transformations.
 ## Custom Node API
 
 
-The custom node library must implement the API interface defined in [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_node_interface.h).
+The custom node library must implement the API interface defined in [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/tree/v2021.4.2/src/custom_node_interface.h).
 The interface is defined in `C` to simplify compatibility with various compilers. The library could use third party components
 linked statically or dynamically. OpenCV is a built in component in OVMS which could be used to perform manipulation on the image
 data. 
@@ -98,7 +98,7 @@ Just add include statement like:
 ## Building
 
 Custom node library can be compiled using any tool. It is recommended to follow the example based 
-a docker container with all build dependencies included. It is described in this [Makefile](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/east_ocr/Makefile). 
+a docker container with all build dependencies included. It is described in this [Makefile](https://github.com/openvinotoolkit/model_server/tree/v2021.4.2/src/custom_nodes/east_ocr/Makefile). 
 
 ## Testing 
 The recommended method for testing the custom library is via OVMS execution:
@@ -108,20 +108,20 @@ The recommended method for testing the custom library is via OVMS execution:
 - Submit a request to OVMS endpoint using a gRPC or REST client.
 - Analyse the logs on the OVMS server.
 
-For debugging steps, refer to the OVMS [developer guide](https://github.com/openvinotoolkit/model_server/blob/main/docs/developer_guide.md)
+For debugging steps, refer to the OVMS [developer guide](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/docs/developer_guide.md)
 
 
 ## Custom node examples 
 The best starting point for developing new custom nodes is by exploring and copying from the existing examples.
 
 Fully functional custom nodes are available here:
-- [east-resnet50 OCR custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/east_ocr)
-- [model zoo intel object detection custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/model_zoo_intel_object_detection)
-- [image transformation custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/image_transformation)
+- [east-resnet50 OCR custom node](https://github.com/openvinotoolkit/model_server/tree/v2021.4.2/src/custom_nodes/east_ocr)
+- [model zoo intel object detection custom node](https://github.com/openvinotoolkit/model_server/tree/v2021.4.2/src/custom_nodes/model_zoo_intel_object_detection)
+- [image transformation custom node](https://github.com/openvinotoolkit/model_server/tree/v2021.4.2/src/custom_nodes/image_transformation)
 
 Additional examples are included in the unit tests:
-- [node_add_sub.c](https://github.com/openvinotoolkit/model_server/tree/main/src/test/custom_nodes/node_add_sub.c)
-- [node_choose_maximum.cpp](https://github.com/openvinotoolkit/model_server/tree/main/src/test/custom_nodes/node_choose_maximum.cpp)
-- [node_missing_implementation.c](https://github.com/openvinotoolkit/model_server/tree/main/src/test/custom_nodes/node_missing_implementation.c)
-- [node_perform_different_operations.cpp](https://github.com/openvinotoolkit/model_server/tree/main/src/test/custom_nodes/node_perform_different_operations.cpp)
+- [node_add_sub.c](https://github.com/openvinotoolkit/model_server/tree/v2021.4.2/src/test/custom_nodes/node_add_sub.c)
+- [node_choose_maximum.cpp](https://github.com/openvinotoolkit/model_server/tree/v2021.4.2/src/test/custom_nodes/node_choose_maximum.cpp)
+- [node_missing_implementation.c](https://github.com/openvinotoolkit/model_server/tree/v2021.4.2/src/test/custom_nodes/node_missing_implementation.c)
+- [node_perform_different_operations.cpp](https://github.com/openvinotoolkit/model_server/tree/v2021.4.2/src/test/custom_nodes/node_perform_different_operations.cpp)
 

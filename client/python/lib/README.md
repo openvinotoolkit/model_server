@@ -6,7 +6,7 @@ OVMS client library contains only the necessary dependencies, so the whole packa
 
 As OpenVINO Model Server API is compatible with TensorFlow Serving, it's possible to use `ovmsclient` with TensorFlow Serving instances on: Predict, GetModelMetadata and GetModelStatus endpoints.
 
-See [API documentation](https://github.com/openvinotoolkit/model_server/blob/main/client/python/lib/docs/README.md) for details on what the library provides.
+See [API documentation](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/client/python/lib/docs/README.md) for details on what the library provides.
 
 
 ## Installation
@@ -126,4 +126,4 @@ results = client.predict(inputs=inputs, model_name="model")
 #
 ```
 
-For more details on `ovmsclient` see [API reference](https://github.com/openvinotoolkit/model_server/blob/main/client/python/lib/docs/README.md)
+For more details on `ovmsclient` see [API reference](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/client/python/lib/docs/README.md)

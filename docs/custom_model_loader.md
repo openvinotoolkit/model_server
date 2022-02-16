@@ -35,7 +35,7 @@ To enable a particular model to load using custom loader, add extra parameter in
 
 
 ### C++ API Interface for custom loader:
-A base class **CustomLoaderInterface** along with interface API is defined in [src/customloaderinterface.hpp](https://github.com/openvinotoolkit/model_server/blob/main/src/customloaderinterface.hpp)
+A base class **CustomLoaderInterface** along with interface API is defined in [src/customloaderinterface.hpp](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/src/customloaderinterface.hpp)
 
 Refer to this file  for API details. 
 
@@ -45,7 +45,7 @@ Derive the new custom loader class from base class **CustomLoaderInterface** and
 **CustomLoaderInterface* createCustomLoader**
 which allocates the new custom loader and returns a pointer to the base class.
 
-An example customloader which reads files and returns required buffers to be loaded is implemented and provided as reference in **[src/example/SampleCustomLoader](https://github.com/openvinotoolkit/model_server/blob/main/src/example/SampleCustomLoader)**
+An example customloader which reads files and returns required buffers to be loaded is implemented and provided as reference in **[src/example/SampleCustomLoader](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/src/example/SampleCustomLoader)**
 
 This customloader is built with the model server build and available in the docker *openvino/model_server-build:latest*. The shared library can be either copied from this docker or built using makefile. An example Makefile is provided as  a reference in the directory.
 
@@ -82,7 +82,7 @@ curl --create-dirs https://download.01.org/opencv/2020/openvinotoolkit/2020.4/op
 Step 4: Download the required Client Components
 
 ```
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/face_detection.py -o face_detection.py  https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/client_requirements.txt -o client_requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.2/example_client/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.2/example_client/face_detection.py -o face_detection.py  https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.2/example_client/client_requirements.txt -o client_requirements.txt
 
 pip3 install -r client_requirements.txt
 ```
@@ -91,7 +91,7 @@ pip3 install -r client_requirements.txt
 Step 5: Download Data for Inference
 
 ```
-curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/images/people/people1.jpeg -o images/people1.jpeg
+curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.2/example_client/images/people/people1.jpeg -o images/people1.jpeg
 ```
 
 Step 6: Prepare the config json.

@@ -1,7 +1,7 @@
 # Vehicle Analysis Pipeline {#ovms_docs_demo_vehicle_analysis}
 
 ## Analyze Multiple Vehicles in a Single Image Frame
-This document demonstrates how to create complex pipelines using object detection and object recognition models from [Open Model Zoo](https://github.com/openvinotoolkit/open_model_zoo). As an example, we use the [vehicle-detection-0202](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/vehicle-detection-0202/README.md) to detect multiple vehicles on the image. Next, for each detected vehicle we crop using the [model_zoo_intel_object_detection](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes/model_zoo_intel_object_detection) custom node. Finally, each vehicle image is sent to the [vehicle-attributes-recognition-barrier-0042](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/vehicle-attributes-recognition-barrier-0042/README.md) model.
+This document demonstrates how to create complex pipelines using object detection and object recognition models from [Open Model Zoo](https://github.com/openvinotoolkit/open_model_zoo). As an example, we use the [vehicle-detection-0202](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/vehicle-detection-0202/README.md) to detect multiple vehicles on the image. Next, for each detected vehicle we crop using the [model_zoo_intel_object_detection](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/src/custom_nodes/model_zoo_intel_object_detection) custom node. Finally, each vehicle image is sent to the [vehicle-attributes-recognition-barrier-0042](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/vehicle-attributes-recognition-barrier-0042/README.md) model.
 
 ![Vehicles analysis visualization](vehicles_analysis.png)
 
@@ -16,7 +16,7 @@ Below is depicted graph implementing vehicles analysis pipeline execution.
 It includes the following Nodes:
 - Model `vehicle_detection` - deep learning model which takes user image as input. Its outputs contain information about vehicle coordinates and confidence levels.
 - Custom node `model_zoo_intel_object_detection` - it includes C++ implementation of common object detection models results processing. By analysing the output it produces cropped vehicle images based on the configurable score level threshold. Custom node also resizes them to the target resolution and combines into a single output of a dynamic batch size. The output batch size is determined by the number of detected
-boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [model_zoo_intel_object_detection custom node](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes/model_zoo_intel_object_detection).
+boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [model_zoo_intel_object_detection custom node](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/src/custom_nodes/model_zoo_intel_object_detection).
 - demultiplexer - outputs from the custom node model_zoo_intel_object_detection have variable batch size. In order to match it with the sequential recognition models, data is split into individuial images with each batch size equal to 1.
 Such smaller requests can be submitted for inference in parallel to the next Model Nodes. Learn more about the [demultiplexing](./demultiplexing.md).
 - Model `vehicle_attributes_recognition` - this model recognizes type and color for given vehicle image
@@ -36,11 +36,11 @@ wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/mode
 
 ## Building the Custom Node "model_zoo_intel_object_detection" Library 
 
-Custom nodes are loaded into OVMS as dynamic libraries implementing OVMS API from [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_node_interface.h).
+Custom nodes are loaded into OVMS as dynamic libraries implementing OVMS API from [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/src/custom_node_interface.h).
 It can use OpenCV libraries included in OVMS or it could use other thirdparty components.
 
 The custom node `model_zoo_intel_object_detection` can be built inside a docker container via the following procedure:
-- go to the custom node source code folder [src/custom_nodes/model_zoo_intel_object_detection](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes/model_zoo_intel_object_detection)
+- go to the custom node source code folder [src/custom_nodes/model_zoo_intel_object_detection](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/src/custom_nodes/model_zoo_intel_object_detection)
 - run `make` command
 
 This command will export the compiled library in `./lib` folder.
@@ -48,7 +48,7 @@ Copy this `lib` folder to the same location with previously downloaded models.
 
 ## OVMS Configuration File
 
-The configuration file for running the vehicles analysis demo is stored in [config.json](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes/model_zoo_intel_object_detection/config_vehicles_example.json).
+The configuration file for running the vehicles analysis demo is stored in [config.json](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/src/custom_nodes/model_zoo_intel_object_detection/config_vehicles_example.json).
 Copy this file along with the model files.
 
 ## Final directory structure
@@ -77,9 +77,9 @@ docker run -p 9000:9000 -d -v ${PWD}/workspace:/workspace openvino/model_server 
 
 ## Requesting the Service
 
-Exemplary client [vehicles_analysis_pipeline_client.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/vehicles_analysis_pipeline_client.py) can be used to request pipeline deployed in previous step.
+Exemplary client [vehicles_analysis_pipeline_client.py](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client/vehicles_analysis_pipeline_client.py) can be used to request pipeline deployed in previous step.
 
-From the context of [example_client](https://github.com/openvinotoolkit/model_server/blob/main/example_client) folder install python3 requirements:
+From the context of [example_client](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client) folder install python3 requirements:
 ```bash
 pip install -r client_requirements.txt
 ``` 

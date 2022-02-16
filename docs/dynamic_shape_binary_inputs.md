@@ -36,9 +36,9 @@ pip3 install ovmsclient
 
 ### Download a Sample Image and Label Mappings
 ```
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/images/zebra.jpeg 
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.2/example_client/images/zebra.jpeg 
 
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/classes.py 
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.2/example_client/classes.py 
 ```
 
 ### Run Inference
