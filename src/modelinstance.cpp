@@ -848,6 +848,7 @@ Status ModelInstance::setCacheOptions(const ModelConfig& config) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has disabled caching", this->getName());
             this->cacheDisabled = true;
         } else if (config.isAllowCacheSetToTrue() && config.isCustomLoaderRequiredToLoadModel()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model: {} has allow cache set to true while using custom loader", this->getName());
             return StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER;
         } else {
             this->ieCore.set_property({{CONFIG_KEY(CACHE_DIR), config.getCacheDir()}});
