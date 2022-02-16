@@ -5310,7 +5310,83 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryDemultiplexer) {
     checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
 }
 
-static const char* pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryDemultiplexer = R"(
+static const char* pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryStaticDemultiplexer = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,1:3,1:3,3) ",
+                "layout": "nhwc:nchw",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "demultiply_count": 5,
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTestBinaryInput, EntryStaticDemultiplexerResolutionMatches) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryStaticDemultiplexer, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    int batchSize = 5;
+    prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
+}
+
+TEST_F(EnsembleFlowTestBinaryInput, EntryStaticDemultiplexerResolutionAutoAlign) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryStaticDemultiplexer, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    int batchSize = 5;
+    prepareBinaryRequest(imagePath4x4, request, "pipeline_input", batchSize);
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimShape("pipeline_output", response, {5, 1, 3, 3, 3});
+}
+
+static const char* pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryDynamicDemultiplexer = R"(
 {
     "model_config_list": [
         {
@@ -5354,9 +5430,9 @@ static const char* pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryDemu
     ]
 })";
 
-TEST_F(EnsembleFlowTestBinaryInput, EntryDemultiplexerResolutionMatches) {
+TEST_F(EnsembleFlowTestBinaryInput, EntryDynamicDemultiplexerResolutionMatches) {
     std::string fileToReload = directoryPath + "/config.json";
-    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryDemultiplexer, fileToReload);
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryDynamicDemultiplexer, fileToReload);
     ConstructorEnabledModelManager manager;
     std::unique_ptr<Pipeline> pipeline;
 
@@ -5370,9 +5446,9 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryDemultiplexerResolutionMatches) {
     checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
 }
 
-TEST_F(EnsembleFlowTestBinaryInput, EntryDemultiplexerResolutionAutoAlign) {
+TEST_F(EnsembleFlowTestBinaryInput, EntryDynamicDemultiplexerResolutionResolutionMismatch) {
     std::string fileToReload = directoryPath + "/config.json";
-    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryDemultiplexer, fileToReload);
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryDynamicDemultiplexer, fileToReload);
     ConstructorEnabledModelManager manager;
     std::unique_ptr<Pipeline> pipeline;
 
@@ -5382,8 +5458,7 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryDemultiplexerResolutionAutoAlign) {
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimShape("pipeline_output", response, {5, 1, 3, 3, 3});
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_SHAPE);
 }
 
 static const char* pipelineWithOnlyDynamicCustomNode = R"(
@@ -5468,7 +5543,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_Reques
     ASSERT_EQ(pipeline->execute(), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);
 }
 
-TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_RequestNhwc) {
+TEST_F(EnsembleFlowTest, TensorContentInputWithPipelineInputLayoutANY_RequestNhwc) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineWithOnlyDynamicCustomNode, fileToReload);
     ConstructorEnabledModelManager manager;
@@ -5554,13 +5629,13 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     ConstructorEnabledModelManager manager;
     std::unique_ptr<Pipeline> pipeline;
 
-    prepareMisalignedBinaryImageRequest(imagePath, imagePath2x2, request, "pipeline_input");
+    prepareMisalignedBinaryImageRequest(imagePath2x2, imagePath, request, "pipeline_input");
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);
 }
 
-TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemultiplexer_RequestNhwc) {
+TEST_F(EnsembleFlowTest, TensorContentInputWithPipelineInputLayoutANYAndDemultiplexer_RequestNhwc) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineWithOnlyDynamicCustomNodeAndDemultiplexer, fileToReload);
     ConstructorEnabledModelManager manager;

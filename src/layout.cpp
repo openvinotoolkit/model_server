@@ -19,6 +19,8 @@
 #include <string>
 #include <tuple>
 
+#include "logging.hpp"
+
 const char* DEFAULT_LAYOUT = "N...";
 const char* UNSPECIFIED_LAYOUT = "...";
 
@@ -99,13 +101,44 @@ Status Layout::validate() const {
     return StatusCode::OK;
 }
 
-std::optional<Layout> Layout::createIntersection(const Layout& other) const {
-    if (*this == other ||
-        other == Layout::getDefaultLayout())
-        return *this;
-    if (*this == Layout::getDefaultLayout())
-        return other;
-    return std::nullopt;
+std::optional<Layout> Layout::createIntersection(const Layout& other, size_t numberOfDimensions) const {
+    Layout lhs = (*this);
+    Layout rhs = other;
+
+    if (lhs.containsEtc()) {
+        size_t knownDimensions = std::count_if(lhs.begin(), lhs.end(), [](char c) { return c != ETC_CHAR; });
+        if (knownDimensions > numberOfDimensions)
+            return std::nullopt;
+        size_t unknownDimensions = numberOfDimensions - knownDimensions;
+        lhs.replace(lhs.find(ETC_LAYOUT_DELIMETER), ETC_LAYOUT_DELIMETER.size(), std::string(unknownDimensions, UNDEFINED_DIMENSION_CHAR));
+    }
+
+    if (rhs.containsEtc()) {
+        size_t knownDimensions = std::count_if(rhs.begin(), rhs.end(), [](char c) { return c != ETC_CHAR; });
+        if (knownDimensions > numberOfDimensions)
+            return std::nullopt;
+        size_t unknownDimensions = numberOfDimensions - knownDimensions;
+        rhs.replace(rhs.find(ETC_LAYOUT_DELIMETER), ETC_LAYOUT_DELIMETER.size(), std::string(unknownDimensions, UNDEFINED_DIMENSION_CHAR));
+    }
+
+    if (lhs.size() != rhs.size() || lhs.size() != numberOfDimensions)
+        return std::nullopt;
+
+    for (size_t i = 0; i < lhs.size(); i++) {
+        if (lhs[i] == rhs[i])
+            continue;
+        if (rhs[i] != UNDEFINED_DIMENSION_CHAR && lhs.find(rhs[i]) != std::string::npos)
+            return std::nullopt;
+        if (lhs[i] == UNDEFINED_DIMENSION_CHAR) {
+            lhs[i] = rhs[i];
+            continue;
+        }
+        if (rhs[i] == UNDEFINED_DIMENSION_CHAR)
+            continue;
+        return std::nullopt;
+    }
+
+    return lhs;
 }
 
 Layout Layout::fromOvLayout(const ov::Layout& layout) {
@@ -119,11 +152,11 @@ Layout Layout::fromOvLayout(const ov::Layout& layout) {
 }
 
 bool Layout::containsEtc() const {
-    return (*this).find(ETC_LAYOUT_DELIMETER) != std::string::npos;
+    return this->find(ETC_LAYOUT_DELIMETER) != std::string::npos;
 }
 
 std::string::size_type Layout::getNumberOfKnownDimensions() const {
-    return std::count_if((*this).begin(), (*this).end(), [](char c) { return ALLOWED_DIMENSION_LETTERS.find(c) != std::string::npos || c == UNDEFINED_DIMENSION_CHAR; });
+    return std::count_if(this->begin(), this->end(), [](char c) { return ALLOWED_DIMENSION_LETTERS.find(c) != std::string::npos || c == UNDEFINED_DIMENSION_CHAR; });
 }
 
 bool Layout::isCompatible(const Shape& shape) const {

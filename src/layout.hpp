@@ -16,6 +16,7 @@
 #pragma once
 
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 #include <openvino/openvino.hpp>
@@ -48,7 +49,7 @@ public:
 
     const std::optional<size_t>& getBatchIndex() const;
     Status validate() const;
-    std::optional<Layout> createIntersection(const Layout& other) const;
+    std::optional<Layout> createIntersection(const Layout& other, size_t numberOfDimensions) const;
     static const Layout& getDefaultLayout();
     static const Layout& getUnspecifiedLayout();
 

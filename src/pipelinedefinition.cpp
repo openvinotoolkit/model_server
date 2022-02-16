@@ -1044,7 +1044,7 @@ const tensor_map_t PipelineDefinition::getOutputsInfo() const {
 }
 
 std::shared_ptr<TensorInfo> applyDemultiplexerShapeForTensor(const std::shared_ptr<TensorInfo>& tensorInfo, int32_t demultiplyCount) {
-    return tensorInfo->createCopyWithEffectiveDimensionPrefix(demultiplyCount ? Dimension(demultiplyCount) : Dimension::any());
+    return tensorInfo->createCopyWithDemultiplexerDimensionPrefix(demultiplyCount ? Dimension(demultiplyCount) : Dimension::any());
 }
 
 std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string& mappedName, const std::shared_ptr<TensorInfo>& tensorInfo, const Shape& gatherShape, bool isConnectionFromDemultiplexer) {
@@ -1065,14 +1065,17 @@ std::shared_ptr<TensorInfo> createOutputTensorInfoForPipeline(const std::string&
 }
 
 Status updateInputsInfoWithNodeConnection(tensor_map_t& inputsInfo, const TensorInfo& tensorInfo, const std::string& alias) {
-    auto newTensorInfo = std::make_shared<TensorInfo>(tensorInfo);
+    auto newTensorInfo = std::make_shared<TensorInfo>(alias, tensorInfo.getPrecision(), tensorInfo.getShape(), tensorInfo.getLayout());
     auto it = inputsInfo.find(alias);
     if (it != inputsInfo.end()) {
         if (!it->second->isTensorSpecEqual(*newTensorInfo)) {
             auto intersectionTensorInfo = it->second->createIntersection(*newTensorInfo);
             if (intersectionTensorInfo == nullptr) {
                 Status status = StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA;
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error validating pipeline: {}", status.string());
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error validating pipeline: {};\n{}\n{}",
+                    status.string(),
+                    it->second->asString(),
+                    newTensorInfo->asString());
                 return status;
             }
             inputsInfo[alias] = intersectionTensorInfo;

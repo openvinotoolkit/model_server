@@ -69,5 +69,19 @@ TEST(TensorInfo, Intersection) {
     first = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
     second = std::make_shared<TensorInfo>("a", "b2", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCHW"});
     EXPECT_EQ(first->createIntersection(*second), nullptr);
-    // layout
+    // intersect with demultiplexer
+    first = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"N...H?"});
+    second = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, 224}), Layout{"NCH..."});
+    intersect = first->createIntersection(*second);
+    ASSERT_NE(intersect, nullptr);
+    intersect = intersect->createCopyWithDemultiplexerDimensionPrefix(Dimension::any());
+    EXPECT_EQ(intersect->getLayout(), "N?CH?");
+}
+
+TEST(TensorInfo, LayoutWithAppliedDemultiplexer) {
+    auto info = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, 3, 224, {220, 230}}), Layout{"NCHW"});
+    info = info->createCopyWithDemultiplexerDimensionPrefix(100);
+    EXPECT_TRUE(info->isInfluencedByDemultiplexer());
+    EXPECT_EQ(info->getShape(), (Shape{100, 1, 3, 224, Dimension{220, 230}})) << info->getShape().toString();
+    EXPECT_EQ(info->getLayout(), Layout("N?CHW")) << info->getLayout();
 }

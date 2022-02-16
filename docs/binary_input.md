@@ -19,11 +19,17 @@ is out of range it will be adjusted to the nearer border. For example, when mode
 - if input shape is [1,90,200,3] it will be resized into [1,100,200,3]
 - if input shape is [1,220,200,3] it will be resized into [1,200,200,3]
 
-Processing the binary image requests requires the model or the custom nodes to accept NHWC layout in BGR color 
+In order to use binary input functionality, model or pipeline input layout needs to be compatible with `N...HWC` and have 4 (or 5 in case of demultiplexing) shape dimensions. It means that input layout needs to resemble `NHWC` layout, e.g. default `N...` will work. On the other hand, binary image input is not supported for inputs with `NCHW` layout. 
+
+To fully utilize binary input utility, automatic image size alignment will be done by OVMS when:
+- input shape does not include dynamic dimension value (`-1`)
+- input layout is configured to be either `...` (custom nodes) and `NHWC` or `N?HWC` (or `N?HWC`, when modified by a [demultiplexer](demultiplexing.md))
+
+Processing the binary image requests requires the model or the custom nodes to accept BGR color 
 format with data with the data range from 0-255. Original layout of the input data can be changed in the 
 OVMS configuration in runtime. For example when the orignal model has input shape [1,3,224,224] add a parameter
 in the OVMS configuration "layout": "NHWC:NCHW" or the command line parameter `--layout NHWC:NCHW`. In result, the model will
-have effective shape [1,224,224,3].
+have effective shape [1,224,224,3] and layout `NHWC`.
 
 In case the model was trained with color format RGB and range other then 0-255, the 
 [model optimizer](tf_model_binary_input.md) 

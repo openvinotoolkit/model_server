@@ -320,12 +320,12 @@ Status RequestValidator::validate() {
             return status;
         auto batchIndex = inputInfo->getLayout().getBatchIndex();
         if (!batchIndex.has_value()) {
-            SPDLOG_ERROR("[servable name: {} version: {}] Missing batch index in input: {} layout: {}",
+            SPDLOG_DEBUG("[servable name: {} version: {}] Missing batch index in input: {} layout: {}",
                 servableName, servableVersion, name, inputInfo->getLayout());
             return StatusCode::INTERNAL_ERROR;
         }
         if (inputInfo->getShape().size() < batchIndex.value() + 1) {
-            SPDLOG_ERROR("[servable name: {} version: {}] Batch index out of shape range for input: {} layout: {} shape: {}",
+            SPDLOG_DEBUG("[servable name: {} version: {}] Batch index out of shape range for input: {} layout: {} shape: {}",
                 servableName, servableVersion, name, inputInfo->getLayout(), inputInfo->getShape().toString());
             return StatusCode::INTERNAL_ERROR;
         }

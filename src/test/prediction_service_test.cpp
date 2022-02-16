@@ -1128,10 +1128,10 @@ TEST_F(TestPredict, PerformInferenceDummyAllDimensionsHaveRange) {
 /**
  * Scenario - send binary input request to model accepting dynamic batch size.
  *
- * 1. Load model with input layout=nhwc, batch_size=-1, initial internal layout: nchw, batch_size=1
- * 2. Do the inference with batch=5 binary image tensor - expect status OK and result in NCHW layout
+ * 1. Load model with input layout=nhwc, batch_size=-1, resolution 1x2, initial internal layout: nchw, batch_size=1
+ * 2. Do the inference with batch=5 binary image tensor 1x1 - expect status INVALID_SHAPE, because if any dimension is dynamic, we perform no resize operation.
  */
-TEST_F(TestPredict, PerformInferenceWithBinaryInputBatchSizeAny) {
+TEST_F(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionNotMatching) {
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1144,10 +1144,33 @@ TEST_F(TestPredict, PerformInferenceWithBinaryInputBatchSizeAny) {
     tensorflow::serving::PredictResponse response;
 
     const int batchSize = 5;
+    // Perform inference with binary input 1x1, expect status BINARY_IMAGES_RESOLUTION_MISMATCH, because if any dimension is dynamic, we perform no resize operation.
+    ASSERT_EQ(performInferenceWithBinaryImageInput(response, INCREMENT_1x3x4x5_MODEL_INPUT_NAME, "increment_1x3x4x5", batchSize), ovms::StatusCode::INVALID_SHAPE);
+}
+
+/**
+ * Scenario - send binary input request to model accepting dynamic batch size.
+ *
+ * 1. Load model with input layout=nhwc, batch_size=-1, resolution 1x1, initial internal layout: nchw, batch_size=1
+ * 2. Do the inference with batch=5 binary image tensor 1x1 - expect status OK, and correct results.
+ */
+TEST_F(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionMatching) {
+    using namespace ovms;
+
+    // Prepare model with changed layout to nhwc (internal layout=nchw)
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    ASSERT_EQ(config.parseShapeParameter("(-1,1,1,3)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    tensorflow::serving::PredictResponse response;
+
+    const int batchSize = 5;
     // Perform inference with binary input, ensure status OK and correct results
     ASSERT_EQ(performInferenceWithBinaryImageInput(response, INCREMENT_1x3x4x5_MODEL_INPUT_NAME, "increment_1x3x4x5", batchSize), ovms::StatusCode::OK);
-    checkOutputShape(response, {5, 3, 1, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
-    checkOutputValues(response, {37.0, 37.0, 28.0, 28.0, 238.0, 238.0, 37.0, 37.0, 28.0, 28.0, 238.0, 238.0, 37.0, 37.0, 28.0, 28.0, 238.0, 238.0, 37.0, 37.0, 28.0, 28.0, 238.0, 238.0, 37.0, 37.0, 28.0, 28.0, 238.0, 238.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+    checkOutputShape(response, {5, 3, 1, 1}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
+    checkOutputValues(response, {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 }
 
 /**

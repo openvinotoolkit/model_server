@@ -316,6 +316,131 @@ TEST(EnsembleMetadata, TwoParallelModelsOneShapeAnyOneStaticIntersection) {
     EXPECT_EQ(output_B->getPrecision(), ovms::Precision::FP32);
 }
 
+TEST(EnsembleMetadata, TwoParallelModelsLayoutIntersection) {
+    /*
+        This test creates pipeline definition with two parallel DL model nodes, which one of them have complete information about layout and the other one not.
+        Test ensures we end up with complete information about layout - intersection of both layouts.
+    */
+    ConstructorEnabledModelManager manager;
+
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setName("dummy");
+    config.setBatchSize(std::nullopt);
+    config.parseLayoutParameter("{\"b\":\"N...\",\"a\":\"N...\"}");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
+
+    config = DUMMY_MODEL_CONFIG;
+    config.setName("dummy_2");
+    config.setBatchSize(std::nullopt);
+    config.parseLayoutParameter("{\"b\":\"NC\",\"a\":\"NC\"}");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "dummy_2_node", "dummy_2", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections["dummy_2_node"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name_A"}}},
+        {"dummy_2_node", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name_B"}}}};
+
+    auto def = std::make_unique<PipelineDefinition>(
+        "my_new_pipeline", info, connections);
+
+    ASSERT_EQ(def->validate(manager), StatusCode::OK);
+
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
+
+    ASSERT_EQ(inputs.size(), 1);
+    ASSERT_EQ(outputs.size(), 2);
+    ASSERT_NE(inputs.find("request_input_name"), inputs.end());
+    ASSERT_NE(outputs.find("request_output_name_A"), outputs.end());
+    ASSERT_NE(outputs.find("request_output_name_B"), outputs.end());
+
+    const auto& input = inputs.at("request_input_name");
+    EXPECT_EQ(input->getLayout(), ovms::Layout{"NC"});
+
+    const auto& output_A = outputs.at("request_output_name_A");
+    EXPECT_EQ(output_A->getLayout(), ovms::Layout{"N..."});
+
+    const auto& output_B = outputs.at("request_output_name_B");
+    EXPECT_EQ(output_B->getLayout(), ovms::Layout{"NC"});
+}
+
+TEST(EnsembleMetadata, TwoParallelModelsDemultiplyEntryLayoutIntersection) {
+    /*
+        This test creates pipeline definition with two parallel DL model nodes, demultiplied at entry, which one of them have complete information about layout and the other one not.
+        Test ensures we end up with complete information about layout - intersection of both layouts.
+    */
+    ConstructorEnabledModelManager manager;
+
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setName("dummy");
+    config.setBatchSize(std::nullopt);
+    config.parseLayoutParameter("{\"b\":\"N...\",\"a\":\"N...\"}");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
+
+    config = DUMMY_MODEL_CONFIG;
+    config.setName("dummy_2");
+    config.setBatchSize(std::nullopt);
+    config.parseLayoutParameter("{\"b\":\"NC\",\"a\":\"NC\"}");
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
+
+    std::optional<int32_t> demultiplyCount = -1;
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{"request_input_name", "request_input_name"}}, demultiplyCount},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "dummy_2_node", "dummy_2", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {ENTRY_NODE_NAME}},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["dummy_node"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections["dummy_2_node"] = {
+        {ENTRY_NODE_NAME, {{"request_input_name", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name_A"}}},
+        {"dummy_2_node", {{DUMMY_MODEL_OUTPUT_NAME, "request_output_name_B"}}}};
+
+    auto def = std::make_unique<PipelineDefinition>(
+        "my_new_pipeline", info, connections);
+
+    ASSERT_EQ(def->validate(manager), StatusCode::OK);
+
+    auto inputs = def->getInputsInfo();
+    auto outputs = def->getOutputsInfo();
+
+    ASSERT_EQ(inputs.size(), 1);
+    ASSERT_EQ(outputs.size(), 2);
+    ASSERT_NE(inputs.find("request_input_name"), inputs.end());
+    ASSERT_NE(outputs.find("request_output_name_A"), outputs.end());
+    ASSERT_NE(outputs.find("request_output_name_B"), outputs.end());
+
+    const auto& input = inputs.at("request_input_name");
+    EXPECT_EQ(input->getLayout(), ovms::Layout{"N?C"});
+
+    const auto& output_A = outputs.at("request_output_name_A");
+    EXPECT_EQ(output_A->getLayout(), ovms::Layout{"..."});
+
+    const auto& output_B = outputs.at("request_output_name_B");
+    EXPECT_EQ(output_B->getLayout(), ovms::Layout{"..."});
+}
+
 TEST(EnsembleMetadata, MultipleNodesOnDifferentLevelsUsingTheSamePipelineInputs) {
     /*
         This test creates pipeline definition with multiple connections refering to entry node.

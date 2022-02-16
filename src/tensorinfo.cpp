@@ -225,15 +225,20 @@ void TensorInfo::setLayout(const Layout& layout) {
 std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const Shape& shape) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->shape = shape;
-    // copy->layout = Layout::getUnspecifiedLayout(); TODO CVS-77193
+    copy->layout = Layout::getUnspecifiedLayout();
     return copy;
 }
 
-std::shared_ptr<TensorInfo> TensorInfo::createCopyWithEffectiveDimensionPrefix(const Dimension& dim) const {
+std::shared_ptr<TensorInfo> TensorInfo::createCopyWithDemultiplexerDimensionPrefix(const Dimension& dim) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->influencedByDemultiplexer = true;
     copy->shape.emplace(copy->shape.begin(), dim);
-    // copy->layout = Layout::getUnspecifiedLayout(); TODO CVS-77193
+    copy->layout = this->getLayout();
+    auto batchPosition = copy->layout.find(BATCH_DIMENSION_LETTER);
+    if (batchPosition != std::string::npos) {
+        copy->layout.replace(batchPosition, 1, std::string(1, UNDEFINED_DIMENSION_CHAR));
+    }
+    copy->layout = std::string(1, BATCH_DIMENSION_LETTER[0]) + copy->layout;
     return copy;
 }
 
@@ -258,11 +263,11 @@ std::shared_ptr<TensorInfo> TensorInfo::createIntersection(const TensorInfo& oth
     } else {
         precision = this->getPrecision();
     }
-    auto layout = this->getLayout().createIntersection(other.getLayout());
-    if (!layout.has_value())
-        return nullptr;
     auto newShape = this->getShape().createIntersection(other.getShape());
     if (!newShape.has_value())
+        return nullptr;
+    auto layout = this->getLayout().createIntersection(other.getLayout(), newShape.value().size());
+    if (!layout.has_value())
         return nullptr;
     return std::make_shared<TensorInfo>(this->getName(),
         this->getMappedName(),
@@ -273,8 +278,8 @@ std::shared_ptr<TensorInfo> TensorInfo::createIntersection(const TensorInfo& oth
 
 bool TensorInfo::isTensorSpecEqual(const TensorInfo& other) const {
     return (this->getShape() == other.getShape()) &&
-           (this->getPrecision() == other.getPrecision());
-    (this->getLayout() == other.getLayout());
+           (this->getPrecision() == other.getPrecision()) &&
+           (this->getLayout() == other.getLayout());
 }
 
 bool TensorInfo::isTensorUnspecified() const {
