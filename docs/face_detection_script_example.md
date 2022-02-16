@@ -3,7 +3,7 @@
 This guide includes an example script to run face detection inference with OpenVINO&trade; Model Server.
 
 
-- The script [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/face_detection.py) runs face detection inference requests for all the images
+- The script [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client/face_detection.py) runs face detection inference requests for all the images
 saved in `image_input_dir` directory. 
 
 - The script can adjust the input image size and change the batch size in the request. It demonstrates how to use
@@ -112,7 +112,7 @@ If the container is not running, check out the [troubleshooting guide](troublesh
 
 ### Run the example script
 
-Run the face detection example script - [FaceDetection.py](https://github.com/openvinotoolkit/model_server/blob/main/example_client/face_detection.py). Make changes to the input shape as required by the model you are running. Refer to the API reference Guide to obtain the input and output shape of the model - [gRPC reference guide](./model_server_grpc_api.md) and [REST API reference guide ](./model_server_rest_api.md).
+Run the face detection example script - [FaceDetection.py](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client/face_detection.py). Make changes to the input shape as required by the model you are running. Refer to the API reference Guide to obtain the input and output shape of the model - [gRPC reference guide](./model_server_grpc_api.md) and [REST API reference guide ](./model_server_rest_api.md).
 
 Run the example script in terminal :
 

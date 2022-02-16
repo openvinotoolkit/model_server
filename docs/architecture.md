@@ -19,4 +19,4 @@ Google Cloud Storage (GCS), Amazon S3, or Azure Blob Storage is supported. For m
 
 - The only two exposed network interfaces are [gRPC](./model_server_grpc_api.md) and [RESTful API](./model_server_rest_api.md). 
 They _do not_ include authorization, authentication, or data encryption. There is, however,
-a [documented method](https://github.com/openvinotoolkit/model_server/tree/main/extras/nginx-mtls-auth) for including NGINX reverse proxy with mTLS traffic termination.
+a [documented method](https://github.com/openvinotoolkit/model_server/tree/v2021.4.2/extras/nginx-mtls-auth) for including NGINX reverse proxy with mTLS traffic termination.

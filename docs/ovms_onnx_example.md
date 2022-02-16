@@ -20,15 +20,15 @@ Note that the downloaded model requires an additional [preprocessing function](h
 
 Get an image to classify:
 ```
-wget -q https://github.com/openvinotoolkit/model_server/raw/main/example_client/images/bee.jpeg
+wget -q https://github.com/openvinotoolkit/model_server/raw/v2021.4.2/example_client/images/bee.jpeg
 ```
 Install python libraries:
 ```bash
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/client_requirements.txt
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.2/example_client/client_requirements.txt
 ```
 Get the list of imagenet classes:
 ```bash
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/example_client/classes.py
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.2/example_client/classes.py
 ```
 
 ## Option 1: Adding preprocessing to the client side <a name="client-side"></a>
@@ -104,8 +104,8 @@ Detected class name: bee
 
 Create a configuration file with DAG containing two sequential nodes: one being the _image transformation node_ and one _DL model node_ resnet. The job of the image transformation node will be to preprocess the image data to match format required by the ONNX model `resnet50-caffe2-v1-9.onnx`.
 
-The example [configuration file](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes/image_transformation/config_with_preprocessing_node.json) is available in _image transformation_ custom node directory.  
-Image transformation custom node library building steps can be found [here](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/image_transformation).
+The example [configuration file](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/src/custom_nodes/image_transformation/config_with_preprocessing_node.json) is available in _image transformation_ custom node directory.  
+Image transformation custom node library building steps can be found [here](https://github.com/openvinotoolkit/model_server/tree/v2021.4.2/src/custom_nodes/image_transformation).
 
 Prepare workspace with the model, preprocessing node library and configuration file.
 ```
