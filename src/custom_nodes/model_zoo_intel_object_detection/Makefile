@@ -16,6 +16,7 @@
 
 HEADER_FILE_PATH ?= ../../custom_node_interface.h
 BASE_OS ?= ubuntu
+OPENCV_DOWNLOAD_FOLDER ?= http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/opencv/release_2022.1/20220215_0649-4.5.5_053/
 
 .PHONY: default build
 
@@ -25,7 +26,7 @@ docker_build:
 	@cp $(HEADER_FILE_PATH) ./custom_node_interface.h
 	@cp -r ../../queue.hpp ./queue.hpp
 	@cp -r ../common ./common
-	@docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} .
+	@docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} --build-arg OPENCV_DOWNLOAD_FOLDER=$(OPENCV_DOWNLOAD_FOLDER) .
 	@rm -Rf lib
 	@docker cp $$(docker create --rm custom_node_build_image:latest):/custom_nodes/lib/ .
 	@rm -rf ./common
