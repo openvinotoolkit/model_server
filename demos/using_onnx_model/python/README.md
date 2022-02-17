@@ -1,4 +1,4 @@
-# Prediction Example with an ONNX Model
+# Prediction Example with an ONNX Model {#ovms_demo_using_onnx_model}
 
 Steps are similar to when you work with IR model format. Model Server accepts ONNX models as well with no differences in versioning. Locate ONNX model file in separate model version directory.
 Below is a complete functional use case using Python 3.6 or higher. 

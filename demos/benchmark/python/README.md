@@ -1,4 +1,4 @@
-# Benchmark Client for OVMS
+# Benchmark Client for OVMS {#ovms_demo_benchmark_app}
 
 ## Introduction
 

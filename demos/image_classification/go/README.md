@@ -1,6 +1,6 @@
-# Image Classification Demo with OVMS
+# Image Classification Demo with OVMS {#ovms_demo_image_classification_go}
 
-This client has been created to demostrate how to interact with OpenVINO Model Server prediction endpoint from Go application. Presented example demonstrates end to end flow for running classification on JPG/PNG image using ResNet50 model. For simplicity of the environment setup, the example is run in the Docker container.
+This client demonstrates how to interact with OpenVINO Model Server prediction endpoints from a Go application. The example shows end-to-end workflow for running classification on JPEG/PNG images using a ResNet50 model. To simplify the environment setup, the demo is run inside a Docker container.
 
 
 ## Get the model

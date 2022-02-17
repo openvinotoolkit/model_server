@@ -1,4 +1,4 @@
-# Person, vehicle, bike detection with multiple data sources
+# Person, vehicle, bike detection with multiple data sources {#ovms_demo_person_vehicle_bike_detection}
 
 The purpose of this demo is to show how to send data from multiple sources (cameras, video files) to a model served in OpenVINO Model Server.
 

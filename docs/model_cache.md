@@ -1,4 +1,4 @@
-# Model Cache
+# Model Cache {#ovms_docs_model_cache}
 
 ## Overview
 The Model Server can leverage a [OpenVINO&trade; model cache functionality](https://docs.openvino.ai/latest/openvino_docs_IE_DG_Model_caching_overview.html), to speed up subsequent model loading on a target device. 

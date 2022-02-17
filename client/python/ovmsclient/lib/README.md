@@ -1,12 +1,12 @@
-# OpenVINO&trade; Model Server Client Library
+# ovmsclient python library {#ovms_client_python_lib_readme}
 
-Model server client library is a set of objects and methods designed to simplify user interaction with the instance of the model server. The library contains functions that hide API specific aspects, so user doesn't have to know about creating protos, preparing requests, parsing responses etc. and can focus on the application itself, rather than dealing with all the aspects of the interaction with OVMS.
+The Model Server client library is a set of objects and methods designed to simplify user interaction with instances of OpenVINO Model Server. The library contains functions that conceal API-specific details. Users do not need to know about creating protos, preparing requests, parsing responses, and other details, so they can focus on deploying the application.
 
 OVMS client library contains only the necessary dependencies, so the whole package is light. That makes it more friendly for deployments with restricted resources as well as for the use cases that require applications to scale well.
 
 As OpenVINO Model Server API is compatible with TensorFlow Serving, it's possible to use `ovmsclient` with TensorFlow Serving instances on: Predict, GetModelMetadata and GetModelStatus endpoints.
 
-See [API documentation](docs/README.md) for details on what the library provides.
+See [API documentation](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/lib/docs/README.md) for details on what the library provides.
 
 
 ## Installation
@@ -118,4 +118,4 @@ results = client.predict(inputs=inputs, model_name="model")
 #
 ```
 
-For more details on `ovmsclient` see [API reference](docs/README.md)
+For more details on `ovmsclient` see [API reference](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/lib/docs/README.md)

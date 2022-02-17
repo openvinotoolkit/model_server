@@ -1,4 +1,4 @@
-# Image Classification Demo with OVMS
+# Image Classification Demo with OVMS {#ovms_demo_image_classification}
 
 ## Overview
 

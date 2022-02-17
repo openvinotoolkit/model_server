@@ -1,9 +1,9 @@
-# Vehicle Analysis Pipeline Demo with OVMS
+# Vehicle Analysis Pipeline Demo with OVMS {#ovms_demo_vehicle_analysis_pipeline}
 This document demonstrates how to create complex pipelines using object detection and object recognition models from OpenVINO Model Zoo. As an example, we will use [vehicle-detection-0202](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/vehicle-detection-0202/README.md) to detect multiple vehicles on the image. Then, for each detected vehicle we will crop it using [model_zoo_intel_object_detection](../../../src/custom_nodes/model_zoo_intel_object_detection) example custom node. Finally, each vehicle image will be forwarded to [vehicle-attributes-recognition-barrier-0042](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/vehicle-attributes-recognition-barrier-0042/README.md) model.
 
 ![Vehicles analysis visualization](vehicles_analysis.png)
 
-Using such pipeline, a single request to OVMS can perform a complex set of operations to determine all vehicles and its properties.
+Using such pipeline, a single request to OVMS can perform a complex set of operations to determine all vehicles and their properties.
 
 ## Pipeline Configuration Graph
 
@@ -18,7 +18,7 @@ boxes according to the configured criteria. All operations on the images employ 
 - demultiplexer - outputs from the custom node model_zoo_intel_object_detection have variable batch size. In order to match it with the sequential recognition models, data is split into individuial images with each batch size equal to 1.
 Such smaller requests can be submitted for inference in parallel to the next Model Nodes. Learn more about the [demultiplexing](../../../docs/demultiplexing.md).
 - Model `vehicle_attributes_recognition` - this model recognizes type and color for given vehicle image
-- Response - the output of the whole pipeline combines the recognized vehicle images with their metadata: coordinates, type, color and detection confidence level. 
+- Response - the output of the whole pipeline combines the recognized vehicle images with their metadata: coordinates, type, color, and detection confidence level. 
 
 ## Prepare workspace to run the demo
 
@@ -66,7 +66,7 @@ Install python dependencies:
 pip3 install -r requirements.txt
 ``` 
 
-Now you can create directory for text images and run the client:
+Now you can create a directory for text images and run the client:
 ```bash
 mkdir results
 ```
@@ -123,5 +123,5 @@ Found 37 vehicles:
 36 Type: car Color: red
 ```
 
-With additional parameter `--vehicle_images_save_path` the client script saves all detected vehicle images to jpeg files into directory path to confirm
+With additional parameter `--vehicle_images_save_path`, the client script saves all detected vehicle images to jpeg files into directory path to confirm
 if the image was analyzed correctly.

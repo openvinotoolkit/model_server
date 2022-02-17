@@ -1,4 +1,4 @@
-# OpenVINO™ Toolkit Operator
+# OpenShift Operator {#ovms_extras_openvino-operator-openshift-readme}
 The Operator installs and manages development tools and production AI deployments in an OpenShift cluster. It enables easy deployment and management of AI inference services by creating `ModelServer` resource.
 
 The Operator also integrates with the JupyterHub [Spawner](https://jupyterhub.readthedocs.io/en/stable/reference/spawners.html) in [Red Hat OpenShift Data Science](https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-data-science) and [Open Data Hub](https://opendatahub.io/docs.html). See [detailed instructions](#integration-with-openshift-data-science-and-open-data-hub) below. 
@@ -24,20 +24,20 @@ After selecting `Create ModelServer` you will see the template for creating a de
 | `batch_size` | by default, batch size is derived from the model. Leave blank unless you wish to modify the default. |
 | `file_system_poll_wait_seconds` | time interval in seconds between checking for new versions of AI models. Setting to `0` disables automatic version updates. |
 | `gcp_creds_secret_name` | optional parameter should only be configured when using [Google Cloud Storage](https://cloud.google.com/storage) as your AI model repository. The secret should be created as a [GCP credentials](https://cloud.google.com/docs/authentication/production) JSON file. |
-| `grpc_port` | required parameter defines the service port for the [gRPC interface](https://github.com/openvinotoolkit/model_server/blob/main/docs/model_server_grpc_api.md). `8080` is the default port, but it can be modified if needed. |
+| `grpc_port` | required parameter defines the service port for the [gRPC interface](https://github.com/openvinotoolkit/model_server/blob/develop/docs/model_server_grpc_api.md). `8080` is the default port, but it can be modified if needed. |
 | `https_proxy` | optional parameter used only when a proxy is required to download models from a remote repository. |
 | `image_name` | required parameter defines container registry for the [OpenVINO Model Server](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de) image. By default `openvino-model-server:latest` is pulled, but `latest` can be replaced with a specific release version like `2021.3-gpu`. |
 | `log_level` | required parameter defines the [log](https://docs.openshift.com/container-platform/4.7/logging/viewing-resource-logs.html) level. By default, the level is set to `INFO` with `ERROR` (errors only) and `DEBUG` (verbose) available as alternatives. |
 | `model_name` | parameter used only when starting a `ModelServer` with a single AI model. The example provided uses `resnet` but this can be changed to describe your custom model. The parameters `config_configmap_name` and `config_path` are not used when this parameter is set. |
-| `model_path` | parameter used only when starting `ModelServer` with a single AI model. For locally accessible storage, use `models_path/model_name` and for cloud storage `s3://bucket/models/model` or `gs://bucket/models/model`. For more information, see [Cloud Storage Requirements](https://github.com/openvinotoolkit/model_server/blob/main/docs/docker_container.md#storage). The parameters `config_configmap_name` and `config_path` are not used when this parameter is set. |
-| `model_version_policy` | required parameter defines the version of AI models to serve. By default, the latest version is served. For other options, please see [Model Version Policy](https://github.com/openvinotoolkit/model_server/blob/main/docs/model_version_policy.md) documentation. |
+| `model_path` | parameter used only when starting `ModelServer` with a single AI model. For locally accessible storage, use `models_path/model_name` and for cloud storage `s3://bucket/models/model` or `gs://bucket/models/model`. For more information, see [Cloud Storage Requirements](https://github.com/openvinotoolkit/model_server/blob/develop/docs/docker_container.md#storage). The parameters `config_configmap_name` and `config_path` are not used when this parameter is set. |
+| `model_version_policy` | required parameter defines the version of AI models to serve. By default, the latest version is served. For other options, please see [Model Version Policy](https://github.com/openvinotoolkit/model_server/blob/develop/docs/model_version_policy.md) documentation. |
 | `models_volume_claim` | optional parameter should be defined only when using a persistent volume as your AI model repository. The [Persistent Volume Claim](https://docs.openshift.com/container-platform/4.7/storage/understanding-persistent-storage.html#using-pods_understanding-persistent-storage) (PVC) must be in the same namespace as this `ModelServer` resource. |
 | `plugin_config` | parameter defines device plugin configuration for performance tuning. For automatic tuning, set to `{"CPU_THROUGHPUT_STREAMS":"CPU_THROUGHPUT_AUTO"}`.
 | `replicas` | this required parameter defines the number of [replicas](https://docs.openshift.com/container-platform/4.7/applications/deployments/what-deployments-are.html#deployments-repliasets_what-deployments-are) for this `ModelServer` deployment. |
-| `resources` | `cpu` and `memory` | optional parameter defines compute resource limits for the [node](https://docs.openshift.com/online/pro/architecture/infrastructure_components/kubernetes_infrastructure.html#node). Limit CPU cores and memory (e.g. `250Mi` for 250MB). |
-| `rest_port` | required parameter defines the service port for the [REST interface](https://github.com/openvinotoolkit/model_server/blob/main/docs/model_server_rest_api.md). `8081` is the default port, but it can be modified if needed. |
+| `resources`, `cpu` and `memory` | optional parameter defines compute resource limits for the [node](https://docs.openshift.com/online/pro/architecture/infrastructure_components/kubernetes_infrastructure.html#node). Limit CPU cores and memory (e.g. `250Mi` for 250MB). |
+| `rest_port` | required parameter defines the service port for the [REST interface](https://github.com/openvinotoolkit/model_server/blob/develop/docs/model_server_rest_api.md). `8081` is the default port, but it can be modified if needed. |
 
-Adjust the parameters according to your needs. See the [full list of parameters](../../deploy/#helm-options-references) in the documentation for more details. See a screenshot of the template below: 
+Adjust the parameters according to your needs. See the [full list of parameters](https://github.com/openvinotoolkit/model_server/blob/develop/deploy/#helm-options-references) in the documentation for more details. See a screenshot of the template below: 
 
 ![template](images/openshift1.png)
 
@@ -46,13 +46,13 @@ Adjust the parameters according to your needs. See the [full list of parameters]
 
 Alternatively, after installing the Operator, you may deploy and manage deployments by creating `ModelServer` resources using the `oc` [OpenShift command line tool](https://docs.openshift.com/container-platform/4.7/cli_reference/openshift_cli/getting-started-cli.html).
 
-Modify the [sample resource](config/samples/intel_v1alpha1_ovms.yaml) and run the following command:
+Modify the [sample resource](https://github.com/openvinotoolkit/model_server/tree/develop/extras/openvino-operator-openshift/config/samples/intel_v1alpha1_ovms.yaml) and run the following command:
 
 ```bash
 oc apply -f config/samples/intel_v1alpha1_ovms.yaml
 ```
 
-The available [parameters](../../deploy/#helm-options-references) are the same as above.
+The available [parameters](../../deploy/README.md) are the same as above.
 
 <b>Note</b>: Some deployment configurations have prerequisites like creating relevant resources in Kubernetes. For example, a secret with credentials,
 persistent volume claim or configmap with a Model Server configuration file.
@@ -172,8 +172,8 @@ There are a few different ways to use the AI inference endpoints created by the 
 - Deploy a client inside a `pod` in the cluster. A client inside the cluster can access the endpoints via the service name or the service cluster ip
 - Configure the service type as `NodePort` - this will expose the service on the Kubernetes `node` external IP address
 - In a managed cloud deployment use the service type `LoadBalancer` - this exposes the service as external IP address
-- Configure OpenShift [`route` resource](https://docs.openshift.com/container-platform/4.6/networking/routes/route-configuration.html) 
-  or [`ingress` resource](https://kubernetes.io/docs/concepts/services-networking/ingress/) in opensource Kubernetes linked with the ModelServer service.
+- Configure OpenShift `route` [resource](https://docs.openshift.com/container-platform/4.6/networking/routes/route-configuration.html) 
+  or `ingress` [resource](https://kubernetes.io/docs/concepts/services-networking/ingress/) in opensource Kubernetes linked with the ModelServer service.
   In OpenShift, this operation could be done from the web console.
   
 Check out the [client code samples](../../client/python/tensorflow-serving-api/samples) to see how your applications can generate gRPC or REST API calls to the AI inference endpoints.
@@ -223,6 +223,6 @@ Average latency= 21.1 ms
 ## Integration with OpenShift Data Science and Open Data Hub
 The Operator integrates with the JupyterHub [Spawner](https://jupyterhub.readthedocs.io/en/stable/reference/spawners.html) in [Red Hat OpenShift Data Science](https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-data-science) and [Open Data Hub](https://opendatahub.io/docs.html). Simply create a `Notebook` resource, which deploys an ImageStream containing the OpenVINO developer tools and ready-to-run Jupyter notebooks. To use the ImageStream, you must have already installed the Operator for OpenShift Data Science or Open Data Hub.  
 
-The `Create Notebook` button in the web console will build the container image and create an ImageStream. This enables selecting `openvino-notebook` image from the Jupyter Spawner drop-down menu. The [image](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/Dockerfile) is maintained by Intel.
+The `Create Notebook` button in the web console will build the container image and create an ImageStream. This enables selecting `openvino-notebook` image from the Jupyter Spawner drop-down menu. The [image](https://github.com/openvinotoolkit/openvino_notebooks/blob/v2021.4.2/Dockerfile) is maintained by Intel.
 
 ![spawner](images/spawner.png)

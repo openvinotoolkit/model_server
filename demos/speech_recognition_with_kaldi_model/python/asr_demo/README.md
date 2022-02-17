@@ -118,7 +118,7 @@ As you start the container, the working directory is `/opt/workspace`
 Download the sample audio file for speech recognition:
 
 ```
-wget https://github.com/openvinotoolkit/model_server/raw/main/demos/speech_recognition_with_kaldi_model/python/asr_demo/sample.wav
+wget https://github.com/openvinotoolkit/model_server/raw/develop/demos/speech_recognition_with_kaldi_model/python/asr_demo/sample.wav
 ```
 
 Run speech recognition:
