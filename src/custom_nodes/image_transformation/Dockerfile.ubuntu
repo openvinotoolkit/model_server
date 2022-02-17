@@ -16,7 +16,7 @@
 
 FROM ubuntu:20.04
 RUN apt update && apt install -y build-essential curl
-ARG ${OPENCV_DOWNLOAD_FOLDER}
+ARG OPENCV_DOWNLOAD_FOLDER
 RUN curl -s ${OPENCV_DOWNLOAD_FOLDER}/ubuntu20.tgz | tar -xzf -
 ARG NODE_NAME=image_transformation
 
