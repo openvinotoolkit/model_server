@@ -22,14 +22,9 @@ rmdir resnet_v2_fp32_savedmodel_NHWC/
 ```
 *Note:* Directories operations are not necessary for the preparation, but in this guide the directories are simplified.
 
-Pull the latest openvino ubuntu_dev image from dockerhub
-```Bash
-docker pull openvino/ubuntu18_dev:latest
-```
-
 Convert the TensorFlow model to Intermediate Representation format using model_optimizer tool:
 ```Bash
-docker run -u $(id -u):$(id -g) -v ${PWD}/resnet_v2/:/resnet openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo.py --saved_model_dir /resnet/ --output_dir /resnet/models/resnet/1/ --input_shape=[1,224,224,3] --mean_values=[123.68,116.78,103.94] --reverse_input_channels
+docker run -u $(id -u):$(id -g) -v ${PWD}/resnet_v2/:/resnet nncv-harbor.inn.intel.com/openvino/ubuntu20_dev:2022.1.0.579 python3 /usr/local/lib/python3.8/dist-packages/openvino/tools/mo/mo.py --saved_model_dir /resnet/ --output_dir /resnet/models/resnet/1/ --input_shape=[1,224,224,3] --mean_values=[123.68,116.78,103.94] --reverse_input_channels
 ```
 
 *Note:* Some models might require other parameters such as `--scale` parameter.
@@ -54,13 +49,13 @@ docker pull openvino/model_server:latest
 
 Deploy OVMS using the following command:
 ```Bash
-docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_server:latest --model_path /models/resnet --model_name resnet --port 9000 --layout NHWC:NCHW
+docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_server:latest --model_path /models/resnet --model_name resnet --port 9000
 ```
 
 ### Running the inference requests from the client
 
 ```Bash
-cd client/python/ovmsclient/samples
+cd ../client/python/ovmsclient/samples
 virtualenv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
