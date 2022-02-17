@@ -34,10 +34,10 @@ class PersonVehicleBikeDetection(UseCase):
             if img_id != -1 and conf >= CONFIDENCE_THRESHOLD:
                 height, width = frame.shape[0:2]
                 cv2.rectangle(frame, (int(width * x_min), int(height * y_min)),
-                    (int(width * x_max), int(height * y_max)), COLORS[int(label)], 1)
+                    (int(width * x_max), int(height * y_max)), COLORS[int(label)], 2)
                 cv2.putText(frame, str(CLASSES[int(label)]), (int(width * x_min)-10,
-                    int(height * y_min)-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                    COLORS[int(label)], 1)
+                    int(height * y_min)-10), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                    COLORS[int(label)], 2)
         return frame
 
 

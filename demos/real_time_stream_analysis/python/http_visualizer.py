@@ -1,39 +1,65 @@
+import multiprocessing
+import os
+import queue
 from flask import Flask, render_template, Response
 from logger import get_logger
 import cv2
-import time
+import signal
 
-class HttpVisualizer:
-	def __init__(self, visualizer_port, io_processor):
+class HttpVisualizer():
+	def __init__(self, visualizer_port, buffer_size):
 		self.logger = get_logger(__name__)
 		self.port = visualizer_port
-		self.flask_server = Flask(__name__)
-		self.io_processor = io_processor
+		flask_server = self._make_flask_server()
+		self.flask_process = multiprocessing.Process(target=flask_server.run, kwargs={"host": "0.0.0.0","port": self.port, "debug":False})
+		self.frames_queue = multiprocessing.Queue(maxsize=buffer_size)
+		self.logger.info(f"Visualizer frames buffer capacity set to {buffer_size} frames")
 
+	def initialize(self):
+		self.logger.info("Starting Flask webserver...")
+		self.flask_process.start()
 
-	def read_postprocessed_frame(self):
+	def shutdown(self):
+		self.logger.info("Shutting down HTTP Visualizer...")
+		self.logger.info("Sending termination singal to Flask web server...")
+		os.kill(self.flask_process.pid, signal.SIGKILL)
+		self.flask_process.join()
+		self.logger.info("Flask web server terminated successfully")
+		self.logger.info("Flushing visualizer input buffer")
+		self._flush_queue()
+		self.logger.info("HTTP Visualizer shut down successfully")
+
+	def _flush_queue(self):
+		while not self.frames_queue.empty():
+			self.frames_queue.get()
+
+	def get_frames_queue(self) -> multiprocessing.Queue:
+		return self.frames_queue
+
+	def read_frame(self):
 		while True:
-			time.sleep(0.04)
-			success, frame = self.io_processor.get_visualizer_frame()
+			try:
+				frame = self.frames_queue.get_nowait()
+			except queue.Empty:
+				continue
+			success, buffer = cv2.imencode('.jpg', frame)
 			if not success:
-				self.logger.info("HTTP Visualizer broke")
-				break
-			ret, buffer = cv2.imencode('.jpg', frame)
+				#self.logger.debug("Failed to encode visualized frame")
+				continue
 			frame = buffer.tobytes()
-			yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n') 
+			yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n") 
 
 
-	def run(self):
-		self.logger.info("Starting HTTP Visualizer")
-		#flask_server = Flask(__name__)
+	def _make_flask_server(self):
+		flask_server = Flask(__name__)
 
-		@self.flask_server.route('/video_feed')
+		@flask_server.route("/video_feed")
 		def video_feed():
-			return Response(self.read_postprocessed_frame(), mimetype='multipart/x-mixed-replace; boundary=frame')
+			return Response(self.read_frame(), mimetype="multipart/x-mixed-replace; boundary=frame")
 
 
-		@self.flask_server.route('/')
+		@flask_server.route("/")
 		def index():
-			return render_template('index.html')
-
-		self.flask_server.run(host="0.0.0.0", port=self.port, debug=False)
+			return render_template("index.html")
+		
+		return flask_server

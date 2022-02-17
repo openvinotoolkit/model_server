@@ -1,120 +1,98 @@
 import queue
-from xml.parsers.expat import model
 import ovmsclient
 from ovmsclient.tfs_compat.grpc.tensors import NP_TO_TENSOR_MAP
 import numpy as np
 from logger import get_logger
-import threading
-
-class ExecutorThread(threading.Thread):
-	def __init__(self, index, inference_executor):
-		print(f"Initializing requesting thread index: {index}")
-		super().__init__()
-		self.index = index
-		self.inference_executor = inference_executor
-		self.input = None
-		self.result = None
-		self.predict_durations = []
-		self.input_ready_event = threading.Event()
-		self.result_ready_event = threading.Event()
-
-	def is_initialized(self):
-		return not (self.input is None and self.result is None)
-
-	def wait_for_input(self):
-		self.input_ready_event.wait()
-		self.input_ready_event.clear()
-
-	def wait_for_result(self):
-		self.result_ready_event.wait()
-		self.result_ready_event.clear()
-
-	def notify_input_ready(self):
-		self.input_ready_event.set()
-
-	def notify_result_ready(self):
-		self.result_ready_event.set()
-
-	def set_input(self, frame):
-		self.input = frame
-		self.notify_input_ready()
-
-	def get_result(self):
-		return self.result
-
-	def run(self):
-		print(f"Launching requesting thread index: {self.index}")
-		global force_exit
-		while (True):
-			self.wait_for_input()
-			self.result = self.inference_executor.predict(self.input)
-			self.notify_result_ready()
-		print(f"Stopping requesting thread index: {self.index}")
+import multiprocessing
+import cv2
 
 
+class InferenceExecutor(multiprocessing.Process):
+	
+	def __init__(self, id, ovms_info, binary_input, input_queue, result_queue, abort_event):
+		multiprocessing.Process.__init__(self)
 
-class InferenceExecutor:
-	def __init__(self, ovms_url, model_name, model_version=0, num_threads=32, 
-				 inputs_queue_maxsize=1000, results_queue_maxsize=1000):
-		
-		self.logger = get_logger(__name__)
+		self.abort_event = abort_event
+		self.exit_event = multiprocessing.Event()
+		self.exit_ready = multiprocessing.Event()
 
-		self.ovms_client = ovmsclient.make_grpc_client(ovms_url)
-		self.model_name = model_name
-		self.model_version = model_version
+		self.logger = get_logger(f"Inference-Executor-{id}")
+		self.id = id
+		self.ovms_url = ovms_info["ovms_url"]
+		self.model_name = ovms_info["model_name"]
+		self.model_version = ovms_info["model_version"]
+		self.binary_input = binary_input
+		self.input_queue = input_queue
+		self.result_queue = result_queue
 
-		self.inputs_queue = queue.Queue(maxsize=inputs_queue_maxsize)
-		self.results_queue = queue.Queue(maxsize=results_queue_maxsize)
+	def shutdown(self):
+		self.logger.debug(f"Shutting down Inference-Executor-{self.id}")
+		self.exit_event.set()
+		self.exit_ready.wait()
+		self.logger.debug("Inference Executor thread stopped")
+		self._flush_queues()
+		self.logger.debug("Flushed Inference Executor IO buffers")
 
-		model_metadata = self.ovms_client.get_model_metadata(self.model_name)
-		if len(model_metadata["inputs"]) > 1 or len(model_metadata["outputs"]) > 1:
-			raise ValueError("Unexpected number of model inputs or outputs. Expecting single input and single output")
-		
-		self.input_name = next(iter(model_metadata['inputs']))
+	def _flush_queues(self):
+		while not self.input_queue.empty():
+			self.input_queue.get_nowait()
+		while not self.result_queue.empty():
+			self.result_queue.get_nowait()
 
-		self.executor_threads = [ExecutorThread(i, self) for i in range(num_threads)]
-		for executor_thread in self.executor_threads:
-			executor_thread.start()
+	def _make_ovms_call(self, func, *args):
+		try:
+			result = func(*args)
+		except (ConnectionError, TimeoutError) as error:
+			# TO DO: Consider retrying, just like with the stream reader
+			self.logger.error(f"Could not connect to OVMS - {str(error)}")
+			return None
+		except ovmsclient.ModelServerError as error:
+			self.logger.error(f"Call to OVMS resulted in error - {str(error)}")
+			return None
+		return result
 
-		self.main_thread = threading.Thread(target=self._main_thread)
-		self.main_thread.start()
-
-		self.logger.info("Inference Executor initialized successfully")
-
-	def predict(self, frame):
+	def _predict(self, ovms_client, input_name, frame):
+		if self.binary_input:
+			_, jpeg_encoded_frame = cv2.imencode('.jpeg', frame)
+			input_data = jpeg_encoded_frame.tobytes()
+		else:
 			frame = np.expand_dims(frame, axis=0)
 			input_data = ovmsclient.make_tensor_proto(frame, dtype=NP_TO_TENSOR_MAP[np.float32].TensorDtype)
-			result = self.ovms_client.predict({self.input_name: input_data}, self.model_name, self.model_version)
-			return result
 
-	def schedule_inference(self, frame) -> bool:
-		try:
-			self.inputs_queue.put_nowait(frame)
-			return True
-		except queue.Full:
-			return False
+		result = self._make_ovms_call(ovms_client.predict, {input_name: input_data}, self.model_name, self.model_version)
+		return result
 
-	def pull_result(self):
-		try:
-			return self.results_queue.get_nowait()
-		except queue.Empty:
-			return None, None
+	def run(self):
+		ovms_client = ovmsclient.make_grpc_client(self.ovms_url)
+		model_metadata = self._make_ovms_call(ovms_client.get_model_metadata, self.model_name)
 
-	def _main_thread(self):
-		num_threads = len(self.executor_threads)
-		i = 0
-		while True:
-			input = self.inputs_queue.get()
-			if not self.executor_threads[i].is_initialized():
-				self.executor_threads[i].set_input(input)
-				i = (i + 1) % num_threads
+		if model_metadata is None:
+			self.logger.info("Issuing abort signal...")
+			self.abort_event.set()
+			self.exit_event.wait()
+			self.exit_ready.set()
+			return
+		
+		if len(model_metadata["inputs"]) > 1 or len(model_metadata["outputs"]) > 1:
+			self.logger("Unexpected number of model inputs or outputs. Expecting single input and single output")
+			# TODO: signal exit to inference manager 
+		
+		input_name = next(iter(model_metadata['inputs']))
+
+		while not self.exit_event.is_set():
+			try:
+				input = self.input_queue.get(timeout=1)
+			except queue.Empty:
 				continue
-			self.executor_threads[i].wait_for_result()
-			inferred_frame = self.executor_threads[i].input
-			result = self.executor_threads[i].get_result()
-			self.results_queue.put((inferred_frame, result))
-			self.executor_threads[i].set_input(input)
-			i = (i + 1) % num_threads
 
+			result = self._predict(ovms_client, input_name, input)
 
+			if result is None:
+				self.logger.info("Issuing abort signal...")
+				self.abort_event.set()
+				self.exit_event.wait()
+				continue
 
+			self.result_queue.put((input, result))
+		self.exit_ready.set()
+		return
