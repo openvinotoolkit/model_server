@@ -1,11 +1,11 @@
-# Multi Faces Analysis Pipeline Demo with OVMS
+# Multi Faces Analysis Pipeline Demo with OVMS {#ovms_demo_multi_faces_analysis_pipeline}
 
 
 This document demonstrates how to create complex pipelines using object detection and object recognition models from OpenVINO Model Zoo. As an example, we will use [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/face-detection-retail-0004/README.md) to detect multiple faces on the image. Then, for each detected face we will crop it using [model_zoo_intel_object_detection](../../../src/custom_nodes/model_zoo_intel_object_detection) example custom node. Finally, each image face image will be forwarded to [age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/age-gender-recognition-retail-0013/README.md) and [emotion-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/emotions-recognition-retail-0003/README.md) models.
 
 ![Multi Faces Analysis Graph](multi_faces_analysis.png)
 
-Using such pipeline, a single request to OVMS can perform a complex set of operations to determine all faces and its properties.
+Using such a pipeline, a single request to OVMS can perform a complex set of operations to determine all faces and their properties.
 
 ### See also
 
@@ -80,7 +80,7 @@ Exemplary client [multi_faces_analysis_pipeline.py](multi_faces_analysis_pipelin
 pip3 install -r requirements.txt
 ``` 
 
-Now you can create directory for text images and run the client:
+Now you can create a directory for text images and run the client:
 ```bash
 mkdir results
 ```

@@ -1,6 +1,6 @@
-# Kubernetes Deployment
+# Helm Deployment {#ovms_deploy_helm_chart}
 
-A helm chart for installing OpenVINO Model Server in a Kubernetes cluster is provided. 
+To simplify deployment in Kubernetes, we provide a helm chart for installing OpenVINO Model Server in a Kubernetes cluster. 
 The helm chart is managing the Model Server instance which represents a kubernetes deployment and a
 kubernetes service with exposed REST and gRPC inference endpoints.
 This guide assumes you already have a functional Kubernetes cluster and helm 
@@ -21,7 +21,7 @@ Each model version subfolder must include its model files.
 
 Model repository can be hosted in the cloud storage, Kubernetes persistent volume or on the local drives.
 
-Learn more about the [model repository](../docs/models_repository.md)
+Learn more about the [model repository](../docs/models_repository.md).
 
 For example, you can 
 use a Google Cloud Storage (GCS) bucket:
@@ -57,7 +57,7 @@ helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs:/
 
 ### S3
 
-For S3 you must provide an AWS Access Key ID, the content of that key (AWS Secret Access Key) and the AWS region when deploying: `aws_access_key_id`, `aws_secret_access_key` and `aws_region` (see below)
+For S3 you must provide an AWS Access Key ID, the content of that key (AWS Secret Access Key) and the AWS region when deploying: `aws_access_key_id`, `aws_secret_access_key` and `aws_region` (see below).
 ```shell script
 helm install ovms-app ovms --set model_name=icnet-camvid-ava-0001,model_path=s3://models-repository/model,aws_access_key_id=<...>,aws_secret_access_key=<...>,aws_region=eu-central-1
 ```
@@ -96,7 +96,7 @@ Note that parameter `models_volume_claim` is mutually exclusive with `models_hos
 ## Assigning Resource Specs
 
 You can restrict assigned cluster resources to the OVMS container by setting the parameter `resources`.
-By default, there are no restrictions but that parameter could be used to reduce the CPU and memory allocation. Below is the snippet example from the values.yaml file:
+By default, there are no restrictions but that parameter could be used to reduce the CPU and memory allocation. Below is the snippet example from the [values.yaml](https://github.com/openvinotoolkit/model_server/blob/develop/deploy/ovms/values.yaml) file:
 ```yaml
 resources:
   limits:
@@ -134,7 +134,7 @@ of the node IP address. `ClusterIP` would keep the OVMS service internal to the 
     
 ## Deploy OpenVINO Model Server with a Single Model
 
-Deploy Model Server using _helm_. Please include the required model name and model path. You can also adjust other parameters defined in [values.yaml](ovms/values.yaml).
+Deploy Model Server using _helm_. Please include the required model name and model path. You can also adjust other parameters defined in [values.yaml](https://github.com/openvinotoolkit/model_server/tree/develop/deploy/ovms/values.yaml).
 ```shell script
 helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository
 ```
@@ -155,8 +155,7 @@ helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs:/
 
 ## Deploy OpenVINO Model Server with Multiple Models Defined in a Configuration File
 
-To serve multiple models you can run Model Server with a configuration file as described here:
-https://github.com/openvinotoolkit/model_server/blob/main/docs/docker_container.md#configfile
+To serve multiple models you can run Model Server with a configuration file as described in [Config File](../docs/multiple_models_mode.md).
 
 Follow the above documentation to create a configuration file named _config.json_ and fill it with proper information.
 
@@ -194,7 +193,7 @@ The service name deployed via the helm chart is defined by the application name.
 gets a suffix `-ovms`, in case the application name doesn't include `ovms` phrase. It avoids a risk of the service name
 conflicts with other application.
 
-Follow the [instructions](https://github.com/openvinotoolkit/model_server/tree/main/demos/image_classification/python) 
+Follow the [instructions](https://github.com/openvinotoolkit/model_server/tree/develop/demos/image_classification/python) 
 to create an image classification client that can be used to perform inference with models being exposed by the server. For example:
 ```shell script
 $ python image_classification.py --grpc_port 8080 --grpc_address 1.2.3.4 --input_name 0 --output_name 1463
@@ -252,36 +251,36 @@ release "ovms-app" uninstalled
 
 | Parameter        | Description           | Prerequisites  | Default |
 | ------------- |-------------|-------------|-------------|
-| replicas      | number of k8s pod replicas to deploy  |  | 1 |
-| image_name      | change to use different docker image with OVMS   |  | openvino/model_server:latest |
+| replicas      | Number of k8s pod replicas to deploy  | - | 1 |
+| image_name      | Change to use different docker image with OVMS   | - | openvino/model_server:latest |
 | config_configmap_name | Starts OVMS using the config file stored in the ConfigMap |    Create the ConfigMap including config.json file | - |
 | config_path | Starts OVMS using the config file mounted from the node local path or the k8s persistent volume | Use it together with models_host_path or models_claim_name and place the config file in configured storage path | - |
-| grpc_port      | service port for gRPC interface |  | 8080 |
-| grpc_port      | service port for REST API interface |  | 8081 |
-| file_system_poll_wait_seconds      | Time interval in seconds between new version detection. 0 disables the version updates |  | 1 |
-| model_name      | model name, start OVMS with a single model, excluding with config_configmap_name and config_path parameter |  | - |
-| model_path      | model path, start OVMS with a single model, excluding with config_configmap_name and config_path parameter |  | - |
+| grpc_port      | Service port for gRPC interface | - | 8080 |
+| grpc_port      | Service port for REST API interface | - | 8081 |
+| file_system_poll_wait_seconds      | Time interval in seconds between new version detection. 0 disables the version updates | - | 1 |
+| model_name      | Model name, start OVMS with a single model, excluding with config_configmap_name and config_path parameter | - | - |
+| model_path      | Model path, start OVMS with a single model, excluding with config_configmap_name and config_path parameter | - | - |
 | target_device      | Target device to run inference operations | Non CPU device require the device plugin to be deployed | CPU |
 | stateful      | If set to any non empty value, enables stateful model execution | Model must be stateful | Stateless model execution |
-| nireq      | Size of inference queue  |  | set automatically by OpenVINO|
-| batch_size      | Change the model batch size  |  | defined by the model attributes |
-| layout      | Change layout of the model input or output with image data. NCHW or NHWC  |  | Defined in the model |
-| shape      | Change the model input shape  |  | defined by the model attributes |
-| model_version_policy      | Set the model version policy  |  | {\"latest\": { \"num_versions\":1 }} The latest version is served |
-| plugin_config      | Device plugin configuration used for performance tuning  |  | {\"CPU_THROUGHPUT_STREAMS\":\"CPU_THROUGHPUT_AUTO\"}|
+| nireq      | Size of inference queue  | - | Set automatically by OpenVINO|
+| batch_size      | Change the model batch size  | - | Defined by the model attributes |
+| layout      | Change layout of the model input or output with image data. NCHW or NHWC  | - | Defined in the model |
+| shape      | Change the model input shape  | - | defined by the model attributes |
+| model_version_policy      | Set the model version policy  | - | {\"latest\": { \"num_versions\":1 }} The latest version is served |
+| plugin_config      | Device plugin configuration used for performance tuning  | - | {\"CPU_THROUGHPUT_STREAMS\":\"CPU_THROUGHPUT_AUTO\"}|
 | gcp_creds_secret_name      | k8s secret resource including GCP credentials, use it with google storage for models | Secret should be created with GCP credentials json file | - |
-| aws_access_key_id      | S3 storage access key id, use it with S3 storage for models |  | - |
-| aws_secret_access_key      | S3 storage secret key, use it with S3 storage for models |  | - |
-| aws_region      | S3 storage secret key, use it with S3 storage for models |  | - |
-| aws_secret_access_key      | S3 storage secret key, use it with S3 storage for models |  | - |
+| aws_access_key_id      | S3 storage access key id, use it with S3 storage for models | - | - |
+| aws_secret_access_key      | S3 storage secret key, use it with S3 storage for models | - | - |
+| aws_region      | S3 storage secret key, use it with S3 storage for models | - | - |
+| aws_secret_access_key      | S3 storage secret key, use it with S3 storage for models |-  | - |
 | s3_compat_api_endpoint      | S3 compatibility api endpoint, use it with Minio storage for models |  | - |
-| azure_storage_connection_string   | connection string to the Azure Storage authentication account, use it with Azure storage for models |  | - |
-| log_level      | OVMS log level, one of ERROR,INFO,DEBUG|  |  INFO |
-| service_type      | k8s service type |  | LoadBalancer |
-| resources      | compute resource limits |  | All CPU and memory on the node |
-| node_selector      | target node label condition |  | All available nodes |
-| annotations      | defined annotations to be set in the pods |  | none |
-| security_context     | OVMS security context |  | 5000:5000 |
-| models_host_path      | mounts node local path in container as /models folder | Path should be created on all nodes and populated with the data | - |
-| models_volume_claim      | mounts k8s persistent volume claim in the container as /models | Persistent Volume Claim should be create in the same namespace and populated with the data | - |
-| https_proxy | proxy name to be used to connect to remote models | | - |
+| azure_storage_connection_string   | Connection string to the Azure Storage authentication account, use it with Azure storage for models | - | - |
+| log_level      | OVMS log level, one of ERROR,INFO,DEBUG| - |  INFO |
+| service_type      | k8s service type | - | LoadBalancer |
+| resources      | Compute resource limits | - | All CPU and memory on the node |
+| node_selector      | Target node label condition | - | All available nodes |
+| annotations      | Defined annotations to be set in the pods | - | None |
+| security_context     | OVMS security context | - | 5000:5000 |
+| models_host_path      | Mounts node local path in container as /models folder | Path should be created on all nodes and populated with the data | - |
+| models_volume_claim      | Mounts k8s persistent volume claim in the container as /models | Persistent Volume Claim should be create in the same namespace and populated with the data | - |
+| https_proxy | Proxy name to be used to connect to remote models | - | - |

@@ -1,19 +1,19 @@
-# Age and Gender Recognition via OpenVINO&trade; Model Server REST API
+# Age and Gender Recognition via REST API {#ovms_docs_demo_age_gender_guide}
 
 ## Introduction
-This documentation presents how to use OpenVINO&trade; Model Server to execute inference requests over REST API interface. The demo is using a pretrained model from [open_model_zoo](https://github.com/opencv/open_model_zoo) repository.
+This article describes how to use OpenVINO&trade; Model Server to execute inference requests sent over the REST API interface. The demo uses a pretrained model from the [Open Model Zoo](https://github.com/openvinotoolkit/open_model_zoo) repository.
 
 ## Steps
 
 #### Download the pretrained model for age and gender recognition
-1. Download both components of the model(xml and bin file) using curl in `model` directory
+1. Download both components of the model (xml and bin file) using curl in the `model` directory
 
 ```Bash
 curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml -o model/1/age-gender-recognition-retail-0013.bin -o model/1/age-gender-recognition-retail-0013.xml
 
 ```
 
-#### Pull and tag the docker image with OVMS component 
+#### Pull and tag the docker image with the OVMS component 
 Pull the latest version of OpenVINO&trade; Model Server from Dockerhub :
 ```Bash
 docker pull openvino/model_server:latest
@@ -30,12 +30,12 @@ Download sample image using the command :
 ```Bash
 wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/2021.4/models/intel/age-gender-recognition-retail-0013/assets/age-gender-recognition-retail-0001.jpg
 
-#### Format the json request and send the inference request to OVMS REST API endpoint
+#### Format the json request and send the inference request to the OVMS REST API endpoint
 1. Create a sample python script using the command : 
 ```Bash
 touch sample.py
 ```
-2. Format the downloaded image using following python code snippet. Output of the code snippet is a json including the downloaded image in BGR format and 0-255 normalization. Paste the following code snippet in `sample.py`.
+2. Format the downloaded image using the following Python code snippet. Output of the code snippet is a json including the downloaded image in BGR format and 0-255 normalization. Paste the following code snippet in `sample.py`.
 ```Python
 import cv2
 import numpy as np

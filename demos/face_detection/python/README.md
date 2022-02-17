@@ -48,7 +48,7 @@ Arguments:
                         Path to client key
 ```
 
-## Usage example
+## Usage example {#ovms_demo_face_detection}
 
 Start the OVMS service locally:
 

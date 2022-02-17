@@ -1,24 +1,28 @@
-# Dynamic batch size with OpenVINO&trade; Model Server Demultiplexer
+# Dynamic batch size with OpenVINO&trade; Model Server Demultiplexer {#ovms_docs_dynamic_bs_demultiplexer}
 
-## Intoduction
-This document guides how to configure DAG Scheduler pipeline to be able to send predict request with arbitrary batch size without model reloading.
+## Introduction
+This document shows how to configure a DAG Scheduler pipeline to send predict requests with an arbitrary batch size without model reloading.
 
 With OpenVINO&trade; Model Server Demultiplexing infer request sent from client application can have various batch sizes and changing batch size does not require model reload.
 
-More information about this feature can be found in [dynamic batch size in demultiplexing](demultiplexing.md#dynamic-batch-handling-with-demultiplexing)
+More information about this feature can be found in [dynamic batch size in demultiplexing](./demultiplexing.md)
 
-*Note:* When using `demultiply_count` parameters, only one demultiplexer can exist in pipeline.
+> **NOTE**: When using `demultiply_count` parameters, only one demultiplexer can exist in the pipeline.
 
-- Example client in python grpc_predict_resnet.py can be used to request the pipeline. Use `--dag-batch-size-auto` flag to add additional dimension to the input shape which is required for demultiplexing feature.
+- Example client in python [grpc_predict_resnet.py](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/grpc_predict_resnet.py) can be used to request the pipeline. Use `--dag-batch-size-auto` flag to add an additional dimension to the input shape which is required for demultiplexing feature.
 
 - The example uses model [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/resnet50-binary-0001/README.md).
 
-- While using resnet model with grpc_predict_resnet.py the script processes the output from the server and displays the inference results using previously prepared file with labels. Inside this file each image has assigned number, which indicates the correct recognition answer.  
+- While using resnet model with grpc_predict_resnet.py the script processes the output from the server and displays the inference results using the previously prepared file with labels. Inside this file, each image has an assigned number, which indicates the correct recognition answer.  
 
 ## Steps
-Clone OpenVINO&trade; Model Server github repository and enter `model_server` directory.
+Clone OpenVINO&trade; Model Server GitHub repository and enter `model_server` directory.
+```
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+```
 #### Download the pretrained model
-Download model files and store it in `models` directory
+Download model files and store them in the `models` directory
 ```Bash
 mkdir -p models/resnet/1
 curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
@@ -31,7 +35,12 @@ docker pull openvino/model_server:latest
 ```
 
 #### OVMS configuration file
-Create new file named `config.json` :
+Go to the `models` directory:
+```
+cd models
+```
+
+Create a new file named `config.json` there:
 ```json
 {
    "model_config_list": [
@@ -86,12 +95,12 @@ Create new file named `config.json` :
 #### Start ovms docker container with downloaded model
 Start ovms container with image pulled in previous step and mount `models` directory :
 ```Bash
-docker run --rm -d -v $(pwd)/models:/models -v $(pwd)/config.json:/config.json -p 9000:9000 openvino/model_server:latest --config_path config.json --port 9000
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config.json --port 9000
 ```
 
 #### Checking metadata
 ```Bash
-cd client/python/tensorflow-serving-api/samples
+cd ../client/python/tensorflow-serving-api/samples
 virtualenv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
@@ -108,13 +117,13 @@ Outputs metadata:
         Output name: 1463; shape: [-1, 1, 1000]; dtype: DT_FLOAT
 ```
 
-*Note:* While using dynamic batching feature both input and output shape has an additional dimension, which represents split batch size. Setting batch size parameter to `--batchsize 8` would set input shape to `[8,1,3,244,244]` and output shape to `[8,1,1000]`.
+> **NOTE**: While using the dynamic batching feature both input and output shape has an additional dimension, which represents split batch size. Setting batch size parameter to `--batchsize 8` would set input shape to `[8,1,3,244,244]` and output shape to `[8,1,1000]`.
 
 #### Run the client
 ```Bash
 python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet50DAG --dag-batch-size-auto --transpose_input False --batchsize 1 > b1.txt && python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet50DAG --dag-batch-size-auto --transpose_input False --batchsize 8 > b8.txt;
 ```
-*Note:* Results of running the client will be available in .txt files in current directory.
+*Note:* Results of running the client will be available in .txt files in the current directory.
 
 #### Output of the script
 Output with `batchsize 1` stored in `b1.txt`:
@@ -203,4 +212,4 @@ Classification accuracy: 100.00
 ```
 Each iteration presents the results of each infer request and details for each image in batch.
 
-With this feature we were able to successfully run client simultaneously with different batch size parameters without performance impact from the model reloading.
+With this feature, we were able to successfully run client simultaneously with different batch size parameters without performance impact from the model reloading.

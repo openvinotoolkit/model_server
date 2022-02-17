@@ -6,5 +6,5 @@
 - [Create pipeline of models for execution in a Single Client Request](./dag_scheduler.md)
 - [Performance tuning](performance_tuning.md)
 - [Running the inference reuqests](../client/python/ovmsclient/samples)
-- [Demos](demos.md)
+- [Demos](../demos)
 - [Troubleshoot](./troubleshooting.md)

@@ -1,7 +1,7 @@
-# OpenVINO&trade; Model Server Troubleshooting
+# OpenVINO&trade; Model Server Troubleshooting {#ovms_docs_troubleshooting}
 
 ## Introduction
-This document gives information about troubleshooting following issues while using OpenVINO&trade; Model Server:
+This document gives information about troubleshooting the following issues while using the OpenVINO&trade; Model Server:
 * <a href="#model-import">Model Import Issues</a>
 * <a href="#client-request">Client Request Issues</a>
 * <a href="#resource-allocation">Resource Allocation</a>
@@ -15,10 +15,10 @@ This document gives information about troubleshooting following issues while usi
 
 OpenVINO&trade; Model Server loads all defined models versions according to set [version policy](./model_version_policy.md). A model version is represented by a numerical directory in a model path, containing OpenVINO model files with .bin and .xml extensions.
 
-When new model version is detected, the server loads the model files and starts serving new model version. This operation might fail for the following reasons :
-- There is a problem with accessing model files (i. e. due to network connectivity issues to the  remote storage or insufficient permissions).
+When a new model version is detected, the server loads the model files and starts serving a new model version. This operation might fail for the following reasons :
+- There is a problem with accessing model files (due to network connectivity issues to the remote storage or insufficient permissions).
 - Model files are malformed and can not be imported by the Inference Engine.
-- Model requires custom CPU extension.
+- Model requires a custom CPU extension.
 
 
 Below are examples of incorrect structure :
@@ -36,15 +36,15 @@ models/
     ├── ir_model.xml
     └── mapping_config.json
 ```
-- In the above example, the server will detect only Directory `1` of `model1`. It will not detect Directory `2` as valid model version because it does not contain valid OpenVINO model files.
+- In the above example, the server will detect only Directory `1` of `model1`. It will not detect Directory `2` as a valid model version because it does not contain valid OpenVINO model files.
 
 - The server will not detect any version in `model2`because, although the files in `model2` are correct, they are not in a numerical directory.
 
-- The root cause is reported in the server logs or in the response from a call to GetModelStatus function. 
+- The root cause is reported in the server logs or the response from a call to GetModelStatus function. 
 
-- A model version that is detected but not loaded will not be served. It will report status `LOADING` with error message: `Error occurred while loading version`.
+- A model version that is detected but not loaded will not be served. It will report status `LOADING` with the error message: `Error occurred while loading version`.
 
-- When model files become accessible or fixed, server will try to load them again on the next version update attempt.
+- When model files become accessible or fixed, the server will try to load them again on the next version update attempt.
 
 - Model import will fail if the OVMS process does not have read permissions to the model files and list permissions on the model folder and model version subfolder. 
 
@@ -56,24 +56,24 @@ models/
 The possible issues could be :
 * Incorrect shape of the input data.
 * Incorrect input key name which does not match the tensor name or set input key name in `mapping_config.json`.
-* Incorrectly serialized data on the client side.
+* Incorrectly serialized data on the client-side.
 
 ## Resource Allocation<a name="resource-allocation"></a>
 - RAM consumption might depend on the size and volume of the models configured for serving. It should be measured experimentally, however it can be estimated that each model will consume RAM size equal to the size of the model weights file (.bin file).
 
-- Every version of the model enabled in the version policy creates a separate inference engine object. By default only the latest version is enabled.
+- Every version of the model enabled in the version policy creates a separate inference engine object. By default, only the latest version is enabled.
 
-- OpenVINO&trade; model server consumes all available CPU resources unless they are restricted by operating system, Docker or Kubernetes capabilities.
+- OpenVINO&trade; model server consumes all available CPU resources unless they are restricted by the operating system, Docker or Kubernetes capabilities.
 
 *Note* When insufficient memory is allocated to the container, it might get terminated by the Docker engine [OOM Killer](https://docs.docker.com/config/containers/resource_constraints/). There will be no termination root cause
-mentioned in the OVMS logs but such situation can be confirmed by `docker inspect <terminated_container>` and reported State `"OOMKilled": true`.
+mentioned in the OVMS logs but such a situation can be confirmed by `docker inspect <terminated_container>` and reported State `"OOMKilled": true`.
 It will be also included in the host system logs like `Memory cgroup out of memory: Killed process`.
 
 
 ## Usage Monitoring<a name="usage-monitoring"></a>
 - It is possible to track the usage of the models including processing time while DEBUG mode is enabled.
 - With this setting model server logs will store information about all the incoming requests.
-- You can parse the logs to analyze: volume of requests, processing statistics and most used models.
+- You can parse the logs to analyze: the volume of requests, processing statistics, and most used models.
 
 ## Configuring AWS For Use With a Proxy<a name="configure-aws"></a>
 - To use AWS behind a proxy, an environment variable should be configured. The AWS storage module is using the following format
@@ -94,9 +94,8 @@ HTTP_proxy
 
 ## Using GCS model behind a proxy <a name="gcs"></a>
 
-- If your environment is required to use proxy but `http_proxy`/`https_proxy` is not passed to server container there will be 15 minutes timeout when accessing GCS models.
-- During that time no logs will be captured by OVMS. Currently there is no option to change timeout duration for GCS.
+- If your environment is required to use proxy but `http_proxy`/`https_proxy` is not passed to the server container there will be 15 minutes timeout when accessing GCS models.
+- During that time no logs will be captured by OVMS. Currently, there is no option to change the timeout duration for GCS.
 
 ## Unable to load network into device with: `can't protect` in server logs <a name="load-network-issue"></a>
 - Since this is known bug, please refer OpenVINO&trade; [release notes](https://software.intel.com/content/www/us/en/develop/articles/openvino-relnotes.html).
-

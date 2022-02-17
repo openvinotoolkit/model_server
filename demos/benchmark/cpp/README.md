@@ -1,4 +1,4 @@
-# Benchmark App for OVMS
+# Benchmark App for OVMS {#ovms_demo_benchmark_app_cpp}
 
 This demo provides a benchmark client that uses asynchronous gRPC API and tests performance with synthetic data (stripped out of OpenCV dependency).
 

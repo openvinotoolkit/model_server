@@ -1,4 +1,4 @@
-# Support for binary inputs data in OpenVINO Model Server
+# Support for Binary Input Data {#ovms_docs_binary_input}
 
 While OpenVINO models don't have the ability to process binary inputs, the model server can accept them and convert
 automatically using OpenCV library.
@@ -31,12 +31,11 @@ OVMS configuration in runtime. For example when the orignal model has input shap
 in the OVMS configuration "layout": "NHWC:NCHW" or the command line parameter `--layout NHWC:NCHW`. In result, the model will
 have effective shape [1,224,224,3] and layout `NHWC`.
 
-In case the model was trained with color format RGB and range other then 0-255, the 
-[model optimizer](tf_model_binary_input.md) 
-can apply required adjustments:  
-```--reverse_input_channels```: Switch the input channels order from RGB to BGR (or vice versa). Applied to original inputs of the model if and only if a number of channels equals 3. Applied after application of --mean_values and --scale_values options, so numbers in --mean_values and  --scale_values go in the order of channels used in the original model  
-```--scale``` : All input values coming from original network inputs  will be divided by this value. When a list of inputs  is overridden by the --input parameter, this scale is  not applied for any input that does not match with the  original input of the model  
-```--mean_values``` :  Mean values to be used for the input image per  channel. Values to be provided in the (R,G,B) or (B,G,R) format. Can be defined for desired input of the model, for example: "--mean_values data[255,255,255],info[255,255,255]". The exact meaning and order of channels depend on how the original model was trained.
+In case the model was trained with RGB color format and a range other than 0-255, the [Model Optimizer](tf_model_binary_input.md) can apply the required adjustments:
+  
+`--reverse_input_channels`: Switch the input channels order from RGB to BGR (or vice versa). Applied to original inputs of the model **only** if a number of channels equals 3. Applied after application of --mean_values and --scale_values options, so numbers in --mean_values and  --scale_values go in the order of channels used in the original model  
+`--scale` : All input values coming from original network inputs  will be divided by this value. When a list of inputs  is overridden by the --input parameter, this scale is  not applied for any input that does not match with the  original input of the model  
+`--mean_values` :  Mean values to be used for the input image per  channel. Values to be provided in the (R,G,B) or (B,G,R) format. Can be defined for desired input of the model, for example: "--mean_values data[255,255,255],info[255,255,255]". The exact meaning and order of channels depend on how the original model was trained.
 
 Blob data precision from binary input decoding is set automatically based on the target model or the [DAG pipeline](dag_scheduler.md) node.
 

@@ -1,4 +1,4 @@
-# OpenVINO™ Model Server Stateful Example Clients 
+# OpenVINO™ Model Server Stateful Example Clients {#ovms_demo_speech_recognition}
 
 This document contains examples to run *Predict* functions over gRPC API and REST API on stateful Kaldi models (rm_lstm4f , aspire_tdnn).
 

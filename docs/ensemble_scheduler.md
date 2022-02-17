@@ -1,10 +1,10 @@
 
-## Image classification with models ensemble
+## Image Classification with Model Ensemble {#ovms_docs_demo_ensemble}
 
-This document presents ensemble models as an example of [DAG Scheduler](dag_scheduler.md) implementation.
+This guide shows how to implement a model ensemble using the [DAG Scheduler](dag_scheduler.md).
 
-- Let's consider you develop an application to perform image classification. There are many different models that can be used for this task. The goal is to combine results from inferences executed on two different models and calculate argmax to pick most probable classification label. 
-- For this task, select two models: [googlenet-v2](https://docs.openvinotoolkit.org/latest/omz_models_public_googlenet_v2_tf_googlenet_v2_tf.html) and [resnet-50](https://docs.openvinotoolkit.org/latest/omz_models_public_resnet_50_tf_resnet_50_tf.html). Additionally, create own model **argmax** to combine and select top result. The aim is to perform this task on the server side with no intermediate results passed over the network. Server should take care of feeding inputs/outputs in subsequent models. Both - googlenet and resnet predictions should run in parallel. 
+- Let's consider you develop an application to perform image classification. There are many different models that can be used for this task. The goal is to combine results from inferences executed on two different models and calculate argmax to pick the most probable classification label. 
+- For this task, select two models: [googlenet-v2](https://docs.openvinotoolkit.org/latest/omz_models_public_googlenet_v2_tf_googlenet_v2_tf.html) and [resnet-50](https://docs.openvinotoolkit.org/latest/omz_models_public_resnet_50_tf_resnet_50_tf.html). Additionally, create own model **argmax** to combine and select top result. The aim is to perform this task on the server side with no intermediate results passed over the network. The server should take care of feeding inputs/outputs in subsequent models. Both - googlenet and resnet predictions should run in parallel. 
 - Diagram for this pipeline would look like this: 
 
 ![diagram](model_ensemble_diagram.svg)
@@ -27,12 +27,12 @@ This document presents ensemble models as an example of [DAG Scheduler](dag_sche
 ~$ source .tf_env/bin/activate
 ~$ pip3 install tensorflow==2.3.1
 ```
-3. Prepare argmax model with `(1, 1001)` input shapes to match output of googlenet and resnet output shapes. Generated model will sum inputs and calculate the index with the highest value. The model output will indicate the most likely predicted class from the ImageNet* dataset. <a name="point-3"></a>
+3. Prepare argmax model with `(1, 1001)` input shapes to match output of the googlenet and resnet output shapes. The enerated model will sum inputs and calculate the index with the highest value. The model output will indicate the most likely predicted class from the ImageNet* dataset. <a name="point-3"></a>
 ```
 ~$ python3 tests/models/argmax_sum.py --input_size 1001 --export_dir ~/models/public/argmax/saved_model
 ```
 
-4. Execute following commands to convert models to IR format and [prepare models repository](./models_repository.md):
+4. Execute the following commands to convert models to IR format and [prepare models repository](./models_repository.md):
 ```
 ~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/converter.py --name googlenet-v2-tf --download_dir /models --output_dir /models --precisions FP32
 
@@ -63,7 +63,7 @@ ovms_models
 ```
 
 ### Step 2: Define required models and pipeline <a name="define-models"></a>
-Pipelines need to be defined in configuration file to use them. The same configuration file is used to define served models and served pipelines.
+Pipelines need to be defined in the configuration file to use them. The same configuration file is used to define served models and served pipelines.
 
 Use the config.json as given below
 ```
@@ -144,25 +144,24 @@ Use the config.json as given below
     ]
 }
 ```
-In `model_config_list` section, three models are defined as usual. We can refer to them by name in pipeline definition but we can also request single inference on them separately. The same inference gRPC and REST API is used to request models and pipelines. OpenVINO&trade; Model Server will first try to search for model with requested name. If not found, it will try to find pipeline.
+In the `model_config_list` section, three models are defined as usual. We can refer to them by name in the pipeline definition but we can also request single inference on them separately. The same inference gRPC and REST API is used to request models and pipelines. OpenVINO&trade; Model Server will first try to search for a model with the requested name. If not found, it will try to find pipeline.
 
 
 
-### Step 3: Start model server
+### Step 3: Start the Model Server
 
-1. Run command to start model server
+1. Run command to start the Model Server
 ```
 ~$ docker run --rm -v ~/ovms_models/:/models:ro -p 9100:9100 -p 8100:8100 openvino/model_server:latest --config_path /models/config.json --port 9100 --rest_port 8100
 ```
 
 ### Step 4: Requesting the service
 
-Input images can be sent to the service requesting resource name `image_classification_pipeline`. There is example client to do exactly that. 
+Input images can be sent to the service requesting resource name `image_classification_pipeline`. There is an example client doing that:
 
 1. Check accuracy of the pipeline by running the client:
 ```
 ~$ cd model_server
-~/model_server$ make venv
 ~/model_server$ . .venv/bin/activate && cd client/python/tensorflow-serving-api/samples
 (.venv) ~/model_server/client/python/tensorflow-serving-api/samples$ python3 grpc_predict_resnet.py --pipeline_name image_classification_pipeline --images_numpy_path ../../imgs.npy \
     --labels_numpy_path ../../lbs.npy --grpc_port 9100 --input_name image --output_name label --transpose_input False --iterations 10
@@ -231,7 +230,7 @@ By analyzing logs and timestamps it is seen that GoogleNet and ResNet model infe
 
 ### Step 6: Requesting pipeline metadata
 
-We can use the same gRPC/REST example client as we use for requesting model metadata. The only difference is we specify pipeline name instead of model name.
+We can use the same gRPC/REST example client as we use for requesting model metadata. The only difference is we specify pipeline name instead of the model name.
 ```
 (.venv) ~/model_server/client/python/tensorflow-serving-api/samples$ python3 grpc_get_model_metadata.py --grpc_port 9100 --model_name image_classification_pipeline
 Getting model metadata for model: image_classification_pipeline

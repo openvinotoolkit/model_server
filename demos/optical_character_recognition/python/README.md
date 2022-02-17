@@ -1,18 +1,19 @@
-#  Optical Character Recognition with Directed Acyclic Graph
+#  Optical Character Recognition with Directed Acyclic Graph {#ovms_demo_optical_character_recognition}
 
-This document demonstrate how to create and use an Optical Character Recognition (OCR) pipeline based on [east-resnet50](https://github.com/argman/EAST) text detection model,
+This document demonstrates how to create and use an Optical Character Recognition (OCR) pipeline based on [east-resnet50](https://github.com/argman/EAST) text detection model,
 [text-recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/text-recognition-0014) combined with a custom node implementation.
 
-Using such pipeline, a single request to OVMS can perform a complex set of operations with a response containing
+Using such a pipeline, a single request to OVMS can perform a complex set of operations with a response containing
 recognized characters for all detected text boxes. 
 
 ## OCR Graph
 
-Below is depicted the graph implementing a complete OCR pipelines. 
+Below is depicted the graph implementing complete OCR pipelines. 
 
 ![OCR graph](east_ocr.png)
 
 It includes the following nodes:
+
 - Model east-resnet50 - inference execution which takes the user image as input. It returns two outputs including information about all detected boxes, their location and scores.
 - Custom node east_ocr - it includes C++ implementation of east-resnet50 model results processing. It analyses the detected boxes coordinates, filters the results
 based on the configurable score level threshold and and applies non-max suppression algorithm to remove overlaping boxes. Finally the custom node east-ocr crops all detected boxes
@@ -30,12 +31,12 @@ The metadata are the `text_coordinates` and the `confidence_level` outputs.
 
 The original pretrained model for east-resnet50 topology is stored on https://github.com/argman/EAST in TensorFlow checkpoint format.
 
-Clone github repository:
+Clone GitHub repository:
 ```bash
 git clone https://github.com/argman/EAST 
 cd EAST 
 ```
-Download and unzip the file east_icdar2015_resnet_v1_50_rbox.zip as instructed in readme.md file to EAST folder with the github repository.
+Download and unzip the file east_icdar2015_resnet_v1_50_rbox.zip as instructed in the Readme.md file to EAST folder with the GitHub repository.
 ```bash
 unzip ./east_icdar2015_resnet_v1_50_rbox.zip
 ```
@@ -104,7 +105,7 @@ Custom nodes are loaded into OVMS as dynamic library implementing OVMS API from 
 It can use OpenCV libraries included in OVMS or it could use other thirdparty components.
 
 The custom node east_ocr can be built inside a docker container via the following procedure:
-- go to the custom node source code folder [src/custom_nodes/east_ocr](../src/custom_nodes/east_ocr)
+- go to the custom node source code folder [src/custom_nodes/east_ocr](https://github.com/openvinotoolkit/model_server/blob/develop/src/custom_nodes/east_ocr)
 - run `make` command
 
 This command will export the compiled library in `./lib` folder.
@@ -144,7 +145,7 @@ Install python dependencies:
 pip3 install -r requirements.txt
 ``` 
 
-Now you can create directory for text images and run the client:
+Now you can create a directory for text images and run the client:
 ```bash
 mkdir results
 ```
@@ -172,23 +173,11 @@ Output: name[text_coordinates]
 With additional parameter `--text_images_save_path` the client script saves all detected text images to jpeg files into directory path to confirm
 if the image was analyzed correctly.
 
-| ![image](demo_images/input.jpg)|
-| --- |
-| Exemplary input image |
-
+Below is the exemplary input image.
+![image](input.jpg)
 
 The custom node generates the following text images retrieved from the original input to CRNN model:
-| #| Image | CRNN Recognition | Decoded Word |                     
-| --- | --- | --- | --- |
-| text 0 |![text0](demo_images/text_images_0.jpg)| p##erformaance## | performance |
-| text 1 |![text1](demo_images/text_images_1.jpg)| g####d#a#n#s#k## | gdansk |
-| text 2 |![text2](demo_images/text_images_2.jpg)| s###e#rrv##e#r## | server |
-| text 3 |![text3](demo_images/text_images_3.jpg)| m####oo#d##ee#l# | model |
-| text 4 |![text4](demo_images/text_images_4.jpg)| oo##pe#n#vi#n#o# | openvino |
-| text 5 |![text5](demo_images/text_images_5.jpg)| p###i#peelinne## | pipeline |
-| text 6 |![text6](demo_images/text_images_6.jpg)| 2####0##2###1### | 2021 |
-| text 7 |![text6](demo_images/text_images_7.jpg)| i###n##t##e###l# | intel |
-| text 8 |![text6](demo_images/text_images_8.jpg)| r###ot#atiion#s# | rotations |
+![image](crnn_table.png)
 
 ## Accurracy
 Please note that it is possible to swap the models included in DAG with your own to adjust pipeline accuracy for various scenarios and datasets.

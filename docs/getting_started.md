@@ -4,11 +4,11 @@ OpenVINO&trade; Model Server is a scalable, high-performance solution for servin
 
 ### Features of Model Server :
 
-* Serves multiple models, or multiple versions of the same model simultaneously.
-* Supports multiple Deep Learning frameworks such as Caffe*, TensorFlow*, MXNet* and ONNX*.
+* Serves multiple models or multiple versions of the same model simultaneously.
+* Supports multiple Deep Learning frameworks such as Caffe*, TensorFlow*, MXNet*, and ONNX*.
 * Supports multi-worker configuration and parallel inference execution.
 * Supports model reshaping at runtime.
-* Speeds time-to-market as development of client code is reduced.
+* Speeds time-to-market as the development of client code is reduced.
 * Server can be deployed in a Kubernetes cluster allowing the inference service to scale horizontally and ensure high availability. [Kubernetes deployments](../deploy).
 * The server supports reshaping models in runtime - [Model Reshaping](./shape_batch_size_and_layout.md).
 

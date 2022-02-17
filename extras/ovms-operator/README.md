@@ -1,5 +1,5 @@
-## About this Operator
-This Operator is based on a [Helm chart](https://github.com/openvinotoolkit/model_server/tree/v2021.3/deploy) for OVMS. 
+## Kubernetes Operator {#ovms_extras_ovms-operator-readme}
+This Operator is based on a [Helm chart](https://github.com/openvinotoolkit/model_server/tree/v2021.3/deploy) for OpenVINO Model Server. 
 It supports all the parameters from the helm chart.
 
 It allows for easy deployment and management of OVMS service in the Kubernetes cluster by just creating `Ovms` resource.
@@ -8,7 +8,7 @@ It allows for easy deployment and management of OVMS service in the Kubernetes c
 
 ### OpenShift
 
-OVMS operator on OpenShift infrastructure is now replaced with the [OpenVINO Operator](../openvino-operator-openshift).
+OVMS operator on OpenShift infrastructure is now replaced with the [OpenVINO Operator](https://github.com/openvinotoolkit/model_server/blob/develop/extras/openvino-operator-openshift).
 It includes the functionality of the Model Server management with other OpenVINO related integrations.
 
 ### Kubernetes with OLM
@@ -22,13 +22,13 @@ Deploy the operator using the steps covered in [OperatorHub](https://operatorhub
 
 If you are using opensource Kubernetes, after installing the operator, deploy and manage OVSM deployments by creating `Ovms` Kubernetes resources.
 
-It can be done by editing the [sample resource](config/samples/intel_v1alpha1_ovms.yaml) and running a command:
+It can be done by editing the [sample resource](https://github.com/openvinotoolkit/model_server/blob/develop/extras/ovms-operator/config/samples/intel_v1alpha1_ovms.yaml) and running a command:
 
 ```bash
 kubectl apply -f config/samples/intel_v1alpha1_ovms.yaml
 ```
 
-The parameters are identical to [Helm chart](../../deploy/#helm-options-references).
+The parameters are identical to [Helm chart](../../deploy/README.md).
 
 <b>Note</b>: Some deployment configurations have prerequisites like creating relevant resources in Kubernetes. For example a secret with credentials,
 persistent volume claim or configmap with OVMS configuration file.
