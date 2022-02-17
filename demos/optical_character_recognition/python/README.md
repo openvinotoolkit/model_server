@@ -68,7 +68,7 @@ export_model('./east_icdar2015_resnet_v1_50_rbox/model.ckpt-49491','./model.pb')
 Freeze the model in checkpoint format and save it in proto buffer format in `model.pb`:
 
 ```bash
-docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw -w /EAST openvino/ubuntu18_dev:2021.3 python3 freeze_east_model.py
+docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw -w /EAST tensorflow/tensorflow:1.15.5 python3 freeze_east_model.py
 ```
 
 Convert the TensorFlow frozen model to Intermediate Representation format using the model_optimizer tool:
