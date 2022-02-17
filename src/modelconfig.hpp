@@ -112,9 +112,9 @@ private:
     std::string cacheDir;
 
     /**
-         * @brief Optional cache disable flag
+         * @brief Flag determining if allow cache option is set to true
          */
-    bool disabledCaching = false;
+    bool isAllowCacheTrue = false;
 
     /**
          * @brief Model version
@@ -360,24 +360,6 @@ public:
     }
 
     /**
-         * @brief Set the caching disable flag
-         * 
-         * @param flag
-         */
-    void setDisableCaching(bool flag) {
-        this->disabledCaching = flag;
-    }
-
-    /**
-         * @brief Check if caching is disabled
-         * 
-         * @return bool
-         */
-    bool isCachingDisabled() const {
-        return this->disabledCaching;
-    }
-
-    /**
          * @brief Get the cache directory
          * 
          * @return const std::string& 
@@ -393,6 +375,24 @@ public:
          */
     void setCacheDir(const std::string& cacheDir) {
         this->cacheDir = cacheDir;
+    }
+
+    /**
+         * @brief Get the allow cache flag
+         * 
+         * @return bool
+         */
+    bool isAllowCacheSetToTrue() const {
+        return this->isAllowCacheTrue;
+    }
+
+    /**
+         * @brief Set the allow cache flag
+         * 
+         * @param allow cache flag
+         */
+    void setAllowCache(const bool& allowCache) {
+        this->isAllowCacheTrue = allowCache;
     }
 
     /**
@@ -964,6 +964,16 @@ public:
          */
     const custom_loader_options_config_t& getCustomLoaderOptionsConfigMap() const {
         return this->customLoaderOptionsConfigMap;
+    }
+
+    /**
+      * @brief Add custom loader option
+      * 
+      * @param name
+      * @param value
+      */
+    void addCustomLoaderOption(const std::string& name, const std::string& value) {
+        customLoaderOptionsConfigMap[name] = value;
     }
 
     /**

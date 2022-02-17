@@ -270,6 +270,11 @@ private:
     Status loadOutputTensors(const ModelConfig& config);
 
     /**
+      * @brief Flag determining if cache is disabled
+      */
+    bool cacheDisabled = false;
+
+    /**
          * @brief Configures batchsize
          */
     void configureBatchSize(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
@@ -380,6 +385,20 @@ public:
          */
     const std::string& getTargetDevice() {
         return targetDevice;
+    }
+
+    /**
+      * @brief Internal method for setting cache options
+      */
+    Status setCacheOptions(const ModelConfig& config);
+
+    /**
+         * @brief Check if cache is disabled
+         *
+         * @return cache disabled
+         */
+    const bool isCacheDisabled() {
+        return cacheDisabled;
     }
 
     /**

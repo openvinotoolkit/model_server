@@ -792,14 +792,10 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
         return status;
     }
     try {
-        if (!this->config.getCacheDir().empty()) {
-            if (this->config.isCachingDisabled()) {
-                this->ieCore.set_property({{CONFIG_KEY(CACHE_DIR), ""}});
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has disabled caching", this->getName());
-            } else {
-                this->ieCore.set_property({{CONFIG_KEY(CACHE_DIR), config.getCacheDir()}});
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has enabled caching", this->getName());
-            }
+        status = setCacheOptions(this->config);
+        if (!status.ok()) {
+            this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
+            return status;
         }
 
         if (!this->model || isLayoutConfigurationChanged) {
@@ -843,6 +839,23 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     this->status.setAvailable();
     modelLoadedNotify.notify_all();
     return status;
+}
+
+Status ModelInstance::setCacheOptions(const ModelConfig& config) {
+    if (!config.getCacheDir().empty()) {
+        if (!config.isAllowCacheSetToTrue() && (config.isCustomLoaderRequiredToLoadModel() || config.anyShapeSetToAuto() || (config.getBatchingMode() == Mode::AUTO))) {
+            this->ieCore.set_property({{CONFIG_KEY(CACHE_DIR), ""}});
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has disabled caching", this->getName());
+            this->cacheDisabled = true;
+        } else if (config.isAllowCacheSetToTrue() && config.isCustomLoaderRequiredToLoadModel()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model: {} has allow cache set to true while using custom loader", this->getName());
+            return StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER;
+        } else {
+            this->ieCore.set_property({{CONFIG_KEY(CACHE_DIR), config.getCacheDir()}});
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has enabled caching", this->getName());
+        }
+    }
+    return StatusCode::OK;
 }
 
 Status ModelInstance::loadModel(const ModelConfig& config) {

@@ -88,7 +88,7 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
     if (isCustomLoaderConfigChanged(rhs)) {
         return true;
     }
-    if (this->isCachingDisabled() != rhs.isCachingDisabled()) {
+    if (this->isAllowCacheSetToTrue() != rhs.isAllowCacheSetToTrue()) {
         return true;
     }
     return false;
@@ -613,13 +613,9 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     }
 
     // Model Cache options
-    if (anyShapeSetToAuto())
-        this->setDisableCaching(true);
-    if (getBatchingMode() == Mode::AUTO)
-        this->setDisableCaching(true);
     if (v.HasMember("allow_cache")) {
-        this->setDisableCaching(!v["allow_cache"].GetBool());
-        SPDLOG_DEBUG("allow_cache: {}", !isCachingDisabled());
+        setAllowCache(v["allow_cache"].GetBool());
+        SPDLOG_DEBUG("allow_cache: {}", v["allow_cache"].GetBool());
     }
 
     // if the config has models which require custom loader to be used, then load the same here
@@ -627,8 +623,6 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         if (!parseCustomLoaderOptionsConfig(v["custom_loader_options"]).ok()) {
             SPDLOG_ERROR("Couldn't parse custom loader options config");
         }
-        // force disable caching
-        this->setDisableCaching(true);
     }
     return StatusCode::OK;
 }
@@ -641,7 +635,7 @@ Status ModelConfig::parseCustomLoaderOptionsConfig(const rapidjson::Value& node)
         if (!it->value.IsString()) {
             return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
         }
-        customLoaderOptionsConfigMap[it->name.GetString()] = it->value.GetString();
+        addCustomLoaderOption(it->name.GetString(), it->value.GetString());
     }
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
