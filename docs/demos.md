@@ -9,7 +9,7 @@
    ovms_docs_demo_age_gender_guide
    ovms_docs_demo_camera_example
    ovms_docs_demo_combined_model_dag
-   ovms_docs_demo_dynamic_batch_demuliplexer
+   ovms_docs_demuliplexing
    ovms_docs_demo_ocr
    ovms_docs_demo_ensemble
    ovms_docs_demo_face_detection

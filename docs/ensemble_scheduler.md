@@ -1,5 +1,4 @@
-
-## Image Classification with Model Ensemble {#ovms_docs_demo_ensemble}
+# Image Classification with Model Ensemble {#ovms_docs_demo_ensemble}
 
 This guide shows how to implement a model ensemble using the [DAG Scheduler](dag_scheduler.md).
 
@@ -9,7 +8,7 @@ This guide shows how to implement a model ensemble using the [DAG Scheduler](dag
 
 ![diagram](model_ensemble_diagram.svg)
 
-### Step 1: Prepare the models
+## Step 1: Prepare the models
 1. Follow the commands below sequentially, to download and use the models from [open model zoo](https://github.com/openvinotoolkit/open_model_zoo):
 ```
 ~$ mkdir models
@@ -62,7 +61,7 @@ ovms_models
     │   └── resnet-50-tf.xml
 ```
 
-### Step 2: Define required models and pipeline <a name="define-models"></a>
+## Step 2: Define required models and pipeline <a name="define-models"></a>
 Pipelines need to be defined in the configuration file to use them. The same configuration file is used to define served models and served pipelines.
 
 Use the config.json as given below
@@ -148,14 +147,14 @@ In the `model_config_list` section, three models are defined as usual. We can re
 
 
 
-### Step 3: Start the Model Server
+## Step 3: Start the Model Server
 
 1. Run command to start the Model Server
 ```
 ~$ docker run --rm -v ~/ovms_models/:/models:ro -p 9100:9100 -p 8100:8100 openvino/model_server:latest --config_path /models/config.json --port 9100 --rest_port 8100
 ```
 
-### Step 4: Requesting the service
+## Step 4: Requesting the service
 
 Input images can be sent to the service requesting resource name `image_classification_pipeline`. There is an example client doing that:
 
@@ -216,7 +215,7 @@ time variance: 82.09
 Classification accuracy: 100.00
 ```
 
-### Step 5: Analyze pipeline execution in server logs
+## Step 5: Analyze pipeline execution in server logs
 
 By analyzing logs and timestamps it is seen that GoogleNet and ResNet model inferences were started in parallel. Just after all inputs became ready - argmax node has started its job.
 ```
@@ -229,7 +228,7 @@ By analyzing logs and timestamps it is seen that GoogleNet and ResNet model infe
 [2020-09-04 12:46:18.849] [serving] [info] [prediction_service_utils.cpp:59] Requesting model:argmax; version:0.
 ```
 
-### Step 6: Requesting pipeline metadata
+## Step 6: Requesting pipeline metadata
 
 We can use the same gRPC/REST example client as we use for requesting model metadata. The only difference is we specify pipeline name instead of the model name.
 ```
