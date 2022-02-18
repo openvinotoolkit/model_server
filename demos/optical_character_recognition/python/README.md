@@ -73,7 +73,7 @@ docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw -w /EAST tensorflow/tensorfl
 
 Convert the TensorFlow frozen model to Intermediate Representation format using the model_optimizer tool:
 ```bash
-docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw nncv-harbor.inn.intel.com/openvino/ubuntu20_dev:2022.1.0.579 python3 /usr/local/lib/python3.8/dist-packages/openvino/tools/mo/mo.py \
+docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw openvino/ubuntu20_dev:2022.1 python3 /usr/local/lib/python3.8/dist-packages/openvino/tools/mo/mo.py \
 --framework=tf --input_shape=[1,1024,1920,3] --input=input_images --output=feature_fusion/Conv_7/Sigmoid,feature_fusion/concat_3 \
 --input_model /EAST/model.pb --output_dir /EAST/IR/1/
 ```
@@ -129,6 +129,9 @@ OCR
 └── lib
     └── libcustom_node_east_ocr.so
 ```
+
+**NOTE:** east_fp32 model created before 2022.1 requires additional parameters in config.json:
+- `layout: {"input_images": "NHWC:NCHW", "feature_fusion/Conv_7/Sigmoid": "NHWC:NCHW", "feature_fusion/concat_3": "NHWC:NCHW"}`
 
 ## Deploying OVMS
 
