@@ -55,7 +55,7 @@ docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_ser
 ### Running the inference requests from the client
 
 ```Bash
-cd ../client/python/ovmsclient/samples
+cd client/python/ovmsclient/samples
 virtualenv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
