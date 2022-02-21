@@ -8,7 +8,7 @@ The client can work efficiently also over slow internet connection with long lat
 ### Download horizontal text detection model from OpenVINO Model Zoo
 
 ```bash
-curl -L --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.bin -o horizontal-text-detection-0001/1/horizontal-text-detection-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.xml -o horizontal-text-detection-0001/1/horizontal-text-detection-0001.xml
+curl -L --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.bin -o horizontal-text-detection-0001/1/horizontal-text-detection-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.xml -o horizontal-text-detection-0001/1/horizontal-text-detection-0001.xml
 ```
 
 ```bash

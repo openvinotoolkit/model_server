@@ -21,12 +21,12 @@ default: setup_repository
 setup_repository:
 # Download vehicle detection model
 	mkdir -p workspace/vehicle-detection-0202/1
-	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.xml -o workspace/vehicle-detection-0202/1/vehicle-detection-0202.xml
-	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.bin	-o workspace/vehicle-detection-0202/1/vehicle-detection-0202.bin
+	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.xml -o workspace/vehicle-detection-0202/1/vehicle-detection-0202.xml
+	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.bin	-o workspace/vehicle-detection-0202/1/vehicle-detection-0202.bin
 # Download vehicle attributes recognition model
 	mkdir -p workspace/vehicle-attributes-recognition-barrier-0042/1
-	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-attributes-recognition-barrier-0042/FP32/vehicle-attributes-recognition-barrier-0042.xml -o workspace/vehicle-attributes-recognition-barrier-0042/1/vehicle-attributes-recognition-barrier-0042.xml
-	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/vehicle-attributes-recognition-barrier-0042/FP32/vehicle-attributes-recognition-barrier-0042.bin -o workspace/vehicle-attributes-recognition-barrier-0042/1/vehicle-attributes-recognition-barrier-0042.bin
+	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/vehicle-attributes-recognition-barrier-0042/FP32/vehicle-attributes-recognition-barrier-0042.xml -o workspace/vehicle-attributes-recognition-barrier-0042/1/vehicle-attributes-recognition-barrier-0042.xml
+	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/vehicle-attributes-recognition-barrier-0042/FP32/vehicle-attributes-recognition-barrier-0042.bin -o workspace/vehicle-attributes-recognition-barrier-0042/1/vehicle-attributes-recognition-barrier-0042.bin
 # Build custom node
 	cd ../../../src/custom_nodes/model_zoo_intel_object_detection && \
 	make && \

@@ -22,7 +22,7 @@ RUN apt-get install -y python3
 RUN apt-get install -y python3-pip
 RUN apt-get install -y curl
 
-RUN curl https://bootstrap.pypa.io/get-pip.py | python3
+RUN curl --fail https://bootstrap.pypa.io/get-pip.py | python3
 
 RUN python3 -m pip install --upgrade pip
 RUN python3 -m pip install numpy
