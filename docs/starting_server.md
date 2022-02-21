@@ -14,8 +14,10 @@
    ovms_docs_cloud_storage
    ovms_docs_target_devices
    ovms_docs_model_version_policy
+   ovms_docs_shape_batch_layout
    ovms_docs_online_config_changes
    ovms_docs_security
+   
 
 
 @endsphinxdirective

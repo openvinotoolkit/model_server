@@ -20,7 +20,7 @@
    ovms_docs_performance_tuning
    ovms_docs_kubernetes
    ovms_docs_demos
-
+   ovms_docs_troubleshooting
 
 @endsphinxdirective
 
