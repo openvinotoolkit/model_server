@@ -101,7 +101,7 @@ install
 COPY third_party /ovms/third_party/
 
 WORKDIR /azure
-RUN apt-get install -y uuid uuid-dev
+RUN apt update && apt-get install -y uuid uuid-dev
 RUN git clone https://github.com/Microsoft/cpprestsdk.git && cd cpprestsdk && git checkout tags/v2.10.18 -b v2.10.18 && git submodule update --init
 
 RUN git clone https://github.com/Azure/azure-storage-cpp.git && cd azure-storage-cpp/Microsoft.WindowsAzure.Storage && git checkout tags/v7.5.0 && mkdir build.release
