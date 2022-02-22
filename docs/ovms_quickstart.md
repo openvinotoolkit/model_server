@@ -86,8 +86,8 @@ curl --fail https://raw.githubusercontent.com/openvinotoolkit/model_server/main/
 
 For more information, check these links:
 
-- [Information on the face detection script](https://github.com/openvinotoolkit/model_server/blob/develop/demos/face_detection/python/face_detection.m). 
-- [More Model Server client scripts](https://github.com/openvinotoolkit/model_server/tree/develop/demos).
+- [Information on the face detection script](../demos/face_detection/python/README.md). 
+- [More Model Server client scripts](../demos/README.md).
 
 ### Step 6: Download Data for Inference
 

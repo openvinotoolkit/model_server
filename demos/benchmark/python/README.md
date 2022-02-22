@@ -1,4 +1,4 @@
-# Benchmark Client for OVMS {#ovms_demo_benchmark_app}
+# Benchmark Client (Python) {#ovms_demo_benchmark_app}
 
 ## Introduction
 
@@ -273,4 +273,4 @@ XI worker: warmup_fail_stdev_latency: 0.0
 XI worker: warmup_fail_cv_latency: 0.0
 ```
 Many other client options together with benchmarking examples are presented in
-[an additional PDF document](../../../docs/python-benchmarking-client-16feb.pdf)
+[an additional PDF document](https://github.com/openvinotoolkit/model_server/blob/develop/docs/python-benchmarking-client-16feb.pdf)

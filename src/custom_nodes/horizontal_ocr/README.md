@@ -6,7 +6,7 @@ Each image in the output will be resized to the predefined target size to fit th
 DAG pipeline.
 Additionally to the detected text boxes, in the two additional outputs are returned their coordinates and confidence levels.  
 
-This custom node can be used to process video frames via [camera example](../../../docs/camera_example.md).
+This custom node can be used to process video frames via [camera example](../../../demos/horizontal_text_detection/python/README.md).
 
 # Building custom node library
 
