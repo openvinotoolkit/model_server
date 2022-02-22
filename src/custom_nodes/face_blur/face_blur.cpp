@@ -49,7 +49,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     uint64_t targetImageColorChannels = convertToGrayScale ? 1 : 3;
     float confidenceThreshold = get_float_parameter("confidence_threshold", params, paramsCount, -1.0);
     NODE_ASSERT(confidenceThreshold >= 0 && confidenceThreshold <= 1.0, "confidence threshold must be in 0-1 range");
-    // uint64_t maxOutputBatch = get_int_parameter("max_output_batch", params, paramsCount, 100);
+    uint64_t maxOutputBatch = get_int_parameter("max_output_batch", params, paramsCount, 100);
     bool debugMode = get_string_parameter("debug", params, paramsCount) == "true";
 
     const CustomNodeTensor* imageTensor = nullptr;
@@ -105,32 +105,36 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(image.cols == imageWidth, "Mat generation failed");
     NODE_ASSERT(image.rows == imageHeight, "Mat generation failed");
 
-    // uint64_t detectionsCount = detectionTensor->dims[2];
-    // uint64_t featuresCount = detectionTensor->dims[3];
+    uint64_t detectionsCount = detectionTensor->dims[2];
+    uint64_t featuresCount = detectionTensor->dims[3];
 
-    // std::vector<cv::Rect> boxes;
+    std::vector<cv::Rect> boxes;
 
-    // for (uint64_t i = 0; i < detectionsCount; i++) {
-    //     float* detection = (float*)(detectionTensor->data + (i * featuresCount * sizeof(float)));
-    //     int imageId = static_cast<int>(detection[0]);
-    //     int labelId = static_cast<int>(detection[1]);
-    //     float confidence = detection[2];
-    //     int xMin = static_cast<int>(detection[3] * imageWidth);
-    //     int yMin = static_cast<int>(detection[4] * imageHeight);
-    //     int xMax = static_cast<int>(detection[5] * imageWidth);
-    //     int yMax = static_cast<int>(detection[6] * imageHeight);
-    //     if (imageId == 0 && confidence >= confidenceThreshold) {
-    //         auto box = cv::Rect(cv::Point(xMin, yMin), cv::Point(xMax, yMax));
-    //         boxes.emplace_back(box);
-    //         if (debugMode) {
-    //             std::cout << "Detection:\nImageID: " << imageId << "; LabelID:" << labelId << "; Confidence:" << confidence << "; Box:" << box << std::endl;
-    //         }
-    //     }
-    // }
+    for (uint64_t i = 0; i < detectionsCount; i++) {
+        float* detection = (float*)(detectionTensor->data + (i * featuresCount * sizeof(float)));
+        int imageId = static_cast<int>(detection[0]);
+        int labelId = static_cast<int>(detection[1]);
+        float confidence = detection[2];
+        int xMin = static_cast<int>(detection[3] * imageWidth);
+        int yMin = static_cast<int>(detection[4] * imageHeight);
+        int xMax = static_cast<int>(detection[5] * imageWidth);
+        int yMax = static_cast<int>(detection[6] * imageHeight);
+        if (imageId == 0 && confidence >= confidenceThreshold) {
+            auto box = cv::Rect(cv::Point(xMin, yMin), cv::Point(xMax, yMax));
+            boxes.emplace_back(box);
+            if (debugMode) {
+                std::cout << "Detection:\nImageID: " << imageId << "; LabelID:" << labelId << "; Confidence:" << confidence << "; Box:" << box << std::endl;
+            }
+        }
+    }
 
-    // if (boxes.size() > maxOutputBatch) {
-    //     boxes.resize(maxOutputBatch);
-    // }
+    if (boxes.size() > maxOutputBatch) {
+        boxes.resize(maxOutputBatch);
+    }
+
+    for (const auto& box : boxes){
+        cv::GaussianBlur(image(box), image(box), cv::Size(51, 51), 0);
+    }
 
     // Prepare output tensor
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * targetImageColorChannels;
