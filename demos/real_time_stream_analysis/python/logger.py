@@ -37,5 +37,3 @@ class LoggerConfig:
         log_level = log_level.upper()
         if log_level in available_log_levels:
             cls.log_level = log_level
-        else:
-            cls.log_level = "INFO"

@@ -23,11 +23,14 @@ import cv2
 import signal
 
 class HttpVisualizer():
+
+	BIND_ADDRESS="0.0.0.0" # nosec
+
 	def __init__(self, visualizer_port, buffer_size):
 		self.logger = get_logger(__name__)
 		self.port = visualizer_port
 		flask_server = self._make_flask_server()
-		self.flask_process = multiprocessing.Process(target=flask_server.run, kwargs={"host": "0.0.0.0","port": self.port, "debug":False})
+		self.flask_process = multiprocessing.Process(target=flask_server.run, kwargs={"host": self.BIND_ADDRESS,"port": self.port, "debug":False})
 		self.frames_queue = multiprocessing.Queue(maxsize=buffer_size)
 		self.logger.info(f"Visualizer frames buffer capacity set to {buffer_size} frames")
 

@@ -27,8 +27,8 @@ from inference_pipeline_handler import InferencePipelineHandler
 
 class InferenceManager:
 
-	def __init__(self, ovms_url, model_name, model_version=0, num_inference_executors=16, binary_input=False,
-				 buffer_size=1000):
+	def __init__(self, ovms_url, model_name, model_version, num_inference_executors, binary_input,
+				 buffer_size):
 		
 		self.exit_event = threading.Event()
 		self.abort_event = threading.Event()
@@ -56,8 +56,7 @@ class InferenceManager:
 		self.logger.info("Starting Inference Executors...")
 		self.inference_executors = [InferenceExecutor(i, ovms_info, binary_input,
 								   input_queue=multiprocessing.Queue(buffer_size),
-								   result_queue=multiprocessing.Queue(buffer_size),
-								   abort_event = multiprocessing.Event())
+								   result_queue=multiprocessing.Queue(buffer_size))
 								   for i in range(num_inference_executors)]
 		for inference_executor in self.inference_executors:
 			inference_executor.start()

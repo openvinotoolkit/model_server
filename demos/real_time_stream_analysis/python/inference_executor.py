@@ -25,10 +25,10 @@ import cv2
 
 class InferenceExecutor(multiprocessing.Process):
 	
-	def __init__(self, id, ovms_info, binary_input, input_queue, result_queue, abort_event):
+	def __init__(self, id, ovms_info, binary_input, input_queue, result_queue):
 		multiprocessing.Process.__init__(self)
 
-		self.abort_event = abort_event
+		self.abort_event = multiprocessing.Event()
 		self.exit_event = multiprocessing.Event()
 		self.exit_ready = multiprocessing.Event()
 
@@ -78,8 +78,7 @@ class InferenceExecutor(multiprocessing.Process):
 		result = self._make_ovms_call(ovms_client.predict, {input_name: input_data}, self.model_name, self.model_version)
 		return result
 
-	def run(self):
-		ovms_client = ovmsclient.make_grpc_client(self.ovms_url)
+	def _get_model_metadata(self, ovms_client):
 		model_metadata = self._make_ovms_call(ovms_client.get_model_metadata, self.model_name)
 
 		if model_metadata is None:
@@ -87,11 +86,22 @@ class InferenceExecutor(multiprocessing.Process):
 			self.abort_event.set()
 			self.exit_event.wait()
 			self.exit_ready.set()
-			return
+			return None
 		
 		if len(model_metadata["inputs"]) > 1 or len(model_metadata["outputs"]) > 1:
-			self.logger("Unexpected number of model inputs or outputs. Expecting single input and single output")
-			# TODO: signal exit to inference manager 
+			self.logger.error("Unexpected number of model inputs or outputs. Expecting single input and single output.")
+			self.logger.info("Issuing abort signal...")
+			self.abort_event.set()
+			self.exit_event.wait()
+			self.exit_ready.set()
+			return None
+		return model_metadata
+
+	def run(self):
+		ovms_client = ovmsclient.make_grpc_client(self.ovms_url)
+		model_metadata = self._get_model_metadata(ovms_client)
+		if model_metadata is None:
+			return
 		
 		input_name = next(iter(model_metadata['inputs']))
 

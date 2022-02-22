@@ -24,7 +24,7 @@ class StreamReader:
 
 	def __init__(self, stream_url):
 		self.logger = get_logger(__name__)
-		self.stream_url =stream_url
+		self.stream_url = stream_url
 
 	def get_frame(self) -> Tuple[bool, np.ndarray]:
 		try:
