@@ -1,4 +1,4 @@
-# OpenVINO™ Model Server Demos {#ovms_docs_demos}
+# Demos {#ovms_docs_demos}
 
 @sphinxdirective
 

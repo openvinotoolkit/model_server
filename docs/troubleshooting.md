@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server Troubleshooting {#ovms_docs_troubleshooting}
+# Troubleshooting {#ovms_docs_troubleshooting}
 
 ## Introduction
 This document gives information about troubleshooting the following issues while using the OpenVINO&trade; Model Server:
