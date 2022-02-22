@@ -264,7 +264,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
             int offsetY = y * 4;
 
             // Extract the rotation angle for the prediction and then compute the sin and cosine
-            float angle = geometryData[(x * 5) + 4];
+            int dataOffset = (x * 5);
+            float angle = geometryData[dataOffset + 4];
 
             if (debugMode)
                 std::cout << "Angle: " << angle << std::endl;
@@ -272,12 +273,12 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
             float sin = std::sin(angle);
 
             // Use the geometry volume to derive the width and height of the bounding box
-            float h = geometryData[(x * 5) + 0] + geometryData[(x * 5) + 2];
-            float w = geometryData[(x * 5) + 1] + geometryData[(x * 5) + 3];
+            float h = geometryData[dataOffset + 0] + geometryData[dataOffset + 2];
+            float w = geometryData[dataOffset + 1] + geometryData[dataOffset + 3];
 
             cv::Point2i p2{
-                offsetX + static_cast<int>(cos * geometryData[(x * 5) + 1] + sin * geometryData[(x * 5) + 2]),
-                offsetY + static_cast<int>(-sin * geometryData[(x * 5) + 1] + cos * geometryData[(x * 5) + 2])};
+                offsetX + static_cast<int>(cos * geometryData[dataOffset + 1] + sin * geometryData[dataOffset + 2]),
+                offsetY + static_cast<int>(-sin * geometryData[dataOffset + 1] + cos * geometryData[dataOffset + 2])};
             cv::Point2i p1{
                 static_cast<int>(-sin * h) + p2.x,
                 static_cast<int>(-cos * h) + p2.y};

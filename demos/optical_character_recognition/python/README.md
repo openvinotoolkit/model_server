@@ -84,9 +84,9 @@ model.mapping
 model.xml
 ```
 Converted east-reasnet50 model will have the following interface:
-- Input name: `input_images` ; shape: `[1 1024 1920 3]` ; precision: `FP32`, layout: `N...`
-- Output name: `feature_fusion/Conv_7/Sigmoid` ; shape: `[1 256 480 1]` ; precision: `FP32`
-- Output name: `feature_fusion/concat_3` ; shape: `[1 256 480 5]` ; precision: `FP32`
+- Input name: `input_images` ; shape: `[1 1024 1920 3]` ; precision: `FP32` ; layout: `N...`
+- Output name: `feature_fusion/Conv_7/Sigmoid` ; shape: `[1 256 480 1]` ; precision: `FP32` ; layout: `N...`
+- Output name: `feature_fusion/concat_3` ; shape: `[1 256 480 5]` ; precision: `FP32`; layout: `N...`
 
 ### Text-recognition model
 Download [text-recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/text-recognition-0014) model and store it in `${PWD}/text-recognition/1` folder.
