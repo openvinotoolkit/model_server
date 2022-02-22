@@ -1,3 +1,4 @@
+
 #
 # Copyright (c) 2022 Intel Corporation
 #
@@ -14,16 +15,27 @@
 # limitations under the License.
 #
 
-import signal
+image:
+  name: real-time-stream-analysis
+  tag: latest
+  pullPolicy: IfNotPresent
 
-class SignalCapture:
-  kill = False
-  def __init__(self):
-    signal.signal(signal.SIGINT, self.exit_gracefully)
-    signal.signal(signal.SIGTERM, self.exit_gracefully)
+# Set to true if your stream publishing service or OVMS are not deployed in the cluster (but for example as standalone services on your localhost)
+use_host_network: false
 
-  def exit_gracefully(self, *args):
-    self.kill = True
+visualizer_service:
+  type: ClusterIP
+  # If port set to 0, visualizer will not launch
+  port: 0
 
+stream_url: ""
+ovms_url: ""
+model_name: ""
+model_version: 0
+binary_input: false
+inference_executors: 1
+buffer_size: 100
+log_level: INFO
 
-signal_capture = SignalCapture()
+http_proxy: ""
+https_proxy: ""

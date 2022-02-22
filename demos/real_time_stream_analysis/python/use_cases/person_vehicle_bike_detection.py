@@ -1,9 +1,22 @@
+#
+# Copyright (c) 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 from use_cases.use_case import UseCase
-from typing import Any
 import numpy as np
 import cv2
-
-from logger import get_logger
 
 class PersonVehicleBikeDetection(UseCase):
 
@@ -46,7 +59,6 @@ class PersonVehicleBikeDetection(UseCase):
 
 
     def postprocess(inference_result: np.ndarray):
-        logger = get_logger(__name__)
         CLASSES = ["None", "Pedestrian", "Vehicle", "Bike", "Other"]
         CONFIDENCE_THRESHOLD = 0.75
 
@@ -63,4 +75,5 @@ class PersonVehicleBikeDetection(UseCase):
 
             if img_id != -1 and conf >= CONFIDENCE_THRESHOLD:
                 if CLASSES[int(label)] == "Pedestrian":
-                    pass #logger.warning("Detected pedestrian on the road") 
+                    pass
+         

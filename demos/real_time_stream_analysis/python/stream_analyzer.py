@@ -1,3 +1,19 @@
+#
+# Copyright (c) 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import time
 from logger import get_logger
 from utils import signal_capture
@@ -61,7 +77,6 @@ class StreamAnalyzer:
 			
 			success, frame = self.stream_reader.get_frame()
 			if not success:
-				#self.logger.debug("Failed to read frame from the stream")
 				self.supervisor.increase_failed_read_frames_counter()
 				continue
 			self.supervisor.increase_frames_counter()
@@ -69,13 +84,11 @@ class StreamAnalyzer:
 			input = self.io_processor.preprocess(frame)
 			success = self.inference_manager.schedule_inference(input)
 			if not success:
-				#self.logger.debug("Input buffer is full. Dropping frame...")
 				self.supervisor.increase_dropped_frames_counter()
 				continue
 
 			success, (frame, result) = self.inference_manager.pull_result()
 			if not success:
-				#self.logger.debug("No inference results ready to read")
 				continue
 
 			self.io_processor.postprocess(frame, result)

@@ -14,16 +14,18 @@
 # limitations under the License.
 #
 
-import signal
-
-class SignalCapture:
-  kill = False
-  def __init__(self):
-    signal.signal(signal.SIGINT, self.exit_gracefully)
-    signal.signal(signal.SIGTERM, self.exit_gracefully)
-
-  def exit_gracefully(self, *args):
-    self.kill = True
-
-
-signal_capture = SignalCapture()
+{{- if .Values.visualizer_service.port}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rt-stream-analyzer.fullname" . }}
+  labels:
+      app: {{ include "rt-stream-analyzer.fullname" . }}
+spec:
+  type: {{ .Values.visualizer_service.type }}
+  ports:
+    - port: {{ .Values.visualizer_service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+{{- end }}

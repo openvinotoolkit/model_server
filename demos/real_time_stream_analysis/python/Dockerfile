@@ -5,7 +5,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,16 +14,14 @@
 # limitations under the License.
 #
 
-import signal
+FROM ubuntu:20.04
+ENV DEBIAN_FRONTEND="noninteractive"
+COPY templates /real_time_stream_analysis/templates
+COPY use_cases /real_time_stream_analysis/use_cases
+COPY requirements.txt /real_time_stream_analysis
+COPY *.py /real_time_stream_analysis/
+WORKDIR /real_time_stream_analysis
+RUN apt -y update && apt install -y libopencv-dev python3-opencv python3-pip
+RUN pip3 install -r requirements.txt
 
-class SignalCapture:
-  kill = False
-  def __init__(self):
-    signal.signal(signal.SIGINT, self.exit_gracefully)
-    signal.signal(signal.SIGTERM, self.exit_gracefully)
-
-  def exit_gracefully(self, *args):
-    self.kill = True
-
-
-signal_capture = SignalCapture()
+ENTRYPOINT ["python3", "real_time_stream_analysis.py"]

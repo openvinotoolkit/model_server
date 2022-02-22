@@ -1,10 +1,25 @@
-from typing import Tuple
-import numpy as np
+#
+# Copyright (c) 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import queue
 from use_cases.use_case import UseCase
 from logger import get_logger
 from processing_supervisor import ProcessingSupervisor
 import multiprocessing
+import numpy as np
 
 class IOProcessor:
 
@@ -23,16 +38,15 @@ class IOProcessor:
 
         self.logger.info("IO Processor initialized successfully")
 
-    def preprocess(self, data):
-        return self.use_case.preprocess(data)
+    def preprocess(self, frame: np.ndarray) -> np.ndarray:
+        return self.use_case.preprocess(frame)
 
-    def postprocess(self, frame, inference_result):
+    def postprocess(self, frame: np.ndarray, inference_result: np.ndarray):
         if self.enable_visualization:
             frame = self.use_case.visualize(frame, inference_result)
             try:
                 self.visualizer_frames_queue.put_nowait(frame)
             except queue.Full:
-                #self.logger.debug("Visualizer buffer full. Dropping frame...")
                 self.dropped_visualizer_frames_counter += 1
         self.use_case.postprocess(inference_result)
 
@@ -43,4 +57,3 @@ class IOProcessor:
                                      "more than half have not been visualized due to full visualizer buffer")
             self.postprocessed_frames_counter = 0
             self.dropped_visualizer_frames_counter = 0
-

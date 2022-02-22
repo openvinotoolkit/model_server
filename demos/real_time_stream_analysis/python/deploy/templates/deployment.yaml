@@ -1,0 +1,65 @@
+#
+# Copyright (c) 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rt-stream-analyzer.fullname" . }}
+spec:
+  selector:
+    matchLabels:
+      release: {{ .Release.Name | quote }}
+      app: {{ template "rt-stream-analyzer.fullname" . }}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        heritage: {{ .Release.Service | quote }}
+        release: {{ .Release.Name | quote }}
+        chart: {{ template "rt-stream-analyzer.chart" . }}
+        app: {{ template "rt-stream-analyzer.fullname" . }}
+    spec:
+      hostNetwork: {{ .Values.use_host_network }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.visualizer_service.port }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.visualizer_service.port }}
+              protocol: TCP
+          {{- end}}
+          env:
+          - name: http_proxy
+            value: {{ .Values.http_proxy }}
+          - name: https_proxy
+            value: {{ .Values.https_proxy }}
+          args: [
+            "--stream_url", "{{ .Values.stream_url }}",
+            "--ovms_url", "{{ .Values.ovms_url }}",
+            "--model_name", "{{ .Values.model_name }}",
+            "--model_version", "{{ .Values.model_version }}",
+            {{- if .Values.visualizer_service.port }}
+            "--visualizer_port", "{{ .Values.visualizer_service.port }}",
+            {{- end }}
+            {{- if .Values.binary_input }}
+            "--binary_input",
+            {{- end }}
+            "--inference_executors", "{{ .Values.inference_executors }}",
+            "--buffer_size", "{{ .Values.buffer_size }}",
+            "--log_level", "{{ .Values.log_level }}",
+          ]
