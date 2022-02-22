@@ -1,4 +1,4 @@
-# Image Classification Demo with OVMS {#ovms_demo_image_classification_cpp}
+# Image Classification Demo (C++) {#ovms_demo_image_classification_cpp}
 
 This demo provides 2 clients:
 - _classification_client_sync_ - simple client using synchronous gRPC API, testing accurracy of classification models
@@ -7,7 +7,7 @@ This demo provides 2 clients:
 To build the clients, run `make` command in this directory. It will build docker image named `ovms_cpp_image_classification` with all dependencies.
 The example clients image also contains test images required for accurracy measurements. It is also possible to use custom images.
 
->**Note**: In this directory you can only see the code specific to the benchmark client. The code shared with other C++ demos as well as all building utilities are placed in the [common C++ directory](../../common/cpp).
+>**Note**: In this directory you can only see the code specific to the benchmark client. The code shared with other C++ demos as well as all building utilities are placed in the [common C++ directory](https://github.com/openvinotoolkit/model_server/tree/develop/demos/common/cpp).
 
 ## Prepare classification model
 

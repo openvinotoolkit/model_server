@@ -81,13 +81,13 @@ For more information on the folder structure and how to deploy more than one mod
 Model scripts are available to provide an easy way to access Model Server.Here is an example command, using face detection and curl, to download all necessary components:
 
 ```
-curl --fail https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/face_detection/python/face_detection.py -o face_detection.py  https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/requirements.txt -o client_requirements.txt
+curl --fail https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/common/python/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/face_detection/python/face_detection.py -o face_detection.py https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/common/python/requirements.txt -o client_requirements.txt
 ```
 
 For more information, check these links:
 
-- [Information on the face detection script](https://github.com/openvinotoolkit/model_server/blob/develop/demos/face_detection/python/face_detection.m). 
-- [More Model Server client scripts](https://github.com/openvinotoolkit/model_server/tree/develop/demos).
+- [Information on the face detection script](../demos/face_detection/python/README.md). 
+- [More Model Server client scripts](../demos/README.md).
 
 ### Step 6: Download Data for Inference
 

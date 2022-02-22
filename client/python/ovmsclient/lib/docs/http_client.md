@@ -1,11 +1,11 @@
 
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/http/serving_client.py#L32"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../lib/ovmsclient/tfs_compat/http/serving_client.py#L32"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `HttpClient`
 
 ---
 
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/http/serving_client.py#L63"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../lib/ovmsclient/tfs_compat/http/serving_client.py#L63"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `get_model_metadata`
 
@@ -75,7 +75,7 @@ model_metadata = client.get_model_metadata(model_name="model")
 
 ---
 
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/http/serving_client.py#L87"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../lib/ovmsclient/tfs_compat/http/serving_client.py#L87"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `get_model_status`
 
@@ -136,7 +136,7 @@ model_status = client.get_model_status(model_name="model")
 
 ---
 
-<a href="../../../../client/python/lib/ovmsclient/tfs_compat/http/serving_client.py#L40"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../../lib/ovmsclient/tfs_compat/http/serving_client.py#L40"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `predict`
 

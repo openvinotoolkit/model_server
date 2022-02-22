@@ -206,7 +206,7 @@ def print_help():
     print("The live-demo.py script is a modified version of the script from https://github.com/kaldi-asr/kaldi.git repository from the \kaldi\egs\vystadial_cz\online_demo\live-demo.py path.")
     print("Run the live-demo.py script to record and send audio files to the server.")
     print("Prerequisites is running run_auto.sh script on server, kaldi container and ovms container as described in the instructions from:")
-    print("https://github.com/openvinotoolkit/model_server/blob/main/demos/speech_recognition_with_kaldi_model/python/asr_demo/README.md")
+    print("https://github.com/openvinotoolkit/model_server/blob/develop/demos/speech_recognition_with_kaldi_model/python/asr_demo/README.md")
     print("\nUsage: python live-demo.py <SERVER_IP> <SERVER_HOME_PATH>/asr_demo/data <SERVER_USER_NAME>\n")
     print("<SERVER_IP> - IP of the unix server with the running ovms and kaldi containers.")
     print("<SERVER_HOME_PATH> - is the path of the $HOME directory.")

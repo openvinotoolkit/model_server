@@ -1,8 +1,8 @@
-# Image Classification Demo with OVMS {#ovms_demo_image_classification}
+# Image Classification Demo (Python) {#ovms_demo_image_classification}
 
 ## Overview
 
-The script [image_classification.py](image_classification.py) reads all images and their labels specified in the text file. It then classifies them with [ResNet50](https://docs.openvino.ai/latest/omz_models_model_resnet50_binary_0001.html) model and presents accuracy results.
+The script [image_classification.py](https://github.com/openvinotoolkit/model_server/blob/develop/demos/image_classification/python/image_classification.py) reads all images and their labels specified in the text file. It then classifies them with [ResNet50](https://docs.openvino.ai/latest/omz_models_model_resnet50_binary_0001.html) model and presents accuracy results.
 
 
 ## Download ResNet50 model
