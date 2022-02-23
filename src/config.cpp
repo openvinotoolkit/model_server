@@ -93,7 +93,11 @@ Config& Config::parse(int argc, char** argv) {
             ("cache_dir",
                 "Overrides model cache directory. By default cache files are saved into /opt/cache if the directory is present. When enabled, first model load will produce cache files.",
                 cxxopts::value<std::string>(),
-                "CACHE_DIR");
+                "CACHE_DIR")
+            ("cpu_extension",
+                "A path to shared library containing custom CPU layer implementation. Default: empty.",
+                cxxopts::value<std::string>()->default_value(""),
+                "CPU_EXTENSION");
         options->add_options("multi model")
             ("config_path",
                 "Absolute path to json configuration file",
@@ -132,10 +136,6 @@ Config& Config::parse(int argc, char** argv) {
                 "Target device to run the inference",
                 cxxopts::value<std::string>()->default_value("CPU"),
                 "TARGET_DEVICE")
-            ("cpu_extension",
-                "A path to shared library containing custom CPU layer implementation. Default: empty.",
-                cxxopts::value<std::string>()->default_value(""),
-                "CPU_EXTENSION")
             ("plugin_config",
                 "A dictionary of plugin configuration keys and their values, eg \"{\\\"CPU_THROUGHPUT_STREAMS\\\": \\\"1\\\"}\". Default throughput streams for CPU and GPU are calculated by OpenVINO",
                 cxxopts::value<std::string>(),
