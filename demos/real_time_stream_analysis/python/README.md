@@ -1,12 +1,11 @@
-# Real Time Stream Analysis Demo
-
+# Real Time Stream Analysis Demo {#ovms_demo_real_time_stream_analysis}
 ## Overview
 
 For object classification, detection and segmentation we use CV (Computer Vision) models that take visual data on the input and return predictions like classification results, bounding boxes parameters etc. By visual data we often mean video stream generated in real time by different kinds of cameras. 
 
 In this demo you'll see how to analyze RTSP (Real Time Streaming Protocol) stream using OpenVINO Model Server for inference.
 
-<img src="assets/concept.jpg">
+<img src="https://github.com/openvinotoolkit/model_server/blob/streaming-demo/demos/real_time_stream_analysis/python/assets/concept.jpg">
 
 The stream analysis app is started with `real_time_stream_analysis.py` script. It reads frames from the provided stream URL, runs pre and post processing and requests inference on specified model served by OVMS.
 
@@ -23,15 +22,15 @@ In order to make this demo work you need to:
 - have access to OpenVINO Model Server with your model of choice deployed
 - have a use case implementation
 
-The stream analysis app needs to have access to RTSP stream to read from and OVMS to run inference on. Apart from that you need use case implementation that defines pre and postprocessing. Some examplary use cases are available in [use cases catalog](use_cases).
+The stream analysis app needs to have access to RTSP stream to read from and OVMS to run inference on. Apart from that you need use case implementation that defines pre and postprocessing. Some examplary use cases are available in [use cases catalog](https://github.com/openvinotoolkit/model_server/blob/streaming-demo/demos/real_time_stream_analysis/python/use_cases).
 
 ## Start the real time stream analysis
 
 ### Select use case
 
-To select pre and post processing routines that will be run on video stream you need to make a small modification in [real_time_stream_analysis.py](real_time_stream_analysis.py) script.
+To select pre and post processing routines that will be run on video stream you need to make a small modification in [real_time_stream_analysis.py](https://github.com/openvinotoolkit/model_server/blob/streaming-demo/demos/real_time_stream_analysis/python/real_time_stream_analysis.py) script.
 
-While creating IOProcessor instance, you have to provide a class that implements [use case interface](use_cases/use_case.py) and runs routines specific to your use case. 
+While creating IOProcessor instance, you have to provide a class that implements [use case interface](https://github.com/openvinotoolkit/model_server/blob/streaming-demo/demos/real_time_stream_analysis/python/use_cases/use_case.py) and runs routines specific to your use case. 
 Simply change the first argument to the use case you want in the IOProcessor constructor in [this one line](https://github.com/openvinotoolkit/model_server/blob/streaming-demo/demos/real_time_stream_analysis/python/real_time_stream_analysis.py#L76):
 
 ```
@@ -44,7 +43,7 @@ The use case class must first be imported. Examplary use cases can be imported f
 from use_cases import PersonVehicleBikeDetection
 ```
 
-> Note: You can use your custom use cases the same way. Implement use case interface and add it to use_cases catalog. For simpler imports from the main script consider adding you class in use_cases package [init file](use_cases/__init__.py) 
+> Note: You can use your custom use cases the same way. Implement use case interface and add it to use_cases catalog. For simpler imports from the main script consider adding you class in use_cases package [init file](https://github.com/openvinotoolkit/model_server/blob/streaming-demo/demos/real_time_stream_analysis/python/use_cases/__init__.py) 
 
 ### Run the app
 
@@ -99,7 +98,7 @@ python3 real_time_stream_analysis.py --stream_url rtsp://localhost:8554/mystream
 
 __Console output:__
 
-<img src="assets/minimal_example.jpg">
+<img src="https://github.com/openvinotoolkit/model_server/blob/streaming-demo/demos/real_time_stream_analysis/python/assets/minimal_example.jpg">
 
 
 ### Running with visualizer
@@ -117,11 +116,11 @@ python3 real_time_stream_analysis.py --stream_url rtsp://localhost:8554/mystream
 
 __Console output:__
 
-<img src="assets/visualizer_example_console.jpg">
+<img src="https://github.com/openvinotoolkit/model_server/blob/streaming-demo/demos/real_time_stream_analysis/python/assets/visualizer_example_console.jpg">
 
 __Browser preview:__
 
-<img src="assets/visualizer_example_browser.gif">
+<img src="https://github.com/openvinotoolkit/model_server/blob/streaming-demo/demos/real_time_stream_analysis/python/assets/visualizer_example_browser.gif">
 
 > Note: Visualizer does not use effecient streaming techniques to display results. It's main goal is to help during development and provide simple solution for quick health/accuracy checks.
 
@@ -155,9 +154,9 @@ All this data is kept in application memory. The `buffer_size` parameter allows 
 
 ## Deploy with Helm
 
-In [deploy catalog](deploy) you can find set of helm charts that simplify application deployment. 
+In [deploy catalog](https://github.com/openvinotoolkit/model_server/blob/streaming-demo/demos/real_time_stream_analysis/python/deploy) you can find set of helm charts that simplify application deployment. 
 Steps for deployment are following:
-1. Build Docker image with the application using provided [Dockerfile](Dockerfile)
+1. Build Docker image with the application using provided [Dockerfile](https://github.com/openvinotoolkit/model_server/blob/streaming-demo/demos/real_time_stream_analysis/python/Dockerfile)
 ```
 docker build . -t real-time-stream-analysis:latest
 ```
@@ -168,4 +167,4 @@ docker build . -t real-time-stream-analysis:latest
 helm install rt-stream-analyzer ./deploy --set stream_url=rtsp://localhost:8554/mystream,ovms_url=localhost:9000,model_name=person-vehicle-detection,visualizer_service.port=5000
 ```
 
-To learn about all available parameters check out [values.yaml](deploy/values.yaml)
+To learn about all available parameters check out [values.yaml](https://github.com/openvinotoolkit/model_server/blob/streaming-demo/demos/real_time_stream_analysis/python/deploy/values.yaml)
