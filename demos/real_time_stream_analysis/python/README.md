@@ -31,7 +31,7 @@ The stream analysis app needs to have access to RTSP stream to read from and OVM
 
 To select pre and post processing routines that will be run on video stream you need to make a small modification in [real_time_stream_analysis.py](real_time_stream_analysis.py) script.
 
-While creating IOProcessor instance, you to provide a class that implements [use case interface](use_cases/use_case.py) and runs routines specific to your use case. 
+While creating IOProcessor instance, you have to provide a class that implements [use case interface](use_cases/use_case.py) and runs routines specific to your use case. 
 Simply change the first argument to the use case you want in the IOProcessor constructor in [this one line](https://github.com/openvinotoolkit/model_server/blob/streaming-demo/demos/real_time_stream_analysis/python/real_time_stream_analysis.py#L76):
 
 ```
@@ -150,7 +150,7 @@ Depending on the location of stream analysis app and the model server in your de
 
 This parameter does not have a direct impact on inference performance, but is important in terms of the resources used by the whole application. Stream analysis app uses internal queues to buffer input frames as well as receiving the results and displaying them via visualizer.
 
-All this data is kept in application memory. The `buffer_size` parameter allows you to set the maximum amout of frames kept in application internal buffers. Depending on the available memory and a single frame size you may want to adjust this parameter not to consume too much, or even run out of memory.
+All this data is kept in application memory. The `buffer_size` parameter allows you to set the maximum amount of frames kept in application internal buffers. Depending on the available memory and a single frame size you may want to adjust this parameter not to consume too much, or even run out of memory.
 
 
 ## Deploy with Helm

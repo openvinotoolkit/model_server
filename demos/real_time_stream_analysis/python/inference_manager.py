@@ -37,7 +37,7 @@ class InferenceManager:
 		self.logger.info("Initializing Inference Manager...")
 
 		model_version_str = "latest" if model_version == 0 else model_version
-		self.logger.info(f"OVMS Endpoint spec - ovms_url:{ovms_url}; model_name: {model_name}; model_version: {model_version_str}")
+		self.logger.info(f"OVMS Endpoint spec - ovms_url: {ovms_url}; model_name: {model_name}; model_version: {model_version_str}")
 
 		ovms_info = {
 			"ovms_url": ovms_url, 
@@ -101,7 +101,7 @@ class InferenceManager:
 
 	def pull_result(self) -> Tuple[bool, Tuple[np.ndarray, np.ndarray]]:
 		# Non blocking results pull method. Returns tuple (status, (frame, result))
-		# status == True infroms that pull was successful
+		# status == True informs that pull was successful
 		# status == False informs that there are no results to be pulled
 		# (frame, result) tuple is the actual element pulled from the results queue
 		# For status == False, it's set to (None, None) as it's N/A 
