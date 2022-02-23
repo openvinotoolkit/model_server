@@ -60,7 +60,10 @@ Now you can create a directory for blurred image and run the client:
 mkdir results
 ```
 
-```
-bash
+```bash
 python face_blur.py --grpc_port 9000 --image_input_path ../../common/static/images/people/people1.jpeg --blurred_image_save_path ./results --image_width 600 --image_height 400 --image_layout NHWC
 ```
+
+Examplary result of running the demo:
+
+![Face Blur Image](face_blur_image.jpg)
