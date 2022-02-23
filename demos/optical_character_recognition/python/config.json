@@ -4,7 +4,6 @@
             "config": {
                 "name": "east",
                 "base_path": "/OCR/east_fp32",
-                "layout": "NHWC:NCHW",
                 "plugin_config": {
                     "CPU_THROUGHPUT_STREAMS":  "1"
                 }

@@ -225,17 +225,17 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(image.cols == imageWidth, "Mat generation failed");
     NODE_ASSERT(image.rows == imageHeight, "Mat generation failed");
 
-    uint64_t _numRows = scoresTensor->dims[2];
-    uint64_t _numCols = scoresTensor->dims[3];
+    uint64_t _numRows = scoresTensor->dims[1];
+    uint64_t _numCols = scoresTensor->dims[2];
     NODE_ASSERT(_numRows <= std::numeric_limits<int>::max(), "score  rows is too large");
     NODE_ASSERT(_numCols <= std::numeric_limits<int>::max(), "score columns is too large");
     int numRows = static_cast<int>(_numRows);
     int numCols = static_cast<int>(_numCols);
 
-    NODE_ASSERT(scoresTensor->dims[1] == 1, "scores has dim 1 not equal to 1");
-    NODE_ASSERT(geometryTensor->dims[1] == 5, "geometry has dim 1 not equal to 5");
-    NODE_ASSERT(scoresTensor->dims[2] == geometryTensor->dims[2], "scores and geometry has not equal dim 2");
-    NODE_ASSERT(scoresTensor->dims[3] == geometryTensor->dims[3], "scores and geometry has not equal dim 3");
+    NODE_ASSERT(scoresTensor->dims[3] == 1, "scores has dim 3 not equal to 1");
+    NODE_ASSERT(geometryTensor->dims[3] == 5, "geometry has dim 3 not equal to 5");
+    NODE_ASSERT(scoresTensor->dims[1] == geometryTensor->dims[1], "scores and geometry has not equal dim 2");
+    NODE_ASSERT(scoresTensor->dims[2] == geometryTensor->dims[2], "scores and geometry has not equal dim 3");
 
     NODE_ASSERT((numRows * 4) == imageHeight, "image is not x4 larger than score/geometry data");
     NODE_ASSERT((numCols * 4) == imageWidth, "image is not x4 larger than score/geometry data");
@@ -247,11 +247,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     // Extract the scores (probabilities), followed by the geometrical data used to derive potential bounding box coordinates that surround text
     for (int y = 0; y < numRows; y++) {
         float* scoresData = (float*)scoresTensor->data + (y * numCols);
-        float* xData0 = (float*)geometryTensor->data + ((0 * numRows * numCols) + (y * numCols));
-        float* xData1 = (float*)geometryTensor->data + ((1 * numRows * numCols) + (y * numCols));
-        float* xData2 = (float*)geometryTensor->data + ((2 * numRows * numCols) + (y * numCols));
-        float* xData3 = (float*)geometryTensor->data + ((3 * numRows * numCols) + (y * numCols));
-        float* anglesData = (float*)geometryTensor->data + ((4 * numRows * numCols) + (y * numCols));
+        float* geometryData = (float*)geometryTensor->data + (y * numCols * 5);
 
         for (int x = 0; x < numCols; x++) {
             float score = scoresData[x];
@@ -268,7 +264,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
             int offsetY = y * 4;
 
             // Extract the rotation angle for the prediction and then compute the sin and cosine
-            float angle = anglesData[x];
+            int dataOffset = (x * 5);
+            float angle = geometryData[dataOffset + 4];
 
             if (debugMode)
                 std::cout << "Angle: " << angle << std::endl;
@@ -276,12 +273,12 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
             float sin = std::sin(angle);
 
             // Use the geometry volume to derive the width and height of the bounding box
-            float h = xData0[x] + xData2[x];
-            float w = xData1[x] + xData3[x];
+            float h = geometryData[dataOffset + 0] + geometryData[dataOffset + 2];
+            float w = geometryData[dataOffset + 1] + geometryData[dataOffset + 3];
 
             cv::Point2i p2{
-                offsetX + static_cast<int>(cos * xData1[x] + sin * xData2[x]),
-                offsetY + static_cast<int>(-sin * xData1[x] + cos * xData2[x])};
+                offsetX + static_cast<int>(cos * geometryData[dataOffset + 1] + sin * geometryData[dataOffset + 2]),
+                offsetY + static_cast<int>(-sin * geometryData[dataOffset + 1] + cos * geometryData[dataOffset + 2])};
             cv::Point2i p1{
                 static_cast<int>(-sin * h) + p2.x,
                 static_cast<int>(-cos * h) + p2.y};
@@ -407,9 +404,9 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     (*info)[1].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     NODE_ASSERT(((*info)[1].dims) != nullptr, "malloc has failed");
     (*info)[1].dims[0] = 1;
-    (*info)[1].dims[1] = 1;
-    (*info)[1].dims[2] = originalImageHeight / 4;
-    (*info)[1].dims[3] = originalImageWidth / 4;
+    (*info)[1].dims[1] = originalImageHeight / 4;
+    (*info)[1].dims[2] = originalImageWidth / 4;
+    (*info)[1].dims[3] = 1;
     (*info)[1].precision = FP32;
 
     (*info)[2].name = GEOMETRY_TENSOR_NAME;
@@ -417,9 +414,9 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     (*info)[2].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     NODE_ASSERT(((*info)[2].dims) != nullptr, "malloc has failed");
     (*info)[2].dims[0] = 1;
-    (*info)[2].dims[1] = 5;
-    (*info)[2].dims[2] = originalImageHeight / 4;
-    (*info)[2].dims[3] = originalImageWidth / 4;
+    (*info)[2].dims[1] = originalImageHeight / 4;
+    (*info)[2].dims[2] = originalImageWidth / 4;
+    (*info)[2].dims[3] = 5;
     (*info)[2].precision = FP32;
     return 0;
 }
