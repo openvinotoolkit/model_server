@@ -148,7 +148,7 @@ Fully functional custom nodes are available here:
 - [model zoo intel object detection custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/model_zoo_intel_object_detection)
 - [image transformation custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/image_transformation)
 - [add one custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/add_one) - demonstrates example implementation of memory pool to avoid dynamic allocation
-
+- [face blur custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/face_blur)
 
 Additional examples are included in the unit tests:
 - [node_add_sub.c](https://github.com/openvinotoolkit/model_server/tree/develop/src/test/custom_nodes/node_add_sub.c)
