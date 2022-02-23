@@ -130,7 +130,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     }
 
     // Applying blur on detected areas
-    for (const auto& box : boxes){
+    for (const auto& box : boxes) {
         cv::GaussianBlur(image(box), image(box), cv::Size(51, 51), 0);
     }
 
@@ -239,7 +239,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     (*info)[0].dims[0] = 1;
 
     if (targetImageLayout == "NHWC") {
-        (*info)[0].dims[1] = targetImageHeight ;
+        (*info)[0].dims[1] = targetImageHeight;
         (*info)[0].dims[2] = targetImageWidth;
         (*info)[0].dims[3] = 3;
     } else {
