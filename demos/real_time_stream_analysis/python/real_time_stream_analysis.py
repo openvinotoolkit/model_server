@@ -21,7 +21,7 @@ from io_processor import IOProcessor
 from http_visualizer import HttpVisualizer
 from stream_analyzer import StreamAnalyzer
 from logger import LoggerConfig
-from use_cases.person_vehicle_bike_detection import PersonVehicleBikeDetection
+from use_cases import PersonVehicleBikeDetection
 
 
 def get_config():
@@ -33,7 +33,7 @@ def get_config():
 	parser.add_argument("--visualizer_port", required=False, type=int, help="Port of the inferece results visualizer webservice. "
 																  			"If not specified, visualizer will not be launched")
 	parser.add_argument("--binary_input", required=False, action="store_true", help="Convert frames to binary format before sending them to OVMS. Default: False")
-	parser.add_argument("--inference_executors", required=False, type=int, default=16, help="Number of inference executor threads. Default: 16")
+	parser.add_argument("--inference_executors", required=False, type=int, default=4, help="Number of inference executor threads. Default: 4")
 	parser.add_argument("--buffer_size", required=False, type=int, default=100, help="Number of frames the have been received from the stream and are awaiting inference or visualization. "
 																					  "When buffer is full, frames are dropped. Default: 100")
 	parser.add_argument("--log_level", required=False, type=str, default="INFO", help="Logging level - available values: INFO, DEBUG, ERROR. Default: INFO")

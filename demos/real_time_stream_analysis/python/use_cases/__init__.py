@@ -13,3 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+# Exposing all working use cases on use_cases level 
+from use_cases.person_vehicle_bike_detection.person_vehicle_bike_detection import PersonVehicleBikeDetection
