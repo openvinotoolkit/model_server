@@ -29,13 +29,11 @@ parser.add_argument('--grpc_port', required=False, default=9000, help='Specify p
 parser.add_argument('--pipeline_name', required=False, default='face_blur_pipeline', help='Pipeline name to request. default: face_blur_pipeline')
 parser.add_argument('--image_input_name', required=False, default='image', help='Pipeline input name for input with image. default: image')
 parser.add_argument('--image_input_path', required=True, help='Input image path.')
-parser.add_argument('--people_images_output_name', required=False, default='people_images', help='Pipeline output name for cropped images with people. default: people_images')
-parser.add_argument('--people_images_save_path', required=False, default='', help='If specified, people images will be saved to disk.')
 parser.add_argument('--image_width', required=False, default=600, help='Original image width. default: 600')
 parser.add_argument('--image_height', required=False, default=400, help='Original image height. default: 400')
 parser.add_argument('--image_layout', required=False, default='NHWC', choices=['NCHW', 'NHWC', 'BINARY'], help='Pipeline input image layout. default: NCHW')
 parser.add_argument('--image_output_name', required=False, default='image', help='Pipeline output name for output with image. default: image')
-parser.add_argument('--detection_output_name', required=False, default='detection', help='Pipeline output name for output with detection. default: detection')
+parser.add_argument('--blurred_image_save_path', required=False, default='', help='If specified, people images will be saved to disk.')
 
 args = vars(parser.parse_args())
 
@@ -57,19 +55,6 @@ def prepare_img_input_in_binary_format(request, name, path):
     with open(path, 'rb') as f:
         data = f.read()
         request.inputs[name].CopyFrom(make_tensor_proto(data, shape=[1]))
-
-def draw_boxes(image, detections):
-    width = image.shape[2] if image.shape[0] == 3 else image.shape[1]
-    height = image.shape[1] if image.shape[0] == 3 else image.shape[0]
-    params = detections[0][0]
-    for i in range(params.shape[0]):
-        if params[i][2] > 0.7 and params[i][0] == 0:
-            x_min = int(params[i][3] * width)
-            y_min = int(params[i][4] * height)
-            x_max = int(params[i][5] * width)
-            y_max = int(params[i][6] * height)
-            image = cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0,0,255), 1)
-    return image
 
 def save_image(image, location):
     if len(image.shape) == 3 and image.shape[0] == 3:  # NCHW
@@ -113,12 +98,5 @@ else:
         print(name)
     exit(1)
 
-for name in response.outputs:
-    print(f"Output: name[{name}]")
-    tensor_proto = response.outputs[name]
-    output_nd = make_ndarray(tensor_proto)
-    print(f"    numpy => shape[{output_nd.shape}] data[{output_nd.dtype}]")
-    
-    if name == args['detection_output_name']:
-        blurred_image = draw_boxes(blurred_image, output_nd)
-        save_image(blurred_image, args['people_images_save_path'])
+print(f'Saving image to {args["blurred_image_save_path"]}')
+save_image(blurred_image, args['blurred_image_save_path'])

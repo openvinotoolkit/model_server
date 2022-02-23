@@ -45,11 +45,9 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(originalImageLayout == "NCHW" || originalImageLayout == "NHWC", "original image layout must be NCHW or NHWC");
     std::string targetImageLayout = get_string_parameter("target_image_layout", params, paramsCount, "NCHW");
     NODE_ASSERT(targetImageLayout == "NCHW" || targetImageLayout == "NHWC", "target image layout must be NCHW or NHWC");
-    bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
-    uint64_t targetImageColorChannels = convertToGrayScale ? 1 : 3;
+    uint64_t targetImageColorChannels = 3;
     float confidenceThreshold = get_float_parameter("confidence_threshold", params, paramsCount, -1.0);
     NODE_ASSERT(confidenceThreshold >= 0 && confidenceThreshold <= 1.0, "confidence threshold must be in 0-1 range");
-    uint64_t maxOutputBatch = get_int_parameter("max_output_batch", params, paramsCount, 100);
     bool debugMode = get_string_parameter("debug", params, paramsCount) == "true";
 
     // Inputs reading
@@ -131,13 +129,14 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         }
     }
 
-    if (boxes.size() > maxOutputBatch) {
-        boxes.resize(maxOutputBatch);
-    }
-
     // Applying blur on detected areas
     for (const auto& box : boxes){
         cv::GaussianBlur(image(box), image(box), cv::Size(51, 51), 0);
+    }
+
+    // Perform resize operation.
+    if (originalImageHeight != targetImageHeight || originalImageWidth != targetImageWidth) {
+        cv::resize(image, image, cv::Size(targetImageWidth, targetImageHeight));
     }
 
     // Preparing output tensor
@@ -228,7 +227,6 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     NODE_ASSERT(targetImageWidth > 0, "target image width must be larger than 0");
     std::string targetImageLayout = get_string_parameter("target_image_layout", params, paramsCount, "NCHW");
     NODE_ASSERT(targetImageLayout == "NCHW" || targetImageLayout == "NHWC", "target image layout must be NCHW or NHWC");
-    bool convertToGrayScale = get_string_parameter("convert_to_gray_scale", params, paramsCount) == "true";
 
     *infoCount = 1;
     *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
@@ -243,9 +241,9 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     if (targetImageLayout == "NHWC") {
         (*info)[0].dims[1] = targetImageHeight ;
         (*info)[0].dims[2] = targetImageWidth;
-        (*info)[0].dims[3] = convertToGrayScale ? 1 : 3;
+        (*info)[0].dims[3] = 3;
     } else {
-        (*info)[0].dims[1] = convertToGrayScale ? 1 : 3;
+        (*info)[0].dims[1] = 3;
         (*info)[0].dims[2] = targetImageHeight;
         (*info)[0].dims[3] = targetImageWidth;
     }
