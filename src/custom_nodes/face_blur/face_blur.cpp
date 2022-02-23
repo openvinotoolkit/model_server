@@ -20,7 +20,7 @@
 #include "../common/utils.hpp"
 #include "opencv2/opencv.hpp"
 
-static constexpr const char* TENSOR_NAME = "image";
+static constexpr const char* IMAGE_TENSOR_NAME = "image";
 static constexpr const char* DETECTION_TENSOR_NAME = "detection";
 
 int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
@@ -52,11 +52,12 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     uint64_t maxOutputBatch = get_int_parameter("max_output_batch", params, paramsCount, 100);
     bool debugMode = get_string_parameter("debug", params, paramsCount) == "true";
 
+    // Inputs reading
     const CustomNodeTensor* imageTensor = nullptr;
     const CustomNodeTensor* detectionTensor = nullptr;
 
     for (int i = 0; i < inputsCount; i++) {
-        if (std::strcmp(inputs[i].name, TENSOR_NAME) == 0) {
+        if (std::strcmp(inputs[i].name, IMAGE_TENSOR_NAME) == 0) {
             imageTensor = &(inputs[i]);
         } else if (std::strcmp(inputs[i].name, DETECTION_TENSOR_NAME) == 0) {
             detectionTensor = &(inputs[i]);
@@ -66,6 +67,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         }
     }
 
+    // Validating inputs
     NODE_ASSERT(imageTensor != nullptr, "Missing input image");
     NODE_ASSERT(detectionTensor != nullptr, "Missing input scores");
     NODE_ASSERT(imageTensor->precision == FP32, "image input is not FP32");
@@ -88,6 +90,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     int imageHeight = static_cast<int>(_imageHeight);
     int imageWidth = static_cast<int>(_imageWidth);
 
+    // Processing
     if (debugMode) {
         std::cout << "Processing input tensor image resolution: " << cv::Size(imageHeight, imageWidth) << "; expected resolution: " << cv::Size(originalImageHeight, originalImageWidth) << std::endl;
     }
@@ -132,11 +135,12 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         boxes.resize(maxOutputBatch);
     }
 
+    // Applying blur on detected areas
     for (const auto& box : boxes){
         cv::GaussianBlur(image(box), image(box), cv::Size(51, 51), 0);
     }
 
-    // Prepare output tensor
+    // Preparing output tensor
     uint64_t byteSize = sizeof(float) * targetImageHeight * targetImageWidth * targetImageColorChannels;
     NODE_ASSERT(image.total() * image.elemSize() == byteSize, "buffer size differs");
     float* buffer = (float*)malloc(byteSize);
@@ -156,7 +160,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     }
 
     CustomNodeTensor& output = (*outputs)[0];
-    output.name = TENSOR_NAME;
+    output.name = IMAGE_TENSOR_NAME;
     output.data = reinterpret_cast<uint8_t*>(buffer);
     output.dataBytes = byteSize;
     output.dimsCount = 4;
@@ -189,7 +193,7 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
     NODE_ASSERT((*info) != nullptr, "malloc has failed");
 
-    (*info)[0].name = TENSOR_NAME;
+    (*info)[0].name = IMAGE_TENSOR_NAME;
     (*info)[0].dimsCount = 4;
     (*info)[0].dims = (uint64_t*)malloc((*info)[0].dimsCount * sizeof(uint64_t));
     NODE_ASSERT(((*info)[0].dims) != nullptr, "malloc has failed");
@@ -230,7 +234,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(struct CustomNodeTensorInfo));
     NODE_ASSERT((*info) != nullptr, "malloc has failed");
 
-    (*info)[0].name = TENSOR_NAME;
+    (*info)[0].name = IMAGE_TENSOR_NAME;
     (*info)[0].dimsCount = 4;
     (*info)[0].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     NODE_ASSERT(((*info)[0].dims) != nullptr, "malloc has failed");

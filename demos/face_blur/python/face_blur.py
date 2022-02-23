@@ -25,15 +25,17 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc
 
 parser = argparse.ArgumentParser(description='Client for OCR pipeline')
 parser.add_argument('--grpc_address', required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
-parser.add_argument('--grpc_port', required=False, default=9178, help='Specify port to grpc service. default: 9178')
+parser.add_argument('--grpc_port', required=False, default=9000, help='Specify port to grpc service. default: 9178')
 parser.add_argument('--pipeline_name', required=False, default='face_blur_pipeline', help='Pipeline name to request. default: face_blur_pipeline')
 parser.add_argument('--image_input_name', required=False, default='image', help='Pipeline input name for input with image. default: image')
 parser.add_argument('--image_input_path', required=True, help='Input image path.')
 parser.add_argument('--people_images_output_name', required=False, default='people_images', help='Pipeline output name for cropped images with people. default: people_images')
 parser.add_argument('--people_images_save_path', required=False, default='', help='If specified, people images will be saved to disk.')
-parser.add_argument('--image_width', required=False, default=1920, help='Original image width. default: 1920')
-parser.add_argument('--image_height', required=False, default=1024, help='Original image height. default: 1024')
+parser.add_argument('--image_width', required=False, default=600, help='Original image width. default: 600')
+parser.add_argument('--image_height', required=False, default=400, help='Original image height. default: 400')
 parser.add_argument('--image_layout', required=False, default='NHWC', choices=['NCHW', 'NHWC', 'BINARY'], help='Pipeline input image layout. default: NCHW')
+parser.add_argument('--image_output_name', required=False, default='image', help='Pipeline output name for output with image. default: image')
+parser.add_argument('--detection_output_name', required=False, default='detection', help='Pipeline output name for output with detection. default: detection')
 
 args = vars(parser.parse_args())
 
@@ -97,12 +99,19 @@ try:
     response = stub.Predict(request, 30.0)
 except grpc.RpcError as err:
     if err.code() == grpc.StatusCode.ABORTED:
-        print('No face has been found in the image')
+        print('Nothing has been found in the image')
         exit(1)
     else:
         raise err
 
-blurred_image = make_ndarray(response.outputs['image'])[0]
+if args['image_output_name'] in response.outputs.keys():
+    blurred_image = make_ndarray(response.outputs[args['image_output_name']])[0]
+else:
+    print(f'No output found in {args["image_output_name"]}')
+    print('Available outputs:')
+    for name in response.outputs:
+        print(name)
+    exit(1)
 
 for name in response.outputs:
     print(f"Output: name[{name}]")
@@ -110,6 +119,6 @@ for name in response.outputs:
     output_nd = make_ndarray(tensor_proto)
     print(f"    numpy => shape[{output_nd.shape}] data[{output_nd.dtype}]")
     
-    if name == 'detection':
+    if name == args['detection_output_name']:
         blurred_image = draw_boxes(blurred_image, output_nd)
         save_image(blurred_image, args['people_images_save_path'])

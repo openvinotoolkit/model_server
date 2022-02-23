@@ -21,10 +21,6 @@
         {
             "name": "face_blur_lib",
             "base_path": "/workspace/face_blur_lib/libcustom_node_face_blur.so"
-        },
-        {
-            "name": "object_detection_image_extractor",
-            "base_path": "/workspace/omz_lib/libcustom_node_model_zoo_intel_object_detection.so"
         }
     ],
     "pipeline_config_list": [
