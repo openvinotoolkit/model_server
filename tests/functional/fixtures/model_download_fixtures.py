@@ -43,7 +43,7 @@ def download_file(model_url_base, model_name, directory, extension, model_versio
     if not os.path.exists(local_model_full_path):
         logger.info("Downloading {} file to directory: {}...".format(model_name + extension, local_model_path))
         response = requests.get(model_url_base + extension, stream=True)
-        assert response.ok, "Detect problem during accessing: {model_url_base}{extension}"
+        assert response.status_code == 200, f"Detect problem during accessing: {model_url_base}{extension} (status code: {response.status_code})"
         with open(local_model_full_path, 'wb') as output:
             output.write(response.content)
 
