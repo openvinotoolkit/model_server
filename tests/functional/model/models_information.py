@@ -163,9 +163,9 @@ class ResnetGS:
 class ResnetONNX:
     name = "resnet_onnx"
     dtype = np.float32
-    input_name = "data"
+    input_name = "gpu_0/data_0"
     input_shape = (1, 3, 224, 224)
-    output_name = "resnetv24_dense0_fwd"
+    output_name = "gpu_0/softmax_1"
     output_shape = (1, 1000)
     rest_request_format = 'row_name'
     url = "https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-caffe2-v1-9"
