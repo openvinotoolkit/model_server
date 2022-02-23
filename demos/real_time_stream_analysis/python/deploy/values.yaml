@@ -33,7 +33,7 @@ ovms_url: ""
 model_name: ""
 model_version: 0
 binary_input: false
-inference_executors: 1
+inference_executors: 4
 buffer_size: 100
 log_level: INFO
 

@@ -16,12 +16,12 @@
 
 FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND="noninteractive"
+RUN apt -y update && apt install -y libopencv-dev python3-opencv python3-pip
+COPY requirements.txt /real_time_stream_analysis/
+RUN pip3 install -r /real_time_stream_analysis/requirements.txt
 COPY templates /real_time_stream_analysis/templates
 COPY use_cases /real_time_stream_analysis/use_cases
-COPY requirements.txt /real_time_stream_analysis
 COPY *.py /real_time_stream_analysis/
 WORKDIR /real_time_stream_analysis
-RUN apt -y update && apt install -y libopencv-dev python3-opencv python3-pip
-RUN pip3 install -r requirements.txt
 
 ENTRYPOINT ["python3", "real_time_stream_analysis.py"]

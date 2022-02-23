@@ -148,6 +148,24 @@ Depending on the location of stream analysis app and the model server in your de
 
 ### `--buffer_size`
 
-This parameter does not have a direct impact on inference performance, but is important in terms of the resources used by the whole application. Stream analysis app uses internal queues to buffer input frames as well as receiving the results and displaying results via visualizer.
+This parameter does not have a direct impact on inference performance, but is important in terms of the resources used by the whole application. Stream analysis app uses internal queues to buffer input frames as well as receiving the results and displaying them via visualizer.
 
 All this data is kept in application memory. The `buffer_size` parameter allows you to set the maximum amout of frames kept in application internal buffers. Depending on the available memory and a single frame size you may want to adjust this parameter not to consume too much, or even run out of memory.
+
+
+## Deploy with Helm
+
+In [deploy catalog](deploy) you can find set of helm charts that simplify application deployment. 
+Steps for deployment are following:
+1. Build Docker image with the application using provided [Dockerfile](Dockerfile)
+```
+docker build . -t real-time-stream-analysis:latest
+```
+
+2. Put the image in a repository accessible from your cluster
+3. Deploy with helm
+```
+helm install rt-stream-analyzer ./deploy --set stream_url=rtsp://localhost:8554/mystream,ovms_url=localhost:9000,model_name=person-vehicle-detection,visualizer_service.port=5000
+```
+
+To learn about all available parameters check out [values.yaml](deploy/values.yaml)
