@@ -18,9 +18,10 @@ pip3 install -r requirements.txt
 To run this example you will need to download the rm_lstm4f model with input and score ark files and convert it to IR format.
  1. Download the model from [rm_lstm4f](https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/)
      
-     ```mkdir models && cd models```
-
-     ```wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/ ```
+     ```
+     mkdir models && cd models
+     wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/ 
+     ```
 
      This command downloads following files:
 
@@ -32,15 +33,21 @@ To run this example you will need to download the rm_lstm4f model with input and
 
  2. [Convert model to IR](https://docs.openvinotoolkit.org/latest/openvino_inference_engine_samples_speech_sample_README.html)
  
-    ```docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo.py --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1 ```
+    ```
+    docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo.py --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1
+    ```
 
  3. Having `rm_lstm4f` model files `.xml` and `.bin` in the IR format present in ```bash $(pwd)/rm_lstm4f/1``` directory,
     OVMS can be started using the command:
 
-    ```docker run -d --rm -v $(pwd)/rm_lstm4f/:/tmp/model -p 9000:9000 -p 5555:5555 openvino/model_server:latest --stateful --port 9000 --rest_port 5555 --model_name rm_lstm4f --model_path /tmp/model ```
+    ```
+    docker run -d --rm -v $(pwd)/rm_lstm4f/:/tmp/model -p 9000:9000 -p 5555:5555 openvino/model_server:latest --stateful --port 9000 --rest_port 5555 --model_name rm_lstm4f --model_path /tmp/model
+    ```
 
  4. Return to the demo root directory
-    ```cd .. ```
+    ```
+    cd ..
+    ```
 
 ## gRPC API Client Example <a name="grpc-api"></a>
 

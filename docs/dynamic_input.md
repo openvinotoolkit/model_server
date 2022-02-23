@@ -11,6 +11,7 @@
    ovms_docs_dynamic_shape_auto_reload
    ovms_docs_dynamic_shape_custom_node
    ovms_docs_dynamic_shape_binary_inputs
+   ovms_docs_dynamic_shape_dynamic_model
 
 
 @endsphinxdirective
@@ -27,3 +28,5 @@ There are multiple ways of enabling dynamic inputs for the model:
 - [dynamic input shape with a custom node](./dynamic_shape_custom_node.md) - create a simple pipeline by pairing your model with a custom node that performs data preprocessing and provides the model with data in an acceptable shape.
 
 - [dynamic input shape with binary input format](./dynamic_shape_binary_inputs.md) - send data in binary format (JPEG or PNG encoded), so the Model Server will adjust the input during data decoding. 
+
+- [dynamic input shape with dynamic IR/ONNX model](./dynamic_shape_dynamic_model.md) - leverage OpenVINO native dynamic shape feature to send data with arbitrary shape

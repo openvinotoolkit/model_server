@@ -206,7 +206,7 @@ When creating a Python-based client application, there are two packages on PyPi 
 
 @endsphinxdirective
 
-For complete usage examples see [ovmsclient samples](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/ovmsclient/samples/README.md).
+For complete usage examples see [ovmsclient samples](../client/python/ovmsclient/samples/README.md).
 
 ## C++ Client
 
@@ -220,7 +220,7 @@ Creating a client application in C++ follows the same principles as Python, but 
 
 To successfully set up communication with the model server you need to implement the logic to communicate with endpoints specified in the [API](api_reference_guide.md). For gRPC, download and compile protos, then link and use them in your application according to the [gRPC API specification](model_server_grpc_api.md). For REST, prepare your data and pack it into the appropriate JSON structure according to the [REST API specification](model_server_rest_api.md).
 
-See our [C++ demo](../demos/benchmark/cpp/README.md) to learn how to build a sample C++ client application in a Docker container and get predictions via the gRPC API. 
+See our [C++ demo](../demos/image_classification/cpp/README.md) to learn how to build a sample C++ client application in a Docker container and get predictions via the gRPC API. 
 
 ## Go Client
 

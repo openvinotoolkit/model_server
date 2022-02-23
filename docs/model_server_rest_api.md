@@ -150,7 +150,7 @@ Read more about [Get Model Metadata API usage](https://github.com/openvinotoolki
 ## Predict API <a name="predict"></a>
 **Description**
 
-Sends requests via TensorFlow Serving RESTful API using images in NumPy array or binary format. It displays performance statistics and optionally the model accuracy.
+Endpoint for running an inference with loaded models or [DAGs](./demultiplexing.md).
 
 **URL**
 ```
@@ -270,8 +270,8 @@ In case of any failure during execution:
 When an operation succeeds HTTP response status code is
   - `201` when config(config file or model version) was reloaded 
   - `200` when reload was not required, already applied or OVMS was started in single model mode
-When an operation fails another status code is returned.
 
+When an operation fails another status code is returned.
 Possible messages returned on error:
 
 - obtaining config file change time failed (file is not existing or cannot be accessed):

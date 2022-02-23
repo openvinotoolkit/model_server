@@ -76,7 +76,7 @@ While models are defined in section `model_config_list`, pipelines are to be con
 section `pipeline_config_list`. 
 Nodes in the pipelines can reference only the models configured in model_config_list section.
 
-Below is depicted a basic pipeline section template:
+Basic pipeline section template is depicted below:
 
 ```
 
@@ -151,7 +151,7 @@ Below is depicted a basic pipeline section template:
 |`"name"`|string|Node name so you can refer to it from other nodes|Yes|
 |`"model_name"`|string|You can specify underlying model (needs to be defined in `model_config_list`), available only for `DL model` nodes|required for `DL model` nodes|
 |`"version"`|integer|You can specify a model version for inference, available only for `DL model` nodes|No|
-|`"type"`|string|Node kind, currently there is only `DL model` kind available|Yes|
+|`"type"`|string|Node kind, currently there are 2 types available: `DL model` and `custom` |Yes|
 |`"demultiply_count"`|integer|Splits node outputs to desired chunks and branches pipeline execution|No|
 |`"gather_from_node"`|string|Setups node to converge pipeline and collect results into one input before execution|No|
 |`"inputs"`|array|Defines the list of input/output mappings between this and dependency nodes, **IMPORTANT**: Please note that output shape, precision, and layout of previous node/request needs to match input of current node's model|Yes|
@@ -210,15 +210,17 @@ the version parameter is ignored. Pipelines are not versioned. Though, they can 
 
 [Single face analysis with combined models](../demos/single_face_analysis_pipeline/python/README.md)
 
-[Multiple vehicles analysis using demultiplexer and custom node](../demos/vehicle_analysis_pipeline/python/README.md)
+[Multiple vehicles analysis using demultiplexer with model_zoo_object_detection example custom node](../demos/vehicle_analysis_pipeline/python/README.md)
 
-[Optical Character Recognition with custom node pipeline](../demos/optical_character_recognition/python/README.md)
+[Optical Character Recognition pipeline with east_ocr example custom node](../demos/optical_character_recognition/python/README.md)
+
+[Horizontal Text Detection pipeline with horizontal_ocr example custom node](../demos/horizontal_text_detection/python/README.md)
 
 ## Current limitations <a name="current-limitations"></a>
 
 - Models with "auto" [batch size](dynamic_bs_auto_reload.md) or [shape](dynamic_shape_auto_reload.md) cannot be referenced in pipeline
-- Connected inputs and output for subsequent node models need to exactly match each other in terms of data shape and precision - 
-there is no automatic conversion between input/output model precisions or layouts. This limitation can be addressed with a custom node to transform the data as required to match the data format.
+- Connected inputs and output for subsequent node models need to match each other in terms of data shape, precision and layout - 
+there is no automatic conversion between input/output model precisions or layouts. This limitation can be addressed with `--shape` and `--layout` model configuration or with a custom node to transform the data as required to match the expected data format.
 - REST requests with no named format (JSON body with one unnamed input) are not supported
 
 
