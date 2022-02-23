@@ -24,7 +24,7 @@ import signal
 
 class HttpVisualizer():
 
-	BIND_ADDRESS="0.0.0.0" # nosec
+	BIND_ADDRESS="localhost" # nosec
 
 	def __init__(self, visualizer_port, buffer_size):
 		self.logger = get_logger(__name__)
