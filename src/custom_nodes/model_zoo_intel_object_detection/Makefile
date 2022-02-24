@@ -16,7 +16,7 @@
 
 HEADER_FILE_PATH ?= ../../custom_node_interface.h
 BASE_OS ?= ubuntu
-OPENCV_DOWNLOAD_FOLDER ?= http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/opencv/release_2022.1/20220215_0649-4.5.5_053/
+OPENCV_DOWNLOAD_FOLDER ?= http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/opencv/release_2022.1/20220223_0602-4.5.5_073/
 
 .PHONY: default build
 
