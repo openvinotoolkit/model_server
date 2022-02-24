@@ -168,13 +168,15 @@ class Docker:
     def ensure_status(self, status, terminal_statuses=None):
         current_status = self.get_container_status()
         logger.debug(f"Ensure container status, expected_status={status}\t current_status={current_status}")
+        ovms_logs = self.container.logs().decode('ascii')
         if terminal_statuses is not None and current_status in terminal_statuses:
-            raise RuntimeError("Received terminal status '{}' for container {}".format(current_status,
-                                                                                       self.container_name))
+            raise RuntimeError("Received terminal status '{}' for container {} - \nOVMS LOGS:\n===\n{}\n===".format(
+                current_status, self.container_name, ovms_logs))
         assert current_status == status, \
-            "Not expected status for container {} found. \n " \
-            "Expected: {}, \n " \
-            "received: {}".format(self.container.name, status, self.container.status)
+            "Not expected status for container {} found. \n" \
+            "Expected: {}, \n" \
+            "received: {}\n" \
+            "Ovms logs: {}\n".format(self.container.name, status, self.container.status, ovms_logs)
 
     def ensure_container_status(self, status: str = CONTAINER_STATUS_RUNNING,
                                 terminal_statuses: List[str] = None):
