@@ -15,6 +15,7 @@
 #
 
 import queue
+from typing import Tuple
 from use_cases.use_case import UseCase
 from logger import get_logger
 from processing_supervisor import ProcessingSupervisor
@@ -38,17 +39,35 @@ class IOProcessor:
 
         self.logger.info("IO Processor initialized successfully")
 
-    def preprocess(self, frame: np.ndarray) -> np.ndarray:
-        return self.use_case.preprocess(frame)
+    def preprocess(self, frame: np.ndarray) -> Tuple[bool, np.ndarray]:
+        try:
+            return True, self.use_case.preprocess(frame)
+        except Exception as error:
+            self.logger.error("There was an error during input preprocessing.\n"
+                              f"Error details: {str(error)}\n"
+                              "Check use case implementation of 'preprocess' method.")
+            return False, None
 
-    def postprocess(self, frame: np.ndarray, inference_result: np.ndarray):
+    def postprocess(self, frame: np.ndarray, inference_result: np.ndarray) -> bool:
         if self.enable_visualization:
-            frame = self.use_case.visualize(frame, inference_result)
+            try:
+                frame = self.use_case.visualize(frame, inference_result)
+            except Exception as error:
+                self.logger.error("There was an error during output visualization.\n"
+                                  f"Error details: {str(error)}\n"
+                                  "Check use case implementation of 'visualize' method.")
+                return False
             try:
                 self.visualizer_frames_queue.put_nowait(frame)
             except queue.Full:
                 self.dropped_visualizer_frames_counter += 1
-        self.use_case.postprocess(inference_result)
+        try:
+            self.use_case.postprocess(inference_result)
+        except Exception as error:
+                self.logger.error("There was an error during output postprocessing.\n"
+                                  f"Error details: {str(error)}\n"
+                                  "Check use case implementation of 'postprocess' method.")
+                return False
 
         self.postprocessed_frames_counter += 1
         if self.postprocessed_frames_counter % self.LOGGING_INTERVAL == 0:
@@ -57,3 +76,4 @@ class IOProcessor:
                                      "more than half have not been visualized due to full visualizer buffer")
             self.postprocessed_frames_counter = 0
             self.dropped_visualizer_frames_counter = 0
+        return True

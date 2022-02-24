@@ -39,6 +39,7 @@ class StreamAnalyzer:
 
 	def run(self):
 		self.logger.info("Starting Stream Analyzer")
+		self.inference_manager.initialize()
 		if self.http_visualizer:
 			self.http_visualizer.initialize()
 
@@ -81,7 +82,11 @@ class StreamAnalyzer:
 				continue
 			self.supervisor.increase_frames_counter()
 
-			input = self.io_processor.preprocess(frame)
+			success, input = self.io_processor.preprocess(frame)
+			if not success:
+				self.logger.info("Preprocessing failed. Stream Analyzer is not functional and can't recover. Shutting down...")
+				break
+
 			success = self.inference_manager.schedule_inference(input)
 			if not success:
 				self.supervisor.increase_dropped_frames_counter()
@@ -91,6 +96,10 @@ class StreamAnalyzer:
 			if not success:
 				continue
 
-			self.io_processor.postprocess(frame, result)
+			success = self.io_processor.postprocess(frame, result)
+			if not success:
+				self.logger.info("Postprocessing failed. Stream Analyzer is not functional and can't recover. Shutting down...")
+				break
+
 			self.supervisor.increase_processed_frames_counter()
 		self.cleanup()

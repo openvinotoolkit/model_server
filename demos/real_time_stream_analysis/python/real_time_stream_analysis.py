@@ -20,9 +20,10 @@ from inference_manager import InferenceManager
 from io_processor import IOProcessor
 from http_visualizer import HttpVisualizer
 from stream_analyzer import StreamAnalyzer
-from logger import LoggerConfig
+from logger import LoggerConfig, get_logger
 from use_cases import PersonVehicleBikeDetection
 
+logger = get_logger(__name__)
 
 def get_config():
 	parser = argparse.ArgumentParser(description="Client for real time video stream analysis")
@@ -73,8 +74,12 @@ def main():
 		http_visualizer = None
 
 	visualizer_frames_queue = http_visualizer.get_frames_queue() if http_visualizer is not None else None
-	io_processor = IOProcessor(PersonVehicleBikeDetection, visualizer_frames_queue)
-
+	try:
+		io_processor = IOProcessor(PersonVehicleBikeDetection, visualizer_frames_queue)
+	except Exception as error:
+		logger.error(f"Error occurred during creating IOProcessor: {str(error)}")
+		logger.info(f"Stream Analyzer cannot be created. Shutting down...")
+		return
 	stream_analyzer = StreamAnalyzer(stream_reader, inference_manager, io_processor, http_visualizer)
 	stream_analyzer.run()
 

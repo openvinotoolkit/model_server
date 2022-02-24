@@ -34,7 +34,6 @@ class InferenceManager:
 		self.abort_event = threading.Event()
 
 		self.logger = get_logger(__name__)
-		self.logger.info("Initializing Inference Manager...")
 
 		model_version_str = "latest" if model_version == 0 else model_version
 		self.logger.info(f"OVMS Endpoint spec - ovms_url: {ovms_url}; model_name: {model_name}; model_version: {model_version_str}")
@@ -53,11 +52,14 @@ class InferenceManager:
 			self.logger.info("Using binary input switched on")
 		
 		self.logger.info(f"Number of Inference Executors: {num_inference_executors}")
-		self.logger.info("Starting Inference Executors...")
 		self.inference_executors = [InferenceExecutor(i, ovms_info, binary_input,
 								   input_queue=multiprocessing.Queue(buffer_size),
 								   result_queue=multiprocessing.Queue(buffer_size))
 								   for i in range(num_inference_executors)]
+
+	def initialize(self) -> None:
+		self.logger.info("Initializing Inference Manager...")
+		self.logger.info("Starting Inference Executors...")
 		for inference_executor in self.inference_executors:
 			inference_executor.start()
 
@@ -68,8 +70,8 @@ class InferenceManager:
 		self.logger.info("Starting inference executors monitoring thread")
 		self.inference_executors_monitoring_thread = threading.Thread(target=self._inference_executors_monitoring_thread)
 		self.inference_executors_monitoring_thread.start()
-
 		self.logger.info("Inference Manager initialized successfully")
+
 
 	def shutdown(self) -> None:
 		self.logger.info("Shutting down Inference Manager...")
