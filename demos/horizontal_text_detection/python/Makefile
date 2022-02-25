@@ -21,12 +21,12 @@ default: setup_repository
 setup_repository:
 # Download horizontal text detection model
 	mkdir -p workspace/horizontal-text-detection-0001/1
-	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.bin -o workspace/horizontal-text-detection-0001/1/horizontal-text-detection-0001.bin
-	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.xml -o workspace/horizontal-text-detection-0001/1/horizontal-text-detection-0001.xml
+	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.bin -o workspace/horizontal-text-detection-0001/1/horizontal-text-detection-0001.bin
+	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.xml -o workspace/horizontal-text-detection-0001/1/horizontal-text-detection-0001.xml
 # Download text recognition model
 	mkdir -p workspace/text-recognition-0014/1
-	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/text-recognition-0014/FP32/text-recognition-0014.bin -o workspace/text-recognition-0014/1/text-recognition-0014.bin
-	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/text-recognition-0014/FP32/text-recognition-0014.xml -o workspace/text-recognition-0014/1/text-recognition-0014.xml
+	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/text-recognition-0014/FP32/text-recognition-0014.bin -o workspace/text-recognition-0014/1/text-recognition-0014.bin
+	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/text-recognition-0014/FP32/text-recognition-0014.xml -o workspace/text-recognition-0014/1/text-recognition-0014.xml
 # Build custom node
 	cd ../../../src/custom_nodes/horizontal_ocr && \
 	make && \

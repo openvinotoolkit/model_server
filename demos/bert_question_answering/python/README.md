@@ -1,10 +1,10 @@
-# BERT Question Answering Demo with OVMS {#ovms_demo_bert}
+# BERT Question Answering Demo {#ovms_demo_bert}
 
 ## Overview
 
 This document demonstrates how to run inference requests for [BERT model](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/bert-small-uncased-whole-word-masking-squad-int8-0002) with OpenVINO Model Server. It provides questions answering functionality.
 
-In this example docker container with [bert-client image](./Dockerfile) runs the script [bert_question_answering.py](./bert_question_answering.py). It runs inference request for each paragraph on a given page in order to answer the provided question. Since each paragraph can have different size the functionality of dynamic shape is used.
+In this example docker container with [bert-client image](https://github.com/openvinotoolkit/model_server/blob/develop/demos/bert_question_answering/python/Dockerfile) runs the script [bert_question_answering.py](https://github.com/openvinotoolkit/model_server/blob/develop/demos/bert_question_answering/python/bert_question_answering.py). It runs inference request for each paragraph on a given page in order to answer the provided question. Since each paragraph can have different size the functionality of dynamic shape is used.
 
 NOTE: With `min_request_token_num` parameter you can specify the minimum size of the request. If the paragraph has too short, it is concatenated with the next one until it has required length. When there is no paragraphs left to concatenate request is created with the remaining content.
 

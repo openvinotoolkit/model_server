@@ -16,7 +16,9 @@
 
 FROM ubuntu:20.04
 RUN apt update && apt install -y build-essential curl
-RUN curl -s http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/ubuntu20.tgz | tar -xzf -
+ARG OPENCV_DOWNLOAD_FOLDER
+RUN curl -s ${OPENCV_DOWNLOAD_FOLDER}/ubuntu20.tgz | tar -xzf -
+ARG OPENCV_DOWNLOAD_FOLDER
 ARG NODE_NAME=east_ocr
 
 ARG OPS="-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv"

@@ -17,8 +17,8 @@
 
 mkdir -p $HOME/resnet50/1
 if [ ! -f "$HOME/resnet50-binary/1/resnet50-binary-0001.bin" ]; then
-    wget https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin --directory-prefix $HOME/resnet50-binary/1/
+    wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin --directory-prefix $HOME/resnet50-binary/1/
 fi
 if [ ! -f "$HOME/resnet50-binary/1/resnet50-binary-0001.xml" ]; then
-    wget https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml --directory-prefix $HOME/resnet50-binary/1/
+    wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml --directory-prefix $HOME/resnet50-binary/1/
 fi

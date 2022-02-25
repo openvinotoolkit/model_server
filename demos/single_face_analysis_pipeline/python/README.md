@@ -1,6 +1,6 @@
-# Single Face Analysis Pipeline Demo with OVMS {#ovms_demo_single_face_analysis_pipeline}
+# Single Face Analysis Pipeline Demo {#ovms_demo_single_face_analysis_pipeline}
 
-This document presents a models ensemble as an example of [DAG Scheduler](dag_scheduler.md) implementation.
+This document presents a models ensemble as an example of [DAG Scheduler](../../../docs/dag_scheduler.md) implementation.
 It describes how to combine several models to perform multiple inference operations with a single prediction call.
 When you need to execute several predictions on the same data, you can create a pipeline, which combines the results from several models.
 
@@ -47,7 +47,7 @@ docker run -p 9000:9000 -d -v ${PWD}/workspace:/workspace openvino/model_server 
 
 ## Requesting the Service
 
-Exemplary client [single_face_analysis_pipeline.py](single_face_analysis_pipeline.py) can be used to request pipeline deployed in previous step.
+Exemplary client [single_face_analysis_pipeline.py](https://github.com/openvinotoolkit/model_server/blob/develop/demos/single_face_analysis_pipeline/python/single_face_analysis_pipeline.py) can be used to request pipeline deployed in previous step.
 
 ```bash
 pip3 install -r requirements.txt
@@ -64,4 +64,4 @@ Emotion results: Natural: 0.02335789 ; Happy: 0.9449672 ; Sad: 0.001236845 ; Sur
 
 ### Next step
 
-For more advanced use case with extracting and analysing mutliple faces on the same image see [multi_faces_analysis_pipeline](../../multi_faces_analysis_pipeline/python) demo.
+For more advanced use case with extracting and analysing mutliple faces on the same image see [multi_faces_analysis_pipeline](../../multi_faces_analysis_pipeline/python/README.md) demo.

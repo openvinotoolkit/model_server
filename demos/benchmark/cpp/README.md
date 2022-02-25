@@ -1,4 +1,4 @@
-# Benchmark App for OVMS {#ovms_demo_benchmark_app_cpp}
+# Benchmark Client (C++) {#ovms_demo_benchmark_app_cpp}
 
 This demo provides a benchmark client that uses asynchronous gRPC API and tests performance with synthetic data (stripped out of OpenCV dependency).
 
@@ -6,7 +6,7 @@ To build the client, run `make` command in this directory. It will build docker 
 
 The application can be used with any model or pipeline served in OVMS, by requesting `GetModelMetadata` endpoint and using such information to prepare synthetic inputs with matching shape and precision.
 
->**Note**: In this directory you can only see the code specific to the benchmark client. The code shared with other C++ demos as well as all building utilities are placed in the [common C++ directory](../../common/cpp).
+> **Note**: In this directory you can only see the code specific to the benchmark client. The code shared with other C++ demos as well as all building utilities are placed in the [common C++ directory](https://github.com/openvinotoolkit/model_server/tree/develop/demos/common/cpp).
 
 > **Note**: It is required that endpoint does not use dynamic shape.
 
@@ -15,7 +15,7 @@ The application can be used with any model or pipeline served in OVMS, by reques
 ### Prepare the model
 Start OVMS with resnet50-binary model:
 ```
-curl -L --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o resnet50-binary/1/model.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o resnet50-binary/1/model.xml
+curl -L --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o resnet50-binary/1/model.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o resnet50-binary/1/model.xml
 ```
 
 ### Prepare the server

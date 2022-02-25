@@ -520,6 +520,7 @@ cc_test(
         "//src:libcustom_node_model_zoo_intel_object_detection.so",
         "//src:libcustom_node_image_transformation.so",
         "//src:libcustom_node_add_one.so",
+        "//src:libcustom_node_horizontal_ocr.so",
         "@com_google_googletest//:gtest",
     ],
     copts = [
@@ -533,7 +534,9 @@ filegroup(
   name = "static_analysis",
   srcs = [
     "//src:ovms",
+    "//src:libcustom_node_add_one.so",
     "//src:libcustom_node_east_ocr.so",
+    "//src:libcustom_node_horizontal_ocr.so",
     "//src:libcustom_node_model_zoo_intel_object_detection.so",
     "//src:libcustom_node_image_transformation.so",
   ]

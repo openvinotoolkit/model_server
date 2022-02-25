@@ -18,7 +18,7 @@ It includes the following nodes:
 - Custom node east_ocr - it includes C++ implementation of east-resnet50 model results processing. It analyses the detected boxes coordinates, filters the results
 based on the configurable score level threshold and and applies non-max suppression algorithm to remove overlaping boxes. Finally the custom node east-ocr crops all detected boxes
 from the original image, resize them to the target resolution and combines into a single output of a dynamic batch size. The output batch size is determined by the number of detected
-boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [east_ocr custom node](../../../src/custom_nodes/east_ocr)
+boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [east_ocr custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/east_ocr)
 - demultiplexer - output from the Custom node east_ocr have variable batch size. In order to match it with the sequential text detection model, the data is split into individuial images with batch size 1 each.
 Such smaller requests can be submitted for inference in parallel to the next Model Node. Learn more about the [demultiplexing](../../../docs/demultiplexing.md)
 - Model text-recognition - this model recognizes characters included in the input image. 
@@ -68,13 +68,13 @@ export_model('./east_icdar2015_resnet_v1_50_rbox/model.ckpt-49491','./model.pb')
 Freeze the model in checkpoint format and save it in proto buffer format in `model.pb`:
 
 ```bash
-docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw -w /EAST openvino/ubuntu18_dev:2021.3 python3 freeze_east_model.py
+docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw -w /EAST tensorflow/tensorflow:1.15.5 python3 freeze_east_model.py
 ```
 
 Convert the TensorFlow frozen model to Intermediate Representation format using the model_optimizer tool:
 ```bash
-docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw openvino/ubuntu18_dev:2021.3 deployment_tools/model_optimizer/mo.py \
---framework=tf --input_shape=[1,1024,1920,3] --input=input_images --output=feature_fusion/Conv_7/Sigmoid,feature_fusion/concat_3  \
+docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw openvino/ubuntu20_dev:2022.1 python3 /usr/local/lib/python3.8/dist-packages/openvino/tools/mo/mo.py \
+--framework=tf --input_shape=[1,1024,1920,3] --input=input_images --output=feature_fusion/Conv_7/Sigmoid,feature_fusion/concat_3 \
 --input_model /EAST/model.pb --output_dir /EAST/IR/1/
 ```
 It will create model files in `${PWD}/IR/1/` folder.
@@ -84,14 +84,14 @@ model.mapping
 model.xml
 ```
 Converted east-reasnet50 model will have the following interface:
-- Input name: `input_images` ; shape: `[1 3 1024 1920]` ; precision: `FP32`, layout: `N...`
-- Output name: `feature_fusion/Conv_7/Sigmoid` ; shape: `[1 1 256 480]` ; precision: `FP32`
-- Output name: `feature_fusion/concat_3` ; shape: `[1 5 256 480]` ; precision: `FP32`
+- Input name: `input_images` ; shape: `[1 1024 1920 3]` ; precision: `FP32` ; layout: `N...`
+- Output name: `feature_fusion/Conv_7/Sigmoid` ; shape: `[1 256 480 1]` ; precision: `FP32` ; layout: `N...`
+- Output name: `feature_fusion/concat_3` ; shape: `[1 256 480 5]` ; precision: `FP32`; layout: `N...`
 
 ### Text-recognition model
 Download [text-recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/text-recognition-0014) model and store it in `${PWD}/text-recognition/1` folder.
 ```bash
-curl -L --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/text-recognition-0014/FP32/text-recognition-0014.bin -o text-recognition/1/model.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/text-recognition-0014/FP32/text-recognition-0014.xml -o text-recognition/1/model.xml
+curl -L --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/text-recognition-0014/FP32/text-recognition-0014.bin -o text-recognition/1/model.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/text-recognition-0014/FP32/text-recognition-0014.xml -o text-recognition/1/model.xml
 chmod -R 755 text-recognition/
 ```
 
@@ -101,7 +101,7 @@ text-recognition model will have the following interface:
 
 ## Building the Custom Node "east_ocr" Library 
 
-Custom nodes are loaded into OVMS as dynamic library implementing OVMS API from [custom_node_interface.h](../../../src/custom_node_interface.h).
+Custom nodes are loaded into OVMS as dynamic library implementing OVMS API from [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/blob/develop/src/custom_node_interface.h).
 It can use OpenCV libraries included in OVMS or it could use other thirdparty components.
 
 The custom node east_ocr can be built inside a docker container via the following procedure:
@@ -129,6 +129,9 @@ OCR
 └── lib
     └── libcustom_node_east_ocr.so
 ```
+
+**NOTE:** east_fp32 model created before 2022.1 requires additional parameters in config.json:
+- `layout: {"input_images": "NHWC:NCHW", "feature_fusion/Conv_7/Sigmoid": "NHWC:NCHW", "feature_fusion/concat_3": "NHWC:NCHW"}`
 
 ## Deploying OVMS
 

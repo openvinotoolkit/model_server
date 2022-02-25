@@ -1,8 +1,8 @@
-# Face Detection Demo in OVMS
+# Face Detection Demo {#ovms_demo_face_detection}
 
 ## Overview
 
-The script [face_detection.py](face_detection.py) runs face detection inference requests for all the images
+The script [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/develop/demos/face_detection/python/face_detection.py) runs face detection inference requests for all the images
 saved in `input_images_dir` directory. 
 
 The script can adjust the input image size and change the batch size in the request. It demonstrates how to use
@@ -48,14 +48,14 @@ Arguments:
                         Path to client key
 ```
 
-## Usage example {#ovms_demo_face_detection}
+## Usage example
 
 Start the OVMS service locally:
 
 ```bash
 mkdir -p model/1
-wget -P model/1 https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin
-wget -P model/1 https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml
+wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin
+wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml
 docker run --rm -d -u $(id -u):$(id -g) -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name face-detection --port 9000  --shape auto
 ```
 
@@ -72,7 +72,6 @@ python face_detection.py --batch_size 4 --width 600 --height 400 --input_images_
 The scipt will visualize the inference results on the images saved in the directory `output_dir`. Saved images have the
 following naming convention:
 
-<#iteration>_<#image_in_batch>.jpeg
-
-
-
+```
+[iteration]_[image_in_batch].jpeg
+```
