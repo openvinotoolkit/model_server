@@ -1,6 +1,6 @@
-# Image Classification with Model Ensemble {#ovms_docs_demo_ensemble}
+# Model Ensemble Pipeline Demo {#ovms_docs_demo_ensemble}
 
-This guide shows how to implement a model ensemble using the [DAG Scheduler](dag_scheduler.md).
+This guide shows how to implement a model ensemble using the [DAG Scheduler](../../../docs/dag_scheduler.md).
 
 - Let's consider you develop an application to perform image classification. There are many different models that can be used for this task. The goal is to combine results from inferences executed on two different models and calculate argmax to pick the most probable classification label. 
 - For this task, select two models: [googlenet-v2](https://docs.openvinotoolkit.org/latest/omz_models_public_googlenet_v2_tf_googlenet_v2_tf.html) and [resnet-50](https://docs.openvinotoolkit.org/latest/omz_models_public_resnet_50_tf_resnet_50_tf.html). Additionally, create own model **argmax** to combine and select top result. The aim is to perform this task on the server side with no intermediate results passed over the network. The server should take care of feeding inputs/outputs in subsequent models. Both - googlenet and resnet predictions should run in parallel. 
@@ -31,13 +31,13 @@ This guide shows how to implement a model ensemble using the [DAG Scheduler](dag
 ~$ python3 tests/models/argmax_sum.py --input_size 1001 --export_dir ~/models/public/argmax/saved_model
 ```
 
-4. Execute the following commands to convert models to IR format and [prepare models repository](./models_repository.md):
+4. Execute the following commands to convert models to IR format and [prepare models repository](../../../docs/models_repository.md):
 ```
 ~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/converter.py --name googlenet-v2-tf --download_dir /models --output_dir /models --precisions FP32
 
 ~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/converter.py --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
 
-~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo_tf.py --input input1,input2 --input_shape [1,1001],[1,1001] --saved_model_dir /models/public/argmax/saved_model/ --output_dir /models/public/argmax/1
+~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo_tf.py --input input1,input2 --input_shape '[1,1001],[1,1001]' --saved_model_dir /models/public/argmax/saved_model/ --output_dir /models/public/argmax/1
 ~$ mkdir -p ovms_models/googlenet-v2-tf/1
 ~$ mkdir -p ovms_models/resnet-50-tf/1
 ~$ mkdir -p ovms_models/argmax/1
@@ -45,20 +45,20 @@ This guide shows how to implement a model ensemble using the [DAG Scheduler](dag
 ~$ cp ~/models/public/resnet-50-tf/FP32/resnet-50-tf.{bin,xml} ~/ovms_models/resnet-50-tf/1/
 ~$ cp ~/models/public/argmax/1/saved_model.{bin,xml} ~/ovms_models/argmax/1/
 
-~$ tree models/public
+~$ tree ovms_models
 ovms_models
 ├── argmax
-│   ├── 1
-│   │   ├── saved_model.bin
-│   │   └── saved_model.xml
+│   └── 1
+│       ├── saved_model.bin
+│       └── saved_model.xml
 ├── googlenet-v2-tf
-│   ├── 1
-│   │   ├── googlenet-v2-tf.bin
-│   │   └── googlenet-v2-tf.xml
+│   └── 1
+│       ├── googlenet-v2-tf.bin
+│       └── googlenet-v2-tf.xml
 └── resnet-50-tf
-    ├── 1
-    │   ├── resnet-50-tf.bin
-    │   └── resnet-50-tf.xml
+    └── 1
+        ├── resnet-50-tf.bin
+        └── resnet-50-tf.xml
 ```
 
 ## Step 2: Define required models and pipeline <a name="define-models"></a>
@@ -158,73 +158,84 @@ In the `model_config_list` section, three models are defined as usual. We can re
 
 Input images can be sent to the service requesting resource name `image_classification_pipeline`. There is an example client doing that:
 
-1. Check accuracy of the pipeline by running the client:
+1. Check accuracy of the pipeline by running the client in another terminal:
 ```
-~$ cd model_server
-~/model_server$ . .venv/bin/activate && cd client/python/tensorflow-serving-api/samples
+~$ cd model_server/client/python/tensorflow-serving-api/samples
+~/model_server/client/python/tensorflow-serving-api/samples$ virtualenv .venv
+~/model_server/client/python/tensorflow-serving-api/samples$ . .venv/bin/activate && pip3 install -r requirements.txt
 (.venv) ~/model_server/client/python/tensorflow-serving-api/samples$ python3 grpc_predict_resnet.py --pipeline_name image_classification_pipeline --images_numpy_path ../../imgs.npy \
     --labels_numpy_path ../../lbs.npy --grpc_port 9100 --input_name image --output_name label --transpose_input False --iterations 10
 Image data range: 0.0 : 255.0
 Start processing:
-        Model name: image_classification_pipeline
+        Model name: resnet
         Iterations: 10
-        Images numpy path: imgs.npy
-        Images in shape: (10, 3, 224, 224)
+        Images numpy path: ../../imgs.npy
+        Numpy file shape: (10, 3, 224, 224)
 
-Iteration 1; Processing time: 50.42 ms; speed 19.83 fps
+Iteration 1; Processing time: 48.92 ms; speed 20.44 fps
 imagenet top results in a single batch:
+response shape (1,)
          0 airliner 404 ; Correct match.
-Iteration 2; Processing time: 45.15 ms; speed 22.15 fps
+Iteration 2; Processing time: 37.39 ms; speed 26.75 fps
 imagenet top results in a single batch:
+response shape (1,)
          0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
-Iteration 3; Processing time: 65.82 ms; speed 15.19 fps
+Iteration 3; Processing time: 37.11 ms; speed 26.95 fps
 imagenet top results in a single batch:
+response shape (1,)
          0 bee 309 ; Correct match.
-Iteration 4; Processing time: 52.14 ms; speed 19.18 fps
+Iteration 4; Processing time: 34.75 ms; speed 28.78 fps
 imagenet top results in a single batch:
+response shape (1,)
          0 golden retriever 207 ; Correct match.
-Iteration 5; Processing time: 49.96 ms; speed 20.02 fps
+Iteration 5; Processing time: 37.15 ms; speed 26.92 fps
 imagenet top results in a single batch:
+response shape (1,)
          0 gorilla, Gorilla gorilla 366 ; Correct match.
-Iteration 6; Processing time: 43.82 ms; speed 22.82 fps
+Iteration 6; Processing time: 35.97 ms; speed 27.80 fps
 imagenet top results in a single batch:
+response shape (1,)
          0 magnetic compass 635 ; Correct match.
-Iteration 7; Processing time: 46.74 ms; speed 21.40 fps
+Iteration 7; Processing time: 35.74 ms; speed 27.98 fps
 imagenet top results in a single batch:
+response shape (1,)
          0 peacock 84 ; Correct match.
-Iteration 8; Processing time: 73.30 ms; speed 13.64 fps
+Iteration 8; Processing time: 37.92 ms; speed 26.37 fps
 imagenet top results in a single batch:
+response shape (1,)
          0 pelican 144 ; Correct match.
-Iteration 9; Processing time: 48.10 ms; speed 20.79 fps
+Iteration 9; Processing time: 38.47 ms; speed 26.00 fps
 imagenet top results in a single batch:
+response shape (1,)
          0 snail 113 ; Correct match.
-Iteration 10; Processing time: 48.32 ms; speed 20.69 fps
+Iteration 10; Processing time: 36.48 ms; speed 27.41 fps
 imagenet top results in a single batch:
+response shape (1,)
          0 zebra 340 ; Correct match.
 
 processing time for all iterations
-average time: 51.90 ms; average speed: 19.27 fps
-median time: 48.50 ms; median speed: 20.62 fps
-max time: 73.00 ms; min speed: 13.70 fps
-min time: 43.00 ms; max speed: 23.26 fps
-time percentile 90: 65.80 ms; speed percentile 90: 15.20 fps
-time percentile 50: 48.50 ms; speed percentile 50: 20.62 fps
-time standard deviation: 9.06
-time variance: 82.09
+average time: 37.40 ms; average speed: 26.74 fps
+median time: 37.00 ms; median speed: 27.03 fps
+max time: 48.00 ms; min speed: 20.83 fps
+min time: 34.00 ms; max speed: 29.41 fps
+time percentile 90: 39.00 ms; speed percentile 90: 25.64 fps
+time percentile 50: 37.00 ms; speed percentile 50: 27.03 fps
+time standard deviation: 3.72
+time variance: 13.84
 Classification accuracy: 100.00
 ```
 
 ## Step 5: Analyze pipeline execution in server logs
 
-By analyzing logs and timestamps it is seen that GoogleNet and ResNet model inferences were started in parallel. Just after all inputs became ready - argmax node has started its job.
+By analyzing debug logs and timestamps it is seen that GoogleNet and ResNet model inferences were started in parallel. Just after all inputs became ready - argmax node has started its job.
 ```
-[2020-09-04 12:46:18.795] [serving] [info] [prediction_service_utils.cpp:59] Requesting model:image_classification_pipeline; version:0.
-[2020-09-04 12:46:18.795] [serving] [info] [prediction_service.cpp:82] Requested model: image_classification_pipeline does not exist. Searching for pipeline with that name...
-[2020-09-04 12:46:18.795] [serving] [info] [prediction_service_utils.cpp:84] Requesting pipeline: image_classification_pipeline;
-[2020-09-04 12:46:18.795] [serving] [info] [pipeline.cpp:70] Started execution of pipeline: image_classification_pipeline
-[2020-09-04 12:46:18.795] [serving] [info] [prediction_service_utils.cpp:59] Requesting model:googlenet; version:0.
-[2020-09-04 12:46:18.795] [serving] [info] [prediction_service_utils.cpp:59] Requesting model:resnet; version:0.
-[2020-09-04 12:46:18.849] [serving] [info] [prediction_service_utils.cpp:59] Requesting model:argmax; version:0.
+[2022-02-28 11:30:20.159][485][serving][debug][prediction_service.cpp:69] Processing gRPC request for model: image_classification_pipeline; version: 0
+[2022-02-28 11:30:20.159][485][serving][debug][prediction_service.cpp:80] Requested model: image_classification_pipeline does not exist. Searching for pipeline with that name...
+[2022-02-28 11:30:20.159][485][serving][debug][modelmanager.cpp:1305] Requesting pipeline: image_classification_pipeline;
+[2022-02-28 11:30:20.160][485][dag_executor][debug][pipeline.cpp:83] Started execution of pipeline: image_classification_pipeline
+[2022-02-28 11:30:20.160][485][serving][debug][modelmanager.cpp:1280] Requesting model: resnet; version: 0.
+[2022-02-28 11:30:20.160][485][serving][debug][modelmanager.cpp:1280] Requesting model: googlenet; version: 0.
+[2022-02-28 11:30:20.194][485][serving][debug][modelmanager.cpp:1280] Requesting model: argmax; version: 0.
 ```
 
 ## Step 6: Requesting pipeline metadata
