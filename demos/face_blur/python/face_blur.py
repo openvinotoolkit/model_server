@@ -34,16 +34,16 @@ parser.add_argument('--blurred_image_save_path', required=False, default='', hel
 
 args = vars(parser.parse_args())
 
-def prepare_input_in_nchw_format(name, path, target_shape):
+def prepare_input_in_nchw_format(name, path, height, width):
     img = cv2.imread(path).astype(np.float32)  # BGR color format, shape HWC
-    img = cv2.resize(img, (target_shape[1], target_shape[0]))
-    img = img.transpose(2,0,1).reshape(1,3,target_shape[0],target_shape[1])
+    img = cv2.resize(img, (width, height))
+    img = img.transpose(2,0,1).reshape(1,3,height,width)
     return {name: img}
 
-def prepare_input_in_nhwc_format(name, path, target_shape):
+def prepare_input_in_nhwc_format(name, path, height, width):
     img = cv2.imread(path).astype(np.float32)  # BGR color format, shape HWC
-    img = cv2.resize(img, (target_shape[1], target_shape[0]))
-    img = img.reshape(1,target_shape[0],target_shape[1],3)
+    img = cv2.resize(img, (width, height))
+    img = img.reshape(1,height,width,3)
     return {name: img}
 
 def prepare_input_in_binary_format(name, path):
@@ -62,9 +62,9 @@ address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
 client = ovmsclient.make_grpc_client(address)
 
 if args['image_layout'] == 'NCHW':
-    input = prepare_input_in_nchw_format(args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
+    input = prepare_input_in_nchw_format(args['image_input_name'], args['image_input_path'], int(args['image_height']), int(args['image_width']))
 elif args['image_layout'] == 'NHWC':
-    input = prepare_input_in_nhwc_format(args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
+    input = prepare_input_in_nhwc_format(args['image_input_name'], args['image_input_path'], int(args['image_height']), int(args['image_width']))
 else:
     input = prepare_input_in_binary_format(args['image_input_name'], args['image_input_path'])
 
