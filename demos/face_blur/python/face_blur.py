@@ -14,14 +14,11 @@
 # limitations under the License.
 #
 
-import grpc
 import cv2
 import os
 import numpy as np
-from tensorflow import make_tensor_proto, make_ndarray
 import argparse
-from tensorflow_serving.apis import predict_pb2
-from tensorflow_serving.apis import prediction_service_pb2_grpc
+import ovmsclient
 
 parser = argparse.ArgumentParser(description='Client for OCR pipeline')
 parser.add_argument('--grpc_address', required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
@@ -37,66 +34,44 @@ parser.add_argument('--blurred_image_save_path', required=False, default='', hel
 
 args = vars(parser.parse_args())
 
-def prepare_img_input_in_nchw_format(request, name, path, resize_to_shape):
+def prepare_input_in_nchw_format(name, path, target_shape):
     img = cv2.imread(path).astype(np.float32)  # BGR color format, shape HWC
-    img = cv2.resize(img, (resize_to_shape[1], resize_to_shape[0]))
-    target_shape = (img.shape[0], img.shape[1])
+    img = cv2.resize(img, (target_shape[1], target_shape[0]))
     img = img.transpose(2,0,1).reshape(1,3,target_shape[0],target_shape[1])
-    request.inputs[name].CopyFrom(make_tensor_proto(img, shape=img.shape))
+    return {name: img}
 
-def prepare_img_input_in_nhwc_format(request, name, path, resize_to_shape):
+def prepare_input_in_nhwc_format(name, path, target_shape):
     img = cv2.imread(path).astype(np.float32)  # BGR color format, shape HWC
-    img = cv2.resize(img, (resize_to_shape[1], resize_to_shape[0]))
-    target_shape = (img.shape[0], img.shape[1])
+    img = cv2.resize(img, (target_shape[1], target_shape[0]))
     img = img.reshape(1,target_shape[0],target_shape[1],3)
-    request.inputs[name].CopyFrom(make_tensor_proto(img, shape=img.shape))
+    return {name: img}
 
-def prepare_img_input_in_binary_format(request, name, path):
+def prepare_input_in_binary_format(name, path):
     with open(path, 'rb') as f:
         data = f.read()
-        request.inputs[name].CopyFrom(make_tensor_proto(data, shape=[1]))
+        return {name: data}
 
 def save_image(image, location):
+    image = image[0]
     if len(image.shape) == 3 and image.shape[0] == 3:  # NCHW
         image = image.transpose(1,2,0)
     cv2.imwrite(os.path.join(location, 'image.jpg'), image)
 
 address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
-MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
-channel = grpc.insecure_channel(address,
-    options=[
-        ('grpc.max_send_message_length', MAX_MESSAGE_LENGTH),
-        ('grpc.max_receive_message_length', MAX_MESSAGE_LENGTH),
-    ])
 
-stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-request = predict_pb2.PredictRequest()
-request.model_spec.name = args['pipeline_name']
+client = ovmsclient.make_grpc_client(address)
 
 if args['image_layout'] == 'NCHW':
-    prepare_img_input_in_nchw_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
+    input = prepare_input_in_nchw_format(args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
 elif args['image_layout'] == 'NHWC':
-    prepare_img_input_in_nhwc_format(request, args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
+    input = prepare_input_in_nhwc_format(args['image_input_name'], args['image_input_path'], (int(args['image_height']), int(args['image_width'])))
 else:
-    prepare_img_input_in_binary_format(request, args['image_input_name'], args['image_input_path'])
+    input = prepare_input_in_binary_format(args['image_input_name'], args['image_input_path'])
 
 try:
-    response = stub.Predict(request, 30.0)
-except grpc.RpcError as err:
-    if err.code() == grpc.StatusCode.ABORTED:
-        print('Nothing has been found in the image')
-        exit(1)
-    else:
-        raise err
-
-if args['image_output_name'] in response.outputs.keys():
-    blurred_image = make_ndarray(response.outputs[args['image_output_name']])[0]
-else:
-    print(f'No output found in {args["image_output_name"]}')
-    print('Available outputs:')
-    for name in response.outputs:
-        print(name)
-    exit(1)
+    response = client.predict(input, args['pipeline_name'])
+except Exception as err:
+    raise err
 
 print(f'Saving image to {args["blurred_image_save_path"]}')
-save_image(blurred_image, args['blurred_image_save_path'])
+save_image(response, args['blurred_image_save_path'])

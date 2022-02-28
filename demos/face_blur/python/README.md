@@ -16,7 +16,7 @@ It include the following Nodes:
 ## Prepare workspace to run the demo
 
 To successfully delpoy face blur pipeline you need to have a workspace that contains:
--[face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/face-detection-retail-0004/README.md)
+- [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/face-detection-retail-0004/README.md)
 - Custom node for image blurring
 - Configuration file
 

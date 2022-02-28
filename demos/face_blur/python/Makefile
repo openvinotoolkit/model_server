@@ -28,7 +28,7 @@ setup_repository:
 	make && \
 	mv lib ../../../demos/face_blur/python/workspace/lib
 # Copy configuration file to workspace directory
-	cp config.json workspace/.
+	cp ../../../src/custom_nodes/face_blur/config.json workspace/.
 
 clean:
 	@rm -rf workspace
