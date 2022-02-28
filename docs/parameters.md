@@ -14,7 +14,7 @@
 | `"plugin_config"` | `json/string`  |  List of device plugin parameters. For full list refer to [OpenVINO documentation](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html) and [performance tuning guide](./performance_tuning.md). Example: <br> `{"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}`  |
 | `"nireq"` | `integer` | The size of internal request queue. When set to 0 or no value is set value is calculated automatically based on available resources.|
 | `"target_device"` | `string` | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"HDDL"/"GPU"/"MYRIAD"/"MULTI"/"HETERO"` |
-| `"statefu"l` | `bool` | If set to true, model is loaded as stateful. |
+| `"stateful"` | `bool` | If set to true, model is loaded as stateful. |
 | `"idle_sequence_cleanup"` | `bool` | If set to true, model will be subject to periodic sequence cleaner scans.  See [idle sequence cleanup](stateful_models.md). |
 | `"max_sequence_number"` | `uint32` | Determines how many sequences can be handled concurrently by a model instance. |
 | `"low_latency_transformation"` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_network_state_intro.html#lowlatency_transformation) on model load. |
