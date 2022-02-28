@@ -53,7 +53,8 @@
                         "original_image_layout": "NHWC",
                         "target_image_layout": "NHWC",
                         "confidence_threshold": "0.7",
-                        "debug": "true"
+                        "debug": "true",
+                        "gaussian_blur_kernel_size": "51"
                     },
                     "inputs": [
                         {

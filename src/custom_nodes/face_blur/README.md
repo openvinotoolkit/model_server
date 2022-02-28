@@ -18,6 +18,8 @@ All [OpenVINO Model Zoo](https://github.com/openvinotoolkit/open_model_zoo/tree/
 - vehicle-license-plate-detection
 - pedestrian-and-vehicle-detector
 
+**NOTE** Examplary [configuration file](../../../demos/face_blur/python/config.json) is available in [face_blur demo](../../../demos/face_blur/python/)
+
 # Building custom node library
 
 You can build the shared library of the custom node simply by running command in this custom node folder context:
@@ -56,3 +58,4 @@ Parameters can be defined in pipeline definition in OVMS configuration file. [Re
 | target_image_layout | Defines the data layout of blurred image | NCHW | |
 | confidence_threshold | Number in a range of 0-1 |  | &check; |
 | debug  | Defines if debug messages should be displayed | false | |
+| gaussian_blur_kernel_size  | Kernel size used in gaussian blur that should be positive and odd | | &check; |

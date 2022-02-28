@@ -49,6 +49,9 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     float confidenceThreshold = get_float_parameter("confidence_threshold", params, paramsCount, -1.0);
     NODE_ASSERT(confidenceThreshold >= 0 && confidenceThreshold <= 1.0, "confidence threshold must be in 0-1 range");
     bool debugMode = get_string_parameter("debug", params, paramsCount) == "true";
+    int gaussianBlurKernelSize = get_int_parameter("gaussian_blur_kernel_size", params, paramsCount, -1);
+    NODE_ASSERT(gaussianBlurKernelSize > 0, "gaussian blur kernel size must be larger than 0");
+    NODE_ASSERT(gaussianBlurKernelSize % 2 == 1, "gaussian blur kernel size must be odd");
 
     // Inputs reading
     const CustomNodeTensor* imageTensor = nullptr;
@@ -131,7 +134,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     // Applying blur on detected areas
     for (const auto& box : boxes) {
-        cv::GaussianBlur(image(box), image(box), cv::Size(51, 51), 0);
+        cv::GaussianBlur(image(box), image(box), cv::Size(gaussianBlurKernelSize, gaussianBlurKernelSize), 0);
     }
 
     // Perform resize operation.
