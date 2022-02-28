@@ -56,18 +56,4 @@ class PersonVehicleBikeDetection(UseCase):
 
 
     def postprocess(inference_result: np.ndarray):
-        CLASSES = ["Vehicle", "Person", "Bike"]
-        CONFIDENCE_THRESHOLD = 0.75
-
-        # expecting inference_result in shape (1, 1, 200, 7)
-        # ommiting batch dimension - frames are not analyzed in batches
-        inference_result = inference_result[0][0]
-        for single_prediction in inference_result:
-            img_id = single_prediction[0]
-            label = single_prediction[1]
-            conf = single_prediction[2]
-
-            if img_id != -1 and conf >= CONFIDENCE_THRESHOLD:
-                if CLASSES[int(label)] == "Person":
-                    pass
-         
+        pass
