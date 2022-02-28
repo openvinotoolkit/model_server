@@ -7,7 +7,7 @@ With OpenVINO&trade; Model Server Demultiplexing infer request sent from client 
 
 More information about this feature can be found in [dynamic batch size in demultiplexing](./demultiplexing.md)
 
-> **NOTE**: When using `demultiply_count` parameters, only one demultiplexer can exist in the pipeline.
+> **NOTE**: Only one dynamic demultiplexer (`demultiply_count` with value `-1`) can exist in the pipeline.
 
 - Example client in python [grpc_predict_resnet.py](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/grpc_predict_resnet.py) can be used to request the pipeline. Use `--dag-batch-size-auto` flag to add an additional dimension to the input shape which is required for demultiplexing feature.
 
@@ -61,7 +61,7 @@ Create a new file named `config.json` there:
            "inputs": [
                "0"
            ],
-           "demultiply_count" : 0,
+           "demultiply_count" : -1,
            "nodes": [
                {
                    "name": "resnetNode",

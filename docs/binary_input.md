@@ -9,17 +9,16 @@ Array data is passed inside the tensor_content field, which represent the input 
 When the data is sent in the `string_val` field, it is interpreted as a binary format of the input data.
 
 Note, that while the model metadata reports the inputs shape with layout NHWC, the binary data must be sent with 
-shape: [N] with dtype: DT_STRING. Where N represents elements with binary data converted to string bytes.
+shape: [N] with dtype: DT_STRING. Where N represents number of images converted to string bytes.
 
 ## Preparing for deployment
 Before processing in the target AI model, binary image data is encoded by OVMS to a NHWC layout in BGR color format.
-It will also be resized to the model or pipeline node resolution. When the model shape is dynamic and image data shape
-is out of range it will be adjusted to the nearer border. For example, when model shape is: [1,100:200,200,3]:
+It will also be resized to the model or pipeline node resolution. When the model resolution supports range of values and image data shape is out of range it will be adjusted to the nearer border. For example, when model shape is: [1,100:200,200,3]:
 
 - if input shape is [1,90,200,3] it will be resized into [1,100,200,3]
 - if input shape is [1,220,200,3] it will be resized into [1,200,200,3]
 
-In order to use binary input functionality, model or pipeline input layout needs to be compatible with `N...HWC` and have 4 (or 5 in case of demultiplexing) shape dimensions. It means that input layout needs to resemble `NHWC` layout, e.g. default `N...` will work. On the other hand, binary image input is not supported for inputs with `NCHW` layout. 
+In order to use binary input functionality, model or pipeline input layout needs to be compatible with `N...HWC` and have 4 (or 5 in case of [demultiplexing](demultiplexing.md)) shape dimensions. It means that input layout needs to resemble `NHWC` layout, e.g. default `N...` will work. On the other hand, binary image input is not supported for inputs with `NCHW` layout. 
 
 To fully utilize binary input utility, automatic image size alignment will be done by OVMS when:
 - input shape does not include dynamic dimension value (`-1`)

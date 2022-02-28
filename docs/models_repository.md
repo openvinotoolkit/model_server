@@ -1,6 +1,6 @@
 # Model Repository {#ovms_docs_models_repository}
 
-The AI models served by OpenVINO&trade Model Server must be in either of the two formats:
+The AI models served by OpenVINO&trade; Model Server must be in either of the two formats:
 - [OpenVINO IR](https://docs.openvino.ai/latest/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets), where the graph is represented in .bin and .xml files 
 - [ONNX](https://onnx.ai/), using the .onnx file
 
@@ -38,7 +38,7 @@ the version number in parameters, by default, the latest version is served.
 
 
 Each model defines input and output tensors in the AI graph. The client passes data to model input tensors by filling appropriate entries in the request input map. 
-Prediction results can be read from the response output map. By default, OpenVINO™ Model Server is uses model tensor names as input and output names in 
+Prediction results can be read from the response output map. By default, OpenVINO™ Model Server uses model tensor names as input and output names in 
 prediction requests and responses. The client passes the input values to the request and reads the results by referring to the corresponding output names.
 
 Here is an example of client code:

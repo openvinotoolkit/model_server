@@ -91,7 +91,7 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 To use an older version, build the image with the following parameter: 
 
 ```bash
-INSTALL_DRIVER_VERSION: make docker_build INSTALL_DRIVER_VERSION=19.41.14441
+make docker_build INSTALL_DRIVER_VERSION=19.41.14441
 ```
 
 

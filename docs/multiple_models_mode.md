@@ -39,7 +39,7 @@ An example of the configuration file:
                 "input1": "(1,3,200,200)",
                 "input2": "(1,3,50,50)"
              },
-         "plugin_config": {"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}
+             "plugin_config": {"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}
          }
       },
       {

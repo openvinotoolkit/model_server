@@ -109,7 +109,7 @@ Set target_device for the model in configuration json file to MULTI:DEVICE_1,DEV
 
 Below is exemplary config.json setting up Multi-Device Plugin for resnet model, using Intel® Movidius™ Neural Compute Stick and CPU devices:
 ```
-make docker_build BASE_OS=centos
+make docker_build BASE_OS=ubuntu
 ```
 
 Additionally, you can use the `INSTALL_DRIVER_VERSION` argument command to choose which GPU driver version is used by the produced image. 

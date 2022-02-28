@@ -50,11 +50,11 @@ Key features:
 [HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html) 
 - works with [Bare Metal Hosts](docs/host.md) as well as [Docker containers](docs/docker_container.md) 
 - [model reshaping](docs/shape_batch_size_and_layout.md) in runtime
-- [directed Acyclic Graph Scheduler](docs/dag_scheduler.md) - connecting multiple models to deploy complex processing solutions and reducing data transfer overheadConnect 
+- [directed Acyclic Graph Scheduler](docs/dag_scheduler.md) - connecting multiple models to deploy complex processing solutions and reducing data transfer overhead
 - [custom nodes in DAG pipelines](docs/custom_node_development.md) - allowing model inference and data transformations to be implemented with a custom node C/C++ dynamic library
 - [serving stateful models](docs/stateful_models.md) - models that operate on sequences of data and maintain their state between inference requests
 - [binary format of the input data](docs/binary_input.md) - data can be sent in JPEG or PNG formats to reduce traffic and offload the client applications
-- [model caching](docs/model_cache.md). cache the models on first load and re-use models from cache on subsequent loads
+- [model caching](docs/model_cache.md) - cache the models on first load and re-use models from cache on subsequent loads
 
 
 **Note:** OVMS has been tested on RedHat, CentOS, and Ubuntu. The latest publicly released docker images are based on Ubuntu and UBI.

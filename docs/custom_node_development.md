@@ -22,18 +22,18 @@ The data structure and functions defined in the API header are explained below.
 
 The CustomNodeTensor struct consist of several fields defining the data in the output and input of the node execution.
 Custom node can generate results based on multiple inputs from one or more other nodes. 
-CustomNodeTensor object can store multiple inputs to be processed in the execute function.
+"Execute" function has access to the pointer to multiple CustomNodeTensor objects which stores multiple inputs to be processed.
 Each input can be referenced using an index or you can search by name:
 ```
 inputTensor0 = &(inputs[0])
 ```
 Every CustomNodeTensor struct includes the following fields:
-`const char* name`  - pointer to the string representing the input name.
-`uint8_t* data` - pointer to data buffer. Data is stored as bytes.
-`uint64_t dataBytes` - the size of the data allocation in bytes.
-`uint64_t* dims` - pointer to the buffer storing array shape size. Size of each dimension consumes 8 bytes.
-`uint64_t dimsCount` - number of dimensions in the data array.
-`CustomNodeTensorPrecision precision` - data precision enumeration.
+- `const char* name`  - pointer to the string representing the input name.
+- `uint8_t* data` - pointer to data buffer. Data is stored as bytes.
+- `uint64_t dataBytes` - the size of the data allocation in bytes.
+- `uint64_t* dims` - pointer to the buffer storing array shape size. Size of each dimension consumes 8 bytes.
+- `uint64_t dimsCount` - number of dimensions in the data array.
+- `CustomNodeTensorPrecision precision` - data precision enumeration.
 
 ### CustomNodeTensorInfo struct
 
@@ -67,7 +67,9 @@ Note that during the function execution all the output data buffers need to be a
 the request processing is completed and returned to the user. The cleanup is triggered by calling the `release` function 
 which also needs to be implemented in the custom library.
 
-Execute function returns an integer value that defines the success (`0` value) or failure ( greater than 0). When the function 
+In some cases, dynamic allocation in `execute` call might be a performance bottleneck or cause memory fragmentation. Starting from 2022.1 release, it is possible to preallocate memory during DAG initialization and reuse it in subsequent inference requests. Refer to `initialize` and `deinitialize` functions below. Those can be used to implement preallocated memory pool. Example implementation can be seen in [custom node example source](https://github.com/openvinotoolkit/model_server/blob/develop/src/custom_nodes/add_one/add_one.cpp#L141).
+
+Execute function returns an integer value that defines the success (`0` value) or failure (other than 0). When the function 
 reports error, the pipeline execution is stopped and the error is returned to the user. 
 
 ### "getInputsInfo" function
@@ -84,14 +86,40 @@ Similar to the previous function but defining the metadata of the output.
 
 ### "release" function
 This function is called by OVMS at the end of the pipeline processing. It clears all memory allocations used during the 
-node execution. This function should only call `free`. OVMS decides when to free and what to free.
+node execution. This function should call `free` if `malloc` was used to allocate output memory in `execute` function. The function should return preallocated memory to the pool if memory pool was used. OVMS decides when to free and which buffer to free.
 
+### "initialize" function
+```
+int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount);
+```
+This function enables creation of resources to be reused between predictions. Potential use cases include optimized temporary buffers allocation. Using `initialize` is optional and not required for custom node to work. `customNodeLibraryInternalManager` should be instantiated inside this function if initialize is used. On initialize failure, status not equal to `0` should be returned to make OVMS treat it as an error.
+
+When not used, minimal dummy implementation is required. Return `0`, meaning no error:
+```
+int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+    return 0;
+}
+```
+
+### "deinitialize" function
+```
+int deinitialize(void* customNodeLibraryInternalManager);
+```
+This function enables destruction of resources that were used between predictions. Using deinitialize is optional and not required for custom node to work. `customNodeLibraryInternalManager` should be destroyed here if deinitialize is used. On deinitialization failure, status not equal to `0` should be returned to make OVMS treat it as an error.
+
+When not used, minimal dummy implementation is required. Return `0`, meaning no error:
+```
+int deinitialize(void* customNodeLibraryInternalManager) {
+    return 0;
+}
+```
 
 ## Using OpenCV
 The custom node library can use any third-party dependencies which could be linked statically or dynamically.
 For simplicity OpenCV libraries included in the OVMS docker image can be used.
 Just add include statement like:
-```c++
+
+```
 #include "opencv2/core.hpp"
 ```
 
@@ -116,8 +144,11 @@ The best starting point for developing new custom nodes is by exploring and copy
 
 Fully functional custom nodes are available here:
 - [east-resnet50 OCR custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/east_ocr)
+- [horizontal OCR custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/horizontal_ocr)
 - [model zoo intel object detection custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/model_zoo_intel_object_detection)
 - [image transformation custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/image_transformation)
+- [add one custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/add_one) - demonstrates example implementation of memory pool to avoid dynamic allocation
+
 
 Additional examples are included in the unit tests:
 - [node_add_sub.c](https://github.com/openvinotoolkit/model_server/tree/develop/src/test/custom_nodes/node_add_sub.c)
