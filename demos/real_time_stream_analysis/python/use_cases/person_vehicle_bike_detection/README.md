@@ -20,7 +20,7 @@ Once you have the model, launch OpenVINO Model Sever and mount model catalog to 
 
 ## Switch Use Case used for pre and post processing
 
-Modify streaming app main script - [`real_time_stream_analysis.py`](../../real_time_stream_analysis.py) to contain the following:
+Modify streaming app main script - [`real_time_stream_analysis.py`](https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/real_time_stream_analysis.py) to contain the following:
 
 ```
 from use_cases import PersonVehicleBikeDetection
@@ -40,4 +40,4 @@ python3 real_time_stream_analysis.py --stream_url <rtsp_stream_url> --ovms_url l
 
 ## Example Browser Preview
 
-<img src="https://github.com/openvinotoolkit/model_server/blob/streaming-demo/demos/real_time_stream_analysis/python/assets/visualizer_example_browser.gif">
+<img src="https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/assets/visualizer_example_browser.gif">
