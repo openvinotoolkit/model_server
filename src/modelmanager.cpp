@@ -109,9 +109,6 @@ void ModelManager::logPluginConfiguration() {
     auto availableDevices = ieCore->get_available_devices();
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Available devices for Open VINO: {}", joins(availableDevices, std::string(", ")));
     auto availablePlugins = availableDevices;
-    availablePlugins.emplace_back("AUTO");
-    availablePlugins.emplace_back("HETERO");
-    availablePlugins.emplace_back("MULTI");
     const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
     for (const auto& plugin : availablePlugins) {
         std::vector<std::string> supportedConfigKeys;
