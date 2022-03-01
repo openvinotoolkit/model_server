@@ -7,6 +7,14 @@
                 "shape": "(1,400,600,3)",
                 "layout": "NHWC:NCHW"
             }
+        },
+        {
+            "config": {
+                "name": "person-detection",
+                "base_path": "/workspace/person-detection-retail-0013",
+                "shape": "(1,400,600,3)",
+                "layout": "NHWC:NCHW"
+            }
         }
     ],
     "custom_node_library_config_list": [
@@ -17,11 +25,30 @@
     ],
     "pipeline_config_list": [
         {
-            "name": "face_blur_pipeline",
+            "name": "face_blur_with_person_detection_pipeline",
             "inputs": [
                 "image"
             ],
             "nodes": [
+                {
+                    "name": "person_detection_node",
+                    "model_name": "person-detection",
+                    "type": "DL model",
+                    "inputs": [
+                        {
+                            "data": {
+                                "node_name": "request",
+                                "data_item": "image"
+                            }
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "data_item": "detection_out",
+                            "alias": "detection"
+                        }
+                    ]
+                },
                 {
                     "name": "face_detection_node",
                     "model_name": "face-detection",
@@ -48,8 +75,8 @@
                     "params": {
                         "original_image_width": "600",
                         "original_image_height": "400",
-                        "target_image_width": "300",
-                        "target_image_height": "200",
+                        "target_image_width": "600",
+                        "target_image_height": "400",
                         "original_image_layout": "NHWC",
                         "target_image_layout": "NHWC",
                         "confidence_threshold": "0.7",
@@ -79,6 +106,12 @@
                 }
             ],
             "outputs": [
+                {
+                    "detection": {
+                        "node_name": "person_detection_node",
+                        "data_item": "detection"
+                    }
+                },
                 {
                     "image": {
                         "node_name": "face_blur_node",
