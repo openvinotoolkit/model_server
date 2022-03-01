@@ -17,9 +17,9 @@ It include the following Nodes:
 - Response - image blurred in spots detected by object detection model and person detection model output with detected people.
 
 ### Inputs
-- `'image' with shape (1, 400, 600, 3)` - original image
+- `'image' with shape (1, 400, 600, 3)` - original image with `BGR` color model
 ### Outputs
-- `'image' with shape (1, target_image_height, target_image_width, 3)` - image with blurred faces
+- `'image' with shape (1, target_image_height, target_image_width, 3)` - image with blurred faces with `BGR` color model
 - `'detection' with shape (1, 1, 200, 7)` - person-detection model output
 
 **NOTE** `target_image_width` and `target_image_height` are [face_blur custom node](https://github.com/openvinotoolkit/model_server/blob/develop/src/custom_nodes/face_blur) parameters.
