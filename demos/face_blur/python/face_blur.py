@@ -29,7 +29,7 @@ parser.add_argument('--image_input_path', required=True, help='Input image path.
 parser.add_argument('--image_width', required=False, default=600, help='Original image width. default: 600')
 parser.add_argument('--image_height', required=False, default=400, help='Original image height. default: 400')
 parser.add_argument('--image_layout', required=False, default='NHWC', choices=['NCHW', 'NHWC', 'BINARY'], help='Pipeline input image layout. default: NCHW')
-parser.add_argument('--blurred_image_save_path', required=False, default='', help='If specified, people images will be saved to disk.')
+parser.add_argument('--blurred_image_save_path', required=False, default='', help='Path to save blurred image')
 
 args = vars(parser.parse_args())
 
