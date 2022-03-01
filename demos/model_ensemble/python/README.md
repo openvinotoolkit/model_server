@@ -8,65 +8,45 @@ This guide shows how to implement a model ensemble using the [DAG Scheduler](../
 
 ![diagram](model_ensemble_diagram.svg)
 
-## Step 1: Prepare the models
-1. Follow the commands below sequentially, to download and use the models from [open model zoo](https://github.com/openvinotoolkit/open_model_zoo):
-```
-~$ mkdir models
+## Step 1: Prepare the repository
+Repository preparation is simplified with `make` script, just run `make` in this repository.
 
-~$ docker run -u $(id -u):$(id -g) -v ~/models:/models openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/downloader.py --name googlenet-v2-tf --output_dir /models
+The steps in `Makefile` are:
 
-~$ docker run -u $(id -u):$(id -g) -v ~/models:/models openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/downloader.py --name resnet-50-tf --output_dir /models
-```
-> **NOTE**: Run commands below in <a href="#point-2">Point 2</a> and <a href="#point-3">Point 3</a> from the git repository root folder
-
-2. Use python script located in this repository. Since it uses tensorflow to create models in _saved model_ format, hence tensorflow pip package is required.<a name="point-2"></a>
+1. Download and use the models from [open model zoo](https://github.com/openvinotoolkit/open_model_zoo).
+2. Use [python script](https://github.com/openvinotoolkit/model_server/blob/develop/tests/models/argmax_sum.py) located in this repository. Since it uses tensorflow to create models in _saved model_ format, hence tensorflow pip package is required.
+3. Prepare argmax model with `(1, 1001)` input shapes to match output of the googlenet and resnet output shapes. The generated model will sum inputs and calculate the index with the highest value. The model output will indicate the most likely predicted class from the ImageNet* dataset.
+4. Convert models to IR format and [prepare models repository](../../../docs/models_repository.md).
 
 ```
-~$ virtualenv -p python3 .tf_env
-~$ source .tf_env/bin/activate
-~$ pip3 install tensorflow==2.3.1
-```
-3. Prepare argmax model with `(1, 1001)` input shapes to match output of the googlenet and resnet output shapes. The enerated model will sum inputs and calculate the index with the highest value. The model output will indicate the most likely predicted class from the ImageNet* dataset. <a name="point-3"></a>
-```
-~$ python3 tests/models/argmax_sum.py --input_size 1001 --export_dir ~/models/public/argmax/saved_model
-```
-
-4. Execute the following commands to convert models to IR format and [prepare models repository](../../../docs/models_repository.md):
-```
-~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/converter.py --name googlenet-v2-tf --download_dir /models --output_dir /models --precisions FP32
-
-~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/converter.py --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
-
-~$ docker run -u $(id -u):$(id -g) -v ~/models:/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo_tf.py --input input1,input2 --input_shape '[1,1001],[1,1001]' --saved_model_dir /models/public/argmax/saved_model/ --output_dir /models/public/argmax/1
-~$ mkdir -p ovms_models/googlenet-v2-tf/1
-~$ mkdir -p ovms_models/resnet-50-tf/1
-~$ mkdir -p ovms_models/argmax/1
-~$ cp ~/models/public/googlenet-v2-tf/FP32/googlenet-v2-tf.{bin,xml} ~/ovms_models/googlenet-v2-tf/1/
-~$ cp ~/models/public/resnet-50-tf/FP32/resnet-50-tf.{bin,xml} ~/ovms_models/resnet-50-tf/1/
-~$ cp ~/models/public/argmax/1/saved_model.{bin,xml} ~/ovms_models/argmax/1/
-
-~$ tree ovms_models
-ovms_models
+...
+models
 ├── argmax
 │   └── 1
 │       ├── saved_model.bin
+│       ├── saved_model.mapping
 │       └── saved_model.xml
+├── config.json
 ├── googlenet-v2-tf
 │   └── 1
 │       ├── googlenet-v2-tf.bin
+│       ├── googlenet-v2-tf.mapping
 │       └── googlenet-v2-tf.xml
 └── resnet-50-tf
     └── 1
         ├── resnet-50-tf.bin
+        ├── resnet-50-tf.mapping
         └── resnet-50-tf.xml
+
+6 directories, 10 files
 ```
 
 ## Step 2: Define required models and pipeline <a name="define-models"></a>
 Pipelines need to be defined in the configuration file to use them. The same configuration file is used to define served models and served pipelines.
 
-Use the config.json as given below
+Use the config.json located in this directory, the content is as follows:
 ```
-~$ cat ovms_models/config.json
+~$ cat config.json
 {
     "model_config_list": [
         {
@@ -146,12 +126,11 @@ Use the config.json as given below
 In the `model_config_list` section, three models are defined as usual. We can refer to them by name in the pipeline definition but we can also request single inference on them separately. The same inference gRPC and REST API is used to request models and pipelines. OpenVINO&trade; Model Server will first try to search for a model with the requested name. If not found, it will try to find pipeline.
 
 
-
 ## Step 3: Start the Model Server
 
 1. Run command to start the Model Server
 ```
-~$ docker run --rm -v ~/ovms_models/:/models:ro -p 9100:9100 -p 8100:8100 openvino/model_server:latest --config_path /models/config.json --port 9100 --rest_port 8100
+$ docker run --rm -v $(pwd)/models/:/models:ro -p 9100:9100 -p 8100:8100 openvino/model_server:latest --config_path /models/config.json --port 9100 --rest_port 8100
 ```
 
 ## Step 4: Requesting the service
