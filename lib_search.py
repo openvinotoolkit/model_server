@@ -66,14 +66,14 @@ def check_dir(start_dir):
     not_ok = []
     no_header = []
 
-    exclude_files = ['__pycache__', '.bandit', '.venv', '.pytest_cache', '.vscode', 'ovms-c/dist', '.git', '.tar.gz', 'docx',
+    exclude_files = ['__pycache__', '.bandit', '.venv', '.pytest_cache', '.vscode', 'ovms-c/dist', '.git', '.gif', '.tar.gz', 'docx',
                      '.npy', '.png', '.svg', '.bin', '.jpeg', '.jpg', 'license.txt', 'md', '.groovy', '.json', '.proto', 'bazel-',
                      'Doxyfile', 'clang-format','net_http.patch', 'tftext.patch', 'tf.patch', 'client_requirements.txt',
                      'openvino.LICENSE.txt', 'c-ares.LICENSE.txt', 'zlib.LICENSE.txt', 'boost.LICENSE.txt',
                      'libuuid.LICENSE.txt', 'input_images.txt', 'REST_age_gender.ipynb', 'dummy.xml', 'listen.patch', 'add.xml',
                      'requirements.txt', 'missing_headers.txt', 'libevent/BUILD', 'azure_sdk.patch', 'rest_sdk_v2.10.16.patch', '.wav',
                      'forbidden_functions.txt', 'missing_headers.txt', 'increment_1x3x4x5.xml', 'horizontal-text-detection.gif', 'model.xml',
-                     'summator.xml', 'resnet_images.txt', 'vehicle_images.txt', 'horizontal-text-detection-ocr.gif', '.pdf']
+                     'summator.xml', 'resnet_images.txt', 'vehicle_images.txt', 'horizontal-text-detection-ocr.gif', '.pdf', "index.html"]
 
     exclude_directories = ['/dist/', 'extras/ovms-operator', 'extras/openvino-operator-openshift']
 
