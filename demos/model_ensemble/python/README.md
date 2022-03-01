@@ -44,7 +44,7 @@ models
 ## Step 2: Define required models and pipeline <a name="define-models"></a>
 Pipelines need to be defined in the configuration file to use them. The same configuration file is used to define served models and served pipelines.
 
-Use the config.json located in this directory, the content is as follows:
+Use the [config.json located here](https://github.com/openvinotoolkit/model_server/blob/develop/demos/model_ensemble/python/config.json), the content is as follows:
 ```
 ~$ cat config.json
 {
@@ -146,61 +146,61 @@ Input images can be sent to the service requesting resource name `image_classifi
     --labels_numpy_path ../../lbs.npy --grpc_port 9100 --input_name image --output_name label --transpose_input False --iterations 10
 Image data range: 0.0 : 255.0
 Start processing:
-        Model name: resnet
+        Model name: image_classification_pipeline
         Iterations: 10
         Images numpy path: ../../imgs.npy
         Numpy file shape: (10, 3, 224, 224)
 
-Iteration 1; Processing time: 48.92 ms; speed 20.44 fps
+Iteration 1; Processing time: 33.51 ms; speed 29.85 fps
 imagenet top results in a single batch:
 response shape (1,)
          0 airliner 404 ; Correct match.
-Iteration 2; Processing time: 37.39 ms; speed 26.75 fps
+Iteration 2; Processing time: 42.52 ms; speed 23.52 fps
 imagenet top results in a single batch:
 response shape (1,)
          0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
-Iteration 3; Processing time: 37.11 ms; speed 26.95 fps
+Iteration 3; Processing time: 34.42 ms; speed 29.05 fps
 imagenet top results in a single batch:
 response shape (1,)
          0 bee 309 ; Correct match.
-Iteration 4; Processing time: 34.75 ms; speed 28.78 fps
+Iteration 4; Processing time: 32.34 ms; speed 30.92 fps
 imagenet top results in a single batch:
 response shape (1,)
          0 golden retriever 207 ; Correct match.
-Iteration 5; Processing time: 37.15 ms; speed 26.92 fps
+Iteration 5; Processing time: 35.92 ms; speed 27.84 fps
 imagenet top results in a single batch:
 response shape (1,)
          0 gorilla, Gorilla gorilla 366 ; Correct match.
-Iteration 6; Processing time: 35.97 ms; speed 27.80 fps
+Iteration 6; Processing time: 33.63 ms; speed 29.74 fps
 imagenet top results in a single batch:
 response shape (1,)
          0 magnetic compass 635 ; Correct match.
-Iteration 7; Processing time: 35.74 ms; speed 27.98 fps
+Iteration 7; Processing time: 37.22 ms; speed 26.86 fps
 imagenet top results in a single batch:
 response shape (1,)
          0 peacock 84 ; Correct match.
-Iteration 8; Processing time: 37.92 ms; speed 26.37 fps
+Iteration 8; Processing time: 35.84 ms; speed 27.90 fps
 imagenet top results in a single batch:
 response shape (1,)
          0 pelican 144 ; Correct match.
-Iteration 9; Processing time: 38.47 ms; speed 26.00 fps
+Iteration 9; Processing time: 33.69 ms; speed 29.68 fps
 imagenet top results in a single batch:
 response shape (1,)
          0 snail 113 ; Correct match.
-Iteration 10; Processing time: 36.48 ms; speed 27.41 fps
+Iteration 10; Processing time: 46.54 ms; speed 21.49 fps
 imagenet top results in a single batch:
 response shape (1,)
          0 zebra 340 ; Correct match.
 
 processing time for all iterations
-average time: 37.40 ms; average speed: 26.74 fps
-median time: 37.00 ms; median speed: 27.03 fps
-max time: 48.00 ms; min speed: 20.83 fps
-min time: 34.00 ms; max speed: 29.41 fps
-time percentile 90: 39.00 ms; speed percentile 90: 25.64 fps
-time percentile 50: 37.00 ms; speed percentile 50: 27.03 fps
-time standard deviation: 3.72
-time variance: 13.84
+average time: 36.00 ms; average speed: 27.78 fps
+median time: 34.50 ms; median speed: 28.99 fps
+max time: 46.00 ms; min speed: 21.74 fps
+min time: 32.00 ms; max speed: 31.25 fps
+time percentile 90: 42.40 ms; speed percentile 90: 23.58 fps
+time percentile 50: 34.50 ms; speed percentile 50: 28.99 fps
+time standard deviation: 4.31
+time variance: 18.60
 Classification accuracy: 100.00
 ```
 

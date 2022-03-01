@@ -102,7 +102,7 @@ while batch_size >= imgs.shape[0]:
 iterations = int((imgs.shape[0]//batch_size) if not (args.get('iterations') or args.get('iterations') != 0) else args.get('iterations'))
 
 print('Start processing:')
-print('\tModel name: {}'.format(args.get('model_name')))
+print('\tModel name: {}'.format(args.get('pipeline_name') if bool(args.get('pipeline_name')) else args.get('model_name')))
 print('\tIterations: {}'.format(iterations))
 print('\tImages numpy path: {}'.format(args.get('images_numpy_path')))
 if args.get('transpose_input') == "True":
