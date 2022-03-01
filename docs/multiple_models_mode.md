@@ -48,7 +48,7 @@ An example of the configuration file:
              "base_path":"s3://bucket/models/model5",
              "shape": "auto",
              "nireq": 32,
-             "target_device": "HDDL",
+             "target_device": "HDDL"
          }
       }
    ]
