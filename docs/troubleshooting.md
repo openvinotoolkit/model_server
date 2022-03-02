@@ -17,7 +17,7 @@ OpenVINO&trade; Model Server loads all defined models versions according to set 
 
 When a new model version is detected, the server loads the model files and starts serving a new model version. This operation might fail for the following reasons :
 - There is a problem with accessing model files (due to network connectivity issues to the remote storage or insufficient permissions).
-- Model files are malformed and can not be imported by the Inference Engine.
+- Model files are malformed and can not be imported by the OpenVINO&trade; Runtime.
 - Model requires a custom CPU extension.
 
 
@@ -61,7 +61,7 @@ The possible issues could be :
 ## Resource Allocation<a name="resource-allocation"></a>
 - RAM consumption might depend on the size and volume of the models configured for serving. It should be measured experimentally, however it can be estimated that each model will consume RAM size equal to the size of the model weights file (.bin file).
 
-- Every version of the model enabled in the version policy creates a separate inference engine object. By default, only the latest version is enabled.
+- Every version of the model enabled in the version policy creates a separate OpenVINO&trade; Runtime `ov::Model` and `ov::CompiledModel` object. By default, only the latest version is enabled.
 
 - OpenVINO&trade; model server consumes all available CPU resources unless they are restricted by the operating system, Docker or Kubernetes capabilities.
 

@@ -84,17 +84,17 @@ protected:
     virtual Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
 
     /**
-         * @brief Inference Engine core object
+         * @brief OpenVINO Runtime Core object reference
          */
     ov::Core& ieCore;
 
     /**
-         * @brief Inference Engine CNNNetwork object
+         * @brief OpenVINO Runtime Model object
          */
     std::shared_ptr<ov::Model> model;
 
     /**
-         * @brief Inference Engine device model
+         * @brief OpenVINO Runtime CompiledModel object
          */
     std::shared_ptr<ov::CompiledModel> compiledModel;
 
@@ -134,7 +134,7 @@ protected:
     size_t batchSize = 0;
 
     /**
-      * @brief Stores required openVINO model files extensions to be able to load model
+      * @brief Stores required OpenVINO model files extensions to be able to load model
       *        Order is important, first file on the list is passed to LoadNetwork
       */
     static constexpr std::array<const char*, 2> OV_MODEL_FILES_EXTENSIONS{".xml", ".bin"};
