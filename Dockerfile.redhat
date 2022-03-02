@@ -128,11 +128,14 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
     wget $DLDT_PACKAGE_URL && \
     mkdir /opt/intel && \
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
-    ln -s /opt/intel/l_openvino_toolkit_runtime_rhel8_p* /opt/intel/openvino
+    ln -s /opt/intel/l_openvino_toolkit_rhel8_dev_2022.1.0.dev20220215 /opt/intel/openvino
 
 # install opencv
 ARG OPENVINO_OPENCV_DOWNLOAD_SERVER=""
-RUN cd /opt/intel/openvino/extras/scripts && ./download_opencv.sh
+ARG OPENCV_PACKAGE_URL=${OPENCV_PACKAGE_URL}
+RUN if [ -d "/opt/intel/openvino/extras/scripts" ]; then cd /opt/intel/openvino/extras/scripts && ./download_opencv.sh ; else cd /opt/intel/openvino && \
+    wget $OPENCV_PACKAGE_URL && \
+    tar -xf openvino_opencv_ubuntu18.tgz; fi ;
 
 # Build OpenVINO Model Server
 WORKDIR /ovms

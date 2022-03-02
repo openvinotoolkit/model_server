@@ -61,6 +61,7 @@ endif
 DIST_OS ?= $(BASE_OS)
 DIST_OS_TAG ?= $(BASE_OS_TAG)
 OPENVINO_OPENCV_DOWNLOAD_SERVER ?= http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/ 
+OPENCV_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/master/2022.1.0.dev20220215/opencv/openvino_opencv_ubuntu18.tgz
 
 ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
@@ -171,6 +172,7 @@ endif
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
 		--build-arg OPENVINO_OPENCV_DOWNLOAD_SERVER=$(OPENVINO_OPENCV_DOWNLOAD_SERVER) \
+		--build-arg OPENCV_PACKAGE_URL=$(OPENCV_PACKAGE_URL) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg JOBS=$(JOBS)
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
