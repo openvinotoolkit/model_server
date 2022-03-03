@@ -50,6 +50,9 @@ APT_OV_PACKAGE ?= intel-openvino-runtime-ubuntu20-2021.4.689
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
 
+# CUDA packages path, needed for building image with CUDA plugin:
+CUDA_PACKAGES_PATH ?= ""
+
 ifeq ($(BAZEL_BUILD_TYPE),dbg)
   BAZEL_DEBUG_FLAGS=" --strip=never --copt=-g -c dbg "
 else
@@ -204,6 +207,13 @@ endif
 	cd extras/nginx-mtls-auth && \
 	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)" "$(BASE_OS)" && \
 	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls
+
+cuda_build:
+	#mkdir -p ./CUDA
+	#git clone --recurse-submodules --single-branch --branch=releases/2021/4 https://github.com/openvinotoolkit/openvino_contrib.git ./CUDA || (cd ./CUDA ; git pull)
+	#./CUDA/modules/cuda_plugin/docker.sh install
+
+	docker build -f Dockerfile.cuda . --build-arg CUDA_PACKAGES_PATH=$(CUDA_PACKAGES_PATH) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy=$(HTTPS_PROXY) --build-arg no_proxy=$(NO_PROXY)
 
 test_checksec:
 	@echo "Running checksec on ovms binary..."

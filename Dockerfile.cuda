@@ -1,0 +1,109 @@
+FROM docker.io/library/ubuntu:20.04
+ARG enable_tensorrt
+ADD https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600
+
+ARG CUDA_PACKAGES_PATH=""
+RUN echo "Oh dang look at that $CUDA_PACKAGES_PATH"
+COPY $CUDA_PACKAGES_PATH  /
+
+SHELL ["/bin/bash", "-c"]
+RUN set -exuo pipefail ; \
+	rm -f /etc/apt/apt.conf.d/docker-clean ; \
+	echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache ; \
+	apt update ; \
+	apt install -y \
+		gnupg2 \
+		software-properties-common \
+	; \
+	if [[ ${enable_tensorrt-} == "1" ]] ; then dpkg -i /nv-tensorrt-repo-*.deb ; fi; \
+	apt-key adv --keyserver-options http-proxy=http://proxy-us.intel.com:911 --fetch-keys  https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub ; \
+	add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /" ; \
+	apt update ; \
+	DEBIAN_FRONTEND=noninteractive apt install -y \
+		./libcudnn*.deb \
+		autoconf \
+		automake \
+		build-essential \
+		ca-certificates \
+		clang-format-9 \
+		cuda \
+		curl \
+		g++-multilib \
+		gcc-multilib \
+		git \
+		git-lfs \
+		gstreamer1.0-plugins-base \
+		libavcodec-dev \
+		libavformat-dev \
+		libboost-regex-dev \
+		libcairo2-dev \
+		libcutensor1 \
+		libcutensor-dev \
+		libglib2.0-dev \
+		libgstreamer1.0-0 \
+		libgtk2.0-dev \
+		libopenblas-dev \
+		libpango1.0-dev \
+		libpng-dev \
+		libssl-dev \
+		libswscale-dev \
+		libtool \
+		libusb-1.0-0-dev \
+		libzstd-dev \
+		pkg-config \
+		python \
+		python3-pip \
+		shellcheck \
+		time \
+		unzip \
+		wget \
+	; \
+	pip3 install cython ; \
+	curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin ; \
+	curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' ; \
+	chmod a+x /usr/local/bin/sccache ; \
+	curl https://github.com/Kitware/CMake/releases/download/v3.13.5/cmake-3.13.5-Linux-x86_64.tar.gz -L | tar xzvC /usr/local --exclude={doc,man} --strip-components=1 ; \
+	curl -L https://github.com/ccache/ccache/releases/download/v4.3/ccache-4.3.tar.xz | tar xJv ; \
+	cd ccache-4.3 ; \
+	mkdir build ; \
+	cd build ; \
+	cmake -DCMAKE_BUILD_TYPE=Release -G Ninja .. ; \
+	ninja -v install ; \
+	cd / ; \
+	rm -r *.deb ccache*
+
+ENV CUDA_PATH=/usr/local/cuda
+ENV PATH=${CUDA_PATH}/bin:$PATH
+
+################### BUILD OPENVINO FROM SOURCE ############################
+RUN git clone  --single-branch --branch=releases/2021/4 https://github.com/openvinotoolkit/openvino /openvino ; cd /openvino ; git submodule update --init --recursive
+WORKDIR /openvino/build
+RUN cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
+RUN make
+RUN make install
+RUN mkdir -p /opt/intel/openvino/extras && \
+    mkdir -p /opt/intel/openvino && \
+    ln -s /openvino/inference-engine/temp/opencv_*_ubuntu20/opencv /opt/intel/openvino/extras && \
+    ln -s /usr/local/runtime /opt/intel/openvino && \
+    ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh
+################## END OF OPENVINO SOURCE BUILD ######################
+
+RUN git clone --recurse-submodules --single-branch --branch=releases/2021/4 https://github.com/openvinotoolkit/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git submodule update --recursive
+
+ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
+ENV OPENVINO_HOME=/openvino
+ENV OPENVINO_CONTRIB=/openvino_contrib
+
+RUN /openvino_contrib/modules/cuda_plugin/build.sh --build
+
+RUN https://github.com/openvinotoolkit/model_server.git /ovms ; cd /ovms ; git checkout v2021.4.1
+RUN cd model_server ; make docker_build
+ADD ./model_server/dist/ubuntu/ovms.tar.gz /
+
+RUN cp /openvino/bin/intel64/Release/lib/libngraph_backend.so /ovms/lib/
+RUN cp /openvino/bin/intel64/Release/lib/libCUDAPlugin.so /ovms/lib/
+RUN cp /openvino/bin/intel64/Release/lib/libinterpreter_backend.so /ovms/lib/
+
+RUN sed -i '/<\/plugins>/i <plugin name="CUDA" location="libCUDAPlugin.so">\n</plugin>' /ovms/lib/plugins.xml 
+
+WORKDIR /ovms/
