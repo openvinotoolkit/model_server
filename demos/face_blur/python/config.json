@@ -1,0 +1,91 @@
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "face-detection",
+                "base_path": "/workspace/face-detection-retail-0004",
+                "shape": "(1,400,600,3)",
+                "layout": "NHWC:NCHW"
+            }
+        }
+    ],
+    "custom_node_library_config_list": [
+        {
+            "name": "face_blur_lib",
+            "base_path": "/workspace/lib/libcustom_node_face_blur.so"
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "face_blur_pipeline",
+            "inputs": [
+                "image"
+            ],
+            "nodes": [
+                {
+                    "name": "face_detection_node",
+                    "model_name": "face-detection",
+                    "type": "DL model",
+                    "inputs": [
+                        {
+                            "data": {
+                                "node_name": "request",
+                                "data_item": "image"
+                            }
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "data_item": "detection_out",
+                            "alias": "detection"
+                        }
+                    ]
+                },
+                {
+                    "name": "face_blur_node",
+                    "library_name": "face_blur_lib",
+                    "type": "custom",
+                    "params": {
+                        "original_image_width": "600",
+                        "original_image_height": "400",
+                        "target_image_width": "300",
+                        "target_image_height": "200",
+                        "original_image_layout": "NHWC",
+                        "target_image_layout": "NHWC",
+                        "confidence_threshold": "0.7",
+                        "debug": "true",
+                        "gaussian_blur_kernel_size": "51"
+                    },
+                    "inputs": [
+                        {
+                            "image": {
+                                "node_name": "request",
+                                "data_item": "image"
+                            }
+                        },
+                        {
+                            "detection": {
+                                "node_name": "face_detection_node",
+                                "data_item": "detection"
+                            }
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "data_item": "image",
+                            "alias": "blurred_image"
+                        }
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "image": {
+                        "node_name": "face_blur_node",
+                        "data_item": "blurred_image"
+                    }
+                }
+            ]
+        }
+    ]
+}
