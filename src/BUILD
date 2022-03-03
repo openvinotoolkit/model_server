@@ -320,6 +320,25 @@ cc_binary(
 )
 
 cc_binary(
+    name = "libcustom_node_face_blur.so",
+    srcs = [
+        "custom_nodes/common/utils.hpp",
+        "custom_nodes/common/opencv_utils.hpp",
+        "custom_nodes/face_blur/face_blur.cpp",
+        "custom_node_interface.h",
+    ],
+    deps = [
+        "@opencv//:opencv"
+    ],
+    linkshared = 1,
+    copts = [
+        "-Wall",
+        "-Wno-unknown-pragmas",
+        "-Werror"
+    ]
+)
+
+cc_binary(
     name = "libcustom_node_add_one.so",
     srcs = [
         "custom_nodes/common/utils.hpp",
@@ -517,6 +536,7 @@ cc_test(
         "//src:lib_node_perform_different_operations.so",
         "//src:lib_node_choose_maximum.so",
         "//src:libcustom_node_east_ocr.so",
+        "//src:libcustom_node_face_blur.so",
         "//src:libcustom_node_model_zoo_intel_object_detection.so",
         "//src:libcustom_node_image_transformation.so",
         "//src:libcustom_node_add_one.so",
@@ -536,6 +556,7 @@ filegroup(
     "//src:ovms",
     "//src:libcustom_node_add_one.so",
     "//src:libcustom_node_east_ocr.so",
+    "//src:libcustom_node_face_blur.so",
     "//src:libcustom_node_horizontal_ocr.so",
     "//src:libcustom_node_model_zoo_intel_object_detection.so",
     "//src:libcustom_node_image_transformation.so",
