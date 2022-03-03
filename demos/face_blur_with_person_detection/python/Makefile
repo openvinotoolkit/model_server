@@ -30,7 +30,7 @@ setup_repository:
 # Build face_blur custom node
 	cd ../../../src/custom_nodes/face_blur && \
 	make && \
-	mv lib ../../../demos/face_blur/python/workspace/lib
+	mv lib ../../../demos/face_blur_with_person_detection/python/workspace/lib
 # Copy configuration file to workspace directory
 	cp config.json workspace/.
 

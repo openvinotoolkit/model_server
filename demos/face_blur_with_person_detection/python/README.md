@@ -8,7 +8,7 @@ Additionally the same image will be used to make an inference with [person-detec
 
 Below is depicted graph implementing face blur with person detection pipeline execution.
 
-![Face Blur With Person Detection Pipeline Graph](https://github.com/openvinotoolkit/model_server/blob/develop/demos/face_blur_with_person_detection/python/face_blur_with_person_detection.svg)
+![Face Blur With Person Detection Pipeline Graph](https://github.com/openvinotoolkit/model_server/blob/face_blur_with_person_detection/demos/face_blur_with_person_detection/python/face_blur_with_person_detection.svg)
 
 It include the following Nodes:
 - Model `face-detection-retail-0004` - deep learning model which takes user image as input. Its output contain information about faces coordinates and confidence levels.
@@ -83,6 +83,6 @@ python face_blur_with_person_detection.py --grpc_port 9000 --image_input_path ..
 
 Examplary result of running the demo:
 
-![Blurred Image](https://github.com/openvinotoolkit/model_server/blob/develop/demos/face_blur_with_person_detection/python/face_blur_image.jpg) ![Image With Detections](https://github.com/openvinotoolkit/model_server/blob/develop/demos/face_blur_with_person_detection/python/image_with_detections.jpg)
+![Blurred Image](https://github.com/openvinotoolkit/model_server/blob/face_blur_with_person_detection/demos/face_blur_with_person_detection/python/face_blur_image.jpg) ![Image With Detections](https://github.com/openvinotoolkit/model_server/blob/face_blur_with_person_detection/demos/face_blur_with_person_detection/python/image_with_detections.jpg)
 
 **NOTE** `--save_detection_with_blur True` parameter can be used to save detections with blurred faces combined.

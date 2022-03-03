@@ -31,7 +31,7 @@ parser.add_argument('--image_height', required=False, default=400, help='Origina
 parser.add_argument('--image_layout', required=False, default='NHWC', choices=['NCHW', 'NHWC', 'BINARY'], help='Pipeline input image layout. default: NCHW')
 parser.add_argument('--blurred_image_save_path', required=False, default='', help='Path to save blurred image')
 parser.add_argument('--detection_image_save_path', required=False, default='', help='Path to save image with detections')
-parser.add_argument('--save_detection_with_blur', required=False, default='', help='Whether detection image should have blurred faces')
+parser.add_argument('--save_detection_with_blur', required=False, default=False, help='Whether detection image should have blurred faces')
 
 args = vars(parser.parse_args())
 
