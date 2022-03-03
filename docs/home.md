@@ -1,6 +1,32 @@
-# OpenVINO&trade; Model Server
+# OpenVINO&trade; Model Server {#ovms_what_is_openvino_model_server}
 
-![OVMS picture](docs/ovms.png)
+@sphinxdirective
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   ovms_docs_quick_start_guide
+   ovms_docs_architecture
+   ovms_docs_models_repository
+   ovms_docs_starting_server
+   ovms_docs_server_api
+   ovms_docs_clients
+   ovms_docs_dag
+   ovms_docs_binary_input
+   ovms_docs_model_cache
+   ovms_docs_dynamic_input
+   ovms_docs_stateful_models
+   ovms_docs_custom_loader
+   ovms_docs_performance_tuning
+   ovms_docs_kubernetes
+   ovms_docs_demos
+   ovms_docs_troubleshooting
+
+@endsphinxdirective
+
+
+![OVMS picture](ovms.png)
 
 OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving machine learning models. It is based on C++ for high scalability 
 and optimized for Intel solutions, so that you can take advantage of all the power of the Intel® Xeon® processor or Intel’s AI accelerators 
@@ -12,23 +38,23 @@ Google Cloud Storage (GCS), Amazon S3, or Azure Blob Storage.
 
 Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what’s new.
 
-Review the [Architecture concept](https://docs.openvino.ai/nightly/ovms_docs_architecture.html) document for more details.
+Review the [Architecture concept](architecture.md) document for more details.
 
 Key features: 
 - support for multiple frameworks, such as Caffe, TensorFlow, MXNet, and ONNX
-- online deployment of new [model versions](https://docs.openvino.ai/nightly/ovms_docs_model_version_policy.html)
-- [configuration updates in runtime](https://docs.openvino.ai/nightly/ovms_docs_online_config_changes.html)
+- online deployment of new [model versions](model_version_policy.md)
+- [configuration updates in runtime](online_config_changes.md)
 - support for AI accelerators, such as 
 [Intel Movidius Myriad VPUs](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html), 
 [GPU](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_GPU.html), and 
 [HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html) 
-- works with [Bare Metal Hosts](docs/host.md) as well as [Docker containers](https://docs.openvino.ai/nightly/ovms_docs_docker_container.html) 
-- [model reshaping](https://docs.openvino.ai/nightly/ovms_docs_shape_batch_layout.html) in runtime
-- [directed Acyclic Graph Scheduler](https://docs.openvino.ai/nightly/ovms_docs_dag.html) - connecting multiple models to deploy complex processing solutions and reducing data transfer overhead
-- [custom nodes in DAG pipelines](https://docs.openvino.ai/nightly/ovms_docs_custom_node_development.html) - allowing model inference and data transformations to be implemented with a custom node C/C++ dynamic library
-- [serving stateful models](https://docs.openvino.ai/nightly/ovms_docs_stateful_models.html) - models that operate on sequences of data and maintain their state between inference requests
-- [binary format of the input data](https://docs.openvino.ai/nightly/ovms_docs_binary_input.html) - data can be sent in JPEG or PNG formats to reduce traffic and offload the client applications
-- [model caching](https://docs.openvino.ai/nightly/ovms_docs_model_cache.html) - cache the models on first load and re-use models from cache on subsequent loads
+- works with [Bare Metal Hosts](host.md) as well as [Docker containers](docker_container.md) 
+- [model reshaping](shape_batch_size_and_layout.md) in runtime
+- [directed Acyclic Graph Scheduler](dag_scheduler.md) - connecting multiple models to deploy complex processing solutions and reducing data transfer overhead
+- [custom nodes in DAG pipelines](custom_node_development.md) - allowing model inference and data transformations to be implemented with a custom node C/C++ dynamic library
+- [serving stateful models](stateful_models.md) - models that operate on sequences of data and maintain their state between inference requests
+- [binary format of the input data](binary_input.md) - data can be sent in JPEG or PNG formats to reduce traffic and offload the client applications
+- [model caching](model_cache.md) - cache the models on first load and re-use models from cache on subsequent loads
 
 
 **Note:** OVMS has been tested on RedHat, CentOS, and Ubuntu. The latest publicly released docker images are based on Ubuntu and UBI.
@@ -39,28 +65,28 @@ They are stored in:
 
 ## Run OpenVINO Model Server
 
-A demonstration on how to use OpenVINO Model Server can be found in [our quick-start guide](docs/ovms_quickstart.md)(https://docs.openvino.ai/nightly/ovms_docs_quick_start_guide.html). 
+A demonstration on how to use OpenVINO Model Server can be found in [our quick-start guide](ovms_quickstart.md). 
 For more information on using Model Server in various scenarios you can check the following guides:
 
-* [Model repository configuration](https://docs.openvino.ai/nightly/ovms_docs_models_repository.html)
+* [Model repository configuration](models_repository.md)
 
-* [Using a docker container](https://docs.openvino.ai/nightly/ovms_docs_docker_container.html)
+* [Using a docker container](docker_container.md)
 
-* [Landing on bare metal or virtual machine](https://docs.openvino.ai/nightly/ovms_docs_baremetal.html)
+* [Landing on bare metal or virtual machine](host.md)
 
-* [Performance tuning](https://docs.openvino.ai/nightly/ovms_docs_performance_tuning.html)
+* [Performance tuning](performance_tuning.md)
 
-* [Directed Acyclic Graph Scheduler](https://docs.openvino.ai/nightly/ovms_docs_dag.html)
+* [Directed Acyclic Graph Scheduler](dag_scheduler.md)
 
-* [Custom nodes development](https://docs.openvino.ai/nightly/ovms_docs_custom_node_development.html)
+* [Custom nodes development](custom_node_development.md)
 
-* [Serving stateful models](https://docs.openvino.ai/nightly/ovms_docs_stateful_models.html)
+* [Serving stateful models](stateful_models.md)
 
-* [Deploy using a Kubernetes Helm Chart](https://docs.openvino.ai/nightly/ovms_deploy_helm_chart.html)
+* [Deploy using a Kubernetes Helm Chart](../deploy/README.md)
 
 * [Deployment using Kubernetes Operator](https://operatorhub.io/operator/ovms-operator)
 
-* [Using binary input data](https://docs.openvino.ai/nightly/ovms_docs_binary_input.html)
+* [Using binary input data](binary_input.md)
 
 
 
