@@ -448,12 +448,27 @@ TEST_F(TestLoadModelWithMapping, SuccessfulLoad) {
     shapeMap["input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["input"] = ovms::LayoutConfiguration{"LAYOUT_INPUT"};
-    layouts["output"] = ovms::LayoutConfiguration{"LAYOUT_OUTPUT"};
+    layouts["input"] = ovms::LayoutConfiguration{"NC"};
+    layouts["output"] = ovms::LayoutConfiguration{"NC"};
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    EXPECT_EQ(modelInstance.getInputsInfo().begin()->second->getShape(), ovms::Shape({1, 10}));
+    EXPECT_EQ(modelInstance.getOutputsInfo().begin()->second->getShape(), ovms::Shape({1, 10}));
+}
+
+TEST_F(TestLoadModelWithMapping, SuccessfulLoadChangingModelLayout) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+
+    layouts["input"] = ovms::LayoutConfiguration{"CN", "NC"};
+    layouts["output"] = ovms::LayoutConfiguration{"CN", "NC"};
+    config.setLayouts(layouts);
+
+    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
+    EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    EXPECT_EQ(modelInstance.getInputsInfo().begin()->second->getShape(), ovms::Shape({10, 1}));
+    EXPECT_EQ(modelInstance.getOutputsInfo().begin()->second->getShape(), ovms::Shape({10, 1}));
 }
 
 TEST_F(TestLoadModelWithMapping, UnSuccessfulLoadOldInputShapeName) {
@@ -642,8 +657,8 @@ TEST_F(TestReloadModelWithMapping, SuccessfulReload) {
     shapeMap["input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["input"] = "LAYOUT_INPUT";
-    layouts["output"] = "LAYOUT_OUTPUT";
+    layouts["input"] = "NC";
+    layouts["output"] = "NC";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::OK);
@@ -716,8 +731,8 @@ TEST_F(TestReloadModelWithMapping, ReloadMultipleTimes) {
     shapeMap["input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["input"] = "LAYOUT_INPUT";
-    layouts["output"] = "LAYOUT_OUTPUT";
+    layouts["input"] = "NC";
+    layouts["output"] = "NC";
     config.setLayouts(layouts);
     EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());

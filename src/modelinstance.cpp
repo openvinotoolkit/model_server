@@ -183,6 +183,7 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::M
     for (const ov::Output<ov::Node>& input : model->inputs()) {
         try {
             std::string name = input.get_any_name();
+            std::string mappedName = config.getMappingInputByKey(name).empty() ? name : config.getMappingInputByKey(name);
 
             if (config.getLayout().isSet()) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: Tensor Layout:{}; Network Layout:{}; single input",
@@ -194,14 +195,14 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::M
                 // TODO: Validate rank vs layout string len?
                 preproc.input().tensor().set_layout(ov::Layout(config.getLayout().getTensorLayout()));
                 preproc.input().model().set_layout(ov::Layout(config.getLayout().getModelLayout()));
-            } else if (config.getLayouts().count(name) > 0) {
-                auto& layout = config.getLayouts().at(name);
+            } else if (config.getLayouts().count(mappedName) > 0) {
+                auto& layout = config.getLayouts().at(mappedName);
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: Tensor Layout:{}; Network Layout:{}; input name: {}",
                     modelName,
                     modelVersion,
                     layout.getTensorLayout(),
                     layout.getModelLayout(),
-                    name);
+                    mappedName);
 
                 // TODO: Validate rank vs layout string len?
                 preproc.input(name).tensor().set_layout(ov::Layout(layout.getTensorLayout()));
@@ -242,15 +243,16 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::M
     for (const ov::Output<ov::Node>& output : model->outputs()) {
         try {
             std::string name = output.get_any_name();
+            std::string mappedName = config.getMappingOutputByKey(name).empty() ? name : config.getMappingOutputByKey(name);
 
-            if (config.getLayouts().count(name) > 0) {
-                auto& layout = config.getLayouts().at(name);
+            if (config.getLayouts().count(mappedName) > 0) {
+                auto& layout = config.getLayouts().at(mappedName);
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding postprocessing step: Tensor Layout:{}; Network Layout:{}; output name: {}",
                     modelName,
                     modelVersion,
                     layout.getTensorLayout(),
                     layout.getModelLayout(),
-                    name);
+                    mappedName);
                 preproc.output(name).tensor().set_layout(ov::Layout(layout.getTensorLayout()));
                 preproc.output(name).model().set_layout(ov::Layout(layout.getModelLayout()));
             } else {
