@@ -20,6 +20,7 @@
 #include "../get_model_metadata_impl.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
+#include "../model_service.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
 #include "../pipeline.hpp"
@@ -961,6 +962,22 @@ static const char* stressPipelineCustomNodeAddOneThenDummyIncreasedQueueSize = R
     ]
 })";
 
+static const char* stressTestOneDummyConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,10) "}
+            }
+        }
+    ]
+})";
+
 class StressPipelineConfigChanges : public TestWithTempDir {
 protected:
     const uint loadThreadCount = 20;
@@ -980,6 +997,9 @@ protected:
     const std::vector<float> requestData{1.1, 2., 3., 7., 5., 6., 4., 9., 10., 8.};
 
 public:
+    virtual std::string getServableName() {
+        return pipelineName;
+    }
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
         const std::string modelPathToReplace{"/ovms/src/test/dummy"};
@@ -1004,6 +1024,12 @@ public:
     void defaultVersionAdd() {
         SPDLOG_INFO("{} start", __FUNCTION__);
         std::filesystem::copy("/ovms/src/test/dummy/1", modelPath + "/2", std::filesystem::copy_options::recursive);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void addFirstModel() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(stressTestOneDummyConfig);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
     void changeToAutoShape() {
@@ -1271,6 +1297,41 @@ public:
             }
         }
     }
+    void triggerGetPipelineStatusInALoop(
+        std::future<void>& startSignal,
+        std::future<void>& stopSignal,
+        ModelManager& manager,
+        const std::set<StatusCode>& requiredLoadResults,
+        const std::set<StatusCode>& allowedLoadResults,
+        std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters) {
+        tensorflow::serving::GetModelStatusRequest request;
+        tensorflow::serving::GetModelStatusResponse response;
+        startSignal.get();
+        // stressIterationsCounter is additional safety measure
+        // for getModelStatus requests it must be much higher since the response time is much lower
+        // as in contrast to predict/metadata requests
+        auto stressIterationsCounter = stressIterationsLimit * 100000;
+        while (stressIterationsCounter-- > 0) {
+            auto futureWaitResult = stopSignal.wait_for(std::chrono::milliseconds(0));
+            if (futureWaitResult == std::future_status::ready) {
+                SPDLOG_INFO("Got stop signal. Ending Load");
+                break;
+            }
+            auto status = ovms::GetModelStatusImpl::createGrpcRequest(getServableName(), 1, &request);
+            status = ovms::GetModelStatusImpl::getModelStatus(&request, &response, manager);
+            createPipelineRetCodesCounters[status.getCode()]++;
+            EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
+                        (allowedLoadResults.find(status.getCode()) != allowedLoadResults.end()))
+                << status.string() << "\n";
+            if (!status.ok()) {
+                continue;
+            }
+            if (::testing::Test::HasFailure()) {
+                SPDLOG_INFO("Earlier fail detected. Stopping execution");
+                break;
+            }
+        }
+    }
     virtual inputs_info_t getExpectedInputsInfo() {
         return {{pipelineInputName,
             std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}}};
@@ -1342,6 +1403,29 @@ public:
         std::stringstream ss;
         ss << "Executed: " << stressIterationsLimit - stressIterationsCounter << " inferences by thread id: " << std::this_thread::get_id() << std::endl;
         SPDLOG_INFO(ss.str());
+    }
+};
+
+static const char* initialClearConfig = R"(
+{
+    "model_config_list": [
+    ]
+})";
+
+class StressModelConfigChanges : public StressPipelineConfigChanges {
+    const std::string modelName = "dummy";
+    const std::string modelInputName = "b";
+    const std::string modelOutputName = "a";
+
+public:
+    std::string getServableName() override {
+        return modelName;
+    }
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        modelPath = directoryPath + "/dummy/";
+        SetUpConfig(initialClearConfig);
+        std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
     }
 };
 
@@ -1740,6 +1824,20 @@ TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringGet
     performStressTest(
         &StressPipelineConfigChanges::triggerGetPipelineMetadataInALoop,
         &StressPipelineConfigChanges::changeCustomLibraryParam,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressModelConfigChanges, AddModelDuringGetModelStatusLoad) {
+    bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
+    std::set<StatusCode> requiredLoadResults = {
+        StatusCode::MODEL_NAME_MISSING,     // until first model is loaded
+        StatusCode::MODEL_VERSION_MISSING,  // this should be hit if test is stressing enough, pottentially to be moved to allowed
+        StatusCode::OK};                    // we expect full continuouity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &StressPipelineConfigChanges::triggerGetPipelineStatusInALoop,
+        &StressPipelineConfigChanges::addFirstModel,
         performWholeConfigReload,
         requiredLoadResults,
         allowedLoadResults);
