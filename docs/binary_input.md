@@ -1,5 +1,15 @@
 # Support for Binary Input Data {#ovms_docs_binary_input}
 
+@sphinxdirective
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   ovms_docs_demo_tensorflow_conversion
+
+@endsphinxdirective
+
 While OpenVINO models don't have the ability to process binary inputs, the model server can accept them and convert
 automatically using OpenCV library.
 

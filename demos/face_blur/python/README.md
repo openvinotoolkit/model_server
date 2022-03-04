@@ -6,7 +6,7 @@ This document demonstrates how to create pipelines using object detection models
 
 Below is depicted graph implementing face blur pipeline execution.
 
-![Face Blur Pipeline Graph](https://github.com/openvinotoolkit/model_server/blob/develop/demos/face_blur/python/face_blur_pipeline.svg)
+![Face Blur Pipeline Graph](face_blur_pipeline.svg)
 
 It include the following Nodes:
 - Model `face-detection-retail-0004` - deep learning model which takes user image as input. Its output contain information about faces coordinates and confidence levels.
@@ -66,4 +66,4 @@ python face_blur.py --grpc_port 9000 --image_input_path ../../common/static/imag
 
 Examplary result of running the demo:
 
-![Face Blur Image](https://github.com/openvinotoolkit/model_server/blob/develop/demos/face_blur/python/face_blur_image.jpg)
+![Face Blur Image](face_blur_image.jpg)

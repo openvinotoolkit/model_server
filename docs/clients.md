@@ -56,7 +56,7 @@ When creating a Python-based client application, there are two packages on PyPi 
 
         status_request = get_model_status_pb2.GetModelStatusRequest()
         status_request.model_spec.name = "my_model"
-        status_response = model_service_stub. GetModelStatus(status_request, 10.0)
+        status_response = model_service_stub.GetModelStatus(status_request, 10.0)
                 
         model_status = {}
         model_version_status = status_response.model_version_status
@@ -206,7 +206,7 @@ When creating a Python-based client application, there are two packages on PyPi 
 
 @endsphinxdirective
 
-For complete usage examples see [ovmsclient samples](../client/python/ovmsclient/samples/README.md).
+For complete usage examples see [ovmsclient samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/samples).
 
 ## C++ Client
 
