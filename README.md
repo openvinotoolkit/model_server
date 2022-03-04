@@ -39,7 +39,7 @@ They are stored in:
 
 ## Run OpenVINO Model Server
 
-A demonstration on how to use OpenVINO Model Server can be found in [our quick-start guide](docs/ovms_quickstart.md)(https://docs.openvino.ai/nightly/ovms_docs_quick_start_guide.html). 
+A demonstration on how to use OpenVINO Model Server can be found in [our quick-start guide](https://docs.openvino.ai/nightly/ovms_docs_quick_start_guide.html). 
 For more information on using Model Server in various scenarios you can check the following guides:
 
 * [Model repository configuration](https://docs.openvino.ai/nightly/ovms_docs_models_repository.html)
