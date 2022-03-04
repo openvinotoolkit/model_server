@@ -75,7 +75,7 @@ docker run --rm -d --cpuset-cpus 0,1,2,3 -v <model_path>:/opt/model -p 9001:9001
 
 OpenVINO Model Server in C++ implementation is using scalable multithreaded gRPC and REST interface, however in some hardware configuration it might become a bottleneck for high performance backend with OpenVINO.
 
-- To increase the throughput, a parameter `--grps_workers` is introduced which increases the number of gRPC server instances. In most cases the default value of `1` will be sufficient.
+- To increase the throughput, a parameter `--grpc_workers` is introduced which increases the number of gRPC server instances. In most cases the default value of `1` will be sufficient.
   In case of particularly heavy load and many parallel connections, higher value might increase the transfer rate.
 
 - Another parameter impacting the performance is `nireq`. It defines the size of the model queue for inference execution.
