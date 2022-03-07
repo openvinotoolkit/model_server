@@ -314,7 +314,8 @@ public:
         ieCore(ieCore),
         name(name),
         version(version),
-        subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)) { isCustomLoaderConfigChanged = false; }
+        subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)),
+        status(name, version) { isCustomLoaderConfigChanged = false; }
 
     /**
          * @brief Destroy the Model Instance object

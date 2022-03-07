@@ -116,6 +116,7 @@ cc_library(
         "modelinstanceunloadguard.cpp",
         "modelinstanceunloadguard.hpp",
         "modelversion.hpp",
+        "modelversionstatus.cpp",
         "modelversionstatus.hpp",
         "model_service.hpp",
         "model_service.cpp",
