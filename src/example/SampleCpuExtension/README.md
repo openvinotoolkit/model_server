@@ -6,14 +6,30 @@ It includes a demonstrative implementation of the Relu layer which can be applie
 public models. That implementation display in the model server logs information about the 
 custom extension execution.
 
+### Creating cpu_extension library
+
 Compile the library by running `make cpu_extension BASE_OS=ubuntu` in root directory of this repository.
 
 Shared library will be generated in the `lib` folder. Such library can be used to run Model Server, using `--cpu_extension` argument:
 
+### Preparing resnet50 model
+
+In order to demonstrate the usage of cpu_extension library some small modifications in resnet model are needed.
+In this sample we are going to change one of the ReLU layers type to CustomReLU.
+By doing so this layer will take adventage of cpu_extension.
+
 ```bash
-$ docker run -it --rm -p 9000:9000 -v <your_lib_dir>:/extension:ro openvino/model_server \
-    --port 9000 --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary  \
-    --cpu_extension /extension/libcustom_relu_cpu_extension.so
+mkdir -p resnet50-binary-0001/1
+curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o resnet50-binary-0001/1/resnet50-binary-0001.xml
+curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o resnet50-binary-0001/1/resnet50-binary-0001.bin
+sed -i '0,/ReLU/s//CustomReLU/' resnet50-binary-0001/1/resnet50-binary-0001.xml
+```
+
+### Deploying OVMS
+
+```bash
+$ docker run -it --rm -p 9000:9000 -v `pwd`/lib/ubuntu:/extension:ro -v `pwd`/resnet50-binary-0001:/resnet openvino/model_server \
+ --port 9000 --model_name resnet --model_path /resnet --cpu_extension /extension/libcustom_relu_cpu_extension.so
 ```
 
 > NOTE: Learn more about [OpenVINO extensibility](https://docs.openvino.ai/latest/openvino_docs_IE_DG_Extensibility_DG_Intro.html) 

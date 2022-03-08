@@ -13,7 +13,7 @@ namespace TemplateExtension {
 
 class CustomReluOp : public ov::op::Op {
 public:
-    OPENVINO_OP("ReLU", "opset1");
+    OPENVINO_OP("CustomReLU", "opset1");
 
     CustomReluOp() = default;
     CustomReluOp(const ov::Output<ov::Node>& arg);
