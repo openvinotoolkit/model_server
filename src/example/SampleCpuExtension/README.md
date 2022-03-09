@@ -8,9 +8,9 @@ custom extension execution.
 
 ## Creating cpu_extension library
 
-Compile the library by running `make cpu_extension BASE_OS=ubuntu` in root directory of this repository.
+Compile the library by running `make cpu_extension BASE_OS=ubuntu` in root directory of [Model Server repository](https://github.com/openvinotoolkit/model_server/tree/develop). The implementation of this library slightly differs from the template in OpenVINO™ repository and can be found in [SampleCpuExtension directory](https://github.com/openvinotoolkit/model_server/tree/develop/src/example/SampleCpuExtension).
 
-Shared library will be generated in the `lib` folder. Such library can be used to run Model Server, using `--cpu_extension` argument:
+Shared library will be generated in the `lib` folder. Such library can be used to run Model Server, using `--cpu_extension` argument.
 
 ## Preparing resnet50 model
 
