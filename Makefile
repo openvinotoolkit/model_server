@@ -67,6 +67,7 @@ ifeq ($(BASE_OS),ubuntu)
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
   INSTALL_DRIVER_VERSION ?= "21.48.21782"
   DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_p_2022.1.0.630_offline.sh
+  INSTALL_DRIVER_VERSION_LEGACY ?= "20.35.17767"
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
@@ -74,6 +75,7 @@ ifeq ($(BASE_OS),redhat)
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "21.38.21026"
   DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_runtime_rhel8_p_2022.1.0.630.tgz
+  INSTALL_DRIVER_VERSION_LEGACY ?= "20.35.17767"
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -201,6 +203,15 @@ endif
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
     	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) && \
     	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu
+	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+    	--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+    	--build-arg no_proxy=$(NO_PROXY) \
+    	--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
+		--build-arg INSTALL_DRIVER_VERSION="$(INSTALL_DRIVER_VERSION_LEGACY)" \
+    	--build-arg GPU=1 \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+    	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu_legacy:$(OVMS_CPP_IMAGE_TAG) && \
+    	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu_legacy:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu_legacy
 	cd extras/nginx-mtls-auth && \
 	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)" "$(BASE_OS)" && \
 	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls
