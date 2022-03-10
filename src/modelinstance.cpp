@@ -643,13 +643,18 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
     plugin_config_t pluginConfig = config.getPluginConfig();
+    // Do not add CPU_THROUGHPUT_AUTO when performance hint is specified.
+    bool isPerformanceHintSpecified = pluginConfig.count("PERFORMANCE_HINT") > 0;
+    if (isPerformanceHintSpecified) {
+        return pluginConfig;
+    }
     // For CPU and GPU, if user did not specify, calculate CPU_THROUGHPUT_STREAMS automatically
-    if (config.isDeviceUsed("CPU")) {
+    if (config.isSingleDeviceUsed("CPU")) {
         if (pluginConfig.count("CPU_THROUGHPUT_STREAMS") == 0) {
             pluginConfig["CPU_THROUGHPUT_STREAMS"] = "CPU_THROUGHPUT_AUTO";
         }
     }
-    if (config.isDeviceUsed("GPU")) {
+    if (config.isSingleDeviceUsed("GPU")) {
         if (pluginConfig.count("GPU_THROUGHPUT_STREAMS") == 0) {
             pluginConfig["GPU_THROUGHPUT_STREAMS"] = "GPU_THROUGHPUT_AUTO";
         }

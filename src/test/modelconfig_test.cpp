@@ -554,16 +554,16 @@ TEST(ModelConfig, mappingRealOutputs) {
     EXPECT_EQ(empty, "");
 }
 
-TEST(ModelConfig, isDeviceUsed) {
+TEST(ModelConfig, isSingleDeviceUsed) {
     ovms::ModelConfig config;
     config.setTargetDevice("GPU");
-    EXPECT_FALSE(config.isDeviceUsed("CPU"));
+    EXPECT_FALSE(config.isSingleDeviceUsed("CPU"));
     config.setTargetDevice("CPU");
-    EXPECT_TRUE(config.isDeviceUsed("CPU"));
+    EXPECT_TRUE(config.isSingleDeviceUsed("CPU"));
     config.setTargetDevice("HETERO:MYRIAD,CPU");
-    EXPECT_TRUE(config.isDeviceUsed("CPU"));
+    EXPECT_FALSE(config.isSingleDeviceUsed("CPU"));
     config.setTargetDevice("HETERO:MYRIAD,GPU");
-    EXPECT_FALSE(config.isDeviceUsed("CPU"));
+    EXPECT_FALSE(config.isSingleDeviceUsed("CPU"));
 }
 
 TEST(ModelConfig, shapeConfigurationEqual_SingleInput) {

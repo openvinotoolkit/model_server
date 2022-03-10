@@ -802,12 +802,12 @@ TEST(CpuThroughputStreamsNotSpecified, DefaultIsSetForCPU) {
     EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 1);
 }
 
-TEST(CpuThroughputStreamsNotSpecified, DefaultIsSetForHeteroCPU) {
+TEST(CpuThroughputStreamsNotSpecified, NotSetForHeteroCPU) {
     ovms::ModelConfig config;
     config.setTargetDevice("HETERO:MYRIAD,CPU");
     config.setPluginConfig({});
     ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
-    EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 1);
+    EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
 }
 
 TEST(CpuThroughputStreamsNotSpecified, NotSetForNonCpuDevices) {
@@ -820,6 +820,17 @@ TEST(CpuThroughputStreamsNotSpecified, NotSetForNonCpuDevices) {
     pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
     EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
     config.setTargetDevice("GPU");
+    pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+    EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
+}
+
+TEST(CpuThroughputStreamsNotSpecified, NotSetWhenPerfHintSpecified) {
+    ovms::ModelConfig config;
+    config.setPluginConfig({{"PERFORMANCE_HINT", "LATENCY"}});
+    config.setTargetDevice("CPU");
+    ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+    EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
+    config.setPluginConfig({{"PERFORMANCE_HINT", "THROUGHTPUT"}});
     pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
     EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
 }
