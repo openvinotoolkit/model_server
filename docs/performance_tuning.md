@@ -40,11 +40,28 @@ This mode prioritizes low latency, providing short response time for each infere
 Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://github.com/openvinotoolkit/openvino/blob/928076ed319fcf172d24d1af4c6844e39c1bc100/docs/OV_Runtime_UG/auto_device_selection.md).
 
 To enable Performance Hints for your application, use the following command:
-```
-docker run --rm -d -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
---model_path /opt/model --model_name my_model --port 9001 \
---plugin_config '{"PERFORMANCE_HINT": "THROUGHTPUT"}'
-```
+@sphinxdirective
+
+.. tab:: CPU  
+
+   .. code-block:: sh
+
+        docker run --rm -d -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
+            --model_path /opt/model --model_name my_model --port 9001 \
+            --plugin_config '{"PERFORMANCE_HINT": "THROUGHTPUT"}' \
+            --target_device CPU
+
+.. tab:: GPU
+
+   .. code-block:: sh  
+   
+        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+            -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
+            --model_path /opt/model --model_name my_model --port 9001 \
+            --plugin_config '{"PERFORMANCE_HINT": "THROUGHTPUT"}' \
+            --target_device GPU
+
+@endsphinxdirective
 
 > NOTE: CPU_THROUGHPUT_STREAMS and PERFORMANCE_HINT should not be used together.
 
