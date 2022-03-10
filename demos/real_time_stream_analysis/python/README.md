@@ -5,7 +5,7 @@ For object classification, detection and segmentation we use CV (Computer Vision
 
 In this demo you'll see how to analyze RTSP (Real Time Streaming Protocol) stream using OpenVINO Model Server for inference.
 
-<img src="https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/assets/concept.jpg">
+![concept](assets/concept.jpg)
 
 The stream analysis app is started with `real_time_stream_analysis.py` script. It reads frames from the provided stream URL, runs pre and post processing and requests inference on specified model served by OVMS.
 
@@ -98,8 +98,7 @@ python3 real_time_stream_analysis.py --stream_url rtsp://localhost:8554/mystream
 
 __Console output:__
 
-<img src="https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/assets/minimal_example.jpg">
-
+![minimal example](assets/minimal_example.jpg)
 
 ### Running with visualizer
 
@@ -116,11 +115,11 @@ python3 real_time_stream_analysis.py --stream_url rtsp://localhost:8554/mystream
 
 __Console output:__
 
-<img src="https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/assets/visualizer_example_console.jpg">
+![visualizer example console](assets/visualizer_example_console.jpg)
 
 __Browser preview:__
 
-<img src="https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/assets/visualizer_example_browser.gif">
+![visualizer example browser](assets/visualizer_example_browser.gif)
 
 > Note: Visualizer does not use effecient streaming techniques to display results. It's main goal is to help during development and provide simple solution for quick health/accuracy checks.
 

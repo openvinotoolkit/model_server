@@ -396,21 +396,12 @@ public:
     }
 
     /**
-         * @brief Checks if target device is heterogeneous and contains specific device
+         * @brief Checks if given device is used as single target device.
          * 
          * @param bool
          */
-    bool isHeteroTargetDevice(const std::string& device) const {
-        return this->targetDevice.find("HETERO") != std::string::npos && this->targetDevice.find(device) != std::string::npos;
-    }
-
-    /**
-         * @brief Checks if given device name is used alone or as a part of multi device configuration
-         * 
-         * @param bool
-         */
-    bool isDeviceUsed(const std::string& device) const {
-        return this->targetDevice == device || this->isHeteroTargetDevice(device);
+    bool isSingleDeviceUsed(const std::string& device) const {
+        return this->targetDevice == device;
     }
 
     /**
