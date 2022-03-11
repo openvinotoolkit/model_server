@@ -209,12 +209,19 @@ endif
 	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls
 
 cuda_build:
-	#mkdir -p ./CUDA
-	#git clone --recurse-submodules --single-branch --branch=releases/2021/4 https://github.com/openvinotoolkit/openvino_contrib.git ./CUDA || (cd ./CUDA ; git pull)
-	#./CUDA/modules/cuda_plugin/docker.sh install
-
-	docker build -f Dockerfile.cuda . --build-arg CUDA_PACKAGES_PATH=$(CUDA_PACKAGES_PATH) --build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy=$(HTTPS_PROXY) --build-arg no_proxy=$(NO_PROXY)
-
+	@cat .workspace/metadata.json
+	docker build $(NO_CACHE_OPTION) -f Dockerfile.cuda . \
+		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy=$(HTTPS_PROXY) --build-arg no_proxy=$(NO_PROXY) \
+		--build-arg CUDA_PACKAGES_PATH=$(CUDA_PACKAGES_PATH) \
+		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
+		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) \
+		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
+		--build-arg PROJECT_NAME=${PROJECT_NAME} \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		--build-arg OPENVINO_OPENCV_DOWNLOAD_SERVER=$(OPENVINO_OPENCV_DOWNLOAD_SERVER) \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) \
+		--build-arg JOBS=$(JOBS)
 test_checksec:
 	@echo "Running checksec on ovms binary..."
 	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash

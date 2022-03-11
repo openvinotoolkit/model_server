@@ -20,7 +20,6 @@ FROM $BASE_IMAGE as base_build
 LABEL version="1.0.0"
 
 ARG INSTALL_DIR=/opt/intel/openvino
-ARG INSTALL_DIR=/opt/intel/openvino
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
