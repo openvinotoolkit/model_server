@@ -255,7 +255,9 @@ Status DLNodeSession::setInputsForInference(ov::InferRequest& inferRequest) {
                     __FUNCTION__, getName(), name);
                 return StatusCode::INTERNAL_ERROR;
             }
-            inferRequest.set_tensor(realModelInputName, tensor);
+            ov::Tensor tensorCopy;
+            ovms::tensorClone(tensorCopy, tensor);
+            inferRequest.set_tensor(realModelInputName, tensorCopy);
         }
         // OV implementation the ov::Exception is not
         // a base class for all other exceptions thrown from OV.
