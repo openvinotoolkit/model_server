@@ -9,6 +9,7 @@ This document gives information about troubleshooting the following issues while
 * <a href="#configure-aws">Configuring AWS For Use With a Proxy</a>
 * <a href="#gcs">Using GCS model behind a proxy </a>
 * <a href="#load-network-issue">Unable to load network into device with: `can't protect` in server logs </a>
+* <a href="#model-cache">Model Cache Issues </a>
 
 
 ## Model Import Issues<a name="model-import"></a>
@@ -99,3 +100,9 @@ HTTP_proxy
 
 ## Cannot compile model into target device: `can't protect` in server logs <a name="load-network-issue"></a>
 - Since this is known bug, please refer OpenVINO&trade; [release notes](https://software.intel.com/content/www/us/en/develop/articles/openvino-relnotes.html).
+
+## Model Cache Issues <a name="model-cache"></a>
+
+- Cache folder should be mounted into docker container and have read-write access.
+- Caching used on CPU is not giving performance gain.
+- Using model cache with HDDL device is not working and results with deserialization error during inference.
