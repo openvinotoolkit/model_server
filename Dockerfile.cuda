@@ -289,8 +289,8 @@ RUN ./bazel-bin/src/./ovms
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE
 
-RUN cp /openvino/bin/intel64/Release/lib/libngraph_backend.so /ovms/lib/
-RUN cp /openvino/bin/intel64/Release/lib/libCUDAPlugin.so /ovms/lib/
-RUN cp /openvino/bin/intel64/Release/lib/libinterpreter_backend.so /ovms/lib/
+# RUN cp /openvino/bin/intel64/Release/lib/libngraph_backend.so /ovms/lib/
+# RUN cp /openvino/bin/intel64/Release/lib/libCUDAPlugin.so /ovms/lib/
+# RUN cp /openvino/bin/intel64/Release/lib/libinterpreter_backend.so /ovms/lib/
 
-RUN sed -i '/<\/plugins>/i <plugin name="CUDA" location="libCUDAPlugin.so">\n</plugin>' /ovms/lib/plugins.xml 
+RUN sed -i '/<\/plugins>/i <plugin name="CUDA" location="libCUDAPlugin.so">\n</plugin>' /openvino/bin/intel64/Release/lib/plugins.xml 
