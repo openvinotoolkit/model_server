@@ -255,9 +255,19 @@ Status DLNodeSession::setInputsForInference(ov::InferRequest& inferRequest) {
                     __FUNCTION__, getName(), name);
                 return StatusCode::INTERNAL_ERROR;
             }
-            ov::Tensor tensorCopy;
-            ovms::tensorClone(tensorCopy, tensor);
-            inferRequest.set_tensor(realModelInputName, tensorCopy);
+            // Workaround for GPU.
+            if (this->model->getModelConfig().isDeviceUsed("GPU")) {
+                ov::Tensor clonedTensor;
+                status = ovms::tensorClone(clonedTensor, tensor);
+                if (!status.ok()) {
+                    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] tensor clone error: {}", getName(), status.string());
+                    return status;
+                }
+                inferRequest.set_tensor(realModelInputName, clonedTensor);
+                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] tensor name: {} cloned before GPU inference", getName(), name);
+            } else {
+                inferRequest.set_tensor(realModelInputName, tensor);
+            }
         }
         // OV implementation the ov::Exception is not
         // a base class for all other exceptions thrown from OV.

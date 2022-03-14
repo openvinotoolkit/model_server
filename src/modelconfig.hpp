@@ -404,6 +404,8 @@ public:
         return this->targetDevice == device;
     }
 
+    bool isDeviceUsed(const std::string& device) const;
+
     /**
          * @brief Get the batching mode
          * 
