@@ -32,6 +32,19 @@
 
 namespace ovms {
 
+bool ModelConfig::isUsingDevice(const std::string& device) const {
+    if (targetDevice == device)
+        return true;
+    if (targetDevice.find(device) != std::string::npos)
+        return true;
+    if (targetDevice == "AUTO")
+        return true;
+    if (device == "CPU" &&
+        targetDevice.find("HETERO") != std::string::npos)
+        return true;
+    return false;
+}
+
 bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
     if (this->name != rhs.name) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to name mismatch", this->name);

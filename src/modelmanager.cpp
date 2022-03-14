@@ -1159,6 +1159,10 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline. Cannot reload model configuration.", config.getName());
             return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
         }
+        if (config.isUsingDevice("GPU")) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested using GPU for model {} but it is used in pipeline. Cannot reload model configuration.", config.getName());
+            return StatusCode::REQUESTED_GPU_ON_SUBSCRIBED_MODEL;
+        }
         if (config.isStateful()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested using stateful model {} but it is used in pipeline. Stateful model cannot be subscribed to pipeline.", config.getName());
             return StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL;

@@ -350,6 +350,8 @@ public:
         return this->targetDevice;
     }
 
+    bool isUsingDevice(const std::string& device) const;
+
     /**
          * @brief Set the target device
          * 

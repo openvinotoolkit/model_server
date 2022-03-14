@@ -417,6 +417,13 @@ public:
                 dependantNodeInfo.modelName);
             return StatusCode::FORBIDDEN_MODEL_DYNAMIC_PARAMETER;
         }
+        if (config.isUsingDevice("GPU")) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Node name: {} used model name: {} with target device GPU which is forbidden.",
+                pipelineName,
+                dependantNodeInfo.nodeName,
+                dependantNodeInfo.modelName);
+            return StatusCode::FORBIDDEN_MODEL_GPU_IN_DAG;
+        }
         return StatusCode::OK;
     }
 

@@ -56,6 +56,7 @@ enum class StatusCode {
     RESHAPE_REQUIRED,                     /*!< Model instance needs to be reloaded with new shape */
     BATCHSIZE_CHANGE_REQUIRED,            /*!< Model instance needs to be reloaded with new batch size */
     FORBIDDEN_MODEL_DYNAMIC_PARAMETER,    /*!< Value of the provided param is forbidden */
+    FORBIDDEN_MODEL_GPU_IN_DAG,           /*!< Value of the provided param is forbidden */
     ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED,    /*!< Anonymous fixed shape is invalid for models with multiple inputs */
     ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED,   /*!< Anonymous fixed layout is invalid for models with multiple inputs */
     CONFIG_SHAPE_IS_NOT_IN_MODEL,
@@ -64,6 +65,7 @@ enum class StatusCode {
     CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME, /*!< Using old name of input/output in config layout when mapped in mapping_config.json*/
     CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE,
     REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL,
+    REQUESTED_GPU_ON_SUBSCRIBED_MODEL,
     CANNOT_CONVERT_FLAT_SHAPE,
     INVALID_BATCH_DIMENSION, /*!< Invalid batch dimension in shape */
     ALLOW_CACHE_WITH_CUSTOM_LOADER,
