@@ -104,5 +104,5 @@ HTTP_proxy
 ## Model Cache Issues <a name="model-cache"></a>
 
 - Cache folder should be mounted into docker container and have read-write access.
-- Caching used on CPU is not giving performance gain.
+- Using model cache on CPU doesn't give performance gain.
 - Using model cache with HDDL device is not working and results with deserialization error during inference.
