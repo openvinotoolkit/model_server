@@ -87,13 +87,17 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 ```
 
 >Note:
-> The public docker image includes the OpenCL drivers for GPU in version 21.38.21026.
-To use an older version, build the image with the following parameter: 
+> The public docker image includes the OpenCL drivers for GPU in version 21.38.21026 (RedHat) and 21.48.21782 (Ubuntu).
 
+To use an older version, build the image with the following parameter: 
 ```bash
-make docker_build INSTALL_DRIVER_VERSION=19.41.14441
+make docker_build INSTALL_DRIVER_VERSION=20.35.17767
 ```
 
+To use newer version on Ubuntu (for dGPU), build image with the following parameter:
+```bash
+make docker_build INSTALL_DRIVER_VERSION=22.10.22597
+```
 
 ## Using Multi-Device Plugin
 
