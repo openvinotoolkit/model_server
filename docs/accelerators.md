@@ -94,7 +94,7 @@ To use an older version, build the image with the following parameter:
 make docker_build INSTALL_DRIVER_VERSION=20.35.17767
 ```
 
-To use newer version on Ubuntu (for dGPU), build image with the following parameter:
+Support for [Intel Arc](https://www.intel.com/content/www/us/en/architecture-and-technology/visual-technology/arc-discrete-graphics.html), which is in preview now, requires newer driver version `22.10.22597`. You can build OpenVINO Model server with ubuntu base image and that driver using the command below:
 ```bash
 make docker_build INSTALL_DRIVER_VERSION=22.10.22597
 ```
