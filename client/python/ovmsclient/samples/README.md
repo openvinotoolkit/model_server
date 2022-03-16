@@ -42,7 +42,7 @@ docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50
 
 ### Model Status <a name="grpc-model-status">
 
-#### **Get information about the status of served models over gRPC interace:**
+#### **Get information about the status of served models over gRPC interface:**
 
 - Command
 
@@ -72,7 +72,7 @@ python grpc_get_model_status.py --model_name resnet
 
 ### Model Metadata <a name="grpc-model-metadata">
 
-#### **Get information about the status of served models over gRPC interace:**
+#### **Get information about the status of served models over gRPC interface:**
 
 - Command
 
@@ -239,7 +239,7 @@ Detection results in file:  ./output/road1.jpg
 
 ### Model Status <a name="http-model-status">
 
-#### **Get information about the status of served models over HTTP interace:**
+#### **Get information about the status of served models over HTTP interface:**
 
 - Command
 
@@ -269,7 +269,7 @@ python http_get_model_status.py --model_name resnet
 
 ### Model Metadata <a name="http-model-metadata">
 
-#### **Get information about the status of served models over HTTP interace:**
+#### **Get information about the status of served models over HTTP interface:**
 
 - Command
 

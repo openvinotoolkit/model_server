@@ -31,7 +31,7 @@ The stream analysis app needs to have access to RTSP stream to read from and OVM
 To select pre and post processing routines that will be run on video stream you need to make a small modification in [real_time_stream_analysis.py](https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/real_time_stream_analysis.py) script.
 
 While creating IOProcessor instance, you have to provide a class that implements [use case interface](https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/use_cases/use_case.py) and runs routines specific to your use case. 
-Simply change the first argument to the use case you want in the IOProcessor constructor in [this one line](https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/real_time_stream_analysis.py#L76):
+Simply change the first argument to the use case you want in the IOProcessor constructor in [this one line](https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/real_time_stream_analysis.py#L78):
 
 ```
 io_processor = IOProcessor(<use_case_class>, visualizer_frames_queue)
@@ -139,7 +139,7 @@ Streaming analysis app can create multiple threads that send requests with video
 
 OpenVINO Model Server can receive video frames either in an array format or in binary encoded format. When data in array format is received, model server can read and pass it as-is to the OpenVINO engine. When data in binary encoded format is received, model server needs to convert it to array format first.
 
-Using binary input feautre puts conversion burden on the model server, but the amount of data exchanged between the client and server is smaller. This can have a particularly big impact for models with large input. 
+Using binary input feature puts conversion burden on the model server, but the amount of data exchanged between the client and server is smaller. This can have a particularly big impact for models with large input. 
 
 Depending on the location of stream analysis app and the model server in your deployment, you may consider setting `binary_input` flag and make the application send binary encoded data to OpenVINO Model Server. Consider that when your model has large input, the stream speed is really fast or the network between stream analysis app and model server is a bottleneck.
 

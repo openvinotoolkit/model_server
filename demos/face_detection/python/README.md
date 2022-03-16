@@ -20,8 +20,8 @@ usage: face_detection.py [-h] [--input_images_dir INPUT_IMAGES_DIR]
                          [--server_cert SERVER_CERT]
                          [--client_cert CLIENT_CERT] [--client_key CLIENT_KEY]
 
-Demo for face detection requests via TFS gRPC API.analyses input images and
-saves with with detected faces.it relies on model face_detection...
+Demo for face detection requests via TFS gRPC API analyses input images and
+saves images with bounding boxes drawn around detected faces. It relies on face_detection model...
 
 Arguments:
   -h, --help            show this help message and exit
@@ -69,7 +69,7 @@ python face_detection.py --batch_size 1 --width 300 --height 300
 python face_detection.py --batch_size 4 --width 600 --height 400 --input_images_dir ../../common/static/images/people --output_dir results
 ```
 
-The scipt will visualize the inference results on the images saved in the directory `output_dir`. Saved images have the
+The script will visualize the inference results on the images saved in the directory `output_dir`. Saved images have the
 following naming convention:
 
 ```
