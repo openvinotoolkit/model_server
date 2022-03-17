@@ -43,7 +43,7 @@ docker pull openvino/model_server:latest
 
 3. Build the custom node:
     ```
-    make build
+    make
     ```
 
 4. Copy the custom node to the `models` repository:
@@ -64,7 +64,7 @@ Create a new file named `config.json` in the `models` directory:
         {
             "config": {
                 "name": "face_detection_retail",
-                "base_path": "/models/face_detection",
+                "base_path": "/models/face_detection"
             }
         }
     ],
@@ -75,7 +75,7 @@ Create a new file named `config.json` in the `models` directory:
     "pipeline_config_list": [
         {
             "name": "face_detection",
-            "inputs": ["image"],
+            "inputs": ["data"],
             "nodes": [
                 {
                     "name": "image_transformation_node",
@@ -92,12 +92,12 @@ Create a new file named `config.json` in the `models` directory:
                         "target_image_color_order": "BGR",
 
                         "original_image_layout": "NCHW",
-                        "target_image_layout": "NCHW",
+                        "target_image_layout": "NCHW"
                     },
                     "inputs": [
                         {"image": {
                                 "node_name": "request",
-                                "data_item": "image"}}],
+                                "data_item": "data"}}],
                     "outputs": [
                         {"data_item": "image",
                             "alias": "transformed_image"}]
@@ -107,7 +107,7 @@ Create a new file named `config.json` in the `models` directory:
                     "model_name": "face_detection_retail",
                     "type": "DL model",
                     "inputs": [
-                        {"input": 
+                        {"data": 
                             {
                              "node_name": "image_transformation_node",
                              "data_item": "transformed_image"
@@ -115,13 +115,13 @@ Create a new file named `config.json` in the `models` directory:
                         }
                     ],
                     "outputs": [
-                        {"data_item": "detection",
+                        {"data_item": "detection_out",
                          "alias": "face_detection_output"}
                     ]
                 }
             ],
             "outputs": [
-                {"detection": {
+                {"detection_out": {
                         "node_name": "face_detection_node",
                         "data_item": "face_detection_output"}}
             ]
@@ -138,14 +138,14 @@ docker run --rm -d -v <models_dir>:/models -p 9000:9000 openvino/model_server:la
 
 #### Run the Client
 ```Bash
-cd demos/face_detection/python
+cd ../demos/face_detection/python
 virtualenv .venv
 . .venv/bin/activate
 pip install -r ../../common/python/requirements.txt
 mkdir results_500x500 results_600x400
 
-python face_detection.py --width 500 --height 500 --input_images_dir images/people --output_dir results_500x500
+python face_detection.py --width 500 --height 500 --input_images_dir ../../common/static/images/people --output_dir results_500x500 --model_name face_detection
 
-python face_detection.py --width 600 --height 400 --input_images_dir images/people --output_dir results_600x400
+python face_detection.py --width 600 --height 400 --input_images_dir ../../common/static/images/people --output_dir results_600x400 --model_name face_detection
 ```
 Results of running the client will be available in directories specified in `--output_dir`
