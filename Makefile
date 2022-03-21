@@ -220,6 +220,71 @@ endif
 	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)" "$(BASE_OS)" && \
 	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls
 
+cuda_build:
+	@echo "Building docker image with CUDA plugin"
+	# Provide metadata information into image if defined
+	@mkdir -p .workspace
+	@bash -c '$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)'
+	@bash -c '$(eval PROJECT_NAME:=${PRODUCT_NAME}\ ${PRODUCT_VERSION}.${PROJECT_VER_PATCH})'
+ifeq ($(NO_DOCKER_CACHE),true)
+	$(eval NO_CACHE_OPTION:=--no-cache)
+	@echo "Docker image will be rebuilt from scratch"
+endif
+ifneq ($(OVMS_METADATA_FILE),)
+	@cp $(OVMS_METADATA_FILE) .workspace/metadata.json
+else
+	@touch .workspace/metadata.json
+endif
+	@cat .workspace/metadata.json
+	docker build $(NO_CACHE_OPTION) -f Dockerfile.cuda . \
+		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy=$(HTTPS_PROXY) --build-arg no_proxy=$(NO_PROXY) \
+		--build-arg CUDA_PACKAGES_PATH=$(CUDA_PACKAGES_PATH) \
+		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
+		--build-arg ov_use_binary=1 --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
+		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) \
+		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
+		--build-arg PROJECT_NAME=${PROJECT_NAME} \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		--build-arg OPENVINO_OPENCV_DOWNLOAD_SERVER=$(OPENVINO_OPENCV_DOWNLOAD_SERVER) \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) \
+		--build-arg JOBS=$(JOBS)
+		docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
+		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) --build-arg BASE_OS=$(BASE_OS) \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
+		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)
+	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
+		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg ov_use_binary=1 --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) --build-arg BASE_OS=$(BASE_OS) \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
+		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)
+	rm -vrf dist/$(DIST_OS) && mkdir -vp dist/$(DIST_OS) && cd dist/$(DIST_OS) && \
+		docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
+			"tar -c -C / ovms.tar* ; sleep 2" | tar -x
+	-docker rm -v $$(docker ps -a -q -f status=exited -f ancestor=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) )
+	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.gz.sha256
+	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.xz.sha256
+	cp -vR release_files/* dist/$(DIST_OS)/
+	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+		--build-arg no_proxy=$(NO_PROXY) \
+		--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
+		--build-arg GPU=0 \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
+	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+    	--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
+    	--build-arg no_proxy=$(NO_PROXY) \
+    	--build-arg INSTALL_RPMS_FROM_URL="$(INSTALL_RPMS_FROM_URL)" \
+		--build-arg INSTALL_DRIVER_VERSION="$(INSTALL_DRIVER_VERSION)" \
+    	--build-arg GPU=1 \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+    	-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) && \
+    	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu
+	cd extras/nginx-mtls-auth && \
+	    http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)" "$(BASE_OS)" && \
+	    docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls
+
 test_checksec:
 	@echo "Running checksec on ovms binary..."
 	@docker create -ti --name $(OVMS_CPP_CONTAINTER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
