@@ -104,5 +104,5 @@ HTTP_proxy
 ## Model Cache Issues <a name="model-cache"></a>
 
 - Cache folder (by default `/opt/cache` or defined by `--cache_dir`) should be mounted into docker container with read-write access. Unless changed by the docker run command, the model server has a security context of ovms account with uid 5000.
-- Using model cache on CPU doesn't give performance gain.
+- The biggest speedup in the model loading time is expected for GPU device. For CPU device the gain will depend on the model topology. In some rare cases, it is possible the load time will not be improved noticeably or it might be even slightly slower.
 - Using model cache with HDDL device is not working and results with deserialization error during inference.
