@@ -27,7 +27,7 @@ Install python dependencies:
 ```bash
 pip3 install -r requirements.txt
 ```
-Run [age_gender_recognition.py]() script to make an inference:
+Run [age_gender_recognition.py](https://github.com/openvinotoolkit/model_server/blob/da69b4852400c6ccd7c37f4f755940a7478f811d/demos/age_gender_recognition/python/age_gender_recognition.py) script to make an inference:
 ```bash
 python3 age_gender_recognition.py --image_input_path age-gender-recognition-retail-0001.jpg
 ```
