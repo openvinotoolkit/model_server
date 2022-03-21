@@ -58,7 +58,7 @@ Output:
 
 Set `camera` count to `1` with `-c 1` and provide path to the video file with `-f` parameter.
 ```
-python person_vehicle_bike_detection.py -n person-vehicle-detection -l data -o detection_out -d 1024 -c 0 -f <path_to_video_file> -i localhost -p 9000
+python person_vehicle_bike_detection.py -n person-vehicle-detection -l data -o detection_out -d 1024 -c 1 -f <path_to_video_file> -i localhost -p 9000
 ```
 
 Console logs:
