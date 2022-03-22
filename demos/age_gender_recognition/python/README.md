@@ -23,6 +23,11 @@ wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/2021.4/mod
 
 #### Requesting the Service
 
+Enter age_gender_recognition python demo directory:
+```bash
+cd demos/age_gender_recognition/python
+```
+
 Install python dependencies:
 ```bash
 pip3 install -r requirements.txt
