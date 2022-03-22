@@ -101,7 +101,7 @@ While sending the input data for inference execution, try to adjust the numerica
 OpenVINO Model Server can be scaled vertically by adding more resources or horizontally by adding more instances of the service on multiple hosts. 
 
 While hosting multiple instances of OVMS with constrained CPU resources, it is optimal to ensure CPU affinity for the containers. 
-It can be arranged via [CPU manager for Kuburnetes](https://kubernetes.io/docs/tasks/administer-cluster/cpu-management-policies/).
+It can be arranged via [CPU manager for Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/cpu-management-policies/).
 
 An equivalent in the docker, would be starting the containers with the option `--cpuset-cpus` instead of `--cpus`.
 
