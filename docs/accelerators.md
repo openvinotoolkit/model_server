@@ -177,4 +177,4 @@ To enable AUTO Plugin as target device, use the following command:
 
 @endsphinxdirective
 
-> NOTE: --target_device AUTO and --shape 'auto' should not be used together.
+> NOTE: currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled. 
