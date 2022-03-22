@@ -4,40 +4,11 @@
 
 This document gives an overview of various parameters that can be configured to achieve maximum performance efficiency. 
 
-## Adjusting the number of streams in CPU and GPU target devices
-
-OpenVINO&trade; Model Server can be tuned to a single client use case or a high concurrency. It is done via setting the number of
-execution streams. They split the available resources to perform parallel execution of multiple requests.
-It is particularly efficient for models which can not consume effectively all CPU cores or for CPUs with high number of cores.
-
-By default, for `CPU` target device, OpenVINO Model Server sets the value CPU_THROUGHPUT_AUTO and GPU_THROUGHTPUT_AUTO for `GPU` target device. It calculates the number of streams based on number of
-available vCPUs. It gives a compromise between the single client scenario and the high concurrency.
-
-If this default configuration is not suitable, adjust it with the parameter `CPU_THROUGHPUT_STREAMS` defined as part 
-of the device plugin configuration. 
-
-In a scenario where the number of parallel connections is close to 1, set the following parameter:
-
-`--plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}'`
-
-When the number of concurrent requests is higher, increase the number of streams. Make sure, however, the number of
-streams is lower then the average volume of concurrent inference operations. Otherwise the server might not be fully utilized.
-Number of streams should not exceed the number of CPU cores.
-
-For example with ~50 clients sending the requests to the server with 48 cores, set the number of streams to 24:
-
-`--plugin_config '{"CPU_THROUGHPUT_STREAMS": "24"}'`
-
-
 ## Performance Hints
 The `PERFORMANCE_HINT` plugin config property enables you to specify a performance mode for the plugin to be more efficient for particular use cases.
 
 #### THROUGHPUT
 This mode prioritizes high throughput, balancing between latency and power. It is best suited for tasks involving multiple jobs, like inference of video feeds or large numbers of images.
-
-#### LATENCY
-This mode prioritizes low latency, providing short response time for each inference job. It performs best for tasks where inference is required for a single input image, like a medical analysis of an ultrasound scan image. It also fits the tasks of real-time or nearly real-time applications, such as an industrial robot's response to actions in its environment or obstacle avoidance for autonomous vehicles.
-Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://github.com/openvinotoolkit/openvino/blob/928076ed319fcf172d24d1af4c6844e39c1bc100/docs/OV_Runtime_UG/auto_device_selection.md).
 
 To enable Performance Hints for your application, use the following command:
 @sphinxdirective
@@ -63,7 +34,57 @@ To enable Performance Hints for your application, use the following command:
 
 @endsphinxdirective
 
+#### LATENCY
+This mode prioritizes low latency, providing short response time for each inference job. It performs best for tasks where inference is required for a single input image, like a medical analysis of an ultrasound scan image. It also fits the tasks of real-time or nearly real-time applications, such as an industrial robot's response to actions in its environment or obstacle avoidance for autonomous vehicles.
+Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://github.com/openvinotoolkit/openvino/blob/928076ed319fcf172d24d1af4c6844e39c1bc100/docs/OV_Runtime_UG/auto_device_selection.md).
+
+To enable Performance Hints for your application, use the following command:
+@sphinxdirective
+
+.. tab:: CPU  
+
+   .. code-block:: sh
+
+        docker run --rm -d -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
+            --model_path /opt/model --model_name my_model --port 9001 \
+            --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+            --target_device CPU
+
+.. tab:: GPU
+
+   .. code-block:: sh  
+   
+        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+            -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
+            --model_path /opt/model --model_name my_model --port 9001 \
+            --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+            --target_device GPU
+
+@endsphinxdirective
+
 > NOTE: CPU_THROUGHPUT_STREAMS and PERFORMANCE_HINT should not be used together.
+
+## Adjusting the number of streams in CPU and GPU target devices
+
+OpenVINO&trade; Model Server can be tuned to a single client use case or a high concurrency. It is done via setting the number of
+execution streams. They split the available resources to perform parallel execution of multiple requests.
+It is particularly efficient for models which cannot effectively consume all CPU cores or for CPUs with high number of cores.
+
+By default, for `CPU` target device, OpenVINO Model Server sets the value CPU_THROUGHPUT_AUTO and GPU_THROUGHTPUT_AUTO for `GPU` target device. It calculates the number of streams based on number of available CPUs. It gives a compromise between the single client scenario and the high concurrency.
+
+If this default configuration is not suitable, adjust it with the `CPU_THROUGHPUT_STREAMS` parameter defined as part 
+of the device plugin configuration. 
+
+In a scenario where the number of parallel connections is close to 1, set the following parameter:
+
+`--plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}'`
+
+When the number of concurrent requests is higher, increase the number of streams. Make sure, however, that the number of streams is lower than the average volume of concurrent inference operations. Otherwise, the server might not be fully utilized.
+Number of streams should not exceed the number of CPU cores.
+
+For example, with ~50 clients sending the requests to the server with 48 cores, set the number of streams to 24:
+
+`--plugin_config '{"CPU_THROUGHPUT_STREAMS": "24"}'`
 
 ## Input data in REST API calls
 
@@ -77,15 +98,14 @@ While sending the input data for inference execution, try to adjust the numerica
 
 ## Scalability
 
-OpenVINO Model Server can be scaled vertically by adding more resources or horizontally by adding more instances 
-of the service on multiple hosts. 
+OpenVINO Model Server can be scaled vertically by adding more resources or horizontally by adding more instances of the service on multiple hosts. 
 
-While hosting multiple instances of OVMS with contrained CPU resources, it is optimal to ensure CPU affinity for the containers. 
+While hosting multiple instances of OVMS with constrained CPU resources, it is optimal to ensure CPU affinity for the containers. 
 It can be arranged via [CPU manager for Kuburnetes](https://kubernetes.io/docs/tasks/administer-cluster/cpu-management-policies/).
 
 An equivalent in the docker, would be starting the containers with the option `--cpuset-cpus` instead of `--cpus`.
 
-In case of using CPU plugin to run the inference, it might be also beneficial to tune the configuration parameters like :
+In case of using CPU plugin to run the inference, it might be also beneficial to tune the configuration parameters like:
 
 | Parameters      | Description |
 | :---        |    :----   |
@@ -96,7 +116,7 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 
 > **NOTE:** For additional information about all parameters read [OpenVINO supported plugins](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CPU.html).
 
-- Example :
+- Example:
 1. While passing the plugin configuration, omit the `KEY_` phase. 
 2. Following docker command will set `KEY_CPU_THROUGHPUT_STREAMS` parameter to a value `KEY_CPU_THROUGHPUT_NUMA`:
 
@@ -108,7 +128,7 @@ docker run --rm -d --cpuset-cpus 0,1,2,3 -v <model_path>:/opt/model -p 9001:9001
 ```
 
 ## CPU Power Management Settings
-In order to save power, the OS can decrease the CPU frequency and increase a volatility of the latency values. Similarly the Intel® Turbo Boost Technolog may also affect the stability of results. For best reproducibility, consider locking the frequency to the processor base frequency (refer to the https://ark.intel.com/ for your specific CPU). For example, in Linux setting the releveant values for the /sys/devices/system/cpu/cpu* entries does the trick. [Read more](https://docs.openvino.ai/nightly/openvino_docs_optimization_guide_dldt_optimization_guide.html). High-level commands like cpupower also exists:
+To save power, the OS can decrease the CPU frequency and increase a volatility of the latency values. Similarly the Intel® Turbo Boost Technology may also affect the stability of results. For best reproducibility, consider locking the frequency to the processor base frequency (refer to the https://ark.intel.com/ for your specific CPU). For example, in Linux setting the relevant values for the /sys/devices/system/cpu/cpu* entries does the trick. [Read more](https://docs.openvino.ai/nightly/openvino_docs_optimization_guide_dldt_optimization_guide.html). High-level commands like cpupower also exists:
 ```
 $ cpupower frequency-set --min 3.1GHz
 ```
@@ -124,14 +144,14 @@ OpenVINO Model Server in C++ implementation is using scalable multithreaded gRPC
 It should be at least as big as the number of assigned OpenVINO streams or expected parallel clients (grpc_wokers >= nireq).
   
 - Parameter `file_system_poll_wait_seconds` defines how often the model server will be checking if new model version gets created in the model repository. 
-The default value is 1 second which ensures prompt response to creating new model version. In some cases it might be recommended to reduce the polling frequency
-  or even disable it. For example with cloud storage, it could cause a cost for API calls to the storage cloud provider. Detecting new versions 
+The default value is 1 second which ensures prompt response to creating new model version. In some cases, it might be recommended to reduce the polling frequency
+  or even disable it. For example, with cloud storage, it could cause a cost for API calls to the storage cloud provider. Detecting new versions 
   can be disabled with a value `0`.
 
 
 ## Plugin configuration
 
-Depending on the device employed to run the inference operation, you can tune the execution behaviour with a set of parameters. Each device is handled by its OpenVINO plugin.
+Depending on the device employed to run the inference operation, you can tune the execution behavior with a set of parameters. Each device is handled by its OpenVINO plugin.
 
 > Note: For additional information, read [supported configuration parameters for all plugins](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html).
 
@@ -144,4 +164,3 @@ docker run --rm -d -v <model_path>:/opt/model -p 9001:9001 openvino/model_server
 --model_path /opt/model --model_name my_model --port 9001 --grpc_workers 8  --nireq 32 \
 --plugin_config '{"CPU_THROUGHPUT_STREAMS": "32", "CPU_BIND_THREAD": "NUMA"}'
 ```
-
