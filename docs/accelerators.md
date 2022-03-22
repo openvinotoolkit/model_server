@@ -68,7 +68,7 @@ docker run --rm -it --device=/dev/dri -v /opt/model:/opt/model -p 9001:9001 open
 
 ```
 
-Running inference on GPU requires the model server process security context account to have correct permissions. It has to belong to the render group identified by the command:
+Running inference on GPU requires the model server process security context account to have correct permissions. It must belong to the render group identified by the command:
 
 ```bash
 stat -c "group_name=%G group_id=%g" /dev/dri/render*
@@ -159,3 +159,22 @@ Here is a config example using heterogeneous plugin with GPU as the primary devi
    }]
 }
 ```
+
+## Using AUTO Plugin
+
+[Auto Device](https://docs.openvino.ai/nightly/openvino_docs_IE_DG_supported_plugins_AUTO.html) (or AUTO in short) is a new special “virtual” or “proxy” device in the OpenVINO toolkit, it doesn’t bind to a specific type of HW device.
+AUTO solves the complexity in application required to code a logic for the HW device selection (through HW devices) and then, on the deducing the best optimization settings on that device.
+AUTO always chooses the best device, if compiling model fails on this device, AUTO will try to compile it on next best device until one of them succeeds.
+
+To enable AUTO Plugin as target device, use the following command:
+@sphinxdirective
+
+   .. code-block:: sh
+
+        docker run --rm -d -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
+            --model_path /opt/model --model_name my_model --port 9001 \
+            --target_device AUTO
+
+@endsphinxdirective
+
+> NOTE: --target_device AUTO and --shape 'auto' should not be used together.
