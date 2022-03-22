@@ -88,7 +88,7 @@ COPY .bazelrc WORKSPACE /build/
 COPY external /build/external/
 COPY third_party /build/third_party/
 
-RUN mkdir -p /opt/intel/openvino && cd /opt/intel/openvino && curl -s http://s3.toolbox.iotg.sclab.intel.com/opencv-packages/ubuntu20.tgz | tar -xzf - && cd /build
+RUN mkdir -p /opt/intel/openvino && cd /opt/intel/openvino && curl -s https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.1/opencv/openvino_opencv_ubuntu20.tgz | tar -xzf - && cd /build
 
 RUN bazel build \
     @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
