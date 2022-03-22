@@ -165,16 +165,55 @@ Here is a config example using heterogeneous plugin with GPU as the primary devi
 [Auto Device](https://docs.openvino.ai/nightly/openvino_docs_IE_DG_supported_plugins_AUTO.html) (or AUTO in short) is a new special “virtual” or “proxy” device in the OpenVINO toolkit, it doesn’t bind to a specific type of HW device.
 AUTO solves the complexity in application required to code a logic for the HW device selection (through HW devices) and then, on the deducing the best optimization settings on that device.
 AUTO always chooses the best device, if compiling model fails on this device, AUTO will try to compile it on next best device until one of them succeeds.
+Make sure you have passed the devices and access to the devices you want to use in for the docker image. For example with:
+```--device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g)```
 
 To enable AUTO Plugin as target device, use the following command:
 @sphinxdirective
 
    .. code-block:: sh
 
-        docker run --rm -d -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
+        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name my_model --port 9001 \
             --target_device AUTO
 
 @endsphinxdirective
 
-> NOTE: currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled. 
+## Performance Hints
+The `PERFORMANCE_HINT` plugin config property enables you to specify a performance mode for the plugin to be more efficient for particular use cases.
+The usage of AUTO and `PERFORMANCE_HINT` plugin usage is described below.
+
+#### THROUGHPUT
+This mode prioritizes high throughput, balancing between latency and power. It is best suited for tasks involving multiple jobs, like inference of video feeds or large numbers of images.
+
+#### LATENCY
+This mode prioritizes low latency, providing short response time for each inference job. It performs best for tasks where inference is required for a single input image, like a medical analysis of an ultrasound scan image. It also fits the tasks of real-time or nearly real-time applications, such as an industrial robot's response to actions in its environment or obstacle avoidance for autonomous vehicles.
+Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://github.com/openvinotoolkit/openvino/blob/928076ed319fcf172d24d1af4c6844e39c1bc100/docs/OV_Runtime_UG/auto_device_selection.md).
+
+To enable Performance Hints for your application, use the following command:
+@sphinxdirective
+
+.. tab:: LATENCY  
+
+   .. code-block:: sh
+
+        docker run --rm -d -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
+            --model_path /opt/model --model_name my_model --port 9001 \
+            --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+            --target_device AUTO
+
+.. tab:: THROUGHTPUT
+
+   .. code-block:: sh  
+   
+        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+            -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
+            --model_path /opt/model --model_name my_model --port 9001 \
+            --plugin_config '{"PERFORMANCE_HINT": "THROUGHTPUT"}' \
+            --target_device AUTO
+
+@endsphinxdirective
+
+> NOTE: CPU_THROUGHPUT_STREAMS and PERFORMANCE_HINT should not be used together.
+
+> NOTE: currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.
