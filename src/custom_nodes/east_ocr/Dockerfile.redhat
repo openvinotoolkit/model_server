@@ -17,7 +17,6 @@
 FROM registry.access.redhat.com/ubi8/ubi:8.4
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && yum update -d6 -y && yum install -d6 -y gcc-c++ curl xz
 ARG OPENCV_DOWNLOAD_FOLDER
-RUN echo ${OPENCV_DOWNLOAD_FOLDER}/openvino_opencv_ubuntu18.tgz
 RUN curl -s ${OPENCV_DOWNLOAD_FOLDER}/openvino_opencv_ubuntu18.tgz | tar -xzf -
 ARG NODE_NAME=east_ocr
 
