@@ -178,16 +178,7 @@ To enable AUTO Plugin as target device, use the following command:
 
 @endsphinxdirective
 
-## Performance Hints
-The `PERFORMANCE_HINT` plugin config property enables you to specify a performance mode for the plugin to be more efficient for particular use cases.
-The usage of AUTO and `PERFORMANCE_HINT` plugin usage is described below.
-
-#### THROUGHPUT
-This mode prioritizes high throughput, balancing between latency and power. It is best suited for tasks involving multiple jobs, like inference of video feeds or large numbers of images.
-
-#### LATENCY
-This mode prioritizes low latency, providing short response time for each inference job. It performs best for tasks where inference is required for a single input image, like a medical analysis of an ultrasound scan image. It also fits the tasks of real-time or nearly real-time applications, such as an industrial robot's response to actions in its environment or obstacle avoidance for autonomous vehicles.
-Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://docs.openvino.ai/nightly/openvino_docs_IE_DG_supported_plugins_AUTO.html#performance-hints).
+The `Auto Device` plugin can also use the [PERFORMANCE_HINT](performance_tuning.md) plugin config property that enables you to specify a performance mode for the plugin.
 
 To enable Performance Hints for your application, use the following command:
 @sphinxdirective
