@@ -28,11 +28,11 @@ This command downloads following files:
 ```rm_lstm4f.counts rm_lstm4f.nnet rm_lstm4f.mapping rm_lstm4f.md``` 
 rm_lstm4f model files in Kaldi format.
 
-```test_feat_1_10.ark``` [Kaldi's](http://kaldi-asr.org/doc/io.html) 
-binary archive file with input data for the model
+```test_feat_1_10.ark``` 
+[Kaldi's](http://kaldi-asr.org/doc/io.html) binary archive file with input data for the model
 
-```test_score_1_10.ark``` [Kaldi's](http://kaldi-asr.org/doc/io.html) 
-binary archive file with reference model results
+```test_score_1_10.ark``` 
+[Kaldi's](http://kaldi-asr.org/doc/io.html) binary archive file with reference model results
 
 2. [Convert model to IR](https://docs.openvinotoolkit.org/latest/openvino_inference_engine_samples_speech_sample_README.html)
  
