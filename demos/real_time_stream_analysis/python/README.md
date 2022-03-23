@@ -103,7 +103,7 @@ __Console output:__
 ### Running with visualizer
 
 Streaming analysis app can run with live browser preview that helps to quickly estimate model accuracy. It's done by starting tiny Flask server that displays visualized inference results on HTTP endpoint. 
-To be able to use visualizer, use case must `return True` on [`supports_visualization`](https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/use_cases/use_case.py#L23) call and implement [`visualize` method](https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/use_cases/use_case.py#L29).
+To be able to use visualizer, use case must `return True` on [supports_visualization](https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/use_cases/use_case.py#L23) call and implement [visualize method](https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/use_cases/use_case.py#L29).
 
 Enabling visualizer is done by providing `--visualizer_port` parameter that specifies on which port the HTTP Server will display inference results. If not provided or set to 0, visualizer will not start.
 
