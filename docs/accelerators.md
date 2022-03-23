@@ -167,7 +167,7 @@ AUTO always chooses the best device, if compiling model fails on this device, AU
 Make sure you have passed the devices and access to the devices you want to use in for the docker image. For example with:
 ```--device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g)```
 
-To enable AUTO Plugin as target device, use the following command:
+Below is an example of the command with AUTO Plugin as target device. It includes extra docker parameters to enable GPU (/dev/dri) , beside CPU.
 @sphinxdirective
 
    .. code-block:: sh
