@@ -153,7 +153,7 @@ The default value is 1 second which ensures prompt response to creating new mode
 
 Depending on the device employed to run the inference operation, you can tune the execution behavior with a set of parameters. Each device is handled by its OpenVINO plugin.
 
-> **NOTE**: For additional information, read [supported configuration parameters for all plugins](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html).
+> **NOTE**: For additional information, read [supported configuration parameters for all plugins](https://docs.openvino.ai/nightly/namespaceInferenceEngine_1_1PluginConfigParams.html).
 
 Model's plugin configuration is a dictionary of param:value pairs passed to OpenVINO Plugin on network load. It can be set with `plugin_config` parameter. 
 
