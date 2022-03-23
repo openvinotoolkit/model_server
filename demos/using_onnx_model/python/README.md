@@ -12,7 +12,9 @@ This model requires additional [preprocessing function](https://github.com/onnx/
 ## Option 1: Adding preprocessing to the client side <a name="client-side"></a>
 
 Prepare workspace with the model by running: 
-```make client_preprocessing```
+```
+make client_preprocessing
+```
 
 You should see `workspace` directory created with the following content:
 ```
@@ -48,7 +50,9 @@ Detected class name: bee
 ## Option 2: Adding preprocessing to the server side (building a DAG) <a name="server-side"></a>
 
 Prepare workspace with the model, preprocessing node library and configuration file by running:
-```make server_preprocessing```
+```
+make server_preprocessing
+```
 
 You should see `workspace` directory created with the following content:
 ```
