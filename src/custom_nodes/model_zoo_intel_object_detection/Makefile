@@ -16,7 +16,7 @@
 
 HEADER_FILE_PATH ?= ../../custom_node_interface.h
 BASE_OS ?= ubuntu
-OPENCV_DOWNLOAD_FOLDER ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.1/opencv/
+OPENCV_DOWNLOAD_FOLDER ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.1/opencv
 
 .PHONY: default build
 

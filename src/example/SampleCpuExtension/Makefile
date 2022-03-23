@@ -16,7 +16,7 @@
 
 all: $(eval SHELL:=/bin/bash)
 	/usr/bin/g++ --version
-	. /opt/intel/openvino/setupvars.sh && /usr/bin/g++ -std=gnu++11 -fPIC -shared ov_extension.cpp CustomReluOp.cpp \
-		-I /opt/intel/openvino/runtime/include/ie \
-		-I /opt/intel/openvino/runtime/include \
+	. /opt/intel/openvino_2022/setupvars.sh && /usr/bin/g++ -std=gnu++11 -fPIC -shared ov_extension.cpp CustomReluOp.cpp \
+		-I /opt/intel/openvino_2022/runtime/include/ie \
+		-I /opt/intel/openvino_2022/runtime/include \
 		-o libcustom_relu_cpu_extension.so
