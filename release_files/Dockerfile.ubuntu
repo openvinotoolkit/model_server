@@ -17,7 +17,7 @@
 ARG BASE_IMAGE=ubuntu:20.04
 FROM $BASE_IMAGE as base_build
 
-SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+SHELL ["/bin/bash", "-c"]
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -130,6 +130,91 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 # for NCS
 RUN mkdir -p /etc/udev/rules.d/ && cp /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules /etc/udev/rules.d/ && ldconfig
+
+ADD https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
+COPY *.deb  /
+
+# build_type=[ opt, dbg ]
+ARG build_type=dbg
+ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
+ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TF_SYSTEM_LIBS="curl"
+SHELL ["/bin/bash", "-c"]
+RUN set -exuo pipefail ; \
+	rm -f /etc/apt/apt.conf.d/docker-clean ; \
+	echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache ; \
+	apt update ; \
+	apt install -y \
+		gnupg2 \
+		software-properties-common \
+	; \
+	if [[ ${enable_tensorrt-} == "1" ]] ; then dpkg -i /nv-tensorrt-repo-*.deb ; fi; \
+	apt-key adv --keyserver-options http-proxy=http://proxy-us.intel.com:911 --fetch-keys  https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub ; \
+	add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /" ; \
+	apt update && apt install -y \
+	./libcudnn*.deb \
+	libboost-atomic1.71.0 \
+	libboost-chrono1.71.0 \
+	libboost-filesystem1.71.0 \
+	libboost-program-options1.71.0 \
+	libboost-thread1.71.0 \
+	libboost-system1.71.0 \
+	libboost-date-time1.71.0 \
+	build-essential \
+	cmake \
+	automake \
+	autoconf \
+	curl \
+	gdb \
+	git \
+	libusb-dev \
+	libusb-1.0-0-dev \
+	libcurl4-openssl-dev \
+	libtool \
+	libxml2-dev \
+	libnuma-dev \
+	libssl-dev \
+	patch \
+	pkg-config \
+	python2 \
+	python2-dev \
+	python-setuptools \
+	python3 \
+	python3-pip \
+	python3-dev \
+	python3-setuptools \
+	python3-virtualenv \
+	python3-numpy \
+	python-is-python3 \
+	unzip \
+	wget \
+	unzip \
+	xz-utils \
+	ca-certificates \
+	clang-format-9 \
+	cuda \
+	g++-multilib \
+	gcc-multilib \
+	git-lfs \
+	gstreamer1.0-plugins-base \
+	libavcodec-dev \
+	libavformat-dev \
+	libcairo2-dev \
+	libcutensor1 \
+	libcutensor-dev \
+	libglib2.0-dev \
+	libgstreamer1.0-0 \
+	libgtk2.0-dev \
+	libopenblas-dev \
+	libpango1.0-dev \
+	libpng-dev \
+	libswscale-dev \
+	libzstd-dev \
+	shellcheck \
+	time \
+	xz-utils && \
+	apt clean ;
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
