@@ -9,6 +9,7 @@ This document gives information about troubleshooting the following issues while
 * <a href="#configure-aws">Configuring AWS For Use With a Proxy</a>
 * <a href="#gcs">Using GCS model behind a proxy </a>
 * <a href="#load-network-issue">Unable to load network into device with: `can't protect` in server logs </a>
+* <a href="#model-cache">Model Cache Issues </a>
 
 
 ## Model Import Issues<a name="model-import"></a>
@@ -99,3 +100,9 @@ HTTP_proxy
 
 ## Cannot compile model into target device: `can't protect` in server logs <a name="load-network-issue"></a>
 - Since this is known bug, please refer OpenVINO&trade; [release notes](https://software.intel.com/content/www/us/en/develop/articles/openvino-relnotes.html).
+
+## Model Cache Issues <a name="model-cache"></a>
+
+- Cache folder (by default `/opt/cache` or defined by `--cache_dir`) should be mounted into docker container with read-write access. Unless changed by the docker run command, the model server has a security context of ovms account with uid 5000.
+- The biggest speedup in the model loading time is expected for GPU device. For CPU device the gain will depend on the model topology. In some rare cases, it is possible the load time will not be improved noticeably or it might be even slightly slower.
+- Currently using model cache is not supported with HDDL target device. Do not enable model cache while using HDDL cards.
