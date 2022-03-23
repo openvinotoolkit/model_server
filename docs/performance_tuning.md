@@ -36,7 +36,7 @@ To enable Performance Hints for your application, use the following command:
 
 #### LATENCY
 This mode prioritizes low latency, providing short response time for each inference job. It performs best for tasks where inference is required for a single input image, like a medical analysis of an ultrasound scan image. It also fits the tasks of real-time or nearly real-time applications, such as an industrial robot's response to actions in its environment or obstacle avoidance for autonomous vehicles.
-Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://docs.openvino.ai/nightly/namespaceInferenceEngine_1_1PluginConfigParams.html).
+Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://docs.openvino.ai/nightly/openvino_docs_IE_DG_supported_plugins_AUTO.html#performance-hints).
 
 To enable Performance Hints for your application, use the following command:
 @sphinxdirective
