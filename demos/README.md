@@ -6,7 +6,7 @@
    :maxdepth: 1
    :hidden:
 
-   ovms_docs_demo_age_gender_guide
+   ovms_demo_age_gender_guide
    ovms_demo_horizontal_text_detection
    ovms_demo_optical_character_recognition
    ovms_demo_face_detection
@@ -30,6 +30,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 ## Python 
 | Demo | Description |
 |---|---|
+|[Age gender recognition](age_gender_recognition/python/README.md) | Run prediction on a JPEG image using age gender recognition model via gRPC API.|
 |[Horizontal Text Detection in Real-Time](horizontal_text_detection/python/README.md) | Run prediction on camera stream using a horizontal text detection model via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [horizontal_ocr custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/horizontal_ocr) and [demultiplexer](../docs/demultiplexing.md). |
 |[Optical Character Recognition Pipeline](optical_character_recognition/python/README.md) | Run prediction on a JPEG image using a pipeline of text recognition and text detection models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [east_ocr custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/east_ocr) and [demultiplexer](../docs/demultiplexing.md). |
 |[Face Detection](face_detection/python/README.md)|Run prediction on a JPEG image using face detection model via gRPC API.|

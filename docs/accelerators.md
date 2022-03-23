@@ -87,13 +87,12 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 ```
 
 > **NOTE**:
-> The public docker image includes the OpenCL drivers for GPU in version 21.38.21026.
-To use an older version, build the image with the following parameter: 
+> The public docker image includes the OpenCL drivers for GPU in version 21.38.21026 (RedHat) and 21.48.21782 (Ubuntu).
 
+Support for [Intel Arc](https://www.intel.com/content/www/us/en/architecture-and-technology/visual-technology/arc-discrete-graphics.html), which is in preview now, requires newer driver version `22.10.22597`. You can build OpenVINO Model server with ubuntu base image and that driver using the command below:
 ```bash
-make docker_build INSTALL_DRIVER_VERSION=19.41.14441
+make docker_build INSTALL_DRIVER_VERSION=22.10.22597
 ```
-
 
 ## Using Multi-Device Plugin
 
