@@ -41,7 +41,7 @@ docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/mode
 
 Check out our recommendations for [throughput optimization on HDDL](performance_tuning.md).
 
->NOTE: 
+> **NOTE**:
 > the OpenVINO Model Server process within the container communicates with _hddldaemon_ via unix sockets in the `/var/tmp` folder. 
 > It requires RW permissions in the docker container security context. 
 > It is recommended to start the docker container in the same context as the account starting _hddldaemon_. For example, if you start the _hddldaemon_ as root, add `--user root` to the `docker run` command.
@@ -86,7 +86,7 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 
 ```
 
->Note:
+> **NOTE**:
 > The public docker image includes the OpenCL drivers for GPU in version 21.38.21026.
 To use an older version, build the image with the following parameter: 
 
@@ -172,13 +172,16 @@ To enable AUTO Plugin as target device, use the following command:
 
    .. code-block:: sh
 
-        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
+        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)\
+            -u $(id -u):$(id -g) -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name my_model --port 9001 \
             --target_device AUTO
 
 @endsphinxdirective
 
 The `Auto Device` plugin can also use the [PERFORMANCE_HINT](performance_tuning.md) plugin config property that enables you to specify a performance mode for the plugin.
+
+> **NOTE**: CPU_THROUGHPUT_STREAMS and PERFORMANCE_HINT should not be used together.
 
 To enable Performance Hints for your application, use the following command:
 @sphinxdirective
@@ -187,7 +190,8 @@ To enable Performance Hints for your application, use the following command:
 
    .. code-block:: sh
 
-        docker run --rm -d -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
+        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+            -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name my_model --port 9001 \
             --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
             --target_device AUTO
@@ -204,6 +208,4 @@ To enable Performance Hints for your application, use the following command:
 
 @endsphinxdirective
 
-> NOTE: CPU_THROUGHPUT_STREAMS and PERFORMANCE_HINT should not be used together.
-
-> NOTE: currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.
+> **NOTE**: currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.
