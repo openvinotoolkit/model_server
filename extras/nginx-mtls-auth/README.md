@@ -18,7 +18,7 @@ WARNING: Please follow [security considerations for containers](../../docs/docke
 
 
 <p align="center">
-  <img width="441" height="231" src="assets/nginx.png">
+  <img width="441" height="231" src="https://github.com/openvinotoolkit/model_server/blob/develop/extras/nginx-mtls-auth/nginx.png">
 </p>
 Architecture of OVMS with NGINX
 
