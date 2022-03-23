@@ -19,18 +19,19 @@ FROM $BASE_IMAGE as base_build
 
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG DLDT_PACKAGE_URL
+ARG APT_OV_PACKAGE
 
 RUN apt update && apt install -y build-essential wget make python3
 
 WORKDIR /
 
 # OV toolkit package
-RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
-    wget $DLDT_PACKAGE_URL && \
-    chmod 755 l_openvino_toolkit_* && \
-    ./l_openvino_toolkit_* -a -s --eula accept && \
-    rm -rf /opt/intel/openvino && \
-    ln -s /opt/intel/openvino_2022 /opt/intel/openvino
+RUN echo "installing apt package" && \
+    wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB && \
+    apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB && \
+    echo "deb https://apt.repos.intel.com/openvino/2022 focal main" | tee /etc/apt/sources.list.d/intel-openvino-2022.list && \
+    apt update && \
+    apt install -y $APT_OV_PACKAGE
 
 WORKDIR /workspace
 COPY Makefile ov_extension.cpp CustomReluOp.cpp CustomReluOp.hpp ./

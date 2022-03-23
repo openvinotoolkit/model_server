@@ -128,7 +128,8 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
     wget $DLDT_PACKAGE_URL && \
     mkdir /opt/intel && \
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
-    ln -s /opt/intel/l_openvino_toolkit_runtime_rhel8_p* /opt/intel/openvino
+    ln -s /opt/intel/l_openvino_toolkit_runtime_rhel8_p* /opt/intel/openvino && \
+    ln -s /opt/intel/l_openvino_toolkit_runtime_rhel8_p* /opt/intel/openvino_2022
 
 # install opencv
 ARG OPENVINO_OPENCV_DOWNLOAD_SERVER=""

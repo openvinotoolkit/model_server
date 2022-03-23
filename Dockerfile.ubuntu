@@ -25,7 +25,8 @@ ARG TEMP_DIR=/tmp/openvino_installer
 ARG DL_INSTALL_DIR=/opt/intel/openvino/deployment_tools
 ARG DL_DIR=/tmp
 ARG JOBS
-ARG APT_OV_PACKAGE=intel-openvino-runtime-ubuntu20-2021.4.689
+ARG APT_OV_PACKAGE=openvino-2022.1.0
+ARG APT_OVCV_PACKAGE=openvino-opencv-2022.1.0
 
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
@@ -160,11 +161,12 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; 
 # apt package
 RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; else exit 0 ; fi ; \
     echo "installing apt package" && \
-    wget https://apt.repos.intel.com/openvino/2021/GPG-PUB-KEY-INTEL-OPENVINO-2021 && \
-    apt-key add GPG-PUB-KEY-INTEL-OPENVINO-2021 && \
-    echo "deb https://apt.repos.intel.com/openvino/2021 all main" | tee /etc/apt/sources.list.d/intel-openvino-2021.list && \
+    wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB && \
+    apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB && \
+    echo "deb https://apt.repos.intel.com/openvino/2022 focal main" | tee /etc/apt/sources.list.d/intel-openvino-2022.list && \
     apt update && \
-    apt install -y $APT_OV_PACKAGE
+    apt install -y $APT_OV_PACKAGE $APT_OVCV_PACKAGE && \
+    ln -s /opt/intel/openvino_2022 /opt/intel/openvino
 
 # install sample apps including benchmark_app
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
@@ -172,7 +174,8 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 
 # install opencv
 ARG OPENVINO_OPENCV_DOWNLOAD_SERVER=""
-RUN cd /opt/intel/openvino/extras/scripts && ./download_opencv.sh
+RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; \
+    cd /opt/intel/openvino/extras/scripts && ./download_opencv.sh
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
