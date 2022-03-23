@@ -43,7 +43,7 @@ The use case class must first be imported. Examplary use cases can be imported f
 from use_cases import PersonVehicleBikeDetection
 ```
 
-> Note: You can use your custom use cases the same way. Implement use case interface and add it to use_cases catalog. For simpler imports from the main script consider adding you class in use_cases package [init file](https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/use_cases/__init__.py) 
+> **NOTE**: You can use your custom use cases the same way. Implement use case interface and add it to use_cases catalog. For simpler imports from the main script consider adding you class in use_cases package [init file](https://github.com/openvinotoolkit/model_server/blob/develop/demos/real_time_stream_analysis/python/use_cases/__init__.py) 
 
 ### Run the app
 
@@ -121,7 +121,7 @@ __Browser preview:__
 
 ![visualizer example browser](assets/visualizer_example_browser.gif)
 
-> Note: Visualizer does not use effecient streaming techniques to display results. It's main goal is to help during development and provide simple solution for quick health/accuracy checks.
+> **NOTE**: Visualizer does not use effecient streaming techniques to display results. It's main goal is to help during development and provide simple solution for quick health/accuracy checks.
 
 ## Performance considerations
 

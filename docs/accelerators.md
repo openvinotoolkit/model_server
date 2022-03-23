@@ -41,7 +41,7 @@ docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/mode
 
 Check out our recommendations for [throughput optimization on HDDL](performance_tuning.md).
 
->NOTE: 
+> **NOTE**:
 > the OpenVINO Model Server process within the container communicates with _hddldaemon_ via unix sockets in the `/var/tmp` folder. 
 > It requires RW permissions in the docker container security context. 
 > It is recommended to start the docker container in the same context as the account starting _hddldaemon_. For example, if you start the _hddldaemon_ as root, add `--user root` to the `docker run` command.
@@ -68,7 +68,7 @@ docker run --rm -it --device=/dev/dri -v /opt/model:/opt/model -p 9001:9001 open
 
 ```
 
-Running inference on GPU requires the model server process security context account to have correct permissions. It has to belong to the render group identified by the command:
+Running inference on GPU requires the model server process security context account to have correct permissions. It must belong to the render group identified by the command:
 
 ```bash
 stat -c "group_name=%G group_id=%g" /dev/dri/render*
@@ -86,7 +86,7 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 
 ```
 
->Note:
+> **NOTE**:
 > The public docker image includes the OpenCL drivers for GPU in version 21.38.21026 (RedHat) and 21.48.21782 (Ubuntu).
 
 Support for [Intel Arc](https://www.intel.com/content/www/us/en/architecture-and-technology/visual-technology/arc-discrete-graphics.html), which is in preview now, requires newer driver version `22.10.22597`. You can build OpenVINO Model server with ubuntu base image and that driver using the command below:
@@ -147,7 +147,6 @@ The order of devices will define their priority, in this case making `device_1` 
 
 Here is a config example using heterogeneous plugin with GPU as the primary device and CPU as a fallback.
 
-
 ```json
 {"model_config_list": [
    {"config": {
@@ -158,3 +157,54 @@ Here is a config example using heterogeneous plugin with GPU as the primary devi
    }]
 }
 ```
+
+## Using AUTO Plugin
+
+[Auto Device](https://docs.openvino.ai/nightly/openvino_docs_IE_DG_supported_plugins_AUTO.html) (or AUTO in short) is a new special “virtual” or “proxy” device in the OpenVINO toolkit, it doesn’t bind to a specific type of HW device.
+AUTO solves the complexity in application required to code a logic for the HW device selection (through HW devices) and then, on the deducing the best optimization settings on that device.
+AUTO always chooses the best device, if compiling model fails on this device, AUTO will try to compile it on next best device until one of them succeeds.
+Make sure you have passed the devices and access to the devices you want to use in for the docker image. For example with:
+```--device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g)```
+
+Below is an example of the command with AUTO Plugin as target device. It includes extra docker parameters to enable GPU (/dev/dri) , beside CPU.
+@sphinxdirective
+
+   .. code-block:: sh
+
+        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)\
+            -u $(id -u):$(id -g) -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
+            --model_path /opt/model --model_name my_model --port 9001 \
+            --target_device AUTO
+
+@endsphinxdirective
+
+The `Auto Device` plugin can also use the [PERFORMANCE_HINT](performance_tuning.md) plugin config property that enables you to specify a performance mode for the plugin.
+
+> **NOTE**: CPU_THROUGHPUT_STREAMS and PERFORMANCE_HINT should not be used together.
+
+To enable Performance Hints for your application, use the following command:
+@sphinxdirective
+
+.. tab:: LATENCY  
+
+   .. code-block:: sh
+
+        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+            -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
+            --model_path /opt/model --model_name my_model --port 9001 \
+            --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+            --target_device AUTO
+
+.. tab:: THROUGHTPUT
+
+   .. code-block:: sh  
+   
+        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+            -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
+            --model_path /opt/model --model_name my_model --port 9001 \
+            --plugin_config '{"PERFORMANCE_HINT": "THROUGHTPUT"}' \
+            --target_device AUTO
+
+@endsphinxdirective
+
+> **NOTE**: currently, AUTO plugin cannot be used with `--shape auto` parameter while GPU device is enabled.

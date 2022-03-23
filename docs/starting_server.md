@@ -26,7 +26,7 @@
 
 The simplest way to deploy OpenVINO™ Model Server is in the single-model mode - only one model is served and the whole configuration is passed via CLI parameters.
 
-> NOTE: In the single-model mode, changing configuration in runtime is not possible.
+> **NOTE**: In the single-model mode, changing configuration in runtime is not possible.
 
 [Learn more](single_model_mode.md)
 
