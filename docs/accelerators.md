@@ -148,7 +148,6 @@ The order of devices will define their priority, in this case making `device_1` 
 
 Here is a config example using heterogeneous plugin with GPU as the primary device and CPU as a fallback.
 
-
 ```json
 {"model_config_list": [
    {"config": {
