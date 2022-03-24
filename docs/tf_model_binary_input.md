@@ -24,7 +24,7 @@ rmdir resnet_v2_fp32_savedmodel_NHWC/
 
 Convert the TensorFlow model to Intermediate Representation format using model_optimizer tool:
 ```Bash
-docker run -u $(id -u):$(id -g) -v ${PWD}/resnet_v2/:/resnet openvino/ubuntu20_dev:2022.1 python3 /usr/local/lib/python3.8/dist-packages/openvino/tools/mo/mo.py --saved_model_dir /resnet/ --output_dir /resnet/models/resnet/1/ --input_shape=[1,224,224,3] --mean_values=[123.68,116.78,103.94] --reverse_input_channels
+docker run -u $(id -u):$(id -g) -v ${PWD}/resnet_v2/:/resnet openvino/ubuntu20_dev:2022.1 mo --saved_model_dir /resnet/ --output_dir /resnet/models/resnet/1/ --input_shape=[1,224,224,3] --mean_values=[123.68,116.78,103.94] --reverse_input_channels
 ```
 
 *Note:* Some models might require other parameters such as `--scale` parameter.
