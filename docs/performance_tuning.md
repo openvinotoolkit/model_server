@@ -114,7 +114,7 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 | CPU_THROUGHPUT_STREAMS | Specifies number of CPU "execution" streams for the throughput mode |
 
 
-> **NOTE:** For additional information about all parameters read [OpenVINO supported plugins](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_CPU.html).
+> **NOTE:** For additional information about all parameters read [OpenVINO supported plugins](https://docs.openvino.ai/2022.1/namespaceInferenceEngine_1_1PluginConfigParams.html?#detailed-documentation).
 
 - Example:
 1. While passing the plugin configuration, omit the `KEY_` phase. 

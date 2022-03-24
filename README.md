@@ -19,9 +19,9 @@ Key features:
 - online deployment of new [model versions](https://docs.openvino.ai/nightly/ovms_docs_model_version_policy.html)
 - [configuration updates in runtime](https://docs.openvino.ai/nightly/ovms_docs_online_config_changes.html)
 - support for AI accelerators, such as 
-[Intel Movidius Myriad VPUs](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html), 
-[GPU](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_GPU.html), and 
-[HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html) 
+[Intel Movidius Myriad VPUs](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_supported_plugins_MYRIAD.html), 
+[GPU](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_supported_plugins_GPU.html), and 
+[HDDL](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_supported_plugins_HDDL.html) 
 - works with [Bare Metal Hosts](docs/host.md) as well as [Docker containers](https://docs.openvino.ai/nightly/ovms_docs_docker_container.html) 
 - [model reshaping](https://docs.openvino.ai/nightly/ovms_docs_shape_batch_layout.html) in runtime
 - [directed Acyclic Graph Scheduler](https://docs.openvino.ai/nightly/ovms_docs_dag.html) - connecting multiple models to deploy complex processing solutions and reducing data transfer overhead
@@ -74,7 +74,7 @@ For more information on using Model Server in various scenarios you can check th
 
 * [RESTful API](https://restfulapi.net/)
 
-* [Benchmarking results](https://docs.openvinotoolkit.org/latest/openvino_docs_performance_benchmarks_ovms.html)
+* [Benchmarking results](https://docs.openvino.ai/2022.1/openvino_docs_performance_benchmarks_ovms.html)
 
 * [Speed and Scale AI Inference Operations Across Multiple Architectures](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) - webinar recording
 

@@ -32,4 +32,4 @@ $ docker run -it --rm -p 9000:9000 -v `pwd`/lib/ubuntu:/extension:ro -v `pwd`/re
  --port 9000 --model_name resnet --model_path /resnet --cpu_extension /extension/libcustom_relu_cpu_extension.so
 ```
 
-> **NOTE**: Learn more about [OpenVINO extensibility](https://docs.openvino.ai/latest/openvino_docs_IE_DG_Extensibility_DG_Intro.html) 
+> **NOTE**: Learn more about [OpenVINO extensibility](https://docs.openvino.ai/2022.1/openvino_docs_Extensibility_UG_Intro.html) 

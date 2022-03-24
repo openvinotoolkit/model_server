@@ -2,7 +2,7 @@
 
 ## Download Model
 
-Model used in this example is [person-vehicle-bike-detection-2002](https://docs.openvino.ai/latest/omz_models_model_person_vehicle_bike_detection_2002.html).
+Model used in this example is [person-vehicle-bike-detection-2002](https://docs.openvino.ai/2022.1/omz_models_model_person_vehicle_bike_detection_2002.html).
 Create `workspace` and model directory and download model in IR format:
 ```
 mkdir -p workspace/person-vehcile-bike-detection-2002/1

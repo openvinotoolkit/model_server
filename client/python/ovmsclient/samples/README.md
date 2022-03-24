@@ -24,7 +24,7 @@ Install samples dependencies:
 pip3 install -r requirements.txt
 ```
 
-Download [Resnet50-tf Model](https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html) and convert it into Intermediate Representation format:
+Download [Resnet50-tf Model](https://docs.openvino.ai/2022.1/omz_models_model_resnet_50_tf.html) and convert it into Intermediate Representation format:
 ```bash
 mkdir models
 docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models openvino/ubuntu18_dev:latest deployment_tools/open_model_zoo/tools/downloader/downloader.py --name resnet-50-tf --output_dir /models
