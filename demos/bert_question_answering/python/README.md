@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document demonstrates how to run inference requests for [BERT model](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/bert-small-uncased-whole-word-masking-squad-int8-0002) with OpenVINO Model Server. It provides questions answering functionality.
+This document demonstrates how to run inference requests for [BERT model](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/bert-small-uncased-whole-word-masking-squad-int8-0002) with OpenVINO Model Server. It provides questions answering functionality.
 
 In this example docker container with [bert-client image](https://github.com/openvinotoolkit/model_server/blob/main/demos/bert_question_answering/python/Dockerfile) runs the script [bert_question_answering.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/bert_question_answering/python/bert_question_answering.py). It runs inference request for each paragraph on a given page in order to answer the provided question. Since each paragraph can have different size the functionality of dynamic shape is used.
 

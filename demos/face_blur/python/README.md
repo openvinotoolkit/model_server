@@ -1,6 +1,6 @@
 # Face Blur Pipeline Demo with OVMS {#ovms_demo_face_blur_pipeline}
 
-This document demonstrates how to create pipelines using object detection models from OpenVINO Model Zoo in order to blur the image. As an example, we will use [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/face-detection-retail-0004/README.md) to detect multiple faces on the image. Then, for each detected face we will blur it using [face_blur](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes/face_blur) example custom node.
+This document demonstrates how to create pipelines using object detection models from OpenVINO Model Zoo in order to blur the image. As an example, we will use [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/face-detection-retail-0004/README.md) to detect multiple faces on the image. Then, for each detected face we will blur it using [face_blur](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes/face_blur) example custom node.
 
 ## Pipeline Configuration Graph
 
@@ -16,7 +16,7 @@ It include the following Nodes:
 ## Prepare workspace to run the demo
 
 To successfully delpoy face blur pipeline you need to have a workspace that contains:
-- [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2021.4/models/intel/face-detection-retail-0004/README.md)
+- [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/face-detection-retail-0004/README.md)
 - Custom node for image blurring
 - Configuration file
 

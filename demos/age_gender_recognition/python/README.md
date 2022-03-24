@@ -18,7 +18,7 @@ docker run --rm -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/age_gender -p 90
 ## Download Sample Image
 Download sample image using the command :
 ```Bash
-wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/2021.4/models/intel/age-gender-recognition-retail-0013/assets/age-gender-recognition-retail-0001.jpg
+wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/2022.1.0/models/intel/age-gender-recognition-retail-0013/assets/age-gender-recognition-retail-0001.jpg
 ```
 
 #### Requesting the Service

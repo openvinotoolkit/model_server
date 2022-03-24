@@ -62,7 +62,7 @@ python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 -
 > **NOTE**: Video source is cropped to 704x704 resolution to match model input size.
 
 ## Recognize Detected Text with OCR Pipeline
-Optical Character Recognition (OCR) pipeline based on [horizontal text detection](https://docs.openvino.ai/latest/omz_models_model_horizontal_text_detection_0001.html) model, [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/text-recognition-0014) 
+Optical Character Recognition (OCR) pipeline based on [horizontal text detection](https://docs.openvino.ai/latest/omz_models_model_horizontal_text_detection_0001.html) model, [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014) 
 combined with a custom node implementation can be used with the same python script used before. OCR pipeline provides location of detected text boxes on the image and additionaly recognized text for each box.
 
 ![horizontal text detection using OCR pipeline](horizontal-text-detection-ocr.gif)
@@ -70,7 +70,7 @@ combined with a custom node implementation can be used with the same python scri
 ### Prepare workspace to run the demo
 
 To successfully deploy OCR pipeline you need to have a workspace that contains:
-- [horizontal text detection](https://docs.openvino.ai/latest/omz_models_model_horizontal_text_detection_0001.html) and [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/text-recognition-0014) models
+- [horizontal text detection](https://docs.openvino.ai/latest/omz_models_model_horizontal_text_detection_0001.html) and [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014) models
 - Custom node for image processing
 - Configuration file
 
