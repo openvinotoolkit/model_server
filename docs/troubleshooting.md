@@ -99,7 +99,7 @@ HTTP_proxy
 - During that time no logs will be captured by OVMS. Currently, there is no option to change the timeout duration for GCS.
 
 ## Cannot compile model into target device: `can't protect` in server logs <a name="load-network-issue"></a>
-- Since this is known bug, please refer OpenVINO&trade; [release notes](https://software.intel.com/content/www/us/en/develop/articles/openvino-relnotes.html).
+- Since this is known bug, please refer OpenVINO&trade; [release notes](https://software.intel.com/content/www/us/en/main/articles/openvino-relnotes.html).
 
 ## Model Cache Issues <a name="model-cache"></a>
 

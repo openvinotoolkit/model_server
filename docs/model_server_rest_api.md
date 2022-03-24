@@ -62,7 +62,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1
   ]
 }
 ```
-Read more about [Get Model Status API usage](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/README.md#model-status-api-1)
+Read more about [Get Model Status API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#model-status-api-1)
 
 ## Model Metadata API <a name="model-metadata"></a>
 **Description**
@@ -145,7 +145,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1/metadata
 }
 ```
 
-Read more about [Get Model Metadata API usage](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/README.md#model-metadata-api-1)
+Read more about [Get Model Metadata API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#model-metadata-api-1)
 
 ## Predict API <a name="predict"></a>
 **Description**
@@ -207,7 +207,7 @@ Besides numerical values, it is possible to pass binary inputs. They must be Bas
 
 Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
 
-Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/README.md#predict-api-1)
+Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#predict-api-1)
 
 ## Config Reload API <a name="config-reload"></a>
 **Description**

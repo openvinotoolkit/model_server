@@ -22,7 +22,7 @@ Gets information about the status of served models including Model Version
 
  [Get Model Status proto](https://github.com/tensorflow/serving/blob/master/tensorflow_serving/apis/get_model_status.proto) defines three message definitions used while calling Status endpoint: *GetModelStatusRequest*, *ModelVersionStatus*, *GetModelStatusResponse* that are used to report all exposed versions including their state in their lifecycle.
 
- Read more about [Get Model Status API usage](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/README.md#model-status-api).
+ Read more about [Get Model Status API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#model-status-api).
 
 
 ## Model Metadata API <a name="model-metadata"></a>
@@ -31,7 +31,7 @@ Gets information about the served models. A function called GetModelMetadata acc
  
 [Get Model Metadata proto](https://github.com/tensorflow/serving/blob/master/tensorflow_serving/apis/get_model_metadata.proto) has three message definitions: *SignatureDefMap*, *GetModelMetadataRequest*, *GetModelMetadataResponse*. 
 
-Read more about [Get Model Metadata API usage](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/README.md#model-metadata-api).     
+Read more about [Get Model Metadata API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#model-metadata-api).     
 
 
 ## Predict API <a name="predict"></a>
@@ -44,14 +44,14 @@ Endpoint for running an inference with loaded models or [DAGs](./demultiplexing.
  * *PredictResponse* includes a map of outputs serialized by 
 [TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) and information about the used model spec.
 
-Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/README.md#predict-api)
+Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#predict-api)
 
 Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
 
 
 ## See Also
 
-- [Example client code](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/README.md) shows how to use GRPC API and REST API.
+- [Example client code](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md) shows how to use GRPC API and REST API.
 - [TensorFlow Serving](https://github.com/tensorflow/serving)
 - [gRPC](https://grpc.io/)
 

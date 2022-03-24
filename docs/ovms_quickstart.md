@@ -81,7 +81,7 @@ For more information on the folder structure and how to deploy more than one mod
 Model scripts are available to provide an easy way to access Model Server. Here is an example command, using face detection and curl, to download all necessary components:
 
 ```
-curl --fail https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/common/python/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/face_detection/python/face_detection.py -o face_detection.py https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/common/python/requirements.txt -o client_requirements.txt
+curl --fail https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/face_detection/python/face_detection.py -o face_detection.py https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/requirements.txt -o client_requirements.txt
 ```
 
 For more information, check these links:
@@ -93,7 +93,7 @@ For more information, check these links:
 
 Provide inference data by putting the files in a separate folder, as inference will be performed on all files contained in it.
 
-In this case, you can download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/develop/demos/common/static/images/people). This example uses a file named [people1.jpeg](https://github.com/openvinotoolkit/model_server/tree/develop/demos/common/static/images/people/people1.jpeg) 
+In this case, you can download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/main/demos/common/static/images/people). This example uses a file named [people1.jpeg](https://github.com/openvinotoolkit/model_server/tree/main/demos/common/static/images/people/people1.jpeg) 
 and use a single people1.jpeg file to run the following script:
 
 ```
