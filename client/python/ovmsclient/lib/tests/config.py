@@ -232,115 +232,53 @@ TLS_CONFIG_INVALID = [
 
 ]
 
-# (url, method_call_count_dict= {"method_name": CallCount.NumberOfCalls})
+# (url)
 URL_VALID = [
-    (
-        "localhost:9000",
-        {
-            "_check_address": CallCount.ONE,
-            "_check_port": CallCount.ONE
-        }
-    ),
-    (
-        "19.117.63.126:1",
-        {
-            "_check_address": CallCount.ONE,
-            "_check_port": CallCount.ONE
-        }
-    ),
-    (
-        f"cluster.cloud.iotg.intel.com:{2**16-1}",
-        {
-            "_check_address": CallCount.ONE,
-            "_check_port": CallCount.ONE
-        }
-    )
+    "localhost",
+    "localhost:9000",
+    "my_address.com",
+    "service_name.some-text.domain123",
+    "service_name.some-text.domain123:1",
+    "service_name.domain123:1000000001",
+    "asl;kdl;asjdasjflknclka",
+    "?hello-there!"
+    "12.34.56.78.910.1112"
+    "19.117.63.126:1",
+    f"cluster.cloud.iotg.intel.com:{2**16-1}",
 ]
 
 # (url,
-# method_call_count_dict= {"method_name": (CallCount.NumberOfCalls, error_raised)},
 # expected_exception, expected_message
 URL_INVALID = [
     (
-        "localhost",
-        {
-            "_check_address": (CallCount.ZERO, None),
-            "_check_port": (CallCount.ZERO, None)
-        },
-        ValueError, 'url must be a string in format <address>:<port>'
+        None,
+        TypeError, "url must be a string"
     ),
 
     (
-        9000,
-        {
-            "_check_address": (CallCount.ZERO, None),
-            "_check_port": (CallCount.ZERO, None)
-        },
-        TypeError, 'url must be a string in format <address>:<port>',
+        0,
+        TypeError, "url must be a string"
     ),
 
     (
-        "address:9000",
-        {
-            "_check_address": (CallCount.ONE, ValueError('address is not valid')),
-            "_check_port": (CallCount.ZERO, None)
-        },
-        ValueError, 'address is not valid'
+        -20,
+        TypeError, "url must be a string"
     ),
 
     (
-        "localhost:string",
-        {
-            "_check_address": (CallCount.ONE, None),
-            "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
-        },
-        TypeError, 'port should be of type int'
+        1.32,
+        TypeError, "url must be a string"
     ),
 
     (
-        "localhost:9000:9001",
-        {
-            "_check_address": (CallCount.ONE, None),
-            "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
-        },
-        TypeError, 'port should be of type int'
+        [5, 4, 3],
+        TypeError, "url must be a string"
     ),
 
     (
-        "localhost:[9000]",
-        {
-            "_check_address": (CallCount.ONE, None),
-            "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
-        },
-        TypeError, 'port should be of type int'
+        {"key": "val"},
+        TypeError, "url must be a string"
     ),
-
-    (
-        "localhost:9000abc",
-        {
-            "_check_address": (CallCount.ONE, None),
-            "_check_port": (CallCount.ONE, TypeError('port should be of type int'))
-        },
-        TypeError, 'port should be of type int'
-    ),
-
-    (
-        f"localhost:{2**16}",
-        {
-            "_check_address": (CallCount.ONE, None),
-            "_check_port": (CallCount.ONE, ValueError(f"port should be in range <0, {2**16-1}>"))
-        },
-        ValueError, f"port should be in range <0, {2**16-1}>"
-    ),
-
-    (
-        "localhost:-1",
-        {
-            "_check_address": (CallCount.ONE, None),
-            "_check_port": (CallCount.ONE, ValueError(f"port should be in range <0, {2**16-1}>"))
-        },
-        ValueError, f"port should be in range <0, {2**16-1}>"
-    )
 ]
 
 # (server_cert_path, client_cert_path, client_key_path,

@@ -161,13 +161,13 @@ BUILD_VALID = [
         "url": f"cluster.cloud.iotg.intel.com:{2**16-1}",
     }, {"_check_url": CallCount.ONE, "_check_tls_config": CallCount.ZERO}, None, None),
     ({
-        "url": "localhost:9000",
+        "url": "localhost:-90001111111111",
         "tls_config": {
             "server_cert_path": PATH_VALID
         }
     }, {"_check_url": CallCount.ONE, "_check_tls_config": CallCount.ONE}, None, (PATH_VALID,)),
     ({
-        "url": "localhost:9000",
+        "url": "some.random.strings.in.the.domain.1234:9000",
         "tls_config": {
             "client_key_path": PATH_VALID,
             "client_cert_path": PATH_VALID,
@@ -183,14 +183,13 @@ BUILD_VALID = [
 BUILD_INVALID_CONFIG = [
     (
         {
-            "url": "localhost"
+            "url": None
         },
         {
-            "_check_url": (CallCount.ONE, ValueError("url must be a string in format "
-                                                     "<address>:<port>")),
+            "_check_url": (CallCount.ONE, TypeError("url must be a string")),
             "_check_tls_config": (CallCount.ZERO, None),
         },
-        ValueError, "url must be a string in format <address>:<port>"
+        TypeError, "url must be a string"
     ),
 
     (
@@ -198,44 +197,43 @@ BUILD_INVALID_CONFIG = [
             "url": 123
         },
         {
-            "_check_url": (CallCount.ONE, TypeError("url must be a string in format "
-                                                    "<address>:<port>")),
+            "_check_url": (CallCount.ONE, TypeError("url must be a string")),
             "_check_tls_config": (CallCount.ZERO, None),
         },
-        TypeError, "url must be a string in format <address>:<port>"
+        TypeError, "url must be a string"
     ),
 
     (
         {
-            "url": "address:9000",
+            "url": ["address:9000"],
         },
         {
-            "_check_url": (CallCount.ONE, ValueError("address is not valid")),
+            "_check_url": (CallCount.ONE, TypeError("url must be a string")),
             "_check_tls_config": (CallCount.ZERO, None),
         },
-        ValueError, "address is not valid"
+        TypeError, "url must be a string"
     ),
 
     (
         {
-            "url": "localhost:port"
+            "url": -3.14
         },
         {
-            "_check_url": (CallCount.ONE, TypeError("port should be of type int")),
+            "_check_url": (CallCount.ONE, TypeError("url must be a string")),
             "_check_tls_config": (CallCount.ZERO, None),
         },
-        TypeError, "port should be of type int"
+        TypeError, "url must be a string"
     ),
 
     (
         {
-            "url": f"localhost:{2**16}"
+            "url": {"key": 300000000000000000000000000}
         },
         {
-            "_check_url": (CallCount.ONE, ValueError(f"port should be in range <0, {2**16-1}>")),
+            "_check_url": (CallCount.ONE, TypeError("url must be a string")),
             "_check_tls_config": (CallCount.ZERO, None),
         },
-        ValueError, f"port should be in range <0, {2**16-1}>"
+        TypeError, "url must be a string"
     ),
 
     (
@@ -381,7 +379,7 @@ PREDICT_REQUEST_INVALID_REQUEST_TYPE = [
      'but is str')
 ]
 
-# ((response_output, http_error_code), raised_exception, error_message)
+# ((response_output, http_error_code), {method: (raised_exception, error_message)})
 COMMON_RESPONSE_ERROR = [
     (
         (
@@ -392,8 +390,14 @@ COMMON_RESPONSE_ERROR = [
             """,
             HTTPStatus.NOT_FOUND
         ),
-        ModelNotFoundError,
-        "Error occurred during handling the request: Model with requested name is not found"
+        {
+            "response_to_dict_error": (ModelNotFoundError,
+                                       "Error occurred during handling the request: "
+                                       "Model with requested name is not found"),
+            "service_call_error": (ModelNotFoundError,
+                                   "Error occurred during handling the request: "
+                                   "Model with requested name is not found")
+        }
     ),
     (
         (
@@ -404,12 +408,52 @@ COMMON_RESPONSE_ERROR = [
             """,
             HTTPStatus.NOT_FOUND
         ),
-        ModelNotFoundError,
-        "Error occurred during handling the request: Model with requested version is not found"
+        {
+            "response_to_dict_error": (ModelNotFoundError,
+                                       "Error occurred during handling the request: "
+                                       "Model with requested version is not found"),
+            "service_call_error": (ModelNotFoundError,
+                                   "Error occurred during handling the request: "
+                                   "Model with requested version is not found")
+        }
+    ),
+
+    (
+        (
+            """
+            <h1>503 SERVICE UNAVAILABLE</h1>
+            """,
+            HTTPStatus.SERVICE_UNAVAILABLE
+        ),
+        {
+            "response_to_dict_error": (JSONDecodeError,
+                                       ""),
+            "service_call_error": (ConnectionError,
+                                   "Error occurred during handling the request: "
+                                   f"{HTTPStatus.SERVICE_UNAVAILABLE.value} "
+                                   f"{HTTPStatus.SERVICE_UNAVAILABLE.phrase}")
+        }
+    ),
+
+    (
+        (
+            """
+            <h1>413 REQUEST ENTITY TOO LARGE</h1>
+            """,
+            HTTPStatus.REQUEST_ENTITY_TOO_LARGE
+        ),
+        {
+            "response_to_dict_error": (JSONDecodeError,
+                                       ""),
+            "service_call_error": (ConnectionError,
+                                   "Error occurred during handling the request: "
+                                   f"{HTTPStatus.REQUEST_ENTITY_TOO_LARGE.value} "
+                                   f"{HTTPStatus.REQUEST_ENTITY_TOO_LARGE.phrase}")
+        }
     ),
 ]
 
-# (response_outputs_dict, expected_outputs_dict)
+# ((response_output, http_error_code), expected_outputs_dict)
 RESPONSE_VALID_OTHER = [
     (
         ("""
@@ -459,7 +503,7 @@ RESPONSE_VALID_OTHER = [
     ),
 ]
 
-# (response_outputs_dict, expected_outputs_dict)
+# ((response_output, http_error_code), expected_outputs_dict)
 PREDICT_RESPONSE_VALID_OUTPUTS = [
     (
         ("""
@@ -485,7 +529,7 @@ PREDICT_RESPONSE_VALID_OUTPUTS = [
     )
 ]
 
-# (response_outputs_dict, expected_error_type)
+# ((response_output, http_error_code), expected_error_type)
 PREDICT_RESPONSE_MALFROMED_RESPONSE = [
     (
         # Missing "error" or "outputs" key, malformed output
@@ -504,7 +548,7 @@ PREDICT_RESPONSE_MALFROMED_RESPONSE = [
     ),
 ]
 
-# ((response_output, http_error_code), raised_exception, error_message)
+# ((response_output, http_error_code), {method: (raised_exception, error_message)})
 PREDICT_RESPONSE_ERROR = COMMON_RESPONSE_ERROR + [
     (
         (
@@ -515,8 +559,14 @@ PREDICT_RESPONSE_ERROR = COMMON_RESPONSE_ERROR + [
             """,
             HTTPStatus.BAD_REQUEST
         ),
-        InvalidInputError, "Error occurred during handling the request: "
-                           "Invalid input precision - Expected: FP32; Actual: I64"
+        {
+            "response_to_dict_error": (InvalidInputError,
+                                       "Error occurred during handling the request: "
+                                       "Invalid input precision - Expected: FP32; Actual: I64"),
+            "service_call_error": (InvalidInputError,
+                                   "Error occurred during handling the request: "
+                                   "Invalid input precision - Expected: FP32; Actual: I64")
+        }
     ),
     (
         (
@@ -527,8 +577,14 @@ PREDICT_RESPONSE_ERROR = COMMON_RESPONSE_ERROR + [
             """,
             HTTPStatus.BAD_REQUEST
         ),
-        InvalidInputError, "Error occurred during handling the request: "
-                           "Invalid number of inputs - Expected: 1; Actual: 0"
+        {
+            "response_to_dict_error": (InvalidInputError,
+                                       "Error occurred during handling the request: "
+                                       "Invalid number of inputs - Expected: 1; Actual: 0"),
+            "service_call_error": (InvalidInputError,
+                                   "Error occurred during handling the request: "
+                                   "Invalid number of inputs - Expected: 1; Actual: 0")
+        }
     ),
     (
         (
@@ -539,8 +595,14 @@ PREDICT_RESPONSE_ERROR = COMMON_RESPONSE_ERROR + [
             """,
             HTTPStatus.BAD_REQUEST
         ),
-        InvalidInputError, "Error occurred during handling the request: "
-                           "Missing input with specific name - Required input: 0"
+        {
+            "response_to_dict_error": (InvalidInputError,
+                                       "Error occurred during handling the request: "
+                                       "Missing input with specific name - Required input: 0"),
+            "service_call_error": (InvalidInputError,
+                                   "Error occurred during handling the request: "
+                                   "Missing input with specific name - Required input: 0")
+        }
     ),
     (
         (
@@ -551,13 +613,20 @@ PREDICT_RESPONSE_ERROR = COMMON_RESPONSE_ERROR + [
             """,
             HTTPStatus.BAD_REQUEST
         ),
-        InvalidInputError, "Error occurred during handling the request: "
-                           "Invalid number of shape dimensions - "
-                           "Expected: (1,300); Actual: (3)"
+        {
+            "response_to_dict_error": (InvalidInputError,
+                                       "Error occurred during handling the request: "
+                                       "Invalid number of shape dimensions - "
+                                       "Expected: (1,300); Actual: (3)"),
+            "service_call_error": (InvalidInputError,
+                                   "Error occurred during handling the request: "
+                                   "Invalid number of shape dimensions - "
+                                   "Expected: (1,300); Actual: (3)")
+        }
     ),
 ]
 
-# (response_outputs_dict, expected_outputs_dict)
+# ((response_output, http_error_code), expected_outputs_dict)
 METADATA_RESPONSE_VALID_OUTPUTS = [
     (
         ("""
@@ -746,7 +815,7 @@ METADATA_RESPONSE_VALID_OUTPUTS = [
     )
 ]
 
-# (response_outputs_dict, expected_error_type)
+# ((response_output, http_error_code), expected_error_type)
 METADATA_RESPONSE_MALFROMED_RESPONSE = [
     (
         # Missing "modelSpec" key, malformed output
@@ -864,7 +933,7 @@ METADATA_RESPONSE_MALFROMED_RESPONSE = [
     ),
 ]
 
-# (response_outputs_dict, expected_outputs_dict)
+# ((response_output, http_error_code), expected_outputs_dict)
 STATUS_RESPONSE_VALID_OUTPUTS = [
     (
         ("""
@@ -940,7 +1009,7 @@ STATUS_RESPONSE_VALID_OUTPUTS = [
     ),
 ]
 
-# (response_outputs_dict, expected_error_type)
+# ((response_output, http_error_code), expected_error_type)
 STATUS_RESPONSE_MALFROMED_RESPONSE = [
     (
         # Missing "state" key, malformed output

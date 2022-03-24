@@ -15,7 +15,6 @@
 #
 
 import os
-from validators import ipv4, domain
 from abc import ABC, abstractmethod
 
 
@@ -141,31 +140,9 @@ class ServingClient(ABC):
             return key
 
     @classmethod
-    def _check_address(cls, address):
-        if address != "localhost" and not ipv4(address) and not domain(address):
-            raise ValueError('address is not valid')
-
-    @classmethod
-    def _check_port(cls, port):
-        try:
-            port = int(port)
-        except Exception:
-            raise TypeError('port should be of type int')
-
-        if port.bit_length() > 16 or port < 0:
-            raise ValueError(f'port should be in range <0, {2**16-1}>')
-
-    @classmethod
     def _check_url(cls, url):
-        if isinstance(url, str):
-            try:
-                [address, port] = url.split(":", 1)
-            except ValueError:
-                raise ValueError("url must be a string in format <address>:<port>")
-        else:
-            raise TypeError("url must be a string in format <address>:<port>")
-        cls._check_address(address)
-        cls._check_port(port)
+        if not isinstance(url, str):
+            raise TypeError("url must be a string")
 
     @classmethod
     def _check_tls_config(cls, tls_config):
