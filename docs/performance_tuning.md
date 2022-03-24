@@ -36,7 +36,7 @@ To enable Performance Hints for your application, use the following command:
 
 #### LATENCY
 This mode prioritizes low latency, providing short response time for each inference job. It performs best for tasks where inference is required for a single input image, like a medical analysis of an ultrasound scan image. It also fits the tasks of real-time or nearly real-time applications, such as an industrial robot's response to actions in its environment or obstacle avoidance for autonomous vehicles.
-Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://docs.openvino.ai/nightly/openvino_docs_IE_DG_supported_plugins_AUTO.html#performance-hints).
+Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://docs.openvino.ai/2022.1/openvino_docs_IE_DG_supported_plugins_AUTO.html#performance-hints).
 
 To enable Performance Hints for your application, use the following command:
 @sphinxdirective
@@ -128,7 +128,7 @@ docker run --rm -d --cpuset-cpus 0,1,2,3 -v <model_path>:/opt/model -p 9001:9001
 ```
 
 ## CPU Power Management Settings
-To save power, the OS can decrease the CPU frequency and increase a volatility of the latency values. Similarly the Intel® Turbo Boost Technology may also affect the stability of results. For best reproducibility, consider locking the frequency to the processor base frequency (refer to the https://ark.intel.com/ for your specific CPU). For example, in Linux setting the relevant values for the /sys/devices/system/cpu/cpu* entries does the trick. [Read more](https://docs.openvino.ai/nightly/openvino_docs_optimization_guide_dldt_optimization_guide.html). High-level commands like cpupower also exists:
+To save power, the OS can decrease the CPU frequency and increase a volatility of the latency values. Similarly the Intel® Turbo Boost Technology may also affect the stability of results. For best reproducibility, consider locking the frequency to the processor base frequency (refer to the https://ark.intel.com/ for your specific CPU). For example, in Linux setting the relevant values for the /sys/devices/system/cpu/cpu* entries does the trick. [Read more](https://docs.openvino.ai/2022.1/openvino_docs_optimization_guide_dldt_optimization_guide.html). High-level commands like cpupower also exists:
 ```
 $ cpupower frequency-set --min 3.1GHz
 ```
@@ -153,7 +153,7 @@ The default value is 1 second which ensures prompt response to creating new mode
 
 Depending on the device employed to run the inference operation, you can tune the execution behavior with a set of parameters. Each device is handled by its OpenVINO plugin.
 
-> **NOTE**: For additional information, read [supported configuration parameters for all plugins](https://docs.openvino.ai/nightly/namespaceInferenceEngine_1_1PluginConfigParams.html).
+> **NOTE**: For additional information, read [supported configuration parameters for all plugins](https://docs.openvino.ai/2022.1/namespaceInferenceEngine_1_1PluginConfigParams.html?#detailed-documentation).
 
 Model's plugin configuration is a dictionary of param:value pairs passed to OpenVINO Plugin on network load. It can be set with `plugin_config` parameter. 
 
