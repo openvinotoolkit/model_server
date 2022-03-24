@@ -17,10 +17,8 @@ WARNING: Review the NGINX configuration settings and adjust them according to yo
 WARNING: Please follow [security considerations for containers](../../docs/docker_container.md#sec).
 
 
-<p align="center">
-  <img width="441" height="231" src="assets/nginx.png">
-</p>
-Architecture of OVMS with NGINX
+![Architecture of OVMS with NGINX](nginx.png)
+
 
 ## Quick Start
 
