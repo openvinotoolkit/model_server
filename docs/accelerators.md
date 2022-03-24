@@ -4,7 +4,7 @@
 ## Starting the server with the Intel® Neural Compute Stick 2
 
 [Intel Movidius Neural Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick) can be employed by OVMS OpenVINO Model Server via 
-[the MYRIAD plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_MYRIAD.html). It must be visible and accessible on the host machine.
+[the MYRIAD plugin](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_supported_plugins_MYRIAD.html). It must be visible and accessible on the host machine.
 
 NCS devices should be reported by the `lsusb` command, printing out `ID 03e7:2485`.
 
@@ -27,7 +27,7 @@ To start the server with Neural Compute Stick use either of the two options:
 
 To run a container that is using the HDDL accelerator, _hddldaemon_ must be running on the host machine. 
 You must set up the environment (the OpenVINO package must be pre-installed) and start _hddldaemon_ on the host before starting a container. 
-Refer to the steps from [OpenVINO installation guides](https://docs.openvinotoolkit.org/2021.4/_docs_install_guides_installing_openvino_docker_linux.html#build_docker_image_for_intel_vision_accelerator_design_with_intel_movidius_vpus).
+Refer to the steps from [OpenVINO installation guides](https://docs.openvino.ai/2022.1/openvino_docs_install_guides_installing_openvino_docker_linux.html#running-the-image-on-intel-vision-accelerator-design-with-intel-movidius-vpus).
 
 An example of a command starting a server with HDDL:
 ```bash

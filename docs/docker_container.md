@@ -101,7 +101,7 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 
 If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
 With Multi-Device Plugin enabled, inference requests will be load balanced between multiple devices. 
-For more detailed information read [OpenVino's Multi-Device plugin documentation](https://docs.openvinotoolkit.org/2021.4/_docs_IE_DG_supported_plugins_MULTI.html).
+For more detailed information read [OpenVino's Multi-Device plugin documentation](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_Running_on_multiple_devices.html).
 
 In order to use this feature in OpenVino™ Model Server, following steps are required:
 
