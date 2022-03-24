@@ -96,7 +96,7 @@ Note that parameter `models_volume_claim` is mutually exclusive with `models_hos
 ## Assigning Resource Specs
 
 You can restrict assigned cluster resources to the OVMS container by setting the parameter `resources`.
-By default, there are no restrictions but that parameter could be used to reduce the CPU and memory allocation. Below is the snippet example from the [values.yaml](https://github.com/openvinotoolkit/model_server/blob/main/deploy/ovms/values.yaml) file:
+By default, there are no restrictions but that parameter could be used to reduce the CPU and memory allocation. Below is the snippet example from the [values.yaml](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/deploy/ovms/values.yaml) file:
 ```yaml
 resources:
   limits:
@@ -134,7 +134,7 @@ of the node IP address. `ClusterIP` would keep the OVMS service internal to the 
     
 ## Deploy OpenVINO Model Server with a Single Model
 
-Deploy Model Server using _helm_. Please include the required model name and model path. You can also adjust other parameters defined in [values.yaml](https://github.com/openvinotoolkit/model_server/tree/main/deploy/ovms/values.yaml).
+Deploy Model Server using _helm_. Please include the required model name and model path. You can also adjust other parameters defined in [values.yaml](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/deploy/ovms/values.yaml).
 ```shell script
 helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository
 ```
@@ -193,7 +193,7 @@ The service name deployed via the helm chart is defined by the application name.
 gets a suffix `-ovms`, in case the application name doesn't include `ovms` phrase. It avoids a risk of the service name
 conflicts with other application.
 
-Follow the [instructions](https://github.com/openvinotoolkit/model_server/tree/main/demos/image_classification/python) 
+Follow the [instructions](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/demos/image_classification/python) 
 to create an image classification client that can be used to perform inference with models being exposed by the server. For example:
 ```shell script
 $ python image_classification.py --grpc_port 8080 --grpc_address 1.2.3.4 --input_name 0 --output_name 1463
