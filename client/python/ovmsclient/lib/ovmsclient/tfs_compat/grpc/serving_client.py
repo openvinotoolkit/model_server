@@ -91,7 +91,6 @@ class GrpcClient(ServingClient):
 
     @classmethod
     def _build(cls, url, tls_config):
-
         ServingClient._check_url(url)
 
         # Setting 1 GB max message size.

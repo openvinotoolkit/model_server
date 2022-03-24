@@ -103,7 +103,8 @@ def test_get_model_status_valid(mocker, valid_http_serving_client_min,
 
 @pytest.mark.parametrize("source_error, raised_error", [
                          (requests.exceptions.ConnectionError, ConnectionError),
-                         (requests.exceptions.ReadTimeout, TimeoutError)
+                         (requests.exceptions.ReadTimeout, TimeoutError),
+                         (requests.exceptions.InvalidURL, ConnectionError)
                          ])
 def test_get_model_status_connection_error(mocker, valid_http_serving_client_min,
                                            source_error, raised_error):
@@ -131,10 +132,11 @@ def test_get_model_status_invalid_params(mocker, valid_http_serving_client_min,
     assert str(error.value) == error_message
 
 
-@pytest.mark.parametrize("response, expected_error, expected_message", COMMON_RESPONSE_ERROR)
+@pytest.mark.parametrize("response, expected_errors", COMMON_RESPONSE_ERROR)
 def test_get_model_status_server_error(mocker, valid_http_serving_client_min,
-                                       response, expected_error, expected_message):
+                                       response, expected_errors):
 
+    expected_error, expected_message = expected_errors["service_call_error"]
     raw_response = RawResponseMock(*response)
     valid_http_serving_client_min.session.get\
         = mocker.Mock(return_value=raw_response)
@@ -176,7 +178,8 @@ def test_get_model_metadata_valid(mocker, valid_http_serving_client_min,
 
 @pytest.mark.parametrize("source_error, raised_error", [
                          (requests.exceptions.ConnectionError, ConnectionError),
-                         (requests.exceptions.ReadTimeout, TimeoutError)
+                         (requests.exceptions.ReadTimeout, TimeoutError),
+                         (requests.exceptions.InvalidURL, ConnectionError)
                          ])
 def test_get_model_metadata_connection_error(mocker, valid_http_serving_client_min,
                                              source_error, raised_error):
@@ -204,10 +207,11 @@ def test_get_model_metadata_invalid_params(mocker, valid_http_serving_client_min
     assert str(error.value) == error_message
 
 
-@pytest.mark.parametrize("response, expected_error, expected_message", COMMON_RESPONSE_ERROR)
+@pytest.mark.parametrize("response, expected_errors", COMMON_RESPONSE_ERROR)
 def test_get_model_metadata_server_error(mocker, valid_http_serving_client_min,
-                                         response, expected_error, expected_message):
+                                         response, expected_errors):
 
+    expected_error, expected_message = expected_errors["service_call_error"]
     raw_response = RawResponseMock(*response)
     valid_http_serving_client_min.session.get\
         = mocker.Mock(return_value=raw_response)
@@ -252,7 +256,8 @@ def test_predict_valid(mocker, valid_http_serving_client_min, response, expected
 
 @pytest.mark.parametrize("source_error, raised_error", [
                          (requests.exceptions.ConnectionError, ConnectionError),
-                         (requests.exceptions.ReadTimeout, TimeoutError)
+                         (requests.exceptions.ReadTimeout, TimeoutError),
+                         (requests.exceptions.InvalidURL, ConnectionError)
                          ])
 def test_predict_connection_error(mocker, valid_http_serving_client_min,
                                   source_error, raised_error):
@@ -281,10 +286,11 @@ def test_predict_invalid_params(mocker, valid_http_serving_client_min,
     assert str(error.value) == error_message
 
 
-@pytest.mark.parametrize("response, expected_error, expected_message", PREDICT_RESPONSE_ERROR)
+@pytest.mark.parametrize("response, expected_errors", PREDICT_RESPONSE_ERROR)
 def test_predict_server_error(mocker, valid_http_serving_client_min,
-                              response, expected_error, expected_message):
+                              response, expected_errors):
 
+    expected_error, expected_message = expected_errors["service_call_error"]
     raw_response = RawResponseMock(*response)
     valid_http_serving_client_min.session.post\
         = mocker.Mock(return_value=raw_response)
