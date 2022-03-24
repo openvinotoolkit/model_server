@@ -36,15 +36,7 @@ enum class ModelVersionState : int {
     END = 50
 };
 
-inline const std::string& ModelVersionStateToString(ModelVersionState state) {
-    static const std::unordered_map<ModelVersionState, std::string> errors = {
-        {ModelVersionState::START, "START"},
-        {ModelVersionState::LOADING, "LOADING"},
-        {ModelVersionState::AVAILABLE, "AVAILABLE"},
-        {ModelVersionState::UNLOADING, "UNLOADING"},
-        {ModelVersionState::END, "END"}};
-    return errors.at(state);
-}
+const std::string& ModelVersionStateToString(ModelVersionState state);
 
 enum class ModelVersionStatusErrorCode : int {
     OK = 0,
@@ -68,13 +60,7 @@ enum class ModelVersionStatusErrorCode : int {
     //    = 20
 };
 
-inline const std::string& ModelVersionStatusErrorCodeToString(ModelVersionStatusErrorCode code) {
-    static const std::unordered_map<ModelVersionStatusErrorCode, std::string> errors = {
-        {ModelVersionStatusErrorCode::OK, "OK"},
-        {ModelVersionStatusErrorCode::UNKNOWN, "UNKNOWN"},
-        {ModelVersionStatusErrorCode::FAILED_PRECONDITION, "FAILED_PRECONDITION"}};
-    return errors.at(code);
-}
+const std::string& ModelVersionStatusErrorCodeToString(ModelVersionStatusErrorCode code);
 
 class ModelVersionStatus {
     std::string modelName;
@@ -83,81 +69,36 @@ class ModelVersionStatus {
     ModelVersionStatusErrorCode errorCode;
 
 public:
-    ModelVersionStatus() = default;
+    ModelVersionStatus() = delete;
 
-    ModelVersionStatus(const std::string& model_name, model_version_t version, ModelVersionState state = ModelVersionState::START) :
-        modelName(model_name),
-        version(version),
-        state(state),
-        errorCode(ModelVersionStatusErrorCode::OK) {
-        logStatus();
-    }
+    ModelVersionStatus(const std::string& model_name, model_version_t version, ModelVersionState state = ModelVersionState::START);
 
-    ModelVersionState getState() const {
-        return this->state;
-    }
+    ModelVersionState getState() const;
 
-    const std::string& getStateString() const {
-        return ModelVersionStateToString(this->state);
-    }
+    const std::string& getStateString() const;
 
-    ModelVersionStatusErrorCode getErrorCode() const {
-        return this->errorCode;
-    }
+    ModelVersionStatusErrorCode getErrorCode() const;
 
-    const std::string& getErrorMsg() const {
-        return ModelVersionStatusErrorCodeToString(this->errorCode);
-    }
+    const std::string& getErrorMsg() const;
 
     /**
      * @brief Check if current state is state that is either transforming to END or already in that state.
      *
      * @return
      */
-    bool willEndUnloaded() const {
-        return ovms::ModelVersionState::UNLOADING <= this->state;
-    }
+    bool willEndUnloaded() const;
 
-    bool isFailedLoading() const {
-        return this->state == ovms::ModelVersionState::LOADING && this->errorCode == ovms::ModelVersionStatusErrorCode::UNKNOWN;
-    }
+    bool isFailedLoading() const;
+    void setLoading(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK);
 
-    void setLoading(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK) {
-        SPDLOG_DEBUG("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
-        state = ModelVersionState::LOADING;
-        errorCode = error_code;
-        logStatus();
-    }
+    void setAvailable(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK);
 
-    void setAvailable(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK) {
-        SPDLOG_DEBUG("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
-        state = ModelVersionState::AVAILABLE;
-        errorCode = error_code;
-        logStatus();
-    }
+    void setUnloading(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK);
 
-    void setUnloading(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK) {
-        SPDLOG_DEBUG("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
-        state = ModelVersionState::UNLOADING;
-        errorCode = error_code;
-        logStatus();
-    }
-
-    void setEnd(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK) {
-        SPDLOG_DEBUG("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
-        state = ModelVersionState::END;
-        errorCode = error_code;
-        logStatus();
-    }
+    void setEnd(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK);
 
 private:
-    void logStatus() {
-        SPDLOG_INFO("STATUS CHANGE: Version {} of model {} status change. New status: ( \"state\": \"{}\", \"error_code\": \"{}\" )",
-            this->version,
-            this->modelName,
-            ModelVersionStateToString(state),
-            ModelVersionStatusErrorCodeToString(errorCode));
-    }
+    void logStatus();
 };
 
 }  // namespace ovms

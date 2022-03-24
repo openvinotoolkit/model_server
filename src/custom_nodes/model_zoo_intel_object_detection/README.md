@@ -30,7 +30,7 @@ make
 ```
 It will compile the library inside a docker container and save the results in `lib` folder.
 
-You can also select base OS between RH 8.4 (redhat), CentOS 7 (centos) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable.
+You can also select base OS between RH 8.4 (redhat) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable.
 ```
 make BASE_OS=redhat
 ```
@@ -68,3 +68,4 @@ Parameters can be defined in pipeline definition in OVMS configuration file. [Re
 | debug  | Defines if debug messages should be displayed | false | |
 | max_output_batch  | Prevents too big batches with incorrect confidence level. It can avoid exceeding RAM resources | 100 | |
 | filter_label_id  | For object detection models with multiple label IDs results, use this parameter to filter the ones with desired ID | | |
+| buffer_queue_size  | Defines the amount of preallocated buffers to allocate during library initialize | 24 | |

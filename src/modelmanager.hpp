@@ -23,14 +23,17 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include <openvino/openvino.hpp>
 #include <rapidjson/document.h>
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
 
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
+#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "customloaders.hpp"
 #include "filesystem.hpp"
 #include "global_sequences_viewer.hpp"
@@ -41,9 +44,12 @@
 namespace ovms {
 
 const uint32_t DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
+const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 
 class IVersionReader;
 class CustomNodeLibraryManager;
+struct FunctorSequenceCleaner;
+struct FunctorResourcesCleaner;
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
@@ -52,7 +58,9 @@ protected:
     /**
      * @brief A default constructor is private
      */
-    ModelManager();
+    ModelManager(const std::string& modelCacheDirectory = "");
+
+    void logPluginConfiguration();
 
     Status checkStatefulFlagChange(const std::string& modelName, bool configStatefulFlag);
 
@@ -63,11 +71,13 @@ protected:
      * 
      */
     std::map<std::string, std::shared_ptr<Model>> models;
-    std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::Core> ieCore;
 
     PipelineFactory pipelineFactory;
 
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
+
+    std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
 
     GlobalSequencesViewer globalSequencesViewer;
     uint32_t waitForModelLoadedTimeoutMs;
@@ -80,6 +90,7 @@ private:
 
     Status lastLoadConfigStatus = StatusCode::OK;
 
+    std::string getConfigFileMD5();
     Status cleanupModelTmpFiles(ModelConfig& config);
     Status reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t> versionsFailed);
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed);
@@ -100,6 +111,16 @@ private:
     void watcher(std::future<void> exitSignal);
 
     /**
+     * @brief Cleaner thread for sequence and resources cleanup
+     */
+    void cleanerRoutine(uint32_t resourcesCleanupIntervalSec, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal);
+
+    /**
+     * @brief Mutex for blocking concurrent add & remove of resources
+     */
+    std::shared_mutex resourcesMtx;
+
+    /**
      * @brief A JSON configuration filename
      */
     std::string configFilename;
@@ -110,9 +131,19 @@ private:
     std::thread monitor;
 
     /**
+     * @brief A thread object used for cleanup
+     */
+    std::thread cleanerThread;
+
+    /**
      * @brief An exit trigger to notify watcher thread to exit
      */
     std::promise<void> exitTrigger;
+
+    /**
+     * @brief An exit trigger to notify cleaner thread to exit
+     */
+    std::promise<void> cleanerExitTrigger;
 
     /**
      * @brief A current configurations of models
@@ -138,14 +169,24 @@ private:
     uint watcherIntervalSec = 1;
 
     /**
-     * Time interval between two consecutive sequence cleaner scans (in minutes)
+     * Time interval between two consecutive sequence cleanup scans (in minutes)
      */
-    uint32_t sequenceCleanerIntervalMinutes = 5;
+    uint32_t sequenceCleaupIntervalMinutes = 5;
 
     /**
-     * @brief Time of last config change
+     * Time interval between two consecutive resources cleanup scans (in seconds)
      */
-    timespec lastConfigChangeTime;
+    uint32_t resourcesCleanupIntervalSec = 1;
+
+    /**
+      * @brief last md5sum of configfile
+      */
+    std::string lastConfigFileMD5;
+
+    /**
+     * @brief Directory for OpenVINO to store cache files.
+     */
+    std::string modelCacheDirectory;
 
 public:
     /**
@@ -166,6 +207,21 @@ public:
      */
     uint getWatcherIntervalSec() {
         return watcherIntervalSec;
+    }
+
+    /**
+     *  @brief Gets the cleaner resources interval timestep in seconds
+     */
+    uint32_t getResourcesCleanupIntervalSec() {
+        return resourcesCleanupIntervalSec;
+    }
+
+    /**
+     *  @brief Adds new resource to watch by the cleaner thread
+     */
+    void addResourceToCleaner(std::shared_ptr<CNLIMWrapper> resource) {
+        std::unique_lock resourcesLock(resourcesMtx);
+        resources.emplace(resources.end(), std::move(resource));
     }
 
     /**
@@ -192,7 +248,10 @@ public:
         return models;
     }
 
-    void startSequenceCleaner();
+    /**
+     * @brief Starts monitoring cleanup as new thread
+     */
+    void startCleaner();
 
     const PipelineFactory& getPipelineFactory() const {
         return pipelineFactory;
@@ -357,6 +416,13 @@ public:
      * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions
      */
     Status updateConfigurationWithoutConfigFile();
+
+    /**
+     * @brief Cleaner thread procedure to cleanup resources that are not used
+     */
+    void cleanupResources();
 };
+
+void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal);
 
 }  // namespace ovms

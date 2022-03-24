@@ -24,20 +24,28 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PATH_INVALID, "The provided base path is invalid or doesn't exists"},
     {StatusCode::FILE_INVALID, "File not found or cannot open"},
     {StatusCode::CONFIG_FILE_INVALID, "Configuration file not found or cannot open"},
+    {StatusCode::FILESYSTEM_ERROR, "Error during filesystem operation"},
     {StatusCode::NOT_IMPLEMENTED, "Functionality not implemented"},
     {StatusCode::NO_MODEL_VERSION_AVAILABLE, "Not a single model version directory has valid numeric name"},
-    {StatusCode::NETWORK_NOT_LOADED, "Error while loading a network"},
+    {StatusCode::MODEL_NOT_LOADED, "Error while loading a model"},
     {StatusCode::JSON_INVALID, "The file is not valid json"},
+    {StatusCode::JSON_SERIALIZATION_ERROR, "Data serialization to json format failed"},
     {StatusCode::MODELINSTANCE_NOT_FOUND, "ModelInstance not found"},
     {StatusCode::SHAPE_WRONG_FORMAT, "The provided shape is in wrong format"},
     {StatusCode::LAYOUT_WRONG_FORMAT, "The provided layout is in wrong format"},
+    {StatusCode::DIM_WRONG_FORMAT, "The provided dimension is in wrong format"},
     {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, "Plugin config is in wrong format"},
     {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT, "Model version policy is in wrong format"},
     {StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY, "Model version policy contains unsupported key"},
+    {StatusCode::GRPC_CHANNEL_ARG_WRONG_FORMAT, "Grpc channel arguments passed in wrong format"},
+    {StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED, "Error during config file timestamp reading"},
     {StatusCode::RESHAPE_ERROR, "Model could not be reshaped with requested shape"},
+    {StatusCode::RESHAPE_REQUIRED, "Model needs to be reloaded with new shape"},
+    {StatusCode::BATCHSIZE_CHANGE_REQUIRED, "Model needs to be reloaded with new batchsize"},
+    {StatusCode::FORBIDDEN_MODEL_DYNAMIC_PARAMETER, "Value of provided parameter is forbidden"},
     {StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED, "Anonymous fixed shape is invalid for models with multiple inputs"},
     {StatusCode::ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED, "Anonymous fixed layout is invalid for models with multiple inputs"},
-    {StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE, "Cannot load network into target device"},
+    {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, "Cannot compile model into target device"},
     {StatusCode::MODEL_MISSING, "Model with requested name and/or version is not found"},
     {StatusCode::MODEL_CONFIG_INVALID, "Model config is invalid"},
     {StatusCode::MODEL_NAME_MISSING, "Model with requested name is not found"},
@@ -49,8 +57,8 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, "Pipeline is not loaded yet"},
     {StatusCode::MODEL_SPEC_MISSING, "model_spec missing in request"},
     {StatusCode::INVALID_SIGNATURE_DEF, "Invalid signature name"},
-    {StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK, "Shape from config not found in network"},
-    {StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK, "Layout from config not found in network"},
+    {StatusCode::CONFIG_SHAPE_IS_NOT_IN_MODEL, "Shape from config not found in model"},
+    {StatusCode::CONFIG_LAYOUT_IS_NOT_IN_MODEL, "Layout from config not found in model"},
     {StatusCode::CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME, "Shape from config has real name. Use mapped name instead"},
     {StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME, "Layout from config has real name. Use mapped name instead"},
     {StatusCode::INVALID_NIREQ, "Nireq parameter too high"},
@@ -58,8 +66,14 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET, "Node is not ready for execution"},
     {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL, "Dynamic shape and dynamic batch size are not supported for stateful models"},
     {StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL, "Stateful model cannot be subscribed to pipeline"},
+    {StatusCode::REQUESTED_MODEL_TYPE_CHANGE, "Model type cannot be changed after it is loaded"},
     {StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER, "Stateful model config parameter used for non stateful model"},
     {StatusCode::INVALID_MAX_SEQUENCE_NUMBER, "Sequence max number parameter too high"},
+    {StatusCode::CANNOT_CONVERT_FLAT_SHAPE, "Cannot convert flat shape to Shape object"},
+    {StatusCode::INVALID_BATCH_DIMENSION, "Invalid batch dimension in shape"},
+    {StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE, "Layout incompatible with given shape"},
+    {StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER, "allow_cache is set to true with custom loader usage"},
+    {StatusCode::UNKNOWN_ERROR, "Unknown error"},
 
     // Sequence management
     {StatusCode::SEQUENCE_MISSING, "Sequence with provided ID does not exist"},
@@ -75,6 +89,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, "Invalid number of inputs"},
     {StatusCode::INVALID_MISSING_INPUT, "Missing input with specific name"},
+    {StatusCode::INVALID_MISSING_OUTPUT, "Missing output with specific name"},
     {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, "Invalid number of shape dimensions"},
     {StatusCode::INVALID_BATCH_SIZE, "Invalid input batch size"},
     {StatusCode::INVALID_SHAPE, "Invalid input shape"},
@@ -93,13 +108,17 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     // Serialization
     {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, "Unsupported serialization precision"},
     {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR, "Internal serialization error"},
+    {StatusCode::OV_CLONE_TENSOR_ERROR, "Error during tensor clone"},
 
     // GetModelStatus
     {StatusCode::INTERNAL_ERROR, "Internal server error"},
 
     // Rest handler failure
+    {StatusCode::REST_NOT_FOUND, "Requested REST resource not found"},
+    {StatusCode::REST_COULD_NOT_PARSE_VERSION, "Could not parse model version in request"},
     {StatusCode::REST_INVALID_URL, "Invalid request URL"},
     {StatusCode::REST_UNSUPPORTED_METHOD, "Unsupported method"},
+    {StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE, "Request components type not recognized"},
 
     // Rest parser failure
     {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, "Request body should be JSON object"},
@@ -140,9 +159,9 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_MODEL_INPUT_CONNECTED_TO_MULTIPLE_DATA_SOURCES, "Pipeline definition has multiple connections to the same input of underlying model"},
     {StatusCode::PIPELINE_EXIT_USED_AS_NODE_DEPENDENCY, "Pipeline definition has response node used as dependency node"},
     {StatusCode::PIPELINE_NAME_OCCUPIED, "Pipeline has the same name as model"},
-    {StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE, "Batch size >= 2 is not allowed when demultiplexer node is used"},
-    {StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS, "Gathered blob shards dimensions are different"},
-    {StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY, "Wrong number of dimensions in a blob to be sharded"},
+    {StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY, "Pipeline refers to incorrect library"},
+    {StatusCode::PIPELINE_INCONSISTENT_SHARD_DIMENSIONS, "Gathered tensor shards dimensions are different"},
+    {StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY, "Wrong number of dimensions in a tensor to be sharded"},
     {StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY, "Wrong dimension size. Should match demultiply count"},
     {StatusCode::PIPELINE_TRIED_TO_SET_THE_SAME_INPUT_TWICE, "Tried to set the same input twice for node input handler"},
     {StatusCode::PIPELINE_TRIED_TO_SET_INPUT_SHARD_FOR_ORDINARY_INPUT_HANDLER, "Tried to set input with shard id > 0 for ordinary input handler"},
@@ -150,6 +169,9 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER, "Gather node refers to node that isn't demultiplexer"},
     {StatusCode::PIPELINE_NODE_GATHER_FROM_ENTRY_NODE, "Gathering from entry node is not allowed"},
     {StatusCode::PIPELINE_DEMULTIPLY_ENTRY_NODE, "Demultiplication at entry node is not allowed"},
+    {StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_TENSOR_SHARD_COUNT, "Demultiplication count does not match tensor first dimension"},
+    {StatusCode::PIPELINE_MANUAL_GATHERING_FROM_MULTIPLE_NODES_NOT_SUPPORTED, "Manual gathering from multiple nodes is not supported"},
+    {StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY, "Pipeline has not enough shape dimensions to demultiply"},
     {StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY, "Too large dynamic demultiplication requested."},
     {StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER, "Demultiplexer and gather nodes are not in LIFO order"},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, "Pipeline execution aborted due to no content from custom node"},
@@ -198,10 +220,31 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::CUSTOM_LOADER_INIT_FAILED, "Custom Loader LoadInit failed"},
     {StatusCode::CUSTOM_LOADER_ERROR, "Custom Loader Generic / Unknown Error"},
 
+    // Custom Node
+    {StatusCode::NODE_LIBRARY_ALREADY_LOADED, "Custom node library is already loaded"},
+    {StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN, "Custom node library failed to open"},
+    {StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM, "Custom node library failed to load symbol"},
+    {StatusCode::NODE_LIBRARY_MISSING, "Custom node library not found"},
+    {StatusCode::NODE_LIBRARY_MISSING_OUTPUT, "Custom node output is missing"},
+    {StatusCode::NODE_LIBRARY_EXECUTION_FAILED, "Custom node failed during execution"},
+    {StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED, "Custom node library has returned corrupted outputs handle"},
+    {StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT, "Custom node library has produced corrupted number of outputs"},
+    {StatusCode::NODE_LIBRARY_INVALID_PRECISION, "Custom node has produced tensor with unspecified precision"},
+    {StatusCode::NODE_LIBRARY_INVALID_SHAPE, "Custom node has produced tensor with not matching shape"},
+    {StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE, "Custom node output has invalid content size"},
+    {StatusCode::NODE_LIBRARY_METADATA_FAILED, "Custom node failed on metadata call"},
+    {StatusCode::NODE_LIBRARY_OUTPUT_MISSING_NAME, "Custom node output is missing name"},
+
     // Binary inputs
+    {StatusCode::IMAGE_PARSING_FAILED, "Image parsing failed"},
     {StatusCode::INVALID_NO_OF_CHANNELS, "Invalid number of channels in binary input"},
-    {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, "Binary input images for this pipeline are required to have the same resolution"},
+    {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, "Binary input images for this endpoint are required to have the same resolution"},
     {StatusCode::STRING_VAL_EMPTY, "String val is empty"},
+    {StatusCode::NODE_LIBRARY_INITIALIZE_FAILED, "Failure during custom node library initialization"},
+
+    // Model control API
+    {StatusCode::OK_NOT_RELOADED, "Config reload was not needed"},
+    {StatusCode::OK_RELOADED, "Config reload successful"},
 };
 
 const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusMap = {
@@ -210,7 +253,7 @@ const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusM
     {StatusCode::PATH_INVALID, grpc::StatusCode::INTERNAL},
     {StatusCode::FILE_INVALID, grpc::StatusCode::INTERNAL},
     {StatusCode::NO_MODEL_VERSION_AVAILABLE, grpc::StatusCode::INTERNAL},
-    {StatusCode::NETWORK_NOT_LOADED, grpc::StatusCode::INTERNAL},
+    {StatusCode::MODEL_NOT_LOADED, grpc::StatusCode::INTERNAL},
     {StatusCode::JSON_INVALID, grpc::StatusCode::INTERNAL},
     {StatusCode::MODELINSTANCE_NOT_FOUND, grpc::StatusCode::INTERNAL},
     {StatusCode::SHAPE_WRONG_FORMAT, grpc::StatusCode::INTERNAL},
@@ -229,7 +272,7 @@ const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusM
     {StatusCode::MODEL_SPEC_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_SIGNATURE_DEF, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, grpc::StatusCode::ABORTED},
-    {StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE, grpc::StatusCode::FAILED_PRECONDITION},
+    {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, grpc::StatusCode::FAILED_PRECONDITION},
 
     // Sequence management
     {StatusCode::SEQUENCE_MISSING, grpc::StatusCode::NOT_FOUND},
@@ -306,7 +349,7 @@ const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::htt
     {StatusCode::PATH_INVALID, net_http::HTTPStatusCode::ERROR},
     {StatusCode::FILE_INVALID, net_http::HTTPStatusCode::ERROR},
     {StatusCode::NO_MODEL_VERSION_AVAILABLE, net_http::HTTPStatusCode::ERROR},
-    {StatusCode::NETWORK_NOT_LOADED, net_http::HTTPStatusCode::ERROR},
+    {StatusCode::MODEL_NOT_LOADED, net_http::HTTPStatusCode::ERROR},
     {StatusCode::JSON_INVALID, net_http::HTTPStatusCode::PRECOND_FAILED},
     {StatusCode::MODELINSTANCE_NOT_FOUND, net_http::HTTPStatusCode::ERROR},
     {StatusCode::SHAPE_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
@@ -325,7 +368,7 @@ const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::htt
     {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, net_http::HTTPStatusCode::NO_CONTENT},
-    {StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE, net_http::HTTPStatusCode::PRECOND_FAILED},
+    {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, net_http::HTTPStatusCode::PRECOND_FAILED},
 
     // Sequence management
     {StatusCode::SEQUENCE_MISSING, net_http::HTTPStatusCode::NOT_FOUND},

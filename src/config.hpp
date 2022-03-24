@@ -349,12 +349,33 @@ public:
     }
 
     /**
-     * @brief Get the sequence cleaner poll wait time in minutes
+     * @brief Get the sequence cleanup poll wait time in minutes
      * 
-     * @return uint 
+     * @return uint32_t
      */
     uint32_t sequenceCleanerPollWaitMinutes() {
         return result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
+    }
+
+    /**
+     * @brief Get the resources cleanup poll wait time in seconds
+     * 
+     * @return uint32_t
+     */
+    uint32_t resourcesCleanerPollWaitSeconds() {
+        return result->operator[]("custom_node_resources_cleaner_interval").as<uint32_t>();
+    }
+
+    /**
+         * @brief Model cache directory
+         * 
+         * @return const std::string& 
+         */
+    const std::string cacheDir() {
+        if (result != nullptr && result->count("cache_dir")) {
+            return result->operator[]("cache_dir").as<std::string>();
+        }
+        return "";
     }
 };
 }  // namespace ovms

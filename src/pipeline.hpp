@@ -47,7 +47,7 @@ public:
     EntryNode& getEntry() const { return this->entry; }
     ExitNode& getExit() const { return this->exit; }
 
-    static void connect(Node& from, Node& to, const Aliases& blobNamesMapping);
+    static void connect(Node& from, Node& to, const Aliases& tensorNamesMapping);
 
     Status execute();
     const std::string& getName() const {

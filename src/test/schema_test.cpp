@@ -1419,9 +1419,20 @@ TEST(SchemaTest, DemultiplexerConfigMatchingSchema) {
     EXPECT_EQ(result, ovms::StatusCode::OK);
 }
 
-TEST(SchemaTest, DemultiplexerConfigDemultiplyCountNegativeNotAllowed) {
+TEST(SchemaTest, DemultiplexerConfigDemultiplyNegativeOneAllowed) {
     const std::string demultiplyCountToReplace{"\"demultiply_count\": 10"};
     const std::string demultiplyCount{"\"demultiply_count\": -1"};
+    std::string config(demultiplexerConfig);
+    config.replace(config.find(demultiplyCountToReplace), demultiplyCountToReplace.size(), demultiplyCount);
+    rapidjson::Document demultiplexerConfigDemultiplyCountNegativeParsed;
+    demultiplexerConfigDemultiplyCountNegativeParsed.Parse(config.c_str());
+    auto result = ovms::validateJsonAgainstSchema(demultiplexerConfigDemultiplyCountNegativeParsed, ovms::MODELS_CONFIG_SCHEMA);
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, DemultiplexerConfigDemultiplyCountNegativeLowerThanNegativeOneNotAllowed) {
+    const std::string demultiplyCountToReplace{"\"demultiply_count\": 10"};
+    const std::string demultiplyCount{"\"demultiply_count\": -2"};
     std::string config(demultiplexerConfig);
     config.replace(config.find(demultiplyCountToReplace), demultiplyCountToReplace.size(), demultiplyCount);
     rapidjson::Document demultiplexerConfigDemultiplyCountNegativeParsed;

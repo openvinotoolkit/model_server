@@ -5,11 +5,11 @@ This guide shows how to configure a model to accept input data with different ba
 
 Enabling dynamic batch size via model reload is as simple as setting the `batch_size` parameter to `auto`. To configure and use the dynamic batch size, take advantage of:
 
-- An example client in Python [grpc_serving_client.py](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client/grpc_serving_client.py) that can be used to request inference with the desired batch size.
+- An example client in Python [grpc_predict_resnet.py](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/grpc_predict_resnet.py) that can be used to request inference with the desired batch size.
 
 - A sample [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/resnet50-binary-0001/README.md) model.
 
- When using the resnet model with `grpc_serving_client.py`, the script processes the output from the server and displays the inference results using the previously prepared file containing labels. Inside this file, each image has an assigned number, which indicates the correct classification result.  
+ When using the resnet model with `grpc_predict_resnet.py`, the script processes the output from the server and displays the inference results using the previously prepared file containing labels. Inside this file, each image has an assigned number, which indicates the correct classification result.  
 
 ## Steps
 Clone OpenVINO&trade; Model Server GitHub repository and enter `model_server` directory.
@@ -38,12 +38,12 @@ docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:l
 
 #### Run the Client
 ```Bash
-cd example_client
+cd client/python/tensorflow-serving-api/samples
 virtualenv .venv
 . .venv/bin/activate
-pip install -r client_requirements.txt
+pip install -r requirements.txt
 
-python grpc_serving_client.py --grpc_port 9000 --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --batchsize 1 > b1.txt && python grpc_serving_client.py --grpc_port 9000 --images_numpy_path imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --batchsize 8 > b8.txt;
+python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --batchsize 1 > b1.txt && python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --batchsize 8 > b8.txt;
 ```
 *NOTE*: Results of running the client will be available in .txt files in the current directory.
 

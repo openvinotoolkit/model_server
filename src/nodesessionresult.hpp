@@ -18,12 +18,12 @@
 #include <unordered_map>
 #include <utility>
 
-#include "blobmap.hpp"
 #include "nodesessionmetadata.hpp"
+#include "tensormap.hpp"
 
 namespace ovms {
 
-using SessionResult = std::pair<NodeSessionMetadata, BlobMap>;
-using SessionResults = std::unordered_map<session_key_t, std::pair<NodeSessionMetadata, BlobMap>>;
+using SessionResult = std::pair<NodeSessionMetadata, TensorMap>;
+using SessionResults = std::unordered_map<session_key_t, std::pair<NodeSessionMetadata, TensorMap>>;
 
 }  // namespace ovms

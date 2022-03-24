@@ -15,15 +15,17 @@
 #
 import logging
 import os
+import re
 from collections import defaultdict
 from logging import FileHandler
 
+import docker
 import grpc  # noqa
 import pytest
 from _pytest._code import ExceptionInfo, filter_traceback  # noqa
 from _pytest.outcomes import OutcomeException
 
-from constants import MODEL_SERVICE, PREDICTION_SERVICE
+from constants import MODEL_SERVICE, PREDICTION_SERVICE, NOT_TO_BE_REPORTED_IF_SKIPPED
 from object_model.server import Server
 from utils.other import reorder_items_by_fixtures_used
 from utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
@@ -33,7 +35,7 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
 from utils.files_operation import get_path_friendly_test_name
 from utils.parametrization import get_tests_suffix
-from config import test_dir, test_dir_cleanup, artifacts_dir
+from config import test_dir, test_dir_cleanup, artifacts_dir, target_device, image
 
 logger = logging.getLogger(__name__)
 
@@ -173,6 +175,40 @@ def exception_catcher(when: str, outcome):
                                .format(when.capitalize(), str(exc_repr)))
 
 
+def get_docker_image_os_version_from_container():
+    client = docker.from_env()
+
+    output = client.containers.run(image=image,
+                                   entrypoint=["/bin/bash", "-c"],
+                                   command="'cat /etc/*-release'")
+    output = output.decode("utf-8")
+    os_distname = re.search('^PRETTY_NAME="(.+)"\n', output, re.MULTILINE).group(1)
+
+    return os_distname
+
+
+def get_ov_and_ovms_version_from_container():
+    client = docker.from_env()
+    output = client.containers.run(image=image,
+                                   entrypoint=["/ovms/bin/ovms", "--version"])
+    output = output.decode("utf-8")
+    _ovms_version = re.search('OpenVINO Model Server (.+)\n', output, re.MULTILINE).group(1)
+    _ov_version = re.search('OpenVINO backend (.+)\n', output, re.MULTILINE).group(1)
+
+    return _ov_version, _ovms_version
+
+
+def devices_not_supported_for_test(not_supported_devices_list):
+    """
+    Comma separated list of devices not supported for test.
+    Use as a test decorator.
+    Example use:
+    @devices_not_supported_for_test(["CPU", "GPU"])
+    def test_example():
+        # test implementation
+    """
+    return pytest.mark.skipif(target_device in not_supported_devices_list,
+                              reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
 
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
@@ -195,3 +231,12 @@ def pytest_runtest_logfinish(nodeid, location):
         _root_logger.removeHandler(_root_logger._test_log_handler)
     yield
 
+
+@pytest.fixture(scope='session', autouse=True)
+def extra_json_environment(request):
+    request.config._json_environment.append(('image', image))
+    request.config._json_environment.append(('system', get_docker_image_os_version_from_container()))
+    _ov_version, _ovms_version = get_ov_and_ovms_version_from_container()
+    request.config._json_environment.append(('ov_version', _ov_version))
+    request.config._json_environment.append(('ovms_version', _ovms_version))
+    return

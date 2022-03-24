@@ -18,9 +18,10 @@
 #include <vector>
 
 #include "../../custom_node_interface.h"
+#include "../common/opencv_utils.hpp"
+#include "../common/utils.hpp"
 #include "nms.hpp"
 #include "opencv2/opencv.hpp"
-#include "utils.hpp"
 
 static constexpr const char* IMAGE_TENSOR_NAME = "image";
 static constexpr const char* SCORES_TENSOR_NAME = "scores";
@@ -88,7 +89,7 @@ bool copy_images_into_output(struct CustomNodeTensor* output, const std::vector<
     return true;
 }
 
-bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
+bool copy_boxes_into_output(struct CustomNodeTensor* output, const std::vector<cv::Rect>& boxes) {
     const uint64_t outputBatch = boxes.size();
     uint64_t byteSize = sizeof(int32_t) * 4 * outputBatch;
 
@@ -115,13 +116,13 @@ bool copy_coordinates_into_output(struct CustomNodeTensor* output, const std::ve
     return true;
 }
 
-bool copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<float>& scores) {
-    const uint64_t outputBatch = scores.size();
+bool copy_confidences_into_output(struct CustomNodeTensor* output, const std::vector<float>& confidences) {
+    const uint64_t outputBatch = confidences.size();
     uint64_t byteSize = sizeof(float) * outputBatch;
 
     float* buffer = (float*)malloc(byteSize);
     NODE_ASSERT(buffer != nullptr, "malloc has failed");
-    std::memcpy(buffer, scores.data(), byteSize);
+    std::memcpy(buffer, confidences.data(), byteSize);
 
     output->data = reinterpret_cast<uint8_t*>(buffer);
     output->dataBytes = byteSize;
@@ -135,12 +136,15 @@ bool copy_scores_into_output(struct CustomNodeTensor* output, const std::vector<
     return true;
 }
 
-void cleanup(CustomNodeTensor& tensor) {
-    free(tensor.data);
-    free(tensor.dims);
+int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+    return 0;
 }
 
-int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
+int deinitialize(void* customNodeLibraryInternalManager) {
+    return 0;
+}
+
+int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     // Parameters reading
     int originalImageHeight = get_int_parameter("original_image_height", params, paramsCount, -1);
     int originalImageWidth = get_int_parameter("original_image_width", params, paramsCount, -1);
@@ -221,17 +225,17 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(image.cols == imageWidth, "Mat generation failed");
     NODE_ASSERT(image.rows == imageHeight, "Mat generation failed");
 
-    uint64_t _numRows = scoresTensor->dims[2];
-    uint64_t _numCols = scoresTensor->dims[3];
+    uint64_t _numRows = scoresTensor->dims[1];
+    uint64_t _numCols = scoresTensor->dims[2];
     NODE_ASSERT(_numRows <= std::numeric_limits<int>::max(), "score  rows is too large");
     NODE_ASSERT(_numCols <= std::numeric_limits<int>::max(), "score columns is too large");
     int numRows = static_cast<int>(_numRows);
     int numCols = static_cast<int>(_numCols);
 
-    NODE_ASSERT(scoresTensor->dims[1] == 1, "scores has dim 1 not equal to 1");
-    NODE_ASSERT(geometryTensor->dims[1] == 5, "geometry has dim 1 not equal to 5");
-    NODE_ASSERT(scoresTensor->dims[2] == geometryTensor->dims[2], "scores and geometry has not equal dim 2");
-    NODE_ASSERT(scoresTensor->dims[3] == geometryTensor->dims[3], "scores and geometry has not equal dim 3");
+    NODE_ASSERT(scoresTensor->dims[3] == 1, "scores has dim 3 not equal to 1");
+    NODE_ASSERT(geometryTensor->dims[3] == 5, "geometry has dim 3 not equal to 5");
+    NODE_ASSERT(scoresTensor->dims[1] == geometryTensor->dims[1], "scores and geometry has not equal dim 2");
+    NODE_ASSERT(scoresTensor->dims[2] == geometryTensor->dims[2], "scores and geometry has not equal dim 3");
 
     NODE_ASSERT((numRows * 4) == imageHeight, "image is not x4 larger than score/geometry data");
     NODE_ASSERT((numCols * 4) == imageWidth, "image is not x4 larger than score/geometry data");
@@ -243,11 +247,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     // Extract the scores (probabilities), followed by the geometrical data used to derive potential bounding box coordinates that surround text
     for (int y = 0; y < numRows; y++) {
         float* scoresData = (float*)scoresTensor->data + (y * numCols);
-        float* xData0 = (float*)geometryTensor->data + ((0 * numRows * numCols) + (y * numCols));
-        float* xData1 = (float*)geometryTensor->data + ((1 * numRows * numCols) + (y * numCols));
-        float* xData2 = (float*)geometryTensor->data + ((2 * numRows * numCols) + (y * numCols));
-        float* xData3 = (float*)geometryTensor->data + ((3 * numRows * numCols) + (y * numCols));
-        float* anglesData = (float*)geometryTensor->data + ((4 * numRows * numCols) + (y * numCols));
+        float* geometryData = (float*)geometryTensor->data + (y * numCols * 5);
 
         for (int x = 0; x < numCols; x++) {
             float score = scoresData[x];
@@ -264,7 +264,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
             int offsetY = y * 4;
 
             // Extract the rotation angle for the prediction and then compute the sin and cosine
-            float angle = anglesData[x];
+            int dataOffset = (x * 5);
+            float angle = geometryData[dataOffset + 4];
 
             if (debugMode)
                 std::cout << "Angle: " << angle << std::endl;
@@ -272,12 +273,12 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
             float sin = std::sin(angle);
 
             // Use the geometry volume to derive the width and height of the bounding box
-            float h = xData0[x] + xData2[x];
-            float w = xData1[x] + xData3[x];
+            float h = geometryData[dataOffset + 0] + geometryData[dataOffset + 2];
+            float w = geometryData[dataOffset + 1] + geometryData[dataOffset + 3];
 
             cv::Point2i p2{
-                offsetX + static_cast<int>(cos * xData1[x] + sin * xData2[x]),
-                offsetY + static_cast<int>(-sin * xData1[x] + cos * xData2[x])};
+                offsetX + static_cast<int>(cos * geometryData[dataOffset + 1] + sin * geometryData[dataOffset + 2]),
+                offsetY + static_cast<int>(-sin * geometryData[dataOffset + 1] + cos * geometryData[dataOffset + 2])};
             cv::Point2i p1{
                 static_cast<int>(-sin * h) + p2.x,
                 static_cast<int>(-cos * h) + p2.y};
@@ -350,7 +351,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     CustomNodeTensor& coordinatesTensor = (*outputs)[1];
     coordinatesTensor.name = COORDINATES_TENSOR_NAME;
-    if (!copy_coordinates_into_output(&coordinatesTensor, filteredBoxes)) {
+    if (!copy_boxes_into_output(&coordinatesTensor, filteredBoxes)) {
         free(*outputs);
         cleanup(textImagesTensor);
         return 1;
@@ -358,7 +359,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
 
     CustomNodeTensor& confidenceTensor = (*outputs)[2];
     confidenceTensor.name = CONFIDENCE_TENSOR_NAME;
-    if (!copy_scores_into_output(&confidenceTensor, filteredScores)) {
+    if (!copy_confidences_into_output(&confidenceTensor, filteredScores)) {
         free(*outputs);
         cleanup(textImagesTensor);
         cleanup(coordinatesTensor);
@@ -368,7 +369,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     return 0;
 }
 
-int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     int originalImageHeight = get_int_parameter("original_image_height", params, paramsCount, -1);
     int originalImageWidth = get_int_parameter("original_image_width", params, paramsCount, -1);
     NODE_ASSERT(originalImageHeight > 0, "original image height must be larger than 0");
@@ -403,9 +404,9 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     (*info)[1].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     NODE_ASSERT(((*info)[1].dims) != nullptr, "malloc has failed");
     (*info)[1].dims[0] = 1;
-    (*info)[1].dims[1] = 1;
-    (*info)[1].dims[2] = originalImageHeight / 4;
-    (*info)[1].dims[3] = originalImageWidth / 4;
+    (*info)[1].dims[1] = originalImageHeight / 4;
+    (*info)[1].dims[2] = originalImageWidth / 4;
+    (*info)[1].dims[3] = 1;
     (*info)[1].precision = FP32;
 
     (*info)[2].name = GEOMETRY_TENSOR_NAME;
@@ -413,14 +414,14 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     (*info)[2].dims = (uint64_t*)malloc((*info)->dimsCount * sizeof(uint64_t));
     NODE_ASSERT(((*info)[2].dims) != nullptr, "malloc has failed");
     (*info)[2].dims[0] = 1;
-    (*info)[2].dims[1] = 5;
-    (*info)[2].dims[2] = originalImageHeight / 4;
-    (*info)[2].dims[3] = originalImageWidth / 4;
+    (*info)[2].dims[1] = originalImageHeight / 4;
+    (*info)[2].dims[2] = originalImageWidth / 4;
+    (*info)[2].dims[3] = 5;
     (*info)[2].precision = FP32;
     return 0;
 }
 
-int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     int targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
     int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
     NODE_ASSERT(targetImageHeight > 0, "target image height must be larger than 0");
@@ -470,7 +471,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     return 0;
 }
 
-int release(void* ptr) {
+int release(void* ptr, void* customNodeLibraryInternalManager) {
     free(ptr);
     return 0;
 }

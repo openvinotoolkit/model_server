@@ -26,13 +26,16 @@
 #include <vector>
 
 #include <dlfcn.h>
+#include <errno.h>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "azurefilesystem.hpp"
+#include "cleaner_utils.hpp"
 #include "config.hpp"
 #include "custom_node_library_manager.hpp"
 #include "customloaders.hpp"
@@ -43,34 +46,94 @@
 #include "localfilesystem.hpp"
 #include "logging.hpp"
 #include "node_library.hpp"
+#include "openssl/md5.h"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
 #include "pipelinedefinition.hpp"
 #include "s3filesystem.hpp"
 #include "schema.hpp"
+#include "stringutils.hpp"
 
 namespace ovms {
 
 static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
 static bool watcherStarted = false;
+static bool cleanerStarted = false;
 
-ModelManager::ModelManager() :
-    ieCore(std::make_unique<InferenceEngine::Core>()),
-    waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS) {
+ModelManager::ModelManager(const std::string& modelCacheDirectory) :
+    ieCore(std::make_unique<ov::Core>()),
+    waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
+    modelCacheDirectory(modelCacheDirectory) {
+    // Take --cache_dir from CLI
+    if (this->modelCacheDirectory.empty()) {
+        this->modelCacheDirectory = ovms::Config::instance().cacheDir();
+    }
+    // If not enabled via CLI, check for /opt/cache existence.
+    if (this->modelCacheDirectory.empty()) {
+        if (std::filesystem::exists(DEFAULT_MODEL_CACHE_DIRECTORY)) {
+            this->modelCacheDirectory = DEFAULT_MODEL_CACHE_DIRECTORY;
+        }
+    }
+    // If cache dir enabled, check for write access.
+    if (!this->modelCacheDirectory.empty()) {
+        // Create directory if does not exist
+        if (!std::filesystem::exists(this->modelCacheDirectory)) {
+            std::filesystem::create_directories(this->modelCacheDirectory);
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} did not exist, created", this->modelCacheDirectory);
+        }
+        int result = access(this->modelCacheDirectory.c_str(), W_OK);
+        if (result != 0) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} is not writable; access() result: {}", this->modelCacheDirectory, result);
+        } else {
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Model cache is enabled: {}", this->modelCacheDirectory);
+        }
+    }
     this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManager>();
     if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
         SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
         try {
-            auto extension_ptr = std::make_shared<InferenceEngine::Extension>(ovms::Config::instance().cpuExtensionLibraryPath());
-            SPDLOG_INFO("Custom CPU extention loaded. Adding it.");
-            ieCore->AddExtension(extension_ptr, "CPU");
-            SPDLOG_INFO("Extention added.");
+            ieCore->add_extension(ovms::Config::instance().cpuExtensionLibraryPath());
+            SPDLOG_INFO("Extension added.");
         } catch (std::exception& ex) {
-            SPDLOG_CRITICAL("Custom CPU extention loading has failed! Reason: {}", ex.what());
+            SPDLOG_CRITICAL("Custom CPU extension loading has failed! Reason: {}", ex.what());
             throw;
         } catch (...) {
-            SPDLOG_CRITICAL("Custom CPU extention loading has failed with an unknown error!");
+            SPDLOG_CRITICAL("Custom CPU extension loading has failed with an unknown error!");
             throw;
+        }
+    }
+    this->logPluginConfiguration();
+}
+
+void ModelManager::logPluginConfiguration() {
+    auto availableDevices = ieCore->get_available_devices();
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Available devices for Open VINO: {}", joins(availableDevices, std::string(", ")));
+    auto availablePlugins = availableDevices;
+    const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
+    for (const auto& plugin : availablePlugins) {
+        std::vector<std::string> supportedConfigKeys;
+        try {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging plugin: {}; configuration", plugin);
+            std::vector<std::string> supportedConfigKeys2 = ieCore->get_property(plugin, supportedConfigKey).as<std::vector<std::string>>();
+            supportedConfigKeys = std::move(supportedConfigKeys2);
+        } catch (std::exception& e) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", plugin, supportedConfigKey, e.what());
+        } catch (...) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value.", plugin, supportedConfigKey);
+        }
+        for (auto& key : supportedConfigKeys) {
+            std::string value;
+            try {
+                auto paramValue = ieCore->get_property(plugin, key);
+                value = paramValue.as<std::string>();
+            } catch (std::exception& e) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; config key: {}; Error: {}", plugin, key, e.what());
+                continue;
+            } catch (...) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; config key: {}", plugin, key);
+                continue;
+            }
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Global plugin: {}; key: {}; value: {}", plugin, key, value);
         }
     }
 }
@@ -80,7 +143,12 @@ ModelManager::~ModelManager() = default;
 Status ModelManager::start() {
     auto& config = ovms::Config::instance();
     watcherIntervalSec = config.filesystemPollWaitSeconds();
-    sequenceCleanerIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
+    sequenceCleaupIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
+    resourcesCleanupIntervalSec = config.resourcesCleanerPollWaitSeconds();
+    if (resourcesCleanupIntervalSec < 1) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Parameter: custom_node_resources_cleaner_interval has to be greater than 0. Applying default value(1 second)");
+        resourcesCleanupIntervalSec = 1;
+    }
     Status status;
     if (config.configPath() != "") {
         status = startFromFile(config.configPath());
@@ -92,6 +160,7 @@ Status ModelManager::start() {
         return status;
     }
     startWatcher();
+    startCleaner();
     return status;
 }
 
@@ -102,12 +171,15 @@ void ModelManager::startWatcher() {
         watcherStarted = true;
         monitor = std::move(t);
     }
-
-    startSequenceCleaner();
 }
 
-void ModelManager::startSequenceCleaner() {
-    globalSequencesViewer.startCleanerThread(sequenceCleanerIntervalMinutes);
+void ModelManager::startCleaner() {
+    if ((!cleanerStarted)) {
+        std::future<void> exitSignal = cleanerExitTrigger.get_future();
+        std::thread t(std::thread(&ModelManager::cleanerRoutine, this, resourcesCleanupIntervalSec, sequenceCleaupIntervalMinutes, std::move(exitSignal)));
+        cleanerStarted = true;
+        cleanerThread = std::move(t);
+    }
 }
 
 Status ModelManager::startFromConfig() {
@@ -124,7 +196,8 @@ Status ModelManager::startFromConfig() {
             config.stateful(),
             config.idleSequenceCleanup(),
             config.lowLatencyTransformation(),
-            config.maxSequenceNumber()});
+            config.maxSequenceNumber(),
+            this->modelCacheDirectory});
 
     if (!success) {
         return StatusCode::UNKNOWN_ERROR;
@@ -163,7 +236,7 @@ Status ModelManager::startFromConfig() {
     if (batchSizeSet && shapeSet) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Both shape and batch size have been defined. Batch size parameter will be ignored.");
         modelConfig.setBatchingMode(FIXED);
-        modelConfig.setBatchSize(0);
+        modelConfig.setBatchSize(std::nullopt);
     }
 
     return reloadModelWithVersions(modelConfig);
@@ -259,11 +332,16 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Reading pipeline: {} configuration", pipelineName);
     std::set<std::string> demultiplexerNodes;
     std::set<std::string> gatheredDemultiplexerNodes;
-    std::optional<uint32_t> demultiplyCountEntry = std::nullopt;
+    std::optional<int32_t> demultiplyCountEntry = std::nullopt;
     auto demultiplyCountEntryIt = pipelineConfig.FindMember("demultiply_count");
     if (demultiplyCountEntryIt != pipelineConfig.MemberEnd()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Pipeline: {} does have demultiply at entry node", pipelineName);
-        demultiplyCountEntry = pipelineConfig["demultiply_count"].GetUint64();
+        int32_t parsedDemultiplyCount = pipelineConfig["demultiply_count"].GetInt();
+        if (parsedDemultiplyCount == 0) {
+            parsedDemultiplyCount = -1;
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "demultiply_count 0 will be deprecated. For dynamic count use -1.");
+        }
+        demultiplyCountEntry = parsedDemultiplyCount;
         demultiplexerNodes.insert(ENTRY_NODE_NAME);
     } else {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Pipeline: {} does not have demultiply at entry node", pipelineName);
@@ -309,9 +387,14 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
         }
         std::unordered_map<std::string, std::string> nodeOutputNameAlias;  // key:alias, value realName
         processNodeOutputs(nodeOutputsItr, nodeName, dlNodeInfo.modelName, nodeOutputNameAlias);
-        std::optional<size_t> demultiplyCount;
+        std::optional<int32_t> demultiplyCount;
         if (nodeConfig.HasMember("demultiply_count")) {
-            demultiplyCount = nodeConfig["demultiply_count"].GetUint64();
+            int32_t parsedDemultiplyCount = nodeConfig["demultiply_count"].GetInt();
+            if (parsedDemultiplyCount == 0) {
+                parsedDemultiplyCount = -1;
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "demultiply_count 0 will be deprecated. For dynamic count use -1.");
+            }
+            demultiplyCount = parsedDemultiplyCount;
             demultiplexerNodes.insert(nodeName);
         }
         std::set<std::string> gatherFromNode;
@@ -347,9 +430,7 @@ Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::V
         SPDLOG_DEBUG("Pipeline:{} was not loaded so far. Triggering load", pipelineName);
         auto status = factory.createDefinition(pipelineName, info, connections, manager);
         pipelinesInConfigFile.insert(pipelineName);
-        if (!status.ok()) {
-            return status;
-        }
+        return status;
     }
     SPDLOG_DEBUG("Pipeline:{} is already loaded. Triggering reload", pipelineName);
     auto status = factory.reloadDefinition(pipelineName,
@@ -490,6 +571,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             modelsWithInvalidConfig.emplace(modelConfig.getName());
             continue;
         }
+        modelConfig.setCacheDir(this->modelCacheDirectory);
 
         const auto modelName = modelConfig.getName();
         if (pipelineDefinitionExists(modelName)) {
@@ -579,9 +661,7 @@ public:
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     configFilename = jsonFilename;
-    struct stat statTime;
-    stat(configFilename.c_str(), &statTime);
-    lastConfigChangeTime = statTime.st_ctim;
+    lastConfigFileMD5 = getConfigFileMD5();
     rapidjson::Document configJson;
 
     uint16_t counter = 0;
@@ -709,16 +789,34 @@ Status ModelManager::updateConfigurationWithoutConfigFile() {
     }
 }
 
+std::string ModelManager::getConfigFileMD5() {
+    std::ifstream ifs;
+    ifs.open(configFilename);
+    std::stringstream strStream;
+    strStream << ifs.rdbuf();
+    std::string str = strStream.str();
+    ifs.close();
+
+    unsigned char result[MD5_DIGEST_LENGTH];
+    MD5((unsigned char*)str.c_str(), str.size(), result);
+    std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
+    return (md5sum);
+}
+
 Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
-    struct stat statTime;
 
-    if (stat(configFilename.c_str(), &statTime) != 0) {
+    if (!std::ifstream(configFilename)) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Config file not found or cannot open.");
         isNeeded = false;
         return StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED;
     }
-    bool configFileModified = !(lastConfigChangeTime.tv_sec == statTime.st_ctim.tv_sec && lastConfigChangeTime.tv_nsec == statTime.st_ctim.tv_nsec);
+
+    std::string newmd5 = getConfigFileMD5();
+    bool configFileModified = false;
+    if (lastConfigFileMD5 != newmd5) {
+        configFileModified = true;
+    }
 
     if (configFilename == "" || !configFileModified) {
         isNeeded = false;
@@ -748,6 +846,62 @@ void ModelManager::watcher(std::future<void> exitSignal) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
 }
 
+void ModelManager::cleanerRoutine(uint32_t resourcesCleanupIntervalSec, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal) {
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Started cleaner thread");
+
+    uint32_t resourcesCleanupIntervalMiliseconds = resourcesCleanupIntervalSec * 1000;
+    uint32_t sequenceCleanerIntervalMiliseconds = sequenceCleanerIntervalMinutes * 60 * 1000;
+
+    FunctorResourcesCleaner functorResourcesCleaner{*this};
+    FunctorSequenceCleaner functorSequenceCleaner{globalSequencesViewer};
+
+    ovms::cleanerRoutine(resourcesCleanupIntervalMiliseconds, functorResourcesCleaner, sequenceCleanerIntervalMiliseconds, functorSequenceCleaner, cleanerExitSignal);
+
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped cleaner thread");
+}
+
+void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal) {
+    uint32_t currentResourcesWaitTime = resourcesCleanupInterval;
+    uint32_t currentSequenceWaitTime = sequenceCleanerInterval;
+    bool shouldCheckForSequenceCleanup = sequenceCleanerInterval != 0;
+    uint32_t currentWaitTime = (!shouldCheckForSequenceCleanup || currentResourcesWaitTime < currentSequenceWaitTime) ? currentResourcesWaitTime : currentSequenceWaitTime;
+
+    while (cleanerExitSignal.wait_for(std::chrono::milliseconds(currentWaitTime)) == std::future_status::timeout) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleanup check cycle begin");
+
+        currentResourcesWaitTime = (currentResourcesWaitTime - currentWaitTime) == 0 ? resourcesCleanupInterval : currentResourcesWaitTime - currentWaitTime;
+        if (shouldCheckForSequenceCleanup)
+            currentSequenceWaitTime = (currentSequenceWaitTime - currentWaitTime) == 0 ? sequenceCleanerInterval : currentSequenceWaitTime - currentWaitTime;
+        currentWaitTime = (!shouldCheckForSequenceCleanup || currentResourcesWaitTime < currentSequenceWaitTime) ? currentResourcesWaitTime : currentSequenceWaitTime;
+
+        if (currentResourcesWaitTime == resourcesCleanupInterval)
+            functorResourcesCleaner.cleanup();
+        if (currentSequenceWaitTime == sequenceCleanerInterval && shouldCheckForSequenceCleanup)
+            functorSequenceCleaner.cleanup();
+
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleanup check cycle end");
+    }
+}
+
+void ModelManager::cleanupResources() {
+    std::vector<std::shared_ptr<CNLIMWrapper>> toBeRemoved;
+    std::unique_lock resourcesLock(resourcesMtx);
+    // Move all resources that should be destroyed to temporary container
+    std::copy_if(resources.begin(),
+        resources.end(),
+        std::back_inserter(toBeRemoved),
+        [](auto& resource) { return resource.use_count() == 1; });
+    resources.erase(
+        std::remove_if(
+            resources.begin(),
+            resources.end(),
+            [toBeRemoved](auto& resource) { return std::find(toBeRemoved.begin(), toBeRemoved.end(), resource) != toBeRemoved.end(); }),
+        resources.end());
+    // Unlock mutex so new resources can be put into container owned by ModelManager
+    resourcesLock.unlock();
+    // Temporary container will fall out of scope and therefore deinitialize should be called on every resource inside of it
+}
+
 void ModelManager::join() {
     if (watcherStarted) {
         exitTrigger.set_value();
@@ -758,7 +912,14 @@ void ModelManager::join() {
         }
     }
 
-    globalSequencesViewer.join();
+    if (cleanerStarted) {
+        cleanerExitTrigger.set_value();
+        if (cleanerThread.joinable()) {
+            cleanerThread.join();
+            cleanerStarted = false;
+            SPDLOG_INFO("Shutdown cleaner thread");
+        }
+    }
 }
 
 void ModelManager::getVersionsToChange(
@@ -1033,7 +1194,6 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
             return StatusCode::OK;
         }
     }
-
     getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     bool reloadNeeded = false;
     if (versionsToStart->size() > 0 || versionsToReload->size() > 0 || versionsToRetire->size() > 0) {
@@ -1147,4 +1307,5 @@ Status ModelManager::getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
 const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() const {
     return *customNodeLibraryManager;
 }
+
 }  // namespace ovms

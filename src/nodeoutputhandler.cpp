@@ -15,10 +15,6 @@
 //*****************************************************************************
 #include "nodeoutputhandler.hpp"
 
-#include <inference_engine.hpp>
-
-#include "logging.hpp"
-
 namespace ovms {
-void NodeOutputHandler::setInput(const std::string& name, InferenceEngine::Blob::Ptr& ptr) {}
+void NodeOutputHandler::setInput(const std::string& name, ov::Tensor& tensorPtr) {}
 }  // namespace ovms

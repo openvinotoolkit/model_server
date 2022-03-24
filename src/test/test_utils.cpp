@@ -30,6 +30,14 @@ void waitForOVMSConfigReload(ovms::ModelManager& manager) {
     std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
 }
 
+void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {
+    // This is effectively multiplying by 1.2 to have 1 config reload in between
+    // two test steps
+    const float WAIT_MULTIPLIER_FACTOR = 1.2;
+    const uint waitTime = WAIT_MULTIPLIER_FACTOR * manager.getResourcesCleanupIntervalSec() * 1000;
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
+}
+
 std::string createConfigFileWithContent(const std::string& content, std::string filename) {
     std::ofstream configFile{filename};
     spdlog::info("Creating config file: {}\n with content:\n{}", filename, content);
@@ -44,8 +52,8 @@ std::string createConfigFileWithContent(const std::string& content, std::string 
 }
 
 ovms::tensor_map_t prepareTensors(
-    const std::unordered_map<std::string, ovms::shape_t>&& tensors,
-    InferenceEngine::Precision precision) {
+    const std::unordered_map<std::string, ovms::Shape>&& tensors,
+    ovms::Precision precision) {
     ovms::tensor_map_t result;
     for (const auto& kv : tensors) {
         result[kv.first] = std::make_shared<ovms::TensorInfo>(
@@ -77,30 +85,20 @@ void checkDummyResponse(const std::string outputName,
         << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
 }
 
-void checkIncrement4DimResponse(const std::string outputName,
-    const std::vector<float>& expectedData,
-    PredictRequest& request,
+void checkIncrement4DimShape(const std::string outputName,
     PredictResponse& response,
     const std::vector<size_t>& expectedShape) {
     ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
     const auto& output_proto = response.outputs().at(outputName);
 
-    auto elementsCount = std::accumulate(expectedShape.begin(), expectedShape.end(), 1, std::multiplies<size_t>());
-
-    ASSERT_EQ(output_proto.tensor_content().size(), elementsCount * sizeof(float));
     ASSERT_EQ(output_proto.tensor_shape().dim_size(), expectedShape.size());
     for (size_t i = 0; i < expectedShape.size(); i++) {
         ASSERT_EQ(output_proto.tensor_shape().dim(i).size(), expectedShape[i]);
     }
-
-    float* actual_output = (float*)output_proto.tensor_content().data();
-    float* expected_output = (float*)expectedData.data();
-    const int dataLengthToCheck = elementsCount * sizeof(float);
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
-        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
 }
 
 bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vector<int64_t>&& expected) {
+    bool same = true;
     if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
         SPDLOG_ERROR("Unexpected dim_size. Got: {}, Expect: {}", actual.dim_size(), expected.size());
         return false;
@@ -108,8 +106,19 @@ bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vecto
     for (int i = 0; i < actual.dim_size(); i++) {
         if (actual.dim(i).size() != expected[i]) {
             SPDLOG_ERROR("Unexpected dim[{}]. Got: {}, Expect: {}", i, actual.dim(i).size(), expected[i]);
-            return false;
+            same = false;
         }
+    }
+    if (same == false) {
+        std::stringstream ss;
+        for (int i = 0; i < actual.dim_size(); i++) {
+            ss << "dim["
+               << i
+               << "] got:"
+               << actual.dim(i).size()
+               << " expect:" << expected[i];
+        }
+        SPDLOG_ERROR("Shape mismatch: {}", ss.str());
     }
     return true;
 }
@@ -128,12 +137,31 @@ void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
     return readImage("/ovms/src/test/binaryutils/rgb.jpg", filesize, image_bytes);
 }
 
+void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
+    return readImage("/ovms/src/test/binaryutils/rgb4x4.jpg", filesize, image_bytes);
+}
+
 tensorflow::serving::PredictRequest prepareBinaryPredictRequest(const std::string& inputName, const int batchSize) {
     tensorflow::serving::PredictRequest request;
     auto& tensor = (*request.mutable_inputs())[inputName];
     size_t filesize = 0;
     std::unique_ptr<char[]> image_bytes = nullptr;
     readRgbJpg(filesize, image_bytes);
+
+    for (int i = 0; i < batchSize; i++) {
+        tensor.add_string_val(image_bytes.get(), filesize);
+    }
+    tensor.set_dtype(tensorflow::DataType::DT_STRING);
+    tensor.mutable_tensor_shape()->add_dim()->set_size(batchSize);
+    return request;
+}
+
+tensorflow::serving::PredictRequest prepareBinary4x4PredictRequest(const std::string& inputName, const int batchSize) {
+    tensorflow::serving::PredictRequest request;
+    auto& tensor = (*request.mutable_inputs())[inputName];
+    size_t filesize = 0;
+    std::unique_ptr<char[]> image_bytes = nullptr;
+    read4x4RgbJpg(filesize, image_bytes);
 
     for (int i = 0; i < batchSize; i++) {
         tensor.add_string_val(image_bytes.get(), filesize);

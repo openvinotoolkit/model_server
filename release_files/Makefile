@@ -14,11 +14,8 @@
 # limitations under the License.
 #
 
-.PHONY: centos redhat
-all: centos redhat
-
-centos:
-	docker build -f Dockerfile.centos -t ovms:centos --build-arg http_proxy=$(http_proxy) --build-arg https_proxy="$(https_proxy)" .
+.PHONY: redhat
+all: redhat
 
 redhat:
 	docker build -f Dockerfile.redhat -t ovms:redhat --build-arg http_proxy=$(http_proxy) --build-arg https_proxy="$(https_proxy)" .

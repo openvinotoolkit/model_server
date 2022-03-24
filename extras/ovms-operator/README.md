@@ -8,7 +8,7 @@ It allows for easy deployment and management of OVMS service in the Kubernetes c
 
 ### OpenShift
 
-OVMS operator on OpenShift infrastructure is now replaced with the [OpenVINO Operator](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/extras/openvino-operator-openshift).
+OVMS operator on OpenShift infrastructure is now replaced with the [OpenVINO Operator](https://github.com/openvinotoolkit/model_server/blob/develop/extras/openvino-operator-openshift).
 It includes the functionality of the Model Server management with other OpenVINO related integrations.
 
 ### Kubernetes with OLM
@@ -22,7 +22,7 @@ Deploy the operator using the steps covered in [OperatorHub](https://operatorhub
 
 If you are using opensource Kubernetes, after installing the operator, deploy and manage OVSM deployments by creating `Ovms` Kubernetes resources.
 
-It can be done by editing the [sample resource](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/extras/ovms-operator/config/samples/intel_v1alpha1_ovms.yaml) and running a command:
+It can be done by editing the [sample resource](https://github.com/openvinotoolkit/model_server/blob/develop/extras/ovms-operator/config/samples/intel_v1alpha1_ovms.yaml) and running a command:
 
 ```bash
 kubectl apply -f config/samples/intel_v1alpha1_ovms.yaml
@@ -53,13 +53,13 @@ Here are the options for accessing the endpoints:
 - configure the service type as the `NodePort` - it will expose the service on the Kubernetes `node` external IP address
 - in the managed Kubernetes cloud deployment use service type as `LoadBalanced` - it will expose the service as external IP address
   
-You can use any of the [exemplary clients](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client) to connect to OVMS. 
-Below is the output of the [jpeg_classification.py](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client/jpeg_classification.py) client connecting to the OVMS serving ResNet model.
+You can use any of the [exemplary clients](../../client/python/tensorflow-serving-api/samples) to connect to OVMS. 
+Below is the output of the [image_classification.py](../../demos/image_classification/python/image_classification.py) client connecting to the OVMS serving ResNet model.
 The command below takes --grpc_address set to the service name so it will work from the cluster pod.
 In case the client is external to the cluster, replace it with the external DNS name or external IP  and adjust the --grpc_port parameter.
 
 ```bash
-$ python jpeg_classification.py --grpc_port 8080 --grpc_address ovms-sample --input_name 0 --output_name 1463
+$ python image_classification.py --grpc_port 8080 --grpc_address ovms-sample --input_name 0 --output_name 1463
 Start processing:
 	Model name: resnet
 	Images list file: input_images.txt

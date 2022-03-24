@@ -30,7 +30,7 @@ static const std::string mockerDemutliplexerNodeOutputName2 = "mockedDemultiplex
 
 class DemultiplexerDLNode : public DLNode {
 public:
-    DemultiplexerDLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager, std::unordered_map<std::string, std::string> nodeOutputNameAlias, std::optional<uint32_t> demultiplyCount, const NodeSessionMetadata& meta) :
+    DemultiplexerDLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion, ModelManager& modelManager, std::unordered_map<std::string, std::string> nodeOutputNameAlias, std::optional<int32_t> demultiplyCount, const NodeSessionMetadata& meta) :
         DLNode(nodeName, modelName, modelVersion, modelManager, nodeOutputNameAlias, demultiplyCount.value_or(0)) {
         // createSession to have source session for fetchResults()
         CollapseDetails collapsingDetails;
@@ -38,49 +38,47 @@ public:
         auto emplacePair = nodeSessions.emplace(meta.getSessionKey(), std::move(nodeSession));
         EXPECT_TRUE(emplacePair.second);
     }
-    void setFetchResult(InferenceEngine::Blob::Ptr& intermediateResultBlob) {
-        this->intermediateResultBlob = intermediateResultBlob;
+    void setFetchResult(ov::Tensor& intermediateResultTensor) {
+        this->intermediateResultTensor = intermediateResultTensor;
     }
     using Node::fetchResults;
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
         const auto& sessionMetadata = nodeSession.getNodeSessionMetadata();
         const auto sessionKey = sessionMetadata.getSessionKey();
-        InferenceEngine::Blob::Ptr secondOutput;
-        EXPECT_EQ(blobClone(secondOutput, intermediateResultBlob), StatusCode::OK);
-        BlobMap blobs{{mockerDemutliplexerNodeOutputName, intermediateResultBlob},
+        ov::Tensor secondOutput;
+        EXPECT_EQ(tensorClone(secondOutput, intermediateResultTensor), StatusCode::OK);
+        TensorMap tensors{{mockerDemutliplexerNodeOutputName, intermediateResultTensor},
             {mockerDemutliplexerNodeOutputName2, secondOutput}};
-        std::pair<NodeSessionMetadata, BlobMap> metaBlobsPair{sessionMetadata, std::move(blobs)};
-        nodeSessionOutputs.emplace(sessionKey, std::move(metaBlobsPair));
+        std::pair<NodeSessionMetadata, TensorMap> metaTensorsPair{sessionMetadata, std::move(tensors)};
+        nodeSessionOutputs.emplace(sessionKey, std::move(metaTensorsPair));
         return StatusCode::OK;
     }
 
 private:
-    InferenceEngine::Blob::Ptr intermediateResultBlob;
+    ov::Tensor intermediateResultTensor;
 };
 
 using ::testing::AnyOf;
 using ::testing::Eq;
 
-TEST(DemultiplexerTest, CheckDemultipliedBlobsMultipleOutputs) {
-    const uint16_t demultiplyCount = 2;
-    // prepare pre demultiplexer blob
-    std::vector<std::vector<float>> blobsData{
+TEST(DemultiplexerTest, CheckDemultipliedTensorsMultipleOutputs) {
+    // prepare pre demultiplexer tensor
+    std::vector<std::vector<float>> tensorsData{
         {-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67, 0, 8},
         {4, 42, 35, -2, 13, 2, -1, 0.9, -0.3, 4.67, 100, 80}};
-    const std::vector<size_t> shape{demultiplyCount, 1, blobsData[0].size()};
-    const InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
-    const InferenceEngine::Layout layout{InferenceEngine::Layout::CHW};
-    const InferenceEngine::TensorDesc desc{precision, shape, layout};
-    std::vector<float> blobDataNonDemultiplexed(blobsData[0].size() * demultiplyCount);
-    std::copy(blobsData[0].begin(), blobsData[0].end(), blobDataNonDemultiplexed.begin());
-    std::copy(blobsData[1].begin(), blobsData[1].end(), blobDataNonDemultiplexed.begin() + blobsData[0].size());
-    InferenceEngine::Blob::Ptr intermediateResultBlob = InferenceEngine::make_shared_blob<float>(desc, blobDataNonDemultiplexed.data());
+    const uint16_t demultiplyCount = tensorsData.size();
+    const std::vector<size_t> shape{demultiplyCount, 1, tensorsData[0].size()};
+    const auto precision{ov::element::Type_t::f32};
+    std::vector<float> tensorDataNonDemultiplexed(tensorsData[0].size() * demultiplyCount);
+    std::copy(tensorsData[0].begin(), tensorsData[0].end(), tensorDataNonDemultiplexed.begin());
+    std::copy(tensorsData[1].begin(), tensorsData[1].end(), tensorDataNonDemultiplexed.begin() + tensorsData[0].size());
+    ov::Tensor intermediateResultTensor = createSharedTensor(precision, shape, tensorDataNonDemultiplexed.data());
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;
     std::string demultiplexerNodeName("node");
     DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);
-    demultiplexerNode.setFetchResult(intermediateResultBlob);
+    demultiplexerNode.setFetchResult(intermediateResultTensor);
     SessionResults sessionResults;
     session_key_t sessionKey = meta.getSessionKey();
     // perform test
@@ -92,33 +90,31 @@ TEST(DemultiplexerTest, CheckDemultipliedBlobsMultipleOutputs) {
     for (size_t shardId = 0; shardId < demultiplyCount; ++shardId) {
         auto& sessionResult = sessionResults[demultiplexedMetadata[shardId].getSessionKey()];
         ASSERT_EQ(sessionResult.first.getSessionKey(), demultiplexedMetadata[shardId].getSessionKey());
-        for (auto& [blobName, blob] : sessionResult.second) {
-            EXPECT_THAT(blobName, AnyOf(Eq(mockerDemutliplexerNodeOutputName),
-                                      Eq(mockerDemutliplexerNodeOutputName2)));
-            ASSERT_EQ(blobsData[shardId].size(), blob->size());
-            ASSERT_THAT(blob->getTensorDesc().getDims(), ElementsAre(1, blobsData[shardId].size()));
-            EXPECT_EQ(std::memcmp((char*)((const void*)InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap()), blobsData[shardId].data(), blob->byteSize()), 0) << "Failed comparison for shard: " << shardId << " blobName: " << blobName;
-            EXPECT_THAT(std::vector<float>((const float*)(const void*)(InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap()), (const float*)(const void*)InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rmap() + blob->size()),
-                ::testing::ElementsAreArray(blobsData[shardId]));
+        for (auto& [tensorName, tensor] : sessionResult.second) {
+            EXPECT_THAT(tensorName, AnyOf(Eq(mockerDemutliplexerNodeOutputName),
+                                        Eq(mockerDemutliplexerNodeOutputName2)));
+            ASSERT_EQ(tensorsData[shardId].size(), tensor.get_size());
+            ASSERT_THAT(tensor.get_shape(), ElementsAre(1, tensorsData[shardId].size()));
+            EXPECT_EQ(std::memcmp(tensor.data(), tensorsData[shardId].data(), tensor.get_byte_size()), 0) << "Failed comparison for shard: " << shardId << " tensorName: " << tensorName;
+            EXPECT_THAT(std::vector<float>((float*)tensor.data(), (float*)tensor.data() + tensor.get_size()),
+                ::testing::ElementsAreArray(tensorsData[shardId]));
         }
     }
 }
 
 TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenWrongOutputDimensions) {
     const uint16_t demultiplyCount = 3;
-    std::vector<float> blobData{-1, 4, 5, 12, 3, 52};
+    std::vector<float> tensorData{-1, 4, 5, 12, 3, 52};
     // imitate (1, 2, 3) but shoudl be (1,3,x1, ..., xN)
     const std::vector<size_t> shape{1, demultiplyCount - 1, 3};
-    const InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
-    const InferenceEngine::Layout layout{InferenceEngine::Layout::CHW};
-    const InferenceEngine::TensorDesc desc{precision, shape, layout};
-    InferenceEngine::Blob::Ptr intermediateResultBlob = InferenceEngine::make_shared_blob<float>(desc, blobData.data());
+    const auto precision{ov::element::Type_t::f32};
+    ov::Tensor intermediateResultTensor = createSharedTensor(precision, shape, tensorData.data());
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;
     std::string demultiplexerNodeName("node");
     DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);  // demultiplexer expects (1, 3, x1, ..., xN);
-    demultiplexerNode.setFetchResult(intermediateResultBlob);
+    demultiplexerNode.setFetchResult(intermediateResultTensor);
     SessionResults sessionResults;
     session_key_t sessionKey = meta.getSessionKey();
     // perform test
@@ -127,20 +123,18 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenWrongOutputDimensions) {
 }
 
 TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenNotEnoughDimensionsInOutput) {
-    std::vector<float> blobData{-1, 4, 5, 12, 3, 52};
-    const uint16_t demultiplyCount = blobData.size();
+    std::vector<float> tensorData{-1, 4, 5, 12, 3, 52};
+    const uint16_t demultiplyCount = tensorData.size();
     // imitate (1, 3) but should be at least (1,3,x1, ..., xN) N >= 1
     const std::vector<size_t> shape{1, demultiplyCount};
-    const InferenceEngine::Precision precision{InferenceEngine::Precision::FP32};
-    const InferenceEngine::Layout layout{InferenceEngine::Layout::NC};
-    const InferenceEngine::TensorDesc desc{precision, shape, layout};
-    InferenceEngine::Blob::Ptr intermediateResultBlob = InferenceEngine::make_shared_blob<float>(desc, blobData.data());
+    const auto precision{ov::element::Type_t::f32};
+    ov::Tensor intermediateResultTensor = createSharedTensor(precision, shape, tensorData.data());
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;
     std::string demultiplexerNodeName("node");
     DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);  // demultiplexer expects (1, 3, x1, ..., xN);
-    demultiplexerNode.setFetchResult(intermediateResultBlob);
+    demultiplexerNode.setFetchResult(intermediateResultTensor);
     SessionResults sessionResults;
     session_key_t sessionKey = meta.getSessionKey();
     // perform test

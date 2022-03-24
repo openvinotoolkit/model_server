@@ -18,6 +18,8 @@
 #include <optional>
 #include <string>
 
+#include <openvino/openvino.hpp>
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
@@ -38,7 +40,7 @@ class EntryNode : public Node {
 public:
     EntryNode(const tensorflow::serving::PredictRequest* request,
         const tensor_map_t& inputsInfo,
-        std::optional<uint32_t> demultiplyCount = std::nullopt) :
+        std::optional<int32_t> demultiplyCount = std::nullopt) :
         Node(ENTRY_NODE_NAME, demultiplyCount),
         request(request),
         inputsInfo(inputsInfo) {}
@@ -48,8 +50,8 @@ public:
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
 
 protected:
-    Status fetchResults(BlobMap& outputs);
-    Status createShardedBlob(InferenceEngine::Blob::Ptr& dividedBlob, const InferenceEngine::TensorDesc& dividedBlobDesc, InferenceEngine::Blob::Ptr blob, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string blobName) override;
+    Status fetchResults(TensorMap& outputs);
+    Status createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) override;
 
 public:
     // Entry nodes have no dependency
@@ -58,31 +60,6 @@ public:
     }
 
     Status isInputBinary(const std::string& name, bool& isBinary) const;
-
-    const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
-        const size_t expectedNumberOfInputs);
-
-    const Status checkIfShapeValuesNegative(const tensorflow::TensorProto& requestInput);
-
-    const Status validateNumberOfBinaryInputShapeDimensions(const tensorflow::TensorProto& requestInput);
-
-    const bool checkBinaryInputBatchSizeMismatch(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const Status validatePrecision(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const Status validateNumberOfShapeDimensions(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const bool checkBatchSizeMismatch(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const bool checkShapeMismatch(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
-
-    const Status validateTensorContentSize(const ovms::TensorInfo& networkInput,
-        const tensorflow::TensorProto& requestInput);
 
     const Status validate();
 };

@@ -3,18 +3,18 @@
         {"config": {
                 "name": "face_detection",
                 "base_path": "/workspace/face-detection-retail-0004/",
-                "shape": "(1,3,400,600)",
-                "layout": "NHWC"}},
+                "shape": "(1,400,600,3)",
+                "layout": "NHWC:NCHW"}},
         {"config": {
                 "name": "age_gender_recognition",
                 "base_path": "/workspace/age-gender-recognition-retail-0013/",
-                "shape": "(1,3,64,64)",
-                "layout": "NHWC"}},
+                "shape": "(1,64,64,3)",
+                "layout": "NHWC:NCHW"}},
         {"config": {
                 "name": "emotion_recognition",
                 "base_path": "/workspace/emotion-recognition-retail-0003/",
-                "shape": "(1,3,64,64)",
-                "layout": "NHWC"}}
+                "shape": "(1,64,64,3)",
+                "layout": "NHWC:NCHW"}}
     ],
     "custom_node_library_config_list": [
         {"name": "object_detection_image_extractor",
@@ -54,7 +54,8 @@
                         "convert_to_gray_scale": "false",
                         "max_output_batch": "100",
                         "confidence_threshold": "0.7",
-                        "debug": "true"
+                        "debug": "true",
+                        "buffer_queue_size": "24"
                     },
                     "inputs": [
                         {"image": {

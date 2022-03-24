@@ -16,6 +16,7 @@
 #pragma once
 
 #include <memory>
+#include <set>
 #include <string>
 
 #include "global_sequences_viewer.hpp"
@@ -26,13 +27,13 @@
 namespace ovms {
 
 class StatefulModelInstance : public ModelInstance {
-    static constexpr std::array<const char*, 2> SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
+    static const std::set<const char*> SPECIAL_INPUT_NAMES;
 
 public:
     /**
          * @brief A default constructor
          */
-    StatefulModelInstance(const std::string& name, model_version_t version, InferenceEngine::Core& ieCore, GlobalSequencesViewer* globalSequencesViewer) :
+    StatefulModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, GlobalSequencesViewer* globalSequencesViewer) :
         ModelInstance(name, version, ieCore),
         globalSequencesViewer(globalSequencesViewer) {
         sequenceManager = std::make_shared<SequenceManager>(config.getMaxSequenceNumber(), name, version);
@@ -52,7 +53,7 @@ public:
 
         Always returns StatusCode::OK
     */
-    const Status preInferenceProcessing(InferenceEngine::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
+    const Status preInferenceProcessing(ov::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
 
     /*
     Performs pre inference operations:
@@ -63,7 +64,7 @@ public:
         Always returns StatusCode::OK
     */
     const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response,
-        InferenceEngine::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
+        ov::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
 
     Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,
@@ -88,12 +89,9 @@ protected:
 
     const Status validate(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& processingSpec);
 
-    const Status validateNumberOfInputs(const tensorflow::serving::PredictRequest* request,
-        const size_t expectedNumberOfInputs) override;
-
     Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
 
-    Status loadOVExecutableNetwork(const ModelConfig& config) override;
+    Status loadOVCompiledModel(const ModelConfig& config) override;
 
 private:
     const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec);

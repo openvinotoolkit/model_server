@@ -62,7 +62,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1
   ]
 }
 ```
-Read more about [Get Model Status API usage](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client/README.md#model-status-api-1)
+Read more about [Get Model Status API usage](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/README.md#model-status-api-1)
 
 ## Model Metadata API <a name="model-metadata"></a>
 **Description**
@@ -145,12 +145,12 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1/metadata
 }
 ```
 
-Read more about [Get Model Metadata API usage](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client/README.md#model-metadata-api-1)
+Read more about [Get Model Metadata API usage](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/README.md#model-metadata-api-1)
 
 ## Predict API <a name="predict"></a>
 **Description**
 
-Sends requests via TensorFlow Serving RESTful API using images in NumPy array or binary format. It displays performance statistics and optionally the model accuracy.
+Endpoint for running an inference with loaded models or [DAGs](./demultiplexing.md).
 
 **URL**
 ```
@@ -207,7 +207,7 @@ Besides numerical values, it is possible to pass binary inputs. They must be Bas
 
 Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
 
-Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client/README.md#predict-api-1)
+Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/README.md#predict-api-1)
 
 ## Config Reload API <a name="config-reload"></a>
 **Description**
@@ -270,8 +270,8 @@ In case of any failure during execution:
 When an operation succeeds HTTP response status code is
   - `201` when config(config file or model version) was reloaded 
   - `200` when reload was not required, already applied or OVMS was started in single model mode
-When an operation fails another status code is returned.
 
+When an operation fails another status code is returned.
 Possible messages returned on error:
 
 - obtaining config file change time failed (file is not existing or cannot be accessed):

@@ -80,7 +80,7 @@ TEST_F(RestParserBinaryInputs, RowName) {
 TEST_F(RestParserBinaryInputs, InvalidObject) {
     std::string request = R"({"signature_name":"","inputs":{"k":[{"b64":")" + b64encoded + R"(", "AdditionalField":"someValue"}]}})";
 
-    RestParser parser(prepareTensors({}, InferenceEngine::Precision::FP16));
+    RestParser parser(prepareTensors({}, ovms::Precision::FP16));
     ASSERT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 

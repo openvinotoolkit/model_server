@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server Troubleshooting {#ovms_docs_troubleshooting}
+# Troubleshooting {#ovms_docs_troubleshooting}
 
 ## Introduction
 This document gives information about troubleshooting the following issues while using the OpenVINO&trade; Model Server:
@@ -9,6 +9,7 @@ This document gives information about troubleshooting the following issues while
 * <a href="#configure-aws">Configuring AWS For Use With a Proxy</a>
 * <a href="#gcs">Using GCS model behind a proxy </a>
 * <a href="#load-network-issue">Unable to load network into device with: `can't protect` in server logs </a>
+* <a href="#model-cache">Model Cache Issues </a>
 
 
 ## Model Import Issues<a name="model-import"></a>
@@ -17,7 +18,7 @@ OpenVINO&trade; Model Server loads all defined models versions according to set 
 
 When a new model version is detected, the server loads the model files and starts serving a new model version. This operation might fail for the following reasons :
 - There is a problem with accessing model files (due to network connectivity issues to the remote storage or insufficient permissions).
-- Model files are malformed and can not be imported by the Inference Engine.
+- Model files are malformed and can not be imported by the OpenVINO&trade; Runtime.
 - Model requires a custom CPU extension.
 
 
@@ -61,7 +62,7 @@ The possible issues could be :
 ## Resource Allocation<a name="resource-allocation"></a>
 - RAM consumption might depend on the size and volume of the models configured for serving. It should be measured experimentally, however it can be estimated that each model will consume RAM size equal to the size of the model weights file (.bin file).
 
-- Every version of the model enabled in the version policy creates a separate inference engine object. By default, only the latest version is enabled.
+- Every version of the model enabled in the version policy creates a separate OpenVINO&trade; Runtime `ov::Model` and `ov::CompiledModel` object. By default, only the latest version is enabled.
 
 - OpenVINO&trade; model server consumes all available CPU resources unless they are restricted by the operating system, Docker or Kubernetes capabilities.
 
@@ -97,11 +98,11 @@ HTTP_proxy
 - If your environment is required to use proxy but `http_proxy`/`https_proxy` is not passed to the server container there will be 15 minutes timeout when accessing GCS models.
 - During that time no logs will be captured by OVMS. Currently, there is no option to change the timeout duration for GCS.
 
-## Unable to load network into device with: `can't protect` in server logs <a name="load-network-issue"></a>
+## Cannot compile model into target device: `can't protect` in server logs <a name="load-network-issue"></a>
 - Since this is known bug, please refer OpenVINO&trade; [release notes](https://software.intel.com/content/www/us/en/develop/articles/openvino-relnotes.html).
 
-## TigerLake GPU support
+## Model Cache Issues <a name="model-cache"></a>
 
-As for now, the public docker image doesn't support GPU on TigerLake platform. Such image can be built using the command:
-`make docker_build BASE_OS=redhat INSTALL_DRIVER_VERSION=20.35.17767`. It will not support, however, older GPU platforms.
-
+- Cache folder (by default `/opt/cache` or defined by `--cache_dir`) should be mounted into docker container with read-write access. Unless changed by the docker run command, the model server has a security context of ovms account with uid 5000.
+- The biggest speedup in the model loading time is expected for GPU device. For CPU device the gain will depend on the model topology. In some rare cases, it is possible the load time will not be improved noticeably or it might be even slightly slower.
+- Currently using model cache is not supported with HDDL target device. Do not enable model cache while using HDDL cards.

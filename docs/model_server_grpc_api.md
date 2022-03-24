@@ -22,7 +22,7 @@ Gets information about the status of served models including Model Version
 
  [Get Model Status proto](https://github.com/tensorflow/serving/blob/master/tensorflow_serving/apis/get_model_status.proto) defines three message definitions used while calling Status endpoint: *GetModelStatusRequest*, *ModelVersionStatus*, *GetModelStatusResponse* that are used to report all exposed versions including their state in their lifecycle.
 
- Read more about [Get Model Status API usage](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client/README.md#model-status-api).
+ Read more about [Get Model Status API usage](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/README.md#model-status-api).
 
 
 ## Model Metadata API <a name="model-metadata"></a>
@@ -31,13 +31,12 @@ Gets information about the served models. A function called GetModelMetadata acc
  
 [Get Model Metadata proto](https://github.com/tensorflow/serving/blob/master/tensorflow_serving/apis/get_model_metadata.proto) has three message definitions: *SignatureDefMap*, *GetModelMetadataRequest*, *GetModelMetadataResponse*. 
 
-Read more about [Get Model Metadata API usage](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client/README.md#model-metadata-api).     
+Read more about [Get Model Metadata API usage](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/README.md#model-metadata-api).     
 
 
 ## Predict API <a name="predict"></a>
 
-Sends requests via TFS gRPC API using images in base64 encoded string or NumPy format. It displays performance statistics and optionally the model accuracy.
-To send images in binary format data should be placed in dt_string field of tensor.proto.
+Endpoint for running an inference with loaded models or [DAGs](./demultiplexing.md).
 
 [Predict proto](https://github.com/tensorflow/serving/blob/r1.14/tensorflow_serving/apis/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.  
  * *PredictRequest* specifies information about the model spec, a map of input data serialized via 
@@ -45,14 +44,14 @@ To send images in binary format data should be placed in dt_string field of tens
  * *PredictResponse* includes a map of outputs serialized by 
 [TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) and information about the used model spec.
 
-Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client/README.md#predict-api)
+Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/README.md#predict-api)
 
 Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
 
 
 ## See Also
 
-- [Example client code](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client/README.md) shows how to use GRPC API and REST API.
+- [Example client code](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/README.md) shows how to use GRPC API and REST API.
 - [TensorFlow Serving](https://github.com/tensorflow/serving)
 - [gRPC](https://grpc.io/)
 

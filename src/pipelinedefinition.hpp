@@ -32,6 +32,7 @@
 #pragma GCC diagnostic pop
 
 #include "aliases.hpp"
+#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "modelversion.hpp"
 #include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"
@@ -43,7 +44,7 @@ namespace ovms {
 
 class ModelManager;
 class Pipeline;
-
+// TODO dispose multiple using
 using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 
 class NodeValidator;
@@ -72,6 +73,7 @@ class PipelineDefinition {
 
     const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
+    std::map<std::string, std::shared_ptr<CNLIMWrapper>> nodeResources = {};
     pipeline_connections_t connections;
 
 protected:
@@ -97,7 +99,7 @@ private:
     Status validateNode(ModelManager& manager, const NodeInfo& node, const bool isMultiBatchAllowed);
 
     const NodeInfo& findNodeByName(const std::string& name) const;
-    shape_t getNodeGatherShape(const NodeInfo& info) const;
+    Shape getNodeGatherShape(const NodeInfo& info) const;
 
 public:
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 10000;
@@ -119,6 +121,9 @@ public:
     Status validateNodes(ModelManager& manager);
     Status validateForCycles();
     Status validateDemultiplexerGatherNodesOrder();
+    Status initializeNodeResources(ModelManager& manager);
+    std::vector<NodeInfo> calculateNodeInfosDiff(const std::vector<NodeInfo>& nodeInfos);
+    void deinitializeNodeResources(const std::vector<NodeInfo>& nodeInfosDiff);
 
     const std::string& getName() const { return pipelineName; }
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
@@ -148,21 +153,21 @@ public:
     const tensor_map_t getOutputsInfo() const;
 
 private:
-    static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName);
+    static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName, void* customNodeLibraryInternalManager);
 
     Status populateOutputsInfoWithDLModelOutputs(
         const NodeInfo& dependencyNodeInfo,
         const ModelManager& manager,
         tensor_map_t& outputsInfo,
         const Aliases& aliases,
-        const shape_t& gatherShape) const;
+        const Shape& gatherShape) const;
 
     Status populateOutputsInfoWithCustomNodeOutputs(
         const NodeInfo& dependencyNodeInfo,
         const ModelManager& manager,
         tensor_map_t& outputsInfo,
         const Aliases& aliases,
-        const shape_t& gatherShape) const;
+        const Shape& gatherShape) const;
 
     void increaseRequestsHandlesCount() {
         ++requestsHandlesCounter;

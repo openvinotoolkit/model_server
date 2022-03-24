@@ -21,6 +21,8 @@
 #include <string>
 #include <unordered_map>
 
+#include <openvino/openvino.hpp>
+
 #include "executingstreamidguard.hpp"
 #include "model_version_policy.hpp"  // for model_version_t typename
 #include "modelinstance.hpp"
@@ -47,7 +49,7 @@ public:
     DLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion,
         ModelManager& modelManager,
         std::unordered_map<std::string, std::string> nodeOutputNameAlias = {},
-        std::optional<uint32_t> demultiplyCount = std::nullopt, std::set<std::string> gatherFromNode = {}) :
+        std::optional<int32_t> demultiplyCount = std::nullopt, std::set<std::string> gatherFromNode = {}) :
         Node(nodeName, demultiplyCount, gatherFromNode),
         modelName(modelName),
         modelVersion(modelVersion),
@@ -60,7 +62,7 @@ public:
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
 
 private:
-    Status fetchResults(BlobMap& outputs, InferenceEngine::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey);
+    Status fetchResults(TensorMap& outputs, ov::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey);
 
 public:
     void release(session_key_t sessionId) override;
@@ -86,7 +88,7 @@ private:
         return StatusCode::OK;
     }
 
-    Status executeInference(PipelineEventQueue& notifyEndQueue, InferenceEngine::InferRequest& infer_request);
+    Status executeInference(PipelineEventQueue& notifyEndQueue, ov::InferRequest& infer_request);
     bool tryDisarm(const session_key_t& sessionKey, const uint microseconds = 1) override;
 
 protected:

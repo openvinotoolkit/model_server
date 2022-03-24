@@ -40,7 +40,7 @@ class MockModelInstanceInState : public ovms::ModelInstance {
     static const ovms::model_version_t UNUSED_VERSION = 987789;
 
 public:
-    MockModelInstanceInState(InferenceEngine::Core& ieCore, ovms::ModelVersionState state) :
+    MockModelInstanceInState(ov::Core& ieCore, ovms::ModelVersionState state) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
         status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_VERSION, state);
     }
@@ -48,7 +48,7 @@ public:
 
 class MockModelInstance : public ovms::ModelInstance {
 public:
-    MockModelInstance(InferenceEngine::Core& ieCore) :
+    MockModelInstance(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
     MOCK_METHOD(bool, canUnloadInstance, (), (const));
 };
@@ -57,9 +57,9 @@ public:
 
 class TestUnloadModel : public ::testing::Test {
 protected:
-    std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::Core> ieCore;
     void SetUp() {
-        ieCore = std::make_unique<InferenceEngine::Core>();
+        ieCore = std::make_unique<ov::Core>();
     }
 };
 
@@ -96,7 +96,7 @@ TEST_F(TestUnloadModel, UnloadWaitsUntilMetadataResponseIsBuilt) {
 
     class MockModelInstanceTriggeringUnload : public ovms::ModelInstance {
     public:
-        MockModelInstanceTriggeringUnload(InferenceEngine::Core& ieCore) :
+        MockModelInstanceTriggeringUnload(ov::Core& ieCore) :
             ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
         // This is to trigger model unloading in separate thread during GetModelMetadataImpl::buildResponse call.
         const ovms::tensor_map_t& getInputsInfo() const override {
@@ -142,7 +142,7 @@ TEST_F(TestUnloadModel, CheckIfCanUnload) {
 
 class MockModelInstanceCheckingUnloadingState : public ovms::ModelInstance {
 public:
-    MockModelInstanceCheckingUnloadingState(InferenceEngine::Core& ieCore) :
+    MockModelInstanceCheckingUnloadingState(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
     virtual bool canUnloadInstance() const {
         EXPECT_EQ(ovms::ModelVersionState::UNLOADING, getStatus().getState());
@@ -160,19 +160,103 @@ TEST_F(TestUnloadModel, CheckIfStateIsUnloadingDuringUnloading) {
 
 class TestLoadModel : public ::testing::Test {
 protected:
-    std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::Core> ieCore;
     void SetUp() {
-        ieCore = std::make_unique<InferenceEngine::Core>();
+        ieCore = std::make_unique<ov::Core>();
     }
 };
 
+class MockModelInstanceWithRTMap : public ovms::ModelInstance {
+private:
+    ov::RTMap inputRtMap;
+    ov::RTMap outputRtMap;
+
+protected:
+    std::shared_ptr<ov::Model> loadOVModelPtr(const std::string& modelFile) override {
+        auto model = ovms::ModelInstance::loadOVModelPtr(modelFile);
+        model->input(DUMMY_MODEL_INPUT_NAME).get_rt_info() = this->inputRtMap;
+        model->output(DUMMY_MODEL_OUTPUT_NAME).get_rt_info() = this->outputRtMap;
+        return model;
+    }
+
+public:
+    MockModelInstanceWithRTMap(ov::Core& ieCore, const ov::RTMap& inputRtMap, const ov::RTMap& outputRtMap) :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore),
+        inputRtMap(inputRtMap),
+        outputRtMap(outputRtMap) {
+    }
+};
+
+// The RTMap is not populated with layout info by Model Optimizer.
+// This test ensures that default layout is picked by OVMS and it is "N...".
+TEST_F(TestLoadModel, LoadModelWithEmptyRTMapLayoutSetsDefaultLayout) {
+    auto inputRtMap = ov::RTMap();
+    auto outputRtMap = ov::RTMap();
+    MockModelInstanceWithRTMap mockModelInstance(*ieCore, inputRtMap, outputRtMap);
+    auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    ASSERT_EQ(mockModelInstance.getInputsInfo().size(), 1);
+    ASSERT_EQ(mockModelInstance.getOutputsInfo().size(), 1);
+    EXPECT_EQ(mockModelInstance.getInputsInfo().begin()->second->getLayout(), ovms::Layout::getDefaultLayout());
+    EXPECT_EQ(mockModelInstance.getOutputsInfo().begin()->second->getLayout(), ovms::Layout::getDefaultLayout());
+}
+
+// The RTMap is populated with layout info by Model Optimizer.
+// This test ensures the data is read as default when nothing is specified otherwise in ModelConfig.
+TEST_F(TestLoadModel, LoadModelWithRTMapLayout) {
+    auto inputRtMap = ov::RTMap({{"param", ov::LayoutAttribute(ov::Layout("NC"))}});
+    auto outputRtMap = ov::RTMap({{"param", ov::LayoutAttribute(ov::Layout("CN"))}});
+    MockModelInstanceWithRTMap mockModelInstance(*ieCore, inputRtMap, outputRtMap);
+    auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    ASSERT_EQ(mockModelInstance.getInputsInfo().size(), 1);
+    ASSERT_EQ(mockModelInstance.getOutputsInfo().size(), 1);
+    EXPECT_EQ(mockModelInstance.getInputsInfo().begin()->second->getLayout(), ovms::Layout("NC"));
+    EXPECT_EQ(mockModelInstance.getOutputsInfo().begin()->second->getLayout(), ovms::Layout("CN"));
+}
+
+// The RTMap is populated with layout info by Model Optimizer.
+// This test ensures the data is not read from .xml file but rather overwritten by --layout parameter.
+TEST_F(TestLoadModel, LoadModelWithRTMapLayoutOverwriteByParameter) {
+    auto inputRtMap = ov::RTMap({{"param", ov::LayoutAttribute(ov::Layout("NC"))}});
+    auto outputRtMap = ov::RTMap({{"param", ov::LayoutAttribute(ov::Layout("CN"))}});
+    MockModelInstanceWithRTMap mockModelInstance(*ieCore, inputRtMap, outputRtMap);
+    auto config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(config.parseLayoutParameter("{\"b\":\"CN\",\"a\":\"NC\"}"), ovms::StatusCode::OK);
+    auto status = mockModelInstance.loadModel(config);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    ASSERT_EQ(mockModelInstance.getInputsInfo().size(), 1);
+    ASSERT_EQ(mockModelInstance.getOutputsInfo().size(), 1);
+    EXPECT_EQ(mockModelInstance.getInputsInfo().begin()->second->getLayout(), ovms::Layout("CN"));
+    EXPECT_EQ(mockModelInstance.getOutputsInfo().begin()->second->getLayout(), ovms::Layout("NC"));
+}
+
+// The RTMap is populated with layout info by Model Optimizer.
+// This test ensures that OVMS refuses to load model with Model Optimizer layout set to invalid layout.
+// Invalid layout, meaning the number of dimensions in shape does not match number of dimensions in layout.
+TEST_F(TestLoadModel, LoadModelWithRTMapParameterInputLayoutIncompatible) {
+    auto inputRtMap = ov::RTMap({{"param", ov::LayoutAttribute(ov::Layout("NCHW"))}});
+    auto outputRtMap = ov::RTMap();
+    MockModelInstanceWithRTMap mockModelInstance(*ieCore, inputRtMap, outputRtMap);
+    auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
+    ASSERT_EQ(status, ovms::StatusCode::MODEL_NOT_LOADED) << status.string();
+}
+
+TEST_F(TestLoadModel, LoadModelWithRTMapParameterOutputLayoutIncompatible) {
+    auto inputRtMap = ov::RTMap();
+    auto outputRtMap = ov::RTMap({{"param", ov::LayoutAttribute(ov::Layout("NCHW"))}});
+    MockModelInstanceWithRTMap mockModelInstance(*ieCore, inputRtMap, outputRtMap);
+    auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
+    ASSERT_EQ(status, ovms::StatusCode::MODEL_NOT_LOADED) << status.string();
+}
+
 class MockModelInstanceThrowingFileNotFoundForLoadingCNN : public ovms::ModelInstance {
 public:
-    MockModelInstanceThrowingFileNotFoundForLoadingCNN(InferenceEngine::Core& ieCore) :
+    MockModelInstanceThrowingFileNotFoundForLoadingCNN(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
 
 protected:
-    std::unique_ptr<InferenceEngine::CNNNetwork> loadOVCNNNetworkPtr(const std::string& modelFile) override {
+    std::shared_ptr<ov::Model> loadOVModelPtr(const std::string& modelFile) override {
         throw std::runtime_error("File was not found");
         return nullptr;
     }
@@ -185,22 +269,22 @@ TEST_F(TestLoadModel, CheckIfOVNonExistingXMLFileErrorIsCatched) {
     EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR) << status.string();
 }
 
-class MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork : public ovms::ModelInstance {
+class MockModelInstanceThrowingFileNotFoundForLoadingCompiledModel : public ovms::ModelInstance {
 public:
-    MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork(InferenceEngine::Core& ieCore) :
+    MockModelInstanceThrowingFileNotFoundForLoadingCompiledModel(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
 
 protected:
-    void loadExecutableNetworkPtr(const ovms::plugin_config_t& pluginConfig) override {
+    void loadCompiledModelPtr(const ovms::plugin_config_t& pluginConfig) override {
         throw std::runtime_error("File was not found");
     }
 };
 
 TEST_F(TestLoadModel, CheckIfOVNonExistingBinFileErrorIsCatched) {
     // Check if handling file removal after file existence was checked
-    MockModelInstanceThrowingFileNotFoundForLoadingExecutableNetwork mockModelInstance(*ieCore);
+    MockModelInstanceThrowingFileNotFoundForLoadingCompiledModel mockModelInstance(*ieCore);
     auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
-    EXPECT_EQ(status, ovms::StatusCode::CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE) << status.string();
+    EXPECT_EQ(status, ovms::StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE) << status.string();
 }
 
 TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
@@ -230,7 +314,8 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
         false,      // is stateful
         false,      // idle sequence cleanup enabled
         false,      // low latency transformation enabled
-        500,        // steteful sequence max number
+        500,        // steteful sequence max number,
+        "",         // cache dir
         version,    // version
         modelPath,  // local path
     };
@@ -265,7 +350,8 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
         false,      // is stateful
         false,      // idle sequence cleanup enabled
         false,      // low latency transformation enabled
-        500,        // steteful sequence max number
+        500,        // steteful sequence max number,
+        "",         // cache dir
         version,    // version
         modelPath,  // local path
     };
@@ -287,80 +373,143 @@ TEST_F(TestLoadModel, UnSuccessfulLoadWhenNireqTooHigh) {
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
 }
 
-class TestLoadImageModelWithMapping : public TestLoadModel {
+TEST_F(TestLoadModel, UnSuccessfulLoadWhenLayoutIncorrect) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    auto config = DUMMY_MODEL_CONFIG;
+    config.parseLayoutParameter("nchw:nc");
+    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::MODEL_NOT_LOADED);
+    EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
+}
+
+TEST_F(TestLoadModel, UnSuccessfulLoadWhenInputLayoutIncompatible) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    auto config = DUMMY_MODEL_CONFIG;
+    config.parseLayoutParameter("{\"b\":\"nchw\"}");
+    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::MODEL_NOT_LOADED);
+    EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
+}
+
+TEST_F(TestLoadModel, UnSuccessfulLoadWhenOutputLayoutIncompatible) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    auto config = DUMMY_MODEL_CONFIG;
+    config.parseLayoutParameter("{\"a\":\"nchw\"}");
+    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::MODEL_NOT_LOADED);
+    EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
+}
+
+TEST_F(TestLoadModel, SuccessfulLoadDummyAllDimensionsAny) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    ASSERT_EQ(config.parseShapeParameter("(-1,-1)"), ovms::StatusCode::OK);
+    ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    ASSERT_NE(modelInstance.getInputsInfo().begin(), modelInstance.getInputsInfo().end());
+    ASSERT_EQ(modelInstance.getInputsInfo().begin()->second->getShape(), ovms::Shape(
+                                                                             {ovms::Dimension::any(), ovms::Dimension::any()}));
+}
+
+TEST_F(TestLoadModel, SuccessfulLoadDummyDimensionRanges) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    ASSERT_EQ(config.parseShapeParameter("(20:30,40:50)"), ovms::StatusCode::OK);
+    ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    ASSERT_NE(modelInstance.getInputsInfo().begin(), modelInstance.getInputsInfo().end());
+    ASSERT_EQ(modelInstance.getInputsInfo().begin()->second->getShape(), ovms::Shape(
+                                                                             {{20, 30}, {40, 50}}));
+}
+
+class TestLoadModelWithMapping : public TestLoadModel {
 protected:
     void SetUp() override {
         TestLoadModel::SetUp();
-        config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-        ovms::mapping_config_t mappingOutputs{{INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME, "custom_output"}};
-        ovms::mapping_config_t mappingInputs{{INCREMENT_1x3x4x5_MODEL_INPUT_NAME, "custom_input"}};
+        config = DUMMY_MODEL_CONFIG;
+        ovms::mapping_config_t mappingOutputs{{"a", "output"}};
+        ovms::mapping_config_t mappingInputs{{"b", "input"}};
         config.setMappingInputs(mappingInputs);
         config.setMappingOutputs(mappingOutputs);
 
-        ovms::mapping_config_t realMappingOutputs{{"custom_output", INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME}};
-        ovms::mapping_config_t realMappingInputs{{"custom_input", INCREMENT_1x3x4x5_MODEL_INPUT_NAME}};
+        ovms::mapping_config_t realMappingOutputs{{"output", "a"}};
+        ovms::mapping_config_t realMappingInputs{{"input", "b"}};
         config.setRealMappingInputs(realMappingInputs);
         config.setRealMappingOutputs(realMappingOutputs);
     }
     ovms::ModelConfig config;
-    ovms::shapes_map_t shapeMap;
-    ovms::layouts_map_t layouts;
+    ovms::shapes_info_map_t shapeMap;
+    ovms::layout_configurations_map_t layouts;
 };
 
-TEST_F(TestLoadImageModelWithMapping, SuccessfulLoad) {
+TEST_F(TestLoadModelWithMapping, SuccessfulLoad) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["custom_input"] = inputShape;
+    shapeMap["input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["custom_input"] = "NCHW";
-    layouts["custom_output"] = "NCHW";
+    layouts["input"] = ovms::LayoutConfiguration{"NC"};
+    layouts["output"] = ovms::LayoutConfiguration{"NC"};
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    EXPECT_EQ(modelInstance.getInputsInfo().begin()->second->getShape(), ovms::Shape({1, 10}));
+    EXPECT_EQ(modelInstance.getOutputsInfo().begin()->second->getShape(), ovms::Shape({1, 10}));
 }
 
-TEST_F(TestLoadImageModelWithMapping, UnSuccessfulLoadOldInputShapeName) {
+TEST_F(TestLoadModelWithMapping, SuccessfulLoadChangingModelLayout) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+
+    layouts["input"] = ovms::LayoutConfiguration{"CN", "NC"};
+    layouts["output"] = ovms::LayoutConfiguration{"CN", "NC"};
+    config.setLayouts(layouts);
+
+    EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
+    EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    EXPECT_EQ(modelInstance.getInputsInfo().begin()->second->getShape(), ovms::Shape({10, 1}));
+    EXPECT_EQ(modelInstance.getOutputsInfo().begin()->second->getShape(), ovms::Shape({10, 1}));
+}
+
+TEST_F(TestLoadModelWithMapping, UnSuccessfulLoadOldInputShapeName) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap[INCREMENT_1x3x4x5_MODEL_INPUT_NAME] = inputShape;
+    shapeMap["b"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["custom_input"] = "NCHW";
-    layouts["custom_output"] = "NCHW";
+    layouts["input"] = "LAYOUT_INPUT";
+    layouts["output"] = "LAYOUT_OUTPUT";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestLoadImageModelWithMapping, UnSuccessfulLoadOldInputLayoutName) {
+TEST_F(TestLoadModelWithMapping, UnSuccessfulLoadOldInputLayoutName) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["custom_input"] = inputShape;
+    shapeMap["input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts[INCREMENT_1x3x4x5_MODEL_INPUT_NAME] = "NCHW";
-    layouts["custom_output"] = "NCHW";
+    layouts["b"] = "LAYOUT_INPUT";
+    layouts["output"] = "LAYOUT_OUTPUT";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestLoadImageModelWithMapping, UnSuccessfulLoadOldOutputLayoutName) {
+TEST_F(TestLoadModelWithMapping, UnSuccessfulLoadOldOutputLayoutName) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["custom_input"] = inputShape;
+    shapeMap["input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["custom_input"] = "NCHW";
-    layouts[INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME] = "NCHW";
+    layouts["input"] = "LAYOUT_INPUT";
+    layouts["a"] = "LAYOUT_OUTPUT";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME);
@@ -369,9 +518,9 @@ TEST_F(TestLoadImageModelWithMapping, UnSuccessfulLoadOldOutputLayoutName) {
 
 class TestReloadModel : public ::testing::Test {
 protected:
-    std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::Core> ieCore;
     void SetUp() {
-        ieCore = std::make_unique<InferenceEngine::Core>();
+        ieCore = std::make_unique<ov::Core>();
     }
 };
 
@@ -421,10 +570,21 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewBatchSize) {
     config.setBatchSize(1);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
-    auto newBatchSize = config.getBatchSize() + 1;
+    auto newBatchSize = ovms::Dimension(config.getBatchSize().value().getStaticValue() + 1);
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unloadGuard;
     EXPECT_EQ(modelInstance.reloadModel(newBatchSize, {}, unloadGuard), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+}
+
+TEST_F(TestReloadModel, ReloadWithIncorrectLayoutAndThenFix) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(config.parseLayoutParameter("nchw:nc"), ovms::StatusCode::OK);
+    ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::MODEL_NOT_LOADED);
+    ASSERT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState()) << modelInstance.getStatus().getStateString();
+    ASSERT_EQ(config.parseLayoutParameter("cn:nc"), ovms::StatusCode::OK);
+    ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
 TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewShape) {
@@ -435,7 +595,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyLoadedWithNewShape) {
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unloadGuard;
-    EXPECT_EQ(modelInstance.reloadModel(0, requestShapes, unloadGuard), ovms::StatusCode::OK);
+    EXPECT_EQ(modelInstance.reloadModel(std::nullopt, requestShapes, unloadGuard), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
@@ -447,7 +607,7 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewBatchSize) {
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     modelInstance.retireModel();
     ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
-    auto newBatchSize = config.getBatchSize() + 1;
+    auto newBatchSize = ovms::Dimension(config.getBatchSize().value().getStaticValue() + 1);
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unloadGuard;
     EXPECT_EQ(modelInstance.reloadModel(newBatchSize, {}, unloadGuard), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
@@ -463,103 +623,103 @@ TEST_F(TestReloadModel, SuccessfulReloadFromAlreadyUnloadedWithNewShape) {
     modelInstance.retireModel();
     ASSERT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unloadGuard;
-    EXPECT_EQ(modelInstance.reloadModel(0, requestShapes, unloadGuard), ovms::StatusCode::OK);
+    EXPECT_EQ(modelInstance.reloadModel(std::nullopt, requestShapes, unloadGuard), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
-class TestReloadImageModelWithMapping : public TestReloadModel {
+class TestReloadModelWithMapping : public TestReloadModel {
 protected:
     void SetUp() override {
         TestReloadModel::SetUp();
-        config = INCREMENT_1x3x4x5_MODEL_CONFIG;
-        ovms::mapping_config_t mappingOutputs{{INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME, "custom_output"}};
-        ovms::mapping_config_t mappingInputs{{INCREMENT_1x3x4x5_MODEL_INPUT_NAME, "custom_input"}};
+        config = DUMMY_MODEL_CONFIG;
+        ovms::mapping_config_t mappingOutputs{{"a", "output"}};
+        ovms::mapping_config_t mappingInputs{{"b", "input"}};
         config.setMappingInputs(mappingInputs);
         config.setMappingOutputs(mappingOutputs);
 
-        ovms::mapping_config_t realMappingOutputs{{"custom_output", INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME}};
-        ovms::mapping_config_t realMappingInputs{{"custom_input", INCREMENT_1x3x4x5_MODEL_INPUT_NAME}};
+        ovms::mapping_config_t realMappingOutputs{{"output", "a"}};
+        ovms::mapping_config_t realMappingInputs{{"input", "b"}};
         config.setRealMappingInputs(realMappingInputs);
         config.setRealMappingOutputs(realMappingOutputs);
     }
     ovms::ModelConfig config;
-    ovms::shapes_map_t shapeMap;
-    ovms::layouts_map_t layouts;
+    ovms::shapes_info_map_t shapeMap;
+    ovms::layout_configurations_map_t layouts;
 };
 
-TEST_F(TestReloadImageModelWithMapping, SuccessfulReload) {
+TEST_F(TestReloadModelWithMapping, SuccessfulReload) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["custom_input"] = inputShape;
+    shapeMap["input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["custom_input"] = "NCHW";
-    layouts["custom_output"] = "NCHW";
+    layouts["input"] = "NC";
+    layouts["output"] = "NC";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestReloadImageModelWithMapping, UnSuccessfulReloadOldInputShapeName) {
+TEST_F(TestReloadModelWithMapping, UnSuccessfulReloadOldInputShapeName) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap[INCREMENT_1x3x4x5_MODEL_INPUT_NAME] = inputShape;
+    shapeMap["b"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["custom_input"] = "NCHW";
-    layouts["custom_output"] = "NCHW";
+    layouts["input"] = "LAYOUT_INPUT";
+    layouts["output"] = "LAYOUT_OUTPUT";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestReloadImageModelWithMapping, UnSuccessfulReloadOldInputLayoutName) {
+TEST_F(TestReloadModelWithMapping, UnSuccessfulReloadOldInputLayoutName) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["custom_input"] = inputShape;
+    shapeMap["input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts[INCREMENT_1x3x4x5_MODEL_INPUT_NAME] = "NCHW";
-    layouts["custom_output"] = "NCHW";
+    layouts["b"] = "LAYOUT_INPUT";
+    layouts["output"] = "LAYOUT_OUTPUT";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestReloadImageModelWithMapping, UnSuccessfulReloadOldOutputLayoutName) {
+TEST_F(TestReloadModelWithMapping, UnSuccessfulReloadOldOutputLayoutName) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     EXPECT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["custom_input"] = inputShape;
+    shapeMap["input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["custom_input"] = "NCHW";
-    layouts[INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME] = "NCHW";
+    layouts["input"] = "LAYOUT_INPUT";
+    layouts["a"] = "LAYOUT_OUTPUT";
     config.setLayouts(layouts);
 
     EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 }
 
-TEST_F(TestReloadImageModelWithMapping, ReloadMultipleTimes) {
+TEST_F(TestReloadModelWithMapping, ReloadMultipleTimes) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     // initial load
@@ -568,23 +728,23 @@ TEST_F(TestReloadImageModelWithMapping, ReloadMultipleTimes) {
 
     // load with mapping
     ovms::ShapeInfo inputShape{ovms::FIXED, {1, 20}};
-    shapeMap["custom_input"] = inputShape;
+    shapeMap["input"] = inputShape;
     config.setShapes(shapeMap);
 
-    layouts["custom_input"] = "NCHW";
-    layouts["custom_output"] = "NCHW";
+    layouts["input"] = "NC";
+    layouts["output"] = "NC";
     config.setLayouts(layouts);
     EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 
     // load with invalid shape and layouts
-    ovms::shapes_map_t shapeMapInvalid;
-    shapeMapInvalid[INCREMENT_1x3x4x5_MODEL_INPUT_NAME] = inputShape;
+    ovms::shapes_info_map_t shapeMapInvalid;
+    shapeMapInvalid["b"] = inputShape;
     config.setShapes(shapeMapInvalid);
 
-    ovms::layouts_map_t layoutsInvalid;
-    layoutsInvalid[INCREMENT_1x3x4x5_MODEL_INPUT_NAME] = "NCHW";
-    layoutsInvalid[INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME] = "NCHW";
+    ovms::layout_configurations_map_t layoutsInvalid;
+    layoutsInvalid["b"] = "LAYOUT_INPUT";
+    layoutsInvalid["a"] = "LAYOUT_OUTPUT";
     config.setLayouts(layoutsInvalid);
     EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
@@ -607,10 +767,10 @@ TEST_F(TestReloadImageModelWithMapping, ReloadMultipleTimes) {
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 
     // load with unknown shape
-    ovms::shapes_map_t shapeMapUnknown;
+    ovms::shapes_info_map_t shapeMapUnknown;
     shapeMapUnknown["unknown"] = inputShape;
     config.setShapes(shapeMapUnknown);
-    EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_NETWORK);
+    EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_MODEL);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 
     // load with valid config
@@ -620,11 +780,11 @@ TEST_F(TestReloadImageModelWithMapping, ReloadMultipleTimes) {
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 
     // load with invalid layout
-    ovms::layouts_map_t layoutsUnknown;
-    layoutsUnknown["custom_input"] = "NCHW";
-    layoutsUnknown["unknown"] = "NCHW";
+    ovms::layout_configurations_map_t layoutsUnknown;
+    layoutsUnknown["input"] = "LAYOUT_INPUT";
+    layoutsUnknown["unknown"] = "LAYOUT_OUTPUT";
     config.setLayouts(layoutsUnknown);
-    EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_LAYOUT_IS_NOT_IN_NETWORK);
+    EXPECT_EQ(modelInstance.reloadModel(config), ovms::StatusCode::CONFIG_LAYOUT_IS_NOT_IN_MODEL);
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance.getStatus().getState());
 
     // load with valid config
@@ -642,12 +802,12 @@ TEST(CpuThroughputStreamsNotSpecified, DefaultIsSetForCPU) {
     EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 1);
 }
 
-TEST(CpuThroughputStreamsNotSpecified, DefaultIsSetForHeteroCPU) {
+TEST(CpuThroughputStreamsNotSpecified, NotSetForHeteroCPU) {
     ovms::ModelConfig config;
     config.setTargetDevice("HETERO:MYRIAD,CPU");
     config.setPluginConfig({});
     ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
-    EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 1);
+    EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
 }
 
 TEST(CpuThroughputStreamsNotSpecified, NotSetForNonCpuDevices) {
@@ -660,6 +820,17 @@ TEST(CpuThroughputStreamsNotSpecified, NotSetForNonCpuDevices) {
     pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
     EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
     config.setTargetDevice("GPU");
+    pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+    EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
+}
+
+TEST(CpuThroughputStreamsNotSpecified, NotSetWhenPerfHintSpecified) {
+    ovms::ModelConfig config;
+    config.setPluginConfig({{"PERFORMANCE_HINT", "LATENCY"}});
+    config.setTargetDevice("CPU");
+    ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+    EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
+    config.setPluginConfig({{"PERFORMANCE_HINT", "THROUGHTPUT"}});
     pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
     EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
 }

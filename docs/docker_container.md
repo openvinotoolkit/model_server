@@ -40,8 +40,8 @@ docker run -p 9000:9000 openvino/model_server:latest \
 --layout NHWC --port 9000 
 
 # download input files, an image, and a label mapping file
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.2/example_client/images/zebra.jpeg 
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.2/example_client/classes.py 
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/common/static/images/zebra.jpeg
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/common/python/classes.py
 
 # Install the Python-based ovmsclient package
 pip3 install ovmsclient
@@ -77,25 +77,50 @@ In the `./dist` directory it will generate:
 - image tagged as openvino/model_server:latest-nginx-mtls - with CPU, NCS, and HDDL support and a reference nginx setup of mTLS integration
 - release package (.tar.gz, with ovms binary and necessary libraries)
 
-**Note:** OVMS docker image can be created with ubi8-minimal base image, centos7, or the default ubuntu20. 
+**Note:** OVMS docker image can be created with ubi8-minimal base image or the default ubuntu20. 
 Note that OVMS with the ubi base image doesn’t support NCS and HDDL accelerators.
 
 To do so, use either of these commands:
 
-```bash
-make docker_build BASE_OS=redhat
+Running the inference operation on GPU requires the ovms process security context account to have correct permissions.
+It has to belong to the render group identified by the command:
+```
+stat -c "group_name=%G group_id=%g" /dev/dri/render*
+```
+The default account in the docker image is already preconfigured. In case you change the security context, use the following command
+to start the ovms container:
+```
+docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+-v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+--model_path /opt/model --model_name my_model --port 9001 --target_device GPU
+```
 
-make docker_build BASE_OS=centos
+*Note:* The public docker image includes the OpenCL drivers for GPU in version 21.38.21026.
+
+## Using Multi-Device Plugin
+
+If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
+With Multi-Device Plugin enabled, inference requests will be load balanced between multiple devices. 
+For more detailed information read [OpenVino's Multi-Device plugin documentation](https://docs.openvinotoolkit.org/2021.4/_docs_IE_DG_supported_plugins_MULTI.html).
+
+In order to use this feature in OpenVino™ Model Server, following steps are required:
+
+Set target_device for the model in configuration json file to MULTI:DEVICE_1,DEVICE_2 (e.g. MULTI:MYRIAD,CPU, order of the devices defines their priority, so MYRIAD devices will be used first in this example)
+
+Below is exemplary config.json setting up Multi-Device Plugin for resnet model, using Intel® Movidius™ Neural Compute Stick and CPU devices:
+```
+make docker_build BASE_OS=ubuntu
 ```
 
 Additionally, you can use the `INSTALL_DRIVER_VERSION` argument command to choose which GPU driver version is used by the produced image. 
 If not provided, most recent version is used.
 
 Currently, the following versions are available:
-- 19.41.14441
-- 20.35.17767
+- 21.38.21026 - Redhat
+- 21.48.21782 - Ubuntu
 
 Example:
 ```bash
-make docker_build INSTALL_DRIVER_VERSION=19.41.14441
+make docker_build INSTALL_DRIVER_VERSION=21.38.21026
 ```
+If not provided, version 21.38.21026 is used for Redhat and 21.48.21782 is used for Ubuntu.

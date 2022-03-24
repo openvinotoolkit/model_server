@@ -73,43 +73,122 @@ TEST(ModelConfig, getters_setters) {
 TEST(ModelConfig, layout_single) {
     ovms::ModelConfig config;
 
-    config.setLayout("NHWC");
+    config.setLayout(ovms::LayoutConfiguration{"NCHW", "NHWC"});
     auto l1 = config.getLayout();
     auto l2 = config.getLayouts();
-    EXPECT_EQ(l1, "NHWC");
+    EXPECT_EQ(l1.getTensorLayout(), "NCHW");
+    EXPECT_EQ(l1.getModelLayout(), "NHWC");
     EXPECT_EQ(l2.size(), 0);
 }
 
 TEST(ModelConfig, layout_multi) {
     ovms::ModelConfig config;
 
-    ovms::layouts_map_t layouts;
-    layouts["A"] = "layout_A";
-    layouts["B"] = "layout_B";
+    ovms::layout_configurations_map_t layouts;
+    layouts["A"] = ovms::LayoutConfiguration{"NCHW", "NHWC"};
+    layouts["B"] = ovms::LayoutConfiguration{"CN", "NC"};
 
     config.setLayout("NHWC");
     config.setLayouts(layouts);
 
     auto l1 = config.getLayout();
     auto l2 = config.getLayouts();
-    EXPECT_EQ(l1, "");
-    EXPECT_THAT(l2, UnorderedElementsAre(
-                        Pair("A", "layout_A"),
-                        Pair("B", "layout_B")));
+    EXPECT_EQ(l1.isSet(), false);
+    ASSERT_EQ(l2.count("A"), 1);
+    ASSERT_EQ(l2.count("B"), 1);
+    EXPECT_EQ(l2.find("A")->second.getTensorLayout(), "NCHW");
+    EXPECT_EQ(l2.find("A")->second.getModelLayout(), "NHWC");
+    EXPECT_EQ(l2.find("B")->second.getTensorLayout(), "CN");
+    EXPECT_EQ(l2.find("B")->second.getModelLayout(), "NC");
 
     config.setLayout("NHWC");
+    l1 = config.getLayout();
     l2 = config.getLayouts();
+    EXPECT_EQ(l1.isSet(), true);
+    EXPECT_EQ(l1.getTensorLayout(), "NHWC");
+    EXPECT_EQ(l1.getModelLayout(), "NHWC");
     EXPECT_EQ(l2.size(), 0);
 
     config.setLayouts(layouts);
-    config.addLayout("C", "layout_C");
     l1 = config.getLayout();
     l2 = config.getLayouts();
-    EXPECT_EQ(l1, "");
-    EXPECT_THAT(l2, UnorderedElementsAre(
-                        Pair("A", "layout_A"),
-                        Pair("B", "layout_B"),
-                        Pair("C", "layout_C")));
+    EXPECT_EQ(l1.isSet(), false);
+    EXPECT_EQ(l2.size(), 2);
+}
+
+TEST(ModelConfig, parseLayoutParam_single) {
+    using namespace ovms;
+    ModelConfig config;
+    // Valid
+    std::string valid_str1 = "";
+    std::string valid_str2 = "nchw";
+    std::string valid_str3 = " Nhwc : ncHW ";
+    std::string valid_str4 = "nC";
+
+    ASSERT_EQ(config.parseLayoutParameter(valid_str1), StatusCode::OK);
+    EXPECT_EQ(config.getLayouts().size(), 0);
+    EXPECT_EQ(config.getLayout().getTensorLayout(), "");
+    EXPECT_EQ(config.getLayout().getModelLayout(), "");
+
+    ASSERT_EQ(config.parseLayoutParameter(valid_str2), StatusCode::OK);
+    EXPECT_EQ(config.getLayouts().size(), 0);
+    EXPECT_EQ(config.getLayout().getTensorLayout(), "NCHW");
+    EXPECT_EQ(config.getLayout().getModelLayout(), "NCHW");
+
+    ASSERT_EQ(config.parseLayoutParameter(valid_str3), StatusCode::OK);
+    EXPECT_EQ(config.getLayouts().size(), 0);
+    EXPECT_EQ(config.getLayout().getTensorLayout(), "NHWC");
+    EXPECT_EQ(config.getLayout().getModelLayout(), "NCHW");
+
+    ASSERT_EQ(config.parseLayoutParameter(valid_str4), StatusCode::OK);
+    EXPECT_EQ(config.getLayouts().size(), 0);
+    EXPECT_EQ(config.getLayout().getTensorLayout(), "NC");
+    EXPECT_EQ(config.getLayout().getModelLayout(), "NC");
+
+    // Invalid
+    std::vector<std::string> invalid_str{
+        std::string{"nc::nc"},
+        std::string{":nc:nc"},
+        std::string{"nc>nc"},
+    };
+
+    for (std::string str : invalid_str) {
+        auto status = config.parseLayoutParameter(str);
+        EXPECT_EQ(status, ovms::StatusCode::LAYOUT_WRONG_FORMAT) << " Failed for: " << str;
+        EXPECT_EQ(config.getLayout().getTensorLayout(), "");
+        EXPECT_EQ(config.getLayout().getModelLayout(), "");
+        EXPECT_EQ(config.getLayouts().size(), 0);
+    }
+}
+
+TEST(ModelConfig, parseLayoutParam_multi) {
+    using namespace ovms;
+    ModelConfig config;
+    // Valid
+    std::string valid_str1 = " { \"input\": \"nchw:nhwc\", \"output\": \"nc\" } ";
+
+    ASSERT_EQ(config.parseLayoutParameter(valid_str1), StatusCode::OK);
+    EXPECT_EQ(config.getLayouts().size(), 2);
+    ASSERT_EQ(config.getLayouts().count("input"), 1);
+    ASSERT_EQ(config.getLayouts().count("output"), 1);
+    EXPECT_EQ(config.getLayouts().find("input")->second.getTensorLayout(), "NCHW");
+    EXPECT_EQ(config.getLayouts().find("input")->second.getModelLayout(), "NHWC");
+    EXPECT_EQ(config.getLayouts().find("output")->second.getTensorLayout(), "NC");
+    EXPECT_EQ(config.getLayouts().find("output")->second.getModelLayout(), "NC");
+
+    // Invalid
+    std::vector<std::string> invalid_str{
+        std::string{" { \"input\": \"nchw>nhwc\", \"output\": \"nc\" } "},
+        std::string{" { \"input\": \"nchw:nhwc:nchw\", \"output\": \"nc\" } "},
+    };
+
+    for (std::string str : invalid_str) {
+        auto status = config.parseLayoutParameter(str);
+        EXPECT_EQ(status, ovms::StatusCode::LAYOUT_WRONG_FORMAT) << " Failed for: " << str;
+        EXPECT_EQ(config.getLayout().getTensorLayout(), "");
+        EXPECT_EQ(config.getLayout().getModelLayout(), "");
+        EXPECT_EQ(config.getLayouts().size(), 0);
+    }
 }
 
 TEST(ModelConfig, shape) {
@@ -119,15 +198,15 @@ TEST(ModelConfig, shape) {
     ovms::ShapeInfo s2{ovms::FIXED, {6, 6, 200, 300}};
     ovms::ShapeInfo s3{ovms::FIXED, {100, 500}};
 
-    ovms::shapes_map_t shapeMap;
+    ovms::shapes_info_map_t shapeMap;
     shapeMap["first"] = s1;
     shapeMap["second"] = s2;
 
     config.setShapes(shapeMap);
     auto gs1 = config.getShapes();
     EXPECT_EQ(gs1.size(), 2);
-    EXPECT_THAT(gs1["first"].shape, ElementsAre(1, 2, 3));
-    EXPECT_THAT(gs1["second"].shape, ElementsAre(6, 6, 200, 300));
+    EXPECT_EQ((gs1["first"].shape), (ovms::Shape{1, 2, 3}));
+    EXPECT_EQ((gs1["second"].shape), (ovms::Shape{6, 6, 200, 300}));
 
     // mutli shape
     config.setShapes(shapeMap);
@@ -135,7 +214,7 @@ TEST(ModelConfig, shape) {
 
     gs1 = config.getShapes();
     EXPECT_EQ(gs1.size(), 3);
-    EXPECT_THAT(gs1["third"].shape, ElementsAre(100, 500));
+    EXPECT_EQ((gs1["third"].shape), (ovms::Shape{100, 500}));
 }
 
 TEST(ModelConfig, parseShapeFromString) {
@@ -152,11 +231,11 @@ TEST(ModelConfig, parseShapeFromString) {
 
     config.parseShape(shapeInfo, valid_str1);
     EXPECT_EQ(shapeInfo.shapeMode, ovms::FIXED);
-    EXPECT_THAT(shapeInfo.shape, ElementsAre(64, 128, 256, 300));
+    EXPECT_EQ(shapeInfo.shape, (ovms::Shape{64, 128, 256, 300}));
 
     config.parseShape(shapeInfo, valid_str2);
     EXPECT_EQ(shapeInfo.shapeMode, ovms::FIXED);
-    EXPECT_THAT(shapeInfo.shape, ElementsAre(64, 300));
+    EXPECT_EQ(shapeInfo.shape, (ovms::Shape{64, 300}));
 
     // Invalid
     std::string invalid_str1 = "(1, 2, 3, 4]";
@@ -171,9 +250,56 @@ TEST(ModelConfig, parseShapeFromString) {
     EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
 
     status = config.parseShape(shapeInfo, invalid_str3);
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+    EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
     status = config.parseShape(shapeInfo, invalid_str4);
     EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
+}
+
+TEST(ModelConfig, parseDimParam) {
+    ovms::ModelConfig config;
+    // Valid
+    std::string auto_str = "auto";
+    std::string valid_str1 = " 24 ";
+    std::string valid_str2 = " 30:32 ";
+    std::string valid_str3 = " -1 ";
+
+    config.setBatchingParams(auto_str);
+    EXPECT_EQ(config.getBatchingMode(), ovms::AUTO);
+    EXPECT_EQ(config.getBatchSize(), std::nullopt);
+
+    config.setBatchingParams(valid_str1);
+    EXPECT_EQ(config.getBatchingMode(), ovms::FIXED);
+    EXPECT_EQ(config.getBatchSize(), ovms::Dimension{24});
+
+    config.setBatchingParams(valid_str2);
+    EXPECT_EQ(config.getBatchingMode(), ovms::FIXED);
+    EXPECT_EQ(config.getBatchSize(), ovms::Dimension(30, 32));
+
+    config.setBatchingParams(valid_str3);
+    EXPECT_EQ(config.getBatchingMode(), ovms::FIXED);
+    EXPECT_EQ(config.getBatchSize(), ovms::Dimension::any());
+
+    // Invalid
+
+    std::vector<std::string> invalid_str{
+        std::string{"word"},
+        std::string{":9"},
+        std::string{"9:"},
+        std::string{"9-30"},
+        std::string{"9..30"},
+        std::string{"0"},
+        std::string{"9::30"},
+        std::string{"-90:10"},
+        std::string{"?"},
+        std::string{"2.5:3"},
+        std::string{"500000000000000000"},
+    };
+
+    for (std::string str : invalid_str) {
+        config.setBatchingParams(str);
+        EXPECT_EQ(config.getBatchingMode(), ovms::FIXED) << " invalid for str " << str;
+        EXPECT_EQ(config.getBatchSize(), std::nullopt) << " invalid for str " << str;
+    }
 }
 
 TEST(ModelConfig, parseShapeParam) {
@@ -191,19 +317,19 @@ TEST(ModelConfig, parseShapeParam) {
     config.parseShapeParameter(valid_str1);
     shapes = config.getShapes();
     EXPECT_EQ(shapes[ovms::ANONYMOUS_INPUT_NAME].shapeMode, ovms::FIXED);
-    EXPECT_THAT(shapes[ovms::ANONYMOUS_INPUT_NAME].shape, ElementsAre(64, 128, 256, 300));
+    EXPECT_EQ(shapes[ovms::ANONYMOUS_INPUT_NAME].shape, (ovms::Shape{64, 128, 256, 300}));
 
     config.parseShapeParameter(valid_str2);
     shapes = config.getShapes();
     EXPECT_EQ(shapes["input"].shapeMode, ovms::FIXED);
-    EXPECT_THAT(shapes["input"].shape, ElementsAre(1, 3, 3, 200));
+    EXPECT_EQ(shapes["input"].shape, (ovms::Shape{1, 3, 3, 200}));
 
     config.parseShapeParameter(valid_str3);
     shapes = config.getShapes();
     EXPECT_EQ(shapes["input"].shapeMode, ovms::AUTO);
     EXPECT_EQ(shapes["input"].shape.size(), 0);
     EXPECT_EQ(shapes["extra_input"].shapeMode, ovms::FIXED);
-    EXPECT_THAT(shapes["extra_input"].shape, ElementsAre(10));
+    EXPECT_EQ(shapes["extra_input"].shape, (ovms::Shape{10}));
 
     // Invalid
 
@@ -219,6 +345,104 @@ TEST(ModelConfig, parseShapeParam) {
 
     status = config.parseShapeParameter(invalid_str3);
     EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
+}
+
+TEST(ModelConfig, parseShapeDynamicParam) {
+    using namespace ovms;
+    ovms::ModelConfig config;
+    // Valid
+    std::string valid_str1 = "(64:128,128,256:512,300:301)";
+    std::string valid_str2 = "{\"input\": \"(1, 3:6, 3, 200:100000)\"}";
+    std::string valid_str3 = "{\"input\": \"auto\", \"extra_input\": \"(10:20)\"}";
+
+    ASSERT_EQ(config.parseShapeParameter(valid_str1), StatusCode::OK);
+    auto shapes = config.getShapes();
+    EXPECT_EQ(shapes[ovms::ANONYMOUS_INPUT_NAME].shapeMode, ovms::FIXED);
+    EXPECT_EQ(shapes[ovms::ANONYMOUS_INPUT_NAME].shape, (ovms::Shape{{64, 128}, 128, {256, 512}, {300, 301}}));
+
+    auto shape = ovms::Shape{1, 5, 10};
+
+    ASSERT_EQ(config.parseShapeParameter(valid_str2), StatusCode::OK);
+    shapes = config.getShapes();
+    EXPECT_EQ(shapes["input"].shapeMode, ovms::FIXED);
+    EXPECT_EQ(shapes["input"].shape, (ovms::Shape{1, {3, 6}, 3, {200, 100000}}));
+
+    ASSERT_EQ(config.parseShapeParameter(valid_str3), StatusCode::OK);
+    shapes = config.getShapes();
+    EXPECT_EQ(shapes["input"].shapeMode, ovms::AUTO);
+    EXPECT_EQ(shapes["input"].shape.size(), 0);
+    EXPECT_EQ(shapes["extra_input"].shapeMode, ovms::FIXED);
+    EXPECT_EQ(shapes["extra_input"].shape, (ovms::Shape{{10, 20}}));
+
+    // Invalid
+
+    std::vector<std::string> invalid_str{
+        std::string{"[1:50, 300]"},
+        std::string{"{\"input\": \"auto\", \"extra_input\": \"(9:10,,50)\"}"},
+        std::string{"{\"input\": \"auto\", \"extra_input\": \"(:9,20,50)\"}"},
+        std::string{"{\"input\": \"auto\", \"extra_input\": \"(9:,20,50)\"}"},
+        std::string{"{\"input\": \"auto\", \"extra_input\": \"(9-30,20,50)\"}"},
+        std::string{"{\"input\": \"auto\", \"extra_input\": \"(9..30,20,50)\"}"},
+        std::string{"{\"input\": \"auto\", \"extra_input\": \"(0,20,50)\"}"},
+        std::string{"{\"input\": \"auto\", \"extra_input\": \"(9::30,20,50)\"}"},
+        std::string{"{\"input\": \"auto\", \"extra_input\": \"(-90:10,20,50)\"}"},
+        std::string{"{\"input\": \"auto\", \"extra_input\": \"(?,20,50)\"}"},
+        std::string{"{\"input\": \"auto\", \"extra_input\": \"(2.5:3,20,50)\"}"},
+        std::string{"{\"input\": \"auto\", \"extra_input\": \"(1,20,500000000000000000)\"}"},
+    };
+
+    for (std::string str : invalid_str) {
+        auto status = config.parseShapeParameter(str);
+        EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
+    }
+}
+
+TEST(ModelConfig, dynamicShapeToString) {
+    using namespace ovms;
+    Shape shape{1, 5, {10, 20}, Dimension::any(), 3, {1, 290}};
+    EXPECT_EQ(shape.toString(), "(1,5,[10~20],-1,3,[1~290])");
+}
+
+TEST(ModelConfig, parseShapeAnyDimParam) {
+    using namespace ovms;
+    ovms::ModelConfig config;
+    // Valid
+    std::string valid_str1 = "(-1,3,224,224)";
+    std::string valid_str2 = "{\"input\": \"(-1,  5, -1, 2)\"}";
+    std::string valid_str3 = "{\"input\": \"auto\", \"extra_input\": \"(10:20,-1)\"}";
+
+    ASSERT_EQ(config.parseShapeParameter(valid_str1), StatusCode::OK);
+    auto shapes = config.getShapes();
+    EXPECT_EQ(shapes[ovms::ANONYMOUS_INPUT_NAME].shapeMode, ovms::FIXED);
+    EXPECT_EQ(shapes[ovms::ANONYMOUS_INPUT_NAME].shape, (Shape{Dimension::any(), 3, 224, 224}));
+
+    auto shape = ovms::Shape{1, 5, 10};
+
+    ASSERT_EQ(config.parseShapeParameter(valid_str2), StatusCode::OK);
+    shapes = config.getShapes();
+    EXPECT_EQ(shapes["input"].shapeMode, ovms::FIXED);
+    EXPECT_EQ(shapes["input"].shape, (Shape{Dimension::any(), 5, Dimension::any(), 2}));
+
+    ASSERT_EQ(config.parseShapeParameter(valid_str3), StatusCode::OK);
+    shapes = config.getShapes();
+    EXPECT_EQ(shapes["input"].shapeMode, ovms::AUTO);
+    EXPECT_EQ(shapes["input"].shape.size(), 0);
+    EXPECT_EQ(shapes["extra_input"].shapeMode, ovms::FIXED);
+    EXPECT_EQ(shapes["extra_input"].shape, (Shape{{10, 20}, Dimension::any()}));
+
+    // Invalid
+
+    std::vector<std::string> invalid_str{
+        std::string{"[-1, 300]"},
+        std::string{"{\"input\": \"auto\", \"extra_input\": \"(--30,20,50)\"}"},
+        std::string{"{\"input\": \"auto\", \"extra_input\": \"(-5,20,50)\"}"},
+        std::string{"{\"input\": \"auto\", \"extra_input\": \"(5-,20,50)\"}"},
+    };
+
+    for (std::string str : invalid_str) {
+        auto status = config.parseShapeParameter(str);
+        EXPECT_EQ(status, ovms::StatusCode::SHAPE_WRONG_FORMAT);
+    }
 }
 
 TEST(ModelConfig, plugin_config_number) {
@@ -330,16 +554,16 @@ TEST(ModelConfig, mappingRealOutputs) {
     EXPECT_EQ(empty, "");
 }
 
-TEST(ModelConfig, isDeviceUsed) {
+TEST(ModelConfig, isSingleDeviceUsed) {
     ovms::ModelConfig config;
     config.setTargetDevice("GPU");
-    EXPECT_FALSE(config.isDeviceUsed("CPU"));
+    EXPECT_FALSE(config.isSingleDeviceUsed("CPU"));
     config.setTargetDevice("CPU");
-    EXPECT_TRUE(config.isDeviceUsed("CPU"));
+    EXPECT_TRUE(config.isSingleDeviceUsed("CPU"));
     config.setTargetDevice("HETERO:MYRIAD,CPU");
-    EXPECT_TRUE(config.isDeviceUsed("CPU"));
+    EXPECT_FALSE(config.isSingleDeviceUsed("CPU"));
     config.setTargetDevice("HETERO:MYRIAD,GPU");
-    EXPECT_FALSE(config.isDeviceUsed("CPU"));
+    EXPECT_FALSE(config.isSingleDeviceUsed("CPU"));
 }
 
 TEST(ModelConfig, shapeConfigurationEqual_SingleInput) {
@@ -392,7 +616,7 @@ TEST(ModelConfig, shapeConfigurationEqual_MultipleInputs) {
     using namespace ovms;
     ModelConfig lhs, rhs;
 
-    shapes_map_t shapesMap = {
+    shapes_info_map_t shapesMap = {
         {"a", {Mode::AUTO, {}}},
         {"b", {Mode::FIXED, {1, 3, 224, 224}}}};
 
@@ -505,6 +729,81 @@ TEST(ModelConfig, shapeConfigurationEqual_MultipleInputs_WrongNumberOfInputs) {
         {"a", {Mode::AUTO, {}}},
         {"b", {Mode::FIXED, {1, 3, 224, 224}}},
         {"c", {Mode::AUTO, {}}},
+    });
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+}
+
+TEST(ModelConfig, shapeConfigurationEqual_MultipleInputs_EqualRanges) {
+    using namespace ovms;
+    ModelConfig lhs, rhs;
+
+    lhs.setShapes({
+        {"b", {Mode::FIXED, Shape{1, 3, {224, 1024}, {224, 512}}}},
+        {"c", {Mode::FIXED, Shape{1, {1, 3}, 224, 224}}},
+    });
+    rhs.setShapes({
+        {"b", {Mode::FIXED, Shape{1, 3, {224, 1024}, {224, 512}}}},
+        {"c", {Mode::FIXED, Shape{1, {1, 3}, 224, 224}}},
+    });
+    EXPECT_TRUE(lhs.isShapeConfigurationEqual(rhs));
+}
+
+TEST(ModelConfig, shapeConfigurationEqual_MultipleInputs_EqualAnyResolution) {
+    using namespace ovms;
+    ModelConfig lhs, rhs;
+
+    lhs.setShapes({
+        {"b", {Mode::FIXED, Shape{1, 3, Dimension::any(), Dimension::any()}}},
+        {"c", {Mode::FIXED, Shape{1, {1, 3}, 224, 224}}},
+    });
+    rhs.setShapes({
+        {"b", {Mode::FIXED, Shape{1, 3, Dimension::any(), Dimension::any()}}},
+        {"c", {Mode::FIXED, Shape{1, {1, 3}, 224, 224}}},
+    });
+    EXPECT_TRUE(lhs.isShapeConfigurationEqual(rhs));
+}
+
+TEST(ModelConfig, shapeConfigurationEqual_MultipleInputs_AnyColorVsRangeColor) {
+    using namespace ovms;
+    ModelConfig lhs, rhs;
+
+    lhs.setShapes({
+        {"b", {Mode::FIXED, Shape{1, 3, Dimension::any(), Dimension::any()}}},
+        {"c", {Mode::FIXED, Shape{1, {1, 3}, 224, 224}}},
+    });
+    rhs.setShapes({
+        {"b", {Mode::FIXED, Shape{1, 3, Dimension::any(), Dimension::any()}}},
+        {"c", {Mode::FIXED, Shape{1, Dimension::any(), 224, 224}}},
+    });
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+}
+
+TEST(ModelConfig, shapeConfigurationEqual_MultipleInputs_DifferentMinResolution) {
+    using namespace ovms;
+    ModelConfig lhs, rhs;
+
+    lhs.setShapes({
+        {"b", {Mode::FIXED, Shape{1, 3, {224, 1024}, {224, 512}}}},
+        {"c", {Mode::FIXED, Shape{1, {1, 3}, 224, 224}}},
+    });
+    rhs.setShapes({
+        {"b", {Mode::FIXED, Shape{1, 3, {100, 1024}, {100, 512}}}},
+        {"c", {Mode::FIXED, Shape{1, {1, 3}, 224, 224}}},
+    });
+    EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
+}
+
+TEST(ModelConfig, shapeConfigurationEqual_MultipleInputs_DifferentMaxResolution) {
+    using namespace ovms;
+    ModelConfig lhs, rhs;
+
+    lhs.setShapes({
+        {"b", {Mode::FIXED, Shape{1, 3, {224, 1024}, {224, 512}}}},
+        {"c", {Mode::FIXED, Shape{1, {1, 3}, 224, 224}}},
+    });
+    rhs.setShapes({
+        {"b", {Mode::FIXED, Shape{1, 3, {224, 300}, {224, 300}}}},
+        {"c", {Mode::FIXED, Shape{1, {1, 3}, 224, 224}}},
     });
     EXPECT_FALSE(lhs.isShapeConfigurationEqual(rhs));
 }
@@ -653,7 +952,7 @@ TEST(ModelConfig, ConfigParseNodeWithValidShapeFormatArray) {
     EXPECT_EQ(modelConfig.getShapes().size(), 1);
     auto shapes = modelConfig.getShapes();
     ASSERT_TRUE(shapes.find("input") != shapes.end());
-    EXPECT_THAT(shapes["input"].shape, ElementsAre(1, 3, 600, 600));
+    EXPECT_EQ(shapes["input"].shape, (ovms::Shape{1, 3, 600, 600}));
 }
 
 static std::string config_low_latency_no_stateful = R"#(

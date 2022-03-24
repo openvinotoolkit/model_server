@@ -32,8 +32,8 @@ gsutil mb gs://model-repository
 You can download the model from [OpenVINO Model Zoo](https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin). and upload it to GCS:
 
 ```shell script
-wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -P 1
-wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.3/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -P 1
+wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -P 1
+wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -P 1
 gsutil cp -r 1 resnet50-binary-0001.bin gs://model-repository/resnet
 ```
 
@@ -96,7 +96,7 @@ Note that parameter `models_volume_claim` is mutually exclusive with `models_hos
 ## Assigning Resource Specs
 
 You can restrict assigned cluster resources to the OVMS container by setting the parameter `resources`.
-By default, there are no restrictions but that parameter could be used to reduce the CPU and memory allocation. Below is the snippet example from the [values.yaml](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/deploy/ovms/values.yaml) file:
+By default, there are no restrictions but that parameter could be used to reduce the CPU and memory allocation. Below is the snippet example from the [values.yaml](https://github.com/openvinotoolkit/model_server/blob/develop/deploy/ovms/values.yaml) file:
 ```yaml
 resources:
   limits:
@@ -134,7 +134,7 @@ of the node IP address. `ClusterIP` would keep the OVMS service internal to the 
     
 ## Deploy OpenVINO Model Server with a Single Model
 
-Deploy Model Server using _helm_. Please include the required model name and model path. You can also adjust other parameters defined in [values.yaml](https://github.com/openvinotoolkit/model_server/tree/v2021.4.2/deploy/ovms/values.yaml).
+Deploy Model Server using _helm_. Please include the required model name and model path. You can also adjust other parameters defined in [values.yaml](https://github.com/openvinotoolkit/model_server/tree/develop/deploy/ovms/values.yaml).
 ```shell script
 helm install ovms-app ovms --set model_name=resnet50-binary-0001,model_path=gs://models-repository
 ```
@@ -193,10 +193,10 @@ The service name deployed via the helm chart is defined by the application name.
 gets a suffix `-ovms`, in case the application name doesn't include `ovms` phrase. It avoids a risk of the service name
 conflicts with other application.
 
-Follow the [instructions](https://github.com/openvinotoolkit/model_server/tree/v2021.4.2/example_client#submitting-grpc-requests-based-on-a-dataset-from-a-list-of-jpeg-files) 
+Follow the [instructions](https://github.com/openvinotoolkit/model_server/tree/develop/demos/image_classification/python) 
 to create an image classification client that can be used to perform inference with models being exposed by the server. For example:
 ```shell script
-$ python jpeg_classification.py --grpc_port 8080 --grpc_address 1.2.3.4 --input_name 0 --output_name 1463
+$ python image_classification.py --grpc_port 8080 --grpc_address 1.2.3.4 --input_name 0 --output_name 1463
 Start processing:
 	Model name: resnet
 	Images list file: input_images.txt

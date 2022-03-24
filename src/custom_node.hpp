@@ -21,6 +21,7 @@
 #include <unordered_map>
 
 #include "custom_node_interface.h"  // NOLINT
+#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "node.hpp"
 #include "nodeinfo.hpp"
 #include "pipelineeventqueue.hpp"
@@ -36,19 +37,22 @@ class CustomNode : public Node {
 
     std::unique_ptr<struct CustomNodeParam[]> libraryParameters = nullptr;
 
+    std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager;
+
 public:
     CustomNode(
         const std::string& nodeName,
         const NodeLibrary& library,
         const parameters_t& parameters,
         const std::unordered_map<std::string, std::string>& nodeOutputNameAlias = {},
-        std::optional<uint32_t> demultiplyCount = std::nullopt,
-        std::set<std::string> gatherFromNode = {});
+        std::optional<int32_t> demultiplyCount = std::nullopt,
+        std::set<std::string> gatherFromNode = {},
+        std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager = nullptr);
 
     Status execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) override;
 
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
-    Status fetchResults(BlobMap& outputs, session_key_t sessionKey);
+    Status fetchResults(TensorMap& outputs, session_key_t sessionKey);
 
     const std::string& getRealOutputName(const std::string& alias) const {
         auto it = nodeOutputNameAlias.find(alias);

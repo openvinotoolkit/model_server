@@ -57,13 +57,13 @@ protected:
         prepareRequest(bs1requestData, request, customPipelineInputName);
         requestData = bs1requestData;
         dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
-            InferenceEngine::Precision::FP32,
+            ovms::Precision::FP32,
             DUMMY_MODEL_SHAPE,
-            InferenceEngine::Layout::NC);
+            Layout{"NC"});
         dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
-            InferenceEngine::Precision::FP32,
+            ovms::Precision::FP32,
             DUMMY_MODEL_SHAPE,
-            InferenceEngine::Layout::NC);
+            Layout{"NC"});
     }
 
     void prepareRequest(const std::vector<float>& requestData, PredictRequest& request, const std::string& customPipelineInputName) {
@@ -142,13 +142,13 @@ protected:
     const std::string customPipelineInputName = "custom_dummy_input";
     const std::string customPipelineOutputName = "custom_dummy_output";
     std::shared_ptr<ovms::TensorInfo> dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
-        InferenceEngine::Precision::FP32,
+        ovms::Precision::FP32,
         DUMMY_MODEL_SHAPE,
-        InferenceEngine::Layout::NC);
+        Layout{"NC"});
     std::shared_ptr<ovms::TensorInfo> dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
-        InferenceEngine::Precision::FP32,
+        ovms::Precision::FP32,
         DUMMY_MODEL_SHAPE,
-        InferenceEngine::Layout::NC);
+        Layout{"NC"});
 
     std::vector<float> requestData;
     const std::vector<float> bs1requestData{-5.0, 3.0, 0.0, -12.0, 9.0, -100.0, 102.0, 92.0, -1.0, 12.0};
@@ -175,9 +175,168 @@ TEST_F(EnsembleFlowTest, DummyModel) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    pipeline.execute();
+    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
+}
+
+TEST_F(EnsembleFlowTest, TwoInnerNodesConnectedShapeRangePartiallyMatching) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+
+    config = DUMMY_MODEL_CONFIG;
+    config.setName("dummy_A");
+    config.setBatchSize(std::nullopt);
+    config.parseShapeParameter("(-1,1:3)");
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    config = DUMMY_MODEL_CONFIG;
+    config.setName("dummy_B");
+    config.setBatchSize(std::nullopt);
+    config.parseShapeParameter("(-1,2:4)");
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    // Configure pipeline
+    dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+        ovms::Precision::FP32,
+        ovms::Shape{Dimension::any(), {1, 3}},
+        Layout{"NC"});
+    dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+        ovms::Precision::FP32,
+        ovms::Shape{Dimension::any(), {2, 4}},
+        Layout{"NC"});
+
+    // 2x2 passing
+    {
+        prepareRequest(std::vector<float>{5.0, 6.0, 15.0, 16.0}, request, customPipelineInputName, {2, 2});
+        response.Clear();
+
+        const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+        auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+        auto model_node_A = std::make_unique<DLNode>("dummy_node_A", "dummy_A", requestedModelVersion, managerWithDummyModel);
+        auto model_node_B = std::make_unique<DLNode>("dummy_node_B", "dummy_B", requestedModelVersion, managerWithDummyModel);
+        const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+        auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+        Pipeline pipeline(*input_node, *output_node);
+        pipeline.connect(*input_node, *model_node_A, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*model_node_A, *model_node_B, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*model_node_B, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+        pipeline.push(std::move(input_node));
+        pipeline.push(std::move(model_node_A));
+        pipeline.push(std::move(model_node_B));
+        pipeline.push(std::move(output_node));
+
+        ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+        ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
+        const auto& output_proto = response.outputs().at(customPipelineOutputName);
+
+        ASSERT_EQ(output_proto.tensor_content().size(), 2 * 2 * sizeof(float));
+        ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
+        ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), 2);
+        ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), 2);
+
+        std::vector<float> responseData = {7.0, 8.0, 17.0, 18.0};
+        float* actual_output = (float*)output_proto.tensor_content().data();
+        float* expected_output = responseData.data();
+        EXPECT_EQ(0, std::memcmp(actual_output, expected_output, 2 * 2 * sizeof(float)));
+    }
+
+    // 2x4 not passing due to not matched dummy_A (but matching dummy_B)
+    {
+        prepareRequest(std::vector<float>{5.0, 6.0, 15.0, 16.0, 5.0, 6.0, 15.0, 16.0}, request, customPipelineInputName, {2, 4});
+        response.Clear();
+
+        const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+        auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+        auto model_node_A = std::make_unique<DLNode>("dummy_node_A", "dummy_A", requestedModelVersion, managerWithDummyModel);
+        auto model_node_B = std::make_unique<DLNode>("dummy_node_B", "dummy_B", requestedModelVersion, managerWithDummyModel);
+        const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+        auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+        Pipeline pipeline(*input_node, *output_node);
+        pipeline.connect(*input_node, *model_node_A, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*model_node_A, *model_node_B, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*model_node_B, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+        pipeline.push(std::move(input_node));
+        pipeline.push(std::move(model_node_A));
+        pipeline.push(std::move(model_node_B));
+        pipeline.push(std::move(output_node));
+
+        ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_SHAPE);
+    }
+
+    // 2x1 not passing due to not matched dummy_B (but matching dummy_A)
+    {
+        prepareRequest(std::vector<float>{5.0, 6.0}, request, customPipelineInputName, {2, 1});
+        response.Clear();
+
+        const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+        auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+        auto model_node_A = std::make_unique<DLNode>("dummy_node_A", "dummy_A", requestedModelVersion, managerWithDummyModel);
+        auto model_node_B = std::make_unique<DLNode>("dummy_node_B", "dummy_B", requestedModelVersion, managerWithDummyModel);
+        const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+        auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+        Pipeline pipeline(*input_node, *output_node);
+        pipeline.connect(*input_node, *model_node_A, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*model_node_A, *model_node_B, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*model_node_B, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+        pipeline.push(std::move(input_node));
+        pipeline.push(std::move(model_node_A));
+        pipeline.push(std::move(model_node_B));
+        pipeline.push(std::move(output_node));
+
+        ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_SHAPE);
+    }
+}
+
+// This test is only theoretical scenario, since pipeline validation should not allow such pipelines.
+TEST_F(EnsembleFlowTest, TwoInnerNodesConnectedShapeRangeNotMatching) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+
+    config = DUMMY_MODEL_CONFIG;
+    config.setName("dummy_A");
+    config.setBatchSize(std::nullopt);
+    config.parseShapeParameter("(-1,1:3)");
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    config = DUMMY_MODEL_CONFIG;
+    config.setName("dummy_B");
+    config.setBatchSize(std::nullopt);
+    config.parseShapeParameter("(-1,4:6)");
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    // Configure pipeline
+    dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+        ovms::Precision::FP32,
+        ovms::Shape{Dimension::any(), {1, 3}},
+        Layout{"NC"});
+    dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+        ovms::Precision::FP32,
+        ovms::Shape{Dimension::any(), {4, 6}},
+        Layout{"NC"});
+
+    // 2x2 not matching dummy_B at execution time
+    prepareRequest(std::vector<float>{5.0, 6.0, 15.0, 16.0}, request, customPipelineInputName, {2, 2});
+    response.Clear();
+
+    const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    auto model_node_A = std::make_unique<DLNode>("dummy_node_A", "dummy_A", requestedModelVersion, managerWithDummyModel);
+    auto model_node_B = std::make_unique<DLNode>("dummy_node_B", "dummy_B", requestedModelVersion, managerWithDummyModel);
+    const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+    Pipeline pipeline(*input_node, *output_node);
+    pipeline.connect(*input_node, *model_node_A, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_A, *model_node_B, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_B, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node_A));
+    pipeline.push(std::move(model_node_B));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_SHAPE);
 }
 
 class EnsembleFlowValidationTest : public EnsembleFlowTest {
@@ -198,6 +357,14 @@ public:
         return pipeline;
     }
 };
+
+TEST_F(EnsembleFlowValidationTest, DummyModelValid) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    auto pipeline = createDummyPipeline(managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+}
 
 TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorNumberOfInputs) {
     ConstructorEnabledModelManager managerWithDummyModel;
@@ -338,6 +505,90 @@ TEST_F(EnsembleFlowValidationTest, DummyModelProtoValidationErrorInvalidTensorCo
     ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_CONTENT_SIZE);
 }
 
+class EnsembleFlowValidationShapeRangeTest : public EnsembleFlowValidationTest {
+protected:
+    void SetUp() {
+        EnsembleFlowValidationTest::SetUp();
+
+        dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+            ovms::Precision::FP32,
+            ovms::Shape{{1, 10}, {2, 11}},
+            Layout{"NC"});
+        dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+            ovms::Precision::FP32,
+            ovms::Shape{{1, 10}, {2, 11}},
+            Layout{"NC"});
+
+        config = DUMMY_MODEL_CONFIG;
+        config.setBatchingParams("0");
+        config.parseShapeParameter("(1:10,2:11)");
+    }
+};
+
+TEST_F(EnsembleFlowValidationShapeRangeTest, DummyModelValid) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    auto pipeline = createDummyPipeline(managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+}
+
+TEST_F(EnsembleFlowValidationShapeRangeTest, DummyModelProtoValidationErrorInvalidBatchSize) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    request.Clear();
+    auto& proto1 = (*request.mutable_inputs())[customPipelineInputName];
+    proto1.mutable_tensor_shape()->add_dim()->set_size(11);
+    proto1.mutable_tensor_shape()->add_dim()->set_size(10);
+    proto1.set_dtype(tensorflow::DataType::DT_FLOAT);
+
+    auto pipeline = createDummyPipeline(managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_BATCH_SIZE);
+}
+
+TEST_F(EnsembleFlowValidationShapeRangeTest, DummyModelProtoValidationErrorInvalidShape) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    request.Clear();
+    auto& proto1 = (*request.mutable_inputs())[customPipelineInputName];
+    proto1.mutable_tensor_shape()->add_dim()->set_size(6);
+    proto1.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto1.set_dtype(tensorflow::DataType::DT_FLOAT);
+
+    auto pipeline = createDummyPipeline(managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_SHAPE);
+}
+
+class EnsembleFlowValidationShapeAnyTest : public EnsembleFlowValidationTest {
+protected:
+    void SetUp() {
+        EnsembleFlowValidationTest::SetUp();
+
+        dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+            ovms::Precision::FP32,
+            ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()},
+            Layout{"NC"});
+        dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+            ovms::Precision::FP32,
+            ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()},
+            Layout{"NC"});
+
+        config = DUMMY_MODEL_CONFIG;
+        config.setBatchingParams("0");
+        config.parseShapeParameter("(-1,-1)");
+    }
+};
+
+TEST_F(EnsembleFlowValidationShapeAnyTest, DummyModelValid) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+    managerWithDummyModel.reloadModelWithVersions(config);
+
+    auto pipeline = createDummyPipeline(managerWithDummyModel);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+}
+
 TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     ConstructorEnabledModelManager managerWithDummyModel;
     config.setNireq(1);
@@ -391,7 +642,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    pipeline.execute();
+    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
 
@@ -449,7 +700,7 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
 
     timer.stop("prepare pipeline");
     timer.start("pipeline::execute");
-    pipeline.execute();
+    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
     timer.stop("pipeline::execute");
 
     timer.start("compare results");
@@ -459,6 +710,456 @@ TEST_F(EnsembleFlowTest, SeriesOfDummyModels) {
     std::cout << "prepare pipeline: " << timer.elapsed<std::chrono::microseconds>("prepare pipeline") / 1000 << "ms\n";
     std::cout << "pipeline::execute: " << timer.elapsed<std::chrono::microseconds>("pipeline::execute") / 1000 << "ms\n";
     std::cout << "compare results: " << timer.elapsed<std::chrono::microseconds>("compare results") / 1000 << "ms\n";
+}
+
+TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchSizeAny) {
+    // Scenario
+
+    // input(3x10)   dummy(1x10), change batch size to any    output(3x10)
+    //  O-------------------------->O----------------------------->O
+
+    // input 3x10
+    // dummy is natively 1x10, batch size change to -1 (any)
+    // process dummy
+    // check if output is 3x10
+
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
+    const int batchSize = 3;
+    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(batchSize);
+    requestData = {
+        -5, -4, -3, -2, -1, 1, 2, 3, 4, 5,            // batch 1
+        -15, -14, -13, -12, -11, 11, 12, 13, 14, 15,  // batch 2
+        -25, -24, -23, -22, -21, 21, 22, 23, 24, 25,  // batch 3
+    };
+    proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+
+    config.setBatchingParams("-1");
+    ConstructorEnabledModelManager managerWithDynamicBatchDummyModel;
+    managerWithDynamicBatchDummyModel.reloadModelWithVersions(config);
+
+    // Configure pipeline
+    dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName, ovms::Precision::FP32, ovms::Shape{ovms::Dimension::any(), 10}, Layout{"NC"});
+    dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName, ovms::Precision::FP32, ovms::Shape{ovms::Dimension::any(), 10}, Layout{"NC"});
+    const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicBatchDummyModel);
+    const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+
+    Pipeline pipeline(*input_node, *output_node);
+
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+    const int seriallyConnectedDummyModels = 1;
+    checkDummyResponse(seriallyConnectedDummyModels, batchSize);
+}
+
+TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchSizeRange) {
+    // Scenario
+
+    // input(3x10)   dummy(1x10), change batch size to (1:5x10)    output(3x10)
+    //  O-------------------------->O------------------------------->O
+
+    // input 3x10
+    // dummy is natively 1x10, batch size change to 1:5 (range)
+    // process dummy
+    // check if output is 3x10
+    // check if execution fails for batch higher than 5
+
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
+    int batchSize = 3;
+    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(batchSize);
+    requestData = {
+        -5, -4, -3, -2, -1, 1, 2, 3, 4, 5,            // batch 1
+        -15, -14, -13, -12, -11, 11, 12, 13, 14, 15,  // batch 2
+        -25, -24, -23, -22, -21, 21, 22, 23, 24, 25,  // batch 3
+    };
+    proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+
+    config.setBatchingParams("1:5");
+    ConstructorEnabledModelManager managerWithDynamicBatchDummyModel;
+    managerWithDynamicBatchDummyModel.reloadModelWithVersions(config);
+
+    // Configure pipeline
+    dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName, ovms::Precision::FP32, ovms::Shape{{1, 5}, 10}, Layout{"NC"});
+    dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName, ovms::Precision::FP32, ovms::Shape{{1, 5}, 10}, Layout{"NC"});
+    {
+        const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+        auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+        auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicBatchDummyModel);
+        const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+        auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+
+        Pipeline pipeline(*input_node, *output_node);
+
+        pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+        pipeline.push(std::move(input_node));
+        pipeline.push(std::move(model_node));
+        pipeline.push(std::move(output_node));
+
+        ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+        const int seriallyConnectedDummyModels = 1;
+        checkDummyResponse(seriallyConnectedDummyModels, batchSize);
+    }
+    // Prepare invalid data
+    batchSize = 6;
+    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(batchSize);
+    requestData = std::vector<float>(batchSize * 10, 1.234);
+    proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+    {
+        const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+        auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+        auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicBatchDummyModel);
+        const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+        auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+
+        Pipeline pipeline(*input_node, *output_node);
+
+        pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+        pipeline.push(std::move(input_node));
+        pipeline.push(std::move(model_node));
+        pipeline.push(std::move(output_node));
+
+        ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_BATCH_SIZE);
+    }
+}
+
+TEST_F(EnsembleFlowTest, ExecutePipelineWithShapeAny) {
+    // Scenario
+
+    // input(1x5)      dummy(1x10) second dimension set to any             output(1x5)
+    //  O---------------------->O----------------------------------------------->O
+
+    // input 1x5
+    // dummy is natively 1x10, but second dimension set to any (-1)
+    // process dummy
+    // check if output is 1x5
+
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
+    proto.mutable_tensor_shape()->mutable_dim(1)->set_size(5);
+    std::vector<float> requestData = {
+        -5, -4, -3, -2, -1,  // batch 1
+    };
+    proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+
+    config.setBatchSize(std::nullopt);  // = not specified in --batch_size parameter
+    config.parseShapeParameter("(1,-1)");
+    ConstructorEnabledModelManager managerWithDynamicShapeDummyModel;
+    managerWithDynamicShapeDummyModel.reloadModelWithVersions(config);
+
+    // Configure pipeline
+    dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName, ovms::Precision::FP32, ovms::Shape{1, ovms::Dimension::any()}, Layout{"NC"});
+    dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName, ovms::Precision::FP32, ovms::Shape{1, ovms::Dimension::any()}, Layout{"NC"});
+    const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicShapeDummyModel);
+    const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+
+    Pipeline pipeline(*input_node, *output_node);
+
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+
+    ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
+    const auto& output_proto = response.outputs().at(customPipelineOutputName);
+
+    ASSERT_EQ(output_proto.tensor_content().size(), 1 * 5 * sizeof(float));
+    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
+    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), 1);
+    ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), 5);
+
+    std::vector<float> responseData = requestData;
+    std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
+
+    float* actual_output = (float*)output_proto.tensor_content().data();
+    float* expected_output = responseData.data();
+
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, 1 * 5 * sizeof(float)));
+}
+
+TEST_F(EnsembleFlowTest, ExecutePipelineWithShapeRange) {
+    // Scenario
+
+    // input(1x5)      dummy(1x10) second dimension set to range (1:5)             output(1x5)
+    //  O---------------------->O----------------------------------------------->O
+
+    // input 1x5
+    // dummy is natively 1x10, but second dimension set to (1:5) range
+    // process dummy
+    // check if output is 1x5
+    // check if there is an error for input dimension higher than 5
+
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
+    proto.mutable_tensor_shape()->mutable_dim(1)->set_size(5);
+    std::vector<float> requestData = {
+        -5, -4, -3, -2, -1,  // batch 1
+    };
+    proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+
+    config.setBatchSize(std::nullopt);  // = not specified in --batch_size parameter
+    config.parseShapeParameter("(1,1:5)");
+    ConstructorEnabledModelManager managerWithDynamicShapeDummyModel;
+    managerWithDynamicShapeDummyModel.reloadModelWithVersions(config);
+
+    // Configure pipeline
+    dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName, ovms::Precision::FP32, ovms::Shape{1, {1, 5}}, Layout{"NC"});
+    dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName, ovms::Precision::FP32, ovms::Shape{1, {1, 5}}, Layout{"NC"});
+    {
+        const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+        auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+        auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicShapeDummyModel);
+        const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+        auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+
+        Pipeline pipeline(*input_node, *output_node);
+
+        pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+        pipeline.push(std::move(input_node));
+        pipeline.push(std::move(model_node));
+        pipeline.push(std::move(output_node));
+
+        ASSERT_EQ(pipeline.execute(), StatusCode::OK);
+
+        ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
+        const auto& output_proto = response.outputs().at(customPipelineOutputName);
+
+        ASSERT_EQ(output_proto.tensor_content().size(), 1 * 5 * sizeof(float));
+        ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
+        ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), 1);
+        ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), 5);
+
+        std::vector<float> responseData = requestData;
+        std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
+
+        float* actual_output = (float*)output_proto.tensor_content().data();
+        float* expected_output = responseData.data();
+
+        EXPECT_EQ(0, std::memcmp(actual_output, expected_output, 1 * 5 * sizeof(float)));
+    }
+    // Prepare invalid data
+    proto.mutable_tensor_shape()->mutable_dim(1)->set_size(6);
+    requestData = std::vector<float>(6, 1.234);
+    proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+    {
+        const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+        auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+        auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicShapeDummyModel);
+        const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+        auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+
+        Pipeline pipeline(*input_node, *output_node);
+
+        pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+        pipeline.push(std::move(input_node));
+        pipeline.push(std::move(model_node));
+        pipeline.push(std::move(output_node));
+
+        ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_SHAPE);
+    }
+}
+
+TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchAndShapeSetToAny) {
+    // Scenario
+
+    // input(3x500)   dummy(1x10), all dimensions set to any    output(3x500)
+    //  O------------------------------>O----------------------------->O
+
+    // input 3x500
+    // dummy is natively 1x10, but all dimensions set to any
+    // process dummy
+    // check if output is 3x500
+
+    const int BATCH_SIZE = 3;
+    const int WIDTH = 500;
+
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
+    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(BATCH_SIZE);
+    proto.mutable_tensor_shape()->mutable_dim(1)->set_size(WIDTH);
+    std::vector<float> requestData;
+    for (int i = 0; i < BATCH_SIZE; i++) {
+        for (int j = 0; j < WIDTH; j++) {
+            requestData.push_back((i + 1) * (j + 1));
+            /*
+            1.0, 2.0, 3.0, ..., 500.0,
+            2.0, 4.0, 6.0, ..., 1000.0,
+            3.0, 6.0, 9.0, ..., 1500.0
+            */
+        }
+    }
+    proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+
+    config.setBatchSize(std::nullopt);  // simulate --batch_size parameter not set
+    config.parseShapeParameter("(-1,-1)");
+    ConstructorEnabledModelManager manager;
+    manager.reloadModelWithVersions(config);
+
+    // Configure pipeline
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+        ovms::Precision::FP32,
+        ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()},
+        Layout{"NC"});
+    const tensor_map_t inputsInfo{{customPipelineInputName, inputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, manager);
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+        ovms::Precision::FP32,
+        ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()},
+        Layout{"NC"});
+    const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+
+    Pipeline pipeline(*input_node, *output_node);
+
+    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(), ovms::StatusCode::OK);
+
+    ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
+    const auto& output_proto = response.outputs().at(customPipelineOutputName);
+
+    ASSERT_EQ(output_proto.tensor_content().size(), BATCH_SIZE * WIDTH * sizeof(float));
+    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
+    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), BATCH_SIZE);
+    ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), WIDTH);
+
+    std::vector<float> responseData = requestData;
+    std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
+
+    float* actual_output = (float*)output_proto.tensor_content().data();
+    float* expected_output = responseData.data();
+
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, BATCH_SIZE * WIDTH * sizeof(float)));
+}
+
+TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchAndShapeSetToRange) {
+    // Scenario
+
+    // input(3x500)   dummy(1x10), all dimensions set to range (1:1000)    output(3x500)
+    //  O------------------------------>O----------------------------->O
+
+    // input 3x500
+    // dummy is natively 1x10, but all dimensions are reset to support range (1:1000)
+    // process dummy
+    // check if output is 3x500
+    // check if for input dimension higher than 1000 there is an error
+
+    const int BATCH_SIZE = 3;
+    const int WIDTH = 500;
+
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
+    proto.mutable_tensor_shape()->mutable_dim(0)->set_size(BATCH_SIZE);
+    proto.mutable_tensor_shape()->mutable_dim(1)->set_size(WIDTH);
+    std::vector<float> requestData;
+    for (int i = 0; i < BATCH_SIZE; i++) {
+        for (int j = 0; j < WIDTH; j++) {
+            requestData.push_back((i + 1) * (j + 1));
+            /*
+            1.0, 2.0, 3.0, ..., 500.0,
+            2.0, 4.0, 6.0, ..., 1000.0,
+            3.0, 6.0, 9.0, ..., 1500.0
+            */
+        }
+    }
+    proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+
+    config.setBatchSize(std::nullopt);  // simulate --batch_size parameter not set
+    config.parseShapeParameter("(1:1000,1:1000)");
+    ConstructorEnabledModelManager manager;
+    manager.reloadModelWithVersions(config);
+
+    // Configure pipeline
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+        ovms::Precision::FP32,
+        ovms::Shape{{1, 1000}, {1, 1000}},
+        Layout{"NC"});
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+        ovms::Precision::FP32,
+        ovms::Shape{{1, 1000}, {1, 1000}},
+        Layout{"NC"});
+    {
+        const tensor_map_t inputsInfo{{customPipelineInputName, inputTensorInfo}};
+        auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+        auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, manager);
+
+        const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
+        auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+
+        Pipeline pipeline(*input_node, *output_node);
+
+        pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+        pipeline.push(std::move(input_node));
+        pipeline.push(std::move(model_node));
+        pipeline.push(std::move(output_node));
+
+        ASSERT_EQ(pipeline.execute(), ovms::StatusCode::OK);
+
+        ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
+        const auto& output_proto = response.outputs().at(customPipelineOutputName);
+
+        ASSERT_EQ(output_proto.tensor_content().size(), BATCH_SIZE * WIDTH * sizeof(float));
+        ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
+        ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), BATCH_SIZE);
+        ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), WIDTH);
+
+        std::vector<float> responseData = requestData;
+        std::for_each(responseData.begin(), responseData.end(), [](float& v) { v += 1.0; });
+
+        float* actual_output = (float*)output_proto.tensor_content().data();
+        float* expected_output = responseData.data();
+
+        EXPECT_EQ(0, std::memcmp(actual_output, expected_output, BATCH_SIZE * WIDTH * sizeof(float)));
+    }
+    // Prepare invalid data
+    proto.mutable_tensor_shape()->mutable_dim(1)->set_size(1001);
+    requestData = std::vector<float>(BATCH_SIZE * 1001, 1.234);
+    proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+    {
+        const tensor_map_t inputsInfo{{customPipelineInputName, inputTensorInfo}};
+        auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+        auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, manager);
+
+        const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
+        auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+
+        Pipeline pipeline(*input_node, *output_node);
+
+        pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+        pipeline.push(std::move(input_node));
+        pipeline.push(std::move(model_node));
+        pipeline.push(std::move(output_node));
+
+        ASSERT_EQ(pipeline.execute(), ovms::StatusCode::INVALID_SHAPE);
+    }
 }
 
 // Disabled with deserialization unification. For this use case to work we would have to additionally rely on "isPipeline" in getFinalShapedTensorInfo() to not use shape from tensor info but to rely on tensorProto
@@ -492,9 +1193,9 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicBatchSize) {
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicBatchDummyModel);
     auto outputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{3, DUMMY_MODEL_OUTPUT_SIZE},
-        InferenceEngine::Layout::NC);
+        ovms::Precision::FP32,
+        ovms::Shape{3, DUMMY_MODEL_OUTPUT_SIZE},
+        Layout{"NC"});
     const tensor_map_t outputsInfo{{customPipelineOutputName, outputTensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
 
@@ -507,7 +1208,7 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicBatchSize) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    pipeline.execute();
+    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
     const int seriallyConnectedDummyModels = 1;
     checkDummyResponse(seriallyConnectedDummyModels, batchSize);
 }
@@ -531,7 +1232,7 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicShape) {
     };
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
-    config.setBatchSize(0);  // = not specified in --batch_size parameter
+    config.setBatchSize(std::nullopt);  // = not specified in --batch_size parameter
     config.parseShapeParameter("auto");
     ConstructorEnabledModelManager managerWithDynamicShapeDummyModel;
     managerWithDynamicShapeDummyModel.reloadModelWithVersions(config);
@@ -541,9 +1242,9 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicShape) {
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDynamicShapeDummyModel);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{1, 5},
-        InferenceEngine::Layout::NC);
+        ovms::Precision::FP32,
+        ovms::Shape{1, 5},
+        Layout{"NC"});
     const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
 
@@ -556,7 +1257,7 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicShape) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    pipeline.execute();
+    ASSERT_EQ(pipeline.execute(), StatusCode::OK);
 
     ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
     const auto& output_proto = response.outputs().at(customPipelineOutputName);
@@ -575,7 +1276,7 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicShape) {
     EXPECT_EQ(0, std::memcmp(actual_output, expected_output, 1 * 5 * sizeof(float)));
 }
 
-TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchAndShape) {
+TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicBatchAndShape) {
     // Scenario
 
     // input(3x500)   dummy(1x10), reshape, change batch size    output(3x500)
@@ -605,23 +1306,23 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchAndShape) {
     }
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
-    config.setBatchSize(0);  // simulate --batch_size parameter not set
+    config.setBatchSize(std::nullopt);  // simulate --batch_size parameter not set
     config.parseShapeParameter("auto");
     ConstructorEnabledModelManager manager;
     manager.reloadModelWithVersions(config);
 
     // Configure pipeline
     auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{3, 500},
-        InferenceEngine::Layout::NC);
+        ovms::Precision::FP32,
+        ovms::Shape{3, 500},
+        Layout{"NC"});
     const tensor_map_t inputsInfo{{customPipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, manager);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{3, 500},
-        InferenceEngine::Layout::NC);
+        ovms::Precision::FP32,
+        ovms::Shape{3, 500},
+        Layout{"NC"});
     const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
 
@@ -653,7 +1354,7 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicBatchAndShape) {
     EXPECT_EQ(0, std::memcmp(actual_output, expected_output, BATCH_SIZE * WIDTH * sizeof(float)));
 }
 
-TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape_RequestHasDifferentDim0) {
+TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicShape_RequestHasDifferentDim0) {
     // Scenario
     // Shape is set to auto but only first dimension differs - change batch size via reshape
 
@@ -686,23 +1387,23 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithDynamicShape_RequestHasDifferentDim0
     }
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
-    config.setBatchSize(0);  // simulate --batch_size parameter not set
+    config.setBatchSize(std::nullopt);  // simulate --batch_size parameter not set
     config.parseShapeParameter("auto");
     ConstructorEnabledModelManager manager;
     manager.reloadModelWithVersions(config);
 
     // Configure pipeline
     auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{BATCH_SIZE, WIDTH},
-        InferenceEngine::Layout::NC);
+        ovms::Precision::FP32,
+        ovms::Shape{BATCH_SIZE, WIDTH},
+        Layout{"NC"});
     const tensor_map_t inputsInfo{{customPipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, manager);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{BATCH_SIZE, WIDTH},
-        InferenceEngine::Layout::NC);
+        ovms::Precision::FP32,
+        ovms::Shape{BATCH_SIZE, WIDTH},
+        Layout{"NC"});
     const tensor_map_t outputsInfo{{customPipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
 
@@ -736,9 +1437,9 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
     for (int i = 0; i < N; i++) {
         const std::string inputName = customPipelineInputName + std::to_string(i);
         inputsInfoTmp[inputName] = std::make_shared<ovms::TensorInfo>(inputName,
-            InferenceEngine::Precision::FP32,
+            ovms::Precision::FP32,
             DUMMY_MODEL_SHAPE,
-            InferenceEngine::Layout::NC);
+            Layout{"NC"});
     }
     const tensor_map_t inputsInfo = inputsInfoTmp;
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
@@ -747,9 +1448,9 @@ TEST_F(EnsembleFlowTest, ParallelDummyModels) {
         const std::string outputName = customPipelineOutputName + std::to_string(i);
         outputsInfo.emplace(outputName,
             std::make_shared<ovms::TensorInfo>(outputName,
-                InferenceEngine::Precision::FP32,
+                ovms::Precision::FP32,
                 DUMMY_MODEL_SHAPE,
-                InferenceEngine::Layout::NC));
+                Layout{"NC"}));
     }
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
     Pipeline pipeline(*input_node, *output_node);
@@ -1151,8 +1852,8 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionShapesNotMatchBetweenDLModelTensorsVa
     ModelConfig dummy_1x20 = config;
     dummy_1x10.setName("dummy_1x10");
     dummy_1x20.setName("dummy_1x20");
-    dummy_1x10.setBatchSize(0);
-    dummy_1x20.setBatchSize(0);
+    dummy_1x10.setBatchSize(std::nullopt);
+    dummy_1x20.setBatchSize(std::nullopt);
     ASSERT_EQ(dummy_1x10.parseShapeParameter("(1,10)"), StatusCode::OK);
     ASSERT_EQ(dummy_1x20.parseShapeParameter("(1,20)"), StatusCode::OK);
 
@@ -1185,25 +1886,20 @@ TEST_F(EnsembleFlowTest, PipelineDefinitionShapesNotMatchBetweenDLModelTensorsVa
     ASSERT_EQ(pipelineDefinition->validateNodes(manager), StatusCode::INVALID_SHAPE);
 }
 
-// Disabled until CVS-36446 is done.
-TEST_F(EnsembleFlowTest, DISABLED_PipelineDefinitionPrecisionsNotMatchBetweenDLModelTensorsValidation) {
+TEST_F(EnsembleFlowTest, PipelineDefinitionPrecisionsNotMatchBetweenDLModelTensorsValidation) {
     ConstructorEnabledModelManager manager;
     ModelConfig dummy_fp32 = config;
-    ModelConfig dummy_u8 = config;
-    dummy_fp32.setName("dummy_fp32");
-    dummy_u8.setName("dummy_u8");
-    // Set precision of dummy_FP32 to FP32
-    // Set precision of dummy_U8 to U8
+    ModelConfig dummy_fp64 = DUMMY_FP64_MODEL_CONFIG;
     ASSERT_EQ(manager.reloadModelWithVersions(dummy_fp32), StatusCode::OK_RELOADED);
-    ASSERT_EQ(manager.reloadModelWithVersions(dummy_u8), StatusCode::OK_RELOADED);
+    ASSERT_EQ(manager.reloadModelWithVersions(dummy_fp64), StatusCode::OK_RELOADED);
 
     PipelineFactory factory;
 
     // Simulate reading from pipeline_config.json
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{customPipelineInputName, customPipelineInputName}}},
-        {NodeKind::DL, "dummy_node_fp32", "dummy_fp32", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
-        {NodeKind::DL, "dummy_node_u8", "dummy_u8", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "dummy_node_fp32", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "dummy_node_fp64", "dummy_fp64", std::nullopt, {{DUMMY_FP64_MODEL_OUTPUT_NAME, DUMMY_FP64_MODEL_OUTPUT_NAME}}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
@@ -1212,11 +1908,11 @@ TEST_F(EnsembleFlowTest, DISABLED_PipelineDefinitionPrecisionsNotMatchBetweenDLM
     connections["dummy_node_fp32"] = {
         {ENTRY_NODE_NAME, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}}}};
 
-    connections["dummy_node_u8"] = {
-        {"dummy_node_fp32", {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}}}};
+    connections["dummy_node_fp64"] = {
+        {"dummy_node_fp32", {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_FP64_MODEL_INPUT_NAME}}}};
 
     connections[EXIT_NODE_NAME] = {
-        {"dummy_node_u8", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
+        {"dummy_node_fp64", {{DUMMY_FP64_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
 
     // Create pipeline definition
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
@@ -2222,14 +2918,14 @@ TEST_F(EnsembleFlowTest, ErrorHandlingSkipsDeferredNodesExecutionIfExecutionFail
     // Configure pipeline
     const tensor_map_t inputsInfo{{"proto_input_1x10",
                                       std::make_shared<ovms::TensorInfo>("proto_input_1x10",
-                                          InferenceEngine::Precision::FP32,
+                                          ovms::Precision::FP32,
                                           DUMMY_MODEL_SHAPE,
-                                          InferenceEngine::Layout::NC)},
+                                          Layout{"NC"})},
         {"proto_input_1x5",
             std::make_shared<ovms::TensorInfo>("proto_input_1x5",
-                InferenceEngine::Precision::FP32,
-                shape_t{1, 5},
-                InferenceEngine::Layout::NC)}};
+                ovms::Precision::FP32,
+                ovms::Shape{1, 5},
+                Layout{"NC"})}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
@@ -2440,6 +3136,98 @@ TEST_F(EnsembleFlowTest, ExecuteOnPipelineCreatedBeforeRetireShouldPass) {
     pipelineBeforeRetire->execute();
     uint dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
+}
+
+TEST_F(EnsembleFlowTest, RuntimeWrongBatchSizeArbitraryPosition) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+
+    ModelConfig configCN = DUMMY_MODEL_CONFIG;
+    configCN.setName("dummy_C1_N10");
+    configCN.setBatchingParams("0");
+    configCN.parseShapeParameter("(1,10)");
+    ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
+    managerWithDummyModel.reloadModelWithVersions(configCN);
+
+    configCN = DUMMY_MODEL_CONFIG;
+    configCN.setName("dummy_C1_N15");
+    configCN.setBatchingParams("0");
+    configCN.parseShapeParameter("(1,15)");
+    ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
+    managerWithDummyModel.reloadModelWithVersions(configCN);
+
+    dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+        ovms::Precision::FP32,
+        Shape{1, 15},
+        Layout{"CN"});
+    dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+        ovms::Precision::FP32,
+        Shape{1, 10},
+        Layout{"CN"});
+
+    // Configure pipeline
+    const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    auto model_node_1 = std::make_unique<DLNode>("dummy_node_1", "dummy_C1_N10", requestedModelVersion, managerWithDummyModel);
+    auto model_node_2 = std::make_unique<DLNode>("dummy_node_2", "dummy_C1_N15", requestedModelVersion, managerWithDummyModel);
+    const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+    Pipeline pipeline(*input_node, *output_node);
+    pipeline.connect(*input_node, *model_node_1, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_1, *model_node_2, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_2, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node_1));
+    pipeline.push(std::move(model_node_2));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_BATCH_SIZE);
+}
+
+TEST_F(EnsembleFlowTest, RuntimeWrongShapeArbitraryBatchPosition) {
+    ConstructorEnabledModelManager managerWithDummyModel;
+
+    ModelConfig configCN = DUMMY_MODEL_CONFIG;
+    configCN.setName("dummy_C1_N10");
+    configCN.setBatchingParams("0");
+    configCN.parseShapeParameter("(1,10)");
+    ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
+    managerWithDummyModel.reloadModelWithVersions(configCN);
+
+    configCN = DUMMY_MODEL_CONFIG;
+    configCN.setName("dummy_C2_N10");
+    configCN.setBatchingParams("0");
+    configCN.parseShapeParameter("(2,10)");
+    ASSERT_EQ(configCN.parseLayoutParameter("cn"), StatusCode::OK);
+    managerWithDummyModel.reloadModelWithVersions(configCN);
+
+    dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+        ovms::Precision::FP32,
+        Shape{2, 10},
+        Layout{"CN"});
+    dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+        ovms::Precision::FP32,
+        Shape{1, 10},
+        Layout{"CN"});
+
+    // Configure pipeline
+    const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    auto model_node_1 = std::make_unique<DLNode>("dummy_node_1", "dummy_C1_N10", requestedModelVersion, managerWithDummyModel);
+    auto model_node_2 = std::make_unique<DLNode>("dummy_node_2", "dummy_C2_N10", requestedModelVersion, managerWithDummyModel);
+    const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
+    Pipeline pipeline(*input_node, *output_node);
+    pipeline.connect(*input_node, *model_node_1, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_1, *model_node_2, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node_2, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node_1));
+    pipeline.push(std::move(model_node_2));
+    pipeline.push(std::move(output_node));
+
+    ASSERT_EQ(pipeline.execute(), StatusCode::INVALID_SHAPE);
 }
 
 class MockedPipelineDefinitionWithHandlingStatus : public PipelineDefinition {
@@ -3263,7 +4051,7 @@ TEST_F(EnsembleFlowTest, PipelineAddSecondPipelineWithSameName) {
     ASSERT_TRUE(std::find_if(nodeInfos.begin(), nodeInfos.end(), [](auto nodeInfo) { return nodeInfo.nodeName == "dummyNode2"; }) == nodeInfos.end());
 }
 
-static const char* pipelineDemultiplexerBatchSize = R"(
+static const char* pipelineDemultiplexerShapeNotEqualToDemultiplyCount = R"(
 {
     "model_config_list": [
         {
@@ -3272,7 +4060,7 @@ static const char* pipelineDemultiplexerBatchSize = R"(
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "batch_size": 2,
+                "shape": "(3, 2, 10) ",
                 "nireq": 1
             }
         }
@@ -3306,19 +4094,165 @@ static const char* pipelineDemultiplexerBatchSize = R"(
     ]
 })";
 
-TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeNotAllowed) {
+TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeWithShapeNotEqualToDemultiplyCountNotAllowed) {
     std::string fileToReload = directoryPath + "/config.json";
-    createConfigFileWithContent(pipelineDemultiplexerBatchSize, fileToReload);
+    createConfigFileWithContent(pipelineDemultiplexerShapeNotEqualToDemultiplyCount, fileToReload);
     ConstructorEnabledModelManager manager;
 
     auto status = manager.loadConfig(fileToReload);
-    ASSERT_EQ(status, StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE);
+    ASSERT_EQ(status, StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_TENSOR_SHARD_COUNT);
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
         PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
 }
 
-static const char* pipelineDemultiplexerShape = R"(
+static const char* pipelineInnerNodeConnectionShapeRangeNotMatch = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_A",
+                "base_path": "/ovms/src/test/dummy",
+                "shape": "(-1,30:40) ",
+                "nireq": 1
+            }
+        },
+        {
+            "config": {
+                "name": "dummy_B",
+                "base_path": "/ovms/src/test/dummy",
+                "shape": "(-1,41:60) ",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode_A",
+                    "model_name": "dummy_A",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode_B",
+                    "model_name": "dummy_B",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "dummyNode_A",
+                               "data_item": "new_dummy_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode_B",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, InnerNodeConnectionShapeRangeNotMatch) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineInnerNodeConnectionShapeRangeNotMatch, fileToReload);
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.loadConfig(fileToReload);
+    ASSERT_EQ(status, StatusCode::INVALID_SHAPE) << status.string();
+
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+}
+
+static const char* pipelineInnerNodeConnectionShapeRangePartiallyMatch = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_A",
+                "base_path": "/ovms/src/test/dummy",
+                "shape": "(-1,30:40) ",
+                "nireq": 1
+            }
+        },
+        {
+            "config": {
+                "name": "dummy_B",
+                "base_path": "/ovms/src/test/dummy",
+                "shape": "(-1,40:60) ",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipeline1Dummy",
+            "inputs": ["custom_dummy_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode_A",
+                    "model_name": "dummy_A",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "custom_dummy_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                },
+                {
+                    "name": "dummyNode_B",
+                    "model_name": "dummy_B",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "dummyNode_A",
+                               "data_item": "new_dummy_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "new_dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"custom_dummy_output": {"node_name": "dummyNode_B",
+                                         "data_item": "new_dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, InnerNodeConnectionShapeRangePartiallyMatch) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineInnerNodeConnectionShapeRangePartiallyMatch, fileToReload);
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.loadConfig(fileToReload);
+    ASSERT_EQ(status, StatusCode::OK);
+
+    ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
+        PipelineDefinitionStateCode::AVAILABLE);
+}
+
+static const char* pipelineDemultiplexerShapeEqualToDemultiplyCount = R"(
 {
     "model_config_list": [
         {
@@ -3327,7 +4261,7 @@ static const char* pipelineDemultiplexerShape = R"(
                 "base_path": "/ovms/src/test/dummy",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(3, 10) ",
+                "shape": "(2, 2, 10) ",
                 "nireq": 1
             }
         }
@@ -3361,16 +4295,16 @@ static const char* pipelineDemultiplexerShape = R"(
     ]
 })";
 
-TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeWithShapeNotAllowed) {
+TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeWithShapeEqualToDemultiplyCountAllowed) {
     std::string fileToReload = directoryPath + "/config.json";
-    createConfigFileWithContent(pipelineDemultiplexerShape, fileToReload);
+    createConfigFileWithContent(pipelineDemultiplexerShapeEqualToDemultiplyCount, fileToReload);
     ConstructorEnabledModelManager manager;
 
     auto status = manager.loadConfig(fileToReload);
-    ASSERT_EQ(status, StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE);
+    ASSERT_EQ(status, StatusCode::OK);
 
     ASSERT_EQ(manager.getPipelineFactory().findDefinitionByName(PIPELINE_1_DUMMY_NAME)->getStateCode(),
-        PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+        PipelineDefinitionStateCode::AVAILABLE);
 }
 
 static const char* pipelineSingleIncrement4DimInputNHWC = R"(
@@ -3382,8 +4316,8 @@ static const char* pipelineSingleIncrement4DimInputNHWC = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,1,2) ",
-                "layout": "nhwc",
+                "shape": "(1,1,2,3) ",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -3428,7 +4362,7 @@ TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimInputNHWC) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse("pipeline_output", {2.0, 5.0, 3.0, 6.0, 4.0, 7.0}, request, response, {1, 3, 1, 2});
+    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 5.0, 3.0, 6.0, 4.0, 7.0}, request, response, {1, 3, 1, 2});
 }
 
 static const char* pipelineSingleIncrement4DimInputNHWCDynamicBatch = R"(
@@ -3440,8 +4374,8 @@ static const char* pipelineSingleIncrement4DimInputNHWCDynamicBatch = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,1,2) ",
-                "layout": "nhwc",
+                "shape": "(1,1,2,3) ",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -3488,7 +4422,7 @@ TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimInputNHWCDynamicBatch) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse("pipeline_output", {2.0, 5.0, 3.0, 6.0, 4.0, 7.0, 11.0, 41.0, 21.0, 51.0, 31.0, 61.0}, request, response, {2, 1, 3, 1, 2});
+    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 5.0, 3.0, 6.0, 4.0, 7.0, 11.0, 41.0, 21.0, 51.0, 31.0, 61.0}, request, response, {2, 1, 3, 1, 2});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC = R"(
@@ -3501,7 +4435,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,3,1,2) ",
-                "layout": {"output": "nhwc"},
+                "layout": {"output": "nhwc:nchw"},
                 "nireq": 1
             }
         }
@@ -3546,7 +4480,7 @@ TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimOutputNHWC) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0}, request, response, {1, 1, 2, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0}, request, response, {1, 1, 2, 3});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWCDynamicBatch = R"(
@@ -3559,7 +4493,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWCDynamicBatch = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,3,1,2) ",
-                "layout": {"output": "nhwc"},
+                "layout": {"output": "nhwc:nchw"},
                 "nireq": 1
             }
         }
@@ -3607,7 +4541,7 @@ TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimOutputNHWCDynamicBatch) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0, 11.0, 31.0, 51, 21.0, 41.0, 61.0}, request, response, {2, 1, 1, 2, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0, 11.0, 31.0, 51, 21.0, 41.0, 61.0}, request, response, {2, 1, 1, 2, 3});
 }
 
 static const char* pipelineAmbiguousInputMeta = R"(
@@ -3619,8 +4553,8 @@ static const char* pipelineAmbiguousInputMeta = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,1,2) ",
-                "layout": {"input": "nhwc"},
+                "shape": "(1,1,2,3) ",
+                "layout": {"input": "nhwc:nchw"},
                 "nireq": 1
             }
         },
@@ -3631,7 +4565,6 @@ static const char* pipelineAmbiguousInputMeta = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,3,1,2) ",
-                "layout": {"input": "nchw"},
                 "nireq": 1
             }
         }
@@ -3697,7 +4630,7 @@ static const char* pipelineInnerConnectedNhwc = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,3,1,2) ",
-                "layout": {"output": "nhwc"},
+                "layout": {"output": "nhwc:nchw"},
                 "nireq": 1
             }
         },
@@ -3707,8 +4640,8 @@ static const char* pipelineInnerConnectedNhwc = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,1,2) ",
-                "layout": {"input": "nhwc"},
+                "shape": "(1,1,2,3) ",
+                "layout": {"input": "nhwc:nchw"},
                 "nireq": 1
             }
         }
@@ -3766,13 +4699,14 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithInnerNhwcConnection) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse("pipeline_output", {3.0, 4.0, 5.0, 6.0, 7.0, 8.0}, request, response, {1, 3, 1, 2});
+    checkIncrement4DimResponse<float>("pipeline_output", {3.0, 4.0, 5.0, 6.0, 7.0, 8.0}, request, response, {1, 3, 1, 2});
 }
 
 class EnsembleFlowTestBinaryInput : public EnsembleFlowTest {
 public:
     const std::string imagePath = "/ovms/src/test/binaryutils/rgb.jpg";
     const std::string imagePath2x2 = "/ovms/src/test/binaryutils/rgb2x2.jpg";
+    const std::string imagePath4x4 = "/ovms/src/test/binaryutils/rgb4x4.jpg";
     const std::string graycaleImagePath = "/ovms/src/test/binaryutils/grayscale.jpg";
 };
 
@@ -3785,8 +4719,8 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1x1 = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,1,1) ",
-                "layout": "nhwc",
+                "shape": "(1,1,1,3) ",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -3831,7 +4765,123 @@ TEST_F(EnsembleFlowTestBinaryInput, BatchSize1) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse("pipeline_output", {37.0, 28.0, 238.0}, request, response, {1, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0}, request, response, {1, 3, 1, 1});
+}
+
+static const char* pipelineWith4DimDummyFP64 = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/dummy_fp64",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,1,1,3) ",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input:0": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output:0",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTestBinaryInput, DoublePrecision) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineWith4DimDummyFP64, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    prepareBinaryRequest(imagePath, request, "pipeline_input");
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse<double>("pipeline_output", {37.0, 28.0, 238.0}, request, response, {1, 1, 1, 3});
+}
+
+static const char* pipelineSingleIncrement4DimOutputNHWC1x1BatchAny = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(-1,1,1,3) ",
+                "layout": "nhwc:nchw",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTestBinaryInput, BatchSizeAny) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWC1x1BatchAny, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    const size_t batchSize = 100;
+    prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimShape("pipeline_output", response, {batchSize, 3, 1, 1});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNCHW1x1 = R"(
@@ -3886,8 +4936,8 @@ TEST_F(EnsembleFlowTestBinaryInput, NchwEntryNotSupported) {
 
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
-
-    ASSERT_EQ(pipeline->execute(), StatusCode::UNSUPPORTED_LAYOUT);
+    auto status = pipeline->execute();
+    ASSERT_EQ(status, StatusCode::INVALID_NO_OF_CHANNELS) << status.string();
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC1x1Grayscale = R"(
@@ -3900,7 +4950,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1x1Grayscale = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,1,1,1) ",
-                "layout": "nhwc",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -3945,7 +4995,7 @@ TEST_F(EnsembleFlowTestBinaryInput, GrayscaleImage) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse("pipeline_output", {1.0}, request, response, {1, 1, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {1.0}, request, response, {1, 1, 1, 1});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC1x1BS5 = R"(
@@ -3957,8 +5007,8 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1x1BS5 = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(5,3,1,1) ",
-                "layout": "nhwc",
+                "shape": "(5,1,1,3) ",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -4004,7 +5054,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BatchSize5) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 3, 1, 1});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC2x2 = R"(
@@ -4016,8 +5066,8 @@ static const char* pipelineSingleIncrement4DimOutputNHWC2x2 = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,2,2) ",
-                "layout": "nhwc",
+                "shape": "(1,2,2,3) ",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -4062,7 +5112,7 @@ TEST_F(EnsembleFlowTestBinaryInput, ResizeBatch1) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0}, request, response, {1, 3, 2, 2});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0}, request, response, {1, 3, 2, 2});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC2x2BS5 = R"(
@@ -4074,8 +5124,8 @@ static const char* pipelineSingleIncrement4DimOutputNHWC2x2BS5 = R"(
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(5,3,2,2) ",
-                "layout": "nhwc",
+                "shape": "(5,2,2,3) ",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -4121,7 +5171,7 @@ TEST_F(EnsembleFlowTestBinaryInput, ResizeBatch5) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0},
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0, 37.0, 37.0, 37.0, 37.0, 28.0, 28.0, 28.0, 28.0, 238.0, 238.0, 238.0, 238.0},
         request, response, {5, 3, 2, 2});
 }
 
@@ -4135,7 +5185,7 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1Channel = R"(
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
                 "shape": "(1,1,1,1) ",
-                "layout": "nhwc",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -4209,8 +5259,8 @@ static const char* pipelineSingleIncrement4DimOutputNHWC1x1EntryDemultiplexer = 
                 "base_path": "/ovms/src/test/increment_1x3x4x5",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}},
-                "shape": "(1,3,1,1) ",
-                "layout": "nhwc",
+                "shape": "(1,1,1,3) ",
+                "layout": "nhwc:nchw",
                 "nireq": 1
             }
         }
@@ -4257,7 +5307,158 @@ TEST_F(EnsembleFlowTestBinaryInput, EntryDemultiplexer) {
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
+}
+
+static const char* pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryStaticDemultiplexer = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,1:3,1:3,3) ",
+                "layout": "nhwc:nchw",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "demultiply_count": 5,
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTestBinaryInput, EntryStaticDemultiplexerResolutionMatches) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryStaticDemultiplexer, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    int batchSize = 5;
+    prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
+}
+
+TEST_F(EnsembleFlowTestBinaryInput, EntryStaticDemultiplexerResolutionAutoAlign) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryStaticDemultiplexer, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    int batchSize = 5;
+    prepareBinaryRequest(imagePath4x4, request, "pipeline_input", batchSize);
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimShape("pipeline_output", response, {5, 1, 3, 3, 3});
+}
+
+static const char* pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryDynamicDemultiplexer = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,1:3,1:3,3) ",
+                "layout": "nhwc:nchw",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "increment_pipeline",
+            "inputs": ["pipeline_input"],
+            "demultiply_count": 0,
+            "nodes": [
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTestBinaryInput, EntryDynamicDemultiplexerResolutionMatches) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryDynamicDemultiplexer, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    int batchSize = 5;
+    prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse<float>("pipeline_output", {37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0, 37.0, 28.0, 238.0}, request, response, {5, 1, 3, 1, 1});
+}
+
+TEST_F(EnsembleFlowTestBinaryInput, EntryDynamicDemultiplexerResolutionResolutionMismatch) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWCRangeResolutionEntryDynamicDemultiplexer, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    int batchSize = 5;
+    prepareBinaryRequest(imagePath4x4, request, "pipeline_input", batchSize);
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_SHAPE);
 }
 
 static const char* pipelineWithOnlyDynamicCustomNode = R"(
@@ -4313,7 +5514,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_Reques
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse("pipeline_output", {44.0, 35.0, 245.0}, request, response, {1, 1, 1, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0}, request, response, {1, 1, 1, 3});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_RequestBS2) {
@@ -4327,7 +5528,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_Reques
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, request, response, {2, 1, 1, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, request, response, {2, 1, 1, 3});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_RequestMisaligned) {
@@ -4342,7 +5543,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_Reques
     ASSERT_EQ(pipeline->execute(), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);
 }
 
-TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANY_RequestNhwc) {
+TEST_F(EnsembleFlowTest, TensorContentInputWithPipelineInputLayoutANY_RequestNhwc) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineWithOnlyDynamicCustomNode, fileToReload);
     ConstructorEnabledModelManager manager;
@@ -4405,7 +5606,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse("pipeline_output", {44.0, 35.0, 245.0}, request, response, {1, 1, 1, 1, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0}, request, response, {1, 1, 1, 1, 3});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemultiplexer_RequestBS2) {
@@ -4419,7 +5620,7 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, request, response, {2, 1, 1, 1, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {44.0, 35.0, 245.0, 44.0, 35.0, 245.0}, request, response, {2, 1, 1, 1, 3});
 }
 
 TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemultiplexer_RequestMisaligned) {
@@ -4428,13 +5629,13 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     ConstructorEnabledModelManager manager;
     std::unique_ptr<Pipeline> pipeline;
 
-    prepareMisalignedBinaryImageRequest(imagePath, imagePath2x2, request, "pipeline_input");
+    prepareMisalignedBinaryImageRequest(imagePath2x2, imagePath, request, "pipeline_input");
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);
 }
 
-TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemultiplexer_RequestNhwc) {
+TEST_F(EnsembleFlowTest, TensorContentInputWithPipelineInputLayoutANYAndDemultiplexer_RequestNhwc) {
     std::string fileToReload = directoryPath + "/config.json";
     createConfigFileWithContent(pipelineWithOnlyDynamicCustomNodeAndDemultiplexer, fileToReload);
     ConstructorEnabledModelManager manager;
@@ -4444,4 +5645,172 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
     ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+}
+
+static const char* pipelineWithDynamicCustomNodeDemultiplexerAndDynamicResolutionModel = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,-1,-1,3) ",
+                "layout": "nhwc:nchw",
+                "nireq": 1
+            }
+        }
+    ],
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_dynamic_image",
+            "base_path": "/ovms/bazel-bin/src/lib_node_dynamic_image.so"
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input"],
+            "demultiply_count": 0,
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_dynamic_image",
+                    "type": "custom",
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output_numbers",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "custom_node",
+                                   "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYCustomNodeDemultiplexerAndDynamicResolutionModel) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineWithDynamicCustomNodeDemultiplexerAndDynamicResolutionModel, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    int batchSize = 1;
+    prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse<float>("pipeline_output", {45.0, 36.0, 246.0}, request, response, {1, 1, 3, 1, 1});
+}
+
+static const char* pipelineWithDynamicCustomNodeDemultiplexerAndRangeOfResolutionModel = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "increment",
+                "base_path": "/ovms/src/test/increment_1x3x4x5",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(1,1:2,1:2,3) ",
+                "layout": "nhwc:nchw",
+                "nireq": 1
+            }
+        }
+    ],
+    "custom_node_library_config_list": [
+        {
+            "name": "lib_dynamic_image",
+            "base_path": "/ovms/bazel-bin/src/lib_node_dynamic_image.so"
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "inputs": ["pipeline_input"],
+            "demultiply_count": 0,
+            "nodes": [
+                {
+                    "name": "custom_node",
+                    "library_name": "lib_dynamic_image",
+                    "type": "custom",
+                    "inputs": [
+                        {"input_numbers": {"node_name": "request",
+                                           "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output_numbers",
+                         "alias": "custom_node_output"}
+                    ]
+                },
+                {
+                    "name": "increment_node",
+                    "model_name": "increment",
+                    "type": "DL model",
+                    "inputs": [
+                        {"input": {"node_name": "custom_node",
+                                   "data_item": "custom_node_output"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "output",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "increment_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYCustomNodeDemultiplexerAndRangeOfResolutionModel) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineWithDynamicCustomNodeDemultiplexerAndRangeOfResolutionModel, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    // Try with resolution out of shape range, expect INVALID_SHAPE
+    int batchSize = 1;
+    prepareBinaryRequest(imagePath4x4, request, "pipeline_input", batchSize);
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_SHAPE);
+
+    request.Clear();
+    response.Clear();
+
+    // Try with resolution matching the shape, expect OK
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
+    prepareBinaryRequest(imagePath, request, "pipeline_input", batchSize);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse<float>("pipeline_output", {45.0, 36.0, 246.0}, request, response, {1, 1, 3, 1, 1});
 }

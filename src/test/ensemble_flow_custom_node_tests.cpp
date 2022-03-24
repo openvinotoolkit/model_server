@@ -31,6 +31,7 @@
 #include "../node_library.hpp"
 #include "../node_library_utils.hpp"
 #include "../pipelinedefinition.hpp"
+#include "../precision.hpp"
 #include "../stringutils.hpp"
 #include "test_utils.hpp"
 
@@ -53,13 +54,13 @@ protected:
                       this->library),
             StatusCode::OK);
         dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
-            InferenceEngine::Precision::FP32,
+            ovms::Precision::FP32,
             DUMMY_MODEL_SHAPE,
-            InferenceEngine::Layout::NC);
+            Layout{"NC"});
         dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
-            InferenceEngine::Precision::FP32,
+            ovms::Precision::FP32,
             DUMMY_MODEL_SHAPE,
-            InferenceEngine::Layout::NC);
+            Layout{"NC"});
     }
 
     template <typename T>
@@ -86,9 +87,9 @@ protected:
     std::unique_ptr<Pipeline> prepareSingleNodePipelineWithLibraryMock() {
         const std::vector<float> inputValues{3.5, 2.1, -0.2};
         auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
-            InferenceEngine::Precision::FP32,
-            shape_t{1, 3},
-            InferenceEngine::Layout::NC);
+            ovms::Precision::FP32,
+            ovms::Shape{1, 3},
+            Layout{"NC"});
         const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
         this->prepareRequest(inputValues);
         auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
@@ -184,15 +185,15 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AddSubCustomNode) {
     const float subValue = 4.8;
 
     auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{1, 3},
-        InferenceEngine::Layout::NC);
+        ovms::Precision::FP32,
+        ovms::Shape{1, 3},
+        Layout{"NC"});
     const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{1, 3},
-        InferenceEngine::Layout::NC);
+        ovms::Precision::FP32,
+        ovms::Shape{1, 3},
+        Layout{"NC"});
     const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
     auto custom_node = std::make_unique<CustomNode>(customNodeName, library,
@@ -241,7 +242,7 @@ protected:
     const std::string dummyNodeName = "dummy";
     const std::string differentOpsNodeName{"different-ops-node"};
     const std::string chooseMaxNodeName{"choose-max-node"};
-    const uint32_t demultiplyCount = 4;  // different ops library has (1,4,10) as output
+    const int32_t demultiplyCount = 4;  // different ops library has (1,4,10) as output
 
     void SetUp() override {
         // increasing default nireq == 1 to speed up the tests
@@ -266,13 +267,13 @@ protected:
                       chooseMaxLibrary),
             StatusCode::OK);
         dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
-            InferenceEngine::Precision::FP32,
+            ovms::Precision::FP32,
             DUMMY_MODEL_SHAPE,
-            InferenceEngine::Layout::NC);
+            Layout{"NC"});
         dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
-            InferenceEngine::Precision::FP32,
+            ovms::Precision::FP32,
             DUMMY_MODEL_SHAPE,
-            InferenceEngine::Layout::NC);
+            Layout{"NC"});
     }
 };
 
@@ -309,9 +310,9 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
     std::vector<std::unique_ptr<Node>> nodes(2 + 3 * demultiplicationLayersCount);  // entry + exit + (choose + differentOps + dummy) * layerCount
     const tensor_map_t inputsInfo{{pipelineInputName, dagDummyModelInputTensorInfo}, {pipelineFactorsName,
                                                                                          std::make_shared<ovms::TensorInfo>(pipelineFactorsName,
-                                                                                             InferenceEngine::Precision::FP32,
-                                                                                             shape_t{1, 4},
-                                                                                             InferenceEngine::Layout::NC)}};
+                                                                                             ovms::Precision::FP32,
+                                                                                             ovms::Shape{1, 4},
+                                                                                             Layout{"NC"})}};
     nodes[0] = std::make_unique<EntryNode>(&predictRequest, inputsInfo);
     const tensor_map_t outputsInfo{{pipelineOutputName, dagDummyModelOutputTensorInfo}};
     nodes[1] = std::make_unique<ExitNode>(&response, outputsInfo);
@@ -382,9 +383,9 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
     std::vector<std::unique_ptr<Node>> nodes(nodesCount);
     const tensor_map_t inputsInfo{{pipelineInputName, dagDummyModelInputTensorInfo}, {pipelineFactorsName,
                                                                                          std::make_shared<ovms::TensorInfo>(pipelineFactorsName,
-                                                                                             InferenceEngine::Precision::FP32,
-                                                                                             shape_t{1, 4},
-                                                                                             InferenceEngine::Layout::NC)}};
+                                                                                             ovms::Precision::FP32,
+                                                                                             ovms::Shape{1, 4},
+                                                                                             Layout{"NC"})}};
     nodes[0] = std::make_unique<EntryNode>(&predictRequest, inputsInfo);
     const tensor_map_t outputsInfo{{pipelineOutputName, dagDummyModelOutputTensorInfo}};
     nodes[nodesCount - 1] = std::make_unique<ExitNode>(&response, outputsInfo);
@@ -446,15 +447,15 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SeriesOfCustomNodes) {
     const std::array<float, PARAMETERS_PAIRS_COUNT> subValues{-5.1, 1.9};
 
     auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{1, 3},
-        InferenceEngine::Layout::NC);
+        ovms::Precision::FP32,
+        ovms::Shape{1, 3},
+        Layout{"NC"});
     const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{1, 3},
-        InferenceEngine::Layout::NC);
+        ovms::Precision::FP32,
+        ovms::Shape{1, 3},
+        Layout{"NC"});
     const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
 
@@ -510,9 +511,9 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ParallelCustomNodes) {
     const std::array<float, PARAMETERS_PAIRS_COUNT> subValues{8.5, -3.2, 10.0, -0.5, 2.4};
 
     auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{1, 3},
-        InferenceEngine::Layout::NC);
+        ovms::Precision::FP32,
+        ovms::Shape{1, 3},
+        Layout{"NC"});
     const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     tensor_map_t outputsInfo;
@@ -520,9 +521,9 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ParallelCustomNodes) {
         const std::string outputName = pipelineOutputName + std::to_string(i);
         outputsInfo.emplace(outputName,
             std::make_shared<ovms::TensorInfo>(outputName,
-                InferenceEngine::Precision::FP32,
-                shape_t{1, 3},
-                InferenceEngine::Layout::NC));
+                ovms::Precision::FP32,
+                ovms::Shape{1, 3},
+                Layout{"NC"}));
     }
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo);
 
@@ -611,16 +612,22 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomAndDLNodes) {
 }
 
 struct LibraryFailInExecute {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 1;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -632,18 +639,24 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeExecution) {
 }
 
 struct LibraryCorruptedOutputHandle {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *handle = nullptr;
         *outputsNum = 5;
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -655,18 +668,24 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputsCorru
 }
 
 struct LibraryCorruptedOutputsNumber {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *handle = (struct CustomNodeTensor*)malloc(5 * sizeof(struct CustomNodeTensor));
         *outputsNum = 0;
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -678,7 +697,13 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputsCorru
 }
 
 struct LibraryMissingOutput {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
         (*handle)->name = "random_not_connected_output";
@@ -690,13 +715,13 @@ struct LibraryMissingOutput {
         (*handle)->dataBytes = sizeof(float);
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -708,7 +733,13 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeMissingOutpu
 }
 
 struct LibraryIncorrectOutputPrecision {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
         (*handle)->name = "output_numbers";
@@ -719,13 +750,13 @@ struct LibraryIncorrectOutputPrecision {
         (*handle)->dataBytes = 1;
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -737,7 +768,13 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvali
 }
 
 struct LibraryIncorrectOutputShape {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
         (*handle)->name = "output_numbers";
@@ -748,13 +785,13 @@ struct LibraryIncorrectOutputShape {
         (*handle)->dataBytes = 1;
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -766,7 +803,13 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvali
 }
 
 struct LibraryIncorrectOutputContentSize {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor** handle, int* outputsNum, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         *handle = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
         *outputsNum = 1;
         (*handle)->name = "output_numbers";
@@ -777,13 +820,13 @@ struct LibraryIncorrectOutputContentSize {
         (*handle)->dataBytes = 0;
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -792,6 +835,174 @@ struct LibraryIncorrectOutputContentSize {
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvalidContentSize) {
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryIncorrectOutputContentSize>();
     ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE);
+}
+
+struct LibraryNotInitilizedExecuteCorrectly {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    // execute function is not using buffer allocation feature, therefore initialize does not do anything apart from returning 0 meaning that initialize worked as intended
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        *outputs = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
+        *outputsCount = 1;
+        (*outputs)->name = "output_numbers";
+        (*outputs)->precision = CustomNodeTensorPrecision::FP32;
+        (*outputs)->dims = (uint64_t*)malloc(2 * sizeof(uint64_t));
+        (*outputs)->dims[0] = 1;
+        (*outputs)->dims[1] = 10;
+        (*outputs)->dimsCount = 2;
+        (*outputs)->data = (uint8_t*)malloc(sizeof(uint8_t));
+        (*outputs)->dataBytes = 40;
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SuccessInCustomNodeExecutionNotInitialized) {
+    auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryNotInitilizedExecuteCorrectly>();
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+}
+
+struct LibraryNotInitializedFailInExecute {
+    // execute is using buffer allocation, therefore initialize should be modified to work properly
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    // execute function is using customNodeLibraryInternalManager, that was supposed to be created in initialize function
+    // execute fails due to incorrect initialization
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        if (customNodeLibraryInternalManager == nullptr) {
+            return 1;
+        }
+        *outputs = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor));
+        *outputsCount = 1;
+        (*outputs)->name = "output_numbers";
+        (*outputs)->precision = CustomNodeTensorPrecision::FP32;
+        (*outputs)->dims = (uint64_t*)malloc(2 * sizeof(uint64_t));
+        (*outputs)->dims[0] = 1;
+        (*outputs)->dims[1] = 10;
+        (*outputs)->dimsCount = 2;
+        (*outputs)->data = (uint8_t*)malloc(sizeof(uint8_t));
+        (*outputs)->dataBytes = 40;
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeExecutionNotInitialized) {
+    auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryNotInitializedFailInExecute>();
+    ASSERT_EQ(pipeline->execute(), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
+}
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeInitialize) {
+    // Nodes
+    // request   custom    response
+    //  O--------->O---------->O
+    //          add-sub
+    ConstructorEnabledModelManager manager;
+    PipelineFactory factory;
+
+    const float addValue = 0.9;
+    const float subValue = 7.3;
+
+    // initialize function call from now on will be calling this lambda function, which indicates
+    // initialization failure
+    library.initialize = [](void**, const struct CustomNodeParam*, int) { return 1; };
+    ASSERT_TRUE(library.isValid());
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, library, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    // request (pipelineInputName) O--------->O custom node (customNodeInputName)
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O response (pipelineOutputName)
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node", {{customNodeOutputName, pipelineOutputName}}}};
+
+    // createDefinition fails due to initialization failure
+    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::NODE_LIBRARY_INITIALIZE_FAILED);
+}
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeDeinitialize) {
+    // Nodes
+    // request   custom    response
+    //  O--------->O---------->O
+    //          add-sub
+    ConstructorEnabledModelManager manager;
+    PipelineFactory factory;
+
+    const std::vector<float> inputValues{7.8, -2.4, 1.9, 8.7, -2.4, 3.5};
+    this->prepareRequest(inputValues);
+
+    const float addValue = 0.9;
+    const float subValue = 7.3;
+
+    // deinitialize function call from now on will be calling this lambda function, which indicates
+    // deinitialization failure
+    library.deinitialize = [](void*) { return 1; };
+    ASSERT_TRUE(library.isValid());
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, library, parameters_t{{"add_value", std::to_string(addValue)}, {"sub_value", std::to_string(subValue)}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    // request (pipelineInputName) O--------->O custom node (customNodeInputName)
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O response (pipelineOutputName)
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node", {{customNodeOutputName, pipelineOutputName}}}};
+
+    std::unique_ptr<Pipeline> pipeline;
+    // creating definition, pipeline and then executing works propely due to correct initialization
+    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
+    ASSERT_EQ(factory.create(pipeline, "my_new_pipeline", &request, &response, manager), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    this->checkResponse<float>(inputValues, [addValue, subValue](float value) -> float {
+        return value + addValue - subValue;
+    });
+
+    // after execute we are retiring pipeline definition and making sure that its state is retired after the operation
+    // even tho deinitialize is failing there is no direct indication of that apart from errors in logs
+    factory.retireOtherThan({}, manager);
+    ASSERT_EQ(factory.findDefinitionByName("my_new_pipeline")->getStateCode(), PipelineDefinitionStateCode::RETIRED);
 }
 
 class EnsembleFlowCustomNodeFactoryCreateThenExecuteTest : public EnsembleFlowCustomNodePipelineExecutionTest {};
@@ -927,6 +1138,146 @@ TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, ParallelPipelineFacto
     for (auto& thread : threads) {
         thread.join();
     }
+}
+
+struct AddSubInternalManager {
+    uint64_t* inputDims;
+    uint64_t* outputDims;
+    struct CustomNodeTensorInfo* inputInfo;
+    struct CustomNodeTensorInfo* outputInfo;
+    struct CustomNodeTensor* outputTensor;
+    uint8_t* outputTensorData;
+    uint64_t* outputTensorDims;
+    inline static std::vector<float> mockedOutput{0, 0, -1, 1, -2, 2, -3, 3, -4, 4};
+
+    AddSubInternalManager() {
+        inputDims = (uint64_t*)malloc(2 * sizeof(uint64_t));
+        outputDims = (uint64_t*)malloc(2 * sizeof(uint64_t));
+        inputInfo = (struct CustomNodeTensorInfo*)malloc(1 * sizeof(struct CustomNodeTensorInfo));
+        outputInfo = (struct CustomNodeTensorInfo*)malloc(1 * sizeof(struct CustomNodeTensorInfo));
+        outputTensor = (struct CustomNodeTensor*)malloc(1 * sizeof(struct CustomNodeTensor));
+        outputTensorData = (uint8_t*)malloc(10 * 4 * sizeof(uint8_t));
+        outputTensorDims = (uint64_t*)malloc(2 * sizeof(uint64_t));
+    }
+
+    bool isPtrOwnedByManager(void* ptr) {
+        return (ptr == inputDims || ptr == outputDims || ptr == inputInfo || ptr == outputInfo || ptr == outputTensor || ptr == outputTensorData || ptr == outputTensorDims);
+    }
+};
+
+struct LibraryAddSubWithInternalManager {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        AddSubInternalManager* internalManager = new AddSubInternalManager();
+        *customNodeLibraryInternalManager = internalManager;
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        if (customNodeLibraryInternalManager != nullptr) {
+            AddSubInternalManager* internalManager = static_cast<AddSubInternalManager*>(customNodeLibraryInternalManager);
+            delete internalManager;
+        }
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        AddSubInternalManager* internalManager = static_cast<AddSubInternalManager*>(customNodeLibraryInternalManager);
+        if (internalManager == nullptr)
+            return 1;
+
+        const struct CustomNodeTensor* input = &inputs[0];
+
+        *outputsCount = 1;
+        *outputs = internalManager->outputTensor;
+        struct CustomNodeTensor* output = (&(*outputs))[0];
+
+        output->name = "output_numbers";
+        output->data = internalManager->outputTensorData;
+        output->dataBytes = input->dataBytes;
+        output->dims = internalManager->outputTensorDims;
+        output->dimsCount = input->dimsCount;
+        memcpy((void*)output->dims, (void*)input->dims, input->dimsCount * sizeof(uint64_t));
+        output->precision = input->precision;
+
+        for (uint64_t i = 0; i < output->dataBytes; i += sizeof(float)) {
+            *(float*)(output->data + i) = internalManager->mockedOutput[i / sizeof(float)];
+        }
+
+        return 0;
+    }
+
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        AddSubInternalManager* internalManager = static_cast<AddSubInternalManager*>(customNodeLibraryInternalManager);
+        if (internalManager == nullptr)
+            return 1;
+        *infoCount = 1;
+        *info = internalManager->inputInfo;
+        (*info)->name = "input_numbers";
+        (*info)->dimsCount = 2;
+        (*info)->dims = internalManager->inputDims;
+        (*info)->dims[0] = 1;
+        (*info)->dims[1] = 10;
+        (*info)->precision = FP32;
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        AddSubInternalManager* internalManager = static_cast<AddSubInternalManager*>(customNodeLibraryInternalManager);
+        if (internalManager == nullptr)
+            return 1;
+        *infoCount = 1;
+        *info = internalManager->outputInfo;
+        (*info)->name = "output_numbers";
+        (*info)->dimsCount = 2;
+        (*info)->dims = internalManager->outputDims;
+        (*info)->dims[0] = 1;
+        (*info)->dims[1] = 10;
+        (*info)->precision = FP32;
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        AddSubInternalManager* internalManager = static_cast<AddSubInternalManager*>(customNodeLibraryInternalManager);
+        if (internalManager == nullptr)
+            return 1;
+        if (!internalManager->isPtrOwnedByManager(ptr)) {
+            free(ptr);
+        }
+        return 0;
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, PipelineFactoryCreationAndExecuteWithCustomNodeUsingInternalManager) {
+    ConstructorEnabledModelManager manager;
+    PipelineFactory factory;
+
+    const std::vector<float> inputValues{7.8, -2.4, 1.9, 8.7, -2.4, 3.5, 2.5, 1.2, -2.5, 10.0};
+    this->prepareRequest(inputValues);
+
+    NodeLibrary libraryAddSubWithInternalManager = createLibraryMock<LibraryAddSubWithInternalManager>();
+    ASSERT_TRUE(libraryAddSubWithInternalManager.isValid());
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, libraryAddSubWithInternalManager},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    // request (pipelineInputName) O--------->O custom node (customNodeInputName)
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O response (pipelineOutputName)
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node", {{customNodeOutputName, pipelineOutputName}}}};
+
+    std::unique_ptr<Pipeline> pipeline;
+    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
+    ASSERT_EQ(factory.create(pipeline, "my_new_pipeline", &request, &response, manager), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    this->checkResponse<float>(AddSubInternalManager::mockedOutput, [](float value) -> float {
+        return value;
+    });
 }
 
 static const char* pipelineCustomNodeConfig = R"(
@@ -1416,11 +1767,11 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, JustDiff
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(differentOpsInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape(), Shape({1, 10}));
     const auto& input_B = inputs.at(differentOpsFactorsName);
-    EXPECT_EQ(input_B->getEffectiveShape(), shape_t({1, 4}));
+    EXPECT_EQ(input_B->getShape(), Shape({1, 4}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({4, 1, 10}));
+    EXPECT_EQ(output->getShape(), Shape({4, 1, 10}));
 }
 
 static const char* pipelineCustomNodeDifferentOperationsThenDummyConfig = R"(
@@ -1508,9 +1859,9 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape(), Shape({1, 10}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({4, 1, 10}));
+    EXPECT_EQ(output->getShape(), Shape({4, 1, 10}));
 }
 
 static const char* pipelineCustomNodeDifferentOperations2OutputsConfig = R"(
@@ -1589,13 +1940,13 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Differen
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(differentOpsInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape(), Shape({1, 10}));
     const auto& input_B = inputs.at(differentOpsFactorsName);
-    EXPECT_EQ(input_B->getEffectiveShape(), shape_t({1, 4}));
+    EXPECT_EQ(input_B->getShape(), Shape({1, 4}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({4, 1, 10}));
+    EXPECT_EQ(output->getShape(), Shape({4, 1, 10}));
     const auto& outputFactors = outputs.at("pipeline_factors");
-    EXPECT_EQ(outputFactors->getEffectiveShape(), shape_t({4, 1, 4}));
+    EXPECT_EQ(outputFactors->getShape(), Shape({4, 1, 4}));
 }
 
 static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig = R"(
@@ -1905,6 +2256,29 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Demultip
     this->checkResponse("pipeline_output", response, expectedOutput, {1, 10});
 }
 
+// Extract TensorInfo out of string in format: "1,3,500,500;FP32"
+static CustomNodeTensorInfo extractMetadata(const char* key, const char* value) {
+    std::string keyStr = key;
+    std::string valueStr = value;
+    auto tokens = tokenize(valueStr, ';');
+    EXPECT_EQ(tokens.size(), 2);
+    std::string shapeStr = tokens[0];
+    std::string precisionStr = tokens[1];
+    tokens = tokenize(shapeStr, ',');
+    EXPECT_GE(tokens.size(), 1);
+    shape_t shape;
+    std::transform(tokens.begin(), tokens.end(), std::back_inserter(shape),
+        [](const std::string& str) { return std::stoull(str); });
+    CustomNodeTensorPrecision precision = toCustomNodeTensorPrecision(ovmsPrecisionToIE2Precision(ovms::fromString(precisionStr)));
+    CustomNodeTensorInfo info;
+    info.name = key;
+    info.dimsCount = shape.size();
+    info.dims = (uint64_t*)malloc(info.dimsCount * sizeof(uint64_t));
+    std::memcpy(info.dims, shape.data(), info.dimsCount * sizeof(uint64_t));
+    info.precision = precision;
+    return info;
+}
+
 struct LibraryParamControlledMetadata {
     static bool startsWith(const char* str, const char* prefix) {
         // Ensure null terminated
@@ -1938,7 +2312,7 @@ struct LibraryParamControlledMetadata {
         shape_t shape;
         std::transform(tokens.begin(), tokens.end(), std::back_inserter(shape),
             [](const std::string& str) { return std::stoull(str); });
-        CustomNodeTensorPrecision precision = toCustomNodeTensorPrecision(InferenceEngine::Precision::FromStr(precisionStr));
+        CustomNodeTensorPrecision precision = toCustomNodeTensorPrecision(ovmsPrecisionToIE2Precision(ovms::fromString(precisionStr)));
         CustomNodeTensorInfo info;
         info.name = key;
         info.dimsCount = shape.size();
@@ -1947,10 +2321,16 @@ struct LibraryParamControlledMetadata {
         info.precision = precision;
         return info;
     }
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 1;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
         int inputs = 0;
         for (int i = 0; i < paramsCount; i++) {
             if (startsWith(params[i].key, "in_")) {
@@ -1971,7 +2351,7 @@ struct LibraryParamControlledMetadata {
         }
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
         int outputs = 0;
         for (int i = 0; i < paramsCount; i++) {
             if (startsWith(params[i].key, "out_")) {
@@ -1992,7 +2372,7 @@ struct LibraryParamControlledMetadata {
         }
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -2400,16 +2780,22 @@ TEST_F(EnsembleConfigurationValidationWithCustomNode, InvalidSharedLibrary) {
 }
 
 struct LibraryErrorsOnMetadataCall {
-    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor*, int, struct CustomNodeTensor**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 1;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 1;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -2488,7 +2874,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
 }
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleDynamicDemultiplexerFirst) {
-    std::optional<uint32_t> demultiplyCount = 0;
+    std::optional<int32_t> demultiplyCount = -1;
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
@@ -2514,7 +2900,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
 }
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleDynamicDemultiplexerFixedLibraryFirstMetadataCheck) {
-    std::optional<uint32_t> demultiplyCount = 0;
+    std::optional<int32_t> demultiplyCount = -1;
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
@@ -2544,13 +2930,13 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape(), Shape({1, 10}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({12, 1, 10}));
+    EXPECT_EQ(output->getShape(), Shape({12, 1, 10}));
 }
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationFixedDemultiplexerDynamicLibraryFirstMetadataCheckShouldAlsoWarnInLog) {
-    std::optional<uint32_t> demultiplyCount = 12;
+    std::optional<int32_t> demultiplyCount = 12;
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
@@ -2580,13 +2966,13 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape(), Shape({1, 10}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({12, 1, 10}));
+    EXPECT_EQ(output->getShape(), Shape({12, 1, 10}));
 }
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationDynamicLibraryShapesMetadataCheckShouldAlsoWarnInLog) {
-    std::optional<uint32_t> demultiplyCount = std::nullopt;
+    std::optional<int32_t> demultiplyCount = std::nullopt;
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
@@ -2611,12 +2997,13 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 0, 0, 0}));
+    EXPECT_EQ(input_A->getShape(), Shape({1, Dimension::any(), Dimension::any(), Dimension::any()}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({0, 1, 0}));
+    EXPECT_EQ(output->getShape(), Shape({Dimension::any(), 1, Dimension::any()}));
 }
+
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleDynamicDemultiplexerLast) {
-    std::optional<uint32_t> demultiplyCount = 0;
+    std::optional<int32_t> demultiplyCount = -1;
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
@@ -2637,7 +3024,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
 }
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleDynamicDemultiplexerAndDynamicGather) {
-    std::optional<uint32_t> demultiplyCount = 0;
+    std::optional<int32_t> demultiplyCount = -1;
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
         {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
@@ -2667,7 +3054,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
 }
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleFixedDemultiplexerAndDynamicGather) {
-    std::optional<uint32_t> demultiplyCount = 12;
+    std::optional<int32_t> demultiplyCount = 12;
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
         {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
@@ -2697,7 +3084,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
 }
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleDynamicDemultiplexerAndFixedGatherShouldWarnInLog) {
-    std::optional<uint32_t> demultiplyCount = 0;
+    std::optional<int32_t> demultiplyCount = -1;
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
         {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
@@ -2727,7 +3114,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
 }
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationSingleDynamicDemultiplexerFixedLibraryDynamicGatherMetadataCheck) {
-    std::optional<uint32_t> demultiplyCount = 0;
+    std::optional<int32_t> demultiplyCount = -1;
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
@@ -2757,10 +3144,11 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape(), Shape({1, 10}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({12, 1, 10}));
+    EXPECT_EQ(output->getShape(), Shape({12, 1, 10}));
 }
+
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfigurationMultipleDemultiplexers) {
     const size_t demultiplyCount1 = 11;
     const size_t demultiplyCount2 = 43;
@@ -2804,14 +3192,14 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, SuccessfulConfiguration
     ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
 }
 
-TEST_F(EnsembleConfigurationValidationWithDemultiplexer, MultipleBatchInCustomNodeRestricted) {
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, MultipleBatchInCustomNode) {
     const size_t demultiplyCount = 9;
 
     std::vector<NodeInfo> info{
         {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
         {NodeKind::CUSTOM, "custom_node_1", "", std::nullopt, {{"1", "out_OutputNumbers_1"}, {"2", "out_OutputNumbers_2"}}, demultiplyCount, {}, mockedLibrary,
             parameters_t{
-                {"in_InputNumbers", "3,3,10;FP32"},  // 1,3,10 is correct
+                {"in_InputNumbers", "3,3,10;FP32"},
                 {"out_OutputNumbers_1", "9,1,700;I32"},
                 {"out_OutputNumbers_2", "9,1,8;FP32"}}},
         {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{"out", "out_OutputNumbers"}}, std::nullopt, {}, mockedLibrary,
@@ -2819,7 +3207,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, MultipleBatchInCustomNo
                 {"in_InputNumbers_1", "1,700;I32"},
                 {"in_InputNumbers_2", "1,8;FP32"},
                 {"out_OutputNumbers", "1,2000;FP32"}}},
-        {NodeKind::EXIT, EXIT_NODE_NAME},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node_1"}},
     };
 
     pipeline_connections_t connections;
@@ -2837,7 +3225,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, MultipleBatchInCustomNo
     ConstructorEnabledModelManager manager;
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     auto status = pipelineDefinition->validate(manager);
-    ASSERT_EQ(status, StatusCode::PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE) << status.string();
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
 }
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplexerNodeNotEnoughDimensionsToDemultiply) {
@@ -2874,12 +3262,12 @@ class DummyModelWithMockedMetadata : public ovms::ModelInstance {
     ovms::tensor_map_t mockedInputsInfo, mockedOutputsInfo;
 
 public:
-    DummyModelWithMockedMetadata(InferenceEngine::Core& ieCore, const ovms::tensor_map_t& inputsInfo, const ovms::tensor_map_t& outputsInfo) :
+    DummyModelWithMockedMetadata(ov::Core& ieCore, const ovms::tensor_map_t& inputsInfo, const ovms::tensor_map_t& outputsInfo) :
         ovms::ModelInstance("dummy", 1, ieCore),
         mockedInputsInfo(inputsInfo),
         mockedOutputsInfo(outputsInfo) {}
 
-    size_t getBatchSize() const override {
+    ovms::Dimension getBatchSize() const override {
         return 1;
     }
 
@@ -2903,7 +3291,7 @@ public:
     ModelWithDummyModelWithMockedMetadata(const std::string& name, std::shared_ptr<DummyModelWithMockedMetadata> modelInstance) :
         Model(name, false, nullptr),
         modelInstance(modelInstance) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, InferenceEngine::Core& ieCore) override {
+    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore) override {
         return modelInstance;
     }
 };
@@ -2920,6 +3308,184 @@ public:
         return std::make_shared<ModelWithDummyModelWithMockedMetadata>("dummy", modelInstance);
     }
 };
+
+struct LibraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        if (inputsCount != 1) {
+            return 1;
+        }
+
+        if (strcmp(inputs[0].name, "in") != 0) {
+            return 2;
+        }
+
+        const struct CustomNodeTensor* input = &inputs[0];
+
+        *outputsCount = 1;
+        *outputs = (struct CustomNodeTensor*)malloc(sizeof(struct CustomNodeTensor) * (*outputsCount));
+        struct CustomNodeTensor* output = (&(*outputs))[0];
+
+        output->name = "out";
+        output->data = (uint8_t*)malloc(input->dataBytes * sizeof(uint8_t));
+        output->dataBytes = input->dataBytes;
+        memcpy((void*)output->data, (void*)input->data, input->dataBytes * sizeof(uint8_t));
+        output->dims = (uint64_t*)malloc(input->dimsCount * sizeof(uint64_t));
+        output->dimsCount = input->dimsCount;
+        memcpy((void*)output->dims, (void*)input->dims, input->dimsCount * sizeof(uint64_t));
+        output->precision = input->precision;
+        return 0;
+    }
+
+    static int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        std::string name = "input_dims";
+        *infoCount = 1;
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(CustomNodeTensorInfo));
+        for (int i = 0; i < paramsCount; i++) {
+            if (params[i].key == name) {
+                (*info)[0] = extractMetadata(params[i].key, params[i].value);
+                (*info)->name = "in";
+                return 0;
+            }
+        }
+        return 1;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+        std::string name = "output_dims";
+        *infoCount = 1;
+        *info = (struct CustomNodeTensorInfo*)malloc(*infoCount * sizeof(CustomNodeTensorInfo));
+        for (int i = 0; i < paramsCount; i++) {
+            if (params[i].key == name) {
+                (*info)[0] = extractMetadata(params[i].key, params[i].value);
+                (*info)->name = "out";
+                return 0;
+            }
+        }
+        return 1;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
+TEST_F(EnsembleConfigurationValidationWithDemultiplexer, CustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy) {
+    NodeLibrary libraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy = createLibraryMock<LibraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy>();
+    ASSERT_TRUE(libraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy.isValid());
+
+    const size_t demultiplyCount = 7;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{"out", "out"}}, demultiplyCount, {}, libraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy,
+            parameters_t{
+                {"input_dims", "7,5,10;FP32"},
+                {"output_dims", "7,5,10;FP32"}}},
+        {NodeKind::DL, "dummy_node", "dummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, {"custom_node"}},
+    };
+
+    pipeline_connections_t connections;
+
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, "in"}}}};
+
+    connections["dummy_node"] = {
+        {"custom_node", {{"out", DUMMY_MODEL_INPUT_NAME}}}};
+
+    connections[EXIT_NODE_NAME] = {
+        {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
+
+    auto ieCore2 = std::make_unique<ov::Core>();
+    auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
+        *ieCore2,
+        tensor_map_t{
+            {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
+                                         DUMMY_MODEL_INPUT_NAME,
+                                         ovms::Precision::FP32,
+                                         ovms::Shape{5, 10})}},
+        tensor_map_t{
+            {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
+                                          DUMMY_MODEL_OUTPUT_NAME,
+                                          ovms::Precision::FP32,
+                                          ovms::Shape{5, 10})}});
+
+    ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::OK);
+}
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy) {
+    // Prepare request
+    std::vector<float> input(7 * 5 * DUMMY_MODEL_INPUT_SIZE);
+    std::iota(input.begin(), input.end(), 42);
+    PredictRequest request;
+    PredictResponse response;
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[pipelineInputName];
+    proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+    proto.mutable_tensor_content()->assign((char*)input.data(), input.size() * sizeof(float));
+    proto.mutable_tensor_shape()->add_dim()->set_size(7);
+    proto.mutable_tensor_shape()->add_dim()->set_size(5);
+    proto.mutable_tensor_shape()->add_dim()->set_size(10);
+
+    // Prepare model
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setBatchSize(5);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare pipeline
+    std::optional<int32_t> demultiplyCount = 7;
+    std::set<std::string> gather = {"custom_node"};
+    std::unordered_map<std::string, std::string> aliases{{"out", "out"}};
+
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        ovms::Precision::FP32,
+        ovms::Shape{7, 5, 10},
+        Layout::getUnspecifiedLayout());
+    const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        ovms::Precision::FP32,
+        ovms::Shape{7, 5, 10},
+        Layout::getUnspecifiedLayout());
+    const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo, gather);
+    auto custom_node = std::make_unique<CustomNode>(
+        "custom_node",
+        createLibraryMock<LibraryCustomNodeWithDemultiplexerAndBatchSizeGreaterThan1ThenDummy>(),
+        parameters_t{
+            {"input_dims", "7,5,10;FP32"},
+            {"output_dims", "7,5,10;FP32"}},
+        aliases, demultiplyCount);
+    auto model_node = std::make_unique<DLNode>("dummy_node", "dummy", std::nullopt, manager);
+
+    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+    pipeline->connect(*input_node, *custom_node, {{pipelineInputName, "in"}});
+    pipeline->connect(*custom_node, *model_node, {{"out", DUMMY_MODEL_INPUT_NAME}});
+    pipeline->connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}});
+
+    pipeline->push(std::move(input_node));
+    pipeline->push(std::move(custom_node));
+    pipeline->push(std::move(model_node));
+    pipeline->push(std::move(output_node));
+
+    // Execute
+    ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
+
+    // Check response
+    std::vector<float> expectedOutput = input;
+    std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
+        [](float f) -> float { return f + 1; });
+    this->checkResponse(pipelineOutputName, response, expectedOutput, {7, 5, 10});
+}
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenDLModelAndCustomNode) {
     const size_t demultiplyCount = 33;
@@ -2943,19 +3509,19 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, ShapesNotMatchBetweenDL
 
     connections[EXIT_NODE_NAME] = {
         {"custom_node", {{"out", pipelineOutputName}}}};
-    auto ieCore = std::make_unique<InferenceEngine::Core>();
+    auto ieCore = std::make_unique<ov::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
-                                         InferenceEngine::Precision::FP32,
-                                         shape_t{1, 10})}},
+                                         ovms::Precision::FP32,
+                                         ovms::Shape{1, 10})}},
         tensor_map_t{
             {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                           DUMMY_MODEL_OUTPUT_NAME,
-                                          InferenceEngine::Precision::FP32,
-                                          shape_t{demultiplyCount, 1, 11})}});  // demultiplyCount, 1, 10 is correct
+                                          ovms::Precision::FP32,
+                                          ovms::Shape{demultiplyCount, 1, 11})}});  // demultiplyCount, 1, 10 is correct
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -3061,7 +3627,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplyCountNotMatch
 
     ConstructorEnabledModelManager manager;
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
-    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_TENSOR_SHARD_COUNT);
 }
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplyCountNotMatchingOutputShapeBeforeExitNode) {
@@ -3087,7 +3653,7 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplyCountNotMatch
 
     ConstructorEnabledModelManager manager;
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
-    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_TENSOR_SHARD_COUNT);
 }
 
 class EnsembleConfigurationValidationWithGather : public EnsembleConfigurationValidationWithCustomNode {};
@@ -3167,19 +3733,19 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{"out", pipelineOutputName}}}};
 
-    auto ieCore = std::make_unique<InferenceEngine::Core>();
+    auto ieCore = std::make_unique<ov::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
-                                         InferenceEngine::Precision::FP32,
-                                         shape_t{1, demultiplyCount, 10})}},
+                                         ovms::Precision::FP32,
+                                         ovms::Shape{1, demultiplyCount, 10})}},
         tensor_map_t{
             {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                           DUMMY_MODEL_OUTPUT_NAME,
-                                          InferenceEngine::Precision::FP32,
-                                          shape_t{demultiplyCount, 1, 10})}});
+                                          ovms::Precision::FP32,
+                                          ovms::Shape{demultiplyCount, 1, 10})}});
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -3220,19 +3786,19 @@ TEST_F(EnsembleConfigurationValidationWithGather, SuccessfulConfigurationWithDLN
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
 
-    auto ieCore = std::make_unique<InferenceEngine::Core>();
+    auto ieCore = std::make_unique<ov::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
-                                         InferenceEngine::Precision::FP32,
-                                         shape_t{demultiplyCount, 1, 10})}},
+                                         ovms::Precision::FP32,
+                                         ovms::Shape{demultiplyCount, 1, 10})}},
         tensor_map_t{
             {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                           DUMMY_MODEL_OUTPUT_NAME,
-                                          InferenceEngine::Precision::FP32,
-                                          shape_t{1, demultiplyCount, 10})}});
+                                          ovms::Precision::FP32,
+                                          ovms::Shape{1, demultiplyCount, 10})}});
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -3316,19 +3882,19 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenDLModelAn
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{"out", pipelineOutputName}}}};
 
-    auto ieCore = std::make_unique<InferenceEngine::Core>();
+    auto ieCore = std::make_unique<ov::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
-                                         InferenceEngine::Precision::FP32,
-                                         shape_t{1, demultiplyCount, 10})}},
+                                         ovms::Precision::FP32,
+                                         ovms::Shape{1, demultiplyCount, 10})}},
         tensor_map_t{
             {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                           DUMMY_MODEL_OUTPUT_NAME,
-                                          InferenceEngine::Precision::FP32,
-                                          shape_t{demultiplyCount, 1, 11})}});  // demultiplyCount, 1, 10 is correct
+                                          ovms::Precision::FP32,
+                                          ovms::Shape{demultiplyCount, 1, 11})}});  // demultiplyCount, 1, 10 is correct
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -3369,19 +3935,19 @@ TEST_F(EnsembleConfigurationValidationWithGather, ShapesNotMatchBetweenCustomNod
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, pipelineOutputName}}}};
 
-    auto ieCore = std::make_unique<InferenceEngine::Core>();
+    auto ieCore = std::make_unique<ov::Core>();
     auto dummyModelInstance = std::make_shared<DummyModelWithMockedMetadata>(
         *ieCore,
         tensor_map_t{
             {DUMMY_MODEL_INPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                          DUMMY_MODEL_INPUT_NAME,
-                                         InferenceEngine::Precision::FP32,
-                                         shape_t{demultiplyCount, 1, 11})}},  // 1, demultiplyCount, 10 is correct
+                                         ovms::Precision::FP32,
+                                         ovms::Shape{demultiplyCount, 1, 11})}},  // 1, demultiplyCount, 10 is correct
         tensor_map_t{
             {DUMMY_MODEL_OUTPUT_NAME, std::make_shared<ovms::TensorInfo>(
                                           DUMMY_MODEL_OUTPUT_NAME,
-                                          InferenceEngine::Precision::FP32,
-                                          shape_t{1, demultiplyCount, 10})}});
+                                          ovms::Precision::FP32,
+                                          ovms::Shape{1, demultiplyCount, 10})}});
 
     ModelManagerWithModelWithDummyModelWithMockedMetadata manager(dummyModelInstance);
     ModelConfig config = DUMMY_MODEL_CONFIG;
@@ -3473,7 +4039,7 @@ TEST_F(EnsembleConfigurationValidationWithGather, DemultiplyCountNotMatchingInpu
 
     ConstructorEnabledModelManager manager;
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
-    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT);
+    ASSERT_EQ(pipelineDefinition->validate(manager), StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_TENSOR_SHARD_COUNT);
 }
 
 TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultipliersGatherNodesNotInLIFOOrder) {
@@ -3701,9 +4267,9 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
     auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape(), Shape({1, 10}));
     auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({0, 1, 10}));
+    EXPECT_EQ(output->getShape(), Shape({Dimension::any(), 1, 10}));
 
     std::shared_ptr<ModelInstance> modelInstance;
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
@@ -3714,9 +4280,9 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     ASSERT_NE(modelInputs.find("b"), modelInputs.end());
     ASSERT_NE(modelOutputs.find("a"), modelOutputs.end());
     auto inputDummy = modelInputs.at("b");
-    EXPECT_EQ(inputDummy->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(inputDummy->getShape(), Shape({1, 10}));
     auto outputDummy = modelOutputs.at("a");
-    EXPECT_EQ(outputDummy->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(outputDummy->getShape(), Shape({1, 10}));
 
     modelInputs.clear();
     modelOutputs.clear();
@@ -3726,9 +4292,9 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     ASSERT_NE(inputs2.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs2.find(pipelineOutputName), outputs.end());
     auto input_A2 = inputs2.at(pipelineInputName);
-    EXPECT_EQ(input_A2->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A2->getShape(), Shape({1, 10}));
     auto output2 = outputs2.at(pipelineOutputName);
-    EXPECT_EQ(output2->getEffectiveShape(), shape_t({0, 1, 10}));
+    EXPECT_EQ(output2->getShape(), Shape({Dimension::any(), 1, 10}));
 
     status = manager.getModelInstance("dummy", 1, modelInstance, modelInstanceUnloadGuardPtr);
     ASSERT_EQ(status, StatusCode::OK) << status.string();
@@ -3737,9 +4303,9 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     ASSERT_NE(modelInputs.find("b"), modelInputs.end());
     ASSERT_NE(modelOutputs.find("a"), modelOutputs.end());
     auto inputDummy2 = modelInputs.at("b");
-    EXPECT_EQ(inputDummy2->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(inputDummy2->getShape(), Shape({1, 10}));
     auto outputDummy2 = modelOutputs.at("a");
-    EXPECT_EQ(outputDummy2->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(outputDummy2->getShape(), Shape({1, 10}));
 }
 
 static const char* pipelineCustomNodeDynamicDemultiplexThenDummyDemultiplexerConnectedToExitConfig = R"(
@@ -3815,11 +4381,11 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, J
     ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
     const auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({1, 10}));
+    EXPECT_EQ(input_A->getShape(), Shape({1, 10}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({0, 1, 10}));
+    EXPECT_EQ(output->getShape(), Shape({Dimension::any(), 1, 10}));
     const auto& output2 = outputs.at(pipelineOutputName + "2");
-    EXPECT_EQ(output2->getEffectiveShape(), shape_t({0, 1, 10}));
+    EXPECT_EQ(output2->getShape(), Shape({Dimension::any(), 1, 10}));
 }
 
 static const char* pipelineEntryNodeDynamicDemultiplexThenDummyConfig = R"(
@@ -3897,9 +4463,83 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, D
     ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
 
     const auto& input_A = inputs.at(pipelineInputName);
-    EXPECT_EQ(input_A->getEffectiveShape(), shape_t({0, 1, 10}));
+    EXPECT_EQ(input_A->getShape(), Shape({Dimension::any(), 1, 10}));
     const auto& output = outputs.at(pipelineOutputName);
-    EXPECT_EQ(output->getEffectiveShape(), shape_t({0, 1, 10}));
+    EXPECT_EQ(output->getShape(), Shape({Dimension::any(), 1, 10}));
+}
+
+static const char* pipelineEntryNodeDemultiplexThenDummyConfig = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "shape": "(5, 10) ",
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "my_pipeline",
+            "demultiply_count": 3,
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "dummyNode",
+                    "model_name": "dummy",
+                    "type": "DL model",
+                    "inputs": [
+                        {"b": {"node_name": "request",
+                               "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "a",
+                         "alias": "dummy_output"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "dummyNode",
+                                     "data_item": "dummy_output"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DemultiplexerEntryThenDummyConfig) {
+    std::unique_ptr<Pipeline> pipeline;
+    std::vector<float> input(3 * 5 * DUMMY_MODEL_INPUT_SIZE);
+    std::iota(input.begin(), input.end(), 42);
+    this->prepareRequest(request, input, pipelineInputName, {3, 5, DUMMY_MODEL_INPUT_SIZE});
+    this->loadConfiguration(pipelineEntryNodeDemultiplexThenDummyConfig);
+    ASSERT_EQ(manager.createPipeline(pipeline, pipelineName, &request, &response), StatusCode::OK);
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+
+    std::vector<float> expectedOutput = input;
+    std::transform(expectedOutput.begin(), expectedOutput.end(), expectedOutput.begin(),
+        [](float f) -> float { return f + 1; });
+    this->checkResponse(pipelineOutputName, response, expectedOutput, {3, 5, DUMMY_MODEL_OUTPUT_SIZE});
+}
+
+TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DemultiplexerEntryThenDummMetadataCorrectness) {
+    this->loadConfiguration(pipelineEntryNodeDemultiplexThenDummyConfig);
+    auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(pipelineName);
+    ASSERT_NE(pipelineDefinition, nullptr);
+
+    auto inputs = pipelineDefinition->getInputsInfo();
+    auto outputs = pipelineDefinition->getOutputsInfo();
+    ASSERT_NE(inputs.find(pipelineInputName), inputs.end());
+    ASSERT_NE(outputs.find(pipelineOutputName), outputs.end());
+
+    const auto& input = inputs.at(pipelineInputName);
+    EXPECT_EQ(input->getShape(), Shape({3, 5, DUMMY_MODEL_INPUT_SIZE}));
+    const auto& output = outputs.at(pipelineOutputName);
+    EXPECT_EQ(output->getShape(), Shape({3, 5, DUMMY_MODEL_OUTPUT_SIZE}));
 }
 
 TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, DynamicDemultiplexerHittingLimitShouldReturnError) {
@@ -4113,7 +4753,13 @@ TEST_F(EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest, 2
 }
 
 struct LibraryProduceImages5Dimensions {
-    static int execute(const struct CustomNodeTensor* inputs, int, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam*, int) {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         const CustomNodeTensor& input = *inputs;
         std::vector<float> inputData((float*)input.data, ((float*)input.data) + (input.dataBytes / sizeof(float)));
 
@@ -4143,13 +4789,119 @@ struct LibraryProduceImages5Dimensions {
         resultTensor.precision = FP32;
         return 0;
     }
-    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int) {
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
         return 0;
     }
-    static int release(void* ptr) {
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwcNodeDynamicDemultiply_NegativeOne) {
+    // Prepare request
+    const std::vector<float> inputValues{1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+    PredictRequest request;
+    PredictResponse response;
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[pipelineInputName];
+    proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+    proto.mutable_tensor_content()->assign((char*)inputValues.data(), inputValues.size() * sizeof(float));
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.mutable_tensor_shape()->add_dim()->set_size(3);
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.mutable_tensor_shape()->add_dim()->set_size(2);
+
+    // Prepare model
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare pipeline
+    std::optional<int32_t> demultiplyCount = -1;
+    std::set<std::string> gather = {"image_demultiplexer_node"};
+    std::unordered_map<std::string, std::string> aliases{{"custom_node_output", "custom_node_output"}};
+
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        Precision::FP32,
+        Shape{Dimension::any(), 3, 1, 2});
+    const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        Precision::FP32,
+        Shape{Dimension::any(), 1, 3, 1, 2});
+    const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo, gather);
+    auto custom_node = std::make_unique<CustomNode>(
+        "image_demultiplexer_node",
+        createLibraryMock<LibraryProduceImages5Dimensions>(),
+        parameters_t{}, aliases, demultiplyCount);
+    auto model_node = std::make_unique<DLNode>("increment_node", "increment_1x3x4x5", std::nullopt, manager);
+
+    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+    pipeline->connect(*input_node, *custom_node, {{pipelineInputName, "any"}});
+    pipeline->connect(*custom_node, *model_node, {{"custom_node_output", "input"}});
+    pipeline->connect(*model_node, *output_node, {{"output", pipelineOutputName}});
+
+    pipeline->push(std::move(input_node));
+    pipeline->push(std::move(custom_node));
+    pipeline->push(std::move(model_node));
+    pipeline->push(std::move(output_node));
+
+    // Execute
+    ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
+    checkIncrement4DimResponse<float>(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
+}
+
+struct LibraryProduceImages5DimensionsInFP32OutFP64 {
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        const CustomNodeTensor& input = *inputs;
+        std::vector<float> inputData((float*)input.data, ((float*)input.data) + (input.dataBytes / sizeof(float)));
+
+        *outputsCount = 1;
+        int elements = 3 * 1 * 1 * 2 * 3;
+        *outputs = (struct CustomNodeTensor*)malloc(*outputsCount * sizeof(CustomNodeTensor));
+        double* result = (double*)malloc(elements * sizeof(double));
+        std::vector<double> data;
+        for (size_t i = 0; i < 3; i++) {
+            for (float v : inputData) {
+                data.push_back(double(v) + double(i) + 1.0);
+            }
+        }
+        std::memcpy(result, data.data(), elements * sizeof(double));
+
+        CustomNodeTensor& resultTensor = (*outputs)[0];
+        resultTensor.name = "custom_node_output";
+        resultTensor.data = reinterpret_cast<uint8_t*>(result);
+        resultTensor.dimsCount = 5;
+        resultTensor.dims = (uint64_t*)malloc(resultTensor.dimsCount * sizeof(uint64_t));
+        resultTensor.dims[0] = 3;
+        resultTensor.dims[1] = 1;
+        resultTensor.dims[2] = 1;
+        resultTensor.dims[3] = 2;
+        resultTensor.dims[4] = 3;
+        resultTensor.dataBytes = elements * sizeof(double);
+        resultTensor.precision = FP64;
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
         free(ptr);
         return 0;
     }
@@ -4172,25 +4924,23 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
     ConstructorEnabledModelManager manager;
     ModelConfig config = INCREMENT_1x3x4x5_MODEL_CONFIG;
     config.setBatchingParams("0");
-    ASSERT_EQ(config.parseShapeParameter("(1,3,1,2)"), ovms::StatusCode::OK);
-    ASSERT_EQ(config.parseLayoutParameter("nhwc"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
+    ASSERT_EQ(config.parseLayoutParameter("nhwc:nchw"), ovms::StatusCode::OK);
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     // Prepare pipeline
-    std::optional<uint32_t> demultiplyCount = 0;
+    std::optional<int32_t> demultiplyCount = -1;
     std::set<std::string> gather = {"image_demultiplexer_node"};
     std::unordered_map<std::string, std::string> aliases{{"custom_node_output", "custom_node_output"}};
 
     auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{0, 3, 1, 2},
-        InferenceEngine::Layout::ANY);
+        Precision::FP32,
+        Shape{Dimension::any(), 3, 1, 2});
     const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
     auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
     auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
-        InferenceEngine::Precision::FP32,
-        shape_t{0, 1, 3, 1, 2},
-        InferenceEngine::Layout::ANY);
+        Precision::FP32,
+        Shape{Dimension::any(), 1, 3, 1, 2});
     const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
     auto output_node = std::make_unique<ExitNode>(&response, outputsInfo, gather);
     auto custom_node = std::make_unique<CustomNode>(
@@ -4211,5 +4961,281 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerConnectedToNhwc
 
     // Execute
     ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
-    checkIncrement4DimResponse(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
+    checkIncrement4DimResponse<float>(pipelineOutputName, {3.0, 6.0, 4.0, 7.0, 5.0, 8.0, 4.0, 7.0, 5.0, 8.0, 6.0, 9.0, 5.0, 8.0, 6.0, 9.0, 7.0, 10.0}, request, response, {3, 1, 3, 1, 2});
+}
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedFP64TensorsFromCustomNode) {
+    /*
+        Description:
+
+        Entry (1x3x1x2, fp32) ----------> (1x3x1x2, fp32) CustomNode (3x1x3x1x2, fp64) --- demultiplexer -------> (1x3x1x2, fp64) 3x ModelNode (1x3x1x2, fp64) ----- gather -----> (3x1x3x1x2, fp64) Exit
+    */
+
+    // Prepare request
+    const std::vector<float> inputValues{1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+    PredictRequest request;
+    PredictResponse response;
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[pipelineInputName];
+    proto.set_dtype(tensorflow::DataType::DT_FLOAT);
+    proto.mutable_tensor_content()->assign((char*)inputValues.data(), inputValues.size() * sizeof(float));
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.mutable_tensor_shape()->add_dim()->set_size(3);
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.mutable_tensor_shape()->add_dim()->set_size(2);
+
+    // Prepare model
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_FP64_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    ASSERT_EQ(config.parseShapeParameter("(1,1,2,3)"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare pipeline
+    std::optional<int32_t> demultiplyCount = -1;
+    std::set<std::string> gather = {"image_demultiplexer_node"};
+    std::unordered_map<std::string, std::string> aliases{{"custom_node_output", "custom_node_output"}};
+
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        Precision::FP32,
+        Shape{Dimension::any(), 3, 1, 2});
+    const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo);
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        Precision::FP64,
+        Shape{Dimension::any(), 1, 1, 2, 3});
+    const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo, gather);
+    auto custom_node = std::make_unique<CustomNode>(
+        "image_demultiplexer_node",
+        createLibraryMock<LibraryProduceImages5DimensionsInFP32OutFP64>(),
+        parameters_t{}, aliases, demultiplyCount);
+    auto model_node = std::make_unique<DLNode>("increment_node", "dummy_fp64", std::nullopt, manager);
+
+    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+    pipeline->connect(*input_node, *custom_node, {{pipelineInputName, "any"}});
+    pipeline->connect(*custom_node, *model_node, {{"custom_node_output", "input:0"}});
+    pipeline->connect(*model_node, *output_node, {{"output:0", pipelineOutputName}});
+
+    pipeline->push(std::move(input_node));
+    pipeline->push(std::move(custom_node));
+    pipeline->push(std::move(model_node));
+    pipeline->push(std::move(output_node));
+
+    // Execute
+    ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
+    checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, request, response, {3, 1, 1, 2, 3});
+}
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DemultiplexerCreatesShardedFP64TensorsFromEntryNode) {
+    /*
+        Description:
+
+        Entry (2x1x2x1x2, fp64) --- demultiplexer --------> (1x2x1x2, fp64) 2x ModelNode (1x2x1x2, fp64) -------> (1x2x1x2, fp64) 2x ModelNode (1x2x1x2, fp64) ----- gather -----> (2x1x2x1x2, fp64) Exit
+    */
+
+    // Prepare request
+    const std::vector<double> inputValues{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
+    PredictRequest request;
+    PredictResponse response;
+    tensorflow::TensorProto& proto = (*request.mutable_inputs())[pipelineInputName];
+    proto.set_dtype(tensorflow::DataType::DT_DOUBLE);
+    proto.mutable_tensor_content()->assign((char*)inputValues.data(), inputValues.size() * sizeof(double));
+    proto.mutable_tensor_shape()->add_dim()->set_size(2);
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.mutable_tensor_shape()->add_dim()->set_size(2);
+    proto.mutable_tensor_shape()->add_dim()->set_size(1);
+    proto.mutable_tensor_shape()->add_dim()->set_size(2);
+
+    // Prepare model
+    ConstructorEnabledModelManager manager;
+    ModelConfig config = DUMMY_FP64_MODEL_CONFIG;
+    config.setBatchingParams("0");
+    ASSERT_EQ(config.parseShapeParameter("(1,2,1,2)"), ovms::StatusCode::OK);
+    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+
+    // Prepare pipeline
+    std::optional<int32_t> demultiplyCount = -1;
+    std::set<std::string> gather = {"request"};
+
+    auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        Precision::FP64,
+        Shape{Dimension::any(), 1, 2, 1, 2});
+    const tensor_map_t inputsInfo{{pipelineInputName, inputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode>(&request, inputsInfo, demultiplyCount);
+    auto tensorInfo = std::make_shared<ovms::TensorInfo>(pipelineOutputName,
+        Precision::FP64,
+        Shape{Dimension::any(), 1, 2, 1, 2});
+    const tensor_map_t outputsInfo{{pipelineOutputName, tensorInfo}};
+    auto output_node = std::make_unique<ExitNode>(&response, outputsInfo, gather);
+    auto model_node_1 = std::make_unique<DLNode>("increment_node_1", "dummy_fp64", std::nullopt, manager);
+    auto model_node_2 = std::make_unique<DLNode>("increment_node_2", "dummy_fp64", std::nullopt, manager);
+
+    auto pipeline = std::make_unique<Pipeline>(*input_node, *output_node);
+    pipeline->connect(*input_node, *model_node_1, {{pipelineInputName, "input:0"}});
+    pipeline->connect(*model_node_1, *model_node_2, {{"output:0", "input:0"}});
+    pipeline->connect(*model_node_2, *output_node, {{"output:0", pipelineOutputName}});
+
+    pipeline->push(std::move(input_node));
+    pipeline->push(std::move(model_node_1));
+    pipeline->push(std::move(model_node_2));
+    pipeline->push(std::move(output_node));
+
+    // Execute
+    ASSERT_EQ(pipeline->execute(), ovms::StatusCode::OK);
+    checkIncrement4DimResponse<double>(pipelineOutputName, {3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}, request, response, {2, 1, 2, 1, 2});
+}
+
+struct LibraryCountDeinitialize {
+    inline static int deinitializeCounter;
+
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+        return 0;
+    }
+    static int deinitialize(void* customNodeLibraryInternalManager) {
+        deinitializeCounter += 1;
+        return 0;
+    }
+    static int execute(const struct CustomNodeTensor* inputs, int, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getInputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int getOutputsInfo(struct CustomNodeTensorInfo**, int*, const struct CustomNodeParam*, int, void* customNodeLibraryInternalManager) {
+        return 0;
+    }
+    static int release(void* ptr, void* customNodeLibraryInternalManager) {
+        free(ptr);
+        return 0;
+    }
+};
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnRetire) {
+    // Nodes
+    // request   custom    custom_2   custom_3    response
+    //  O--------->O--------->O--------->O---------->O
+    //          add-sub    add-sub    add-sub
+    ResourcesAccessModelManager manager;
+    manager.startCleaner();
+    ASSERT_EQ(manager.getResourcesSize(), 0);
+    PipelineFactory factory;
+
+    // mocking custom node library and copying crucial functions from add_sub_lib in order to
+    // create pipeline definition
+    auto mockedLibrary = createLibraryMock<LibraryCountDeinitialize>();
+    mockedLibrary.getInputsInfo = library.getInputsInfo;
+    mockedLibrary.getOutputsInfo = library.getOutputsInfo;
+
+    // setting global deinitialize call counter to 0
+    LibraryCountDeinitialize::deinitializeCounter = 0;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    // request (pipelineInputName) O--------->O custom node (customNodeInputName)
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O custom node 2 (customNodeInputName)
+    connections["custom_node_2"] = {
+        {"custom_node", {{customNodeOutputName, customNodeInputName}}}};
+
+    // custom node 2 (customNodeOutputName) O--------->O custom node 3 (customNodeInputName)
+    connections["custom_node_3"] = {
+        {"custom_node_2", {{customNodeOutputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O response (pipelineOutputName)
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_3", {{customNodeOutputName, pipelineOutputName}}}};
+
+    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
+    waitForOVMSResourcesCleanup(manager);
+    ASSERT_EQ(manager.getResourcesSize(), 3);
+
+    factory.retireOtherThan({}, manager);
+    waitForOVMSResourcesCleanup(manager);
+    ASSERT_EQ(manager.getResourcesSize(), 0);
+    manager.join();
+    // Each custom node has effectively 1 internalManager initialized, because they use same library instance
+    // in order to count whether deinitialize has been called expected number of times
+    ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 3);
+}
+
+TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDeinitializeAllCustomNodes) {
+    // Nodes
+    // request   custom    custom_2   custom_3    response
+    //  O--------->O--------->O--------->O---------->O
+    //          add-sub    add-sub    add-sub
+    ResourcesAccessModelManager manager;
+    manager.startCleaner();
+    ASSERT_EQ(manager.getResourcesSize(), 0);
+    PipelineFactory factory;
+
+    // mocking custom node library and copying crucial functions from add_sub_lib in order to
+    // create pipeline definition
+    auto mockedLibrary = createLibraryMock<LibraryCountDeinitialize>();
+    mockedLibrary.getInputsInfo = library.getInputsInfo;
+    mockedLibrary.getOutputsInfo = library.getOutputsInfo;
+
+    // setting global deinitialize call counter to 0
+    LibraryCountDeinitialize::deinitializeCounter = 0;
+
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{pipelineInputName, pipelineInputName}}},
+        {NodeKind::CUSTOM, "custom_node", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
+        {NodeKind::CUSTOM, "custom_node_2", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
+        {NodeKind::CUSTOM, "custom_node_3", "", std::nullopt, {{customNodeOutputName, customNodeOutputName}},
+            std::nullopt, {}, mockedLibrary, parameters_t{}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    // request (pipelineInputName) O--------->O custom node (customNodeInputName)
+    connections["custom_node"] = {
+        {ENTRY_NODE_NAME, {{pipelineInputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O custom node 2 (customNodeInputName)
+    connections["custom_node_2"] = {
+        {"custom_node", {{customNodeOutputName, customNodeInputName}}}};
+
+    // custom node 2 (customNodeOutputName) O--------->O custom node 3 (customNodeInputName)
+    connections["custom_node_3"] = {
+        {"custom_node_2", {{customNodeOutputName, customNodeInputName}}}};
+
+    // custom node (customNodeOutputName) O--------->O response (pipelineOutputName)
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_3", {{customNodeOutputName, pipelineOutputName}}}};
+
+    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
+    waitForOVMSResourcesCleanup(manager);
+    ASSERT_EQ(manager.getResourcesSize(), 3);
+
+    // Nodes
+    // request   custom    custom_2    response
+    //  O--------->O--------->O---------->O
+    //          add-sub    add-sub
+    info.erase(info.begin() + 3);
+    connections.erase("custom_node_3");
+    connections[EXIT_NODE_NAME] = {
+        {"custom_node_2", {{customNodeOutputName, pipelineOutputName}}}};
+    ASSERT_EQ(factory.reloadDefinition("my_new_pipeline", std::move(info), std::move(connections), manager), StatusCode::OK);
+    waitForOVMSResourcesCleanup(manager);
+    ASSERT_EQ(manager.getResourcesSize(), 2);
+    manager.join();
+    // Each custom node has effectively 1 internalManager initialized, because they use same library instance
+    // in order to count whether deinitialize has been called expected number of times
+    ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 3);
 }

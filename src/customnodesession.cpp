@@ -17,6 +17,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <unordered_map>
 #include <utility>
 
 #include "custom_node_output_allocator.hpp"
@@ -38,13 +39,24 @@ CustomNodeSession::CustomNodeSession(const NodeSessionMetadata&& metadata, const
 
 CustomNodeSession::~CustomNodeSession() = default;
 
-Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node, const NodeLibrary& library, std::unique_ptr<struct CustomNodeParam[]>& parameters, int parametersCount) {
-    const auto& blobMap = this->inputHandler->getInputs();
-    auto inputTensorsCount = blobMap.size();
-    auto inputTensors = createCustomNodeTensorArray(blobMap);
+std::unordered_map<std::string, shape_t> createOwnedShapesCopy(const TensorMap& tensorMap) {
+    std::unordered_map<std::string, shape_t> tensorsDims;
+    for (auto& [name, tensor] : tensorMap) {
+        shape_t tensorDims = tensor.get_shape();
+        tensorsDims.emplace(name, std::move(tensorDims));
+    }
+    return tensorsDims;
+}
+
+Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node, const NodeLibrary& library, std::unique_ptr<struct CustomNodeParam[]>& parameters, int parametersCount, void* customNodeLibraryInternalManager) {
+    const auto& tensorMap = this->inputHandler->getInputs();
+    auto inputTensorsCount = tensorMap.size();
+    // this is a hack to overcome OV 1.0 -> 2.0 API change where we do not get reference to
+    // tensor shape now but a copy. Hence we have to extend the lifetime of dims vector
+    auto tensorsDims = createOwnedShapesCopy(tensorMap);
+    auto inputTensors = createCustomNodeTensorArray(tensorMap, tensorsDims);
     struct CustomNodeTensor* outputTensors = nullptr;
     int outputTensorsCount = 0;
-
     this->timer->start("execution");
     int result = library.execute(
         inputTensors.get(),
@@ -52,7 +64,8 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         &outputTensors,
         &outputTensorsCount,
         parameters.get(),
-        parametersCount);
+        parametersCount,
+        customNodeLibraryInternalManager);
     this->timer->stop("execution");
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Custom node execution processing time for node {}; session: {} - {} ms",
         this->getName(),
@@ -75,53 +88,53 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
 
     if (outputTensorsCount <= 0) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; has corrupted number of outputs", getName(), getSessionKey());
-        library.release(outputTensors);
+        library.release(outputTensors, customNodeLibraryInternalManager);
         notifyEndQueue.push({node, getSessionKey()});
         return StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT;
     }
 
     // At this point this is important we do not exit before finishing the loop.
-    // There will be memory leak if any tensor is not converted into blob.
-    // Blob destructor is responsible for cleaning up resources.
+    // There will be memory leak if any tensor is not converted into ov::Tensor.
+    // ov::Tensor destructor is responsible for cleaning up resources.
     Status status = StatusCode::OK;
     for (int i = 0; i < outputTensorsCount; i++) {
-        InferenceEngine::Blob::Ptr resultBlob;
-        auto result = this->createBlob(&outputTensors[i], resultBlob, library);
+        ov::Tensor resultTensor;
+        auto result = this->createTensor(&outputTensors[i], resultTensor, library, customNodeLibraryInternalManager);
         if (outputTensors[i].name == nullptr) {
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed blob conversion - missing output name", getName(), getSessionKey());
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed tensor conversion - missing output name", getName(), getSessionKey());
             status = StatusCode::NODE_LIBRARY_OUTPUT_MISSING_NAME;
             continue;
         }
         if (!result.ok()) {
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed to convert {}: to blob", getName(), getSessionKey(), outputTensors[i].name);
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed to convert {}: to tensor", getName(), getSessionKey(), outputTensors[i].name);
             if (status.ok()) {
                 status = result;
             }
             continue;
         }
-        this->resultBlobs.emplace(std::string(outputTensors[i].name), std::move(resultBlob));
+        this->resultTensors.emplace(std::string(outputTensors[i].name), std::move(resultTensor));
     }
 
-    library.release(outputTensors);
+    library.release(outputTensors, customNodeLibraryInternalManager);
     notifyEndQueue.push({node, getSessionKey()});
     return status;
 }
 
-Status CustomNodeSession::fetchResult(const std::string& name, InferenceEngine::Blob::Ptr& resultBlob) {
-    auto it = resultBlobs.find(name);
-    if (it == resultBlobs.end()) {
+Status CustomNodeSession::fetchResult(const std::string& name, ov::Tensor& resultTensor) {
+    auto it = resultTensors.find(name);
+    if (it == resultTensors.end()) {
         return StatusCode::NODE_LIBRARY_MISSING_OUTPUT;
     }
-    resultBlob = it->second;
+    resultTensor = it->second;
     return StatusCode::OK;
 }
 
-void CustomNodeSession::releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibrary& library) {
+void CustomNodeSession::releaseTensorResources(const struct CustomNodeTensor* tensor, const NodeLibrary& library, void* customNodeLibraryInternalManager) {
     if (tensor->data) {
-        library.release(tensor->data);
+        library.release(tensor->data, customNodeLibraryInternalManager);
     }
     if (tensor->dims) {
-        library.release(tensor->dims);
+        library.release(tensor->dims, customNodeLibraryInternalManager);
     }
 }
 
@@ -129,17 +142,19 @@ class TensorResourcesGuard {
     const struct CustomNodeTensor* tensor;
     const NodeLibrary& library;
     bool persistData = false;
+    void* customNodeLibraryInternalManager;
 
 public:
-    TensorResourcesGuard(const struct CustomNodeTensor* tensor, const NodeLibrary& library) :
+    TensorResourcesGuard(const struct CustomNodeTensor* tensor, const NodeLibrary& library, void* customNodeLibraryInternalManager) :
         tensor(tensor),
-        library(library) {}
+        library(library),
+        customNodeLibraryInternalManager(customNodeLibraryInternalManager) {}
     ~TensorResourcesGuard() {
         if (tensor->data && !persistData) {
-            library.release(tensor->data);
+            library.release(tensor->data, customNodeLibraryInternalManager);
         }
         if (tensor->dims) {
-            library.release(tensor->dims);
+            library.release(tensor->dims, customNodeLibraryInternalManager);
         }
     }
     void setPersistData() {
@@ -147,19 +162,18 @@ public:
     }
 };
 
-Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, InferenceEngine::Blob::Ptr& resultBlob, const NodeLibrary& library) {
-    TensorResourcesGuard tensorResourcesGuard(tensor, library);
-    InferenceEngine::TensorDesc desc;
+Status CustomNodeSession::createTensor(const struct CustomNodeTensor* tensor, ov::Tensor& resultTensor, const NodeLibrary& library, void* customNodeLibraryInternalManager) {
+    TensorResourcesGuard tensorResourcesGuard(tensor, library, customNodeLibraryInternalManager);
 
-    InferenceEngine::Precision precision = toInferenceEnginePrecision(tensor->precision);
-    if (precision == InferenceEngine::Precision::UNSPECIFIED) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; Unspecified output precision from custom node tensor: {}",
+    auto precision = ovmsPrecisionToIE2Precision(toInferenceEnginePrecision(tensor->precision));
+    if (precision == ov::element::Type_t::undefined) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; Unspecified output precision:{} from custom node tensor: {}",
             this->getName(),
             this->getSessionKey(),
+            precision,
             tensor->name);
         return StatusCode::NODE_LIBRARY_INVALID_PRECISION;
     }
-    desc.setPrecision(precision);
 
     if (tensor->dims == nullptr || tensor->dimsCount == 0) {
         std::string error;
@@ -174,11 +188,10 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, Infe
             error);
         return StatusCode::NODE_LIBRARY_INVALID_SHAPE;
     }
-    InferenceEngine::SizeVector shape(tensor->dims, tensor->dims + tensor->dimsCount);
-    desc.setDims(shape);
+    shape_t shape(tensor->dims, tensor->dims + tensor->dimsCount);
 
     size_t expectedElementsCount = std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<size_t>());
-    size_t expectedDataLength = expectedElementsCount *= precision.size();
+    size_t expectedDataLength = expectedElementsCount *= ov::element::Type(precision).size();
     if (tensor->data == nullptr || tensor->dataBytes != expectedDataLength) {
         std::stringstream error;
         if (tensor->data == nullptr) {
@@ -192,34 +205,25 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, Infe
             error.str());
         return StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE;
     }
-    auto allocator = std::make_shared<CustomNodeOutputAllocator>(*tensor, library);
+    auto allocatorImpl = std::make_shared<CustomNodeOutputAllocator>(*tensor, library, customNodeLibraryInternalManager);
+    auto allocator = ov::Allocator(allocatorImpl);
     try {
         switch (tensor->precision) {
         case CustomNodeTensorPrecision::FP32:
-            resultBlob = InferenceEngine::make_shared_blob<float>(desc, std::move(allocator));
-            break;
         case CustomNodeTensorPrecision::I32:
-            resultBlob = InferenceEngine::make_shared_blob<int32_t>(desc, std::move(allocator));
-            break;
         case CustomNodeTensorPrecision::I8:
-            resultBlob = InferenceEngine::make_shared_blob<int8_t>(desc, std::move(allocator));
-            break;
         case CustomNodeTensorPrecision::U8:
-            resultBlob = InferenceEngine::make_shared_blob<uint8_t>(desc, std::move(allocator));
-            break;
         case CustomNodeTensorPrecision::FP16:
-            resultBlob = InferenceEngine::make_shared_blob<uint16_t>(desc, std::move(allocator));
-            break;
         case CustomNodeTensorPrecision::I16:
-            resultBlob = InferenceEngine::make_shared_blob<int16_t>(desc, std::move(allocator));
-            break;
         case CustomNodeTensorPrecision::U16:
-            resultBlob = InferenceEngine::make_shared_blob<uint16_t>(desc, std::move(allocator));
+        case CustomNodeTensorPrecision::FP64:
+        case CustomNodeTensorPrecision::I64:
+            resultTensor = ov::Tensor(ov::element::Type(ovmsPrecisionToIE2Precision(toInferenceEnginePrecision(tensor->precision))), ov::Shape(shape), allocator);
             break;
         case CustomNodeTensorPrecision::UNSPECIFIED:
             return StatusCode::INTERNAL_ERROR;
         }
-    } catch (const InferenceEngine::Exception& e) {
+    } catch (const ov::Exception& e) {
         Status status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "{}: {}", status.string(), e.what());
         return status;
@@ -228,8 +232,6 @@ Status CustomNodeSession::createBlob(const struct CustomNodeTensor* tensor, Infe
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "{}: {}", status.string(), e.what());
         return status;
     }
-
-    resultBlob->allocate();
     tensorResourcesGuard.setPersistData();
     return StatusCode::OK;
 }

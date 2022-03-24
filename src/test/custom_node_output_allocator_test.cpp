@@ -17,33 +17,45 @@
 #include <gtest/gtest.h>
 
 #include "../custom_node_output_allocator.hpp"
+#include "../precision.hpp"
+#include "../shape.hpp"
 
 using namespace ovms;
 
 class NodeLibraryCheckingReleaseCalled {
 public:
     static bool releaseBufferCalled;
-    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount);
-    static int getInputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount);
-    static int getOutputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount);
-    static int release(void* ptr);
+    static int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount);
+    static int deinitialize(void* customNodeLibraryInternalManager);
+    static int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
+    static int getInputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
+    static int getOutputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
+    static int release(void* ptr, void* customNodeLibraryInternalManager);
 };
 
-int NodeLibraryCheckingReleaseCalled::execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
+int NodeLibraryCheckingReleaseCalled::initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+    return 5;
+}
+
+int NodeLibraryCheckingReleaseCalled::deinitialize(void* customNodeLibraryInternalManager) {
+    return 6;
+}
+
+int NodeLibraryCheckingReleaseCalled::execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     return 1;
 }
 
-int NodeLibraryCheckingReleaseCalled::getInputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
+int NodeLibraryCheckingReleaseCalled::getInputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     return 2;
 }
 
-int NodeLibraryCheckingReleaseCalled::getOutputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
+int NodeLibraryCheckingReleaseCalled::getOutputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     return 3;
 }
 
-int NodeLibraryCheckingReleaseCalled::release(void* ptr) {
+int NodeLibraryCheckingReleaseCalled::release(void* ptr, void* customNodeLibraryInternalManager) {
     releaseBufferCalled = true;
-    return 4;
+    return 0;
 }
 
 bool NodeLibraryCheckingReleaseCalled::releaseBufferCalled = false;
@@ -52,27 +64,22 @@ class CustomNodeOutputAllocatorCheckingFreeCalled : public CustomNodeOutputAlloc
     bool freeCalled = false;
 
 public:
-    CustomNodeOutputAllocatorCheckingFreeCalled(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary) :
-        CustomNodeOutputAllocator(tensor, nodeLibrary) {
+    CustomNodeOutputAllocatorCheckingFreeCalled(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, void* customNodeLibraryInternalManager) :
+        CustomNodeOutputAllocator(tensor, nodeLibrary, customNodeLibraryInternalManager) {
     }
 
     ~CustomNodeOutputAllocatorCheckingFreeCalled() {
         EXPECT_TRUE(freeCalled);
     }
 
-    bool free(void* handle) noexcept override {
-        bool tmp = CustomNodeOutputAllocator::free(handle);
+    void deallocate(void* handle, const size_t bytes, size_t alignment) override {
+        CustomNodeOutputAllocator::deallocate(handle, bytes, alignment);
         freeCalled = true;
-        return tmp;
     }
 };
 
-TEST(CustomNodeOutputAllocator, BlobDeallocationCallsReleaseBuffer) {
+TEST(CustomNodeOutputAllocator, TensorDeallocationCallsReleaseBuffer) {
     unsigned int elementsCount = 10;
-    const InferenceEngine::TensorDesc desc{
-        InferenceEngine::Precision::FP32,
-        {elementsCount},
-        InferenceEngine::Layout::C};
     std::vector<float> data(elementsCount);
     CustomNodeTensor tensor{
         "name",
@@ -82,41 +89,50 @@ TEST(CustomNodeOutputAllocator, BlobDeallocationCallsReleaseBuffer) {
         1,
         CustomNodeTensorPrecision::FP32};
     NodeLibrary library{
+        NodeLibraryCheckingReleaseCalled::initialize,
+        NodeLibraryCheckingReleaseCalled::deinitialize,
         NodeLibraryCheckingReleaseCalled::execute,
         NodeLibraryCheckingReleaseCalled::getInputsInfo,
         NodeLibraryCheckingReleaseCalled::getOutputsInfo,
         NodeLibraryCheckingReleaseCalled::release};
-    std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocatorCheckingFreeCalled>(tensor, library);
+    void* customNodeLibraryInternalManager = nullptr;
+    std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocatorCheckingFreeCalled>(tensor, library, customNodeLibraryInternalManager);
+    ov::Allocator alloc(customNodeOutputAllocator);
     EXPECT_FALSE(NodeLibraryCheckingReleaseCalled::releaseBufferCalled);
     {
-        InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<float>(desc, customNodeOutputAllocator);
-        blob->allocate();
+        auto elemType = ovmsPrecisionToIE2Precision(Precision::FP32);
+        shape_t shape{data.size()};
+        auto tensorIE2 = std::make_shared<ov::Tensor>(elemType, shape, alloc);
     }
     EXPECT_TRUE(NodeLibraryCheckingReleaseCalled::releaseBufferCalled);
 }
 
-int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
+int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+    return 5;
+}
+
+int deinitialize(void* customNodeLibraryInternalManager) {
+    return 6;
+}
+
+int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     return 1;
 }
 
-int getInputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
+int getInputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     return 2;
 }
 
-int getOutputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount) {
+int getOutputsInfo(struct CustomNodeTensorInfo** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     return 3;
 }
 
-int release(void* ptr) {
-    return 4;
+int release(void* ptr, void* customNodeLibraryInternalManager) {
+    return 0;
 }
 
-TEST(CustomNodeOutputAllocator, BlobReturnsCorrectPointer) {
+TEST(CustomNodeOutputAllocator, TensorReturnsCorrectPointer) {
     unsigned int elementsCount = 10;
-    const InferenceEngine::TensorDesc desc{
-        InferenceEngine::Precision::FP32,
-        {elementsCount},
-        InferenceEngine::Layout::C};
     std::vector<float> data(elementsCount);
     CustomNodeTensor tensor{
         "name",
@@ -126,12 +142,17 @@ TEST(CustomNodeOutputAllocator, BlobReturnsCorrectPointer) {
         1,
         CustomNodeTensorPrecision::FP32};
     NodeLibrary library{
+        initialize,
+        deinitialize,
         execute,
         getInputsInfo,
         getOutputsInfo,
         release};
-    std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocator>(tensor, library);
-    InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<float>(desc, customNodeOutputAllocator);
-    blob->allocate();
-    EXPECT_EQ(static_cast<unsigned char*>(InferenceEngine::as<InferenceEngine::MemoryBlob>(blob)->rwmap()), tensor.data);
+    void* customNodeLibraryInternalManager = nullptr;
+    std::shared_ptr<CustomNodeOutputAllocator> customNodeOutputAllocator = std::make_shared<CustomNodeOutputAllocator>(tensor, library, customNodeLibraryInternalManager);
+    ov::Allocator alloc(customNodeOutputAllocator);
+    auto elemType = ovmsPrecisionToIE2Precision(Precision::FP32);
+    shape_t shape{10};
+    auto tensorIE2 = std::make_shared<ov::Tensor>(elemType, shape, alloc);
+    EXPECT_EQ(tensorIE2->data(), tensor.data);
 }

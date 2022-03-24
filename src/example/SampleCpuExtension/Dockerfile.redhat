@@ -1,0 +1,39 @@
+#
+# Copyright (c) 2021 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.4
+FROM $BASE_IMAGE as base_build
+
+ARG TEMP_DIR=/tmp/openvino_installer
+ARG DLDT_PACKAGE_URL
+
+#RUN apt update && apt install -y build-essential wget unzip make git python3
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && yum update -d6 -y && yum install -d6 -y \
+        gcc-c++ wget make python3
+
+WORKDIR /
+
+# OV toolkit package
+RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
+    wget $DLDT_PACKAGE_URL && \
+    mkdir /opt/intel && \
+    tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
+    ln -s /opt/intel/l_openvino_* /opt/intel/openvino && \
+    ln -s /opt/intel/l_openvino_* /opt/intel/openvino_2022
+
+WORKDIR /workspace
+COPY Makefile ov_extension.cpp CustomReluOp.cpp CustomReluOp.hpp ./
+
+RUN make

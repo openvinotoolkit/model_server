@@ -23,21 +23,16 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <inference_engine.hpp>
 
 #include "../sequence.hpp"
 #include "../sequence_manager.hpp"
+#include "../tensorinfo.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mock_iinferrequest.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>
-
-using namespace InferenceEngine;
 
 const std::string SEQUENCE_ID_INPUT = "sequence_id";
 const std::string SEQUENCE_CONTROL_INPUT = "sequence_control_input";
@@ -74,54 +69,49 @@ static bool CheckSequenceIdResponse(tensorflow::serving::PredictResponse& respon
 
 class DummyStatefulModel {
 private:
+    ov::Core ieCore;
     const std::string MODEL_PATH = std::filesystem::current_path().u8string() + "/src/test/summator/1/summator.xml";
 
-    std::shared_ptr<InferenceEngine::CNNNetwork> cnnNetworkPtr;
-    std::shared_ptr<InferenceEngine::ExecutableNetwork> execNetworkPtr;
-    std::shared_ptr<InferenceEngine::InferRequest> inferRequestPtr;
-
-    const Precision statePrecision{Precision::FP32};
-    const std::vector<size_t> stateShape{1, 1};
-    const Layout stateLayout{Layout::NC};
-    const TensorDesc stateDesc{statePrecision, stateShape, stateLayout};
+    std::shared_ptr<ov::Model> model;
+    std::shared_ptr<ov::CompiledModel> compiledModel;
 
     const std::string stateName = "state";
 
 public:
     DummyStatefulModel() {
-        InferenceEngine::Core ieCore;
-        cnnNetworkPtr = std::make_shared<InferenceEngine::CNNNetwork>(ieCore.ReadNetwork(MODEL_PATH));
-        execNetworkPtr = std::make_shared<InferenceEngine::ExecutableNetwork>(ieCore.LoadNetwork(*cnnNetworkPtr, "CPU"));
+        model = ieCore.read_model(MODEL_PATH);
+        compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(model, "CPU"));
     }
 
-    InferenceEngine::InferRequest createInferRequest() {
-        return execNetworkPtr->CreateInferRequest();
+    ov::InferRequest createInferRequest() {
+        return compiledModel->create_infer_request();
     }
 
     const std::string getStateName() {
         return stateName;
     }
 
-    static InferenceEngine::VariableState getVariableState(InferenceEngine::InferRequest& inferRequest) {
-        std::vector<InferenceEngine::VariableState> memoryState = inferRequest.QueryState();
+    static ov::VariableState getVariableState(ov::InferRequest& inferRequest) {
+        std::vector<ov::VariableState> memoryState = inferRequest.query_state();
         return memoryState[0];
     }
 
-    static void resetVariableState(InferenceEngine::InferRequest& inferRequest) {
-        std::vector<InferenceEngine::VariableState> memoryState = inferRequest.QueryState();
-        memoryState[0].Reset();
+    static void resetVariableState(ov::InferRequest& inferRequest) {
+        std::vector<ov::VariableState> memoryState = inferRequest.query_state();
+        memoryState[0].reset();
     }
 
-    static void setVariableState(InferenceEngine::InferRequest& inferRequest, std::vector<float> values) {
+    static void setVariableState(ov::InferRequest& inferRequest, std::vector<float> values) {
         DummyStatefulModel::resetVariableState(inferRequest);
         std::vector<size_t> shape{1, 1};
-        const Precision precision{Precision::FP32};
-        const Layout layout{Layout::NC};
-        const TensorDesc desc{precision, shape, layout};
 
-        Blob::Ptr inputBlob = make_shared_blob<float>(desc, values.data());
-        inferRequest.SetBlob("input", inputBlob);
-        inferRequest.Infer();
+        ov::Tensor tensor(
+            ov::element::Type_t::f32,
+            shape,
+            values.data());
+
+        inferRequest.set_tensor("input", tensor);
+        inferRequest.infer();
     }
 };
 
@@ -152,4 +142,3 @@ public:
         return ovms::SequenceManager::terminateSequence(sequenceId);
     }
 };
-#pragma GCC diagnostic pop

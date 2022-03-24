@@ -18,6 +18,7 @@
 #include "ovinferrequestsqueue.hpp"
 
 namespace ovms {
+
 struct ExecutingStreamIdGuard {
     ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue) :
         inferRequestsQueue_(inferRequestsQueue),
@@ -27,11 +28,12 @@ struct ExecutingStreamIdGuard {
         inferRequestsQueue_.returnStream(id_);
     }
     int getId() { return id_; }
-    InferenceEngine::InferRequest& getInferRequest() { return inferRequest; }
+    ov::InferRequest& getInferRequest() { return inferRequest; }
 
 private:
     ovms::OVInferRequestsQueue& inferRequestsQueue_;
     const int id_;
-    InferenceEngine::InferRequest& inferRequest;
+    ov::InferRequest& inferRequest;
 };
+
 }  //  namespace ovms

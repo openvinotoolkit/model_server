@@ -19,17 +19,45 @@ package(
 )
 
 cc_library(
+    name = "openvino_old_headers",
+    hdrs = glob([
+        "include/ie/**/*.*"
+    ]),
+    strip_include_prefix = "include/ie",
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "openvino_new_headers",
+    hdrs = glob([
+        "include/openvino/**/*.*"
+    ]),
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@openvino//:openvino_old_headers",
+    ]
+)
+
+cc_library(
+    name = "ngraph",
+    hdrs = glob([
+        "include/ngraph/**/*.*"
+    ]),
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "openvino",
     srcs = glob([
-        "inference_engine/lib/intel64/libinference_engine_legacy.so",
-        "inference_engine/lib/intel64/libinference_engine.so",
-        "inference_engine/lib/intel64/libinference_engine_c_api.so",
-        "ngraph/lib/libngraph.so"
+        "lib/intel64/libopenvino.so"
     ]),
-    hdrs = glob([
-        "inference_engine/include/**/*.*"
-    ]),
-    data = [ "inference_engine/lib/intel64/plugins.xml" ],
-    strip_include_prefix = "inference_engine/include",
+    data = [ "lib/intel64/plugins.xml" ],
+    strip_include_prefix = "include/ie",
     visibility = ["//visibility:public"],
+    deps = [
+        "@openvino//:ngraph",
+        "@openvino//:openvino_new_headers",
+    ],
 )

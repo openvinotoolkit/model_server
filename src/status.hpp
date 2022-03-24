@@ -39,30 +39,35 @@ enum class StatusCode {
     FILE_INVALID,        /*!< File not found or cannot open */
     CONFIG_FILE_INVALID, /*!< Config file not found or cannot open */
     FILESYSTEM_ERROR,    /*!< Underlaying filesystem error */
-    NETWORK_NOT_LOADED,
+    MODEL_NOT_LOADED,
     JSON_INVALID,             /*!< The file/content is not valid json */
     JSON_SERIALIZATION_ERROR, /*!< Data serialization to json format failed */
     MODELINSTANCE_NOT_FOUND,
     SHAPE_WRONG_FORMAT,                   /*!< The provided shape param is in wrong format */
     LAYOUT_WRONG_FORMAT,                  /*!< The provided layout param is in wrong format */
+    DIM_WRONG_FORMAT,                     /*!< The provided dimension param is in wrong format */
     PLUGIN_CONFIG_WRONG_FORMAT,           /*!< Plugin config is in wrong format */
     MODEL_VERSION_POLICY_WRONG_FORMAT,    /*!< Model version policy is in wrong format */
     MODEL_VERSION_POLICY_UNSUPPORTED_KEY, /*!< Model version policy contains invalid key */
     GRPC_CHANNEL_ARG_WRONG_FORMAT,
-    CONFIG_FILE_TIMESTAMP_READING_FAILED,    /*!< Reading config file timestamp failed */
-    NO_MODEL_VERSION_AVAILABLE,              /*!< No model version found in path */
-    RESHAPE_ERROR,                           /*!< Impossible to perform reshape */
-    RESHAPE_REQUIRED,                        /*!< Model instance needs to be reloaded with new shape */
-    BATCHSIZE_CHANGE_REQUIRED,               /*!< Model instance needs to be reloaded with new batch size */
-    FORBIDDEN_MODEL_DYNAMIC_PARAMETER,       /*!< Value of the provided param is forbidden */
-    ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED,       /*!< Anonymous fixed shape is invalid for models with multiple inputs */
-    ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED,      /*!< Anonymous fixed layout is invalid for models with multiple inputs */
-    CONFIG_SHAPE_IS_NOT_IN_NETWORK,          /*!< Configured tensor shape is not present in network */
-    CONFIG_LAYOUT_IS_NOT_IN_NETWORK,         /*!< Configured tensor layout is not present in network */
+    CONFIG_FILE_TIMESTAMP_READING_FAILED, /*!< Reading config file timestamp failed */
+    NO_MODEL_VERSION_AVAILABLE,           /*!< No model version found in path */
+    RESHAPE_ERROR,                        /*!< Impossible to perform reshape */
+    RESHAPE_REQUIRED,                     /*!< Model instance needs to be reloaded with new shape */
+    BATCHSIZE_CHANGE_REQUIRED,            /*!< Model instance needs to be reloaded with new batch size */
+    FORBIDDEN_MODEL_DYNAMIC_PARAMETER,    /*!< Value of the provided param is forbidden */
+    ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED,    /*!< Anonymous fixed shape is invalid for models with multiple inputs */
+    ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED,   /*!< Anonymous fixed layout is invalid for models with multiple inputs */
+    CONFIG_SHAPE_IS_NOT_IN_MODEL,
+    CONFIG_LAYOUT_IS_NOT_IN_MODEL,
     CONFIG_SHAPE_MAPPED_BUT_USED_REAL_NAME,  /*!< Using old name of input/output in config shape when mapped in mapping_config.json*/
     CONFIG_LAYOUT_MAPPED_BUT_USED_REAL_NAME, /*!< Using old name of input/output in config layout when mapped in mapping_config.json*/
-    CANNOT_LOAD_NETWORK_INTO_TARGET_DEVICE,  /*!< Cannot load network into target device */
+    CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE,
     REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL,
+    CANNOT_CONVERT_FLAT_SHAPE,
+    INVALID_BATCH_DIMENSION, /*!< Invalid batch dimension in shape */
+    ALLOW_CACHE_WITH_CUSTOM_LOADER,
+    LAYOUT_INCOMPATIBLE_WITH_SHAPE,
 
     // Model management
     MODEL_MISSING,                                     /*!< Model with such name and/or version does not exist */
@@ -102,7 +107,7 @@ enum class StatusCode {
     INVALID_CONTENT_SIZE,           /*!< Invalid content size error status for types using tensor_content() */
 
     // Deserialization
-    OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against network precision */
+    OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against model precision */
     OV_INTERNAL_DESERIALIZATION_ERROR,        /*!< Error occured during deserialization */
 
     // Inference
@@ -111,7 +116,7 @@ enum class StatusCode {
     // Serialization
     OV_UNSUPPORTED_SERIALIZATION_PRECISION, /*!< Unsupported serializaton precision */
     OV_INTERNAL_SERIALIZATION_ERROR,        /*!< Error occurred during serialization */
-    OV_CLONE_BLOB_ERROR,                    /*!< Error during blob clone */
+    OV_CLONE_TENSOR_ERROR,                  /*!< Error during tensor clone */
 
     // GetModelStatus
     INVALID_SIGNATURE_DEF, /*!< Requested signature is not supported */
@@ -164,7 +169,6 @@ enum class StatusCode {
     REST_COULD_NOT_PARSE_VERSION,    /*!< Could not parse model version in request */
     REST_INVALID_URL,                /*!< Malformed REST request url */
     REST_UNSUPPORTED_METHOD,         /*!< Request sent with unsupported method */
-    REST_MALFORMED_REQUEST,          /*!< Malformed REST request */
     UNKNOWN_REQUEST_COMPONENTS_TYPE, /*!< Components type not recognized */
 
     // REST Parse
@@ -210,7 +214,6 @@ enum class StatusCode {
     PIPELINE_EXIT_USED_AS_NODE_DEPENDENCY,
     PIPELINE_NAME_OCCUPIED,
     PIPELINE_DEFINITION_INVALID_NODE_LIBRARY,
-    PIPELINE_DEMULTIPLEXER_MULTIPLE_BATCH_SIZE,
     PIPELINE_INCONSISTENT_SHARD_DIMENSIONS,
     PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY,
     PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY,
@@ -220,7 +223,7 @@ enum class StatusCode {
     PIPELINE_NODE_GATHER_FROM_NOT_DEMULTIPLEXER,
     PIPELINE_NODE_GATHER_FROM_ENTRY_NODE,
     PIPELINE_DEMULTIPLY_ENTRY_NODE,
-    PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_BLOB_SHARD_COUNT,
+    PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_TENSOR_SHARD_COUNT,
     PIPELINE_MANUAL_GATHERING_FROM_MULTIPLE_NODES_NOT_SUPPORTED,
     PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY,
     PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY,
@@ -250,6 +253,7 @@ enum class StatusCode {
     NODE_LIBRARY_INVALID_CONTENT_SIZE,
     NODE_LIBRARY_METADATA_FAILED,
     NODE_LIBRARY_OUTPUT_MISSING_NAME,
+    NODE_LIBRARY_INITIALIZE_FAILED,
 
     // Binary inputs
     IMAGE_PARSING_FAILED,
@@ -260,7 +264,7 @@ enum class StatusCode {
 
     // Model control API
     OK_NOT_RELOADED, /*!< Operation succeeded but no config reload was needed */
-    OK_RELOADED,     /*!< Operation succeeded but no config reload was needed */
+    OK_RELOADED,     /*!< Operation succeeded and config reload was needed */
 
     STATUS_CODE_END
 };
@@ -293,7 +297,7 @@ public:
         if (it != statusMessageMap.end())
             this->message = std::make_unique<std::string>(it->second);
         else
-            this->message = std::make_unique<std::string>("Unknown error");
+            this->message = std::make_unique<std::string>("Undefined error");
     }
 
     Status(StatusCode code, const std::string& details) :

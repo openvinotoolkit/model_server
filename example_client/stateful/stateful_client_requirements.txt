@@ -1,2 +1,0 @@
--r ../client_requirements.txt
-kaldi-python-io==1.2.1

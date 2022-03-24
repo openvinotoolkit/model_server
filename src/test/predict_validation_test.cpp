@@ -21,6 +21,7 @@
 
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
+#include "../predict_request_validation_utils.hpp"
 #include "test_utils.hpp"
 
 using ::testing::NiceMock;
@@ -29,60 +30,56 @@ using ::testing::ReturnRef;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
+
+class MockModelInstance : public ovms::ModelInstance {
+public:
+    MockModelInstance(ov::Core& ieCore) :
+        ModelInstance("UNUSED_NAME", 42, ieCore) {}
+    MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
+    MOCK_METHOD(ovms::Dimension, getBatchSize, (), (const, override));
+    MOCK_METHOD(const ovms::ModelConfig&, getModelConfig, (), (const, override));
+    const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
+        return validate(request);
+    }
+};
+
 class PredictValidation : public ::testing::Test {
-    class MockModelInstance : public ovms::ModelInstance {
-    public:
-        MockModelInstance(InferenceEngine::Core& ieCore) :
-            ModelInstance("UNUSED_NAME", 42, ieCore) {}
-        MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
-        MOCK_METHOD(size_t, getBatchSize, (), (const, override));
-        MOCK_METHOD(const ovms::ModelConfig&, getModelConfig, (), (const, override));
-        const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
-            return validate(request);
-        }
-    };
-
 protected:
-    using tensor_desc_map_t = std::unordered_map<std::string, InferenceEngine::TensorDesc>;
-
-    std::unique_ptr<InferenceEngine::Core> ieCore;
+    std::unique_ptr<ov::Core> ieCore;
     std::unique_ptr<NiceMock<MockModelInstance>> instance;
     tensorflow::serving::PredictRequest request;
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
-    ovms::tensor_map_t networkInputs;
-    std::unordered_map<std::string, InferenceEngine::TensorDesc> tensors;
+    ovms::tensor_map_t servableInputs;
 
     void SetUp() override {
-        ieCore = std::make_unique<InferenceEngine::Core>();
+        ieCore = std::make_unique<ov::Core>();
         instance = std::make_unique<NiceMock<MockModelInstance>>(*ieCore);
-        tensors = tensor_desc_map_t({
-            {"Input_FP32_1_3_224_224_NHWC", {InferenceEngine::Precision::FP32, {1, 3, 224, 224}, InferenceEngine::Layout::NHWC}},
-            {"Input_U8_1_3_62_62_NCHW", {InferenceEngine::Precision::U8, {1, 3, 62, 62}, InferenceEngine::Layout::NCHW}},
-            {"Input_I64_1_6_128_128_16_NCDHW", {InferenceEngine::Precision::I64, {1, 6, 128, 128, 16}, InferenceEngine::Layout::NCDHW}},
-            {"Input_U16_1_2_8_4_NCHW", {InferenceEngine::Precision::U16, {1, 2, 8, 4}, InferenceEngine::Layout::NCHW}},
+
+        servableInputs = ovms::tensor_map_t({
+            {"Input_FP32_1_224_224_3_NHWC",
+                std::make_shared<ovms::TensorInfo>("Input_FP32_1_3_224_224_NHWC", ovms::Precision::FP32, ovms::shape_t{1, 224, 224, 3}, ovms::Layout{"NHWC"})},
+            {"Input_U8_1_3_62_62_NCHW",
+                std::make_shared<ovms::TensorInfo>("Input_U8_1_3_62_62_NCHW", ovms::Precision::U8, ovms::shape_t{1, 3, 62, 62}, ovms::Layout{"NCHW"})},
+            {"Input_I64_1_6_128_128_16_NCDHW",
+                std::make_shared<ovms::TensorInfo>("Input_I64_1_6_128_128_16_NCDHW", ovms::Precision::I64, ovms::shape_t{1, 6, 128, 128, 16}, ovms::Layout{"NCDHW"})},
+            {"Input_U16_1_2_8_4_NCHW",
+                std::make_shared<ovms::TensorInfo>("Input_U16_1_2_8_4_NCHW", ovms::Precision::U16, ovms::shape_t{1, 2, 8, 4}, ovms::Layout{"NCHW"})},
         });
 
-        for (const auto& pair : tensors) {
-            networkInputs[pair.first] = std::make_shared<ovms::TensorInfo>(
-                pair.first,
-                pair.second.getPrecision(),
-                pair.second.getDims(),
-                pair.second.getLayout());
-        }
-
-        ON_CALL(*instance, getInputsInfo()).WillByDefault(ReturnRef(networkInputs));
+        ON_CALL(*instance, getInputsInfo()).WillByDefault(ReturnRef(servableInputs));
         ON_CALL(*instance, getBatchSize()).WillByDefault(Return(1));
         ON_CALL(*instance, getModelConfig()).WillByDefault(ReturnRef(modelConfig));
 
         request = preparePredictRequest(
             {
-                {"Input_FP32_1_3_224_224_NHWC",
+                {"Input_FP32_1_224_224_3_NHWC",
                     std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 224, 224, 3}, tensorflow::DataType::DT_FLOAT}},
                 {"Input_U8_1_3_62_62_NCHW",
                     std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 3, 62, 62}, tensorflow::DataType::DT_UINT8}},
                 {"Input_I64_1_6_128_128_16_NCDHW",
                     std::tuple<ovms::shape_t, tensorflow::DataType>{{1, 6, 128, 128, 16}, tensorflow::DataType::DT_INT64}},
             });
+
         // U16 uses int_val instead of tensor_content so it needs separate test
         auto& inputD = (*request.mutable_inputs())["Input_U16_1_2_8_4_NCHW"];
         inputD.set_dtype(tensorflow::DataType::DT_UINT16);
@@ -135,7 +132,7 @@ TEST_F(PredictValidation, RequestWrongInputName) {
 }
 
 TEST_F(PredictValidation, RequestTooManyShapeDimensions) {
-    auto& input = (*request.mutable_inputs())["Input_FP32_1_3_224_224_NHWC"];
+    auto& input = (*request.mutable_inputs())["Input_FP32_1_224_224_3_NHWC"];
     input.mutable_tensor_shape()->add_dim()->set_size(16);
 
     auto status = instance->mockValidate(&request);
@@ -143,7 +140,7 @@ TEST_F(PredictValidation, RequestTooManyShapeDimensions) {
 }
 
 TEST_F(PredictValidation, RequestNotEnoughShapeDimensions) {
-    auto& input = (*request.mutable_inputs())["Input_FP32_1_3_224_224_NHWC"];
+    auto& input = (*request.mutable_inputs())["Input_FP32_1_224_224_3_NHWC"];
     input.mutable_tensor_shape()->clear_dim();
 
     auto status = instance->mockValidate(&request);
@@ -181,13 +178,13 @@ TEST_F(PredictValidation, ValidRequestBinaryInputs) {
     }
     input.mutable_tensor_shape()->add_dim()->set_size(requestBatchSize);
 
-    networkInputs.clear();
+    servableInputs.clear();
     ovms::shape_t shape = {1, 3, 224, 224};
-    networkInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
         inputName,
-        InferenceEngine::Precision::FP32,
+        ovms::Precision::FP32,
         shape,
-        InferenceEngine::Layout::NHWC);
+        ovms::Layout{"NHWC"});
 
     auto status = instance->mockValidate(&binaryInputRequest);
     EXPECT_TRUE(status.ok());
@@ -205,13 +202,13 @@ TEST_F(PredictValidation, RequestWrongBatchSizeBinaryInputs) {
     }
     input.mutable_tensor_shape()->add_dim()->set_size(requestBatchSize);
 
-    networkInputs.clear();
+    servableInputs.clear();
     ovms::shape_t shape = {1, 3, 224, 224};
-    networkInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
         inputName,
-        InferenceEngine::Precision::FP32,
+        ovms::Precision::FP32,
         shape,
-        InferenceEngine::Layout::NHWC);
+        ovms::Layout{"NHWC"});
 
     auto status = instance->mockValidate(&binaryInputRequest);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
@@ -230,13 +227,13 @@ TEST_F(PredictValidation, RequestWrongBatchSizeAutoBinaryInputs) {
     }
     input.mutable_tensor_shape()->add_dim()->set_size(requestBatchSize);
 
-    networkInputs.clear();
+    servableInputs.clear();
     ovms::shape_t shape = {1, 3, 224, 224};
-    networkInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
         inputName,
-        InferenceEngine::Precision::FP32,
+        ovms::Precision::FP32,
         shape,
-        InferenceEngine::Layout::NHWC);
+        ovms::Layout{"NHWC"});
 
     auto status = instance->mockValidate(&binaryInputRequest);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
@@ -248,34 +245,18 @@ TEST_F(PredictValidation, RequestWrongAndCorrectBatchSizeAuto) {
     // First is incorrect, second is correct
     request = preparePredictRequest({{"im_data", {{3, 3, 800, 1344}, tensorflow::DataType::DT_FLOAT}},
         {"im_info", {{1, 3}, tensorflow::DataType::DT_FLOAT}}});
-    tensors = tensor_desc_map_t{
-        {"im_data", {InferenceEngine::Precision::FP32, {1, 3, 800, 1344}, InferenceEngine::Layout::NCHW}},
-        {"im_info", {InferenceEngine::Precision::FP32, {1, 3}, InferenceEngine::Layout::NC}},
-    };
 
-    networkInputs.clear();
-    for (const auto& pair : tensors) {
-        networkInputs[pair.first] = std::make_shared<ovms::TensorInfo>(
-            pair.first,
-            pair.second.getPrecision(),
-            pair.second.getDims(),
-            pair.second.getLayout());
-    }
+    servableInputs.clear();
+    servableInputs = ovms::tensor_map_t{
+        {"im_data", std::make_shared<ovms::TensorInfo>("im_data", ovms::Precision::FP32, ovms::shape_t{1, 3, 800, 1344}, ovms::Layout{"NCHW"})},
+        {"im_info", std::make_shared<ovms::TensorInfo>("im_info", ovms::Precision::FP32, ovms::shape_t{1, 3}, ovms::Layout{"NC"})},
+    };
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
 
     request = preparePredictRequest({{"im_data", {{1, 3, 800, 1344}, tensorflow::DataType::DT_FLOAT}},
         {"im_info", {{3, 3}, tensorflow::DataType::DT_FLOAT}}});
-
-    networkInputs.clear();
-    for (const auto& pair : tensors) {
-        networkInputs[pair.first] = std::make_shared<ovms::TensorInfo>(
-            pair.first,
-            pair.second.getPrecision(),
-            pair.second.getDims(),
-            pair.second.getLayout());
-    }
 
     status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
@@ -287,19 +268,11 @@ TEST_F(PredictValidation, RequestWrongAndCorrectShapeAuto) {
         {"im_info", {{1, 3}, tensorflow::DataType::DT_FLOAT}}});
 
     // First is incorrect, second is correct
-    tensors = tensor_desc_map_t({
-        {"im_data", {InferenceEngine::Precision::FP32, {1, 3, 800, 1344}, InferenceEngine::Layout::NCHW}},
-        {"im_info", {InferenceEngine::Precision::FP32, {1, 3}, InferenceEngine::Layout::NC}},
-    });
-
-    networkInputs.clear();
-    for (const auto& pair : tensors) {
-        networkInputs[pair.first] = std::make_shared<ovms::TensorInfo>(
-            pair.first,
-            pair.second.getPrecision(),
-            pair.second.getDims(),
-            pair.second.getLayout());
-    }
+    servableInputs.clear();
+    servableInputs = ovms::tensor_map_t{
+        {"im_data", std::make_shared<ovms::TensorInfo>("im_data", ovms::Precision::FP32, ovms::shape_t{1, 3, 800, 1344}, ovms::Layout{"NCHW"})},
+        {"im_info", std::make_shared<ovms::TensorInfo>("im_info", ovms::Precision::FP32, ovms::shape_t{1, 3}, ovms::Layout{"NC"})},
+    };
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
@@ -307,15 +280,6 @@ TEST_F(PredictValidation, RequestWrongAndCorrectShapeAuto) {
     // First is correct, second is incorrect
     request = preparePredictRequest({{"im_data", {{1, 3, 800, 1344}, tensorflow::DataType::DT_FLOAT}},
         {"im_info", {{1, 6}, tensorflow::DataType::DT_FLOAT}}});
-
-    networkInputs.clear();
-    for (const auto& pair : tensors) {
-        networkInputs[pair.first] = std::make_shared<ovms::TensorInfo>(
-            pair.first,
-            pair.second.getPrecision(),
-            pair.second.getDims(),
-            pair.second.getLayout());
-    }
 
     status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
@@ -506,7 +470,7 @@ TEST_F(PredictValidation, RequestIncorrectValueCountShapeAuto) {
 }
 
 TEST_F(PredictValidation, RequestWrongPrecision) {
-    auto& input = (*request.mutable_inputs())["Input_FP32_1_3_224_224_NHWC"];
+    auto& input = (*request.mutable_inputs())["Input_FP32_1_224_224_3_NHWC"];
     input.set_dtype(tensorflow::DataType::DT_UINT8);
 
     auto status = instance->mockValidate(&request);
@@ -514,11 +478,197 @@ TEST_F(PredictValidation, RequestWrongPrecision) {
 }
 
 TEST_F(PredictValidation, RequestNegativeValueInShape) {
-    auto& input = (*request.mutable_inputs())["Input_FP32_1_3_224_224_NHWC"];
+    auto& input = (*request.mutable_inputs())["Input_FP32_1_224_224_3_NHWC"];
     input.mutable_tensor_shape()->mutable_dim(1)->set_size(-4);
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
 }
+
+class PredictValidationArbitraryBatchPosition : public PredictValidation {
+protected:
+    void SetUp() override {
+        PredictValidation::SetUp();
+
+        servableInputs = ovms::tensor_map_t({
+            {"Input_FP32_224_224_3_1_HWCN",
+                std::make_shared<ovms::TensorInfo>("Input_FP32_224_224_3_1_HWCN", ovms::Precision::FP32, ovms::shape_t{224, 224, 3, 1}, ovms::Layout{"HWCN"})},
+            {"Input_U8_3_1_128_CNH",
+                std::make_shared<ovms::TensorInfo>("Input_U8_3_1_128_CNH", ovms::Precision::U8, ovms::shape_t{3, 1, 128}, ovms::Layout{"CNH"})},
+        });
+
+        request = preparePredictRequest(
+            {
+                {"Input_FP32_224_224_3_1_HWCN",
+                    std::tuple<ovms::shape_t, tensorflow::DataType>{{224, 224, 3, 1}, tensorflow::DataType::DT_FLOAT}},
+                {"Input_U8_3_1_128_CNH",
+                    std::tuple<ovms::shape_t, tensorflow::DataType>{{3, 1, 128}, tensorflow::DataType::DT_UINT8}},
+            });
+    }
+};
+
+TEST_F(PredictValidationArbitraryBatchPosition, Valid) {
+    auto status = instance->mockValidate(&request);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST_F(PredictValidationArbitraryBatchPosition, RequestWrongBatchSize) {
+    auto& input = (*request.mutable_inputs())["Input_FP32_224_224_3_1_HWCN"];
+
+    // Edit fourth dimension (N), expect validator to report wrong batch size instead of wrong shape.
+    input.mutable_tensor_shape()->mutable_dim(3)->set_size(10);
+    prepareTensorContent(input);
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
+}
+
+TEST_F(PredictValidationArbitraryBatchPosition, RequestWrongBatchSizeAuto) {
+    modelConfig.setBatchingParams("auto");
+
+    auto& input = (*request.mutable_inputs())["Input_FP32_224_224_3_1_HWCN"];
+
+    // Edit fourth dimension (N), expect validator to report batch size change request instead of reshape request.
+    input.mutable_tensor_shape()->mutable_dim(3)->set_size(10);
+    prepareTensorContent(input);
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
+}
+
+TEST_F(PredictValidationArbitraryBatchPosition, RequestWrongShapeValues) {
+    auto& input = (*request.mutable_inputs())["Input_FP32_224_224_3_1_HWCN"];
+
+    // Edit first dimension (H), expect validator to report wrong shape instead of wrong batch size.
+    input.mutable_tensor_shape()->mutable_dim(0)->set_size(10);
+    prepareTensorContent(input);
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(PredictValidationArbitraryBatchPosition, RequestWrongShapeValuesAuto) {
+    modelConfig.parseShapeParameter("auto");
+
+    auto& input = (*request.mutable_inputs())["Input_FP32_224_224_3_1_HWCN"];
+
+    // Edit first dimension (H), expect validator to report reshape request instead of requesting batch size change.
+    input.mutable_tensor_shape()->mutable_dim(0)->set_size(10);
+    prepareTensorContent(input);
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
+}
+
+class PredictValidationDynamicModel : public PredictValidation {
+protected:
+    void SetUp() override {
+        PredictValidation::SetUp();
+
+        servableInputs = ovms::tensor_map_t({{"Input_FP32_any_224:512_224:512_3_NHWC",
+                                                 std::make_shared<ovms::TensorInfo>("Input_FP32_any_224:512_224:512_3_NHWC", ovms::Precision::FP32, ovms::Shape{ovms::Dimension::any(), {224, 512}, {224, 512}, 3}, ovms::Layout{"NHWC"})},
+            {"Input_U8_100:200_any_CN",
+                std::make_shared<ovms::TensorInfo>("Input_U8_100:200_any_CN", ovms::Precision::U8, ovms::Shape{{100, 200}, ovms::Dimension::any()}, ovms::Layout{"CN"})}});
+
+        ON_CALL(*instance, getBatchSize()).WillByDefault(Return(ovms::Dimension::any()));
+
+        const ovms::dimension_value_t requestBatchSize = 16;
+        request = preparePredictRequest(
+            {
+                {"Input_FP32_any_224:512_224:512_3_NHWC",
+                    std::tuple<ovms::shape_t, tensorflow::DataType>{{requestBatchSize, 300, 320, 3}, tensorflow::DataType::DT_FLOAT}},
+                {"Input_U8_100:200_any_CN",
+                    std::tuple<ovms::shape_t, tensorflow::DataType>{{101, requestBatchSize}, tensorflow::DataType::DT_UINT8}},
+            });
+    }
+};
+
+TEST_F(PredictValidationDynamicModel, ValidRequest) {
+    auto status = instance->mockValidate(&request);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST_F(PredictValidationDynamicModel, RequestBatchNotInRangeFirstPosition) {
+    auto& input = (*request.mutable_inputs())["Input_FP32_any_224:512_224:512_3_NHWC"];
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(98);  // Should be in 1-5 range
+
+    servableInputs["Input_FP32_any_224:512_224:512_3_NHWC"] = std::make_shared<ovms::TensorInfo>("Input_FP32_any_224:512_224:512_3_NHWC", ovms::Precision::FP32, ovms::Shape{{1, 5}, {224, 512}, {224, 512}, 3}, ovms::Layout{"NHWC"});
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
+}
+
+TEST_F(PredictValidationDynamicModel, RequestDimensionNotInRangeFirstPosition) {
+    auto& input = (*request.mutable_inputs())["Input_U8_100:200_any_CN"];
+    input.mutable_tensor_shape()->mutable_dim(0)->set_size(98);  // Should be in 100-200 range
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(PredictValidationDynamicModel, RequestBatchNotInRangeSecondPosition) {
+    auto& input = (*request.mutable_inputs())["Input_U8_100:200_any_CN"];
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(98);  // Should be in 1-5 range
+
+    servableInputs["Input_U8_100:200_any_CN"] = std::make_shared<ovms::TensorInfo>("Input_U8_100:200_any_CN", ovms::Precision::U8, ovms::Shape{{100, 200}, {1, 5}}, ovms::Layout{"CN"});
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
+}
+
+TEST_F(PredictValidationDynamicModel, RequestDimensionNotInRangeSecondPosition) {
+    auto& input = (*request.mutable_inputs())["Input_FP32_any_224:512_224:512_3_NHWC"];
+    input.mutable_tensor_shape()->mutable_dim(1)->set_size(223);  // Should be in 224-512 range
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(PredictValidationDynamicModel, RequestDimensionInRangeWrongTensorContent) {
+    auto& input = (*request.mutable_inputs())["Input_U8_100:200_any_CN"];
+
+    size_t numberOfElements = 1;
+    for (int i = 0; i < input.tensor_shape().dim_size(); i++) {
+        numberOfElements *= input.tensor_shape().dim(i).size();
+    }
+    numberOfElements -= 1;
+    *input.mutable_tensor_content() = std::string(numberOfElements * tensorflow::DataTypeSize(input.dtype()), '1');
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE);
+}
+
+class PredictValidationPrecision : public ::testing::TestWithParam<ovms::Precision> {
+protected:
+    void SetUp() override {
+        auto precision = ovms::Precision::FP32;
+        mockedInputsInfo[tensorName] = std::make_shared<ovms::TensorInfo>(tensorName, precision, ovms::shape_t{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Layout{"NC"});
+    }
+    tensorflow::serving::PredictRequest request;
+    const char* tensorName = DUMMY_MODEL_INPUT_NAME;
+    ovms::tensor_map_t mockedInputsInfo;
+};
+
+TEST_P(PredictValidationPrecision, ValidPrecisions) {
+    ovms::Precision testedPrecision = GetParam();
+    mockedInputsInfo[tensorName]->setPrecision(testedPrecision);
+    request = preparePredictRequest(
+        {
+            {tensorName,
+                std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::TensorInfo::getPrecisionAsDataType(testedPrecision)}},
+        });
+    auto status = ovms::request_validation_utils::validate(request, mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::OK) << "Precision validation failed:"
+                                            << toString(testedPrecision)
+                                            << " should pass validation";
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    Test,
+    PredictValidationPrecision,
+    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<PredictValidationPrecision::ParamType>& info) {
+        return toString(info.param);
+    });
 
 #pragma GCC diagnostic pop

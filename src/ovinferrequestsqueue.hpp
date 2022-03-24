@@ -24,70 +24,22 @@
 #include <thread>
 #include <vector>
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
+#include "queue.hpp"
+
 namespace ovms {
-/**
-* @brief Class representing circular buffer for managing IE streams
-*/
-class OVInferRequestsQueue {
+
+class OVInferRequestsQueue : public Queue<ov::InferRequest> {
 public:
-    /**
-    * @brief Allocating idle stream for execution
-    */
-    std::future<int> getIdleStream();
-
-    /**
-    * @brief Release stream after execution
-    */
-    void returnStream(int streamID);
-
-    /**
-    * @brief Constructor with initialization
-    */
-    OVInferRequestsQueue(InferenceEngine::ExecutableNetwork& network, int streamsLength) :
-        streams(streamsLength),
-        front_idx{0},
-        back_idx{0} {
+    OVInferRequestsQueue(ov::CompiledModel& compiledModel, int streamsLength) :
+        Queue(streamsLength) {
         for (int i = 0; i < streamsLength; ++i) {
             streams[i] = i;
-            inferRequests.push_back(network.CreateInferRequest());
+            inferRequests.push_back(compiledModel.create_infer_request());
         }
     }
-
-    /**
-     * @brief Give InferRequest
-     */
-    InferenceEngine::InferRequest& getInferRequest(int streamID) {
-        return inferRequests[streamID];
-    }
-
-protected:
-    /**
-    * @brief Vector representing circular buffer for infer queue
-    */
-    std::vector<int> streams;
-
-    /**
-    * @brief Index of the front of the idle streams list
-    */
-    std::uint32_t front_idx;
-
-    /**
-    * @brief Index of the back of the idle streams list
-    */
-    std::atomic<std::uint32_t> back_idx;
-
-    /**
-    * @brief Vector representing OV streams and used for notification about completed inference operations
-    */
-    std::mutex front_mut;
-    std::mutex queue_mutex;
-    /**
-     * 
-     */
-    std::vector<InferenceEngine::InferRequest> inferRequests;
-    std::queue<std::promise<int>> promises;
 };
+
 }  // namespace ovms

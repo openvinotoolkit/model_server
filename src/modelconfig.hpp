@@ -26,15 +26,15 @@
 
 #include <rapidjson/document.h>
 
+#include "layout_configuration.hpp"
 #include "model_version_policy.hpp"
-#include "shapeinfo.hpp"
+#include "shape.hpp"
 #include "status.hpp"
 
 namespace ovms {
 
-using layouts_map_t = std::unordered_map<std::string, std::string>;
 using mapping_config_t = std::unordered_map<std::string, std::string>;
-using plugin_config_t = std::map<std::string, std::string>;
+using plugin_config_t = std::map<std::string, ov::Any>;
 using custom_loader_options_config_t = std::map<std::string, std::string>;
 
 const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
@@ -74,7 +74,7 @@ private:
     /**
          * @brief Batch size
          */
-    size_t batchSize;
+    std::optional<Dimension> batchSize;
 
     /**
          * @brief Model version policy
@@ -107,6 +107,16 @@ private:
     uint32_t maxSequenceNumber;
 
     /**
+         * @brief Model cache directory
+         */
+    std::string cacheDir;
+
+    /**
+         * @brief Flag determining if allow cache option is set to true
+         */
+    bool isAllowCacheTrue = false;
+
+    /**
          * @brief Model version
          */
     model_version_t version = -1;
@@ -119,17 +129,17 @@ private:
     /**
          * @brief Layout for single input
          */
-    std::string layout;
+    LayoutConfiguration layout;
 
     /**
          * @brief Map of shapes
          */
-    shapes_map_t shapes;
+    shapes_info_map_t shapes;
 
     /**
          * @brief Map of layouts
          */
-    layouts_map_t layouts;
+    layout_configurations_map_t layouts;
 
     /**
          * @brief Input mapping configuration
@@ -199,6 +209,7 @@ public:
         bool idleSequenceCleanup = true,
         bool lowLatencyTransformation = false,
         uint32_t maxSequenceNumber = DEFAULT_MAX_SEQUENCE_NUMBER,
+        const std::string& cacheDir = "",
         model_version_t version = 0,
         const std::string& localPath = "") :
         name(name),
@@ -211,6 +222,7 @@ public:
         idleSequenceCleanup(idleSequenceCleanup),
         lowLatencyTransformation(lowLatencyTransformation),
         maxSequenceNumber(maxSequenceNumber),
+        cacheDir(cacheDir),
         version(version),
         pluginConfig({}),
         layout(""),
@@ -238,6 +250,24 @@ public:
          * @return true if customloader configuration has changed
          */
     bool isCustomLoaderConfigChanged(const ModelConfig& rhs) const;
+
+    /**
+         * @brief Compares two ModelConfig instances for batch size configuration
+         * 
+         * @param rhs
+         *  
+         * @return true if configurations are equal false otherwise
+         */
+    bool isBatchSizeConfigurationEqual(const ModelConfig& rhs) const;
+
+    /**
+         * @brief Compares two ModelConfig instances for layout configuration
+         * 
+         * @param rhs
+         *  
+         * @return true if configurations are equal false otherwise
+         */
+    bool isLayoutConfigurationEqual(const ModelConfig& rhs) const;
 
     /**
          * @brief Compares two ModelConfig instances for shape configuration
@@ -330,22 +360,51 @@ public:
     }
 
     /**
-         * @brief Checks if target device is heterogeneous and contains specific device
+         * @brief Get the cache directory
          * 
-         * @param bool
+         * @return const std::string& 
          */
-    bool isHeteroTargetDevice(const std::string& device) const {
-        return this->targetDevice.find("HETERO") != std::string::npos && this->targetDevice.find(device) != std::string::npos;
+    const std::string& getCacheDir() const {
+        return this->cacheDir;
     }
 
     /**
-         * @brief Checks if given device name is used alone or as a part of multi device configuration
+         * @brief Set the cache directory
+         * 
+         * @param cache directory
+         */
+    void setCacheDir(const std::string& cacheDir) {
+        this->cacheDir = cacheDir;
+    }
+
+    /**
+         * @brief Get the allow cache flag
+         * 
+         * @return bool
+         */
+    bool isAllowCacheSetToTrue() const {
+        return this->isAllowCacheTrue;
+    }
+
+    /**
+         * @brief Set the allow cache flag
+         * 
+         * @param allow cache flag
+         */
+    void setAllowCache(const bool& allowCache) {
+        this->isAllowCacheTrue = allowCache;
+    }
+
+    /**
+         * @brief Checks if given device is used as single target device.
          * 
          * @param bool
          */
-    bool isDeviceUsed(const std::string& device) const {
-        return this->targetDevice == device || this->isHeteroTargetDevice(device);
+    bool isSingleDeviceUsed(const std::string& device) const {
+        return this->targetDevice == device;
     }
+
+    bool isDeviceUsed(const std::string& device) const;
 
     /**
          * @brief Get the batching mode
@@ -365,7 +424,7 @@ public:
          * 
          * @return size_t 
          */
-    size_t getBatchSize() const {
+    std::optional<Dimension> getBatchSize() const {
         return this->batchSize;
     }
 
@@ -383,7 +442,7 @@ public:
          * 
          * @param batchSize 
          */
-    void setBatchSize(size_t batchSize) {
+    void setBatchSize(std::optional<Dimension> batchSize) {
         this->batchSize = batchSize;
     }
 
@@ -413,7 +472,7 @@ public:
          * 
          * @param configBatchSize 
          */
-    static std::tuple<Mode, size_t> extractBatchingParams(std::string configBatchSize);
+    static std::tuple<Mode, std::optional<Dimension>> extractBatchingParams(std::string configBatchSize);
 
     /**
          * @brief Get the model version policy
@@ -632,7 +691,7 @@ public:
          * 
          * @return const shapes_map_t& 
          */
-    const shapes_map_t& getShapes() const {
+    const shapes_info_map_t& getShapes() const {
         return this->shapes;
     }
 
@@ -641,7 +700,7 @@ public:
          * 
          * @param shapes 
          */
-    void setShapes(const shapes_map_t& shapes) {
+    void setShapes(const shapes_info_map_t& shapes) {
         this->shapes = shapes;
     }
 
@@ -701,7 +760,7 @@ public:
          * 
          * @return const std::string& 
          */
-    const std::string& getLayout() const {
+    const LayoutConfiguration& getLayout() const {
         return this->layout;
     }
 
@@ -710,7 +769,7 @@ public:
          * 
          * @param layout
          */
-    void setLayout(const std::string& layout) {
+    void setLayout(const LayoutConfiguration& layout) {
         this->layout = layout;
         this->layouts.clear();
     }
@@ -718,9 +777,9 @@ public:
     /**
          * @brief Get the layouts
          * 
-         * @return const layouts_map_t& 
+         * @return const layout_configurations_map_t& 
          */
-    const layouts_map_t& getLayouts() const {
+    const layout_configurations_map_t& getLayouts() const {
         return this->layouts;
     }
 
@@ -729,20 +788,9 @@ public:
          * 
          * @param layouts 
          */
-    void setLayouts(const layouts_map_t& layouts) {
+    void setLayouts(const layout_configurations_map_t& layouts) {
         this->layouts = layouts;
-        this->layout = "";
-    }
-
-    /**
-         * @brief Add a named layout
-         * 
-         * @param name 
-         * @param layout 
-         */
-    void addLayout(const std::string& name, const std::string& layout) {
-        this->layouts[name] = layout;
-        this->layout = "";
+        this->layout = LayoutConfiguration();
     }
 
     /**
@@ -912,6 +960,16 @@ public:
     }
 
     /**
+      * @brief Add custom loader option
+      * 
+      * @param name
+      * @param value
+      */
+    void addCustomLoaderOption(const std::string& name, const std::string& value) {
+        customLoaderOptionsConfigMap[name] = value;
+    }
+
+    /**
          * @brief Get the custom loader option config
          *
          * @return const std::string
@@ -928,5 +986,7 @@ public:
          * @return status
          */
     Status parseCustomLoaderOptionsConfig(const rapidjson::Value& node);
+
+    std::string layoutConfigurationToString() const;
 };
 }  // namespace ovms

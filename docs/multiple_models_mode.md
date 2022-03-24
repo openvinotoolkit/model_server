@@ -39,7 +39,7 @@ An example of the configuration file:
                 "input1": "(1,3,200,200)",
                 "input2": "(1,3,50,50)"
              },
-         "plugin_config": {"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}
+             "plugin_config": {"CPU_THROUGHPUT_STREAMS": "CPU_THROUGHPUT_AUTO"}
          }
       },
       {
@@ -48,7 +48,7 @@ An example of the configuration file:
              "base_path":"s3://bucket/models/model5",
              "shape": "auto",
              "nireq": 32,
-             "target_device": "HDDL",
+             "target_device": "HDDL"
          }
       }
    ]

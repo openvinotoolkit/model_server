@@ -17,8 +17,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
-
-#include <inference_engine.hpp>
+#include <unordered_map>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -31,50 +30,79 @@
 
 namespace ovms {
 
+// in case we change behaviour for this constructor we may need to write additional tests for TensorInfo intersection / DAGs
 TensorInfo::TensorInfo(const std::string& name,
-    const InferenceEngine::Precision& precision,
+    const Precision& precision,
+    const Shape& shape) :
+    name(name),
+    mapping(""),
+    precision(precision),
+    shape(shape),
+    layout(Layout::getDefaultLayout()) {}
+
+TensorInfo::TensorInfo(const std::string& name,
+    const Precision& precision,
     const shape_t& shape) :
     name(name),
     mapping(""),
     precision(precision),
     shape(shape),
-    layout(InferenceEngine::Layout::ANY) {
-    this->updateEffectiveShape();
+    layout(Layout::getDefaultLayout()) {
 }
 
 TensorInfo::TensorInfo(const std::string& name,
-    const InferenceEngine::Precision& precision,
+    const ovms::Precision& precision,
     const shape_t& shape,
-    const InferenceEngine::Layout& layout) :
+    const Layout& layout) :
     name(name),
     mapping(""),
     precision(precision),
     shape(shape),
     layout(layout) {
-    this->updateEffectiveShape();
 }
 
 TensorInfo::TensorInfo(const std::string& name,
-    const InferenceEngine::TensorDesc& tensorDesc) :
+    const ovms::Precision& precision,
+    const Shape& shape,
+    const Layout& layout) :
     name(name),
     mapping(""),
-    precision(tensorDesc.getPrecision()),
-    shape(tensorDesc.getDims()),
-    layout(tensorDesc.getLayout()) {
-    this->updateEffectiveShape();
+    precision(precision),
+    shape(shape),
+    layout(layout) {
 }
 
 TensorInfo::TensorInfo(const std::string& name,
     const std::string& mapping,
-    const InferenceEngine::Precision& precision,
+    const ovms::Precision& precision,
     const shape_t& shape,
-    const InferenceEngine::Layout& layout) :
+    const Layout& layout) :
     name(name),
     mapping(mapping),
     precision(precision),
     shape(shape),
     layout(layout) {
-    this->updateEffectiveShape();
+}
+TensorInfo::TensorInfo(const std::string& name,
+    const std::string& mapping,
+    const ovms::Precision& precision,
+    const Shape& shape,
+    const Layout& layout) :
+    name(name),
+    mapping(mapping),
+    precision(precision),
+    shape(shape),
+    layout(layout) {
+}
+TensorInfo::TensorInfo(const std::string& name,
+    const std::string& mapping,
+    const Precision& precision,
+    const shape_t& shape) :
+    name(name),
+    mapping(mapping),
+    precision(precision),
+    shape(shape),
+    layout(Layout::getDefaultLayout()) {
 }
 
 const std::string& TensorInfo::getName() const {
@@ -89,81 +117,62 @@ void TensorInfo::setMappedName(const std::string& mappedName) {
     mapping = mappedName;
 }
 
-const InferenceEngine::Precision TensorInfo::getPrecision() const {
+const Precision TensorInfo::getPrecision() const {
     return precision;
 }
 
-void TensorInfo::setPrecision(const InferenceEngine::Precision& requestedPrecision) {
+void TensorInfo::setPrecision(const ovms::Precision& requestedPrecision) {
     precision = requestedPrecision;
 }
 
-const tensorflow::DataType TensorInfo::getPrecisionAsDataType() const {
+tensorflow::DataType TensorInfo::getPrecisionAsDataType() const {
     return getPrecisionAsDataType(precision);
 }
 
-const tensorflow::DataType TensorInfo::getPrecisionAsDataType(InferenceEngine::Precision precision) {
-    switch (precision) {
-    case InferenceEngine::Precision::FP32:
-        return tensorflow::DataType::DT_FLOAT;
-    case InferenceEngine::Precision::I32:
-        return tensorflow::DataType::DT_INT32;
-    case InferenceEngine::Precision::I8:
-        return tensorflow::DataType::DT_INT8;
-    case InferenceEngine::Precision::U8:
-        return tensorflow::DataType::DT_UINT8;
-    case InferenceEngine::Precision::FP16:
-        return tensorflow::DataType::DT_HALF;
-    // case InferenceEngine::Precision::Q78:   return tensorflow::DataType::
-    case InferenceEngine::Precision::I16:
-        return tensorflow::DataType::DT_INT16;
-    case InferenceEngine::Precision::U16:
-        return tensorflow::DataType::DT_UINT16;
-    case InferenceEngine::Precision::U64:
-        return tensorflow::DataType::DT_UINT64;
-    case InferenceEngine::Precision::I64:
-        return tensorflow::DataType::DT_INT64;
-    // case InferenceEngine::Precision::BIN:   return tensorflow::DataType::
-    case InferenceEngine::Precision::BOOL:
-        return tensorflow::DataType::DT_BOOL;
-    default:
+tensorflow::DataType TensorInfo::getPrecisionAsDataType(Precision precision) {
+    static std::unordered_map<Precision, tensorflow::DataType> precisionMap{
+        {Precision::FP32, tensorflow::DataType::DT_FLOAT},
+        {Precision::FP64, tensorflow::DataType::DT_DOUBLE},
+        {Precision::FP16, tensorflow::DataType::DT_HALF},
+        {Precision::I64, tensorflow::DataType::DT_INT64},
+        {Precision::I32, tensorflow::DataType::DT_INT32},
+        {Precision::I16, tensorflow::DataType::DT_INT16},
+        {Precision::I8, tensorflow::DataType::DT_INT8},
+        {Precision::U64, tensorflow::DataType::DT_UINT64},
+        {Precision::U16, tensorflow::DataType::DT_UINT16},
+        {Precision::U8, tensorflow::DataType::DT_UINT8},
+        //    {Precision::MIXED, tensorflow::DataType::DT_INVALID},
+        //    {Precision::Q78, tensorflow::DataType::DT_INVALID},
+        //    {Precision::BIN, tensorflow::DataType::DT_INVALID},
+        {Precision::BOOL, tensorflow::DataType::DT_BOOL}
+        //    {Precision::CUSTOM, tensorflow::DataType::DT_INVALID}
+    };
+    auto it = precisionMap.find(precision);
+    if (it == precisionMap.end()) {
+        // TODO missing precisions
         return tensorflow::DataType::DT_INVALID;
     }
+    return it->second;
 }
 
-const std::string TensorInfo::getPrecisionAsString() const {
+std::string TensorInfo::getPrecisionAsString(Precision precision) {
+    return toString(precision);
+}
+
+ov::element::Type TensorInfo::getOvPrecision() const {
+    return ovmsPrecisionToIE2Precision(precision);
+}
+
+std::string TensorInfo::getPrecisionAsString() const {
     return getPrecisionAsString(precision);
-}
-
-const std::string TensorInfo::getPrecisionAsString(InferenceEngine::Precision precision) {
-    switch (precision) {
-    case InferenceEngine::Precision::FP32:
-        return "FP32";
-    case InferenceEngine::Precision::I32:
-        return "I32";
-    case InferenceEngine::Precision::I8:
-        return "I8";
-    case InferenceEngine::Precision::U8:
-        return "U8";
-    case InferenceEngine::Precision::FP16:
-        return "FP16";
-        // case InferenceEngine::Precision::Q78:   return tensorflow::DataType::
-    case InferenceEngine::Precision::I16:
-        return "I16";
-    case InferenceEngine::Precision::U16:
-        return "U16";
-    case InferenceEngine::Precision::I64:
-        return "I64";
-    case InferenceEngine::Precision::BOOL:
-        return "BOOL";
-    default:
-        return "DT_INVALID";
-    }
 }
 
 const std::string TensorInfo::getDataTypeAsString(tensorflow::DataType dataType) {
     switch (dataType) {
     case tensorflow::DataType::DT_FLOAT:
         return "FP32";
+    case tensorflow::DataType::DT_DOUBLE:
+        return "FP64";
     case tensorflow::DataType::DT_INT32:
         return "I32";
     case tensorflow::DataType::DT_INT8:
@@ -189,142 +198,94 @@ const std::string TensorInfo::getDataTypeAsString(tensorflow::DataType dataType)
     }
 }
 
-InferenceEngine::Layout TensorInfo::getLayoutFromString(const std::string& layout) {
-    if (layout == "ANY")
-        return InferenceEngine::Layout::ANY;
-    if (layout == "NCHW")
-        return InferenceEngine::Layout::NCHW;
-    if (layout == "NHWC")
-        return InferenceEngine::Layout::NHWC;
-    if (layout == "NCDHW")
-        return InferenceEngine::Layout::NCDHW;
-    if (layout == "NDHWC")
-        return InferenceEngine::Layout::NDHWC;
-    if (layout == "OIHW")
-        return InferenceEngine::Layout::OIHW;
-    if (layout == "GOIHW")
-        return InferenceEngine::Layout::GOIHW;
-    if (layout == "OIDHW")
-        return InferenceEngine::Layout::OIDHW;
-    if (layout == "GOIDHW")
-        return InferenceEngine::Layout::GOIDHW;
-    if (layout == "SCALAR")
-        return InferenceEngine::Layout::SCALAR;
-    if (layout == "C")
-        return InferenceEngine::Layout::C;
-    if (layout == "CHW")
-        return InferenceEngine::Layout::CHW;
-    if (layout == "HW")
-        return InferenceEngine::Layout::HW;
-    if (layout == "HWC")
-        return InferenceEngine::Layout::HWC;
-    if (layout == "NC")
-        return InferenceEngine::Layout::NC;
-    if (layout == "CN")
-        return InferenceEngine::Layout::CN;
-    if (layout == "BLOCKED")
-        return InferenceEngine::Layout::BLOCKED;
-
-    return InferenceEngine::Layout::ANY;
-}
-
-std::string TensorInfo::getStringFromLayout(InferenceEngine::Layout layout) {
-    switch (layout) {
-    case InferenceEngine::Layout::ANY:
-        return "ANY";
-    case InferenceEngine::Layout::NCHW:
-        return "NCHW";
-    case InferenceEngine::Layout::NHWC:
-        return "NHWC";
-    case InferenceEngine::Layout::NCDHW:
-        return "NCDHW";
-    case InferenceEngine::Layout::NDHWC:
-        return "NDHWC";
-    case InferenceEngine::Layout::OIHW:
-        return "OIHW";
-    case InferenceEngine::Layout::GOIHW:
-        return "GOIHW";
-    case InferenceEngine::Layout::OIDHW:
-        return "OIDHW";
-    case InferenceEngine::Layout::GOIDHW:
-        return "GOIDHW";
-    case InferenceEngine::Layout::SCALAR:
-        return "SCALAR";
-    case InferenceEngine::Layout::C:
-        return "C";
-    case InferenceEngine::Layout::CHW:
-        return "CHW";
-    case InferenceEngine::Layout::HW:
-        return "HW";
-    case InferenceEngine::Layout::HWC:
-        return "HWC";
-    case InferenceEngine::Layout::NC:
-        return "NC";
-    case InferenceEngine::Layout::CN:
-        return "CN";
-    case InferenceEngine::Layout::BLOCKED:
-        return "BLOCKED";
-    }
-    return "";
-}
-
-const InferenceEngine::Layout& TensorInfo::getLayout() const {
+std::string TensorInfo::getStringFromLayout(const Layout& layout) {
     return layout;
 }
 
-const shape_t& TensorInfo::getShape() const {
-    return shape;
+const Layout& TensorInfo::getLayout() const {
+    return layout;
 }
 
 bool TensorInfo::isInfluencedByDemultiplexer() const {
     return influencedByDemultiplexer;
 }
 
-const shape_t& TensorInfo::getEffectiveShape() const {
-    return effectiveShape.size() > 0 ? effectiveShape : shape;
-}
-
-void TensorInfo::setShape(const shape_t& shape) {
+void TensorInfo::setShape(const Shape& shape) {
     this->shape = shape;
-    this->updateEffectiveShape();
 }
 
-void TensorInfo::setLayout(InferenceEngine::Layout layout) {
+const Shape& TensorInfo::getShape() const {
+    return this->shape;
+}
+
+void TensorInfo::setLayout(const Layout& layout) {
     this->layout = layout;
-    this->updateEffectiveShape();
 }
 
-void TensorInfo::updateEffectiveShape() {
-    this->effectiveShape = this->getTensorDesc().getBlockingDesc().getBlockDims();
-}
-
-std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const shape_t& shape) const {
+std::shared_ptr<TensorInfo> TensorInfo::createCopyWithNewShape(const Shape& shape) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->shape = shape;
-    copy->layout = InferenceEngine::Layout::ANY;
-    copy->updateEffectiveShape();
+    copy->layout = Layout::getUnspecifiedLayout();
     return copy;
 }
 
-std::shared_ptr<TensorInfo> TensorInfo::createCopyWithEffectiveDimensionPrefix(size_t dim) const {
+std::shared_ptr<TensorInfo> TensorInfo::createCopyWithDemultiplexerDimensionPrefix(const Dimension& dim) const {
     auto copy = std::make_shared<TensorInfo>(*this);
     copy->influencedByDemultiplexer = true;
-    copy->effectiveShape = this->getEffectiveShape();
-    copy->effectiveShape.insert(copy->effectiveShape.begin(), dim);
+    copy->shape.emplace(copy->shape.begin(), dim);
+    copy->layout = this->getLayout();
+    auto batchPosition = copy->layout.find(BATCH_DIMENSION_LETTER);
+    if (batchPosition != std::string::npos) {
+        copy->layout.replace(batchPosition, 1, std::string(1, UNDEFINED_DIMENSION_CHAR));
+    }
+    copy->layout = std::string(1, BATCH_DIMENSION_LETTER[0]) + copy->layout;
     return copy;
 }
 
-const InferenceEngine::TensorDesc TensorInfo::getTensorDesc() const {
-    return InferenceEngine::TensorDesc{precision, shape, layout};
+std::shared_ptr<TensorInfo> TensorInfo::createIntersection(const TensorInfo& other) {
+    if (this->isTensorUnspecified())
+        return std::make_shared<TensorInfo>(other);
+    if (other.isTensorUnspecified())
+        return std::make_shared<TensorInfo>(*this);
+    if ((this->getName() != other.getName()) ||
+        (this->getMappedName() != other.getMappedName())) {
+        return nullptr;
+    }
+    Precision precision;
+    if (this->getPrecision() != other.getPrecision()) {
+        if (this->getPrecision() == Precision::UNDEFINED) {
+            precision = other.getPrecision();
+        } else if (other.getPrecision() == Precision::UNDEFINED) {
+            precision = this->getPrecision();
+        } else {
+            return nullptr;
+        }
+    } else {
+        precision = this->getPrecision();
+    }
+    auto newShape = this->getShape().createIntersection(other.getShape());
+    if (!newShape.has_value())
+        return nullptr;
+    auto layout = this->getLayout().createIntersection(other.getLayout(), newShape.value().size());
+    if (!layout.has_value())
+        return nullptr;
+    return std::make_shared<TensorInfo>(this->getName(),
+        this->getMappedName(),
+        precision,
+        std::move(newShape.value()),
+        layout.value());
 }
 
 bool TensorInfo::isTensorSpecEqual(const TensorInfo& other) const {
-    return this->getEffectiveShape() == other.getEffectiveShape() &&
-           this->getPrecision() == other.getPrecision();
+    return (this->getShape() == other.getShape()) &&
+           (this->getPrecision() == other.getPrecision()) &&
+           (this->getLayout() == other.getLayout());
 }
 
 bool TensorInfo::isTensorUnspecified() const {
-    return this->getPrecision() == InferenceEngine::Precision::UNSPECIFIED;
+    return (this->getPrecision() == Precision::UNDEFINED) &&
+           (this->getName() == "") &&
+           (this->getShape() == Shape());
 }
 
 std::string TensorInfo::shapeToString(const shape_t& shape) {
@@ -358,16 +319,28 @@ std::string TensorInfo::tensorShapeToString(const tensorflow::TensorShapeProto& 
 }
 
 std::shared_ptr<TensorInfo> TensorInfo::getUnspecifiedTensorInfo() {
-    std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>("", InferenceEngine::Precision::UNSPECIFIED, shape_t{});
-    return info;
+    return std::make_shared<TensorInfo>("", Precision::UNDEFINED, Shape{});
 }
 
-std::string TensorInfo::tensorDescToString(const InferenceEngine::TensorDesc& desc) {
+const std::optional<Dimension> TensorInfo::getBatchSize() const {
+    const auto batchIndex = this->layout.getBatchIndex();
+    if (!batchIndex.has_value()) {
+        return std::nullopt;
+    }
+    if (getShape().size() < batchIndex.value() + 1) {
+        throw std::logic_error("batch outside of shape range");
+    }
+    return getShape()[batchIndex.value()];
+}
+
+std::string TensorInfo::asString() const {
     std::stringstream ss;
-    ss << "shape: " << shapeToString(desc.getDims())
-       << " effective shape: " << shapeToString(desc.getBlockingDesc().getBlockDims())
-       << " precision: " << getPrecisionAsString(desc.getPrecision())
-       << " layout: " << getStringFromLayout(desc.getLayout());
+    ss
+        << "name: " << getName() << "; "
+        << "mapping_name: " << getMappedName() << "; "
+        << "shape: " << getShape().toString() << "; "
+        << "precision: " << getPrecisionAsString() << "; "
+        << "layout: " << getStringFromLayout(getLayout());
     return ss.str();
 }
 }  // namespace ovms

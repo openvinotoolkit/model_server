@@ -22,13 +22,13 @@ docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 9001:9001 open
 | `-p`                           | | exposes the model serving port outside the Docker container                                                                   |
 +--------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
 | `openvino/model_server:latest` | | represents the image name; the ovms binary is the Docker entry point                                                          |
-|                                | | varies by tag and build process - see _ovms tags: https://hub.docker.com/r/openvino/model_server/tags/ for a full tag list.   |
+|                                | | varies by tag and build process - see tags: https://hub.docker.com/r/openvino/model_server/tags/ for a full tag list.         |
 +--------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
 | `--model_path`                 | | model location, which can be:                                                                                                 |
 |                                | | a Docker container path that is mounted during start-up                                                                       |
 |                                | | a Google Cloud Storage path `gs://<bucket>/<model_path>`                                                                      |
 |                                | | an AWS S3 path `s3://<bucket>/<model_path>`                                                                                   |
-|                                | | an Azure blob path`az://<container>/<model_path>`                                                                             |
+|                                | | an Azure blob path `az://<container>/<model_path>`                                                                            |
 +--------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
 | `--model_name`                 | | the name of the model in the model_path                                                                                       |
 +--------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
@@ -39,9 +39,8 @@ docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 9001:9001 open
 @endsphinxdirective
 
 
->**NOTE**:
-> - Publish the container's port to your host's **open ports**.
-> - In the command above, port 9000 is exposed for gRPC and port 9001 is exposed for REST API calls.
-> - For preparing and saving models to serve with OpenVINO&trade; Model Server refer to the [Model Repository](models_repository.md) article.
-> - Add model_name for the client gRPC/REST API calls.
-
+### Notes
+- Publish the container's port to your host's **open ports**.
+- In the command above, port 9000 is exposed for gRPC and port 9001 is exposed for REST API calls.
+- For preparing and saving models to serve with OpenVINO&trade; Model Server refer to the [Model Repository](models_repository.md) article.
+- Add model_name for the client gRPC/REST API calls.

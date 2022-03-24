@@ -8,7 +8,7 @@ or [ONNX](https://onnx.ai/) format. You can get them by:
 
 To quickly start using OpenVINO™ Model Server follow these steps:
 1. Prepare Docker
-2. Download and build the OpenVINO™ Model server
+2. Download or build the OpenVINO™ Model server
 3. Provide a model
 4. Start the Model Server Container
 5. Prepare the Example Client Components
@@ -26,7 +26,7 @@ If you are not sure if it has already been installed, test it using the followin
 $ docker run hello-world
 ``` 
 
-### Step 2: Download and Build the OpenVINO Model Server
+### Step 2: Download or Build the OpenVINO Model Server
 
 Download the Docker image that contains OpenVINO Model Server available through DockerHub:
 
@@ -45,10 +45,10 @@ make docker_build
 Store components of the downloaded or converted model in the `model/1` directory. Here is an example command using curl and a face detection model:
 
 ```
-curl --create-dirs https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/1/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/1/face-detection-retail-0004.xml -o model/1/face-detection-retail-0004.bin
+curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/1/face-detection-retail-0004.xml -o model/1/face-detection-retail-0004.bin
 ```
 
-**Note:** For ONNX models additional steps are required. For a detailed description refer to our [ONNX format example](ovms_onnx_example.md)
+**Note:** For ONNX models additional steps are required. For a detailed description refer to our [ONNX format example](../demos/using_onnx_model/python/README.md).
 
 
 ### Step 4: Start the Model Server Container
@@ -78,26 +78,26 @@ For more information on the folder structure and how to deploy more than one mod
 
 ### Step 5: Prepare the Example Client Components
 
-Model scripts are available to provide an easy way to access Model Server.Here is an example command, using face detection and curl, to download all necessary components:
+Model scripts are available to provide an easy way to access Model Server. Here is an example command, using face detection and curl, to download all necessary components:
 
 ```
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/face_detection.py -o face_detection.py  https://raw.githubusercontent.com/openvinotoolkit/model_server/master/example_client/client_requirements.txt -o client_requirements.txt
+curl --fail https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/common/python/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/face_detection/python/face_detection.py -o face_detection.py https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/common/python/requirements.txt -o client_requirements.txt
 ```
 
 For more information, check these links:
 
-- [Information on the face detection script](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client/face_detection.md). 
-- [More Model Server client scripts](https://github.com/openvinotoolkit/model_server/tree/v2021.4.2/example_client).
+- [Information on the face detection script](../demos/face_detection/python/README.md). 
+- [More Model Server client scripts](../demos/README.md).
 
 ### Step 6: Download Data for Inference
 
 Provide inference data by putting the files in a separate folder, as inference will be performed on all files contained in it.
 
-In this case, you can download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/v2021.4.2/example_client/images/people) 
+In this case, you can download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/develop/demos/common/static/images/people). This example uses a file named [people1.jpeg](https://github.com/openvinotoolkit/model_server/tree/develop/demos/common/static/images/people/people1.jpeg) 
 and use a single people1.jpeg file to run the following script:
 
 ```
-curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/v2021.4.2/example_client/images/people/people1.jpeg -o images/people1.jpeg
+curl --fail --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/people/people1.jpeg -o images/people1.jpeg
 ```
 
 ### Step 7: Run Inference
@@ -116,3 +116,5 @@ python face_detection.py --batch_size 1 --width 600 --height 400 --input_images_
 
 In the `results` folder, you can find files containing inference results. 
 In our case, it will be a modified input image with bounding boxes indicating detected faces.
+
+Note: Similar steps can be repeated also for the model with ONNX model. Check the inference [use case example with a public ResNet model in ONNX format](../demos/using_onnx_model/python/README.md). 

@@ -22,8 +22,6 @@
 
 #include "../sequence_manager.hpp"
 #include "../status.hpp"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "stateful_test_utils.hpp"
 
 TEST(SequenceManager, GetUniqueSequenceIdFirstOK) {
@@ -238,9 +236,9 @@ TEST(SequenceManager, RemoveOneIdleSequence) {
     DummyStatefulModel realModel;
     std::vector<float> state{10};
 
-    InferenceEngine::InferRequest auxInferRequest = realModel.createInferRequest();
+    ov::InferRequest auxInferRequest = realModel.createInferRequest();
     realModel.setVariableState(auxInferRequest, state);
-    InferenceEngine::VariableState memoryState = realModel.getVariableState(auxInferRequest);
+    ov::VariableState memoryState = realModel.getVariableState(auxInferRequest);
     newState.push_back(memoryState);
 
     MockedSequenceManager sequenceManager(24, "dummy", 1);
@@ -324,4 +322,3 @@ TEST(SequenceManager, ExceedMaxSequenceNumber) {
         ASSERT_EQ(sequenceManager.mockCreateSequence(spec), ovms::StatusCode::MAX_SEQUENCE_NUMBER_REACHED);
     }
 }
-#pragma GCC diagnostic pop

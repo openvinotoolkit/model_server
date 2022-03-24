@@ -5,7 +5,7 @@ This guide explains how to configure a model to accept input data in different s
 
 Enable dynamic shape via model reloading by setting the `shape` parameter to `auto`. To configure and use the dynamic batch size, take advantage of:
 
-- Example client in Python [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/v2021.4.2/example_client/face_detection.py) that can be used to request inference with the desired input shape.
+- Example client in Python [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/develop/demos/face_detection/python/face_detection.py) that can be used to request inference with the desired input shape.
 
 - An example [face_detection_retail_0004](https://docs.openvinotoolkit.org/2021.4/omz_models_model_face_detection_retail_0004.html) model.
 
@@ -33,20 +33,20 @@ docker pull openvino/model_server:latest
 #### Start the Model Server Container with the Model and Dynamic Batch Size
 Start the container using the image pulled in the previous step and mount the `models` directory:
 ```Bash
-docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name face_detection --model_path /models/face_detection --shape auto --port 9000
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name face-detection --model_path /models/face_detection --shape auto --port 9000
 ```
 
 #### Run the Client
 ```Bash
-cd example_client
+cd demos/face_detection/python
 virtualenv .venv
 . .venv/bin/activate
-pip install -r client_requirements.txt
+pip install -r ../../common/python/requirements.txt
 mkdir results_500x500 results_600x400
 
-python face_detection.py --width 500 --height 500 --input_images_dir images/people --output_dir results_500x500
+python face_detection.py --width 500 --height 500 --input_images_dir ../../common/static/images/people --output_dir results_500x500
 
-python face_detection.py --width 600 --height 400 --input_images_dir images/people --output_dir results_600x400
+python face_detection.py --width 600 --height 400 --input_images_dir ../../common/static/images/people --output_dir results_600x400
 ```
 The results from running the client will be saved in the directory specified by `--output_dir`
 

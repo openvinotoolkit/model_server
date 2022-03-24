@@ -72,7 +72,7 @@ Example configuration file with one demultiplexer (remove everything after arrow
 ```
 
 ## Dynamic demultiply_count parameter
-There might be use cases where one custom node library is used to produce an unpredictable number of a batch. To achieve it, `demultiply_count` can be set to `0`. This indicates that the pipeline supports any number of batch returned by custom node: `(X,N,C,H,W,...)` - where `X` is dynamic `demultiply_count`. OpenVINO&trade; Model Server is capable of interpreting such dynamic batch and is able to split outputs into a dynamic number of the pipeline branches. When using dynamic `demultiply_count` parameters, only one demultiplexer can exist in the pipeline. Important to note - in release 2021.3, when batch 0 is returned, the pipeline stops its execution and ABORTED status is returned. This may be changed in future releases.
+There might be use cases where one custom node library is used to produce an unpredictable number of a batch. To achieve it, `demultiply_count` can be set to `-1`. This indicates that the pipeline supports any number of batch returned by custom node: `(X,N,C,H,W,...)` - where `X` is dynamic `demultiply_count`. OpenVINO&trade; Model Server is capable of interpreting such dynamic batch and is able to split outputs into a dynamic number of the pipeline branches. When using dynamic `demultiply_count` parameters, only one demultiplexer can exist in the pipeline. Important to note - in release 2021.3, when batch 0 is returned, the pipeline stops its execution and ABORTED status is returned. This may be changed in future releases.
 
 ## Multiple demultiplexers
 Directed Acyclic Graph Scheduler is not limited to a single demultiplexer node in one pipeline definition. Each demultiplexer node that is not referenced by `gather_from_node` parameter will be automatically gathered in `response` node - meaning each demultiplexer adds one new dimension equal to `demultiply_count` into all  pipeline outputs shape. This must be taken into account when interpreting response data in client applications.
@@ -165,7 +165,7 @@ Example configuration file for pipeline with `gather_from_node` specified before
 
 Demutliplexing feature enables handling requests with dynamic batch size without a model reloading.
 It is recommended for workloads with an arbitrary batch size in sequential requests.
-You can use the dynamic batching feature via requests demuliplexing by configuring a pipeline including a single model and an extra field 'demultiply_count: 0'.
+You can use the dynamic batching feature via requests demuliplexing by configuring a pipeline including a single model and an extra field 'demultiply_count: -1'.
 To leverage this feature, input data requires an additional, first dimension, representing the batch size. It should be added to the original model shape with batch size 1.
 The response will include combined predictions from the split batch. That also adds an extra first dimension to the model output.
 
@@ -176,10 +176,10 @@ Output: (N,1,1001)
 
 Because of this additional dimension, demultiplexing implementation is generic and can support any input and output data layout.
 
-Examplary usage of this feature is available in [dynamic_batch_size](./dynamic_bs_demultiplexer.md) guide.
+Examplary usage of this feature is available in [dynamic batch size guide](./dynamic_bs_demultiplexer.md).
 
 *Note:* You can use additional parameters in model config ('nireq' and 'CPU_THROUGHPUT_STREAMS') to fine-tune your performance for dynamic batch. 'CPU_THROUGHPUT_STREAMS' allows for multiple parallel
-inferences processing in OpenVINO which may increase throughput at the cost of latency of predict requests. 'nireq' specifies how many inference requests can be prepared.
+inferences processing in OpenVINO&trade; which may increase throughput at the cost of latency of predict requests. 'nireq' specifies how many inference requests can be prepared.
 
 *Note:* In case you are using a different device for inference than CPU you have check that device plugin configuration parameters.
 

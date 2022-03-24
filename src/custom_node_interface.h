@@ -25,7 +25,9 @@ typedef enum {
     I8,
     I16,
     U16,
-    I32
+    I32,
+    FP64,
+    I64
 } CustomNodeTensorPrecision;
 
 struct CustomNodeTensor {
@@ -52,10 +54,25 @@ struct CustomNodeParam {
 extern "C" {
 #endif
 
-int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount);
-int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount);
-int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount);
-int release(void* ptr);
+/**
+ * @brief Custom node library initialize enables creation of resources to be reused between predictions.
+ * Potential use cases include optimized temporary buffers allocation.
+ * Using initialize is optional and not required for custom node to work.
+ * CustomNodeLibraryInternalManager should be created here if initialize is used.
+ * On initialize failure status not equal to zero is returned and error log is printed.
+ */
+int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount);
+/**
+ * @brief Custom node library deinitialize enables destruction of resources that were used between predictions.
+ * Using deinitialize is optional and not required for custom node to work.
+ * CustomNodeLibraryInternalManager should be destroyed here if deinitialize is used.
+ * On deinitialize failure only error log is printed.
+ */
+int deinitialize(void* customNodeLibraryInternalManager);
+int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
+int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
+int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
+int release(void* ptr, void* customNodeLibraryInternalManager);
 
 #ifdef __cplusplus
 }

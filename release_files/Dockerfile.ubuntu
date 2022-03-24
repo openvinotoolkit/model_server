@@ -68,7 +68,7 @@ FROM $BASE_IMAGE as release
 ARG INSTALL_RPMS_FROM_URL=
 ENV INSTALL_RPMS_FROM_URL=$INSTALL_RPMS_FROM_URL
 ENV HDDL_INSTALL_DIR=/ovms/lib/hddl
-ARG INSTALL_DRIVER_VERSION="20.35.17767"
+ARG INSTALL_DRIVER_VERSION="21.48.21782"
 ENV INSTALL_DRIVER_VERSION=$INSTALL_DRIVER_VERSION
 ARG GPU=1
 ENV GPU=$GPU
@@ -83,15 +83,6 @@ RUN	set -e ; \
 	if [ "$GPU" == "1" ] ; then \
                 apt install -y libnuma1 ocl-icd-libopencl1; \
 	        case $INSTALL_DRIVER_VERSION in \
-                "19.41.14441") \
-                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/19.41.14441/intel-gmmlib_19.3.2_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/19.41.14441/intel-igc-core_1.0.2597_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/19.41.14441/intel-igc-opencl_1.0.2597_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/19.41.14441/intel-opencl_19.41.14441_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/19.41.14441/intel-ocloc_19.41.14441_amd64.deb ; \
-                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
-                ;; \
                 "20.35.17767") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-gmmlib_20.2.4_amd64.deb ; \
@@ -100,6 +91,24 @@ RUN	set -e ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-opencl_20.35.17767_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-ocloc_20.35.17767_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/20.35.17767/intel-level-zero-gpu_1.0.17767_amd64.deb ; \
+                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
+                ;; \
+                "21.48.21782") \
+                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-gmmlib_21.3.3_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.9441/intel-igc-core_1.0.9441_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.9441/intel-igc-opencl_1.0.9441_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-opencl-icd_21.48.21782_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-level-zero-gpu_1.2.21782_amd64.deb ; \
+                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
+                ;; \
+                "22.10.22597") \
+                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-gmmlib_22.0.2_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.10409/intel-igc-core_1.0.10409_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.10409/intel-igc-opencl_1.0.10409_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-opencl-icd_22.10.22597_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-level-zero-gpu_1.3.22597_amd64.deb ; \
                         dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
                 ;; \
                         *) \
@@ -129,7 +138,7 @@ RUN apt-get update && \
         libjson-c4 && \
     rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 # for NCS
-RUN mkdir -p /etc/udev/rules.d/ && cp /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules /etc/udev/rules.d/ && ldconfig
+RUN if [ -f /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules ]; then mkdir -p /etc/udev/rules.d/ && cp /ovms/lib/hddl/etc/rules.d/97-myriad-usbboot.rules /etc/udev/rules.d/ && ldconfig ; fi
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
