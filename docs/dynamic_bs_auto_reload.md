@@ -43,7 +43,7 @@ virtualenv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
 
-python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --batchsize 1 > b1.txt && python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --batchsize 8 > b8.txt;
+python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --batchsize 1 > b1.txt && python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --batchsize 8 > b8.txt;
 ```
 *NOTE*: Results of running the client will be available in .txt files in the current directory.
 
