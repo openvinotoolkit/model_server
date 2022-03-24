@@ -5,9 +5,9 @@ This guide shows how to configure a model to accept input data with different ba
 
 Enabling dynamic batch size via model reload is as simple as setting the `batch_size` parameter to `auto`. To configure and use the dynamic batch size, take advantage of:
 
-- An example client in Python [grpc_predict_resnet.py](https://github.com/openvinotoolkit/model_server/blob/develop/client/python/tensorflow-serving-api/samples/grpc_predict_resnet.py) that can be used to request inference with the desired batch size.
+- An example client in Python [grpc_predict_resnet.py](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/client/python/tensorflow-serving-api/samples/grpc_predict_resnet.py) that can be used to request inference with the desired batch size.
 
-- A sample [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/intel/resnet50-binary-0001/README.md) model.
+- A sample [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/resnet50-binary-0001/README.md) model.
 
  When using the resnet model with `grpc_predict_resnet.py`, the script processes the output from the server and displays the inference results using the previously prepared file containing labels. Inside this file, each image has an assigned number, which indicates the correct classification result.  
 

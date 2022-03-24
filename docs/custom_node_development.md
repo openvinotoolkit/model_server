@@ -11,7 +11,7 @@ developed in C++ or C to perform arbitrary data transformations.
 ## Custom Node API
 
 
-The custom node library must implement the API interface defined in [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_node_interface.h).
+The custom node library must implement the API interface defined in [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_node_interface.h).
 The interface is defined in `C` to simplify compatibility with various compilers. The library could use third party components
 linked statically or dynamically. OpenCV is a built in component in OVMS which could be used to perform manipulation on the image
 data. 
@@ -67,7 +67,7 @@ Note that during the function execution all the output data buffers need to be a
 the request processing is completed and returned to the user. The cleanup is triggered by calling the `release` function 
 which also needs to be implemented in the custom library.
 
-In some cases, dynamic allocation in `execute` call might be a performance bottleneck or cause memory fragmentation. Starting from 2022.1 release, it is possible to preallocate memory during DAG initialization and reuse it in subsequent inference requests. Refer to `initialize` and `deinitialize` functions below. Those can be used to implement preallocated memory pool. Example implementation can be seen in [custom node example source](https://github.com/openvinotoolkit/model_server/blob/develop/src/custom_nodes/add_one/add_one.cpp#L141).
+In some cases, dynamic allocation in `execute` call might be a performance bottleneck or cause memory fragmentation. Starting from 2022.1 release, it is possible to preallocate memory during DAG initialization and reuse it in subsequent inference requests. Refer to `initialize` and `deinitialize` functions below. Those can be used to implement preallocated memory pool. Example implementation can be seen in [custom node example source](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/src/custom_nodes/add_one/add_one.cpp#L141).
 
 Execute function returns an integer value that defines the success (`0` value) or failure (other than 0). When the function 
 reports error, the pipeline execution is stopped and the error is returned to the user. 
@@ -126,7 +126,7 @@ Just add include statement like:
 ## Building
 
 Custom node library can be compiled using any tool. It is recommended to follow the example based 
-a docker container with all build dependencies included. It is described in this [Makefile](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/east_ocr/Makefile). 
+a docker container with all build dependencies included. It is described in this [Makefile](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/east_ocr/Makefile). 
 
 ## Testing 
 The recommended method for testing the custom library is via OVMS execution:
@@ -136,23 +136,23 @@ The recommended method for testing the custom library is via OVMS execution:
 - Submit a request to OVMS endpoint using a gRPC or REST client.
 - Analyse the logs on the OVMS server.
 
-For debugging steps, refer to the OVMS [developer guide](https://github.com/openvinotoolkit/model_server/blob/develop/docs/developer_guide.md)
+For debugging steps, refer to the OVMS [developer guide](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/docs/developer_guide.md)
 
 
 ## Custom node examples 
 The best starting point for developing new custom nodes is by exploring and copying from the existing examples.
 
 Fully functional custom nodes are available here:
-- [east-resnet50 OCR custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/east_ocr)
-- [horizontal OCR custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/horizontal_ocr)
-- [model zoo intel object detection custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/model_zoo_intel_object_detection)
-- [image transformation custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/image_transformation)
-- [add one custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/add_one) - demonstrates example implementation of memory pool to avoid dynamic allocation
-- [face blur custom node](https://github.com/openvinotoolkit/model_server/tree/develop/src/custom_nodes/face_blur)
+- [east-resnet50 OCR custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/east_ocr)
+- [horizontal OCR custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/horizontal_ocr)
+- [model zoo intel object detection custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/model_zoo_intel_object_detection)
+- [image transformation custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/image_transformation)
+- [add one custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/add_one) - demonstrates example implementation of memory pool to avoid dynamic allocation
+- [face blur custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/face_blur)
 
 Additional examples are included in the unit tests:
-- [node_add_sub.c](https://github.com/openvinotoolkit/model_server/tree/develop/src/test/custom_nodes/node_add_sub.c)
-- [node_choose_maximum.cpp](https://github.com/openvinotoolkit/model_server/tree/develop/src/test/custom_nodes/node_choose_maximum.cpp)
-- [node_missing_implementation.c](https://github.com/openvinotoolkit/model_server/tree/develop/src/test/custom_nodes/node_missing_implementation.c)
-- [node_perform_different_operations.cpp](https://github.com/openvinotoolkit/model_server/tree/develop/src/test/custom_nodes/node_perform_different_operations.cpp)
+- [node_add_sub.c](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/test/custom_nodes/node_add_sub.c)
+- [node_choose_maximum.cpp](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/test/custom_nodes/node_choose_maximum.cpp)
+- [node_missing_implementation.c](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/test/custom_nodes/node_missing_implementation.c)
+- [node_perform_different_operations.cpp](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/test/custom_nodes/node_perform_different_operations.cpp)
 

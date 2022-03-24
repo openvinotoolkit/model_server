@@ -6,7 +6,7 @@ To build the client, run `make` command in this directory. It will build docker 
 
 The application can be used with any model or pipeline served in OVMS, by requesting `GetModelMetadata` endpoint and using such information to prepare synthetic inputs with matching shape and precision.
 
-> **Note**: In this directory you can only see the code specific to the benchmark client. The code shared with other C++ demos as well as all building utilities are placed in the [common C++ directory](https://github.com/openvinotoolkit/model_server/tree/develop/demos/common/cpp).
+> **Note**: In this directory you can only see the code specific to the benchmark client. The code shared with other C++ demos as well as all building utilities are placed in the [common C++ directory](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/demos/common/cpp).
 
 > **Note**: It is required that endpoint does not use dynamic shape.
 

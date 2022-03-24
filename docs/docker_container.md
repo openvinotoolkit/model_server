@@ -6,7 +6,7 @@ This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Li
 
 - [Docker Engine](https://docs.docker.com/engine/) installed ([How to Install Docker Engine](https://docs.docker.com/engine/install/))
 - Intel® Core™ processor (6-12th gen.) or Intel® Xeon® processor
-- (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html)
+- (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/2022.1/openvino_docs_IE_DG_supported_plugins_Supported_Devices.html)
 - Linux, macOS or Windows via [WSL](https://docs.microsoft.com/en-us/windows/wsl/) 
 
 **NOTE:** accelerators are only tested on bare-metal Linux hosts.
@@ -40,8 +40,8 @@ docker run -p 9000:9000 openvino/model_server:latest \
 --layout NHWC --port 9000 
 
 # download input files, an image, and a label mapping file
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/common/static/images/zebra.jpeg
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/common/python/classes.py
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/static/images/zebra.jpeg
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/python/classes.py
 
 # Install the Python-based ovmsclient package
 pip3 install ovmsclient
@@ -101,7 +101,7 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 
 If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
 With Multi-Device Plugin enabled, inference requests will be load balanced between multiple devices. 
-For more detailed information read [OpenVino's Multi-Device plugin documentation](https://docs.openvinotoolkit.org/2021.4/_docs_IE_DG_supported_plugins_MULTI.html).
+For more detailed information read [OpenVino's Multi-Device plugin documentation](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_Running_on_multiple_devices.html).
 
 In order to use this feature in OpenVino™ Model Server, following steps are required:
 

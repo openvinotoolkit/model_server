@@ -40,10 +40,10 @@ test_score_1_10.ark
 ```
 [Kaldi's](http://kaldi-asr.org/doc/io.html) binary archive file with reference model results
 
-2. [Convert model to IR](https://docs.openvinotoolkit.org/latest/openvino_inference_engine_samples_speech_sample_README.html)
+2. [Convert model to IR](https://docs.openvino.ai/2022.1/openvino_inference_engine_samples_speech_sample_README.html)
  
 ```bash
-docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu18_dev:latest deployment_tools/model_optimizer/mo.py --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1
+docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu18_dev:latest mo --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1
 ```
 
 3. Having `rm_lstm4f` model files `.xml` and `.bin` in the IR format present in ```bash $(pwd)/rm_lstm4f/1``` directory,

@@ -77,7 +77,7 @@ spec:
 
     # Model Server
     [OpenVINO™ Model Server](https://github.com/openvinotoolkit/model_server) (OVMS) is a scalable, high-performance solution for serving machine learning models optimized for Intel® architectures. The server provides an inference service via gRPC or REST API - making it easy to deploy new algorithms and AI experiments using the same architecture as [TensorFlow Serving](https://github.com/tensorflow/serving) for any models trained in a framework that is supported by [OpenVINO](https://software.intel.com/en-us/openvino-toolkit).
-    Model Server configuration is identical with a [Helm chart](https://github.com/openvinotoolkit/model_server/tree/main/deploy) for OVMS. It supports all the parameters from the helm chart.
+    Model Server configuration is identical with a [Helm chart](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/deploy) for OVMS. It supports all the parameters from the helm chart.
     ## Using the cluster
     OpenVINO Model Server can be consumed as a `Service`. It is called like with `ModelServer` resource with `-ovms` suffix.
     The suffix is ommited when `ovms` phrase is included in the name.
@@ -94,7 +94,7 @@ spec:
     ## Before you start
     Depending on the deployment configuration there might be pre-requisites for additional records to be created in the cluster. 
     ## References
-    OpenVINO Model Server on [Github](https://github.com/openvinotoolkit/model_server/tree/main/extras/openvino-operator-openshift)
+    OpenVINO Model Server on [Github](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/extras/openvino-operator-openshift)
 
     # Notebook
     The Notebook resource integrates JupyterHub from OpenShift Data Science or Open Data Hub with a container image that includes [developer
@@ -301,7 +301,7 @@ spec:
   - AI Inference OpenVINO
   links:
   - name: OpenVINO Toolkit Operator
-    url: https://github.com/openvinotoolkit/model_server/tree/main/extras/openvino-operator-openshift
+    url: https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/extras/openvino-operator-openshift
   maturity: alpha
   provider:
     name: Intel

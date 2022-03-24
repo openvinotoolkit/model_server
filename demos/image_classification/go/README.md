@@ -5,7 +5,7 @@ This client demonstrates how to interact with OpenVINO Model Server prediction e
 
 ## Get the model
 
-To run end to end flow and get correct results, please download `resnet-50-tf` model and convert it to IR format by following [instructions available on the OpenVINO Model Zoo page](https://docs.openvinotoolkit.org/latest/omz_models_model_resnet_50_tf.html)
+To run end to end flow and get correct results, please download `resnet-50-tf` model and convert it to IR format by following [instructions available on the OpenVINO Model Zoo page](https://docs.openvino.ai/2022.1/omz_models_model_resnet_50_tf.html)
 
 Place converted model files (XML and BIN) under the following path: `<PATH_TO_MODELS>/resnet/1`
 

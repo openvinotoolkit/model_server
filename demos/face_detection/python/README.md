@@ -2,13 +2,13 @@
 
 ## Overview
 
-The script [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/develop/demos/face_detection/python/face_detection.py) runs face detection inference requests for all the images
+The script [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/face_detection/python/face_detection.py) runs face detection inference requests for all the images
 saved in `input_images_dir` directory. 
 
 The script can adjust the input image size and change the batch size in the request. It demonstrates how to use
 the functionality of dynamic shape in OpenVINO Model Server and how to process the output from the server.
 
-The example relies on the model [face-detection-retail-0004](https://docs.openvinotoolkit.org/2021.4/omz_models_model_face_detection_retail_0004.html).
+The example relies on the model [face-detection-retail-0004](https://docs.openvinotoolkit.org/2022.1/omz_models_model_face_detection_retail_0004.html).
 
 ```bash
 python face_detection.py --help
