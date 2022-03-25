@@ -37,6 +37,9 @@ RUN if [ -d /ovms/src/custom_nodes/lib/${BASE_OS} ] ; then true ; else exit 0 ; 
 RUN cp /ovms/metadata.json /ovms_release/
 RUN cp -v /openvino/bin/intel64/Release/lib/libCUDAPlugin.so /ovms_release/lib/
 RUN cp -v /openvino/bin/intel64/Release/lib/plugins.xml /ovms_release/lib/
+RUN cp -v /openvino/bin/intel64/Release/lib/libngraph_backend.so /ovms_release/lib/
+RUN cp -v /openvino/bin/intel64/Release/lib/libCUDAPlugin.so /ovms_release/lib/
+RUN cp -v /openvino/bin/intel64/Release/lib/libinterpreter_backend.so /ovms_release/lib/
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cp -v /openvino/bin/intel64/Release/lib/plugins.xml /ovms_release/lib/
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -v /opt/intel/openvino/runtime/3rdparty/hddl/config/* /ovms_release/lib/hddl/config/ || true
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; cp -vr /opt/intel/openvino/runtime/3rdparty/hddl/etc/* /ovms_release/lib/hddl/etc/ || true
