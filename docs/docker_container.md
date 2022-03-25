@@ -138,3 +138,16 @@ Example:
 make docker_build INSTALL_DRIVER_VERSION=21.38.21026
 ```
 If not provided, version 21.38.21026 is used for Redhat and 21.48.21782 is used for Ubuntu.
+
+## Using CUDA Plugin
+
+*Note:* To build container with CUDA plugin use command: 
+```bash
+   make cuda_build CUDA_PACKAGES_PATH=<path_to_cuddn_deb_package>
+```
+cuDNN 8.1.0 for cuda 11.2 can be downloaded from https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html
+
+Example command to run container with CUDA support:
+
+```bash
+   docker run -it --gpus all -p 9178:9178 -v /model:/model openvino/model_server-gpu:latest --model_path /model --model_name resnet --target_device CUDA
