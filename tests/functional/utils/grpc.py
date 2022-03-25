@@ -20,7 +20,8 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, model_service_p
     get_model_metadata_pb2, get_model_status_pb2
 
 from config import infer_timeout
-from utils.port_manager import SimplePortManager
+from config import grpc_ovms_starting_port, ports_pool_size
+from utils.port_manager import PortManager
 from constants import MODEL_SERVICE, PREDICTION_SERVICE
 import logging
 
