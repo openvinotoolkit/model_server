@@ -43,10 +43,6 @@ ENV INSTALL_DRIVER_VERSION=$INSTALL_DRIVER_VERSION
 ARG GPU=1
 ENV GPU=$GPU
 WORKDIR /
-RUN microdnf install yum \
-  && yum -y update-minimal --security --sec-severity=Important --sec-severity=Critical \
-  && yum clean all \
-  && microdnf clean all
 RUN     set -e ; \
         set -x ; \
         microdnf install -y pkg-config; \
