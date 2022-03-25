@@ -23,7 +23,7 @@ from tensorflow_serving.apis import get_model_metadata_pb2, \
 import logging
 
 from config import infer_timeout
-from utils.port_manager import PortManager
+from utils.port_manager import SimplePortManager
 from config import rest_ovms_starting_port, ports_pool_size
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ DEFAULT_REST_PORT = "{}".format(rest_ovms_starting_port)
 PREDICT = ':predict'
 METADATA = '/metadata'
 
-port_manager_rest = PortManager("rest", starting_port=rest_ovms_starting_port, pool_size=ports_pool_size)
+port_manager_rest = SimplePortManager("rest", starting_port=rest_ovms_starting_port, pool_size=ports_pool_size)
 
 
 def get_url(model: str, address: str = DEFAULT_ADDRESS, port: str = DEFAULT_REST_PORT,
