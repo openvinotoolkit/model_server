@@ -30,8 +30,8 @@ RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-l
 FROM registry.access.redhat.com/ubi8/ubi-minimal:8.4 as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
-LABEL "version"="2021.4"
-LABEL "release"="2021"
+LABEL "version"="2022.1"
+LABEL "release"="2022"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"
 
@@ -43,7 +43,10 @@ ENV INSTALL_DRIVER_VERSION=$INSTALL_DRIVER_VERSION
 ARG GPU=1
 ENV GPU=$GPU
 WORKDIR /
-
+RUN microdnf install yum \
+  && yum -y update-minimal --security --sec-severity=Important --sec-severity=Critical \
+  && yum clean all \
+  && microdnf clean all
 RUN     set -e ; \
         set -x ; \
         microdnf install -y pkg-config; \
