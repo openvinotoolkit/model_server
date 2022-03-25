@@ -74,6 +74,19 @@ It will generate the images, tagged as:
 - openvino/model_server-gpu:latest - with CPU, NCS, HDDL and iGPU support,
 - openvino/model_server:latest-nginx-mtls - with CPU, NCS and HDDL support and a reference nginx setup of mTLS integration,
 as well as a release package (.tar.gz, with ovms binary and necessary libraries), in a ./dist directory.
+
+*Note:* To build container with CUDA plugin use command: 
+```bash
+   make cuda_build CUDA_PACKAGES_PATH=<path_to_cuddn_deb_package>
+```
+cuDNN 8.1.0 for cuda 11.2 can be downloaded from https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html
+
+Example command to run container with CUDA support:
+
+```bash
+   docker run -it --gpus all -p 9178:9178 -v /model:/model openvino/model_server-gpu:latest --model_path /model --model_name resnet --target_device CUDA
+```
+
 </details>
 
 *Note:* Latest images include OpenVINO 2021.4 release.
