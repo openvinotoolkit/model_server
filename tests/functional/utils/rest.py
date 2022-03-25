@@ -33,7 +33,7 @@ DEFAULT_REST_PORT = "{}".format(rest_ovms_starting_port)
 PREDICT = ':predict'
 METADATA = '/metadata'
 
-port_manager_rest = SimplePortManager("rest", starting_port=rest_ovms_starting_port, pool_size=ports_pool_size)
+port_manager_rest = SimplePortManager("rest")
 
 
 def get_url(model: str, address: str = DEFAULT_ADDRESS, port: str = DEFAULT_REST_PORT,
