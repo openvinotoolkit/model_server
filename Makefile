@@ -263,6 +263,7 @@ endif
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.gz.sha256
 	cd dist/$(DIST_OS) && sha256sum --check ovms.tar.xz.sha256
 	cp -vR release_files/* dist/$(DIST_OS)/
+	cp -r $(CUDA_PACKAGES_PATH)/* dist/$(DIST_OS)/
 	cd dist/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg no_proxy=$(NO_PROXY) \
