@@ -18,7 +18,7 @@ docker run --rm -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/age_gender -p 90
 ## Download Sample Image
 Download sample image using the command :
 ```Bash
-wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/2021.4/models/intel/age-gender-recognition-retail-0013/assets/age-gender-recognition-retail-0001.jpg
+wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/2022.1.0/models/intel/age-gender-recognition-retail-0013/assets/age-gender-recognition-retail-0001.jpg
 ```
 
 #### Requesting the Service
@@ -32,7 +32,7 @@ Install python dependencies:
 ```bash
 pip3 install -r requirements.txt
 ```
-Run [age_gender_recognition.py](https://github.com/openvinotoolkit/model_server/blob/develop/demos/age_gender_recognition/python/age_gender_recognition.py) script to make an inference:
+Run [age_gender_recognition.py](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/age_gender_recognition/python/age_gender_recognition.py) script to make an inference:
 ```bash
 python3 age_gender_recognition.py --image_input_path age-gender-recognition-retail-0001.jpg
 ```

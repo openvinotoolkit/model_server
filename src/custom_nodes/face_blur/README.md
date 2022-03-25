@@ -4,7 +4,7 @@ This custom node analyses the response of models from OpenVINO Model Zoo. Based 
 
 # Supported models
 
-All [OpenVINO Model Zoo](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel) object detection models with specific output tensor `detection` with shape: `[1, 1, 200, 7]`:
+All [OpenVINO Model Zoo](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel) object detection models with specific output tensor `detection` with shape: `[1, 1, 200, 7]`:
 - face-detection
 - face-detection-adas
 - face-detection-retail
@@ -18,7 +18,7 @@ All [OpenVINO Model Zoo](https://github.com/openvinotoolkit/open_model_zoo/tree/
 - vehicle-license-plate-detection
 - pedestrian-and-vehicle-detector
 
-**NOTE** Examplary [configuration file](https://github.com/openvinotoolkit/model_server/blob/develop/demos/face_blur/python/config.json) is available in [face_blur demo](https://github.com/openvinotoolkit/model_server/blob/develop/demos/face_blur/python/)
+**NOTE** Examplary [configuration file](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/face_blur/python/config.json) is available in [face_blur demo](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/face_blur/python/)
 
 # Building custom node library
 
@@ -47,7 +47,7 @@ make BASE_OS=redhat
 | image | Returns blurred image in place of detected boxes. Boxes are filtered based on confidence_threshold param. Resolution is defined by the node parameters.   | `N,C,H,W` | FP32  |
 
 # Custom node parameters
-Parameters can be defined in pipeline definition in OVMS configuration file. [Read more](https://github.com/openvinotoolkit/model_server/blob/develop/docs/custom_node_development.md) about node parameters.
+Parameters can be defined in pipeline definition in OVMS configuration file. [Read more](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/docs/custom_node_development.md) about node parameters.
 | Parameter        | Description           | Default  | Required |
 | ------------- | ------------- | ------------- | ------------ |
 | original_image_width  | Required input image width |  | &check; |

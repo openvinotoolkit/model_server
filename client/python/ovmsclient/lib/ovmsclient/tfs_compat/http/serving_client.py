@@ -15,6 +15,7 @@
 #
 
 from json.decoder import JSONDecodeError
+from http import HTTPStatus
 import requests
 
 from ovmsclient.util.ovmsclient_export import ovmsclient_export
@@ -26,7 +27,8 @@ from ovmsclient.tfs_compat.http.responses import (HttpModelStatusResponse,
                                                   HttpModelMetadataResponse,
                                                   HttpPredictResponse)
 
-from ovmsclient.tfs_compat.base.errors import BadResponseError, ModelServerError, raise_from_http
+from ovmsclient.tfs_compat.base.errors import (BadResponseError, ModelServerError,
+                                               raise_from_http, raise_from_http_response)
 
 
 class HttpClient(ServingClient):
@@ -56,6 +58,10 @@ class HttpClient(ServingClient):
         except ModelServerError as model_server_error:
             raise model_server_error
         except (JSONDecodeError, ValueError) as parsing_error:
+            if raw_response.status_code is not HTTPStatus.OK:
+                error_code = HTTPStatus(raw_response.status_code)
+                error_message = f"{error_code.value} {error_code.phrase}"
+                raise_from_http_response(error_code, error_message)
             raise BadResponseError("Received response is malformed and could not be parsed."
                                    f"Details: {str(parsing_error)}")
         return response["outputs"]
@@ -80,6 +86,10 @@ class HttpClient(ServingClient):
         except ModelServerError as model_server_error:
             raise model_server_error
         except (JSONDecodeError, KeyError, ValueError) as parsing_error:
+            if raw_response.status_code is not HTTPStatus.OK:
+                error_code = HTTPStatus(raw_response.status_code)
+                error_message = f"{error_code.value} {error_code.phrase}"
+                raise_from_http_response(error_code, error_message)
             raise BadResponseError("Received response is malformed and could not be parsed."
                                    f"Details: {str(parsing_error)}")
         return response
@@ -103,6 +113,10 @@ class HttpClient(ServingClient):
         except ModelServerError as model_server_error:
             raise model_server_error
         except (JSONDecodeError, KeyError, ValueError) as parsing_error:
+            if raw_response.status_code is not HTTPStatus.OK:
+                error_code = HTTPStatus(raw_response.status_code)
+                error_message = f"{error_code.value} {error_code.phrase}"
+                raise_from_http_response(error_code, error_message)
             raise BadResponseError("Received response is malformed and could not be parsed."
                                    f"Details: {str(parsing_error)}")
         return response

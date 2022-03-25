@@ -516,7 +516,7 @@ BUILD_VALID = [
     ),
     (
         {
-            "url": "localhost:9000",
+            "url": "modelserver.default.svc.cluster.local:9000000000000121321312312",
             "tls_config": {
                 "server_cert_path": "valid_path"
             }
@@ -529,7 +529,7 @@ BUILD_VALID = [
     ),
     (
         {
-            "url": "localhost:9000",
+            "url": "modelserver123:9000",
             "tls_config": {
                 "client_key_path": PATH_VALID,
                 "client_cert_path": PATH_VALID,
@@ -550,15 +550,14 @@ BUILD_VALID = [
 BUILD_INVALID_CONFIG = [
     (
         {
-            "url": "localhost"
+            "url": None
         },
         {
-            "_check_url": (CallCount.ONE, ValueError("url must be a string "
-                                                     "in format <address>:<port>")),
+            "_check_url": (CallCount.ONE, TypeError("url must be a string")),
             "_check_tls_config": (CallCount.ZERO, None),
             "_prepare_certs": (CallCount.ZERO, None)
         },
-        ValueError, "url must be a string in format <address>:<port>"
+        TypeError, "url must be a string"
     ),
 
     (
@@ -566,48 +565,47 @@ BUILD_INVALID_CONFIG = [
             "url": 123
         },
         {
-            "_check_url": (CallCount.ONE, TypeError("url must be a string "
-                                                    "in format <address>:<port>")),
+            "_check_url": (CallCount.ONE, TypeError("url must be a string")),
             "_check_tls_config": (CallCount.ZERO, None),
             "_prepare_certs": (CallCount.ZERO, None)
         },
-        TypeError, "url must be a string in format <address>:<port>"
+        TypeError, "url must be a string"
     ),
 
     (
         {
-            "url": "address:9000",
+            "url": ["address:9000"],
         },
         {
-            "_check_url": (CallCount.ONE, ValueError("address is not valid")),
+            "_check_url": (CallCount.ONE, TypeError("url must be a string")),
             "_check_tls_config": (CallCount.ZERO, None),
             "_prepare_certs": (CallCount.ZERO, None)
         },
-        ValueError, "address is not valid"
+        TypeError, "url must be a string"
     ),
 
     (
         {
-            "url": "localhost:port"
+            "url": {"address": "127.0.0.1", "port": 9000}
         },
         {
-            "_check_url": (CallCount.ONE, TypeError("port should be of type int")),
+            "_check_url": (CallCount.ONE, TypeError("url must be a string")),
             "_check_tls_config": (CallCount.ZERO, None),
             "_prepare_certs": (CallCount.ZERO, None)
         },
-        TypeError, "port should be of type int"
+        TypeError, "url must be a string"
     ),
 
     (
         {
-            "url": f"localhost:{2**16}"
+            "url": [123, 546]
         },
         {
-            "_check_url": (CallCount.ONE, ValueError(f"port should be in range <0, {2**16-1}>")),
+            "_check_url": (CallCount.ONE, TypeError("url must be a string")),
             "_check_tls_config": (CallCount.ZERO, None),
             "_prepare_certs": (CallCount.ZERO, None)
         },
-        ValueError, f"port should be in range <0, {2**16-1}>"
+        TypeError, "url must be a string"
     ),
 
     (

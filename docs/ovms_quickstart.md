@@ -1,10 +1,10 @@
 # Quickstart Guide {#ovms_docs_quick_start_guide}
 
-OpenVINO Model Server can perform inference using pre-trained models in either [OpenVINO IR](https://docs.openvino.ai/latest/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets) 
+OpenVINO Model Server can perform inference using pre-trained models in either [OpenVINO IR](https://docs.openvino.ai/2022.1/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets) 
 or [ONNX](https://onnx.ai/) format. You can get them by:
 
 - downloading proper models from [Open Model Zoo](https://download.01.org/opencv/2021/openvinotoolkit/2021.1/open_model_zoo/models_bin/)
-- converting other formats using [Model Optimizer](https://docs.openvinotoolkit.org/latest/_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html)
+- converting other formats using [Model Optimizer](https://docs.openvino.ai/2022.1/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html)
 
 To quickly start using OpenVINO™ Model Server follow these steps:
 1. Prepare Docker
@@ -81,7 +81,7 @@ For more information on the folder structure and how to deploy more than one mod
 Model scripts are available to provide an easy way to access Model Server. Here is an example command, using face detection and curl, to download all necessary components:
 
 ```
-curl --fail https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/common/python/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/face_detection/python/face_detection.py -o face_detection.py https://raw.githubusercontent.com/openvinotoolkit/model_server/develop/demos/common/python/requirements.txt -o client_requirements.txt
+curl --fail https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/python/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/face_detection/python/face_detection.py -o face_detection.py https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/python/requirements.txt -o client_requirements.txt
 ```
 
 For more information, check these links:
@@ -93,11 +93,11 @@ For more information, check these links:
 
 Provide inference data by putting the files in a separate folder, as inference will be performed on all files contained in it.
 
-In this case, you can download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/develop/demos/common/static/images/people). This example uses a file named [people1.jpeg](https://github.com/openvinotoolkit/model_server/tree/develop/demos/common/static/images/people/people1.jpeg) 
+In this case, you can download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/demos/common/static/images/people). This example uses a file named [people1.jpeg](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/demos/common/static/images/people/people1.jpeg) 
 and use a single people1.jpeg file to run the following script:
 
 ```
-curl --fail --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/people/people1.jpeg -o images/people1.jpeg
+curl --fail --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/static/images/people/people1.jpeg -o images/people1.jpeg
 ```
 
 ### Step 7: Run Inference

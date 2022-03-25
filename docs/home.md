@@ -42,13 +42,13 @@ Read [release notes](https://github.com/openvinotoolkit/model_server/releases) t
 Review the [Architecture concept](architecture.md) document for more details.
 
 Key features: 
-- support for multiple frameworks, such as Caffe, TensorFlow, MXNet, and ONNX
+- support for multiple frameworks, such as Caffe, TensorFlow, MXNet, PaddlePaddle and ONNX
 - online deployment of new [model versions](model_version_policy.md)
 - [configuration updates in runtime](online_config_changes.md)
 - support for AI accelerators, such as 
-[Intel Movidius Myriad VPUs](https://docs.openvinotoolkit.org/latest/openvino_docs_IE_DG_supported_plugins_VPU.html), 
-[GPU](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_GPU.html), and 
-[HDDL](https://docs.openvinotoolkit.org/latest/_docs_IE_DG_supported_plugins_HDDL.html) 
+[Intel Movidius Myriad VPUs](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_supported_plugins_MYRIAD.html), 
+[GPU](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_supported_plugins_GPU.html), and 
+[HDDL](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_supported_plugins_HDDL.html) 
 - works with [Bare Metal Hosts](host.md) as well as [Docker containers](docker_container.md) 
 - [model reshaping](shape_batch_size_and_layout.md) in runtime
 - [directed Acyclic Graph Scheduler](dag_scheduler.md) - connecting multiple models to deploy complex processing solutions and reducing data transfer overhead
@@ -101,7 +101,7 @@ For more information on using Model Server in various scenarios you can check th
 
 * [RESTful API](https://restfulapi.net/)
 
-* [Benchmarking results](https://docs.openvinotoolkit.org/latest/openvino_docs_performance_benchmarks_ovms.html)
+* [Benchmarking results](https://docs.openvino.ai/2022.1/openvino_docs_performance_benchmarks_ovms.html)
 
 * [Speed and Scale AI Inference Operations Across Multiple Architectures](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) - webinar recording
 

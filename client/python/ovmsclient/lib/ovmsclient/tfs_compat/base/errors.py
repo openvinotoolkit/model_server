@@ -51,6 +51,8 @@ HTTP_ERROR_TYPE_TO_EXCEPTION = {
 HTTP_ERROR_CODE_TO_EXCEPTION = {
     HTTPStatus.NOT_FOUND: {"class": ModelNotFoundError},
     HTTPStatus.BAD_REQUEST: {"class": InvalidInputError},
+    HTTPStatus.REQUEST_ENTITY_TOO_LARGE: {"class": ConnectionError},
+    HTTPStatus.SERVICE_UNAVAILABLE: {"class": ConnectionError},
 }
 
 

@@ -4,7 +4,7 @@
 ## Starting the server with the Intel® Neural Compute Stick 2
 
 [Intel Movidius Neural Compute Stick 2](https://software.intel.com/en-us/neural-compute-stick) can be employed by OVMS OpenVINO Model Server via 
-[the MYRIAD plugin](https://docs.openvinotoolkit.org/2021.4/openvino_docs_IE_DG_supported_plugins_MYRIAD.html). It must be visible and accessible on the host machine.
+[the MYRIAD plugin](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_supported_plugins_MYRIAD.html). It must be visible and accessible on the host machine.
 
 NCS devices should be reported by the `lsusb` command, printing out `ID 03e7:2485`.
 
@@ -27,7 +27,7 @@ To start the server with Neural Compute Stick use either of the two options:
 
 To run a container that is using the HDDL accelerator, _hddldaemon_ must be running on the host machine. 
 You must set up the environment (the OpenVINO package must be pre-installed) and start _hddldaemon_ on the host before starting a container. 
-Refer to the steps from [OpenVINO installation guides](https://docs.openvinotoolkit.org/2021.4/_docs_install_guides_installing_openvino_docker_linux.html#build_docker_image_for_intel_vision_accelerator_design_with_intel_movidius_vpus).
+Refer to the steps from [OpenVINO installation guides](https://docs.openvino.ai/2022.1/openvino_docs_install_guides_installing_openvino_docker_linux.html#running-the-image-on-intel-vision-accelerator-design-with-intel-movidius-vpus).
 
 An example of a command starting a server with HDDL:
 ```bash
@@ -48,13 +48,13 @@ Check out our recommendations for [throughput optimization on HDDL](performance_
 
 ## Starting a Docker Container with Intel GPU
 
-The [GPU plugin](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_GPU.html) uses the Intel Compute Library for 
+The [GPU plugin](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_supported_plugins_GPU.html) uses the Intel Compute Library for 
 Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. For inference execution, it employs Intel® Processor Graphics including 
 Intel® HD Graphics, Intel® Iris® Graphics, Intel® Iris® Xe Graphics, and Intel® Iris® Xe MAX graphics.
 
 
 Before using GPU as OpenVINO Model Server target device, you need to:
-- install the required drivers - refer to [OpenVINO installation guide](https://docs.openvino.ai/latest/openvino_docs_install_guides_installing_openvino_linux.html#install-gpu)
+- install the required drivers - refer to [OpenVINO installation guide](https://docs.openvino.ai/2022.1/openvino_docs_install_guides_installing_openvino_linux.html#step-5-optional-configure-inference-on-non-cpu-devices)
 - start the docker container with the additional parameter of `--device /dev/dri` to pass the device context 
 - set the parameter of `--target_device` to `GPU`.
 - use the `openvino/model_server:latest-gpu` image, which contains GPU dependencies
@@ -97,7 +97,7 @@ make docker_build INSTALL_DRIVER_VERSION=22.10.22597
 ## Using Multi-Device Plugin
 
 If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
-It distributes Inference requests among multiple devices, balancing out the load. For more detailed information read OpenVINO’s [Multi-Device plugin documentation](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_MULTI.html) documentation.
+It distributes Inference requests among multiple devices, balancing out the load. For more detailed information read OpenVINO’s [Multi-Device plugin documentation](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_Running_on_multiple_devices.html) documentation.
 
 To use this feature in OpenVINO Model Server, you can choose one of two ways:
 
@@ -138,7 +138,7 @@ The total throughput will be roughly equal to the sum of CPU and Intel Movidius 
 
 ## Using Heterogeneous Plugin
 
-The [HETERO plugin](https://docs.openvino.ai/latest/openvino_docs_IE_DG_supported_plugins_HETERO.html) makes it possible to distribute inference load of one model 
+The [HETERO plugin](https://docs.openvino.ai/2022.1/openvino_docs_OV_UG_Hetero_execution.html) makes it possible to distribute inference load of one model 
 among several computing devices. That way different parts of the deep learning network can be executed by devices best suited to their type of calculations. 
 OpenVINO automatically divides the network to optimize the process.
 
@@ -160,7 +160,7 @@ Here is a config example using heterogeneous plugin with GPU as the primary devi
 
 ## Using AUTO Plugin
 
-[Auto Device](https://docs.openvino.ai/nightly/openvino_docs_IE_DG_supported_plugins_AUTO.html) (or AUTO in short) is a new special “virtual” or “proxy” device in the OpenVINO toolkit, it doesn’t bind to a specific type of HW device.
+[Auto Device](https://docs.openvino.ai/2022.1/openvino_docs_IE_DG_supported_plugins_AUTO.html) (or AUTO in short) is a new special “virtual” or “proxy” device in the OpenVINO toolkit, it doesn’t bind to a specific type of HW device.
 AUTO solves the complexity in application required to code a logic for the HW device selection (through HW devices) and then, on the deducing the best optimization settings on that device.
 AUTO always chooses the best device, if compiling model fails on this device, AUTO will try to compile it on next best device until one of them succeeds.
 Make sure you have passed the devices and access to the devices you want to use in for the docker image. For example with:
