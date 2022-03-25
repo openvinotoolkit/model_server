@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.4
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.5
 FROM $BASE_IMAGE as base_build
 RUN yum install -y xz
 WORKDIR /
@@ -27,7 +27,7 @@ RUN groupadd --gid 5000 ovms && \
 RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-licenses /licenses/thirdparty-licenses
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.4 as release
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5 as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
 LABEL "version"="2022.1"
