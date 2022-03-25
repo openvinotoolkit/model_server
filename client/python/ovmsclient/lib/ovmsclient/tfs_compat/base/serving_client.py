@@ -49,7 +49,7 @@ class ServingClient(ABC):
         pass
 
     @abstractmethod
-    def get_model_metadata(model_name, model_version=0, timeout=10.0):
+    def get_model_metadata(self, model_name, model_version=0, timeout=10.0):
         '''
         Send ModelMetadataRequest to the server and return response.
 
