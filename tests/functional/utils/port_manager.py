@@ -1,79 +1,57 @@
 #
-# Copyright (c) 2021 Intel Corporation
+# INTEL CONFIDENTIAL
+# Copyright (c) 2022 Intel Corporation
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# The source code contained or described herein and all documents related to
+# the source code ("Material") are owned by Intel Corporation or its suppliers
+# or licensors. Title to the Material remains with Intel Corporation or its
+# suppliers and licensors. The Material contains trade secrets and proprietary
+# and confidential information of Intel or its suppliers and licensors. The
+# Material is protected by worldwide copyright and trade secret laws and treaty
+# provisions. No part of the Material may be used, copied, reproduced, modified,
+# published, uploaded, posted, transmitted, distributed, or disclosed in any way
+# without Intel's prior express written permission.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# No license under any patent, copyright, trade secret or other intellectual
+# property right is granted to or conferred upon you by disclosure or delivery
+# of the Materials, either expressly, by implication, inducement, estoppel or
+# otherwise. Any license under such intellectual property rights must be express
+# and approved by Intel in writing.
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-import logging
 import socket
 import errno
 
-from utils.helpers import get_xdist_worker_count, get_xdist_worker_nr
+from common_libs.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
-class PortManager():
-
-    def __init__(self, name: str, starting_port: int = None, pool_size: int = None):
+class SimplePortManager:
+    def __init__(self, name: str):
         self.name = name
-        assert starting_port is not None, "Lack of starting port while creating instance {} of PortManager".format(name)
-        assert pool_size is not None, "Lack of pool size while creating instance {} of PortManager".format(name)
-        assert pool_size > 0, "Not expected pool size given for manager {}, should be > 0.".format(name)
-
-        self.xdist_worker_count = get_xdist_worker_count()
-        self.xdist_current_worker = get_xdist_worker_nr()
-
-        self.starting_port = int(starting_port + (pool_size / self.xdist_worker_count) * self.xdist_current_worker)
-        self.pool_size = int(pool_size / self.xdist_worker_count)
-
-        self.reserved_ports = []
-        self.allowed_ports = list(range(self.starting_port, self.starting_port + self.pool_size))
 
     def get_port(self):
-        logger.debug("Getting port for Port Manager: {}\nallowed ports: {}\nreserved ports: {}"
-                     .format(self.name,
-                             ", ".join([str(port) for port in self.allowed_ports]),
-                             ", ".join([str(port) for port in self.reserved_ports])))
-        for port in self.allowed_ports[:]:
-            generated_port = self.reserve_port(port=port)
-            logger.debug("Generated port for Port Manager {}: {}".format(self.name, generated_port))
-            if generated_port:
-                logger.debug("Reserved port for Port Manager {}: {}".format(self.name, generated_port))
-                return generated_port
-        else:
-            raise Exception("Ports pool {} has been used up. "
-                            "Consider release ports or increase pool size.".format(self.name))
+        generated_port = self.reserve_port()
+        logger.debug(f"Generated_port={generated_port}")
+        return generated_port
 
-    def reserve_port(self, port):
+    def reserve_port(self):
+        # Idea found in SO:
+        # https://unix.stackexchange.com/questions/55913/whats-the-easiest-way-to-find-an-unused-local-port
         try:
             sock = socket.socket()
-            sock.bind(('', port))
+            sock.bind(('', 0))
+            port = sock.getsockname()[1]
             sock.close()
-            self.reserved_ports.append(port)
-            self.allowed_ports.remove(port)
+            logger.debug(f"Reserved port={port}")
             return port
-
         except socket.error as e:
             if e.errno != errno.EADDRINUSE:
+                # All ports pool used?
                 raise Exception("Not expected exception found in port manager {}: {}".format(self.name, e))
-
-        self.allowed_ports.remove(port)
         return 0
 
     def release_port(self, port: int):
-        logger.debug("Releasing port for Port Manager: {}\nport to release: {}\nallowed ports: {}\nreserved ports: {}"
-                     .format(self.name, port,
-                             ", ".join([str(port) for port in self.allowed_ports]),
-                             ", ".join([str(port) for port in self.reserved_ports])))
+        logger.debug(f"Release port={port}")
         try:
             sock = socket.socket()
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -84,5 +62,3 @@ class PortManager():
                 raise Exception("Address has not been deleted for port manager {}".format(self.name))
             else:
                 raise Exception("Not expected exception found in port manager {}: {}".format(self.name, e))
-        self.reserved_ports.remove(port)
-        self.allowed_ports.append(port)
