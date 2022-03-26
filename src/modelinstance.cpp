@@ -1079,7 +1079,7 @@ void ModelInstance::unloadModelComponents() {
 }
 
 const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
-    static const std::set<const char*> optionalInputNames = {};
+    static const std::set<std::string> optionalInputNames = {};
     return request_validation_utils::validate(
         *request,
         getInputsInfo(),

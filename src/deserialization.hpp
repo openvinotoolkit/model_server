@@ -16,6 +16,7 @@
 #pragma once
 
 #include <memory>
+#include <set>
 #include <string>
 
 #include <openvino/openvino.hpp>
@@ -108,7 +109,9 @@ template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const tensorflow::serving::PredictRequest& request,
     const tensor_map_t& inputMap,
-    Sink& inputSink, bool isPipeline) {
+    Sink& inputSink,
+    bool isPipeline,
+    const std::set<std::string> excludedNames = {}) {
     Status status;
     for (const auto& pair : inputMap) {
         try {
@@ -116,8 +119,22 @@ Status deserializePredictRequest(
             auto tensorInfo = pair.second;
             auto requestInputItr = request.inputs().find(name);
             if (requestInputItr == request.inputs().end()) {
-                SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
-                return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
+                // if only one input then accept any name
+                bool foundRealInput = false;
+                if (inputMap.size() == 1) {
+                    requestInputItr = request.inputs().begin();
+                    while (requestInputItr != request.inputs().end()) {
+                        if (excludedNames.find(requestInputItr->first) == excludedNames.end()) {
+                            foundRealInput = true;
+                            break;
+                        }
+                        ++requestInputItr;
+                    }
+                }
+                if (!foundRealInput) {
+                    SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
+                    return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
+                }
             }
             auto& requestInput = requestInputItr->second;
             ov::Tensor tensor;

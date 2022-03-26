@@ -132,8 +132,6 @@ cc_library(
         "nodesessionresult.hpp",
         "nodeinputhandler.cpp",
         "nodeinputhandler.hpp",
-        "nodeoutputhandler.cpp",
-        "nodeoutputhandler.hpp",
         "nodesessionmetadata.hpp",
         "nodesessionmetadata.cpp",
         "nodestreamidguard.hpp",

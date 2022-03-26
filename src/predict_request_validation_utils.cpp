@@ -30,7 +30,7 @@ class RequestValidator {
     const tensor_map_t& inputsInfo;
     const std::string& servableName;
     const model_version_t servableVersion;
-    const std::set<const char*>& optionalAllowedInputNames;
+    const std::set<std::string>& optionalAllowedInputNames;
     const Mode batchingMode;
     const shapes_info_map_t& shapeInfo;
 
@@ -45,7 +45,7 @@ class RequestValidator {
 public:
     RequestValidator(
         const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo,
-        const std::string& servableName, const model_version_t servableVersion, const std::set<const char*>& optionalAllowedInputNames,
+        const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames,
         const Mode batchingMode, const shapes_info_map_t& shapeInfo) :
         request(request),
         inputsInfo(inputsInfo),
@@ -56,7 +56,7 @@ public:
         shapeInfo(shapeInfo) {}
 
     Status validateNumberOfInputs(const tensorflow::serving::PredictRequest& request) const;
-    Status validateAndGetInput(const tensorflow::serving::PredictRequest& request, const std::string& name, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it);
+    Status validateAndGetInput(const tensorflow::serving::PredictRequest& request, const std::string& name, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it, bool acceptAnyName);
     Status checkIfShapeValuesNegative(const tensorflow::TensorProto& proto) const;
     Status validateNumberOfBinaryInputShapeDimensions(const tensorflow::TensorProto& proto) const;
     Status checkBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& servableBatchSize, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
@@ -84,10 +84,19 @@ Status RequestValidator::validateNumberOfInputs(const tensorflow::serving::Predi
     return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
 }
 
-Status RequestValidator::validateAndGetInput(const tensorflow::serving::PredictRequest& request, const std::string& name, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it) {
+Status RequestValidator::validateAndGetInput(const tensorflow::serving::PredictRequest& request, const std::string& name, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it, bool acceptAnyName) {
     it = request.inputs().find(name);
     if (it != request.inputs().end()) {
         return StatusCode::OK;
+    }
+    if (acceptAnyName) {
+        it = request.inputs().begin();
+        while (it != request.inputs().end()) {
+            if (optionalAllowedInputNames.find(it->first) == optionalAllowedInputNames.end()) {
+                return StatusCode::OK;
+            }
+            ++it;
+        }
     }
     std::stringstream ss;
     ss << "Required input: " << name;
@@ -308,8 +317,9 @@ Status RequestValidator::validate() {
     if (!status.ok())
         return status;
 
+    bool acceptAnyName = (inputsInfo.size() == 1 ? true : false);
     for (const auto& [name, inputInfo] : inputsInfo) {
-        status = validateAndGetInput(request, name, it);
+        status = validateAndGetInput(request, name, it, acceptAnyName);
         if (!status.ok())
             return status;
 
@@ -367,7 +377,7 @@ Status RequestValidator::validate() {
     return finalStatus;
 }
 
-Status validate(const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<const char*>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
+Status validate(const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
     return RequestValidator(request, inputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
 }
 

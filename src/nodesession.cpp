@@ -18,7 +18,6 @@
 #include "gathernodeinputhandler.hpp"
 #include "logging.hpp"
 #include "nodeinputhandler.hpp"
-#include "nodeoutputhandler.hpp"
 #include "timer.hpp"
 
 namespace ovms {
@@ -45,16 +44,14 @@ NodeSession::NodeSession(const NodeSessionMetadata& metadata, const std::string&
     sessionKey(metadata.getSessionKey()),
     nodeName(nodeName),
     timer(std::make_unique<Timer>()),
-    inputHandler(createNodeInputHandler(inputsCount, collapsingDetails)),
-    outputHandler(std::make_unique<NodeOutputHandler>()) {}
+    inputHandler(createNodeInputHandler(inputsCount, collapsingDetails)) {}
 
 NodeSession::NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
     metadata(std::move(metadata)),
     sessionKey(this->metadata.getSessionKey()),
     nodeName(nodeName),
     timer(std::make_unique<Timer>()),
-    inputHandler(std::make_unique<NodeInputHandler>(inputsCount)),
-    outputHandler(std::make_unique<NodeOutputHandler>()) {}
+    inputHandler(std::make_unique<NodeInputHandler>(inputsCount)) {}
 
 bool NodeSession::isReady() const {
     bool isReady = inputHandler->isReady();
