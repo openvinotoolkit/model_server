@@ -157,6 +157,7 @@ docker_build:
 ifeq ($(NO_DOCKER_CACHE),true)
 	$(eval NO_CACHE_OPTION:=--no-cache)
 	@echo "Docker image will be rebuilt from scratch"
+	@docker pull $(BASE_IMAGE)
 endif
 ifneq ($(OVMS_METADATA_FILE),)
 	@cp $(OVMS_METADATA_FILE) .workspace/metadata.json
