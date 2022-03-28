@@ -83,33 +83,21 @@ Status OutputGetter<ov::InferRequest&>::get(const std::string& name, ov::Tensor&
         tensor = outputSource.get_tensor(name);
     } catch (const ov::Exception& e) {
         Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
-        SPDLOG_ERROR("{}: {}", status.string(), e.what());
+        SPDLOG_DEBUG("{}: {}", status.string(), e.what());
         return status;
     }
     return StatusCode::OK;
 }
 
-Status serializePredictResponse(
-    ov::InferRequest& inferRequest,
-    const tensor_map_t& outputMap,
-    tensorflow::serving::PredictResponse* response) {
-    Status status;
-    for (const auto& pair : outputMap) {
-        auto servableOutput = pair.second;
-        ov::Tensor tensor;
-        OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-        status = outputGetter.get(servableOutput->getName(), tensor);
-        if (!status.ok()) {
-            return status;
-        }
-        auto& tensorProto = (*response->mutable_outputs())[servableOutput->getMappedName()];
-        status = serializeTensorToTensorProto(tensorProto, servableOutput, tensor);
-        if (!status.ok()) {
-            return status;
-        }
-    }
-
-    return status;
+template <>
+tensorflow::TensorProto& ProtoGetter<tensorflow::serving::PredictResponse*,tensorflow::TensorProto&>::get(const std::string& name) {
+    return (*protoStorage->mutable_outputs())[name];
 }
 
+const std::string& getTensorInfoName(const std::string& first, const TensorInfo& tensorInfo) {
+    return tensorInfo.getName();
+}
+const std::string& getOutputMapKeyName(const std::string& first, const TensorInfo& tensorInfo) {
+    return first;
+}
 }  // namespace ovms

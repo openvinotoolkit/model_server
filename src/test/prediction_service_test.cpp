@@ -41,7 +41,8 @@ using testing::Eq;
 void serializeAndCheck(int outputSize, ov::InferRequest& inferRequest, const std::string& outputName, const ovms::tensor_map_t& outputsInfo) {
     std::vector<float> output(10);
     tensorflow::serving::PredictResponse response;
-    auto status = serializePredictResponse(inferRequest, outputsInfo, &response);
+    ovms::OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
+    auto status = serializePredictResponse(outputGetter, outputsInfo, &response, ovms::getTensorInfoName);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
     std::memcpy(output.data(), (float*)response.outputs().at(outputName).tensor_content().data(), DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));

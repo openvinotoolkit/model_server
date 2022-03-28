@@ -58,7 +58,7 @@ Status OutputGetter<const TensorMap&>::get(const std::string& name, ov::Tensor& 
 
 Status ExitNode::fetchResults(const TensorMap& inputTensors) {
     OutputGetter<const TensorMap&> outputGetter(inputTensors);
-    return serializePredictResponse(outputGetter, this->outputsInfo, this->response);
+    return serializePredictResponse(outputGetter, this->outputsInfo, this->response, getOutputMapKeyName);
 }
 
 std::unique_ptr<NodeSession> ExitNode::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {

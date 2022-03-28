@@ -27,6 +27,8 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "kfs_grpc_inference_service.hpp"
+
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -43,29 +45,39 @@ private:
     T outputSource;
 };
 
+template <typename ProtoStorage, typename ProtoType>
+class ProtoGetter {
+    ProtoStorage protoStorage;
+public:
+    ProtoGetter(ProtoStorage protoStorage) : protoStorage(protoStorage) {}
+    ProtoType get(const std::string& name);
+};
+
+
 Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor);
 
-Status serializePredictResponse(
-    ov::InferRequest& inferRequest,
-    const tensor_map_t& outputMap,
-    tensorflow::serving::PredictResponse* response);
+typedef const std::string& (*outputNameChooser_t)(const std::string&, const TensorInfo&);
+const std::string& getTensorInfoName(const std::string& first, const TensorInfo& tensorInfo);
+const std::string& getOutputMapKeyName(const std::string& first, const TensorInfo& tensorInfo);
 
 template <typename T>
 Status serializePredictResponse(
     OutputGetter<T>& outputGetter,
     const tensor_map_t& outputMap,
-    tensorflow::serving::PredictResponse* response) {
+    tensorflow::serving::PredictResponse* response,
+    outputNameChooser_t outputNameChooser) {
     Status status;
+    ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&> protoGetter(response);
     for (const auto& [outputName, outputInfo] : outputMap) {
         ov::Tensor tensor;
-        status = outputGetter.get(outputName, tensor);
+        status = outputGetter.get(outputNameChooser(outputName, *outputInfo), tensor);
         if (!status.ok()) {
             return status;
         }
-        auto& tensorProto = (*response->mutable_outputs())[outputInfo->getMappedName()];
+        auto& tensorProto = protoGetter.get(outputInfo->getMappedName());
         status = serializeTensorToTensorProto(tensorProto, outputInfo, tensor);
         if (!status.ok()) {
             return status;

@@ -248,7 +248,8 @@ Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* r
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
 
     timer.start("serialize");
-    status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
+    OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
+    status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, getTensorInfoName);
     timer.stop("serialize");
     if (!status.ok())
         return status;
