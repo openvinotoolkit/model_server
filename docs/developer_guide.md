@@ -18,7 +18,7 @@ This document gives information and steps to run and debug tests. It gives infor
 
 ## Set up the Development Environment <a name="set-env"></a>
 
-The tests in this guide are written in Python. Therefore, to complete the functional tests, Python 3.6 - 3.8 must be installed. 
+The tests in this guide are written in Python. Therefore, to complete the functional tests, Python 3.8 must be installed. 
 
 In-case of problems, see <a href="#debug">Debugging</a>.
 
@@ -79,7 +79,7 @@ In-case of problems, see <a href="#debug">Debugging</a>.
 
 ### Step 2: Install software
 
-1. Install Python release 3.6 through 3.8.
+1. Install Python release 3.8.
  
 > **NOTE**: Python is only necessary to complete the functional tests in this guide.
 
