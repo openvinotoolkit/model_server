@@ -47,12 +47,7 @@ Status OutputGetter<const TensorMap&>::get(const std::string& name, ov::Tensor& 
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Failed to find expected pipeline output when serializing response: {}", name);
         return StatusCode::INTERNAL_ERROR;
     }
-    ov::Tensor finalTensor;
-    auto status = tensorClone(finalTensor, it->second);
-    if (!status.ok()) {
-        return status;
-    }
-    tensor = finalTensor;
+    tensor = it->second;
     return StatusCode::OK;
 }
 
