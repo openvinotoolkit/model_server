@@ -27,6 +27,7 @@ using inference::GRPCInferenceService;
   std::cout << __FUNCTION__ << ":" << __LINE__  << std::endl;
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
+
 ::grpc::Status KFSInferenceServiceImpl::ServerReady(::grpc::ServerContext* context, const ::inference::ServerReadyRequest* request, ::inference::ServerReadyResponse* response) {
   (void) context;
   (void) request;
@@ -34,6 +35,7 @@ using inference::GRPCInferenceService;
   std::cout << __FUNCTION__ << ":" << __LINE__  << std::endl;
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
+
 ::grpc::Status KFSInferenceServiceImpl::ModelReady(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response) {
   (void) context;
   (void) request;
@@ -41,6 +43,7 @@ using inference::GRPCInferenceService;
   std::cout << __FUNCTION__ << ":" << __LINE__  << std::endl;
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
+
 ::grpc::Status KFSInferenceServiceImpl::ServerMetadata(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response) {
   (void) context;
   (void) request;
@@ -48,33 +51,80 @@ using inference::GRPCInferenceService;
   std::cout << __FUNCTION__ << ":" << __LINE__  << std::endl;
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
+
 ::grpc::Status KFSInferenceServiceImpl::ModelMetadata(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) {
-  (void) context;
-  (void) request;
-  (void) response;
-  std::cout << __FUNCTION__ << ":" << __LINE__
-            << " name:" << request->name() << " version:" << request->version()
-            << std::endl;
-  response->set_name("dummy");
-  // TODO KFS seems to share metadata across model versions
-  // OVMS does not - each version has its own -> need to decide what to do
-  response->add_versions("0");
+  auto& manager = ModelManager::getInstance();
+  const auto& name = request->name();
+  const auto& version = request->version();
+
+  auto model = manager.findModelByName(name);
+  if (model == nullptr) {
+    SPDLOG_DEBUG("GetModelMetadata: Model {} is missing, trying to find pipeline with such name", name);
+    auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(name);
+    if (!pipelineDefinition) {
+      return ::grpc::Status(::grpc::StatusCode::INVALID_ARGUMENT, "Model with requested name is not found");
+    }
+    //return buildResponse(*pipelineDefinition, response, manager);
+  }
+
+  std::shared_ptr<ModelInstance> instance = nullptr;
+  if (!version.empty()) {
+    SPDLOG_DEBUG("GetModelMetadata requested model: name {}; version {}", name, version);
+    instance = model->getModelInstanceByVersion(std::stoi(version));
+    if (instance == nullptr) {
+      SPDLOG_WARN("GetModelMetadata requested model {}; version {} is missing", name, version);
+      return ::grpc::Status(::grpc::StatusCode::INVALID_ARGUMENT, "Model with requested version is not found");
+    }
+  } else {
+    SPDLOG_DEBUG("GetModelMetadata requested model: name {}; default version", name);
+    instance = model->getDefaultModelInstance();
+    if (instance == nullptr) {
+      SPDLOG_WARN("GetModelMetadata requested model {}; version {} is missing", name, version);
+      return ::grpc::Status(::grpc::StatusCode::INVALID_ARGUMENT, "Model with requested version is not found");
+    }
+  }
+
+  return buildResponse(instance, response);
+}
+
+::grpc::Status KFSInferenceServiceImpl::buildResponse(
+  std::shared_ptr<ModelInstance> instance,
+  ::inference::ModelMetadataResponse* response) {
+  
+  std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
+
+  // 0 meaning immediately return unload guard if possible, otherwise do not wait for available state
+  auto status = instance->waitForLoaded(0, unloadGuard);
+  if (!status.ok()) {
+    return status;
+  }
+
+  response->Clear();
+  response->set_name(instance->getName());
+  response->add_versions(std::to_string(instance->getVersion()));
   response->set_platform("OpenVINO"); // here need to add DL/ML framework/backend
-  // add inputs
-  ::inference::ModelMetadataResponse::TensorMetadata* tm = response->add_inputs();
-  tm->set_name( "dummy");
-  tm->set_datatype( "FP32");
-  tm->add_shape(1);
-  tm->add_shape(10);
-  // add output
-  ::inference::ModelMetadataResponse::TensorMetadata* tmo = response->add_outputs();
-  tmo->set_name( "dummy");
-  tmo->set_datatype( "FP32");
-  tmo->add_shape(1);
-  tmo->add_shape(10);
-  std::cout << "HERE" << std::endl;
+
+  for (const auto& [name, input] : instance->getInputsInfo()) {
+    ::inference::ModelMetadataResponse::TensorMetadata* tm = response->add_inputs();
+    tm->set_name(name);
+    tm->set_datatype(input->getPrecisionAsString());
+    for (const auto& shape : input->getShape()) {
+      tm->add_shape(shape.getStaticValue());
+    }
+  }
+
+  for (const auto& [name, output] : instance->getOutputsInfo()) {
+    ::inference::ModelMetadataResponse::TensorMetadata* tmo = response->add_outputs();
+    tmo->set_name(name);
+    tmo->set_datatype(output->getPrecisionAsString());
+    for (const auto& shape : output->getShape()) {
+      tmo->add_shape(shape.getStaticValue());
+    }
+  }
+
   return ::grpc::Status(::grpc::StatusCode::OK, "");
 }
+
 ::grpc::Status KFSInferenceServiceImpl::ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) {
   (void) context;
   (void) request;
@@ -143,4 +193,5 @@ using inference::GRPCInferenceService;
 
   return ::grpc::Status(::grpc::StatusCode::OK, "");
 }
+
 }  // namespace ovms

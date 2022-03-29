@@ -24,6 +24,8 @@
 #include "src/kfserving_api/grpc_predict_v2.pb.h"
 #pragma GCC diagnostic pop
 
+#include "modelmanager.hpp"
+
 namespace ovms {
 
 using inference::GRPCInferenceService;
@@ -35,6 +37,7 @@ class KFSInferenceServiceImpl final : public GRPCInferenceService::Service {
 ::grpc::Status ServerMetadata(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response) override;
 ::grpc::Status ModelMetadata(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) override;
 ::grpc::Status ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) override;
+::grpc::Status buildResponse(std::shared_ptr<ModelInstance> instance, ::inference::ModelMetadataResponse* response);
 };
 
 }  // namespace ovms
