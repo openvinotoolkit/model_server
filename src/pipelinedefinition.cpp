@@ -210,9 +210,10 @@ Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloa
     return StatusCode::OK;
 }
 
+template <typename RequestType, typename ResponseType>
 Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
-    const tensorflow::serving::PredictRequest* request,
-    tensorflow::serving::PredictResponse* response,
+    const RequestType* request,
+    ResponseType* response,
     ModelManager& manager) {
     std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
     Status status = waitForLoaded(unloadGuard);
@@ -279,6 +280,11 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     }
     return status;
 }
+template Status PipelineDefinition::create<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(
+    std::unique_ptr<Pipeline>& pipeline,
+    const tensorflow::serving::PredictRequest* request,
+    tensorflow::serving::PredictResponse* response,
+    ModelManager& manager);
 
 void PipelineDefinition::resetSubscriptions(ModelManager& manager) {
     for (auto& [modelName, modelVersion] : subscriptions) {
