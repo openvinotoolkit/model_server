@@ -143,13 +143,13 @@ Input images can be sent to the service requesting resource name `image_classifi
 ~/model_server/client/python/tensorflow-serving-api/samples$ virtualenv .venv
 ~/model_server/client/python/tensorflow-serving-api/samples$ . .venv/bin/activate && pip3 install -r requirements.txt
 (.venv) ~/model_server/client/python/tensorflow-serving-api/samples$ python3 grpc_predict_resnet.py --pipeline_name image_classification_pipeline --images_numpy_path ../../imgs.npy \
-    --labels_numpy_path ../../lbs.npy --grpc_port 9100 --input_name image --output_name label --transpose_input False --iterations 10
+    --labels_numpy_path ../../lbs.npy --grpc_port 9100 --input_name image --output_name label --transpose_input True --transpose_method nchw2nhwc --iterations 10
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: image_classification_pipeline
         Iterations: 10
         Images numpy path: ../../imgs.npy
-        Numpy file shape: (10, 3, 224, 224)
+        Numpy file shape: (10, 224, 224, 3)
 
 Iteration 1; Processing time: 33.51 ms; speed 29.85 fps
 imagenet top results in a single batch:
@@ -224,9 +224,7 @@ We can use the same gRPC/REST example client as we use for requesting model meta
 (.venv) ~/model_server/client/python/tensorflow-serving-api/samples$ python3 grpc_get_model_metadata.py --grpc_port 9100 --model_name image_classification_pipeline
 Getting model metadata for model: image_classification_pipeline
 Inputs metadata:
-        Input name: image; shape: [1, 3, 224, 224]; dtype: DT_FLOAT
+        Input name: image; shape: [1, 224, 224, 3]; dtype: DT_FLOAT
 Outputs metadata:
-        Output name: label; shape: [1]; dtype: DT_INT32
+        Output name: label; shape: [1]; dtype: DT_INT64
 ```
-
-
