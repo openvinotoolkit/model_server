@@ -61,7 +61,7 @@
                                     "data_item": "probability"}}
                     ], 
                     "outputs": [
-                        {"data_item": "argmax/Squeeze",
+                        {"data_item": "argmax:0",
                          "alias": "most_probable_label"}
                     ] 
                 }
