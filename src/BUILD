@@ -472,6 +472,7 @@ cc_test(
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
         "test/http_rest_api_handler_test.cpp",
+        "test/kfs_inference_service_test.cpp",
         "test/layout_test.cpp",
         "test/localfilesystem_test.cpp",
         "test/mockmodelinstancechangingstates.hpp",

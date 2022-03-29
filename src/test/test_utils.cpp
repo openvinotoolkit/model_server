@@ -123,6 +123,34 @@ bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vecto
     return true;
 }
 
+extern bool isShapeTheSame(const google::protobuf::RepeatedField<long int>& actual, const std::vector<int64_t>&& expected) {
+    bool same = true;
+    int a_size = actual.size();
+    if (a_size != int(expected.size())) {
+        SPDLOG_ERROR("Unexpected dim_size. Got: {}, Expect: {}", a_size, expected.size());
+        return false;
+    }
+    for (int i = 0; i < a_size; i++) {
+        if (actual.at(i) != expected[i]) {
+            SPDLOG_ERROR("Unexpected dim[{}]. Got: {}, Expect: {}", i, actual.at(i), expected[i]);
+            same = false;
+            break;
+        }
+    }
+    if (same == false) {
+        std::stringstream ss;
+        for (int i = 0; i < a_size; i++) {
+            ss << "dim["
+               << i
+               << "] got:"
+               << actual.at(i)
+               << " expect:" << expected[i];
+        }
+        SPDLOG_ERROR("Shape mismatch: {}", ss.str());
+    }
+    return true;
+}
+
 void readImage(const std::string& path, size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
     std::ifstream DataFile;
     DataFile.open(path, std::ios::binary);
