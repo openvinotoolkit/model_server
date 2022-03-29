@@ -116,14 +116,6 @@ public:
         const RequestType* request,
         ResponseType* response,
         ModelManager& manager);
- /*   Status create(std::unique_ptr<Pipeline>& pipeline,
-        const tensorflow::serving::PredictRequest* request,
-        tensorflow::serving::PredictResponse* response,
-        ModelManager& manager);
-    Status create(std::unique_ptr<Pipeline>& pipeline,
-        const ::inference::ModelInferRequest* request,
-        ::inference::ModelInferResponse* response,
-        ModelManager& manager);*/
     Status reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections);
     void retire(ModelManager& manager);
     Status validate(ModelManager& manager);

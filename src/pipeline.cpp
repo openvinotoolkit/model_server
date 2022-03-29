@@ -30,7 +30,7 @@
 namespace ovms {
 Pipeline::~Pipeline() = default;
 
-Pipeline::Pipeline(EntryNode& entry, ExitNode& exit, const std::string& name) :
+Pipeline::Pipeline(Node& entry, Node& exit, const std::string& name) :
     name(name),
     entry(entry),
     exit(exit) {}

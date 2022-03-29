@@ -33,12 +33,13 @@ namespace ovms {
 
 const std::string ENTRY_NODE_NAME = "request";
 
+template<typename RequestType>
 class EntryNode : public Node {
-    const tensorflow::serving::PredictRequest* request;
+    const RequestType* request;
     const tensor_map_t inputsInfo;
 
 public:
-    EntryNode(const tensorflow::serving::PredictRequest* request,
+    EntryNode(const RequestType* request,
         const tensor_map_t& inputsInfo,
         std::optional<int32_t> demultiplyCount = std::nullopt) :
         Node(ENTRY_NODE_NAME, demultiplyCount),

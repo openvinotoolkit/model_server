@@ -222,15 +222,15 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     }
 
     std::unordered_map<std::string, std::unique_ptr<Node>> nodes;
-    EntryNode* entry = nullptr;
-    ExitNode* exit = nullptr;
+    EntryNode<RequestType>* entry = nullptr;
+    ExitNode<ResponseType>* exit = nullptr;
 
     for (const auto& info : nodeInfos) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Creating pipeline: {}. Adding nodeName: {}, modelName: {}",
             getName(), info.nodeName, info.modelName);
         switch (info.kind) {
         case NodeKind::ENTRY: {
-            auto node = std::make_unique<EntryNode>(request, getInputsInfo(), info.demultiplyCount);
+            auto node = std::make_unique<EntryNode<RequestType>>(request, getInputsInfo(), info.demultiplyCount);
             entry = node.get();
             nodes.emplace(info.nodeName, std::move(node));
             break;
@@ -256,7 +256,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                              nodeResources.at(info.nodeName)));
             break;
         case NodeKind::EXIT: {
-            auto node = std::make_unique<ExitNode>(response, getOutputsInfo(), info.gatherFromNode);
+            auto node = std::make_unique<ExitNode<ResponseType>>(response, getOutputsInfo(), info.gatherFromNode);
             exit = node.get();
             nodes.emplace(info.nodeName, std::move(node));
             break;
