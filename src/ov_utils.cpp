@@ -24,9 +24,10 @@
 #include "tensorinfo.hpp"
 
 namespace ovms {
+
+// This creates tensor without data ownership.
 ov::Tensor createSharedTensor(ov::element::Type_t precision, const shape_t& shape, void* data) {
-    auto tensor = ov::Tensor(precision, shape);
-    std::memcpy(tensor.data(), data, std::accumulate(shape.begin(), shape.end(), ov::element::Type(precision).size(), std::multiplies<size_t>()));
+    auto tensor = ov::Tensor(precision, shape, data);
     return tensor;
 }
 
