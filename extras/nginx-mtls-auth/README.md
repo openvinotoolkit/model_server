@@ -14,7 +14,7 @@ WARNING: Those contain certificate generation automation for development and tes
 
 WARNING: Review the NGINX configuration settings and adjust them according to your organization policies: you are responsible for setting and using a secure configuration.
 
-WARNING: Please follow [security considerations for containers](../../docs/docker_container.md#sec).
+WARNING: Please follow [security considerations for containers](../../docs/security_considerations.md).
 
 
 ![Architecture of OVMS with NGINX](nginx.png)
