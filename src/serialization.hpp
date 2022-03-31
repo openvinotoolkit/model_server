@@ -63,6 +63,13 @@ typedef const std::string& (*outputNameChooser_t)(const std::string&, const Tens
 const std::string& getTensorInfoName(const std::string& first, const TensorInfo& tensorInfo);
 const std::string& getOutputMapKeyName(const std::string& first, const TensorInfo& tensorInfo);
 
+template <typename T, typename ResponseType>
+Status serializePredictResponse(
+    OutputGetter<T>& outputGetter,
+    const tensor_map_t& outputMap,
+    ResponseType* response,
+    outputNameChooser_t outputNameChooser);
+// partial template specialization
 template <typename T>
 Status serializePredictResponse(
     OutputGetter<T>& outputGetter,

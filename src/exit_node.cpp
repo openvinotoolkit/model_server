@@ -64,7 +64,7 @@ Status ExitNode<ResponseType>::fetchResults(const TensorMap& inputTensors) {
     return serializePredictResponse(outputGetter, this->outputsInfo, this->response, getOutputMapKeyName);
 }
 
-template<typename ResponseType>
+template <typename ResponseType>
 std::unique_ptr<NodeSession> ExitNode<ResponseType>::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {
     return std::make_unique<ExitNodeSession>(metadata, getName(), previous.size(), collapsingDetails);
 }

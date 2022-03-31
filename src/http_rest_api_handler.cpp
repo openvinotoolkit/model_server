@@ -310,7 +310,7 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
 
     tensorflow::serving::PredictRequest& requestProto = requestParser.getProto();
     requestProto.mutable_model_spec()->set_name(modelName);
-    status = ModelManager::getInstance().getPipeline(pipelinePtr, &requestProto, &responseProto);
+    status = ModelManager::getInstance().createPipeline(pipelinePtr, modelName, &requestProto, &responseProto);
     if (!status.ok()) {
         return status;
     }

@@ -124,7 +124,6 @@ Status EntryNode<RequestType>::createShardedTensor(ov::Tensor& dividedTensor, Pr
 template<typename RequestType>
 const Status EntryNode<RequestType>::validate() {
     static const std::set<const char*> optionalInputNames = {};
-    // TODO either call validate with
     return request_validation_utils::validate(
         *request,
         inputsInfo,

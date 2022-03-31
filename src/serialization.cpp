@@ -97,6 +97,7 @@ tensorflow::TensorProto& ProtoGetter<tensorflow::serving::PredictResponse*,tenso
 const std::string& getTensorInfoName(const std::string& first, const TensorInfo& tensorInfo) {
     return tensorInfo.getName();
 }
+
 const std::string& getOutputMapKeyName(const std::string& first, const TensorInfo& tensorInfo) {
     return first;
 }
