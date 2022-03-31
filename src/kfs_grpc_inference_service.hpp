@@ -15,7 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include <grpcpp/server_context.h> // TODO
+#include <grpcpp/server_context.h>  // TODO
 // TODO
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -24,20 +24,22 @@
 #include "src/kfserving_api/grpc_predict_v2.pb.h"
 #pragma GCC diagnostic pop
 
-#include "modelmanager.hpp"
+#include "modelinstance.hpp"
 
 namespace ovms {
 
 using inference::GRPCInferenceService;
 
 class KFSInferenceServiceImpl final : public GRPCInferenceService::Service {
-::grpc::Status ServerLive(::grpc::ServerContext* context, const ::inference::ServerLiveRequest* request, ::inference::ServerLiveResponse* response) override;
-::grpc::Status ServerReady(::grpc::ServerContext* context, const ::inference::ServerReadyRequest* request, ::inference::ServerReadyResponse* response) override;
-::grpc::Status ModelReady(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response) override;
-::grpc::Status ServerMetadata(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response) override;
-::grpc::Status ModelMetadata(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) override;
-::grpc::Status ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) override;
-::grpc::Status buildResponse(std::shared_ptr<ModelInstance> instance, ::inference::ModelMetadataResponse* response);
+    ::grpc::Status ServerLive(::grpc::ServerContext* context, const ::inference::ServerLiveRequest* request, ::inference::ServerLiveResponse* response) override;
+    ::grpc::Status ServerReady(::grpc::ServerContext* context, const ::inference::ServerReadyRequest* request, ::inference::ServerReadyResponse* response) override;
+    ::grpc::Status ModelReady(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response) override;
+    ::grpc::Status ServerMetadata(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response) override;
+    ::grpc::Status ModelMetadata(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) override;
+    ::grpc::Status ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) override;
+    ::grpc::Status buildResponse(std::shared_ptr<ModelInstance> instance, ::inference::ModelMetadataResponse* response);
+    ::grpc::Status buildResponse(PipelineDefinition& pipelineDefinition, ::inference::ModelMetadataResponse* response);
+    void convert(const std::pair<std::string, std::shared_ptr<TensorInfo>>& from, ::inference::ModelMetadataResponse::TensorMetadata* to);
 };
 
 }  // namespace ovms
