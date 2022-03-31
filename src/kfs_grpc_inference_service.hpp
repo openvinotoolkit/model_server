@@ -24,6 +24,10 @@
 #include "src/kfserving_api/grpc_predict_v2.pb.h"
 #pragma GCC diagnostic pop
 
+#include <memory>
+#include <string>
+#include <utility>
+
 #include "modelinstance.hpp"
 
 namespace ovms {
