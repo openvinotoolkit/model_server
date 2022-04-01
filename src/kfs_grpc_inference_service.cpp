@@ -68,7 +68,7 @@ const std::string PLATFORM = "OpenVINO";
         SPDLOG_DEBUG("GetModelMetadata: Model {} is missing, trying to find pipeline with such name", name);
         auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(name);
         if (!pipelineDefinition) {
-            return ::grpc::Status(::grpc::StatusCode::INVALID_ARGUMENT, "Model with requested name is not found");
+            return Status(StatusCode::MODEL_NAME_MISSING).grpc();
         }
         return buildResponse(*pipelineDefinition, response);
     }
@@ -79,18 +79,18 @@ const std::string PLATFORM = "OpenVINO";
         instance = model->getModelInstanceByVersion(std::stoi(version));
         if (instance == nullptr) {
             SPDLOG_WARN("GetModelMetadata requested model {}; version {} is missing", name, version);
-            return ::grpc::Status(::grpc::StatusCode::INVALID_ARGUMENT, "Model with requested version is not found");
+            return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
         }
     } else {
         SPDLOG_DEBUG("GetModelMetadata requested model: name {}; default version", name);
         instance = model->getDefaultModelInstance();
         if (instance == nullptr) {
             SPDLOG_WARN("GetModelMetadata requested model {}; version {} is missing", name, version);
-            return ::grpc::Status(::grpc::StatusCode::INVALID_ARGUMENT, "Model with requested version is not found");
+            return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
         }
     }
 
-    return buildResponse(instance, response);
+    return buildResponse(instance, response).grpc();
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) {
@@ -164,7 +164,7 @@ const std::string PLATFORM = "OpenVINO";
     return ::grpc::Status(::grpc::StatusCode::OK, "");
 }
 
-::grpc::Status KFSInferenceServiceImpl::buildResponse(
+Status KFSInferenceServiceImpl::buildResponse(
     std::shared_ptr<ModelInstance> instance,
     ::inference::ModelMetadataResponse* response) {
 
@@ -173,7 +173,7 @@ const std::string PLATFORM = "OpenVINO";
     // 0 meaning immediately return unload guard if possible, otherwise do not wait for available state
     auto status = instance->waitForLoaded(0, unloadGuard);
     if (!status.ok()) {
-        return ::grpc::Status(::grpc::StatusCode::UNAVAILABLE, "Failed to load model");
+        return status;
     }
 
     response->Clear();
@@ -189,10 +189,10 @@ const std::string PLATFORM = "OpenVINO";
         convert(output, response->add_outputs());
     }
 
-    return ::grpc::Status(::grpc::StatusCode::OK, "");
+    return StatusCode::OK;
 }
 
-::grpc::Status KFSInferenceServiceImpl::buildResponse(
+Status KFSInferenceServiceImpl::buildResponse(
     PipelineDefinition& pipelineDefinition,
     ::inference::ModelMetadataResponse* response) {
 
@@ -201,7 +201,7 @@ const std::string PLATFORM = "OpenVINO";
     // 0 meaning immediately return unload guard if possible, otherwise do not wait for available state
     auto status = pipelineDefinition.waitForLoaded(unloadGuard, 0);
     if (!status.ok()) {
-        return ::grpc::Status(::grpc::StatusCode::UNAVAILABLE, "Failed to load pipeline");
+        return status;
     }
 
     response->Clear();
@@ -217,7 +217,7 @@ const std::string PLATFORM = "OpenVINO";
         convert(output, response->add_outputs());
     }
 
-    return ::grpc::Status(::grpc::StatusCode::OK, "");
+    return StatusCode::OK;
 }
 
 void KFSInferenceServiceImpl::convert(

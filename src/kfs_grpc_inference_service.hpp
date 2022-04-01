@@ -42,8 +42,8 @@ public:
     ::grpc::Status ServerMetadata(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response) override;
     ::grpc::Status ModelMetadata(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) override;
     ::grpc::Status ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) override;
-    ::grpc::Status buildResponse(std::shared_ptr<ModelInstance> instance, ::inference::ModelMetadataResponse* response);
-    ::grpc::Status buildResponse(PipelineDefinition& pipelineDefinition, ::inference::ModelMetadataResponse* response);
+    Status buildResponse(std::shared_ptr<ModelInstance> instance, ::inference::ModelMetadataResponse* response);
+    Status buildResponse(PipelineDefinition& pipelineDefinition, ::inference::ModelMetadataResponse* response);
     void convert(const std::pair<std::string, std::shared_ptr<TensorInfo>>& from, ::inference::ModelMetadataResponse::TensorMetadata* to);
 };
 
