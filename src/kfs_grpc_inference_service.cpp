@@ -24,6 +24,8 @@ namespace ovms {
 
 using inference::GRPCInferenceService;
 
+const std::string PLATFORM = "OpenVINO";
+
 ::grpc::Status KFSInferenceServiceImpl::ServerLive(::grpc::ServerContext* context, const ::inference::ServerLiveRequest* request, ::inference::ServerLiveResponse* response) {
     (void)context;
     (void)request;
@@ -177,7 +179,7 @@ using inference::GRPCInferenceService;
     response->Clear();
     response->set_name(instance->getName());
     response->add_versions(std::to_string(instance->getVersion()));
-    response->set_platform("OpenVINO");  // here need to add DL/ML framework/backend
+    response->set_platform(PLATFORM);
 
     for (const auto& input : instance->getInputsInfo()) {
         convert(input, response->add_inputs());
@@ -204,7 +206,8 @@ using inference::GRPCInferenceService;
 
     response->Clear();
     response->set_name(pipelineDefinition.getName());
-    response->set_platform("OpenVINO");  // here need to add DL/ML framework/backend
+    response->add_versions("1");
+    response->set_platform(PLATFORM);
 
     for (const auto& input : pipelineDefinition.getInputsInfo()) {
         convert(input, response->add_inputs());
