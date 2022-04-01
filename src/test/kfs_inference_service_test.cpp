@@ -16,18 +16,18 @@
 #include <gtest/gtest.h>
 
 #include "../kfs_grpc_inference_service.hpp"
+#include "../pipelinedefinition.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
-#include "../pipelinedefinition.hpp"
 
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRef;
 
 struct Info {
-        ovms::Precision precision;
-        ovms::shape_t shape;
-    };
+    ovms::Precision precision;
+    ovms::shape_t shape;
+};
 using tensor_desc_map_t = std::unordered_map<std::string, Info>;
 
 class ModelMetadataResponseBuild : public ::testing::Test {
@@ -86,25 +86,22 @@ public:
     }
 
     void prepare() {
-        prepare(tensor_desc_map_t({
-                    {"Input_FP32_1_3_224_224", {
-                                                ovms::Precision::FP32,
-                                                {1, 3, 224, 224},
-                                            }},
+        prepare(tensor_desc_map_t({{"Input_FP32_1_3_224_224", {
+                                                                  ovms::Precision::FP32,
+                                                                  {1, 3, 224, 224},
+                                                              }},
                     {"Input_U8_1_3_62_62", {
-                                            ovms::Precision::U8,
-                                            {1, 3, 62, 62},
-                                        }}}),
-                tensor_desc_map_t({
-                    {"Output_I32_1_2000", {
-                                            ovms::Precision::I32,
-                                            {1, 2000},
-                                        }},
-                    {"Output_FP32_2_20_3", {
-                                            ovms::Precision::FP32,
-                                            {2, 20, 3},
-                                        }}})
-                );
+                                               ovms::Precision::U8,
+                                               {1, 3, 62, 62},
+                                           }}}),
+            tensor_desc_map_t({{"Output_I32_1_2000", {
+                                                         ovms::Precision::I32,
+                                                         {1, 2000},
+                                                     }},
+                {"Output_FP32_2_20_3", {
+                                           ovms::Precision::FP32,
+                                           {2, 20, 3},
+                                       }}}));
     }
 
 protected:
@@ -150,12 +147,8 @@ TEST_F(ModelMetadataResponseBuild, ModelVersionNotLoadedYet) {
 }
 
 TEST_F(ModelMetadataResponseBuild, SingleInputSingleOutputValidResponse) {
-    tensor_desc_map_t inputs = tensor_desc_map_t({
-        {"SingleInput", {ovms::Precision::FP32, {1, 3, 224, 224}}}
-    });
-    tensor_desc_map_t outputs = tensor_desc_map_t({
-        {"SingleOutput", {ovms::Precision::I32, {1, 2000}}}
-    });
+    tensor_desc_map_t inputs = tensor_desc_map_t({{"SingleInput", {ovms::Precision::FP32, {1, 3, 224, 224}}}});
+    tensor_desc_map_t outputs = tensor_desc_map_t({{"SingleOutput", {ovms::Precision::I32, {1, 2000}}}});
     prepare(inputs, outputs);
 
     ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
@@ -176,13 +169,9 @@ TEST_F(ModelMetadataResponseBuild, SingleInputSingleOutputValidResponse) {
 }
 
 TEST_F(ModelMetadataResponseBuild, DoubleInputSingleOutputValidResponse) {
-    tensor_desc_map_t inputs = tensor_desc_map_t({
-        {"FirstInput", {ovms::Precision::FP32, {1, 3, 224, 224}}},
-        {"SecondInput", {ovms::Precision::U8, {1, 700, 5}}}
-    });
-    tensor_desc_map_t outputs = tensor_desc_map_t({
-        {"SingleOutput", {ovms::Precision::I32, {1, 2000}}}
-    });
+    tensor_desc_map_t inputs = tensor_desc_map_t({{"FirstInput", {ovms::Precision::FP32, {1, 3, 224, 224}}},
+        {"SecondInput", {ovms::Precision::U8, {1, 700, 5}}}});
+    tensor_desc_map_t outputs = tensor_desc_map_t({{"SingleOutput", {ovms::Precision::I32, {1, 2000}}}});
     prepare(inputs, outputs);
 
     ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
@@ -208,13 +197,9 @@ TEST_F(ModelMetadataResponseBuild, DoubleInputSingleOutputValidResponse) {
 }
 
 TEST_F(ModelMetadataResponseBuild, SingleInputDoubleOutputValidResponse) {
-    tensor_desc_map_t inputs = tensor_desc_map_t({
-        {"SingleInput", {ovms::Precision::FP32, {1, 3, 224, 224}}}
-    });
-    tensor_desc_map_t outputs = tensor_desc_map_t({
-        {"FirstOutput", {ovms::Precision::I32, {1, 2000}}},
-        {"SecondOutput", {ovms::Precision::FP32, {1, 3, 400, 400}}}
-    });
+    tensor_desc_map_t inputs = tensor_desc_map_t({{"SingleInput", {ovms::Precision::FP32, {1, 3, 224, 224}}}});
+    tensor_desc_map_t outputs = tensor_desc_map_t({{"FirstOutput", {ovms::Precision::I32, {1, 2000}}},
+        {"SecondOutput", {ovms::Precision::FP32, {1, 3, 400, 400}}}});
     prepare(inputs, outputs);
 
     ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
@@ -240,14 +225,10 @@ TEST_F(ModelMetadataResponseBuild, SingleInputDoubleOutputValidResponse) {
 }
 
 TEST_F(ModelMetadataResponseBuild, DoubleInputDoubleOutputValidResponse) {
-    tensor_desc_map_t inputs = tensor_desc_map_t({
-        {"FirstInput", {ovms::Precision::FP32, {1, 3, 224, 224}}},
-        {"SecondInput", {ovms::Precision::U8, {1, 700, 5}}}
-    });
-    tensor_desc_map_t outputs = tensor_desc_map_t({
-        {"FirstOutput", {ovms::Precision::I32, {1, 2000}}},
-        {"SecondOutput", {ovms::Precision::FP32, {1, 3, 400, 400}}}
-    });
+    tensor_desc_map_t inputs = tensor_desc_map_t({{"FirstInput", {ovms::Precision::FP32, {1, 3, 224, 224}}},
+        {"SecondInput", {ovms::Precision::U8, {1, 700, 5}}}});
+    tensor_desc_map_t outputs = tensor_desc_map_t({{"FirstOutput", {ovms::Precision::I32, {1, 2000}}},
+        {"SecondOutput", {ovms::Precision::FP32, {1, 3, 400, 400}}}});
     prepare(inputs, outputs);
 
     ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
@@ -278,7 +259,6 @@ TEST_F(ModelMetadataResponseBuild, DoubleInputDoubleOutputValidResponse) {
 }
 
 TEST_F(ModelMetadataResponseBuild, ModelMappingValidResponse) {
-    
 }
 
 class PipelineMetadataResponseBuild : public ::testing::Test {
@@ -309,6 +289,7 @@ protected:
     MockPipelineDefinitionGetInputsOutputsInfo pipelineDefinition;
     ::inference::ModelMetadataResponse response;
     ConstructorEnabledModelManager manager;
+
 public:
     void prepare(const ovms::tensor_map_t& inputsInfo, const ovms::tensor_map_t& outputsInfo) {
         pipelineDefinition.mockMetadata(inputsInfo, outputsInfo);
@@ -317,12 +298,12 @@ public:
     void prepare() {
         ovms::tensor_map_t inputsInfo = ovms::tensor_map_t(
             {{"Input_FP32_1_3_224_224", std::make_shared<ovms::TensorInfo>("Input_FP32_1_3_224_224", ovms::Precision::FP32, ovms::Shape{1, 3, 224, 224})},
-            {"Input_U8_1_3_62_62", std::make_shared<ovms::TensorInfo>("Input_U8_1_3_62_62", ovms::Precision::U8, ovms::Shape{1, 3, 62, 62})},
-            {"Input_Unspecified", ovms::TensorInfo::getUnspecifiedTensorInfo()}});
+                {"Input_U8_1_3_62_62", std::make_shared<ovms::TensorInfo>("Input_U8_1_3_62_62", ovms::Precision::U8, ovms::Shape{1, 3, 62, 62})},
+                {"Input_Unspecified", ovms::TensorInfo::getUnspecifiedTensorInfo()}});
         ovms::tensor_map_t outputsInfo = ovms::tensor_map_t(
             {{"Output_I32_1_2000", std::make_shared<ovms::TensorInfo>("Output_I32_1_2000", ovms::Precision::I32, ovms::Shape{1, 2000})},
-            {"Output_FP32_2_20_3", std::make_shared<ovms::TensorInfo>("Output_FP32_2_20_3", ovms::Precision::FP32, ovms::Shape{2, 20, 3})},
-            {"Output_Unspecified", ovms::TensorInfo::getUnspecifiedTensorInfo()}});
+                {"Output_FP32_2_20_3", std::make_shared<ovms::TensorInfo>("Output_FP32_2_20_3", ovms::Precision::FP32, ovms::Shape{2, 20, 3})},
+                {"Output_Unspecified", ovms::TensorInfo::getUnspecifiedTensorInfo()}});
         prepare(inputsInfo, outputsInfo);
     }
 };
@@ -413,10 +394,10 @@ TEST_F(PipelineMetadataResponseBuild, PipelineAvailableOrAvailableRequiringReval
 TEST_F(PipelineMetadataResponseBuild, HandleDynamicAndRangeShapes) {
     ovms::tensor_map_t inputsInfo = ovms::tensor_map_t(
         {{"Input_FP32_1_-1_224_224", std::make_shared<ovms::TensorInfo>("Input_FP32_1_-1_224_224", ovms::Precision::FP32, ovms::Shape{1, ovms::Dimension::any(), 224, 224})},
-        {"Input_U8_1_3_62:92_62:92", std::make_shared<ovms::TensorInfo>("Input_U8_1_3_62:92_62:92", ovms::Precision::U8, ovms::Shape{1, 3, {62, 92}, {62, 92}})}});
+            {"Input_U8_1_3_62:92_62:92", std::make_shared<ovms::TensorInfo>("Input_U8_1_3_62:92_62:92", ovms::Precision::U8, ovms::Shape{1, 3, {62, 92}, {62, 92}})}});
     ovms::tensor_map_t outputsInfo = ovms::tensor_map_t(
         {{"Output_I32_1_-1", std::make_shared<ovms::TensorInfo>("Output_I32_1_-1", ovms::Precision::I32, ovms::Shape{1, ovms::Dimension::any()})},
-        {"Output_FP32_1_224:294_224:294_3", std::make_shared<ovms::TensorInfo>("Output_FP32_1_224:294_224:294_3", ovms::Precision::FP32, ovms::Shape{1, {224, 294}, {224, 294}, 3})}});
+            {"Output_FP32_1_224:294_224:294_3", std::make_shared<ovms::TensorInfo>("Output_FP32_1_224:294_224:294_3", ovms::Precision::FP32, ovms::Shape{1, {224, 294}, {224, 294}, 3})}});
     prepare(inputsInfo, outputsInfo);
 
     ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
