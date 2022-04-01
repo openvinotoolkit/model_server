@@ -34,7 +34,7 @@
 
 namespace ovms {
 
-template<typename RequestType>
+template <typename RequestType>
 Status EntryNode<RequestType>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
     // this should be created in EntryNode::SetInputs, or special method for entry node called
     // in event loop can be done in future release while implementing dynamic demultiplexing at
@@ -49,7 +49,7 @@ Status EntryNode<RequestType>::execute(session_key_t sessionId, PipelineEventQue
     return StatusCode::OK;
 }
 
-template<typename RequestType>
+template <typename RequestType>
 Status EntryNode<RequestType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
     TensorMap outputs;
     auto status = fetchResults(outputs);
@@ -65,7 +65,7 @@ Status EntryNode<RequestType>::fetchResults(NodeSession& nodeSession, SessionRes
     return StatusCode::OK;
 }
 
-template<typename RequestType>
+template <typename RequestType>
 Status EntryNode<RequestType>::fetchResults(TensorMap& outputs) {
     auto status = validate();
     if (!status.ok()) {
@@ -82,7 +82,7 @@ Status InputSink<TensorMap&>::give(const std::string& name, ov::Tensor& tensor) 
     return StatusCode::OK;
 }
 
-template<typename RequestType>
+template <typename RequestType>
 Status EntryNode<RequestType>::isInputBinary(const std::string& name, bool& isBinary) const {
     auto it = request->inputs().find(name);
     if (it == request->inputs().end()) {
@@ -93,7 +93,7 @@ Status EntryNode<RequestType>::isInputBinary(const std::string& name, bool& isBi
     return StatusCode::OK;
 }
 
-template<typename RequestType>
+template <typename RequestType>
 Status EntryNode<RequestType>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
     bool isBinary = false;
     auto status = this->isInputBinary(tensorName, isBinary);
@@ -121,7 +121,7 @@ Status EntryNode<RequestType>::createShardedTensor(ov::Tensor& dividedTensor, Pr
     return StatusCode::OK;
 }
 
-template<typename RequestType>
+template <typename RequestType>
 const Status EntryNode<RequestType>::validate() {
     static const std::set<const char*> optionalInputNames = {};
     return request_validation_utils::validate(

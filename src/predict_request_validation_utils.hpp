@@ -34,7 +34,7 @@
 namespace ovms {
 namespace request_validation_utils {
 
-template<typename RequestType>
+template <typename RequestType>
 Status validate(
     const RequestType& request,
     const tensor_map_t& inputsInfo,

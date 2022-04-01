@@ -90,7 +90,7 @@ Status OutputGetter<ov::InferRequest&>::get(const std::string& name, ov::Tensor&
 }
 
 template <>
-tensorflow::TensorProto& ProtoGetter<tensorflow::serving::PredictResponse*,tensorflow::TensorProto&>::get(const std::string& name) {
+tensorflow::TensorProto& ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&>::get(const std::string& name) {
     return (*protoStorage->mutable_outputs())[name];
 }
 

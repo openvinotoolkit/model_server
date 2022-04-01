@@ -30,10 +30,9 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
-#include "kfs_grpc_inference_service.hpp"
-
 #include "aliases.hpp"
 #include "custom_node_library_internal_manager_wrapper.hpp"
+#include "kfs_grpc_inference_service.hpp"
 #include "modelversion.hpp"
 #include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"

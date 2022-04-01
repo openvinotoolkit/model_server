@@ -30,7 +30,7 @@ namespace ovms {
 
 const std::string EXIT_NODE_NAME = "response";
 
-template<typename ResponseType>
+template <typename ResponseType>
 class ExitNode : public Node {
     ResponseType* response;
     const tensor_map_t outputsInfo;

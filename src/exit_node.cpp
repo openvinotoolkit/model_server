@@ -30,13 +30,13 @@
 #include "exitnodesession.hpp"
 
 namespace ovms {
-template<typename ResponseType>
+template <typename ResponseType>
 Status ExitNode<ResponseType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
     auto& exitNodeSession = static_cast<ExitNodeSession&>(nodeSession);
     return this->fetchResults(exitNodeSession.getInputTensors());
 }
 
-template<typename ResponseType>
+template <typename ResponseType>
 Status ExitNode<ResponseType>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
     notifyEndQueue.push(NodeSessionKeyPair(*this, sessionId));
     return StatusCode::OK;
@@ -58,7 +58,7 @@ Status OutputGetter<const TensorMap&>::get(const std::string& name, ov::Tensor& 
     return StatusCode::OK;
 }
 
-template<typename ResponseType>
+template <typename ResponseType>
 Status ExitNode<ResponseType>::fetchResults(const TensorMap& inputTensors) {
     OutputGetter<const TensorMap&> outputGetter(inputTensors);
     return serializePredictResponse(outputGetter, this->outputsInfo, this->response, getOutputMapKeyName);

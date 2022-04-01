@@ -28,7 +28,6 @@
 #pragma GCC diagnostic pop
 
 #include "kfs_grpc_inference_service.hpp"
-
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -48,11 +47,12 @@ private:
 template <typename ProtoStorage, typename ProtoType>
 class ProtoGetter {
     ProtoStorage protoStorage;
+
 public:
-    ProtoGetter(ProtoStorage protoStorage) : protoStorage(protoStorage) {}
+    ProtoGetter(ProtoStorage protoStorage) :
+        protoStorage(protoStorage) {}
     ProtoType get(const std::string& name);
 };
-
 
 Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,

@@ -27,9 +27,9 @@
 namespace ovms {
 
 class Node;
-template<typename PredictRequest>
+template <typename PredictRequest>
 class EntryNode;
-template<typename PredictResponse>
+template <typename PredictResponse>
 class ExitNode;
 
 void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const Aliases& pairs);

@@ -33,7 +33,7 @@ namespace ovms {
 
 const std::string ENTRY_NODE_NAME = "request";
 
-template<typename RequestType>
+template <typename RequestType>
 class EntryNode : public Node {
     const RequestType* request;
     const tensor_map_t inputsInfo;
