@@ -254,24 +254,24 @@ TEST_F(GetPipelineMetadataResponseBuild, serialize2Json) {
     EXPECT_TRUE(received_doc.HasMember("metadata"));
 }
 
-class GetPipelineMetadataResponseBuildWithDynamicShapes : public GetPipelineMetadataResponseBuild {
+class GetPipelineMetadataResponseBuildWithDynamicAndRangeShapes : public GetPipelineMetadataResponseBuild {
 protected:
     void prepare() override {
         GetPipelineMetadataResponse::prepare();
         pipelineDefinition.mockMetadata(
             {{"Input_FP32_1_-1_224_224",
                  std::make_shared<TensorInfo>("Input_FP32_1_-1_224_224", ovms::Precision::FP32, ovms::Shape{1, ovms::Dimension::any(), 224, 224})},
-                {"Input_U8_1_3_-1_-1",
-                    std::make_shared<TensorInfo>("Input_U8_1_3_-1_-1", ovms::Precision::U8, ovms::Shape{1, 3, ovms::Dimension::any(), ovms::Dimension::any()})}},
+                {"Input_U8_1_3_62:92_62:92",
+                    std::make_shared<TensorInfo>("Input_U8_1_3_62:92_62:92", ovms::Precision::U8, ovms::Shape{1, 3, {62, 92}, {62, 92}})}},
             {{"Output_I32_1_-1",
                  std::make_shared<TensorInfo>("Output_I32_1_-1", ovms::Precision::I32, ovms::Shape{1, ovms::Dimension::any()})},
-                {"Output_FP32_1_-1_-1_3",
-                    std::make_shared<TensorInfo>("Output_FP32_1_-1_-1_3", ovms::Precision::FP32, ovms::Shape{1, ovms::Dimension::any(), ovms::Dimension::any(), 3})}});
+                {"Output_FP32_1_224:294_224:294_3",
+                    std::make_shared<TensorInfo>("Output_FP32_1_224:294_224:294_3", ovms::Precision::FP32, ovms::Shape{1, {224, 294}, {224, 294}, 3})}});
         ASSERT_EQ(ovms::GetModelMetadataImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
     }
 };
 
-TEST_F(GetPipelineMetadataResponseBuildWithDynamicShapes, HandleDynamicShapes) {
+TEST_F(GetPipelineMetadataResponseBuildWithDynamicAndRangeShapes, HandleDynamicAndRangeShapes) {
     tensorflow::serving::SignatureDefMap def;
     response.metadata().at("signature_def").UnpackTo(&def);
 
@@ -282,12 +282,12 @@ TEST_F(GetPipelineMetadataResponseBuildWithDynamicShapes, HandleDynamicShapes) {
         inputs.at("Input_FP32_1_-1_224_224").tensor_shape(),
         {1, -1, 224, 224}));
     EXPECT_TRUE(isShapeTheSame(
-        inputs.at("Input_U8_1_3_-1_-1").tensor_shape(),
+        inputs.at("Input_U8_1_3_62:92_62:92").tensor_shape(),
         {1, 3, -1, -1}));
     EXPECT_TRUE(isShapeTheSame(
         outputs.at("Output_I32_1_-1").tensor_shape(),
         {1, -1}));
     EXPECT_TRUE(isShapeTheSame(
-        outputs.at("Output_FP32_1_-1_-1_3").tensor_shape(),
+        outputs.at("Output_FP32_1_224:294_224:294_3").tensor_shape(),
         {1, -1, -1, 3}));
 }

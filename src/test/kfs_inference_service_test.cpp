@@ -13,19 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-
-
-// #include <chrono>
-// #include <future>
-// #include <thread>
-
-// #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-// #include <rapidjson/document.h>
 
 #include "../kfs_grpc_inference_service.hpp"
-// #include "../modelmanager.hpp"
-// #include "../status.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
 #include "../pipelinedefinition.hpp"
@@ -39,33 +29,6 @@ struct Info {
         ovms::shape_t shape;
     };
 using tensor_desc_map_t = std::unordered_map<std::string, Info>;
-
-class ModelMetadataValidation : public ::testing::Test {
-protected:
-    ::inference::ModelMetadataRequest request;
-
-    void SetUp() override {
-        request.Clear();
-        request.set_name("ResNet50");
-    }
-};
-
-TEST_F(ModelMetadataValidation, ValidRequestWithNoVersionSpecified) {
-    auto status = ovms::KFSInferenceServiceImpl::validate(&request);
-    EXPECT_TRUE(status.ok());
-}
-
-TEST_F(ModelMetadataValidation, ValidRequestWithVersionSpecified) {
-    request.set_version("170");
-    auto status = ovms::KFSInferenceServiceImpl::validate(&request);
-    EXPECT_TRUE(status.ok());
-}
-
-TEST_F(ModelMetadataValidation, RequestMissingName) {
-    request.set_name("");
-    auto status = ovms::KFSInferenceServiceImpl::validate(&request);
-    EXPECT_EQ(status, ovms::StatusCode::OK);    //TODO: Change to MODEL_NAME_MISSING
-}
 
 class ModelMetadataResponseBuild : public ::testing::Test {
     class MockModelInstance : public MockModelInstanceChangingStates {
@@ -200,14 +163,14 @@ TEST_F(ModelMetadataResponseBuild, SingleInputSingleOutputValidResponse) {
     EXPECT_EQ(response.inputs_size(), 1);
     auto input = response.inputs().at(0);
     EXPECT_EQ(input.name(), "SingleInput");
-    EXPECT_EQ(input.datatype(), "DT_FLOAT");    //TODO:Change data type to kserv
+    EXPECT_EQ(input.datatype(), "FP32");
     EXPECT_EQ(input.shape_size(), 4);
     EXPECT_TRUE(isShapeTheSame(input.shape(), {1, 3, 224, 224}));
 
     EXPECT_EQ(response.outputs_size(), 1);
     auto output = response.outputs().at(0);
     EXPECT_EQ(output.name(), "SingleOutput");
-    EXPECT_EQ(output.datatype(), "DT_INT32");    //TODO:Change data type to kserv
+    EXPECT_EQ(output.datatype(), "I32");
     EXPECT_EQ(output.shape_size(), 2);
     EXPECT_TRUE(isShapeTheSame(output.shape(), {1, 2000}));
 }
@@ -227,19 +190,19 @@ TEST_F(ModelMetadataResponseBuild, DoubleInputSingleOutputValidResponse) {
     EXPECT_EQ(response.inputs_size(), 2);
     auto firstInput = response.inputs().at(0);
     EXPECT_EQ(firstInput.name(), "FirstInput");
-    EXPECT_EQ(firstInput.datatype(), "DT_FLOAT");    //TODO:Change data type to kserv
+    EXPECT_EQ(firstInput.datatype(), "FP32");
     EXPECT_EQ(firstInput.shape_size(), 4);
     EXPECT_TRUE(isShapeTheSame(firstInput.shape(), {1, 3, 224, 224}));
     auto secondInput = response.inputs().at(1);
     EXPECT_EQ(secondInput.name(), "SecondInput");
-    EXPECT_EQ(secondInput.datatype(), "DT_UINT8");    //TODO:Change data type to kserv
+    EXPECT_EQ(secondInput.datatype(), "U8");
     EXPECT_EQ(secondInput.shape_size(), 3);
     EXPECT_TRUE(isShapeTheSame(secondInput.shape(), {1, 700, 5}));
 
     EXPECT_EQ(response.outputs_size(), 1);
     auto output = response.outputs().at(0);
     EXPECT_EQ(output.name(), "SingleOutput");
-    EXPECT_EQ(output.datatype(), "DT_INT32");    //TODO:Change data type to kserv
+    EXPECT_EQ(output.datatype(), "I32");
     EXPECT_EQ(output.shape_size(), 2);
     EXPECT_TRUE(isShapeTheSame(output.shape(), {1, 2000}));
 }
@@ -259,19 +222,19 @@ TEST_F(ModelMetadataResponseBuild, SingleInputDoubleOutputValidResponse) {
     EXPECT_EQ(response.inputs_size(), 1);
     auto input = response.inputs().at(0);
     EXPECT_EQ(input.name(), "SingleInput");
-    EXPECT_EQ(input.datatype(), "DT_FLOAT");    //TODO:Change data type to kserv
+    EXPECT_EQ(input.datatype(), "FP32");
     EXPECT_EQ(input.shape_size(), 4);
     EXPECT_TRUE(isShapeTheSame(input.shape(), {1, 3, 224, 224}));
 
     EXPECT_EQ(response.outputs_size(), 2);
     auto firstOutput = response.outputs().at(0);
     EXPECT_EQ(firstOutput.name(), "FirstOutput");
-    EXPECT_EQ(firstOutput.datatype(), "DT_INT32");    //TODO:Change data type to kserv
+    EXPECT_EQ(firstOutput.datatype(), "I32");
     EXPECT_EQ(firstOutput.shape_size(), 2);
     EXPECT_TRUE(isShapeTheSame(firstOutput.shape(), {1, 2000}));
     auto secondOutput = response.outputs().at(0);
     EXPECT_EQ(secondOutput.name(), "SecondOutput");
-    EXPECT_EQ(secondOutput.datatype(), "DT_FLOAT");    //TODO:Change data type to kserv
+    EXPECT_EQ(secondOutput.datatype(), "FP32");
     EXPECT_EQ(secondOutput.shape_size(), 4);
     EXPECT_TRUE(isShapeTheSame(secondOutput.shape(), {1, 3, 400, 400}));
 }
@@ -292,26 +255,30 @@ TEST_F(ModelMetadataResponseBuild, DoubleInputDoubleOutputValidResponse) {
     EXPECT_EQ(response.inputs_size(), 2);
     auto firstInput = response.inputs().at(0);
     EXPECT_EQ(firstInput.name(), "FirstInput");
-    EXPECT_EQ(firstInput.datatype(), "DT_FLOAT");    //TODO:Change data type to kserv
+    EXPECT_EQ(firstInput.datatype(), "FP32");
     EXPECT_EQ(firstInput.shape_size(), 4);
     EXPECT_TRUE(isShapeTheSame(firstInput.shape(), {1, 3, 224, 224}));
     auto secondInput = response.inputs().at(1);
     EXPECT_EQ(secondInput.name(), "SecondInput");
-    EXPECT_EQ(secondInput.datatype(), "DT_UINT8");    //TODO:Change data type to kserv
+    EXPECT_EQ(secondInput.datatype(), "U8");
     EXPECT_EQ(secondInput.shape_size(), 3);
     EXPECT_TRUE(isShapeTheSame(secondInput.shape(), {1, 700, 5}));
 
     EXPECT_EQ(response.outputs_size(), 2);
     auto firstOutput = response.outputs().at(0);
     EXPECT_EQ(firstOutput.name(), "FirstOutput");
-    EXPECT_EQ(firstOutput.datatype(), "DT_INT32");    //TODO:Change data type to kserv
+    EXPECT_EQ(firstOutput.datatype(), "I32");
     EXPECT_EQ(firstOutput.shape_size(), 2);
     EXPECT_TRUE(isShapeTheSame(firstOutput.shape(), {1, 2000}));
     auto secondOutput = response.outputs().at(0);
     EXPECT_EQ(secondOutput.name(), "SecondOutput");
-    EXPECT_EQ(secondOutput.datatype(), "DT_FLOAT");    //TODO:Change data type to kserv
+    EXPECT_EQ(secondOutput.datatype(), "FP32");
     EXPECT_EQ(secondOutput.shape_size(), 4);
     EXPECT_TRUE(isShapeTheSame(secondOutput.shape(), {1, 3, 400, 400}));
+}
+
+TEST_F(ModelMetadataResponseBuild, ModelMappingValidResponse) {
+    
 }
 
 class PipelineMetadataResponseBuild : public ::testing::Test {
@@ -381,34 +348,34 @@ TEST_F(PipelineMetadataResponseBuild, PipelineInputOutputResponseMetadata) {
     EXPECT_EQ(response.inputs_size(), 3);
     auto firstInput = response.inputs().at(0);
     EXPECT_EQ(firstInput.name(), "Input_FP32_1_3_224_224");
-    EXPECT_EQ(firstInput.datatype(), "DT_FLOAT");    //TODO:Change data type to kserv
+    EXPECT_EQ(firstInput.datatype(), "FP32");
     EXPECT_EQ(firstInput.shape_size(), 4);
     EXPECT_TRUE(isShapeTheSame(firstInput.shape(), {1, 3, 224, 224}));
     auto secondInput = response.inputs().at(1);
     EXPECT_EQ(secondInput.name(), "Input_U8_1_3_62_62");
-    EXPECT_EQ(secondInput.datatype(), "DT_UINT8");    //TODO:Change data type to kserv
+    EXPECT_EQ(secondInput.datatype(), "U8");
     EXPECT_EQ(secondInput.shape_size(), 4);
     EXPECT_TRUE(isShapeTheSame(secondInput.shape(), {1, 3, 62, 62}));
     auto thirdInput = response.inputs().at(2);
     EXPECT_EQ(thirdInput.name(), "Input_Unspecified");
-    EXPECT_EQ(thirdInput.datatype(), "DT_INVALID");    //TODO:Change data type to kserv
+    EXPECT_EQ(thirdInput.datatype(), "DT_INVALID");
     EXPECT_EQ(thirdInput.shape_size(), 0);
     EXPECT_TRUE(isShapeTheSame(thirdInput.shape(), {}));
 
     EXPECT_EQ(response.outputs_size(), 3);
     auto firstOutput = response.outputs().at(0);
     EXPECT_EQ(firstOutput.name(), "Output_I32_1_2000");
-    EXPECT_EQ(firstOutput.datatype(), "DT_INT32");    //TODO:Change data type to kserv
+    EXPECT_EQ(firstOutput.datatype(), "I32");
     EXPECT_EQ(firstOutput.shape_size(), 2);
     EXPECT_TRUE(isShapeTheSame(firstOutput.shape(), {1, 2000}));
     auto secondOutput = response.outputs().at(1);
     EXPECT_EQ(secondOutput.name(), "Output_FP32_2_20_3");
-    EXPECT_EQ(secondOutput.datatype(), "DT_FLOAT");    //TODO:Change data type to kserv
+    EXPECT_EQ(secondOutput.datatype(), "FP32");
     EXPECT_EQ(secondOutput.shape_size(), 3);
     EXPECT_TRUE(isShapeTheSame(secondOutput.shape(), {2, 20, 3}));
     auto thirdOutput = response.outputs().at(2);
     EXPECT_EQ(thirdOutput.name(), "Output_Unspecified");
-    EXPECT_EQ(thirdOutput.datatype(), "DT_INVALID");    //TODO:Change data type to kserv
+    EXPECT_EQ(thirdOutput.datatype(), "DT_INVALID");
     EXPECT_EQ(thirdOutput.shape_size(), 0);
     EXPECT_TRUE(isShapeTheSame(thirdOutput.shape(), {}));
 }
@@ -443,48 +410,12 @@ TEST_F(PipelineMetadataResponseBuild, PipelineAvailableOrAvailableRequiringReval
     EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
 }
 
-TEST_F(PipelineMetadataResponseBuild, HandleDynamicShapes) {
+TEST_F(PipelineMetadataResponseBuild, HandleDynamicAndRangeShapes) {
     ovms::tensor_map_t inputsInfo = ovms::tensor_map_t(
         {{"Input_FP32_1_-1_224_224", std::make_shared<ovms::TensorInfo>("Input_FP32_1_-1_224_224", ovms::Precision::FP32, ovms::Shape{1, ovms::Dimension::any(), 224, 224})},
-        {"Input_U8_1_3_-1_-1", std::make_shared<ovms::TensorInfo>("Input_U8_1_3_-1_-1", ovms::Precision::U8, ovms::Shape{1, 3, ovms::Dimension::any(), ovms::Dimension::any()})}});
-    ovms::tensor_map_t outputsInfo = ovms::tensor_map_t(
-        {{"Output_I32_1_-1", std::make_shared<ovms::TensorInfo>("Output_I32_1_-1", ovms::Precision::I32, ovms::Shape{1, ovms::Dimension::any()})},
-        {"Output_FP32_1_-1_-1_3", std::make_shared<ovms::TensorInfo>("Output_FP32_1_-1_-1_3", ovms::Precision::FP32, ovms::Shape{1, ovms::Dimension::any(), ovms::Dimension::any(), 3})}});
-    prepare(inputsInfo, outputsInfo);
-
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
-
-    EXPECT_EQ(response.inputs_size(), 2);
-    auto firstInput = response.inputs().at(0);
-    EXPECT_EQ(firstInput.name(), "Input_FP32_1_-1_224_224");
-    EXPECT_EQ(firstInput.datatype(), "DT_FLOAT");    //TODO:Change data type to kserv
-    EXPECT_EQ(firstInput.shape_size(), 4);
-    EXPECT_TRUE(isShapeTheSame(firstInput.shape(), {1, -1, 224, 224}));
-    auto secondInput = response.inputs().at(1);
-    EXPECT_EQ(secondInput.name(), "Input_U8_1_3_-1_-1");
-    EXPECT_EQ(secondInput.datatype(), "DT_UINT8");    //TODO:Change data type to kserv
-    EXPECT_EQ(secondInput.shape_size(), 4);
-    EXPECT_TRUE(isShapeTheSame(secondInput.shape(), {1, 3, -1, -1}));
-
-    EXPECT_EQ(response.outputs_size(), 2);
-    auto firstOutput = response.outputs().at(0);
-    EXPECT_EQ(firstOutput.name(), "Output_I32_1_-1");
-    EXPECT_EQ(firstOutput.datatype(), "DT_INT32");    //TODO:Change data type to kserv
-    EXPECT_EQ(firstOutput.shape_size(), 2);
-    EXPECT_TRUE(isShapeTheSame(firstOutput.shape(), {1, -1}));
-    auto secondOutput = response.outputs().at(1);
-    EXPECT_EQ(secondOutput.name(), "Output_FP32_1_-1_-1_3");
-    EXPECT_EQ(secondOutput.datatype(), "DT_FLOAT");    //TODO:Change data type to kserv
-    EXPECT_EQ(secondOutput.shape_size(), 4);
-    EXPECT_TRUE(isShapeTheSame(secondOutput.shape(), {1, -1, -1, 3}));
-}
-
-TEST_F(PipelineMetadataResponseBuild, HandleRangeShapes) {
-    ovms::tensor_map_t inputsInfo = ovms::tensor_map_t(
-        {{"Input_FP32_1_1:3_224_224", std::make_shared<ovms::TensorInfo>("Input_FP32_1_1:3_224_224", ovms::Precision::FP32, ovms::Shape{1, {1, 3}, 224, 224})},
         {"Input_U8_1_3_62:92_62:92", std::make_shared<ovms::TensorInfo>("Input_U8_1_3_62:92_62:92", ovms::Precision::U8, ovms::Shape{1, 3, {62, 92}, {62, 92}})}});
     ovms::tensor_map_t outputsInfo = ovms::tensor_map_t(
-        {{"Output_I32_1_1:200", std::make_shared<ovms::TensorInfo>("Output_I32_1_1:200", ovms::Precision::I32, ovms::Shape{1, {1, 200}})},
+        {{"Output_I32_1_-1", std::make_shared<ovms::TensorInfo>("Output_I32_1_-1", ovms::Precision::I32, ovms::Shape{1, ovms::Dimension::any()})},
         {"Output_FP32_1_224:294_224:294_3", std::make_shared<ovms::TensorInfo>("Output_FP32_1_224:294_224:294_3", ovms::Precision::FP32, ovms::Shape{1, {224, 294}, {224, 294}, 3})}});
     prepare(inputsInfo, outputsInfo);
 
@@ -492,37 +423,27 @@ TEST_F(PipelineMetadataResponseBuild, HandleRangeShapes) {
 
     EXPECT_EQ(response.inputs_size(), 2);
     auto firstInput = response.inputs().at(0);
-    EXPECT_EQ(firstInput.name(), "Input_FP32_1_1:3_224_224");
-    EXPECT_EQ(firstInput.datatype(), "DT_FLOAT");    //TODO:Change data type to kserv
+    EXPECT_EQ(firstInput.name(), "Input_FP32_1_-1_224_224");
+    EXPECT_EQ(firstInput.datatype(), "FP32");
     EXPECT_EQ(firstInput.shape_size(), 4);
-    EXPECT_EQ(firstInput.shape().at(0), 1);
-    EXPECT_EQ(firstInput.shape().at(1), -1);
-    EXPECT_EQ(firstInput.shape().at(2), 224);
-    EXPECT_EQ(firstInput.shape().at(3), 224);
+    EXPECT_TRUE(isShapeTheSame(firstInput.shape(), {1, -1, 224, 224}));
     auto secondInput = response.inputs().at(1);
     EXPECT_EQ(secondInput.name(), "Input_U8_1_3_62:92_62:92");
-    EXPECT_EQ(secondInput.datatype(), "DT_UINT8");    //TODO:Change data type to kserv
+    EXPECT_EQ(secondInput.datatype(), "U8");
     EXPECT_EQ(secondInput.shape_size(), 4);
-    EXPECT_EQ(secondInput.shape().at(0), 1);
-    EXPECT_EQ(secondInput.shape().at(1), 3);
-    EXPECT_EQ(secondInput.shape().at(2), -1);
-    EXPECT_EQ(secondInput.shape().at(3), -1);
+    EXPECT_TRUE(isShapeTheSame(secondInput.shape(), {1, 3, -1, -1}));
 
     EXPECT_EQ(response.outputs_size(), 2);
     auto firstOutput = response.outputs().at(0);
-    EXPECT_EQ(firstOutput.name(), "Output_I32_1_1:200");
-    EXPECT_EQ(firstOutput.datatype(), "DT_INT32");    //TODO:Change data type to kserv
+    EXPECT_EQ(firstOutput.name(), "Output_I32_1_-1");
+    EXPECT_EQ(firstOutput.datatype(), "I32");
     EXPECT_EQ(firstOutput.shape_size(), 2);
-    EXPECT_EQ(firstOutput.shape().at(0), 1);
-    EXPECT_EQ(firstOutput.shape().at(1), -1);
+    EXPECT_TRUE(isShapeTheSame(firstOutput.shape(), {1, -1}));
     auto secondOutput = response.outputs().at(1);
     EXPECT_EQ(secondOutput.name(), "Output_FP32_1_224:294_224:294_3");
-    EXPECT_EQ(secondOutput.datatype(), "DT_FLOAT");    //TODO:Change data type to kserv
+    EXPECT_EQ(secondOutput.datatype(), "FP32");
     EXPECT_EQ(secondOutput.shape_size(), 4);
-    EXPECT_EQ(secondOutput.shape().at(0), 1);
-    EXPECT_EQ(secondOutput.shape().at(1), -1);
-    EXPECT_EQ(secondOutput.shape().at(2), -1);
-    EXPECT_EQ(secondOutput.shape().at(3), 3);
+    EXPECT_TRUE(isShapeTheSame(secondOutput.shape(), {1, -1, -1, 3}));
 }
 
 // TODO:serialize2Json test for model
