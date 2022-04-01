@@ -249,7 +249,10 @@ void performPrediction(const std::string modelName,
     ASSERT_TRUE(validationStatus == ovms::StatusCode::OK ||
                 validationStatus == ovms::StatusCode::RESHAPE_REQUIRED ||
                 validationStatus == ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
-    ASSERT_EQ(modelInstance->reloadModelIfRequired(validationStatus, &request, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    auto bsPositionIndex = 0;
+    auto requestBatchSize = ovms::getRequestBatchSize(&request, bsPositionIndex);
+    auto requestShapes = ovms::getRequestShapes(&request);
+    ASSERT_EQ(modelInstance->reloadModelIfRequired(validationStatus, requestBatchSize, requestShapes, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 
     ovms::ExecutingStreamIdGuard executingStreamIdGuard(modelInstance->getInferRequestsQueue());
     ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();

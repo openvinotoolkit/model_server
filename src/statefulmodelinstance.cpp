@@ -145,6 +145,7 @@ Status StatefulModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     return ModelInstance::loadOVCompiledModel(config);
 }
 
+template <>
 const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec) {
     uint64_t sequenceId = 0;
     uint32_t sequenceControlInput = 0;
@@ -175,7 +176,8 @@ const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::servin
     return StatusCode::OK;
 }
 
-const Status StatefulModelInstance::validate(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec) {
+template <typename RequestType>
+const Status StatefulModelInstance::validate(const RequestType* request, SequenceProcessingSpec& sequenceProcessingSpec) {
     auto status = validateSpecialKeys(request, sequenceProcessingSpec);
     if (!status.ok())
         return status;

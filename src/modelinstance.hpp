@@ -218,7 +218,8 @@ protected:
          */
     Status loadOVModelUsingCustomLoader();
 
-    virtual const Status validate(const tensorflow::serving::PredictRequest* request);
+    template <typename PredictRequest>
+    const Status validate(const PredictRequest* request);
 
 private:
     /**
@@ -503,8 +504,10 @@ public:
          * 
          * @return Status
          */
-
-    Status reloadModelIfRequired(Status validationStatus, const tensorflow::serving::PredictRequest* requestProto,
+    Status reloadModelIfRequired(
+        Status validationStatus,
+        const std::optional<Dimension>& requestedBatchSize,
+        const std::map<std::string, shape_t>& requestedShapes,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
     /**
