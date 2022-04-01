@@ -123,7 +123,7 @@ bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vecto
     return true;
 }
 
-extern bool isShapeTheSame(const google::protobuf::RepeatedField<int64>& actual, const std::vector<int64_t>&& expected) {
+extern bool isShapeTheSame(const google::protobuf::RepeatedField<int64_t>& actual, const std::vector<int64_t>&& expected) {
     bool same = true;
     int a_size = actual.size();
     if (a_size != int(expected.size())) {
