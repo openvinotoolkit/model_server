@@ -427,5 +427,5 @@ TEST_F(PipelineMetadataResponseBuild, HandleDynamicAndRangeShapes) {
     EXPECT_TRUE(isShapeTheSame(secondOutput.shape(), {1, -1, -1, 3}));
 }
 
-// TODO:serialize2Json test for model
-// TODO:serialize2Json test for pipeline
+// TODO: serialize2Json test for model
+// TODO: serialize2Json test for pipeline

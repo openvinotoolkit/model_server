@@ -16,6 +16,8 @@
 #include "kfs_grpc_inference_service.hpp"
 
 #include <iostream>
+#include <memory>
+#include <string>
 
 #include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
