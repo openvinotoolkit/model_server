@@ -73,5 +73,4 @@ template Status ExitNode<tensorflow::serving::PredictResponse>::fetchResults(Nod
 template Status ExitNode<tensorflow::serving::PredictResponse>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
 template Status ExitNode<tensorflow::serving::PredictResponse>::fetchResults(const TensorMap& inputTensors);
 template std::unique_ptr<NodeSession> ExitNode<tensorflow::serving::PredictResponse>::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails);
-// TODO check if template ExitNode<tensor...> wouldn't suffice
 }  // namespace ovms
