@@ -14,6 +14,10 @@
 // limitations under the License.
 //*****************************************************************************
 #include "predict_request_validation_utils.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma GCC diagnostic pop
 
 #include <sstream>
 #include <string>
