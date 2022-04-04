@@ -323,7 +323,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
         nodes[i++] = std::make_unique<CustomNode>(chooseMaxNodeName + "-" + std::to_string(demultiplicationLayer), chooseMaxLibrary, parameters, chooseMaxOutputAlias, std::nullopt, std::set<std::string>({differentOpsNodeName + "-" + std::to_string(demultiplicationLayer)}));
     }
 
-    Pipeline pipeline(dynamic_cast<EntryNode<PredictRequest>&>(*nodes[0]), dynamic_cast<ExitNode<PredictResponse>&>(*nodes[1]));
+    Pipeline pipeline(*nodes[0], *nodes[1]);
     i = 2;
     for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
         if (i == 2) {  // first node after entry
@@ -396,7 +396,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
         nodes[nodesCount - 1 - (i / 2)] = std::make_unique<CustomNode>(chooseMaxNodeName + "-" + std::to_string(demultiplicationLayer), chooseMaxLibrary, parameters, chooseMaxOutputAlias, std::nullopt, std::set<std::string>({differentOpsNodeName + "-" + std::to_string(demultiplicationLayer)}));
     }
 
-    Pipeline pipeline(dynamic_cast<EntryNode<PredictRequest>&>(*nodes[0]), dynamic_cast<ExitNode<PredictResponse>&>(*nodes[nodesCount - 1]));
+    Pipeline pipeline(*nodes[0], *nodes[nodesCount - 1]);
     i = 1;
     for (size_t demultiplicationLayer = 0; demultiplicationLayer < demultiplicationLayersCount; ++demultiplicationLayer) {
         if (i == 1) {  // first node after entry needs to connect to entry
