@@ -26,26 +26,30 @@
 
 namespace ovms {
 
-struct Node;
-struct EntryNode;
-struct ExitNode;
+class Node;
+template <typename PredictRequest>
+class EntryNode;
+template <typename PredictResponse>
+class ExitNode;
 
 void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const Aliases& pairs);
 
 class Pipeline {
     std::vector<std::unique_ptr<Node>> nodes;
     const std::string name;
-    EntryNode& entry;
-    ExitNode& exit;
+    // TODO removed specific types in order not to templatize Pipeline class
+    // consider if this is best way
+    Node& entry;
+    Node& exit;
 
 public:
-    Pipeline(EntryNode& entry, ExitNode& exit, const std::string& name = "default_name");
+    Pipeline(Node& entry, Node& exit, const std::string& name = "default_name");
 
     void push(std::unique_ptr<Node> node);
     ~Pipeline();
 
-    EntryNode& getEntry() const { return this->entry; }
-    ExitNode& getExit() const { return this->exit; }
+    Node& getEntry() const { return this->entry; }
+    Node& getExit() const { return this->exit; }
 
     static void connect(Node& from, Node& to, const Aliases& tensorNamesMapping);
 

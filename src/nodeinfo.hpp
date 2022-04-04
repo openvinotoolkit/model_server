@@ -23,11 +23,6 @@
 #include <utility>
 #include <vector>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-
 #include "aliases.hpp"
 #include "modelversion.hpp"
 #include "node_library.hpp"

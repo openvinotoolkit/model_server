@@ -210,9 +210,10 @@ Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloa
     return StatusCode::OK;
 }
 
+template <typename RequestType, typename ResponseType>
 Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
-    const tensorflow::serving::PredictRequest* request,
-    tensorflow::serving::PredictResponse* response,
+    const RequestType* request,
+    ResponseType* response,
     ModelManager& manager) {
     std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
     Status status = waitForLoaded(unloadGuard);
@@ -221,15 +222,15 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     }
 
     std::unordered_map<std::string, std::unique_ptr<Node>> nodes;
-    EntryNode* entry = nullptr;
-    ExitNode* exit = nullptr;
+    EntryNode<RequestType>* entry = nullptr;
+    ExitNode<ResponseType>* exit = nullptr;
 
     for (const auto& info : nodeInfos) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Creating pipeline: {}. Adding nodeName: {}, modelName: {}",
             getName(), info.nodeName, info.modelName);
         switch (info.kind) {
         case NodeKind::ENTRY: {
-            auto node = std::make_unique<EntryNode>(request, getInputsInfo(), info.demultiplyCount);
+            auto node = std::make_unique<EntryNode<RequestType>>(request, getInputsInfo(), info.demultiplyCount);
             entry = node.get();
             nodes.emplace(info.nodeName, std::move(node));
             break;
@@ -255,7 +256,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                              nodeResources.at(info.nodeName)));
             break;
         case NodeKind::EXIT: {
-            auto node = std::make_unique<ExitNode>(response, getOutputsInfo(), info.gatherFromNode);
+            auto node = std::make_unique<ExitNode<ResponseType>>(response, getOutputsInfo(), info.gatherFromNode);
             exit = node.get();
             nodes.emplace(info.nodeName, std::move(node));
             break;
@@ -279,6 +280,11 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     }
     return status;
 }
+template Status PipelineDefinition::create<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(
+    std::unique_ptr<Pipeline>& pipeline,
+    const tensorflow::serving::PredictRequest* request,
+    tensorflow::serving::PredictResponse* response,
+    ModelManager& manager);
 
 void PipelineDefinition::resetSubscriptions(ModelManager& manager) {
     for (auto& [modelName, modelVersion] : subscriptions) {

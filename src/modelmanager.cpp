@@ -1295,15 +1295,6 @@ Status ModelManager::getModelInstance(const std::string& modelName,
     return modelInstance->waitForLoaded(waitForModelLoadedTimeoutMs, modelInstanceUnloadGuardPtr);
 }
 
-Status ModelManager::getPipeline(std::unique_ptr<ovms::Pipeline>& pipelinePtr,
-    const tensorflow::serving::PredictRequest* request,
-    tensorflow::serving::PredictResponse* response) {
-
-    SPDLOG_DEBUG("Requesting pipeline: {};", request->model_spec().name());
-    auto status = createPipeline(pipelinePtr, request->model_spec().name(), request, response);
-    return status;
-}
-
 const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() const {
     return *customNodeLibraryManager;
 }

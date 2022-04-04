@@ -954,12 +954,13 @@ Status ModelInstance::reloadModel(std::optional<Dimension> batchSize, std::map<s
 
 Status ModelInstance::reloadModelIfRequired(
     Status validationStatus,
-    const tensorflow::serving::PredictRequest* requestProto,
+    const std::optional<Dimension>& requestedBatchSize,
+    const std::map<std::string, shape_t>& requestedShapes,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
     Status status = validationStatus;
     if (status.batchSizeChangeRequired()) {
         try {
-            status = reloadModel(getRequestBatchSize(requestProto, this->getBatchSizeIndex()), {}, modelUnloadGuardPtr);
+            status = reloadModel(requestedBatchSize, {}, modelUnloadGuardPtr);
         } catch (const std::exception& e) {
             status = Status(StatusCode::INVALID_BATCH_DIMENSION, e.what());
         }
@@ -968,7 +969,7 @@ Status ModelInstance::reloadModelIfRequired(
                 getName(), getVersion(), status.getCode(), status.string());
         }
     } else if (status.reshapeRequired()) {
-        status = reloadModel(std::nullopt, getRequestShapes(requestProto), modelUnloadGuardPtr);
+        status = reloadModel(std::nullopt, requestedShapes, modelUnloadGuardPtr);
         if (!status.ok() && status != StatusCode::RESHAPE_ERROR) {
             SPDLOG_ERROR("Model: {}, version: {} reload (reshape) failed. Status Code: {}, Error: {}",
                 getName(), getVersion(), status.getCode(), status.string());
@@ -1078,7 +1079,8 @@ void ModelInstance::unloadModelComponents() {
     }
 }
 
-const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request) {
+template <typename RequestType>
+const Status ModelInstance::validate(const RequestType* request) {
     static const std::set<const char*> optionalInputNames = {};
     return request_validation_utils::validate(
         *request,
@@ -1109,7 +1111,9 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     using std::chrono::microseconds;
 
     auto status = validate(requestProto);
-    status = reloadModelIfRequired(status, requestProto, modelUnloadGuardPtr);
+    auto requestBatchSize = getRequestBatchSize(requestProto, this->getBatchSizeIndex());
+    auto requestShapes = getRequestShapes(requestProto);
+    status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
     if (!status.ok())
         return status;
     timer.start("get infer request");
@@ -1139,7 +1143,8 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
         requestProto->model_spec().name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
 
     timer.start("serialize");
-    status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
+    OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
+    status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, getTensorInfoName);
     timer.stop("serialize");
     if (!status.ok())
         return status;

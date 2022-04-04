@@ -87,13 +87,15 @@ protected:
 
     GlobalSequencesViewer* globalSequencesViewer;
 
-    const Status validate(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& processingSpec);
+    template <typename RequestType>
+    const Status validate(const RequestType* request, SequenceProcessingSpec& processingSpec);
 
     Status loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
 
     Status loadOVCompiledModel(const ModelConfig& config) override;
 
 private:
-    const Status validateSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec);
+    template <typename RequestType>
+    const Status validateSpecialKeys(const RequestType* request, SequenceProcessingSpec& sequenceProcessingSpec);
 };
 }  // namespace ovms
