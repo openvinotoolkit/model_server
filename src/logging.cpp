@@ -37,6 +37,9 @@ void set_log_level(const std::string log_level, std::shared_ptr<spdlog::logger> 
         } else if (log_level == "ERROR") {
             logger->set_level(spdlog::level::err);
             logger->flush_on(spdlog::level::err);
+        } else if (log_level == "TRACE") {
+            logger->set_level(spdlog::level::trace);
+            logger->flush_on(spdlog::level::trace);
         }
     }
 }

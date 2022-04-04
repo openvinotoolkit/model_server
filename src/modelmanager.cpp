@@ -761,7 +761,7 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
 
 Status ModelManager::updateConfigurationWithoutConfigFile() {
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Checking if something changed with model versions");
+    SPDLOG_LOGGER_TRACE(modelmanager_logger, "Checking if something changed with model versions");
     bool reloadNeeded = false;
     Status firstErrorStatus = StatusCode::OK;
     Status status;
@@ -832,7 +832,7 @@ void ModelManager::watcher(std::future<void> exitSignal) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started model manager thread");
 
     while (exitSignal.wait_for(std::chrono::seconds(watcherIntervalSec)) == std::future_status::timeout) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Models configuration and filesystem check cycle begin");
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle begin");
         std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
         bool isNeeded;
         configFileReloadNeeded(isNeeded);
@@ -841,7 +841,7 @@ void ModelManager::watcher(std::future<void> exitSignal) {
         }
         updateConfigurationWithoutConfigFile();
 
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Models configuration and filesystem check cycle end");
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle end");
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
 }
@@ -867,7 +867,7 @@ void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& 
     uint32_t currentWaitTime = (!shouldCheckForSequenceCleanup || currentResourcesWaitTime < currentSequenceWaitTime) ? currentResourcesWaitTime : currentSequenceWaitTime;
 
     while (cleanerExitSignal.wait_for(std::chrono::milliseconds(currentWaitTime)) == std::future_status::timeout) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleanup check cycle begin");
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Cleanup check cycle begin");
 
         currentResourcesWaitTime = (currentResourcesWaitTime - currentWaitTime) == 0 ? resourcesCleanupInterval : currentResourcesWaitTime - currentWaitTime;
         if (shouldCheckForSequenceCleanup)
@@ -879,7 +879,7 @@ void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& 
         if (currentSequenceWaitTime == sequenceCleanerInterval && shouldCheckForSequenceCleanup)
             functorSequenceCleaner.cleanup();
 
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleanup check cycle end");
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Cleanup check cycle end");
     }
 }
 
@@ -931,9 +931,9 @@ void ModelManager::getVersionsToChange(
     std::shared_ptr<model_versions_t>& versionsToRetireIn) {
     std::sort(requestedVersions.begin(), requestedVersions.end());
     model_versions_t registeredModelVersions;
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Currently registered model: {} versions count: {}", newModelConfig.getName(), modelVersionsInstances.size());
+    SPDLOG_LOGGER_TRACE(modelmanager_logger, "Currently registered model: {} versions count: {}", newModelConfig.getName(), modelVersionsInstances.size());
     for (const auto& [version, versionInstance] : modelVersionsInstances) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {} version: {} state: {}", newModelConfig.getName(), version, ovms::ModelVersionStateToString(versionInstance->getStatus().getState()));
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "model: {} version: {} state: {}", newModelConfig.getName(), version, ovms::ModelVersionStateToString(versionInstance->getStatus().getState()));
         registeredModelVersions.push_back(version);
     }
 
@@ -1076,7 +1076,7 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
     }
 
     for (const auto& entry : dirs) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Detected version folder: {}", entry);
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Detected version folder: {}", entry);
         try {
             ovms::model_version_t version = std::stoll(entry);
             if (version <= 0) {
@@ -1134,7 +1134,7 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
 }
 
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started applying config changes to model: {}", config.getName());
+    SPDLOG_LOGGER_TRACE(modelmanager_logger, "Started applying config changes to model: {}", config.getName());
 
     if (config.isStateful() && config.isDynamicParameterEnabled()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for stateful model {}. Dynamic shape and dynamic batch size not supported for stateful models.", config.getName());

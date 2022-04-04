@@ -27,7 +27,7 @@ public:
     ~Environment() override {}
 
     void SetUp() override {
-        ovms::configure_logger("DEBUG", "");
+        ovms::configure_logger("TRACE", "");
     }
 
     void TearDown() override {}

@@ -216,7 +216,7 @@ cc_library(
         "@opencv//:opencv",
     ],
     local_defines = [
-        "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG"
+        "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE"
     ],
     copts = [
         "-Wall",
