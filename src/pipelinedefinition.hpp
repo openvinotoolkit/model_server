@@ -30,9 +30,9 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
-
 #include "aliases.hpp"
 #include "custom_node_library_internal_manager_wrapper.hpp"
+#include "kfs_grpc_inference_service.hpp"
 #include "modelversion.hpp"
 #include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"
@@ -110,10 +110,10 @@ public:
         nodeInfos(nodeInfos),
         connections(connections),
         status(this->pipelineName) {}
-
+    template <typename RequestType, typename ResponseType>
     Status create(std::unique_ptr<Pipeline>& pipeline,
-        const tensorflow::serving::PredictRequest* request,
-        tensorflow::serving::PredictResponse* response,
+        const RequestType* request,
+        ResponseType* response,
         ModelManager& manager);
     Status reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections);
     void retire(ModelManager& manager);

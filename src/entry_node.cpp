@@ -30,11 +30,13 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
 namespace ovms {
 
-Status EntryNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
+template <typename RequestType>
+Status EntryNode<RequestType>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
     // this should be created in EntryNode::SetInputs, or special method for entry node called
     // in event loop can be done in future release while implementing dynamic demultiplexing at
     // entry node
@@ -48,7 +50,8 @@ Status EntryNode::execute(session_key_t sessionId, PipelineEventQueue& notifyEnd
     return StatusCode::OK;
 }
 
-Status EntryNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
+template <typename RequestType>
+Status EntryNode<RequestType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
     TensorMap outputs;
     auto status = fetchResults(outputs);
     if (!status.ok()) {
@@ -63,7 +66,8 @@ Status EntryNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSes
     return StatusCode::OK;
 }
 
-Status EntryNode::fetchResults(TensorMap& outputs) {
+template <typename RequestType>
+Status EntryNode<RequestType>::fetchResults(TensorMap& outputs) {
     auto status = validate();
     if (!status.ok()) {
         return status;
@@ -79,7 +83,8 @@ Status InputSink<TensorMap&>::give(const std::string& name, ov::Tensor& tensor) 
     return StatusCode::OK;
 }
 
-Status EntryNode::isInputBinary(const std::string& name, bool& isBinary) const {
+template <typename RequestType>
+Status EntryNode<RequestType>::isInputBinary(const std::string& name, bool& isBinary) const {
     auto it = request->inputs().find(name);
     if (it == request->inputs().end()) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Error during checking binary input; input: {} does not exist", name);
@@ -89,7 +94,8 @@ Status EntryNode::isInputBinary(const std::string& name, bool& isBinary) const {
     return StatusCode::OK;
 }
 
-Status EntryNode::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
+template <typename RequestType>
+Status EntryNode<RequestType>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
     bool isBinary = false;
     auto status = this->isInputBinary(tensorName, isBinary);
     if (!status.ok()) {
@@ -116,7 +122,8 @@ Status EntryNode::createShardedTensor(ov::Tensor& dividedTensor, Precision preci
     return StatusCode::OK;
 }
 
-const Status EntryNode::validate() {
+template <typename RequestType>
+const Status EntryNode<RequestType>::validate() {
     static const std::set<const char*> optionalInputNames = {};
     return request_validation_utils::validate(
         *request,
@@ -126,4 +133,12 @@ const Status EntryNode::validate() {
         optionalInputNames);  // Pipelines are not versioned and always reports version 1
 }
 
+// TODO move this declarations outside entrynode.cpp in the future together with KFS RequestType for faster
+// incremental compilation
+template Status EntryNode<tensorflow::serving::PredictRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
+template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
+template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(TensorMap& outputs);
+template Status EntryNode<tensorflow::serving::PredictRequest>::isInputBinary(const std::string& name, bool& isBinary) const;
+template Status EntryNode<tensorflow::serving::PredictRequest>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
+template const Status EntryNode<tensorflow::serving::PredictRequest>::validate();
 }  // namespace ovms

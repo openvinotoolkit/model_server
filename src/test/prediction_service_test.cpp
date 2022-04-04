@@ -41,7 +41,8 @@ using testing::Eq;
 void serializeAndCheck(int outputSize, ov::InferRequest& inferRequest, const std::string& outputName, const ovms::tensor_map_t& outputsInfo) {
     std::vector<float> output(10);
     tensorflow::serving::PredictResponse response;
-    auto status = serializePredictResponse(inferRequest, outputsInfo, &response);
+    ovms::OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
+    auto status = serializePredictResponse(outputGetter, outputsInfo, &response, ovms::getTensorInfoName);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
     std::memcpy(output.data(), (float*)response.outputs().at(outputName).tensor_content().data(), DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
@@ -248,7 +249,10 @@ void performPrediction(const std::string modelName,
     ASSERT_TRUE(validationStatus == ovms::StatusCode::OK ||
                 validationStatus == ovms::StatusCode::RESHAPE_REQUIRED ||
                 validationStatus == ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
-    ASSERT_EQ(modelInstance->reloadModelIfRequired(validationStatus, &request, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    auto bsPositionIndex = 0;
+    auto requestBatchSize = ovms::getRequestBatchSize(&request, bsPositionIndex);
+    auto requestShapes = ovms::getRequestShapes(&request);
+    ASSERT_EQ(modelInstance->reloadModelIfRequired(validationStatus, requestBatchSize, requestShapes, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 
     ovms::ExecutingStreamIdGuard executingStreamIdGuard(modelInstance->getInferRequestsQueue());
     ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();

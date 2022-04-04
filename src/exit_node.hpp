@@ -30,12 +30,13 @@ namespace ovms {
 
 const std::string EXIT_NODE_NAME = "response";
 
+template <typename ResponseType>
 class ExitNode : public Node {
-    tensorflow::serving::PredictResponse* response;
+    ResponseType* response;
     const tensor_map_t outputsInfo;
 
 public:
-    ExitNode(tensorflow::serving::PredictResponse* response, const tensor_map_t& outputsInfo, std::set<std::string> gatherFromNode = {}) :
+    ExitNode(ResponseType* response, const tensor_map_t& outputsInfo, std::set<std::string> gatherFromNode = {}) :
         Node(EXIT_NODE_NAME, std::nullopt, gatherFromNode),
         response(response),
         outputsInfo(outputsInfo) {

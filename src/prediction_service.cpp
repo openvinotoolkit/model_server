@@ -56,7 +56,7 @@ Status getPipeline(const PredictRequest* request,
     PredictResponse* response,
     std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
     ModelManager& manager = ModelManager::getInstance();
-    return manager.getPipeline(pipelinePtr, request, response);
+    return manager.createPipeline(pipelinePtr, request->model_spec().name(), request, response);
 }
 
 grpc::Status ovms::PredictionServiceImpl::Predict(

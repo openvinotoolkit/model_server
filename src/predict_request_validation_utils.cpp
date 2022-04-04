@@ -14,12 +14,17 @@
 // limitations under the License.
 //*****************************************************************************
 #include "predict_request_validation_utils.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma GCC diagnostic pop
 
 #include <sstream>
 #include <string>
 
 #include <spdlog/spdlog.h>
 
+#include "kfs_grpc_inference_service.hpp"
 #include "modelconfig.hpp"
 
 namespace ovms {
@@ -367,8 +372,14 @@ Status RequestValidator::validate() {
     return finalStatus;
 }
 
+template <>
 Status validate(const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<const char*>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
     return RequestValidator(request, inputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
+}
+
+template <>
+Status validate(const ::inference::ModelInferRequest& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<const char*>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
+    return StatusCode::NOT_IMPLEMENTED;
 }
 
 }  // namespace request_validation_utils

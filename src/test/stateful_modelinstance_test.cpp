@@ -246,7 +246,8 @@ public:
         timer.stop("prediction");
 
         timer.start("serialize");
-        status = serializePredictResponse(inferRequest, getOutputsInfo(), responseProto);
+        ovms::OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
+        status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, ovms::getTensorInfoName);
         timer.stop("serialize");
         if (!status.ok())
             return status;
