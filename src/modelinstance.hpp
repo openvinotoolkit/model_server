@@ -218,8 +218,8 @@ protected:
          */
     Status loadOVModelUsingCustomLoader();
 
-    template <typename PredictRequest>
-    const Status validate(const PredictRequest* request);
+    template <typename RequestType>
+    const Status validate(const RequestType* request);
 
 private:
     /**
