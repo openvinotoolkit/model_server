@@ -120,7 +120,7 @@ bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vecto
         }
         SPDLOG_ERROR("Shape mismatch: {}", ss.str());
     }
-    return true;
+    return same;
 }
 
 extern bool isShapeTheSame(const google::protobuf::RepeatedField<int64_t>& actual, const std::vector<int64_t>&& expected) {
@@ -148,7 +148,7 @@ extern bool isShapeTheSame(const google::protobuf::RepeatedField<int64_t>& actua
         }
         SPDLOG_ERROR("Shape mismatch: {}", ss.str());
     }
-    return true;
+    return same;
 }
 
 void readImage(const std::string& path, size_t& filesize, std::unique_ptr<char[]>& image_bytes) {

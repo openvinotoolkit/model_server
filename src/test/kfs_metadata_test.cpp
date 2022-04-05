@@ -168,62 +168,6 @@ TEST_F(ModelMetadataResponseBuild, SingleInputSingleOutputValidResponse) {
     EXPECT_TRUE(isShapeTheSame(output.shape(), {1, 2000}));
 }
 
-TEST_F(ModelMetadataResponseBuild, DoubleInputSingleOutputValidResponse) {
-    tensor_desc_map_t inputs = tensor_desc_map_t({{"FirstInput", {ovms::Precision::FP32, {1, 3, 224, 224}}},
-        {"SecondInput", {ovms::Precision::U8, {1, 700, 5}}}});
-    tensor_desc_map_t outputs = tensor_desc_map_t({{"SingleOutput", {ovms::Precision::I32, {1, 2000}}}});
-    prepare(inputs, outputs);
-
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
-
-    EXPECT_EQ(response.inputs_size(), 2);
-    auto firstInput = response.inputs().at(0);
-    EXPECT_EQ(firstInput.name(), "FirstInput");
-    EXPECT_EQ(firstInput.datatype(), "FP32");
-    EXPECT_EQ(firstInput.shape_size(), 4);
-    EXPECT_TRUE(isShapeTheSame(firstInput.shape(), {1, 3, 224, 224}));
-    auto secondInput = response.inputs().at(1);
-    EXPECT_EQ(secondInput.name(), "SecondInput");
-    EXPECT_EQ(secondInput.datatype(), "U8");
-    EXPECT_EQ(secondInput.shape_size(), 3);
-    EXPECT_TRUE(isShapeTheSame(secondInput.shape(), {1, 700, 5}));
-
-    EXPECT_EQ(response.outputs_size(), 1);
-    auto output = response.outputs().at(0);
-    EXPECT_EQ(output.name(), "SingleOutput");
-    EXPECT_EQ(output.datatype(), "I32");
-    EXPECT_EQ(output.shape_size(), 2);
-    EXPECT_TRUE(isShapeTheSame(output.shape(), {1, 2000}));
-}
-
-TEST_F(ModelMetadataResponseBuild, SingleInputDoubleOutputValidResponse) {
-    tensor_desc_map_t inputs = tensor_desc_map_t({{"SingleInput", {ovms::Precision::FP32, {1, 3, 224, 224}}}});
-    tensor_desc_map_t outputs = tensor_desc_map_t({{"FirstOutput", {ovms::Precision::I32, {1, 2000}}},
-        {"SecondOutput", {ovms::Precision::FP32, {1, 3, 400, 400}}}});
-    prepare(inputs, outputs);
-
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
-
-    EXPECT_EQ(response.inputs_size(), 1);
-    auto input = response.inputs().at(0);
-    EXPECT_EQ(input.name(), "SingleInput");
-    EXPECT_EQ(input.datatype(), "FP32");
-    EXPECT_EQ(input.shape_size(), 4);
-    EXPECT_TRUE(isShapeTheSame(input.shape(), {1, 3, 224, 224}));
-
-    EXPECT_EQ(response.outputs_size(), 2);
-    auto firstOutput = response.outputs().at(0);
-    EXPECT_EQ(firstOutput.name(), "FirstOutput");
-    EXPECT_EQ(firstOutput.datatype(), "I32");
-    EXPECT_EQ(firstOutput.shape_size(), 2);
-    EXPECT_TRUE(isShapeTheSame(firstOutput.shape(), {1, 2000}));
-    auto secondOutput = response.outputs().at(1);
-    EXPECT_EQ(secondOutput.name(), "SecondOutput");
-    EXPECT_EQ(secondOutput.datatype(), "FP32");
-    EXPECT_EQ(secondOutput.shape_size(), 4);
-    EXPECT_TRUE(isShapeTheSame(secondOutput.shape(), {1, 3, 400, 400}));
-}
-
 TEST_F(ModelMetadataResponseBuild, DoubleInputDoubleOutputValidResponse) {
     tensor_desc_map_t inputs = tensor_desc_map_t({{"FirstInput", {ovms::Precision::FP32, {1, 3, 224, 224}}},
         {"SecondInput", {ovms::Precision::U8, {1, 700, 5}}}});
@@ -256,9 +200,6 @@ TEST_F(ModelMetadataResponseBuild, DoubleInputDoubleOutputValidResponse) {
     EXPECT_EQ(secondOutput.datatype(), "FP32");
     EXPECT_EQ(secondOutput.shape_size(), 4);
     EXPECT_TRUE(isShapeTheSame(secondOutput.shape(), {1, 3, 400, 400}));
-}
-
-TEST_F(ModelMetadataResponseBuild, ModelMappingValidResponse) {
 }
 
 class PipelineMetadataResponseBuild : public ::testing::Test {
@@ -426,6 +367,3 @@ TEST_F(PipelineMetadataResponseBuild, HandleDynamicAndRangeShapes) {
     EXPECT_EQ(secondOutput.shape_size(), 4);
     EXPECT_TRUE(isShapeTheSame(secondOutput.shape(), {1, -1, -1, 3}));
 }
-
-// TODO: serialize2Json test for model
-// TODO: serialize2Json test for pipeline

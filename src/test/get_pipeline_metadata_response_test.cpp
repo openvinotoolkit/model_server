@@ -262,7 +262,7 @@ protected:
             {{"Input_FP32_1_-1_224_224",
                  std::make_shared<TensorInfo>("Input_FP32_1_-1_224_224", ovms::Precision::FP32, ovms::Shape{1, ovms::Dimension::any(), 224, 224})},
                 {"Input_U8_1_3_62:92_62:92",
-                    std::make_shared<TensorInfo>("Input_U8_1_3_62:92_62:92", ovms::Precision::U8, ovms::Shape{1, 3, {62, 92}, {62, 92}})}},
+                    std::make_shared<TensorInfo>("Input_U8_1_3_62:92_62:92", ovms::Precision::U8, ovms::Shape{1, 3, {62, 92}, ovms::Dimension::any()})}},
             {{"Output_I32_1_-1",
                  std::make_shared<TensorInfo>("Output_I32_1_-1", ovms::Precision::I32, ovms::Shape{1, ovms::Dimension::any()})},
                 {"Output_FP32_1_224:294_224:294_3",
