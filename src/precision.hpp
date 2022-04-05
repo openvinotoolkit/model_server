@@ -107,6 +107,36 @@ inline static Precision fromString(const std::string& s) {
     return it->second;
 }
 
+inline static Precision fromKFSString(const std::string& s) {
+    static std::unordered_map<std::string, Precision> precisionMap{
+        {"BF16", Precision::BF16},
+        {"FP64", Precision::FP64},
+        {"FP32", Precision::FP32},
+        {"FP16", Precision::FP16},
+        {"INT64", Precision::I64},
+        {"INT32", Precision::I32},
+        {"INT16", Precision::I16},
+        {"INT8", Precision::I8},
+        {"INT4", Precision::I4},
+        {"UINT64", Precision::U64},
+        {"UINT32", Precision::U32},
+        {"UINT16", Precision::U16},
+        {"UINT8", Precision::U8},
+        {"UINT4", Precision::U4},
+        {"UINT1", Precision::U1},
+        {"MIXED", Precision::MIXED},
+        {"Q78", Precision::Q78},
+        {"BIN", Precision::BIN},
+        {"BOOL", Precision::BOOL},
+        {"UNDEFINED", Precision::UNDEFINED},
+        {"CUSTOM", Precision::CUSTOM}};
+    auto it = precisionMap.find(s);
+    if (it == precisionMap.end()) {
+        return Precision::UNDEFINED;
+    }
+    return it->second;
+}
+
 inline static ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision) {
     static std::unordered_map<Precision, ov::element::Type_t> precisionMap{
         {Precision::FP64, ov::element::Type_t::f64},
@@ -118,6 +148,7 @@ inline static ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precisio
         {Precision::I8, ov::element::Type_t::i8},
         {Precision::I4, ov::element::Type_t::i4},
         {Precision::U64, ov::element::Type_t::u64},
+        {Precision::U32, ov::element::Type_t::u32},
         {Precision::U16, ov::element::Type_t::u16},
         {Precision::U8, ov::element::Type_t::u8},
         {Precision::U4, ov::element::Type_t::u4},

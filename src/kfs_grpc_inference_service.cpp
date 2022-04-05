@@ -125,14 +125,16 @@ const std::string PLATFORM = "OpenVINO";
         }
         std::cout << std::endl;
 
+        // only first input
         if (i == 0) {
-            tensorInfo = std::make_shared<TensorInfo>(input.name(), fromString("I32"), ovms::Shape{1, 16});
+            tensorInfo = std::make_shared<TensorInfo>(input.name(), fromKFSString(input.datatype()), ovms::Shape{1, 16});
             tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(input, tensorInfo, request->raw_input_contents()[i]);
         }
     }
 
     std::cout << tensor.get_element_type() << tensor.get_shape() << tensor.data() << std::endl;
-    int32_t* data = (int32_t*)tensor.data();
+    // cast to expected input.datatype() to print data
+    uint32_t* data = (uint32_t*)tensor.data();
     for (int i = 0; i < floats; ++i) {
         std::cout << "data2[" << i << "]=" << (*(data + i)) << " ";
         *(data + i) *= 3;
