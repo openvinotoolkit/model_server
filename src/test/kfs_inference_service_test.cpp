@@ -217,7 +217,7 @@ TEST_F(ModelMetadataResponseBuild, SingleInputDoubleOutputValidResponse) {
     EXPECT_EQ(firstOutput.datatype(), "I32");
     EXPECT_EQ(firstOutput.shape_size(), 2);
     EXPECT_TRUE(isShapeTheSame(firstOutput.shape(), {1, 2000}));
-    auto secondOutput = response.outputs().at(0);
+    auto secondOutput = response.outputs().at(1);
     EXPECT_EQ(secondOutput.name(), "SecondOutput");
     EXPECT_EQ(secondOutput.datatype(), "FP32");
     EXPECT_EQ(secondOutput.shape_size(), 4);
@@ -251,7 +251,7 @@ TEST_F(ModelMetadataResponseBuild, DoubleInputDoubleOutputValidResponse) {
     EXPECT_EQ(firstOutput.datatype(), "I32");
     EXPECT_EQ(firstOutput.shape_size(), 2);
     EXPECT_TRUE(isShapeTheSame(firstOutput.shape(), {1, 2000}));
-    auto secondOutput = response.outputs().at(0);
+    auto secondOutput = response.outputs().at(1);
     EXPECT_EQ(secondOutput.name(), "SecondOutput");
     EXPECT_EQ(secondOutput.datatype(), "FP32");
     EXPECT_EQ(secondOutput.shape_size(), 4);
@@ -311,7 +311,7 @@ public:
 TEST_F(PipelineMetadataResponseBuild, BasicResponseMetadata) {
     prepare();
 
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response), ovms::StatusCode::OK);
 
     EXPECT_EQ(response.name(), "pipeline_name");
 
@@ -324,7 +324,7 @@ TEST_F(PipelineMetadataResponseBuild, BasicResponseMetadata) {
 TEST_F(PipelineMetadataResponseBuild, PipelineInputOutputResponseMetadata) {
     prepare();
 
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response), ovms::StatusCode::OK);
 
     EXPECT_EQ(response.inputs_size(), 3);
     auto firstInput = response.inputs().at(0);
@@ -339,7 +339,7 @@ TEST_F(PipelineMetadataResponseBuild, PipelineInputOutputResponseMetadata) {
     EXPECT_TRUE(isShapeTheSame(secondInput.shape(), {1, 3, 62, 62}));
     auto thirdInput = response.inputs().at(2);
     EXPECT_EQ(thirdInput.name(), "Input_Unspecified");
-    EXPECT_EQ(thirdInput.datatype(), "DT_INVALID");
+    EXPECT_EQ(thirdInput.datatype(), "UNDEFINED");
     EXPECT_EQ(thirdInput.shape_size(), 0);
     EXPECT_TRUE(isShapeTheSame(thirdInput.shape(), {}));
 
@@ -356,39 +356,39 @@ TEST_F(PipelineMetadataResponseBuild, PipelineInputOutputResponseMetadata) {
     EXPECT_TRUE(isShapeTheSame(secondOutput.shape(), {2, 20, 3}));
     auto thirdOutput = response.outputs().at(2);
     EXPECT_EQ(thirdOutput.name(), "Output_Unspecified");
-    EXPECT_EQ(thirdOutput.datatype(), "DT_INVALID");
+    EXPECT_EQ(thirdOutput.datatype(), "UNDEFINED");
     EXPECT_EQ(thirdOutput.shape_size(), 0);
     EXPECT_TRUE(isShapeTheSame(thirdOutput.shape(), {}));
 }
 
 TEST_F(PipelineMetadataResponseBuild, ModelVersionNotLoadedAnymoreButPipelineNotReloadedYet) {
     pipelineDefinition.mockStatus(ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
-    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
+    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response), ovms::StatusCode::OK);
 }
 
 TEST_F(PipelineMetadataResponseBuild, ModelVersionNotLoadedYet) {
     pipelineDefinition.mockStatus(ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
-    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
+    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response), ovms::StatusCode::OK);
 }
 
 TEST_F(PipelineMetadataResponseBuild, PipelineNotLoadedAnymore) {
     this->pipelineDefinition.getPipelineDefinitionStatus().handle(ovms::RetireEvent());
-    auto status = ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response, manager);
+    auto status = ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response);
     ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE) << status.string();
 }
 
 TEST_F(PipelineMetadataResponseBuild, PipelineNotLoadedYet) {
     this->pipelineDefinition.getPipelineDefinitionStatus().handle(ovms::UsedModelChangedEvent());
     this->pipelineDefinition.getPipelineDefinitionStatus().handle(ovms::ValidationFailedEvent());
-    auto status = ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response, manager);
+    auto status = ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response);
     ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET) << status.string();
     this->pipelineDefinition.getPipelineDefinitionStatus().handle(ovms::UsedModelChangedEvent());
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response), ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET);
 }
 
 TEST_F(PipelineMetadataResponseBuild, PipelineAvailableOrAvailableRequiringRevalidation) {
     this->pipelineDefinition.getPipelineDefinitionStatus().handle(ovms::UsedModelChangedEvent());
-    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
+    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response), ovms::StatusCode::OK);
 }
 
 TEST_F(PipelineMetadataResponseBuild, HandleDynamicAndRangeShapes) {
@@ -400,7 +400,7 @@ TEST_F(PipelineMetadataResponseBuild, HandleDynamicAndRangeShapes) {
             {"Output_FP32_1_224:294_224:294_3", std::make_shared<ovms::TensorInfo>("Output_FP32_1_224:294_224:294_3", ovms::Precision::FP32, ovms::Shape{1, {224, 294}, {224, 294}, 3})}});
     prepare(inputsInfo, outputsInfo);
 
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response, manager), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(pipelineDefinition, &response), ovms::StatusCode::OK);
 
     EXPECT_EQ(response.inputs_size(), 2);
     auto firstInput = response.inputs().at(0);
