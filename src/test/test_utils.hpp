@@ -324,6 +324,7 @@ static ovms::NodeLibrary createLibraryMock() {
 }
 
 extern bool isShapeTheSame(const tensorflow::TensorShapeProto&, const std::vector<int64_t>&&);
+extern bool isShapeTheSame(const google::protobuf::RepeatedField<int64_t>&, const std::vector<int64_t>&&);
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);
 void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);
