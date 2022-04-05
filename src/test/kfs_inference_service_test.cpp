@@ -344,12 +344,12 @@ TEST_F(PipelineMetadataResponseBuild, PipelineInputOutputResponseMetadata) {
     EXPECT_TRUE(isShapeTheSame(thirdInput.shape(), {}));
 
     EXPECT_EQ(response.outputs_size(), 3);
-    auto firstOutput = response.outputs().at(0);
+    auto firstOutput = response.outputs().at(1);
     EXPECT_EQ(firstOutput.name(), "Output_I32_1_2000");
     EXPECT_EQ(firstOutput.datatype(), "I32");
     EXPECT_EQ(firstOutput.shape_size(), 2);
     EXPECT_TRUE(isShapeTheSame(firstOutput.shape(), {1, 2000}));
-    auto secondOutput = response.outputs().at(1);
+    auto secondOutput = response.outputs().at(0);
     EXPECT_EQ(secondOutput.name(), "Output_FP32_2_20_3");
     EXPECT_EQ(secondOutput.datatype(), "FP32");
     EXPECT_EQ(secondOutput.shape_size(), 3);
@@ -415,12 +415,12 @@ TEST_F(PipelineMetadataResponseBuild, HandleDynamicAndRangeShapes) {
     EXPECT_TRUE(isShapeTheSame(secondInput.shape(), {1, 3, -1, -1}));
 
     EXPECT_EQ(response.outputs_size(), 2);
-    auto firstOutput = response.outputs().at(0);
+    auto firstOutput = response.outputs().at(1);
     EXPECT_EQ(firstOutput.name(), "Output_I32_1_-1");
     EXPECT_EQ(firstOutput.datatype(), "I32");
     EXPECT_EQ(firstOutput.shape_size(), 2);
     EXPECT_TRUE(isShapeTheSame(firstOutput.shape(), {1, -1}));
-    auto secondOutput = response.outputs().at(1);
+    auto secondOutput = response.outputs().at(0);
     EXPECT_EQ(secondOutput.name(), "Output_FP32_1_224:294_224:294_3");
     EXPECT_EQ(secondOutput.datatype(), "FP32");
     EXPECT_EQ(secondOutput.shape_size(), 4);
