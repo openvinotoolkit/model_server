@@ -188,13 +188,23 @@ protected:
             shape_t{1, 3},
             Layout{"NC"});
         SetUpTensorProto(TensorInfo::getPrecisionAsString(precision));
-        buffer = std::string(1 * DUMMY_MODEL_INPUT_SIZE, '1');
+        float value = 1.0;
+        auto bytes = static_cast<char*>(static_cast<void*>(&value));
+        SetUpBuffer(bytes);
     }
     void SetUpTensorProto(std::string dataType) {
         tensorProto.set_datatype(dataType);
+        tensorProto.mutable_shape()->Clear();
         tensorProto.add_shape(1);
         tensorProto.add_shape(DUMMY_MODEL_INPUT_SIZE);
     }
+    void SetUpBuffer(char* bytes) {
+        buffer = "";
+        for (int i = 0; i < DUMMY_MODEL_INPUT_SIZE; i++) {
+            buffer += std::string(bytes, 4);
+        }
+    }
+
     KFSTensorProto tensorProto;
     std::string buffer;
     const char* tensorName = DUMMY_MODEL_INPUT_NAME;
@@ -222,10 +232,18 @@ TEST_P(DeserializeKFSTensorProto, ShouldReturnValidTensor) {
     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
                               << toString(testedPrecision)
                               << " should return valid tensor ptr";
-    // check tensor content
 }
 
-// TEST with 2 inputs
+TEST_F(KserveGRPCPredict, ShouldReturnValidTensor) {
+    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], buffer);
+
+    ASSERT_EQ(tensor.get_element_type(), ov::element::Type_t::f32);
+    ASSERT_EQ(tensor.get_shape(), ov::Shape({1, DUMMY_MODEL_INPUT_SIZE}));
+    float_t* data = (float_t*)tensor.data();
+    for (int i = 0; i < DUMMY_MODEL_INPUT_SIZE; i++) {
+        ASSERT_EQ(data[i], 1);
+    }
+}
 
 INSTANTIATE_TEST_SUITE_P(
     TestDeserialize,

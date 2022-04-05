@@ -19,9 +19,9 @@
 #include <memory>
 #include <string>
 
+#include "deserialization.hpp"
 #include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
-#include "deserialization.hpp"
 
 namespace ovms {
 
@@ -117,7 +117,7 @@ const std::string PLATFORM = "OpenVINO";
         std::cout << " name:" << input.name()
                   << " dataType:" << input.datatype()
                   << " shape:";
-        auto sh =  input.shape();
+        auto sh = input.shape();
         for (int j = 0; j < sh.size(); j++) {
             std::cout << sh[j] << " ";
             if (i == 0)
