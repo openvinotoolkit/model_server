@@ -25,6 +25,7 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+
 #include "kfs_grpc_inference_service.hpp"
 #pragma GCC diagnostic pop
 
