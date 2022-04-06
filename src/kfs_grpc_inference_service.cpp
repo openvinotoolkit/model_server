@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 
+#include "deserialization.hpp"
 #include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
 
@@ -107,46 +108,36 @@ const std::string PLATFORM = "OpenVINO";
     // TODO parameters - could hold eg. sequence id.
     // TODO inputs
     // TODO outputs
-    // TODO raw_input_contents
-    auto it = request->inputs().begin();
-    if (it == request->inputs().end())
-        throw 1;
-    std::cout << " name:" << it->name()
-              << " dataType:" << it->datatype()
-              << " shape:";
-    auto sh = it->shape();
+
     int floats = 1;
+    ov::Tensor tensor;
+    std::shared_ptr<TensorInfo> tensorInfo;
+    for (int i = 0; i < request->inputs_size(); i++) {
+        floats = 1;
+        auto input = request->inputs().at(i);
+        std::cout << " name:" << input.name()
+                  << " dataType:" << input.datatype()
+                  << " shape:";
+        auto sh = input.shape();
+        for (int j = 0; j < sh.size(); j++) {
+            std::cout << sh[j] << " ";
+            floats *= sh[j];
+        }
+        std::cout << std::endl;
 
-    for (int i = 0; i < sh.size(); ++i) {
-        std::cout << sh[i] << " ";
-        floats *= sh[i];
+        tensorInfo = std::make_shared<TensorInfo>(input.name(), kfsPrecisionToOvmsPrecision(input.datatype()), ovms::Shape{1, 16});
+        tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(input, tensorInfo, request->raw_input_contents()[i]);
     }
-    std ::cout << " parameters:"
-               << "";
-    // TODO check if we want to use this or the  InferTensorContents
-    auto size = it->contents().fp32_contents_size();
-    std::cout << size
 
-              << " contents size:"
-              << "" << size << " content shapesize: " << floats << " content:"
-              << std::endl;
-    std::cout << "HER:" << it->has_contents() << " " << (!request->raw_input_contents().empty()) << std::endl;
-    /*
-    float* data = (float*)it->contents().fp32_contents().data();
+    std::cout << tensor.get_element_type() << tensor.get_shape() << tensor.data() << std::endl;
+    // cast to expected input.datatype() to print data
+    int32_t* data = (int32_t*)tensor.data();
     for (int i = 0; i < floats; ++i) {
-      std::cout << *(data + i) << " ";
-    }*/
-    if (request->raw_input_contents().size() == 0)
-        throw 2;
-    const std::string& raw = request->raw_input_contents()[0];
-    float* data = (float*)raw.c_str();
-    std::cout << raw << std::endl;
-    for (int i = 0; i < floats; ++i) {
-        std::cout << "data[" << i << "]=" << (*(data + i)) << " ";
-        // just showing influence of ovms
+        std::cout << "data2[" << i << "]=" << (*(data + i)) << " ";
         *(data + i) *= 3;
     }
     std::cout << std::endl;
+
     // serialize
     auto responseTensor = response->outputs();
     // add first output
@@ -156,9 +147,9 @@ const std::string PLATFORM = "OpenVINO";
     output->set_name("a");
     output->set_datatype("FP32");
     std::string* raw_contents = response->add_raw_output_contents();
-    size_t bytesize = sizeof(float) * floats;
+    size_t bytesize = sizeof(int32_t) * floats;
     raw_contents->reserve(bytesize);
-    std::string outputString = std::string(1 * 10 * sizeof(float), (char)0);
+    std::string outputString = std::string(1 * 10 * sizeof(int32_t), (char)0);
     raw_contents->assign((char*)data, bytesize);
     // raw_contents->assign((char*) outputString.c_str(), bytesize);
     response->set_id(request->id());
@@ -226,7 +217,7 @@ void KFSInferenceServiceImpl::convert(
     const std::pair<std::string, std::shared_ptr<TensorInfo>>& from,
     ::inference::ModelMetadataResponse::TensorMetadata* to) {
     to->set_name(from.first);
-    to->set_datatype(from.second->getPrecisionAsString());
+    to->set_datatype(from.second->getPrecisionAsKfsPrecision());
     for (auto dim : from.second->getShape()) {
         if (dim.isStatic()) {
             to->add_shape(dim.getStaticValue());

@@ -163,7 +163,7 @@ TEST_F(ModelMetadataResponseBuild, SingleInputSingleOutputValidResponse) {
     EXPECT_EQ(response.outputs_size(), 1);
     auto output = response.outputs().at(0);
     EXPECT_EQ(output.name(), "SingleOutput");
-    EXPECT_EQ(output.datatype(), "I32");
+    EXPECT_EQ(output.datatype(), "INT32");
     EXPECT_EQ(output.shape_size(), 2);
     EXPECT_TRUE(isShapeTheSame(output.shape(), {1, 2000}));
 }
@@ -185,14 +185,14 @@ TEST_F(ModelMetadataResponseBuild, DoubleInputDoubleOutputValidResponse) {
     EXPECT_TRUE(isShapeTheSame(firstInput.shape(), {1, 3, 224, 224}));
     auto secondInput = response.inputs().at(1);
     EXPECT_EQ(secondInput.name(), "SecondInput");
-    EXPECT_EQ(secondInput.datatype(), "U8");
+    EXPECT_EQ(secondInput.datatype(), "UINT8");
     EXPECT_EQ(secondInput.shape_size(), 3);
     EXPECT_TRUE(isShapeTheSame(secondInput.shape(), {1, 700, 5}));
 
     EXPECT_EQ(response.outputs_size(), 2);
     auto firstOutput = response.outputs().at(0);
     EXPECT_EQ(firstOutput.name(), "FirstOutput");
-    EXPECT_EQ(firstOutput.datatype(), "I32");
+    EXPECT_EQ(firstOutput.datatype(), "INT32");
     EXPECT_EQ(firstOutput.shape_size(), 2);
     EXPECT_TRUE(isShapeTheSame(firstOutput.shape(), {1, 2000}));
     auto secondOutput = response.outputs().at(1);
@@ -275,7 +275,7 @@ TEST_F(PipelineMetadataResponseBuild, PipelineInputOutputResponseMetadata) {
     EXPECT_TRUE(isShapeTheSame(firstInput.shape(), {1, 3, 224, 224}));
     auto secondInput = response.inputs().at(1);
     EXPECT_EQ(secondInput.name(), "Input_U8_1_3_62_62");
-    EXPECT_EQ(secondInput.datatype(), "U8");
+    EXPECT_EQ(secondInput.datatype(), "UINT8");
     EXPECT_EQ(secondInput.shape_size(), 4);
     EXPECT_TRUE(isShapeTheSame(secondInput.shape(), {1, 3, 62, 62}));
     auto thirdInput = response.inputs().at(2);
@@ -287,7 +287,7 @@ TEST_F(PipelineMetadataResponseBuild, PipelineInputOutputResponseMetadata) {
     EXPECT_EQ(response.outputs_size(), 3);
     auto firstOutput = response.outputs().at(1);
     EXPECT_EQ(firstOutput.name(), "Output_I32_1_2000");
-    EXPECT_EQ(firstOutput.datatype(), "I32");
+    EXPECT_EQ(firstOutput.datatype(), "INT32");
     EXPECT_EQ(firstOutput.shape_size(), 2);
     EXPECT_TRUE(isShapeTheSame(firstOutput.shape(), {1, 2000}));
     auto secondOutput = response.outputs().at(0);
@@ -351,14 +351,14 @@ TEST_F(PipelineMetadataResponseBuild, HandleDynamicAndRangeShapes) {
     EXPECT_TRUE(isShapeTheSame(firstInput.shape(), {1, -1, 224, 224}));
     auto secondInput = response.inputs().at(1);
     EXPECT_EQ(secondInput.name(), "Input_U8_1_3_62:92_62:92");
-    EXPECT_EQ(secondInput.datatype(), "U8");
+    EXPECT_EQ(secondInput.datatype(), "UINT8");
     EXPECT_EQ(secondInput.shape_size(), 4);
     EXPECT_TRUE(isShapeTheSame(secondInput.shape(), {1, 3, -1, -1}));
 
     EXPECT_EQ(response.outputs_size(), 2);
     auto firstOutput = response.outputs().at(1);
     EXPECT_EQ(firstOutput.name(), "Output_I32_1_-1");
-    EXPECT_EQ(firstOutput.datatype(), "I32");
+    EXPECT_EQ(firstOutput.datatype(), "INT32");
     EXPECT_EQ(firstOutput.shape_size(), 2);
     EXPECT_TRUE(isShapeTheSame(firstOutput.shape(), {1, -1}));
     auto secondOutput = response.outputs().at(0);

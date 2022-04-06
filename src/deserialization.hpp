@@ -25,6 +25,8 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+
+#include "kfs_grpc_inference_service.hpp"
 #pragma GCC diagnostic pop
 
 #include "binaryutils.hpp"
@@ -36,8 +38,36 @@ namespace ovms {
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo);
 
+ov::Tensor makeTensor(const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo,
+    const std::string& buffer);
+
 class ConcreteTensorProtoDeserializator {
 public:
+    static ov::Tensor deserializeTensorProto(
+        const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+        const std::shared_ptr<TensorInfo>& tensorInfo,
+        const std::string& buffer) {
+        switch (tensorInfo->getPrecision()) {
+        case ovms::Precision::FP64:
+        case ovms::Precision::FP32:
+        case ovms::Precision::FP16:
+        case ovms::Precision::I64:
+        case ovms::Precision::I32:
+        case ovms::Precision::I16:
+        case ovms::Precision::I8:
+        case ovms::Precision::U64:
+        case ovms::Precision::U32:
+        case ovms::Precision::U16:
+        case ovms::Precision::BOOL:
+        case ovms::Precision::U8: {
+            return makeTensor(requestInput, tensorInfo, buffer);
+        }
+        default:
+            return ov::Tensor();
+        }
+    }
+
     static ov::Tensor deserializeTensorProto(
         const tensorflow::TensorProto& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo) {
@@ -92,6 +122,14 @@ ov::Tensor deserializeTensorProto(
     const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo) {
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo);
+}
+
+template <class TensorProtoDeserializator>
+ov::Tensor deserializeTensorProto(
+    const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo,
+    const std::string& buffer) {
+    return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, buffer);
 }
 
 template <class Requester>
