@@ -184,7 +184,7 @@ public:
         */
     std::string getPrecisionAsString() const;
 
-     /**
+    /**
         * @brief Get the Precision As String object representing Kfs precision
         *
         * @return const std::string
