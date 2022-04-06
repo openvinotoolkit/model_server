@@ -107,9 +107,9 @@ inline static Precision fromString(const std::string& s) {
     return it->second;
 }
 
-inline static Precision fromKFSString(const std::string& s) {
+inline static Precision kfsPrecisionToOvmsPrecision(const std::string& s) {
     static std::unordered_map<std::string, Precision> precisionMap{
-        {"BF16", Precision::BF16},
+        {"BOOL", Precision::BOOL},
         {"FP64", Precision::FP64},
         {"FP32", Precision::FP32},
         {"FP16", Precision::FP16},
@@ -117,22 +117,35 @@ inline static Precision fromKFSString(const std::string& s) {
         {"INT32", Precision::I32},
         {"INT16", Precision::I16},
         {"INT8", Precision::I8},
-        {"INT4", Precision::I4},
         {"UINT64", Precision::U64},
         {"UINT32", Precision::U32},
         {"UINT16", Precision::U16},
-        {"UINT8", Precision::U8},
-        {"UINT4", Precision::U4},
-        {"UINT1", Precision::U1},
-        {"MIXED", Precision::MIXED},
-        {"Q78", Precision::Q78},
-        {"BIN", Precision::BIN},
-        {"BOOL", Precision::BOOL},
-        {"UNDEFINED", Precision::UNDEFINED},
-        {"CUSTOM", Precision::CUSTOM}};
+        {"UINT8", Precision::U8}};
     auto it = precisionMap.find(s);
     if (it == precisionMap.end()) {
         return Precision::UNDEFINED;
+    }
+    return it->second;
+}
+
+inline static std::string ovmsPrecisionToKfsPrecision(Precision precision) {
+    static std::unordered_map<Precision, const char*> precisionMap{
+        {Precision::FP64, "FP64"},
+        {Precision::FP32, "FP32"},
+        {Precision::FP16, "FP16"},
+        {Precision::I64, "INT64"},
+        {Precision::I32, "INT32"},
+        {Precision::I16, "INT16"},
+        {Precision::I8, "INT8"},
+        {Precision::U64, "UINT64"},
+        {Precision::U32, "UINT32"},
+        {Precision::U16, "UINT16"},
+        {Precision::U8, "UINT8"},
+        {Precision::BOOL, "BOOL"},
+        {Precision::UNDEFINED, "UNDEFINED"}};
+    auto it = precisionMap.find(precision);
+    if (it == precisionMap.end()) {
+        return "INVALID";
     }
     return it->second;
 }

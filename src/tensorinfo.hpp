@@ -184,6 +184,13 @@ public:
         */
     std::string getPrecisionAsString() const;
 
+     /**
+        * @brief Get the Precision As String object representing Kfs precision
+        *
+        * @return const std::string
+        */
+    std::string getPrecisionAsKfsPrecision() const;
+
     /**
         * @brief Get the string representation of TensorInfo object
         *
@@ -192,6 +199,8 @@ public:
     std::string asString() const;
 
     static std::string getPrecisionAsString(Precision precision);
+
+    static std::string getPrecisionAsKfsPrecision(Precision precision);
 
     static const std::string getDataTypeAsString(tensorflow::DataType dataType);
 

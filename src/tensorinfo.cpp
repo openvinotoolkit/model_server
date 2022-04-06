@@ -167,6 +167,14 @@ std::string TensorInfo::getPrecisionAsString() const {
     return getPrecisionAsString(precision);
 }
 
+std::string TensorInfo::getPrecisionAsKfsPrecision(Precision precision) {
+    return ovmsPrecisionToKfsPrecision(precision);
+}
+
+std::string TensorInfo::getPrecisionAsKfsPrecision() const {
+    return getPrecisionAsKfsPrecision(precision);
+}
+
 const std::string TensorInfo::getDataTypeAsString(tensorflow::DataType dataType) {
     switch (dataType) {
     case tensorflow::DataType::DT_FLOAT:

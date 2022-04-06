@@ -280,7 +280,7 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     Test,
     DeserializeKFSTensorProtoNegative,
-    ::testing::ValuesIn(UNSUPPORTED_INPUT_PRECISIONS),
+    ::testing::ValuesIn(UNSUPPORTED_KFS_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<DeserializeKFSTensorProtoNegative::ParamType>& info) {
         return toString(info.param);
     });
@@ -288,7 +288,7 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     Test,
     DeserializeKFSTensorProto,
-    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
+    ::testing::ValuesIn(SUPPORTED_KFS_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<DeserializeKFSTensorProto::ParamType>& info) {
         return toString(info.param);
     });

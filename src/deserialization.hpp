@@ -49,16 +49,18 @@ public:
         const std::shared_ptr<TensorInfo>& tensorInfo,
         const std::string& buffer) {
         switch (tensorInfo->getPrecision()) {
-        case ovms::Precision::FP32:
-        case ovms::Precision::I32:
-        case ovms::Precision::I8:
-        case ovms::Precision::U8:
         case ovms::Precision::FP64:
-        case ovms::Precision::I64:
-        case ovms::Precision::I16:
+        case ovms::Precision::FP32:
         case ovms::Precision::FP16:
+        case ovms::Precision::I64:
+        case ovms::Precision::I32:
+        case ovms::Precision::I16:
+        case ovms::Precision::I8:
+        case ovms::Precision::U64:
         case ovms::Precision::U32:
-        case ovms::Precision::U16: {
+        case ovms::Precision::U16:
+        case ovms::Precision::BOOL:
+        case ovms::Precision::U8: {
             return makeTensor(requestInput, tensorInfo, buffer);
         }
         default:

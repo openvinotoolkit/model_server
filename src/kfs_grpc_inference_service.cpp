@@ -125,7 +125,7 @@ const std::string PLATFORM = "OpenVINO";
         }
         std::cout << std::endl;
 
-        tensorInfo = std::make_shared<TensorInfo>(input.name(), fromKFSString(input.datatype()), ovms::Shape{1, 16});
+        tensorInfo = std::make_shared<TensorInfo>(input.name(), kfsPrecisionToOvmsPrecision(input.datatype()), ovms::Shape{1, 16});
         tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(input, tensorInfo, request->raw_input_contents()[i]);
     }
 
@@ -217,7 +217,7 @@ void KFSInferenceServiceImpl::convert(
     const std::pair<std::string, std::shared_ptr<TensorInfo>>& from,
     ::inference::ModelMetadataResponse::TensorMetadata* to) {
     to->set_name(from.first);
-    to->set_datatype(from.second->getPrecisionAsString());
+    to->set_datatype(from.second->getPrecisionAsKfsPrecision());
     for (auto dim : from.second->getShape()) {
         if (dim.isStatic()) {
             to->add_shape(dim.getStaticValue());
