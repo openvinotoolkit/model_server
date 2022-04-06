@@ -77,6 +77,61 @@ Status serializeTensorToTensorProto(
     return StatusCode::OK;
 }
 
+Status serializeTensorToTensorProto(
+    ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
+    const std::shared_ptr<TensorInfo>& servableOutput,
+    ov::Tensor& tensor) {
+    responseOutput.Clear();
+    responseOutput.set_name(servableOutput->getName());
+    if (servableOutput->getOvPrecision() != tensor.get_element_type()) {
+        SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in precision expected:{} vs actual:{}",
+            servableOutput->getName(),
+            TensorInfo::getPrecisionAsString(servableOutput->getPrecision()),
+            tensor.get_element_type().get_type_name());
+        return StatusCode::INTERNAL_ERROR;
+    }
+    switch (servableOutput->getPrecision()) {
+    case ovms::Precision::FP64:
+    case ovms::Precision::FP32:
+    case ovms::Precision::FP16:
+    case ovms::Precision::I64:
+    case ovms::Precision::I32:
+    case ovms::Precision::I16:
+    case ovms::Precision::I8:
+    case ovms::Precision::U64:
+    case ovms::Precision::U32:
+    case ovms::Precision::U16:
+    case ovms::Precision::U8:
+    case ovms::Precision::BOOL:
+        responseOutput.set_datatype(servableOutput->getPrecisionAsKfsPrecision());
+        break;
+    default: {
+        Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
+        SPDLOG_ERROR(status.string());
+        return status;
+    }
+    }
+    responseOutput.clear_shape();
+    auto& effectiveNetworkOutputShape = servableOutput->getShape();
+    ov::Shape actualTensorShape = tensor.get_shape();
+    if (effectiveNetworkOutputShape.size() != actualTensorShape.size()) {
+        SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in number of dimensions expected:{} vs actual:{}",
+            servableOutput->getName(), effectiveNetworkOutputShape.size(), actualTensorShape.size());
+        return StatusCode::INTERNAL_ERROR;
+    }
+    for (size_t i = 0; i < effectiveNetworkOutputShape.size(); ++i) {
+        dimension_value_t dim;
+        if (!effectiveNetworkOutputShape[i].match(actualTensorShape[i])) {
+            SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in dimension:{} expected:{} vs actual:{}",
+                servableOutput->getName(), i, effectiveNetworkOutputShape[i].toString(), actualTensorShape[i]);
+            return StatusCode::INTERNAL_ERROR;
+        }
+        dim = actualTensorShape[i];
+        responseOutput.add_shape(dim);
+    }
+    return StatusCode::OK;
+}
+
 template <>
 Status OutputGetter<ov::InferRequest&>::get(const std::string& name, ov::Tensor& tensor) {
     try {
