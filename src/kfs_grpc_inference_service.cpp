@@ -113,6 +113,7 @@ const std::string PLATFORM = "OpenVINO";
     ov::Tensor tensor;
     std::shared_ptr<TensorInfo> tensorInfo;
     for (int i = 0; i < request->inputs_size(); i++) {
+        floats = 1;
         auto input = request->inputs().at(i);
         std::cout << " name:" << input.name()
                   << " dataType:" << input.datatype()
@@ -120,27 +121,23 @@ const std::string PLATFORM = "OpenVINO";
         auto sh = input.shape();
         for (int j = 0; j < sh.size(); j++) {
             std::cout << sh[j] << " ";
-            if (i == 0)
-                floats *= sh[j];
+            floats *= sh[j];
         }
         std::cout << std::endl;
 
-        // only first input
-        if (i == 0) {
-            tensorInfo = std::make_shared<TensorInfo>(input.name(), fromKFSString(input.datatype()), ovms::Shape{1, 16});
-            tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(input, tensorInfo, request->raw_input_contents()[i]);
-        }
+        tensorInfo = std::make_shared<TensorInfo>(input.name(), fromKFSString(input.datatype()), ovms::Shape{1, 16});
+        tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(input, tensorInfo, request->raw_input_contents()[i]);
     }
 
     std::cout << tensor.get_element_type() << tensor.get_shape() << tensor.data() << std::endl;
     // cast to expected input.datatype() to print data
-    uint32_t* data = (uint32_t*)tensor.data();
+    int32_t* data = (int32_t*)tensor.data();
     for (int i = 0; i < floats; ++i) {
         std::cout << "data2[" << i << "]=" << (*(data + i)) << " ";
         *(data + i) *= 3;
     }
-
     std::cout << std::endl;
+
     // serialize
     auto responseTensor = response->outputs();
     // add first output
