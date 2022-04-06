@@ -120,7 +120,7 @@ inline static Precision kfsPrecisionToOvmsPrecision(const std::string& s) {
         {"UINT64", Precision::U64},
         {"UINT32", Precision::U32},
         {"UINT16", Precision::U16},
-        // {"BYTES", Precision::??}, // TODO decide what to do with BYTES 
+        // {"BYTES", Precision::??}, // TODO decide what to do with BYTES
         {"UINT8", Precision::U8}};
     auto it = precisionMap.find(s);
     if (it == precisionMap.end()) {
