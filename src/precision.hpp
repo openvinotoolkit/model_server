@@ -120,6 +120,7 @@ inline static Precision kfsPrecisionToOvmsPrecision(const std::string& s) {
         {"UINT64", Precision::U64},
         {"UINT32", Precision::U32},
         {"UINT16", Precision::U16},
+        // {"BYTES", Precision::??}, // TODO decide what to do with BYTES 
         {"UINT8", Precision::U8}};
     auto it = precisionMap.find(s);
     if (it == precisionMap.end()) {
@@ -142,6 +143,15 @@ inline static std::string ovmsPrecisionToKfsPrecision(Precision precision) {
         {Precision::U16, "UINT16"},
         {Precision::U8, "UINT8"},
         {Precision::BOOL, "BOOL"},
+        // {Precision::BF16, ""}, TODO
+        // {Precision::U4, ""}, TODO
+        // {Precision::U1, ""}, TODO
+        // {Precision::CUSTOM, ""}, TODO
+        // {Precision::DYNAMIC, ""}, TODO
+        // {Precision::MIXED, ""}, TODO
+        // {Precision::Q78, ""}, TODO
+        // {Precision::BIN, ""}, TODO
+        // {Precision::I4, ""}, TODO
         {Precision::UNDEFINED, "UNDEFINED"}};
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
