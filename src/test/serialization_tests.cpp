@@ -104,12 +104,12 @@ const std::vector<ovms::Precision> SUPPORTED_KFS_OUTPUT_PRECISIONS{
 };
 
 const std::vector<ovms::Precision> UNSUPPORTED_KFS_OUTPUT_PRECISIONS{
-    ovms::Precision::UNDEFINED,
-    ovms::Precision::MIXED,
+    // ovms::Precision::UNDEFINED, // Cannot create tensor with such precision
+    // ovms::Precision::MIXED, // Cannot create tensor with such precision
     // ovms::Precision::FP64,
     // ovms::Precision::FP32,
     // ovms::Precision::FP16,
-    ovms::Precision::Q78,
+    // ovms::Precision::Q78, // Cannot create tensor with such precision
     // ovms::Precision::I16,
     // ovms::Precision::U8,
     // ovms::Precision::I8,
@@ -118,7 +118,7 @@ const std::vector<ovms::Precision> UNSUPPORTED_KFS_OUTPUT_PRECISIONS{
     // ovms::Precision::I64,
     // ovms::Precision::U32,
     // ovms::Precision::U64,
-    ovms::Precision::BIN,
+    // ovms::Precision::BIN, // Cannot create tensor with such precision
     // ovms::Precision::BOOL
     // ovms::Precision::CUSTOM)
 };
