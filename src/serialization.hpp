@@ -61,7 +61,7 @@ Status serializeTensorToTensorProto(
 
 Status serializeTensorToTensorProto(
     ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
-    std::string& bytes,
+    std::string& rawOutputContents,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor);
 
