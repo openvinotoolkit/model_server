@@ -64,13 +64,12 @@ Status serializeTensorToTensorProto(
         return StatusCode::INTERNAL_ERROR;
     }
     for (size_t i = 0; i < effectiveNetworkOutputShape.size(); ++i) {
-        dimension_value_t dim;
-        if (!effectiveNetworkOutputShape[i].match(actualTensorShape[i])) {
+        dimension_value_t dim = actualTensorShape[i];
+        if (!effectiveNetworkOutputShape[i].match(dim)) {
             SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in dimension:{} expected:{} vs actual:{}",
-                servableOutput->getName(), i, effectiveNetworkOutputShape[i].toString(), actualTensorShape[i]);
+                servableOutput->getName(), i, effectiveNetworkOutputShape[i].toString(), dim);
             return StatusCode::INTERNAL_ERROR;
         }
-        dim = actualTensorShape[i];
         responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
     responseOutput.mutable_tensor_content()->assign((char*)tensor.data(), tensor.get_byte_size());
@@ -79,6 +78,7 @@ Status serializeTensorToTensorProto(
 
 Status serializeTensorToTensorProto(
     ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
+    std::string& rawOutputContents,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     responseOutput.Clear();
@@ -105,6 +105,10 @@ Status serializeTensorToTensorProto(
     case ovms::Precision::BOOL:
         responseOutput.set_datatype(servableOutput->getPrecisionAsKfsPrecision());
         break;
+    case ovms::Precision::UNDEFINED:
+    case ovms::Precision::MIXED:
+    case ovms::Precision::Q78:
+    case ovms::Precision::BIN:
     default: {
         Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
         SPDLOG_ERROR(status.string());
@@ -120,15 +124,15 @@ Status serializeTensorToTensorProto(
         return StatusCode::INTERNAL_ERROR;
     }
     for (size_t i = 0; i < effectiveNetworkOutputShape.size(); ++i) {
-        dimension_value_t dim;
-        if (!effectiveNetworkOutputShape[i].match(actualTensorShape[i])) {
+        dimension_value_t dim = actualTensorShape[i];
+        if (!effectiveNetworkOutputShape[i].match(dim)) {
             SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in dimension:{} expected:{} vs actual:{}",
-                servableOutput->getName(), i, effectiveNetworkOutputShape[i].toString(), actualTensorShape[i]);
+                servableOutput->getName(), i, effectiveNetworkOutputShape[i].toString(), dim);
             return StatusCode::INTERNAL_ERROR;
         }
-        dim = actualTensorShape[i];
         responseOutput.add_shape(dim);
     }
+    rawOutputContents.assign((char*)tensor.data(), tensor.get_byte_size());
     return StatusCode::OK;
 }
 
