@@ -280,7 +280,7 @@ protected:
 };
 
 TEST_F(KFServingGRPCPredict, ValidSerialization) {
-    ov::Tensor tensor(ov::element::i32, shape_t{1, 3, 1, 1});
+    ov::Tensor tensor(ov::element::f32, shape_t{1, 3, 1, 1});
     KFSTensorProto responseOutput;
     std::string tmp;
     auto status = serializeTensorToTensorProto(responseOutput,
