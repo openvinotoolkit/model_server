@@ -78,7 +78,7 @@ Status serializeTensorToTensorProto(
 
 Status serializeTensorToTensorProto(
     ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
-    std::string& rawOutputContents,
+    std::string* rawOutputContents,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     responseOutput.Clear();
@@ -132,7 +132,7 @@ Status serializeTensorToTensorProto(
         }
         responseOutput.add_shape(dim);
     }
-    rawOutputContents.assign((char*)tensor.data(), tensor.get_byte_size());
+    rawOutputContents->assign((char*)tensor.data(), tensor.get_byte_size());
     return StatusCode::OK;
 }
 
