@@ -23,7 +23,7 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/bert_question_answering/python
 ```
 
-Start docker container which runs the client
+Build and start the docker container which runs the client
 ```
 docker build -t bert-client:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} .
 
