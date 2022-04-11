@@ -59,6 +59,12 @@ wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/
 docker run --rm -d -u $(id -u):$(id -g) -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name face-detection --port 9000  --shape auto
 ```
 
+Clone the repository and enter face_detection directory
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/face_detection/python
+```
+
 Run the client:
 ```bash
 pip install -r ../../common/python/requirements.txt

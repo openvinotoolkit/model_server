@@ -47,6 +47,12 @@ from use_cases import PersonVehicleBikeDetection
 
 ### Run the app
 
+Clone the repository and enter real_time_stream_analysis directory
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/real_time_stream_analysis/python
+```
+
 Once you adjusted the main script to your use case, got RTSP source and OVMS up and running, you can launch the stream analysis app.
 
 ```
