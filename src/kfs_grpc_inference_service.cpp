@@ -22,6 +22,7 @@
 #include "deserialization.hpp"
 #include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
+#include "serialization.hpp"
 
 namespace ovms {
 
@@ -131,27 +132,15 @@ const std::string PLATFORM = "OpenVINO";
 
     std::cout << tensor.get_element_type() << tensor.get_shape() << tensor.data() << std::endl;
     // cast to expected input.datatype() to print data
-    int32_t* data = (int32_t*)tensor.data();
+    char* data = (char*)tensor.data();
     for (int i = 0; i < floats; ++i) {
         std::cout << "data2[" << i << "]=" << (*(data + i)) << " ";
-        *(data + i) *= 3;
     }
     std::cout << std::endl;
 
     // serialize
-    auto responseTensor = response->outputs();
-    // add first output
     auto output = response->add_outputs();
-    output->mutable_shape()->Add(1);
-    output->mutable_shape()->Add(10);
-    output->set_name("a");
-    output->set_datatype("FP32");
-    std::string* raw_contents = response->add_raw_output_contents();
-    size_t bytesize = sizeof(int32_t) * floats;
-    raw_contents->reserve(bytesize);
-    std::string outputString = std::string(1 * 10 * sizeof(int32_t), (char)0);
-    raw_contents->assign((char*)data, bytesize);
-    // raw_contents->assign((char*) outputString.c_str(), bytesize);
+    serializeTensorToTensorProto(*output, response->add_raw_output_contents(), tensorInfo, tensor);
     response->set_id(request->id());
 
     return ::grpc::Status(::grpc::StatusCode::OK, "");
