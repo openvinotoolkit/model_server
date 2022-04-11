@@ -154,6 +154,7 @@ cc_library(
         "pipelineeventqueue.hpp",
         "pipeline_factory.cpp",
         "pipeline_factory.hpp",
+        "precision.cpp",
         "precision.hpp",
         "prediction_service.cpp",
         "prediction_service.hpp",

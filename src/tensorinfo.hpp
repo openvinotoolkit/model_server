@@ -185,11 +185,11 @@ public:
     std::string getPrecisionAsString() const;
 
     /**
-        * @brief Get the Precision As String object representing Kfs precision
+        * @brief Get the Precision As String object representing KFS precision
         *
         * @return const std::string
         */
-    std::string getPrecisionAsKfsPrecision() const;
+    std::string getPrecisionAsKFSPrecision() const;
 
     /**
         * @brief Get the string representation of TensorInfo object
@@ -200,7 +200,7 @@ public:
 
     static std::string getPrecisionAsString(Precision precision);
 
-    static std::string getPrecisionAsKfsPrecision(Precision precision);
+    static std::string getPrecisionAsKFSPrecision(Precision precision);
 
     static const std::string getDataTypeAsString(tensorflow::DataType dataType);
 
@@ -241,6 +241,7 @@ public:
     static std::string shapeToString(const shape_t& shape);
 
     static std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape);
+    static std::string tensorShapeToString(const google::protobuf::RepeatedField<int64_t>& tensorShape);
 
     static std::shared_ptr<TensorInfo> getUnspecifiedTensorInfo();
 

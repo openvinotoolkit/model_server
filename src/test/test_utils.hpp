@@ -33,12 +33,13 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
-
+#include "../kfs_grpc_inference_service.hpp"
 #include "../modelmanager.hpp"
 #include "../node_library.hpp"
 #include "../tensorinfo.hpp"
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;
+using inputs_info_kfs_t = std::map<std::string, std::tuple<ovms::shape_t, const std::string>>;
 
 const std::string dummy_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy";
 const std::string dummy_fp64_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_fp64";
@@ -178,6 +179,22 @@ static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t r
             std::memcpy(content.data(), data.data(), content.size());
             *input.mutable_tensor_content() = content;
         }
+    }
+    return request;
+}
+
+::inference::ModelInferRequest_InferInputTensor* findKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name);
+std::string* findKFSInferInputTensorContent(::inference::ModelInferRequest& request, const std::string& name);
+
+void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,
+    const std::vector<float>& data = {});
+
+static ::inference::ModelInferRequest prepareKFSPredictRequest(inputs_info_kfs_t requestInputs, const std::vector<float>& data = {}) {
+    ::inference::ModelInferRequest request;
+    request.mutable_inputs()->Clear();
+    request.mutable_raw_input_contents()->Clear();
+    for (auto const& it : requestInputs) {
+        prepareKFSInferInputTensor(request, it.first, it.second, data);
     }
     return request;
 }
