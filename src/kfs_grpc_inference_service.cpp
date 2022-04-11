@@ -109,7 +109,8 @@ const std::string PLATFORM = "OpenVINO";
     // TODO parameters - could hold eg. sequence id.
     // TODO inputs
     // TODO outputs
-
+    auto inst = ModelManager::getInstance().findModelInstance("dummy", 1);
+    inst->validate(request);
     int floats = 1;
     ov::Tensor tensor;
     std::shared_ptr<TensorInfo> tensorInfo;

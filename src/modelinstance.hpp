@@ -217,7 +217,7 @@ protected:
          * @return Status
          */
     Status loadOVModelUsingCustomLoader();
-
+public:
     template <typename RequestType>
     const Status validate(const RequestType* request);
 
