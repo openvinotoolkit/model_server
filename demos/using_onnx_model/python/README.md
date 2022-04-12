@@ -11,6 +11,12 @@ This model requires additional [preprocessing function](https://github.com/onnx/
 
 ## Option 1: Adding preprocessing to the client side <a name="client-side"></a>
 
+Clone the repository and enter using_onnx_model directory
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/using_onnx_model/python
+```
+
 Prepare workspace with the model by running: 
 ```
 make client_preprocessing

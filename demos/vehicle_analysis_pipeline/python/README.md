@@ -27,6 +27,12 @@ To successfully deploy face analysis pipeline you need to have a workspace that 
 - Custom node for image processing
 - Configuration file
 
+Clone the repository and enter vehicle_analysis_pipeline directory
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/vehicle_analysis_pipeline/python
+```
+
 You can prepare the workspace that contains all the above by just running
 
 ```
