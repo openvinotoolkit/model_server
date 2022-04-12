@@ -39,7 +39,7 @@ When creating a Python-based client application, there are two packages on PyPi 
 
         from ovmsclient import make_grpc_client
 
-        client = make_grpc_client(service_url="10.20.30.40:9000")
+        client = make_grpc_client("10.20.30.40:9000")
         model_status = client.get_model_status(model_name="my_model")
 
 
@@ -80,7 +80,7 @@ When creating a Python-based client application, there are two packages on PyPi 
 
         from ovmsclient import make_grpc_client
 
-        client = make_grpc_client(service_url="10.20.30.40:9000")
+        client = make_grpc_client("10.20.30.40:9000")
         model_metadata = client.get_model_metadata(model_name="my_model")
 
 
@@ -141,7 +141,7 @@ When creating a Python-based client application, there are two packages on PyPi 
 
         from ovmsclient import make_grpc_client
 
-        client = make_grpc_client(service_url="10.20.30.40:9000")
+        client = make_grpc_client("10.20.30.40:9000")
         with open("img.jpeg", "rb") as f:
             data = f.read()
         inputs = {"input_name": data}    
@@ -180,7 +180,7 @@ When creating a Python-based client application, there are two packages on PyPi 
         import numpy as np
         from ovmsclient import make_grpc_client
 
-        client = make_grpc_client(service_url="10.20.30.40:9000")
+        client = make_grpc_client("10.20.30.40:9000")
         data = np.array([1.0, 2.0, ..., 1000.0])
         inputs = {"input_name": data}
         results = client.predict(inputs=inputs, model_name="my_model")

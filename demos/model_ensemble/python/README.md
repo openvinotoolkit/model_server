@@ -9,6 +9,13 @@ This guide shows how to implement a model ensemble using the [DAG Scheduler](../
 ![diagram](model_ensemble_diagram.svg)
 
 ## Step 1: Prepare the repository
+
+Clone the repository and enter model_ensemble directory
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/model_ensemble/python
+```
+
 Repository preparation is simplified with `make` script, just run `make` in this repository.
 
 The steps in `Makefile` are:

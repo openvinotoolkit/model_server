@@ -26,6 +26,12 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/horizontal-text-detection-0001:/mod
 
 ### Run the client
 
+Clone the repository and enter horizontal_text_detection directory
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/horizontal_text_detection/python
+```
+
 Install required packages:
 ```bash
 pip3 install -r requirements.txt
@@ -73,6 +79,12 @@ To successfully deploy OCR pipeline you need to have a workspace that contains:
 - [horizontal text detection](https://docs.openvino.ai/2022.1/omz_models_model_horizontal_text_detection_0001.html) and [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014) models
 - Custom node for image processing
 - Configuration file
+
+Clone the repository and enter horizontal_text_detection directory
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/horizontal_text_detection/python
+```
 
 You can prepare the workspace that contains all the above by just running
 
