@@ -27,6 +27,40 @@
 namespace ovms {
 const char* MODELS_CONFIG_SCHEMA = R"({
 	"definitions": {
+		"plugin_config": {
+			"type": "object",
+			"properties": {
+				"PERFORMANCE_HINT": {
+					"type": "string",
+					"enum": ["LATENCY", "THROUGHPUT"]
+				},
+				"CPU_THROUGHPUT_STREAMS": {
+					"anyOf": [
+						{
+							"type": "integer",
+							"minimum": 1
+						}, 
+						{
+							"type": "string",
+							"enum": ["CPU_THROUGHPUT_AUTO"]
+						}
+					]
+				},
+				"GPU_THROUGHPUT_STREAMS": {
+					"anyOf": [
+						{
+							"type": "integer",
+							"minimum": 1
+						}, 
+						{
+							"type": "string",
+							"enum": ["GPU_THROUGHPUT_AUTO"]
+						}
+					]
+				},
+				"additionalProperties": false
+			}
+		},
 		"custom_loader_config": {
 			"type": "object",
 			"required": ["config"],
@@ -87,9 +121,7 @@ const char* MODELS_CONFIG_SCHEMA = R"({
                         "allow_cache": {
                             "type": "boolean"
                         },
-						"plugin_config": {
-							"type": "object"
-						},
+						"$ref": "#/definitions/plugin_config",
 						"stateful": {
 							"type": "boolean"
 						},
