@@ -14,6 +14,11 @@ In this example the following models are used:
 
 [emotions-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/emotions-recognition-retail-0003/README.md)
 
+Clone the repository and enter single_face_analysis_pipeline directory
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/single_face_analysis_pipeline/python
+```
 
 You can prepare the workspace that contains all the above by just running
 
