@@ -389,7 +389,7 @@ class BaseClient(metaclass=abc.ABCMeta):
             self.xdata[input_name].append(xargs)
 
     def run_workload(self, steps_number, duration, timeout=30, errors_limits=(0,0),
-                     warmup=0, window=None, hist_base=10, hist_factor=1000):
+                     warmup=0, window=None, hist_base=10, hist_factor=1000, tfps=None):
         assert self.dataset_length, "no data to inference!"
         errors_limit, errors_exposition = errors_limits
         fail_counter, counter = 0, 0
@@ -401,7 +401,6 @@ class BaseClient(metaclass=abc.ABCMeta):
         window_series = XSeries("window", hist_base, hist_factor)
         warmup_series = XSeries("warmup")
         total_series = XSeries("")
-
         start_workload = time.time()
         if duration is None:
             stop_workload = math.inf
@@ -471,6 +470,30 @@ class BaseClient(metaclass=abc.ABCMeta):
                 if window_series.stop():
                     window_ts = window_series.stop_timestamp
                     self.print_info(f"Window normally stopped: {window_ts}")
+            if tfps is not None:
+                # N - successfully launched requests till now
+                # CFPS - current FPS
+                # tfps - target FPS
+                # tc - time till now - achieving CFPS
+                # tt - time till executing N frames with tfps
+                # t0 - start time
+                # we start with this
+                # CFPS=N/(tc-t0)  TFSP=N/(tt-t0)
+                # we want to know if we want to sleep and if so how long
+                # after calculations we get to
+                # deltat = tt - tc = (CFPS/tfps - 1)(tc - t0) # lhs is tells if we want to sleep
+                # deltat = (N / (tc - t0) / tfps - 1)(tc - t0)
+                # deltat = N / tfps - (tc - t0)
+                N = counter
+                tc = time.time()
+                t0 = start_workload
+                timediff = tc - t0
+                CFPS = N / (timediff)
+                deltat = N/tfps - timediff
+
+                if deltat > 0:
+                    self.print_info(f"Need to sleep: {deltat} CFPS:{CFPS} N:{N} timediff:{timediff} 1N:{1.0 * N}")
+                    time.sleep(deltat)
         if warmup_series.stop():
             warmup_ts = warmup_series.stop_timestamp
             self.print_info(f"Warmup unnormally stopped: {warmup_ts}")
