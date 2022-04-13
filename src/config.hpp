@@ -328,6 +328,19 @@ public:
         return empty;
     }
 
+#ifdef MTR_ENABLED
+    /**
+        * @brief Get the log path
+         *
+        * @return const std::string&
+        */
+    const std::string& tracePath() {
+        if (result->count("trace_path"))
+            return result->operator[]("trace_path").as<std::string>();
+        return empty;
+    }
+#endif
+
     /**
         * @brief Get the plugin config
         *

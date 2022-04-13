@@ -21,6 +21,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include "profiler.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
@@ -55,6 +56,7 @@ std::string getTensorMapString(const std::map<std::string, std::shared_ptr<Tenso
 }
 
 Status tensorClone(ov::Tensor& destinationTensor, const ov::Tensor& sourceTensor) {
+    OVMS_PROFILE_FUNCTION();
     destinationTensor = ov::Tensor(sourceTensor.get_element_type(), sourceTensor.get_shape());
 
     if (destinationTensor.get_byte_size() != sourceTensor.get_byte_size()) {

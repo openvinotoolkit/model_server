@@ -39,6 +39,7 @@
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "prediction_service_utils.hpp"
+#include "profiler.hpp"
 #include "serialization.hpp"
 #include "shape.hpp"
 #include "stringutils.hpp"
@@ -1081,6 +1082,7 @@ void ModelInstance::unloadModelComponents() {
 
 template <typename RequestType>
 const Status ModelInstance::validate(const RequestType* request) {
+    OVMS_PROFILE_FUNCTION();
     static const std::set<const char*> optionalInputNames = {};
     return request_validation_utils::validate(
         *request,
@@ -1093,9 +1095,14 @@ const Status ModelInstance::validate(const RequestType* request) {
 }
 
 Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
+    OVMS_PROFILE_FUNCTION();
     try {
+        OVMS_PROFILE_SYNC_BEGIN("ov::InferRequest::start_async");
         inferRequest.start_async();
+        OVMS_PROFILE_SYNC_END("ov::InferRequest::start_async");
+        OVMS_PROFILE_SYNC_BEGIN("ov::InferRequest::wait");
         inferRequest.wait();
+        OVMS_PROFILE_SYNC_END("ov::InferRequest::wait");
     } catch (const ov::Exception& e) {
         Status status = StatusCode::OV_INTERNAL_INFERENCE_ERROR;
         SPDLOG_ERROR("Async caught an exception {}: {}", status.string(), e.what());
@@ -1107,6 +1114,7 @@ Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
 Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,
     tensorflow::serving::PredictResponse* responseProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
+    OVMS_PROFILE_FUNCTION();
     Timer timer;
     using std::chrono::microseconds;
 

@@ -23,6 +23,7 @@
 #include "logging.hpp"
 #include "nodesession.hpp"
 #include "ov_utils.hpp"
+#include "profiler.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -56,6 +57,7 @@ Node::Node(const std::string& nodeName, std::optional<int32_t> demultiplyCount, 
 }
 
 Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs) {
+    OVMS_PROFILE_FUNCTION();
     auto it = nodeSessions.find(sessionId);
 
     auto& nodeSession = it->second;
@@ -83,6 +85,7 @@ void Node::printNodeConnections(const std::string& nodeName, const std::string& 
 }
 
 Status Node::setInputs(const Node& dependency, SessionResults& sessionResults) {
+    OVMS_PROFILE_FUNCTION();
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "node: {} set inputs from node: {}", getName(), dependency.getName());
     for (auto& [sessionKey, metadataInputsPair] : sessionResults) {
         auto& [metadata, inputs] = metadataInputsPair;
@@ -198,6 +201,7 @@ std::vector<session_key_t> Node::getReadySessions() const {
 }
 
 Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
+    OVMS_PROFILE_FUNCTION();
     if (!demultiplexCount) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} called demultiplyOutputs but node does not have demultiplexCount set", getName());
         return StatusCode::INTERNAL_ERROR;
@@ -219,6 +223,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         return StatusCode::INTERNAL_ERROR;
     }
     for (auto& [tensorName, tensor] : tensorMap) {
+        OVMS_PROFILE_SCOPE("Demultiply Tensor");
         auto newDims = tensor.get_shape();
         if (newDims.size() < 3) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong number of dimensions: {} to demultiply. Must be at least 3", newDims.size());
@@ -239,6 +244,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         newDims.erase(newDims.begin());
         const auto step = tensor.get_byte_size() / resultsDemultiplyCount;
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
+            OVMS_PROFILE_SCOPE("Create Shard");
             ov::Tensor dividedTensor;
             this->createShardedTensor(dividedTensor, ovElementTypeToOvmsPrecision(tensor.get_element_type()), newDims, tensor, i, step, metadata, tensorName);
             std::stringstream ss;
@@ -258,6 +264,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
 }
 
 Status Node::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
+    OVMS_PROFILE_FUNCTION();
     auto status = createSharedTensor(dividedTensor, ovmsPrecisionToIE2Precision(precision), shape);
     if (!status.ok()) {
         return status;

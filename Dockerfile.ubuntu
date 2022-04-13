@@ -31,6 +31,7 @@ ARG APT_OVCV_PACKAGE=openvino-opencv-2022.1.0
 # build_type=[ opt, dbg ]
 ARG build_type=dbg
 ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
+ARG minitrace_flags
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TF_SYSTEM_LIBS="curl"
@@ -204,7 +205,7 @@ RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12`#g" /ovms/src/version.hpp
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/extras/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
-RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:ovms
+RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/example/SampleCpuExtension/ && make

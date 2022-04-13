@@ -32,12 +32,14 @@
 namespace ovms {
 template <typename ResponseType>
 Status ExitNode<ResponseType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
+    OVMS_PROFILE_FUNCTION();
     auto& exitNodeSession = static_cast<ExitNodeSession&>(nodeSession);
     return this->fetchResults(exitNodeSession.getInputTensors());
 }
 
 template <typename ResponseType>
 Status ExitNode<ResponseType>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
+    OVMS_PROFILE_FUNCTION();
     notifyEndQueue.push(NodeSessionKeyPair(*this, sessionId));
     return StatusCode::OK;
 }

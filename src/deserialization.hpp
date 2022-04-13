@@ -30,6 +30,7 @@
 #pragma GCC diagnostic pop
 
 #include "binaryutils.hpp"
+#include "profiler.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -147,6 +148,7 @@ Status deserializePredictRequest(
     const tensorflow::serving::PredictRequest& request,
     const tensor_map_t& inputMap,
     Sink& inputSink, bool isPipeline) {
+    OVMS_PROFILE_FUNCTION();
     Status status;
     for (const auto& pair : inputMap) {
         try {

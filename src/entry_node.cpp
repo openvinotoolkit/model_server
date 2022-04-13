@@ -26,6 +26,7 @@
 #include "logging.hpp"
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
+#include "profiler.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -37,6 +38,7 @@ namespace ovms {
 
 template <typename RequestType>
 Status EntryNode<RequestType>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
+    OVMS_PROFILE_FUNCTION();
     // this should be created in EntryNode::SetInputs, or special method for entry node called
     // in event loop can be done in future release while implementing dynamic demultiplexing at
     // entry node
@@ -52,6 +54,7 @@ Status EntryNode<RequestType>::execute(session_key_t sessionId, PipelineEventQue
 
 template <typename RequestType>
 Status EntryNode<RequestType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
+    OVMS_PROFILE_FUNCTION();
     TensorMap outputs;
     auto status = fetchResults(outputs);
     if (!status.ok()) {

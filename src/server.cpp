@@ -36,6 +36,7 @@
 #include "model_service.hpp"
 #include "modelmanager.hpp"
 #include "prediction_service.hpp"
+#include "profiler.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 
@@ -258,6 +259,16 @@ int server_main(int argc, char** argv) {
         auto& config = ovms::Config::instance().parse(argc, argv);
         configure_logger(config.logLevel(), config.logPath());
 
+#ifdef MTR_ENABLED
+        const char* traceFileName = config.tracePath().c_str();
+#else
+        const char* traceFileName = "";
+#endif
+        if (!profiler_init(traceFileName)) {
+            SPDLOG_ERROR("Cannot open file for profiler, --trace_path: {}", traceFileName);
+            return EXIT_FAILURE;
+        }
+
         PredictionServiceImpl predict_service;
         ModelServiceImpl model_service;
         KFSInferenceServiceImpl kfsGrpcInferenceService;
@@ -286,11 +297,14 @@ int server_main(int argc, char** argv) {
         ModelManager::getInstance().join();
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
+        profiler_shutdown();
         return EXIT_FAILURE;
     } catch (...) {
         SPDLOG_ERROR("Unknown exception catch - will now terminate.");
+        profiler_shutdown();
         return EXIT_FAILURE;
     }
 
+    profiler_shutdown();
     return EXIT_SUCCESS;
 }

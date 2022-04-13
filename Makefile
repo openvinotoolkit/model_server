@@ -50,11 +50,18 @@ APT_OV_PACKAGE ?= openvino-2022.1.0
 APT_OVCV_PACKAGE ?= openvino-opencv-2022.1.0
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
+MINITRACE ?= OFF
 
 ifeq ($(BAZEL_BUILD_TYPE),dbg)
   BAZEL_DEBUG_FLAGS=" --strip=never --copt=-g -c dbg "
 else
   BAZEL_DEBUG_FLAGS=" --strip=never "
+endif
+
+ifeq ($(MINITRACE),ON)
+  MINITRACE_FLAGS="--copt=-DMTR_ENABLED"
+else
+  MINITRACE_FLAGS=""
 endif
 
 # Option to Override release image.
@@ -172,6 +179,7 @@ endif
 		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) \
 		--build-arg APT_OVCV_PACKAGE=$(APT_OVCV_PACKAGE) \
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
+		--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
 		--build-arg OPENVINO_OPENCV_DOWNLOAD_SERVER=$(OPENVINO_OPENCV_DOWNLOAD_SERVER) \

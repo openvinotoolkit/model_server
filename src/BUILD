@@ -161,6 +161,8 @@ cc_library(
         "prediction_service_utils.cpp",
         "predict_request_validation_utils.hpp",
         "predict_request_validation_utils.cpp",
+        "profiler.cpp",
+        "profiler.hpp",
         "rest_parser.cpp",
         "rest_parser.hpp",
         "rest_utils.cpp",
@@ -200,6 +202,7 @@ cc_library(
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
         "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
+        "@minitrace//:trace",
         "@com_github_grpc_grpc//:grpc++",
         "@org_tensorflow//tensorflow/core:framework",
         "@rapidjson//:rapidjson",
@@ -222,7 +225,7 @@ cc_library(
         "//src/kfserving_api:kfserving_api_cpp",
     ],
     local_defines = [
-        "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE"
+        "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
     ],
     copts = [
         "-Wall",

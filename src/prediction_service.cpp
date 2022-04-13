@@ -32,6 +32,7 @@
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "prediction_service_utils.hpp"
+#include "profiler.hpp"
 #include "status.hpp"
 #include "timer.hpp"
 
@@ -48,6 +49,7 @@ namespace ovms {
 Status getModelInstance(const PredictRequest* request,
     std::shared_ptr<ovms::ModelInstance>& modelInstance,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
+    OVMS_PROFILE_FUNCTION();
     ModelManager& manager = ModelManager::getInstance();
     return manager.getModelInstance(request->model_spec().name(), request->model_spec().version().value(), modelInstance, modelInstanceUnloadGuardPtr);
 }
@@ -55,6 +57,7 @@ Status getModelInstance(const PredictRequest* request,
 Status getPipeline(const PredictRequest* request,
     PredictResponse* response,
     std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
+    OVMS_PROFILE_FUNCTION();
     ModelManager& manager = ModelManager::getInstance();
     return manager.createPipeline(pipelinePtr, request->model_spec().name(), request, response);
 }
@@ -63,6 +66,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
     ServerContext* context,
     const PredictRequest* request,
     PredictResponse* response) {
+    OVMS_PROFILE_FUNCTION();
     Timer timer;
     timer.start("total");
     using std::chrono::microseconds;
@@ -104,6 +108,7 @@ grpc::Status PredictionServiceImpl::GetModelMetadata(
     grpc::ServerContext* context,
     const tensorflow::serving::GetModelMetadataRequest* request,
     tensorflow::serving::GetModelMetadataResponse* response) {
+    OVMS_PROFILE_FUNCTION();
     return GetModelMetadataImpl::getModelStatus(request, response).grpc();
 }
 

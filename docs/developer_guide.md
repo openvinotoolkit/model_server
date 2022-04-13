@@ -73,7 +73,7 @@ In-case of problems, see <a href="#debug">Debugging</a>.
 	* Without a Docker cache :
 
 	```bash
-	make NO_DOCKER_CACHE=true
+	make docker_build NO_DOCKER_CACHE=true
 	```
 
 
@@ -253,7 +253,7 @@ os.environ["LD_LIBRARY_PATH"] = "<path to ovms libraries>"
 
 ## Debugging <a name="debug"></a>
 
-Two debugging options are available. Click on the required option :
+Debugging options are available. Click on the required option :
 
 
 <details><summary>Use gdb to debug in Docker</summary>
@@ -285,6 +285,48 @@ Two debugging options are available. Click on the required option :
 	# (in gdb cli) set follow-fork-mode child
 	```
 </details>
+
+<details><summary>Use minitrace to display flame graph</summary>
+
+### Option 1. Use OpenVINO Model Server build image.
+This is convenient way during development in case it is needed to add new or remove already existing traces.
+
+1. Build OVMS build image locally.
+```
+$ make docker_build
+```
+
+2. Start the container.
+```
+$ docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest 
+```
+
+3. Build OVMS with minitrace enabled.
+```
+$ bazel build --copts="-DMTR_ENABLED" //src:ovms
+```
+
+4. Run OVMS with `--trace_path` specifying where to save flame graph JSON file.
+```
+$ bazel-bin/src/ovms --model_name resnet --model_path models/resnet --trace_path trace.json
+```
+
+5. During app exit, the trace info will be saved into `trace.json`.
+
+6. Use Chrome web browser `chrome://tracing` tool to display the graph.
+
+### Option 2. Build OVMS image with minitrace enabled
+This is convenient when final image has to be used on different machine and no changes to existing traces do not need to be modified for debugging.
+
+1. Build OVMS with minitrace enabled locally.
+```
+$ make docker_build MINITRACE=ON
+```
+
+2. Run OVMS with minitrace enabled and `--trace_path` and follow Option 1 to open trace file in Chrome web browser.
+
+</details>
+
 <details><summary>Debug functional tests</summary>
 
 Use OpenVINO Model Server build image because it installs the necessary tools.

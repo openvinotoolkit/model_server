@@ -26,6 +26,7 @@
 #include "logging.hpp"
 #include "node.hpp"
 #include "pipelineeventqueue.hpp"
+#include "profiler.hpp"
 
 namespace ovms {
 Pipeline::~Pipeline() = default;
@@ -80,6 +81,7 @@ void setFailIfNotFailEarlier(ovms::Status& earlierStatusCode, ovms::Status& newF
     }
 
 Status Pipeline::execute() {
+    OVMS_PROFILE_FUNCTION();
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Started execution of pipeline: {}", getName());
     PipelineEventQueue finishedNodeQueue;
     ovms::Status firstErrorStatus{ovms::StatusCode::OK};
@@ -104,8 +106,11 @@ Status Pipeline::execute() {
     // has necessary resources already
     while (true) {
         spdlog::trace("Pipeline: {} waiting for message that node finished.", getName());
+        OVMS_PROFILE_SYNC_BEGIN("PipelineEventQueue::tryPull");
         auto optionallyFinishedNode = finishedNodeQueue.tryPull(WAIT_FOR_FINISHED_NODE_TIMEOUT_MICROSECONDS);
+        OVMS_PROFILE_SYNC_END("PipelineEventQueue::tryPull");
         if (optionallyFinishedNode) {
+            OVMS_PROFILE_SCOPE_S("Processing Finished Node", "node_name", optionallyFinishedNode.value().first.get().getName().c_str());
             auto& [finishedNodeRef, sessionKey] = optionallyFinishedNode.value();
             Node& finishedNode = finishedNodeRef.get();
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Pipeline: {} got message that node: {} session: {} finished.", getName(), finishedNode.getName(), sessionKey);
@@ -152,6 +157,7 @@ Status Pipeline::execute() {
                 break;
             }
         } else {
+            OVMS_PROFILE_SCOPE("No new finished nodes");
             // If error occurred earlier, disarm stream id guards of all deferred nodes and exit
             if (!firstErrorStatus.ok()) {
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will try to disarm all stream id guards of all {} deferred node sessions due to previous error in pipeline", deferredNodeSessions.size());

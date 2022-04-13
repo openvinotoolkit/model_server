@@ -7,6 +7,7 @@
 version
 __pycache__/
 report.json
+trace.json
 bazel-bin
 bazel-out
 bazel-ovms
