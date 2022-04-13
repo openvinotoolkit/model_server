@@ -59,6 +59,12 @@ Status serializeTensorToTensorProto(
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor);
 
+Status serializeTensorToTensorProto(
+    ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
+    std::string* rawOutputContents,
+    const std::shared_ptr<TensorInfo>& servableOutput,
+    ov::Tensor& tensor);
+
 typedef const std::string& (*outputNameChooser_t)(const std::string&, const TensorInfo&);
 const std::string& getTensorInfoName(const std::string& first, const TensorInfo& tensorInfo);
 const std::string& getOutputMapKeyName(const std::string& first, const TensorInfo& tensorInfo);
