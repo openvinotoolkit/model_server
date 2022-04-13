@@ -139,7 +139,11 @@ Status serializeTensorToTensorProto(
 template <>
 Status OutputGetter<ov::InferRequest&>::get(const std::string& name, ov::Tensor& tensor) {
     try {
-        tensor = outputSource.get_tensor(name);
+        if (name != "unk_output") {
+            tensor = outputSource.get_tensor(name);
+        } else {
+            tensor = outputSource.get_output_tensor();
+        }
     } catch (const ov::Exception& e) {
         Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
         SPDLOG_DEBUG("{}: {}", status.string(), e.what());

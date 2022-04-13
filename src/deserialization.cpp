@@ -21,7 +21,11 @@ template <>
 Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& tensor) {
     Status status;
     try {
-        requester.set_tensor(name, tensor);
+        if (name == "unk_input") {
+            requester.set_input_tensor(tensor);
+        } else {
+            requester.set_tensor(name, tensor);
+        }
         // OV implementation the ov::Exception is not
         // a base class for all other exceptions thrown from OV.
         // OV can throw exceptions derived from std::logic_error.

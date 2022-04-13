@@ -438,6 +438,119 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
     return StatusCode::OK;
 }
 
+Status ModelInstance::loadInputTensors2(const ModelConfig& config, const DynamicModelParameter& parameter) {
+    this->inputsInfo.clear();
+
+    // // First pass, gather reshape info.
+    // for (const ov::Output<ov::Node>& input : getModel()->inputs()) {
+    //     std::string name;
+    //     try {
+    //         std::string name = input.get_any_name();
+    //         ov::PartialShape shape = input.get_partial_shape();
+
+    //         Shape requestedShape;
+    //         auto status = getRequestedShape(config, parameter, name, requestedShape);
+    //         if (!status.ok()) {
+    //             return status;
+    //         }
+    //         if (requestedShape.size() > 0) {
+    //             shape = requestedShape.createPartialShape();
+    //         }
+
+    //         if (input.get_partial_shape() != shape) {
+    //             return StatusCode::UNKNOWN_ERROR;
+    //         }
+    //     } catch (const ov::Exception& e) {
+    //         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+    //             getName(),
+    //             getVersion(),
+    //             e.what());
+    //         return StatusCode::UNKNOWN_ERROR;
+    //     } catch (const std::exception& e) {
+    //         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+    //             getName(),
+    //             getVersion(),
+    //             e.what());
+    //         return StatusCode::UNKNOWN_ERROR;
+    //     } catch (...) {
+    //         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO",
+    //             getName(),
+    //             getVersion());
+    //         return StatusCode::UNKNOWN_ERROR;
+    //     }
+    // }
+
+    // if (reshapeRequired) {
+    //     SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs", getName(), getVersion());
+    //     try {
+    //         model->reshape(modelShapes);
+    //     } catch (const ov::Exception& e) {
+    //         SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
+    //         SPDLOG_DEBUG("Description: {}", e.what());
+    //         return StatusCode::RESHAPE_ERROR;
+    //     } catch (const std::exception& e) {
+    //         SPDLOG_WARN("OV does not support reshaping model: {} with provided shape", getName());
+    //         SPDLOG_DEBUG("Description: {}", e.what());
+    //         return StatusCode::RESHAPE_ERROR;
+    //     }
+    // } else {
+    //     SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
+    // }
+
+    // configureBatchSize(this->config, parameter);
+
+    for (const ov::Output<const ov::Node>& input : getModel()->inputs()) {
+        try {
+            std::string name;
+            if (input.get_names().size() == 0) {
+                name = "unk_input";
+            } else {
+                name = input.get_any_name();
+            }
+            ovms::Precision precision = ovElementTypeToOvmsPrecision(input.get_element_type());
+            Shape shape(input.get_partial_shape());
+            std::string mappingName = config.getMappingInputByKey(name);
+            const Layout layout = Layout{"N..."};  // getReportedTensorLayout(config, name, true);
+
+            if (!layout.isCompatible(shape)) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Layout: {}; incompatible with shape: {}; for input name: {}", layout, shape.toString(), name);
+                return StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE;
+            }
+
+            std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
+                name,
+                mappingName,
+                precision,
+                shape,
+                layout);
+
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Input {}", info->asString());
+
+            this->inputsInfo[info->getMappedName()] = std::move(info);
+        } catch (const ov::Exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+                getName(),
+                getVersion(),
+                e.what());
+            // TODO potentially allow for empty names if OV will load such model. Then potentially use empty string as input/output names
+            // and adjust validation, metadata, dags for that
+            return StatusCode::UNKNOWN_ERROR;
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
+                getName(),
+                getVersion(),
+                e.what());
+            return StatusCode::UNKNOWN_ERROR;
+        } catch (...) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO",
+                getName(),
+                getVersion());
+            return StatusCode::UNKNOWN_ERROR;
+        }
+    }
+    return StatusCode::OK;
+}
+
 Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
     this->outputsInfo.clear();
 
@@ -449,6 +562,63 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
             Shape shape(output.get_partial_shape());
             std::string mappingName = config.getMappingOutputByKey(name);
             const Layout layout = getReportedTensorLayout(config, name, false);
+
+            if (!layout.isCompatible(shape)) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Layout: {}; incompatible with shape: {}; for output name: {}", layout, shape.toString(), name);
+                return StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE;
+            }
+
+            std::shared_ptr<TensorInfo> info = std::make_shared<TensorInfo>(
+                name,
+                mappingName,
+                precision,
+                shape,
+                layout);
+
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Output {}", info->asString());
+
+            this->outputsInfo[info->getMappedName()] = std::move(info);
+        } catch (const ov::Exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get output name for model:{}; version:{}; from OpenVINO with error:{}",
+                getName(),
+                getVersion(),
+                e.what());
+            // TODO potentially allow for empty names if OV will load such model. Then potentially use empty string as input/output names
+            // and adjust validation, metadata, dags for that
+            return StatusCode::UNKNOWN_ERROR;
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get output name for model:{}; version:{}; from OpenVINO with error:{}",
+                getName(),
+                getVersion(),
+                e.what());
+            return StatusCode::UNKNOWN_ERROR;
+        } catch (...) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get output name for model:{}; version:{}; from OpenVINO",
+                getName(),
+                getVersion());
+            return StatusCode::UNKNOWN_ERROR;
+        }
+    }
+
+    return StatusCode::OK;
+}
+
+Status ModelInstance::loadOutputTensors2(const ModelConfig& config) {
+    this->outputsInfo.clear();
+
+    for (const ov::Output<const ov::Node>& output : getModel()->outputs()) {
+        try {
+            std::string name;
+            if (output.get_names().size() == 0) {
+                name = "unk_output";
+            } else {
+                name = output.get_any_name();
+            }
+
+            ovms::Precision precision = ovElementTypeToOvmsPrecision(output.get_element_type());
+            Shape shape(output.get_partial_shape());
+            std::string mappingName = config.getMappingOutputByKey(name);
+            const Layout layout = Layout{"N..."};  // getReportedTensorLayout(config, name, false);
 
             if (!layout.isCompatible(shape)) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Layout: {}; incompatible with shape: {}; for output name: {}", layout, shape.toString(), name);
@@ -550,7 +720,6 @@ uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& mo
     std::string key = METRIC_KEY(OPTIMAL_NUMBER_OF_INFER_REQUESTS);
     try {
         numberOfParallelInferRequests = compiledModel->get_property(key).as<unsigned int>();
-        compiledModel->
     } catch (const ov::Exception& ex) {
         SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
         numberOfParallelInferRequests = 1u;
@@ -574,9 +743,22 @@ std::shared_ptr<ov::Model> ModelInstance::loadOVModelPtr(const std::string& mode
     return ieCore.read_model(modelFile);
 }
 
+inline bool ends_with(std::string const& value, std::string const& ending) {
+    if (ending.size() > value.size())
+        return false;
+    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
+
 Status ModelInstance::loadOVModel() {
     auto& modelFile = modelFiles[0];
     SPDLOG_DEBUG("Try reading model file: {}", modelFile);
+
+    bool isBlobFormat = ends_with(modelFile, ".blob");
+    SPDLOG_DEBUG("Is blob format: {}", isBlobFormat);
+    if (isBlobFormat) {
+        return StatusCode::OK;
+    }
+
     try {
         model = loadOVModelPtr(modelFile);
     } catch (std::exception& e) {
@@ -639,7 +821,17 @@ Status ModelInstance::loadOVModelUsingCustomLoader() {
 }
 
 void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
-    compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(model, targetDevice, pluginConfig));
+    auto& modelFile = modelFiles[0];
+
+    bool isBlobFormat = ends_with(modelFile, ".blob");
+    SPDLOG_DEBUG("Is blob format: {}", isBlobFormat);
+    if (isBlobFormat) {
+        // return StatusCode::OK;
+        std::ifstream file{modelFile};
+        compiledModel = std::make_shared<ov::CompiledModel>(ieCore.import_model(file, targetDevice, pluginConfig));
+    } else {
+        compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(model, targetDevice, pluginConfig));
+    }
 }
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
@@ -686,6 +878,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             config.getTargetDevice());
         return status;
     }
+    return StatusCode::OK;
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Plugin config for device: {}", targetDevice);
     for (const auto pair : pluginConfig) {
         const auto key = pair.first;
@@ -830,15 +1023,34 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             return status;
         }
 
-        status = loadTensors(this->config, needsToApplyLayoutConfiguration, parameter);
-        if (!status.ok()) {
-            this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
-            return status;
+        if (this->model) {
+            status = loadTensors(this->config, needsToApplyLayoutConfiguration, parameter);
+            if (!status.ok()) {
+                this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
+                return status;
+            }
+        } else {
+            SPDLOG_DEBUG("Ignored loading tensors");
         }
         status = loadOVCompiledModel(this->config);
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
+        }
+        if (!this->model) {
+            SPDLOG_DEBUG("Loading tensors now");
+            status = loadInputTensors2(config, parameter);
+            if (!status.ok()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during loading input tensors");
+                this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
+                return status;
+            }
+            status = loadOutputTensors2(config);
+            if (!status.ok()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during loading output tensors");
+                this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
+                return status;
+            }
         }
         status = prepareInferenceRequestsQueue(this->config);
         if (!status.ok()) {

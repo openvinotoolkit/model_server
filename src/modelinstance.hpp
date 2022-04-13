@@ -267,6 +267,7 @@ private:
          * @param config
          */
     Status loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
+    Status loadInputTensors2(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
 
     /**
          * @brief Internal method for loading outputs
@@ -274,6 +275,7 @@ private:
          * @param config
          */
     Status loadOutputTensors(const ModelConfig& config);
+    Status loadOutputTensors2(const ModelConfig& config);
 
     /**
       * @brief Flag determining if cache is disabled
@@ -327,6 +329,13 @@ public:
          * @brief Destroy the Model Instance object
          */
     virtual ~ModelInstance() = default;
+
+    std::shared_ptr<const ov::Model> getModel() const {
+        if (this->compiledModel && !this->model) {
+            return this->compiledModel->get_runtime_model();
+        }
+        return this->model;
+    }
 
     /**
          * @brief Increases predict requests usage count
@@ -414,7 +423,14 @@ public:
          * @return batch size
          */
     virtual Dimension getBatchSize() const {
-        return Dimension(ov::get_batch(model));
+        // return Dimension(ov::get_batch(model));
+        ov::Dimension d;
+        try {
+            d = ov::get_batch(this->getModel());
+        } catch (std::exception& e) {
+            d = this->getModel()->inputs().begin()->get_partial_shape()[0];
+        }
+        return Dimension(d);
     }
 
     const size_t getBatchSizeIndex() const;
