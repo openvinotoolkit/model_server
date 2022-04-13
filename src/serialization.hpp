@@ -98,4 +98,26 @@ Status serializePredictResponse(
     }
     return status;
 }
+template <typename T>
+Status serializePredictResponse(
+    OutputGetter<T>& outputGetter,
+    const tensor_map_t& outputMap,
+    ::inference::ModelInferResponse* response,
+    outputNameChooser_t outputNameChooser) {
+    Status status;
+    ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&> protoGetter(response);
+    for (const auto& [outputName, outputInfo] : outputMap) {
+        ov::Tensor tensor;
+        status = outputGetter.get(outputNameChooser(outputName, *outputInfo), tensor);
+        if (!status.ok()) {
+            return status;
+        }
+        auto& inferOutputTensor = protoGetter.get(outputInfo->getMappedName());
+        status = serializeTensorToTensorProto(inferOutputTensor, response->add_raw_output_contents(), outputInfo, tensor);
+        if (!status.ok()) {
+            return status;
+        }
+    }
+    return status;
+}
 }  // namespace ovms

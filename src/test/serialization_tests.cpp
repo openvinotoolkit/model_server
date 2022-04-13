@@ -38,6 +38,8 @@ using KFSTensorProto = ::inference::ModelInferResponse::InferOutputTensor;
 
 using TFPredictRequest = tensorflow::serving::PredictRequest;
 using TFPredictResponse = tensorflow::serving::PredictResponse;
+using KFSPredictRequest = ::inference::ModelInferRequest;
+using KFSPredictResponse = ::inference::ModelInferResponse;
 
 using namespace ovms;
 
@@ -364,6 +366,31 @@ TEST_P(SerializeKFSInferOutputTensorNegative, SerializeTensorProtoShouldSucceedF
         << "Unsupported OV serialization precision"
         << toString(testedPrecision)
         << "should fail";
+}
+
+TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
+    KFSPredictResponse response;
+    ov::Core ieCore;
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
+    ov::InferRequest inferRequest = compiledModel.create_infer_request();
+    ovms::tensor_map_t tenMap;
+    std::shared_ptr<ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
+        DUMMY_MODEL_INPUT_NAME,
+        ovms::Precision::FP32,
+        ovms::Shape{1, 10},
+        Layout{"NC"});
+    tenMap[DUMMY_MODEL_OUTPUT_NAME] = tensorInfo;
+    ov::Tensor tensor(tensorInfo->getOvPrecision(), ov::Shape{1, 10});
+    inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
+    OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
+    auto status = serializePredictResponse(outputGetter, tenMap, &response, getTensorInfoName);
+    ASSERT_TRUE(status.ok());
+    EXPECT_EQ(DUMMY_MODEL_INPUT_NAME, response.outputs(0).name());
+    EXPECT_EQ("FP32", response.outputs(0).datatype());
+    EXPECT_EQ(1, response.outputs(0).shape(0));
+    EXPECT_EQ(10, response.outputs(0).shape(1));
+    EXPECT_EQ(40, response.raw_output_contents(0).size());
 }
 
 INSTANTIATE_TEST_SUITE_P(
