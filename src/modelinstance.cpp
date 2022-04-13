@@ -550,6 +550,7 @@ uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& mo
     std::string key = METRIC_KEY(OPTIMAL_NUMBER_OF_INFER_REQUESTS);
     try {
         numberOfParallelInferRequests = compiledModel->get_property(key).as<unsigned int>();
+        compiledModel->
     } catch (const ov::Exception& ex) {
         SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
         numberOfParallelInferRequests = 1u;
@@ -753,7 +754,17 @@ Status ModelInstance::fetchModelFilepaths() {
             modelFiles.push_back(file);
         }
     }
-
+    if (!found) {
+        found = true;
+        modelFiles.clear();
+        for (auto extension : BLOB_MODEL_FILES_EXTENSIONS) {
+            auto file = findModelFilePathWithExtension(extension);
+            if (file.empty()) {
+                found = false;
+            }
+            modelFiles.push_back(file);
+        }
+    }
     if (!found) {
         SPDLOG_ERROR("Could not find file for model: {} version: {} in path: {}", getName(), getVersion(), path);
         return StatusCode::FILE_INVALID;

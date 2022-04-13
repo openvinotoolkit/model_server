@@ -31,7 +31,7 @@ namespace ovms {
 namespace fs = std::filesystem;
 constexpr uint64_t NANOS_PER_SECOND = 1000000000;
 
-const std::vector<std::string> FileSystem::acceptedFiles = {".bin", ".onnx", ".xml", "mapping_config.json"};
+const std::vector<std::string> FileSystem::acceptedFiles = {".bin", ".onnx", ".xml", "mapping_config.json", ".blob"};
 
 StatusCode LocalFileSystem::fileExists(const std::string& path, bool* exists) {
     try {

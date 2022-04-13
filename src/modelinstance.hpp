@@ -145,6 +145,11 @@ protected:
     static constexpr std::array<const char*, 1> ONNX_MODEL_FILES_EXTENSIONS{".onnx"};
 
     /**
+      * @brief Stores required blob model files extensions to be able to load model
+      */
+    static constexpr std::array<const char*, 1> BLOB_MODEL_FILES_EXTENSIONS{".blob"};
+
+    /**
          * @brief Notifies model instance users who wait for loading
          */
     std::condition_variable modelLoadedNotify;
