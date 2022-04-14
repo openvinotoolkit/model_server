@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <string>
+
 #include "minitrace.h"  // NOLINT
 
 #define OVMS_PROFILE_SCOPE(name) MTR_SCOPE("OVMS", name);
@@ -29,5 +31,19 @@
 #define OVMS_PROFILE_ASYNC_BEGIN(name, id) MTR_START("OVMS", name, id);
 #define OVMS_PROFILE_ASYNC_END(name, id) MTR_FINISH("OVMS", name, id);
 
-bool profiler_init(const char* file_name);
+namespace ovms {
+
+bool profiler_init(const char* file_path);
 void profiler_shutdown();
+
+class Profiler {
+public:
+    Profiler(const std::string& file_path);
+    ~Profiler();
+    bool isInitialized() const;
+
+private:
+    bool initialized = false;
+};
+
+}  // namespace ovms

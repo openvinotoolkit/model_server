@@ -17,11 +17,13 @@
 
 #include <stdio.h>
 
-bool profiler_init(const char* file_name) {
+namespace ovms {
+
+bool profiler_init(const char* file_path) {
 #ifndef MTR_ENABLED
     return true;
 #endif
-    FILE* f = fopen(file_name, "wb");
+    FILE* f = fopen(file_path, "wb");
     if (f == nullptr) {
         return false;
     }
@@ -36,3 +38,19 @@ void profiler_shutdown() {
     mtr_flush();
     mtr_shutdown();
 }
+
+Profiler::Profiler(const std::string& file_path) {
+    this->initialized = profiler_init(file_path.c_str());
+}
+
+Profiler::~Profiler() {
+    if (this->isInitialized()) {
+        profiler_shutdown();
+    }
+}
+
+bool Profiler::isInitialized() const {
+    return this->initialized;
+}
+
+}  // namespace ovms

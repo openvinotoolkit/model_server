@@ -260,14 +260,12 @@ int server_main(int argc, char** argv) {
         configure_logger(config.logLevel(), config.logPath());
 
 #ifdef MTR_ENABLED
-        const char* traceFileName = config.tracePath().c_str();
-#else
-        const char* traceFileName = "";
-#endif
-        if (!profiler_init(traceFileName)) {
-            SPDLOG_ERROR("Cannot open file for profiler, --trace_path: {}", traceFileName);
+        auto profiler = Profiler(config.tracePath());
+        if (!profiler.isInitialized()) {
+            SPDLOG_ERROR("Cannot open file for profiler, --trace_path: {}", config.tracePath());
             return EXIT_FAILURE;
         }
+#endif
 
         PredictionServiceImpl predict_service;
         ModelServiceImpl model_service;
@@ -297,14 +295,11 @@ int server_main(int argc, char** argv) {
         ModelManager::getInstance().join();
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
-        profiler_shutdown();
         return EXIT_FAILURE;
     } catch (...) {
         SPDLOG_ERROR("Unknown exception catch - will now terminate.");
-        profiler_shutdown();
         return EXIT_FAILURE;
     }
 
-    profiler_shutdown();
     return EXIT_SUCCESS;
 }

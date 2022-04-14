@@ -337,10 +337,10 @@ $ docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --mo
 |---|---|---|
 | OVMS_PROFILER_FUNCTION | Add this macro at the very beginning of a function. This will automatically add function name to trace marker. | `OVMS_PROFILER_FUNCTION();`  |
 | OVMS_PROFILER_SCOPE | Add this macro at the beginning of a code scope and add marker name. This will automatically add ending marker at the end of code scope.  | `OVMS_PROFILER_SCOPE("My Code Scope Marker");`  |
-| OVMS_PROFILER_SYNC_BEGIN | For custom start and end markers, use this macro to mark beginning of synchronous event. Remember to use the same marker name for beginning and end. | `OVMS_PROFILER_SYNC_BEGIN("My Synchronous Event")` |
-| OVMS_PROFILER_SYNC_END | For custom start and end markers, use this macro to mark ending of synchronous event. Remember to use the same marker name for beginning and end. | `OVMS_PROFILER_SYNC_END("My Synchronous Event")` |
-| OVMS_PROFILER_ASYNC_BEGIN | For custom start and end markers, use this macro to mark beginning of asynchronous event. Remember to use the same marker name and id for beginning and end. Asynchronous markers need an identifier to correctly match events. | `OVMS_PROFILER_ASYNC_BEGIN("My Asynchronous Event", unique_id)` |
-| OVMS_PROFILER_ASYNC_END | For custom start and end markers, use this macro to mark end of asynchronous event. Remember to use the same marker name and id for beginning and end. Asynchronous markers need an identifier to correctly match events. | `OVMS_PROFILER_ASYNC_END("My Asynchronous Event", unique_id)` |
+| OVMS_PROFILER_SYNC_BEGIN | For custom start and end markers, use this macro to mark beginning of synchronous event. Remember to use the same marker name for beginning and end. | `OVMS_PROFILER_SYNC_BEGIN("My Synchronous Event");` |
+| OVMS_PROFILER_SYNC_END | For custom start and end markers, use this macro to mark ending of synchronous event. Remember to use the same marker name for beginning and end. | `OVMS_PROFILER_SYNC_END("My Synchronous Event");` |
+| OVMS_PROFILER_ASYNC_BEGIN | For custom start and end markers, use this macro to mark beginning of asynchronous event. Remember to use the same marker name and id for beginning and end. Asynchronous markers need an identifier to correctly match events. | `OVMS_PROFILER_ASYNC_BEGIN("My Asynchronous Event", unique_id);` |
+| OVMS_PROFILER_ASYNC_END | For custom start and end markers, use this macro to mark end of asynchronous event. Remember to use the same marker name and id for beginning and end. Asynchronous markers need an identifier to correctly match events. | `OVMS_PROFILER_ASYNC_END("My Asynchronous Event", unique_id);` |
 
 More information can be found in [profiler.hpp](../src/profiler.hpp) file.
 
