@@ -60,7 +60,7 @@ protected:
      */
     ModelManager(const std::string& modelCacheDirectory = "");
 
-    void logPluginConfiguration();
+    void logPluginConfiguration(const plugin_config_t& pluginConfig);
 
     Status checkStatefulFlagChange(const std::string& modelName, bool configStatefulFlag);
 
