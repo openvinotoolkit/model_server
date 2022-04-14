@@ -323,7 +323,26 @@ This is convenient when final image has to be used on different machine and no c
 $ make docker_build MINITRACE=ON
 ```
 
-2. Run OVMS with minitrace enabled and `--trace_path` and follow Option 1 to open trace file in Chrome web browser.
+2. Run OVMS with minitrace enabled and `--trace_path` to specify where to save trace JSON file. Since the file is flushed and saved at container shutdown, mount the host directory with write access to persist the file after container stops.
+```
+$ docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/trace.json 
+```
+
+3. During app exit, the trace info will be saved into `${PWD}/trace.json`.
+
+4. Use Chrome web browser `chrome://tracing` tool to display the graph, similarly to Option 1.
+
+### Profiling macros
+| Macro | Description | Example Usage |
+|---|---|---|
+| OVMS_PROFILER_FUNCTION | Add this macro at the very beginning of a function. This will automatically add function name to trace marker. | `OVMS_PROFILER_FUNCTION();`  |
+| OVMS_PROFILER_SCOPE | Add this macro at the beginning of a code scope and add marker name. This will automatically add ending marker at the end of code scope.  | `OVMS_PROFILER_SCOPE("My Code Scope Marker");`  |
+| OVMS_PROFILER_SYNC_BEGIN | For custom start and end markers, use this macro to mark beginning of synchronous event. Remember to use the same marker name for beginning and end. | `OVMS_PROFILER_SYNC_BEGIN("My Synchronous Event")` |
+| OVMS_PROFILER_SYNC_END | For custom start and end markers, use this macro to mark ending of synchronous event. Remember to use the same marker name for beginning and end. | `OVMS_PROFILER_SYNC_END("My Synchronous Event")` |
+| OVMS_PROFILER_ASYNC_BEGIN | For custom start and end markers, use this macro to mark beginning of asynchronous event. Remember to use the same marker name and id for beginning and end. Asynchronous markers need an identifier to correctly match events. | `OVMS_PROFILER_ASYNC_BEGIN("My Asynchronous Event", unique_id)` |
+| OVMS_PROFILER_ASYNC_END | For custom start and end markers, use this macro to mark end of asynchronous event. Remember to use the same marker name and id for beginning and end. Asynchronous markers need an identifier to correctly match events. | `OVMS_PROFILER_ASYNC_END("My Asynchronous Event", unique_id)` |
+
+More information can be found in [profiler.hpp](../src/profiler.hpp) file.
 
 </details>
 
