@@ -28,6 +28,7 @@
 #pragma GCC diagnostic pop
 
 #include "kfs_grpc_inference_service.hpp"
+#include "profiler.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
@@ -82,6 +83,7 @@ Status serializePredictResponse(
     const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response,
     outputNameChooser_t outputNameChooser) {
+    OVMS_PROFILE_FUNCTION();
     Status status;
     ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&> protoGetter(response);
     for (const auto& [outputName, outputInfo] : outputMap) {

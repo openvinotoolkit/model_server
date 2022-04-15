@@ -75,6 +75,11 @@ Config& Config::parse(int argc, char** argv) {
             ("log_path",
                 "Optional path to the log file",
                 cxxopts::value<std::string>(), "LOG_PATH")
+#ifdef MTR_ENABLED
+            ("trace_path",
+                "Path to the trace file",
+                cxxopts::value<std::string>(), "TRACE_PATH")
+#endif
             ("grpc_channel_arguments",
                 "A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000)",
                 cxxopts::value<std::string>(), "GRPC_CHANNEL_ARGUMENTS")

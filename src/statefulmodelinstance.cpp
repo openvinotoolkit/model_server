@@ -22,6 +22,7 @@
 #include "executingstreamidguard.hpp"
 #include "logging.hpp"
 #include "predict_request_validation_utils.hpp"
+#include "profiler.hpp"
 #include "serialization.hpp"
 #include "timer.hpp"
 
@@ -178,6 +179,7 @@ const Status StatefulModelInstance::validateSpecialKeys(const tensorflow::servin
 
 template <typename RequestType>
 const Status StatefulModelInstance::validate(const RequestType* request, SequenceProcessingSpec& sequenceProcessingSpec) {
+    OVMS_PROFILE_FUNCTION();
     auto status = validateSpecialKeys(request, sequenceProcessingSpec);
     if (!status.ok())
         return status;
@@ -195,6 +197,7 @@ const Status StatefulModelInstance::validate(const RequestType* request, Sequenc
 Status StatefulModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,
     tensorflow::serving::PredictResponse* responseProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
+    OVMS_PROFILE_FUNCTION();
     Timer timer;
     using std::chrono::microseconds;
     SequenceProcessingSpec sequenceProcessingSpec;

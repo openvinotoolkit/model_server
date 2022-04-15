@@ -17,6 +17,7 @@
 workspace(name = "ovms")
 
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # overriding tensorflow serving bazel dependency
@@ -65,6 +66,23 @@ git_repository(
     patches = ["net_http.patch", "listen.patch"]
     #                             ^^^^^^^^^^^^
     #                       make bind address configurable
+)
+
+# minitrace
+new_git_repository(
+    name = "minitrace",
+    remote = "https://github.com/hrydgard/minitrace.git",
+    commit = "020f42b189e8d6ad50e4d8f45d69edee0a6b3f23",
+    build_file_content = """
+cc_library(
+    name = "trace",
+    hdrs = ["minitrace.h"],
+    srcs = ["minitrace.c"],
+    visibility = ["//visibility:public"],
+    local_defines = [
+    ],
+)
+""",
 )
 
 load("@tensorflow_serving//tensorflow_serving:repo.bzl", "tensorflow_http_archive")

@@ -26,6 +26,7 @@
 
 #include "kfs_grpc_inference_service.hpp"
 #include "modelconfig.hpp"
+#include "profiler.hpp"
 
 namespace ovms {
 namespace request_validation_utils {
@@ -374,11 +375,13 @@ Status RequestValidator::validate() {
 
 template <>
 Status validate(const tensorflow::serving::PredictRequest& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<const char*>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
+    OVMS_PROFILE_FUNCTION();
     return RequestValidator(request, inputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
 }
 
 template <>
 Status validate(const ::inference::ModelInferRequest& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<const char*>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
+    OVMS_PROFILE_FUNCTION();
     return StatusCode::NOT_IMPLEMENTED;
 }
 
