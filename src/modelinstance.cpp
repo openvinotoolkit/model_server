@@ -45,6 +45,7 @@
 #include "stringutils.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
+#include "plugin_configuration.hpp"
 
 namespace ovms {
 
@@ -686,6 +687,12 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             config.getTargetDevice());
         return status;
     }
+    auto status = validatePluginConfiguration(config.getPluginConfig(), config.getTargetDevice(), ieCore);
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config contains unsupported keys");
+        return status;
+    }
+
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Plugin config for device: {}", targetDevice);
     for (const auto pair : pluginConfig) {
         const auto key = pair.first;

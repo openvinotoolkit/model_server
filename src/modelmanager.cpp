@@ -53,6 +53,7 @@
 #include "s3filesystem.hpp"
 #include "schema.hpp"
 #include "stringutils.hpp"
+#include "plugin_configuration.hpp"
 
 namespace ovms {
 
@@ -102,26 +103,26 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory) :
             throw;
         }
     }
+    this->logPluginConfiguration();
 }
 
-void ModelManager::logPluginConfiguration(const plugin_config_t& pluginConfig) {
+void ModelManager::logPluginConfiguration() {
     auto availableDevices = ieCore->get_available_devices();
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Available devices for Open VINO: {}", joins(availableDevices, std::string(", ")));
     auto availablePlugins = availableDevices;
     const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
-    std::vector<std::string> allSupportedConfigKeys;
     for (const auto& plugin : availablePlugins) {
-        std::vector<std::string> pluginSupportedConfigKeys;
+        std::vector<std::string> supportedConfigKeys;
         try {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging plugin: {}; configuration", plugin);
-            std::vector<std::string> pluginSupportedConfigKeys2 = ieCore->get_property(plugin, supportedConfigKey).as<std::vector<std::string>>();
-            pluginSupportedConfigKeys = std::move(pluginSupportedConfigKeys2);
+            std::vector<std::string> supportedConfigKeys2 = ieCore->get_property(plugin, supportedConfigKey).as<std::vector<std::string>>();
+            supportedConfigKeys = std::move(supportedConfigKeys2);
         } catch (std::exception& e) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", plugin, supportedConfigKey, e.what());
         } catch (...) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value.", plugin, supportedConfigKey);
         }
-        for (auto& key : pluginSupportedConfigKeys) {
+        for (auto& key : supportedConfigKeys) {
             std::string value;
             try {
                 auto paramValue = ieCore->get_property(plugin, key);
@@ -134,17 +135,6 @@ void ModelManager::logPluginConfiguration(const plugin_config_t& pluginConfig) {
                 continue;
             }
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Global plugin: {}; key: {}; value: {}", plugin, key, value);
-        }
-        allSupportedConfigKeys.insert(
-            allSupportedConfigKeys.end(),
-            std::make_move_iterator(pluginSupportedConfigKeys.begin()),
-            std::make_move_iterator(pluginSupportedConfigKeys.end())
-        );
-    }
-    for (auto& config : pluginConfig) {
-        if (std::find(allSupportedConfigKeys.begin(), allSupportedConfigKeys.end(), config.first) == allSupportedConfigKeys.end())
-        {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Plugin config key: {} not found in supported config keys for available devices", config.first);
         }
     }
 }
@@ -223,7 +213,11 @@ Status ModelManager::startFromConfig() {
         return status;
     }
 
-    this->logPluginConfiguration(modelConfig.getPluginConfig());
+    status = validatePluginConfiguration(modelConfig.getPluginConfig(), modelConfig.getTargetDevice(), *ieCore.get());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config contains unsupported keys");
+        return status;
+    }
 
     status = modelConfig.parseModelVersionPolicy(config.modelVersionPolicy());
     if (!status.ok()) {
@@ -585,7 +579,12 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             modelsWithInvalidConfig.emplace(modelConfig.getName());
             continue;
         }
-        this->logPluginConfiguration(modelConfig.getPluginConfig());
+
+        status = validatePluginConfiguration(modelConfig.getPluginConfig(), modelConfig.getTargetDevice(), *ieCore.get());
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config contains unsupported keys");
+            return status;
+        }
         modelConfig.setCacheDir(this->modelCacheDirectory);
 
         const auto modelName = modelConfig.getName();

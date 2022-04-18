@@ -199,6 +199,8 @@ cc_library(
         "logging.cpp",
         "binaryutils.hpp",
         "binaryutils.cpp",
+        "plugin_configuration.hpp",
+        "plugin_configuration.cpp",
     ],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
