@@ -116,8 +116,6 @@ public:
     Status validate();
 };
 
-// TODO test with two the same inputs since ther is no mapa
-// TODO request with input size 0
 Status RequestValidatorKFS::validateNumberOfInputs() const {
     size_t expectedNumberOfInputs = inputsInfo.size();
     auto it = request.inputs().begin();
