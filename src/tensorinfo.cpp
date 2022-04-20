@@ -326,7 +326,7 @@ std::string TensorInfo::tensorShapeToString(const tensorflow::TensorShapeProto& 
     return oss.str();
 }
 // TODO templatize
-std::string TensorInfo::tensorShapeToString(const google::protobuf::RepeatedField<long int>& shape) {
+std::string TensorInfo::tensorShapeToString(const google::protobuf::RepeatedField<int64_t>& shape) {
     std::ostringstream oss;
     oss << "(";
     size_t i = 0;

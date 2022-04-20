@@ -241,7 +241,7 @@ public:
     static std::string shapeToString(const shape_t& shape);
 
     static std::string tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape);
-    static std::string tensorShapeToString(const google::protobuf::RepeatedField<long int>& tensorShape);
+    static std::string tensorShapeToString(const google::protobuf::RepeatedField<int64_t>& tensorShape);
 
     static std::shared_ptr<TensorInfo> getUnspecifiedTensorInfo();
 
