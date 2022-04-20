@@ -202,7 +202,8 @@ tensorflow::serving::PredictRequest prepareBinary4x4PredictRequest(const std::st
 ::inference::ModelInferRequest_InferInputTensor* findKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name) {
     auto it = request.mutable_inputs()->begin();
     while (it != request.mutable_inputs()->end()) {
-        if (it->name() == name) break;
+        if (it->name() == name)
+            break;
         ++it;
     }
     return it == request.mutable_inputs()->end() ? nullptr : &(*it);
@@ -213,7 +214,8 @@ std::string* findKFSInferInputTensorContent(::inference::ModelInferRequest& requ
     size_t bufferId = 0;
     std::string* content = nullptr;
     while (it != request.mutable_inputs()->end()) {
-        if (it->name() == name) break;
+        if (it->name() == name)
+            break;
         ++it;
         ++bufferId;
     }
@@ -224,11 +226,12 @@ std::string* findKFSInferInputTensorContent(::inference::ModelInferRequest& requ
 }
 
 void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,
-        const std::vector<float>& data) {
+    const std::vector<float>& data) {
     auto it = request.mutable_inputs()->begin();
     size_t bufferId = 0;
     while (it != request.mutable_inputs()->end()) {
-        if (it->name() == name) break;
+        if (it->name() == name)
+            break;
         ++it;
         ++bufferId;
     }

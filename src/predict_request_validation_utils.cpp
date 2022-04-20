@@ -18,8 +18,6 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
-#include "kfs_grpc_inference_service.hpp"
-
 #include <sstream>
 #include <string>
 
@@ -104,7 +102,6 @@ public:
         optionalAllowedInputNames(optionalAllowedInputNames),
         batchingMode(batchingMode),
         shapeInfo(shapeInfo) {}
-
 
     Status validateNumberOfInputs() const;
     Status validateAndGetInput(const ::inference::ModelInferRequest& request, const std::string& name, google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferRequest_InferInputTensor>& it, size_t& bufferId);
@@ -258,7 +255,6 @@ Status RequestValidatorKFS::checkBatchSizeMismatch(const inference::ModelInferRe
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
     }
     return StatusCode::OK;
-
 }
 
 Status RequestValidator::checkBinaryBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
@@ -424,7 +420,6 @@ Status RequestValidator::validateTensorContentSize(const tensorflow::TensorProto
     return StatusCode::OK;
 }
 Status RequestValidatorKFS::validateTensorContentSize(const inference::ModelInferRequest_InferInputTensor& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
-
     size_t expectedValueCount = 1;
     for (int i = 0; i < proto.shape().size(); i++) {
         expectedValueCount *= proto.shape()[i];
@@ -583,7 +578,7 @@ Status RequestValidatorKFS::validate() {
     auto status = validateNumberOfInputs();
     if (!status.ok())
         return status;
-    
+
     size_t bufferId = 0;
     for (const auto& [name, inputInfo] : inputsInfo) {
         status = validateAndGetInput(request, name, it, bufferId);
@@ -608,7 +603,7 @@ Status RequestValidatorKFS::validate() {
         }
         const Dimension& batchSize = inputInfo->getShape()[batchIndex.value()];
         Mode shapeMode = getShapeMode(shapeInfo, name);
-/* TODO do together with binary inputs implementation
+        /* TODO do together with binary inputs implementation
         // More detailed binary input validation is performed in next step, during conversion to tensor.
         if (proto.dtype() == tensorflow::DataType::DT_STRING) {
             SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing binary input: name: {}; batch size: {}", servableName, servableVersion, name, proto.string_val_size());
@@ -641,7 +636,7 @@ Status RequestValidatorKFS::validate() {
         if (!status.ok())
             return status;
     }
-    
+
     return finalStatus;
 }
 

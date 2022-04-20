@@ -14,9 +14,9 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <unordered_map>
-
 #include "precision.hpp"
+
+#include <unordered_map>
 
 namespace ovms {
 
@@ -139,16 +139,16 @@ KFSDataType ovmsPrecisionToKfsPrecision(Precision precision) {
         {Precision::U16, "UINT16"},
         {Precision::U8, "UINT8"},
         {Precision::BOOL, "BOOL"}};
-        // {Precision::BF16, ""}, TODO
-        // {Precision::U4, ""}, TODO
-        // {Precision::U1, ""}, TODO
-        // {Precision::CUSTOM, ""}, TODO
-        // {Precision::DYNAMIC, ""}, TODO
-        // {Precision::MIXED, ""}, TODO
-        // {Precision::Q78, ""}, TODO
-        // {Precision::BIN, ""}, TODO
-        // {Precision::I4, ""}, TODO
-        // {Precision::UNDEFINED, "UNDEFINED"}}; TODO
+    // {Precision::BF16, ""}, TODO
+    // {Precision::U4, ""}, TODO
+    // {Precision::U1, ""}, TODO
+    // {Precision::CUSTOM, ""}, TODO
+    // {Precision::DYNAMIC, ""}, TODO
+    // {Precision::MIXED, ""}, TODO
+    // {Precision::Q78, ""}, TODO
+    // {Precision::BIN, ""}, TODO
+    // {Precision::I4, ""}, TODO
+    // {Precision::UNDEFINED, "UNDEFINED"}}; TODO
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
         return "INVALID";

@@ -339,7 +339,6 @@ std::string TensorInfo::tensorShapeToString(const google::protobuf::RepeatedFiel
     oss << ")";
 
     return oss.str();
-
 }
 
 std::shared_ptr<TensorInfo> TensorInfo::getUnspecifiedTensorInfo() {
