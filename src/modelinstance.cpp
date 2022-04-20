@@ -499,7 +499,7 @@ Status ModelInstance::loadInputTensors2(const ModelConfig& config, const Dynamic
 
     // configureBatchSize(this->config, parameter);
 
-    for (const ov::Output<const ov::Node>& input : getModel()->inputs()) {
+    for (const ov::Output<const ov::Node>& input : this->compiledModel->inputs()) {
         try {
             std::string name;
             if (input.get_names().size() == 0) {
@@ -606,7 +606,7 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
 Status ModelInstance::loadOutputTensors2(const ModelConfig& config) {
     this->outputsInfo.clear();
 
-    for (const ov::Output<const ov::Node>& output : getModel()->outputs()) {
+    for (const ov::Output<const ov::Node>& output : this->compiledModel->outputs()) {
         try {
             std::string name;
             if (output.get_names().size() == 0) {

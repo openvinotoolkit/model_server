@@ -330,12 +330,12 @@ public:
          */
     virtual ~ModelInstance() = default;
 
-    std::shared_ptr<const ov::Model> getModel() const {
-        if (this->compiledModel && !this->model) {
-            return this->compiledModel->get_runtime_model();
-        }
-        return this->model;
-    }
+    // std::shared_ptr<const ov::Model> getModel() const {
+    //     if (this->compiledModel && !this->model) {
+    //         return this->compiledModel->get_runtime_model();
+    //     }
+    //     return this->model;
+    // }
 
     /**
          * @brief Increases predict requests usage count
@@ -425,10 +425,10 @@ public:
     virtual Dimension getBatchSize() const {
         // return Dimension(ov::get_batch(model));
         ov::Dimension d;
-        try {
-            d = ov::get_batch(this->getModel());
-        } catch (std::exception& e) {
-            d = this->getModel()->inputs().begin()->get_partial_shape()[0];
+        if (this->model) {
+            d = ov::get_batch(this->model);
+        } else {
+            d = this->compiledModel->inputs().begin()->get_partial_shape()[0];
         }
         return Dimension(d);
     }
