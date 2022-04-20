@@ -153,6 +153,11 @@ tensorflow::TensorProto& ProtoGetter<tensorflow::serving::PredictResponse*, tens
     return (*protoStorage->mutable_outputs())[name];
 }
 
+template <>
+::inference::ModelInferResponse::InferOutputTensor& ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&>::get(const std::string& name) {
+    return *protoStorage->add_outputs();
+}
+
 const std::string& getTensorInfoName(const std::string& first, const TensorInfo& tensorInfo) {
     return tensorInfo.getName();
 }
