@@ -45,7 +45,7 @@
 #include "stringutils.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
-#include "plugin_configuration.hpp"
+#include "ov_utils.hpp"
 
 namespace ovms {
 

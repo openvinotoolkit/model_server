@@ -42,4 +42,6 @@ Status tensorClone(ov::Tensor& destinationTensor, const ov::Tensor& sourceTensor
 
 std::optional<ov::Layout> getLayoutFromRTMap(const ov::RTMap& rtMap);
 
+Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const std::string& targetDevice, const ov::Core& ieCore);
+
 }  // namespace ovms

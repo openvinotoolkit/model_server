@@ -23,6 +23,7 @@
 
 #include "profiler.hpp"
 #include "tensorinfo.hpp"
+#include "logging.hpp"
 
 namespace ovms {
 
@@ -79,4 +80,40 @@ std::optional<ov::Layout> getLayoutFromRTMap(const ov::RTMap& rtMap) {
     return std::nullopt;
 }
 
+Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const std::string& targetDevice, const ov::Core& ieCore) {
+    auto availableDevices = ieCore.get_available_devices();
+    auto availablePlugins = availableDevices;
+    const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
+    for (const auto& plugin : availablePlugins) {
+        std::vector<std::string> supportedConfigKeys;
+        try {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Validating plugin: {}; configuration", plugin);
+            std::vector<std::string> supportedConfigKeys2 = ieCore.get_property(plugin, supportedConfigKey).as<std::vector<std::string>>();
+            supportedConfigKeys = std::move(supportedConfigKeys2);
+        } catch (std::exception& e) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", plugin, supportedConfigKey, e.what());
+        } catch (...) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value.", plugin, supportedConfigKey);
+        }
+        if(plugin == targetDevice){
+            for (auto& config : pluginConfig) {
+                if (std::find(supportedConfigKeys.begin(), supportedConfigKeys.end(), config.first) == supportedConfigKeys.end())
+                {
+                    std::ostringstream supportedConfigKeysStr;
+                    if (!supportedConfigKeys.empty())
+                    {
+                        std::copy(supportedConfigKeys.begin(), supportedConfigKeys.end()-1,
+                            std::ostream_iterator<std::string>(supportedConfigKeysStr, ","));
+                    
+                        supportedConfigKeysStr << supportedConfigKeys.back();
+                    }
+
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config key: {} not found in supported config keys for {} device. List of supported keys for this device: {}", config.first, plugin, supportedConfigKeysStr.str());
+                    return StatusCode::MODEL_CONFIG_INVALID;
+                }
+            }
+        }
+    }
+    return StatusCode::OK;
+}
 }  // namespace ovms

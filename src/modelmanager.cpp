@@ -53,7 +53,7 @@
 #include "s3filesystem.hpp"
 #include "schema.hpp"
 #include "stringutils.hpp"
-#include "plugin_configuration.hpp"
+#include "ov_utils.hpp"
 
 namespace ovms {
 
