@@ -21,12 +21,26 @@
 
 #include "deserialization.hpp"
 #include "modelmanager.hpp"
+#include "modelmanager.hpp"
+#include "ovinferrequestsqueue.hpp"
+#include "prediction_service_utils.hpp"
 #include "pipelinedefinition.hpp"
 #include "serialization.hpp"
+#include "timer.hpp"
 
 namespace ovms {
 
 using inference::GRPCInferenceService;
+
+Status getPipeline(const ::inference::ModelInferRequest* request,
+    ::inference::ModelInferResponse* response,
+    std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
+    OVMS_PROFILE_FUNCTION();
+    ModelManager& manager = ModelManager::getInstance();
+    return manager.createPipeline(pipelinePtr, request->model_name(), request, response);
+}
+
+//}  // namespace ovms
 
 const std::string PLATFORM = "OpenVINO";
 
@@ -101,6 +115,44 @@ const std::string PLATFORM = "OpenVINO";
     (void)context;
     (void)request;
     (void)response;
+    OVMS_PROFILE_FUNCTION();
+    Timer timer;
+    timer.start("total");
+    using std::chrono::microseconds;
+    SPDLOG_DEBUG("Processing gRPC request for model: {}; version: {}",
+        request->model_name(),
+        request->model_version());
+
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::Pipeline> pipelinePtr;
+
+    std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    auto status = getModelInstance(request, modelInstance, modelInstanceUnloadGuard);
+
+    if (status == StatusCode::MODEL_NAME_MISSING) {
+        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", request->model_name());
+        status = getPipeline(request, response, pipelinePtr);
+    }
+    if (!status.ok()) {
+        SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
+        return status.grpc();
+    }
+
+    if (pipelinePtr) {
+        status = pipelinePtr->execute();
+    } else {
+        status = modelInstance->infer(request, response, modelInstanceUnloadGuard);
+    }
+
+    if (!status.ok()) {
+        return status.grpc();
+    }
+
+    timer.stop("total");
+    SPDLOG_DEBUG("Total gRPC request processing time: {} ms", timer.elapsed<microseconds>("total") / 1000);
+    return grpc::Status::OK;
+
+/*
     std::cout << __FUNCTION__ << ":" << __LINE__
               << " model:" << request->model_name()
               << " version:" << request->model_version()
@@ -145,6 +197,7 @@ const std::string PLATFORM = "OpenVINO";
     response->set_id(request->id());
 
     return ::grpc::Status(::grpc::StatusCode::OK, "");
+    */
 }
 
 Status KFSInferenceServiceImpl::buildResponse(

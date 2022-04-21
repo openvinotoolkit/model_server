@@ -301,10 +301,11 @@ public:
         }
     }
 
+    template<typename RequestType, typename ResponseType>
     Status createPipeline(std::unique_ptr<Pipeline>& pipeline,
         const std::string name,
-        const tensorflow::serving::PredictRequest* request,
-        tensorflow::serving::PredictResponse* response) {
+        const RequestType* request,
+        ResponseType* response) {
         return pipelineFactory.create(pipeline, name, request, response, *this);
     }
 

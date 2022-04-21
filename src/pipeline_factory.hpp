@@ -50,10 +50,11 @@ public:
 
     bool definitionExists(const std::string& name) const;
 
+    template<typename RequestType, typename ResponseType>
     Status create(std::unique_ptr<Pipeline>& pipeline,
         const std::string& name,
-        const tensorflow::serving::PredictRequest* request,
-        tensorflow::serving::PredictResponse* response,
+        const RequestType* request,
+        ResponseType* response,
         ModelManager& manager) const;
 
     PipelineDefinition* findDefinitionByName(const std::string& name) const;

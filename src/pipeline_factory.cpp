@@ -75,10 +75,11 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
     return validationResult;
 }
 
+    template<typename RequestType, typename ResponseType>
 Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline,
     const std::string& name,
-    const tensorflow::serving::PredictRequest* request,
-    tensorflow::serving::PredictResponse* response,
+    const RequestType* request,
+    ResponseType* response,
     ModelManager& manager) const {
     if (!definitionExists(name)) {
         SPDLOG_LOGGER_INFO(dag_executor_logger, "Pipeline with requested name: {} does not exist", name);

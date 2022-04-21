@@ -23,10 +23,19 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
+#include "kfs_grpc_inference_service.hpp"
 
 #include "shape.hpp"
 
 namespace ovms {
+Status getModelInstance(const ::inference::ModelInferRequest* request,
+    std::shared_ptr<ovms::ModelInstance>& modelInstance,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
+
+
+std::optional<Dimension> getRequestBatchSize(const ::inference::ModelInferRequest* request, const size_t batchSizeIndex);
+
+std::map<std::string, shape_t> getRequestShapes(const ::inference::ModelInferRequest* request);
 
 std::optional<Dimension> getRequestBatchSize(const tensorflow::serving::PredictRequest* request, const size_t batchSizeIndex);
 std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request);

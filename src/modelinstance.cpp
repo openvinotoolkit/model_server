@@ -1167,6 +1167,60 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     return StatusCode::OK;
 }
 
+Status ModelInstance::infer(const ::inference::ModelInferRequest* requestProto,
+    ::inference::ModelInferResponse* responseProto,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
+    OVMS_PROFILE_FUNCTION();
+    Timer timer;
+    using std::chrono::microseconds;
+
+    auto status = validate(requestProto);
+    auto requestBatchSize = getRequestBatchSize(requestProto, this->getBatchSizeIndex());
+    auto requestShapes = getRequestShapes(requestProto);
+    status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
+    if (!status.ok())
+        return status;
+    timer.start("get infer request");
+    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+    int executingInferId = executingStreamIdGuard.getId();
+    ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    timer.stop("get infer request");
+    SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
+        requestProto->model_name(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
+
+    timer.start("deserialize");
+    InputSink<ov::InferRequest&> inputSink(inferRequest);
+    bool isPipeline = false;
+    SPDLOG_ERROR("{}", isPipeline);
+    //status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
+    timer.stop("deserialize");
+    if (!status.ok())
+        return status;
+    SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
+        requestProto->model_name(), getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
+
+    timer.start("prediction");
+    status = performInference(inferRequest);
+    timer.stop("prediction");
+    if (!status.ok())
+        return status;
+    SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
+        requestProto->model_name(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
+
+    timer.start("serialize");
+    OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
+    status = serializePredictResponse(outputGetter, getOutputsInfo(), responseProto, getTensorInfoName);
+    timer.stop("serialize");
+    if (!status.ok())
+        return status;
+
+    SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
+        requestProto->model_name(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
+
+    return StatusCode::OK;
+
+}
+
 const size_t ModelInstance::getBatchSizeIndex() const {
     const auto& inputItr = this->inputsInfo.cbegin();
     if (inputItr == this->inputsInfo.cend()) {

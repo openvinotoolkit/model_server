@@ -42,6 +42,11 @@
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
+namespace inference {
+class ModelInferRequest;
+class ModelInferResponse;
+}
+
 namespace ovms {
 
 using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
@@ -546,6 +551,9 @@ public:
 
     virtual Status infer(const tensorflow::serving::PredictRequest* requestProto,
         tensorflow::serving::PredictResponse* responseProto,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
+    virtual Status infer(const ::inference::ModelInferRequest* requestProto,
+        ::inference::ModelInferResponse* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 };
 }  // namespace ovms
