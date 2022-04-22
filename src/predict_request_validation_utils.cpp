@@ -118,13 +118,14 @@ public:
 
 Status RequestValidatorKFS::validateNumberOfInputs() const {
     size_t expectedNumberOfInputs = inputsInfo.size();
-    auto it = request.inputs().begin();
 
     if (optionalAllowedInputNames.size() > 0) {
+        auto it = request.inputs().begin();
         while (it != request.inputs().end()) {
             if (optionalAllowedInputNames.find(it->name()) != optionalAllowedInputNames.end()) {
                 ++expectedNumberOfInputs;
             }
+            ++it;
         }
     }
     if (request.inputs_size() > 0 && expectedNumberOfInputs == static_cast<size_t>(request.inputs_size())) {
