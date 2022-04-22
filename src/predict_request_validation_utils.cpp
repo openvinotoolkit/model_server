@@ -479,7 +479,7 @@ Status RequestValidator::validatePrecision(const ovms::TensorInfo& inputInfo, co
     return StatusCode::OK;
 }
 Status RequestValidatorKFS::validatePrecision(const ovms::TensorInfo& inputInfo, const inference::ModelInferRequest_InferInputTensor& proto) const {
-    if (proto.datatype() != inputInfo.getPrecisionAsKfsPrecision()) {
+    if (proto.datatype() != inputInfo.getPrecisionAsKFSPrecision()) {
         std::stringstream ss;
         ss << "Expected: " << inputInfo.getPrecisionAsString()
            << "; Actual: " << proto.datatype()

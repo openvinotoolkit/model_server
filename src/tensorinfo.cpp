@@ -167,12 +167,12 @@ std::string TensorInfo::getPrecisionAsString() const {
     return getPrecisionAsString(precision);
 }
 
-std::string TensorInfo::getPrecisionAsKfsPrecision(Precision precision) {
-    return ovmsPrecisionToKfsPrecision(precision);
+std::string TensorInfo::getPrecisionAsKFSPrecision(Precision precision) {
+    return ovmsPrecisionToKFSPrecision(precision);
 }
 
-std::string TensorInfo::getPrecisionAsKfsPrecision() const {
-    return getPrecisionAsKfsPrecision(precision);
+std::string TensorInfo::getPrecisionAsKFSPrecision() const {
+    return getPrecisionAsKFSPrecision(precision);
 }
 
 const std::string TensorInfo::getDataTypeAsString(tensorflow::DataType dataType) {

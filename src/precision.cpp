@@ -80,7 +80,7 @@ Precision fromString(const std::string& s) {
     return it->second;
 }
 
-Precision kfsPrecisionToOvmsPrecision(const std::string& s) {
+Precision KFSPrecisionToOvmsPrecision(const KFSDataType& s) {
     static std::unordered_map<std::string, Precision> precisionMap{
         {"BOOL", Precision::BOOL},
         {"FP64", Precision::FP64},
@@ -125,7 +125,7 @@ size_t KFSDataTypeSize(const KFSDataType& datatype) {
     return it->second;
 }
 
-KFSDataType ovmsPrecisionToKfsPrecision(Precision precision) {
+KFSDataType ovmsPrecisionToKFSPrecision(Precision precision) {
     static std::unordered_map<Precision, KFSDataType> precisionMap{
         {Precision::FP64, "FP64"},
         {Precision::FP32, "FP32"},
