@@ -303,7 +303,7 @@ $ docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_s
 
 3. Build OVMS with minitrace enabled.
 ```
-$ bazel build --copts="-DMTR_ENABLED" //src:ovms
+$ bazel build --copt="-DMTR_ENABLED" //src:ovms
 ```
 
 4. Run OVMS with `--trace_path` specifying where to save flame graph JSON file.
@@ -335,12 +335,12 @@ $ docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --mo
 ### Profiling macros
 | Macro | Description | Example Usage |
 |---|---|---|
-| OVMS_PROFILER_FUNCTION | Add this macro at the very beginning of a function. This will automatically add function name to trace marker. | `OVMS_PROFILER_FUNCTION();`  |
-| OVMS_PROFILER_SCOPE | Add this macro at the beginning of a code scope and add marker name. This will automatically add ending marker at the end of code scope.  | `OVMS_PROFILER_SCOPE("My Code Scope Marker");`  |
-| OVMS_PROFILER_SYNC_BEGIN | For custom start and end markers, use this macro to mark beginning of synchronous event. Remember to use the same marker name for beginning and end. | `OVMS_PROFILER_SYNC_BEGIN("My Synchronous Event");` |
-| OVMS_PROFILER_SYNC_END | For custom start and end markers, use this macro to mark ending of synchronous event. Remember to use the same marker name for beginning and end. | `OVMS_PROFILER_SYNC_END("My Synchronous Event");` |
-| OVMS_PROFILER_ASYNC_BEGIN | For custom start and end markers, use this macro to mark beginning of asynchronous event. Remember to use the same marker name and id for beginning and end. Asynchronous markers need an identifier to correctly match events. | `OVMS_PROFILER_ASYNC_BEGIN("My Asynchronous Event", unique_id);` |
-| OVMS_PROFILER_ASYNC_END | For custom start and end markers, use this macro to mark end of asynchronous event. Remember to use the same marker name and id for beginning and end. Asynchronous markers need an identifier to correctly match events. | `OVMS_PROFILER_ASYNC_END("My Asynchronous Event", unique_id);` |
+| OVMS_PROFILE_FUNCTION | Add this macro at the very beginning of a function. This will automatically add function name to trace marker. | `OVMS_PROFILER_FUNCTION();`  |
+| OVMS_PROFILE_SCOPE | Add this macro at the beginning of a code scope and add marker name. This will automatically add ending marker at the end of code scope.  | `OVMS_PROFILER_SCOPE("My Code Scope Marker");`  |
+| OVMS_PROFILE_SYNC_BEGIN | For custom start and end markers, use this macro to mark beginning of synchronous event. Remember to use the same marker name for beginning and end. | `OVMS_PROFILER_SYNC_BEGIN("My Synchronous Event");` |
+| OVMS_PROFILE_SYNC_END | For custom start and end markers, use this macro to mark ending of synchronous event. Remember to use the same marker name for beginning and end. | `OVMS_PROFILER_SYNC_END("My Synchronous Event");` |
+| OVMS_PROFILE_ASYNC_BEGIN | For custom start and end markers, use this macro to mark beginning of asynchronous event. Remember to use the same marker name and id for beginning and end. Asynchronous markers need an identifier to correctly match events. | `OVMS_PROFILER_ASYNC_BEGIN("My Asynchronous Event", unique_id);` |
+| OVMS_PROFILE_ASYNC_END | For custom start and end markers, use this macro to mark end of asynchronous event. Remember to use the same marker name and id for beginning and end. Asynchronous markers need an identifier to correctly match events. | `OVMS_PROFILER_ASYNC_END("My Asynchronous Event", unique_id);` |
 
 More information can be found in [profiler.hpp](../src/profiler.hpp) file.
 
