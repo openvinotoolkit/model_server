@@ -24,6 +24,6 @@
 namespace ovms {
 
 using SessionResult = std::pair<NodeSessionMetadata, TensorMap>;
-using SessionResults = std::unordered_map<session_key_t, std::pair<NodeSessionMetadata, TensorMap>>;
+using SessionResults = std::unordered_map<session_key_t, SessionResult>;
 
 }  // namespace ovms

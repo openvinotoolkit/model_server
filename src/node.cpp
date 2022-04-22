@@ -99,6 +99,7 @@ Status Node::setInputs(const Node& dependency, SessionResults& sessionResults) {
 
 Status Node::setInputs(const Node& dependency, TensorMap& inputs, NodeSessionMetadata& metadata) {
     // mapping for dependency - keeps mapping between dependency output name and this node input name
+    OVMS_PROFILE_SYNC_BEGIN("preparation");
     const auto& mapping_for_dependency = this->getMappingByDependency(dependency);
     NodeSession* nodeSession = getNodeSession(metadata);
     if (!nodeSession) {
@@ -112,29 +113,41 @@ Status Node::setInputs(const Node& dependency, TensorMap& inputs, NodeSessionMet
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to get shardId for node: {}", getName());
         return StatusCode::INTERNAL_ERROR;
     }
+    OVMS_PROFILE_SYNC_END("preparation");
     // assign all input tensors from inputs that are required by this node for future inference
-    for (const auto& pair : mapping_for_dependency) {
-        const auto& dependency_output_name = pair.first;
-        const auto& current_node_input_name = pair.second;
+    {
+        OVMS_PROFILE_SCOPE("assign all inputs");
+        for (const auto& pair : mapping_for_dependency) {
+            const auto& dependency_output_name = pair.first;
+            const auto& current_node_input_name = pair.second;
 
-        // possibly incorrectly constructed pipeline - required input missing from previous node
-        auto it = inputs.find(dependency_output_name);
-        if (it == inputs.end()) {
-            SPDLOG_LOGGER_WARN(dag_executor_logger, "node: {} error setting required input from node: {} dependency is missing output name: {}",
+            // possibly incorrectly constructed pipeline - required input missing from previous node
+            auto it = inputs.find(dependency_output_name);
+            if (it == inputs.end()) {
+                SPDLOG_LOGGER_WARN(dag_executor_logger, "node: {} error setting required input from node: {} dependency is missing output name: {}",
+                    getName(),
+                    dependency.getName(),
+                    dependency_output_name);
+                return StatusCode::INVALID_MISSING_INPUT;
+            }
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "node: {} setting required input from node: {}, input name: {}, dependency output name: {}",
                 getName(),
                 dependency.getName(),
+                current_node_input_name,
                 dependency_output_name);
-            return StatusCode::INVALID_MISSING_INPUT;
+            auto status = nodeSession->setInput(current_node_input_name, it->second, shardId);
+            if (!status.ok()) {
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "node: {} failed to set input: {}, shard: {}", getName(), current_node_input_name, shardId);
+                return status;
+            }
         }
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "node: {} setting required input from node: {}, input name: {}, dependency output name: {}",
-            getName(),
-            dependency.getName(),
-            current_node_input_name,
-            dependency_output_name);
-        auto status = nodeSession->setInput(current_node_input_name, it->second, shardId);
-        if (!status.ok()) {
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "node: {} failed to set input: {}, shard: {}", getName(), current_node_input_name, shardId);
-            return status;
+    }
+    {
+        OVMS_PROFILE_SCOPE("find orig");
+        for (auto it = inputs.begin(); it != inputs.end(); it++) {
+            if (it->first.rfind("ORIG_", 0) == 0) {
+                nodeSession->saveInput(it->second);
+            }
         }
     }
     return nodeSession->notifyFinishedDependency();
@@ -245,17 +258,20 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         const auto step = tensor.get_byte_size() / resultsDemultiplyCount;
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
             OVMS_PROFILE_SCOPE("Create Shard");
-            ov::Tensor dividedTensor;
-            this->createShardedTensor(dividedTensor, ovElementTypeToOvmsPrecision(tensor.get_element_type()), newDims, tensor, i, step, metadata, tensorName);
+            ov::Tensor dividedTensor(tensor.get_element_type(), newDims, (void*)((char*)(tensor.data()) + i * step));
             std::stringstream ss;
             ss << "Node: " << getName() << " input demultiplied: " << tensorName
                << "; Actual: " << TensorInfo::shapeToString(dividedTensor.get_shape());
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
-            auto it = nodeSessionOutputs.find(newSessionMetadatas[i].getSessionKey());
+            auto sessionKey = newSessionMetadatas[i].getSessionKey();
+            auto it = nodeSessionOutputs.find(sessionKey);
             if (it == nodeSessionOutputs.end()) {
-                nodeSessionOutputs.emplace(newSessionMetadatas[i].getSessionKey(), SessionResult{newSessionMetadatas[i], TensorMap{{tensorName, dividedTensor}}});
+                nodeSessionOutputs.emplace(sessionKey, SessionResult{newSessionMetadatas[i], TensorMap{
+                                                                                                 {tensorName, dividedTensor},
+                                                                                                 {std::string{"ORIG_"} + tensorName, tensor}}});
             } else {
                 it->second.second.emplace(tensorName, dividedTensor);
+                it->second.second.emplace(std::string{"ORIG_"} + tensorName, tensor);
             }
         }
     }

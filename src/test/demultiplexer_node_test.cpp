@@ -61,7 +61,7 @@ private:
 using ::testing::AnyOf;
 using ::testing::Eq;
 
-TEST(DemultiplexerTest, CheckDemultipliedTensorsMultipleOutputs) {
+TEST(DemultiplexerTest, DISABLED_CheckDemultipliedTensorsMultipleOutputs) {
     // prepare pre demultiplexer tensor
     std::vector<std::vector<float>> tensorsData{
         {-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67, 0, 8},

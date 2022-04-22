@@ -37,8 +37,13 @@ Status NodeInputHandler::setInput(const std::string& inputName, ov::Tensor& tens
     return StatusCode::OK;
 }
 
+void NodeInputHandler::saveInput(const ov::Tensor& tensor) {
+    savedTensors.emplace_back(tensor);
+}
+
 void NodeInputHandler::clearInputs() {
     inputTensors.clear();
+    savedTensors.clear();
 }
 
 bool NodeInputHandler::isReady() {

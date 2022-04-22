@@ -18,11 +18,14 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include <openvino/openvino.hpp>
 
 namespace ovms {
 
 using TensorMap = std::unordered_map<std::string, ov::Tensor>;
+using TensorVector = std::vector<ov::Tensor>;
 
 }  // namespace ovms
