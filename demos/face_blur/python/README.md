@@ -20,6 +20,12 @@ To successfully delpoy face blur pipeline you need to have a workspace that cont
 - Custom node for image blurring
 - Configuration file
 
+Clone the repository and enter face_blur directory
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/face_blur/python
+```
+
 You can prepare the workspace that contains all the above by just running
 
 ```

@@ -8,6 +8,12 @@ It covers following topics:
 
 ## Requirement
 
+Clone the repository and enter speech_recognition_with_kaldi_model directory
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/speech_recognition_with_kaldi_model/python
+```
+
 Install client dependencies:
 ```
 pip3 install -r requirements.txt
