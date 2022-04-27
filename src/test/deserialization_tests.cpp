@@ -284,7 +284,7 @@ TEST_F(KserveGRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
     EXPECT_TRUE(status.ok());
-    std::cout<<status.string();
+    std::cout << status.string();
 }
 
 class KserveGRPCPredictRequestNegative : public KserveGRPCPredictRequest {};

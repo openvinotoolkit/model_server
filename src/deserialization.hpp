@@ -212,7 +212,7 @@ Status deserializePredictRequest(
         try {
             const auto& name = pair.first;
             auto tensorInfo = pair.second;
-            auto requestInputItr = std::find_if(request.inputs().begin(), request.inputs().end(), [&name](const ::inference::ModelInferRequest::InferInputTensor& tensor) {return tensor.name() == name;});
+            auto requestInputItr = std::find_if(request.inputs().begin(), request.inputs().end(), [&name](const ::inference::ModelInferRequest::InferInputTensor& tensor) { return tensor.name() == name; });
             if (requestInputItr == request.inputs().end()) {
                 SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
@@ -233,7 +233,7 @@ Status deserializePredictRequest(
             // }
 
             tensor = deserializeTensorProto<TensorProtoDeserializator>(
-            *requestInputItr, tensorInfo, request.raw_input_contents()[requestInputItr - request.inputs().begin()]);
+                *requestInputItr, tensorInfo, request.raw_input_contents()[requestInputItr - request.inputs().begin()]);
 
             if (!tensor) {
                 status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
