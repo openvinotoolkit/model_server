@@ -420,9 +420,9 @@ Status Node::demultiplyOutputsEx(SessionResultsEx& nodeSessionOutputs) {
         const auto step = tensor.get_byte_size() / resultsDemultiplyCount;
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
             OVMS_PROFILE_SCOPE("Create Shard");
-            // ov::Tensor dividedTensor;
-            // this->createShardedTensor(dividedTensor, ovElementTypeToOvmsPrecision(tensor.get_element_type()), newDims, tensor, i, step, metadata, tensorName);
-            ov::Tensor dividedTensor(tensor.get_element_type(), newDims, (void*)((char*)(tensor.data()) + i * step));
+            ov::Tensor dividedTensor;
+            this->createShardedTensor(dividedTensor, ovElementTypeToOvmsPrecision(tensor.get_element_type()), newDims, tensor, i, step, metadata, tensorName);
+            // ov::Tensor dividedTensor(tensor.get_element_type(), newDims, (void*)((char*)(tensor.data()) + i * step));
             std::stringstream ss;
             ss << "Node: " << getName() << " input demultiplied: " << tensorName
                << "; Actual: " << TensorInfo::shapeToString(dividedTensor.get_shape());
@@ -431,9 +431,9 @@ Status Node::demultiplyOutputsEx(SessionResultsEx& nodeSessionOutputs) {
             auto it = nodeSessionOutputs.find(sessionKey);
             if (it == nodeSessionOutputs.end()) {
                 nodeSessionOutputs.emplace(sessionKey, SessionResultEx{newSessionMetadatas[i], TensorMapEx{
-                                                                                                   {tensorName, std::make_pair(dividedTensor, ov::Tensor())}}});
+                                                                                                   {tensorName, std::make_pair(dividedTensor, tensor)}}});
             } else {
-                it->second.second.emplace(tensorName, std::make_pair(dividedTensor, ov::Tensor()));
+                it->second.second.emplace(tensorName, std::make_pair(dividedTensor, tensor));
             }
         }
     }
@@ -443,16 +443,17 @@ Status Node::demultiplyOutputsEx(SessionResultsEx& nodeSessionOutputs) {
 
 Status Node::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
     OVMS_PROFILE_FUNCTION();
-    auto status = createSharedTensor(dividedTensor, ovmsPrecisionToIE2Precision(precision), shape);
-    if (!status.ok()) {
-        return status;
-    }
-    if (dividedTensor.get_byte_size() != step) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created tensor: {} have wrong byte size: {}, expected: {}",
-            getName(), metadata.getSessionKey(), tensorName, dividedTensor.get_byte_size(), step);
-        return StatusCode::UNKNOWN_ERROR;
-    }
-    memcpy(dividedTensor.data(), (char*)(tensor.data()) + i * step, step);
+    dividedTensor = createSharedTensor(ovmsPrecisionToIE2Precision(precision), shape, (void*)((char*)(tensor.data()) + i * step));
+    // auto status = createSharedTensor(dividedTensor, ovmsPrecisionToIE2Precision(precision), shape);
+    // if (!status.ok()) {
+    //     return status;
+    // }
+    // if (dividedTensor.get_byte_size() != step) {
+    //     SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {}, session: {} created tensor: {} have wrong byte size: {}, expected: {}",
+    //         getName(), metadata.getSessionKey(), tensorName, dividedTensor.get_byte_size(), step);
+    //     return StatusCode::UNKNOWN_ERROR;
+    // }
+    // memcpy(dividedTensor.data(), (char*)(tensor.data()) + i * step, step);
     return StatusCode::OK;
 }
 }  // namespace ovms

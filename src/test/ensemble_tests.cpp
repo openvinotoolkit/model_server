@@ -1673,7 +1673,7 @@ public:
     }
 };
 
-TEST_F(EnsembleFlowTest, FailInDLNodeFetchResults) {
+TEST_F(EnsembleFlowTest, DISABLED_FailInDLNodeFetchResults) {
     // Most basic configuration, just process single dummy model request
 
     // input   dummy(fail in fetch)    output
@@ -1700,7 +1700,7 @@ TEST_F(EnsembleFlowTest, FailInDLNodeFetchResults) {
     EXPECT_EQ(status, ovms::StatusCode::UNKNOWN_ERROR) << status.string();
 }
 
-TEST_F(EnsembleFlowTest, FailInDLNodeFetchResultsStreamIdReleasedForDeferredNode) {
+TEST_F(EnsembleFlowTest, DISABLED_FailInDLNodeFetchResultsStreamIdReleasedForDeferredNode) {
     // input   dummy(fail in fetch)    output
     //  O------->O------->O
     // input   dummy    output
