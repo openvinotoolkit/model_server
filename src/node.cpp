@@ -142,14 +142,14 @@ Status Node::setInputs(const Node& dependency, TensorMap& inputs, NodeSessionMet
             }
         }
     }
-    {
-        OVMS_PROFILE_SCOPE("find orig");
-        for (auto it = inputs.begin(); it != inputs.end(); it++) {
-            if (it->first.rfind("ORIG_", 0) == 0) {
-                nodeSession->saveInput(it->second);
-            }
-        }
-    }
+    // {
+    //     OVMS_PROFILE_SCOPE("find orig");
+    //     for (auto it = inputs.begin(); it != inputs.end(); it++) {
+    //         if (it->first.rfind("ORIG_", 0) == 0) {
+    //             nodeSession->saveInput(it->second);
+    //         }
+    //     }
+    // }
     return nodeSession->notifyFinishedDependency();
 }
 
@@ -258,7 +258,9 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
         const auto step = tensor.get_byte_size() / resultsDemultiplyCount;
         for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
             OVMS_PROFILE_SCOPE("Create Shard");
-            ov::Tensor dividedTensor(tensor.get_element_type(), newDims, (void*)((char*)(tensor.data()) + i * step));
+            ov::Tensor dividedTensor;
+            this->createShardedTensor(dividedTensor, ovElementTypeToOvmsPrecision(tensor.get_element_type()), newDims, tensor, i, step, metadata, tensorName);
+            //ov::Tensor dividedTensor(tensor.get_element_type(), newDims, (void*)((char*)(tensor.data()) + i * step));
             std::stringstream ss;
             ss << "Node: " << getName() << " input demultiplied: " << tensorName
                << "; Actual: " << TensorInfo::shapeToString(dividedTensor.get_shape());
@@ -267,11 +269,12 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
             auto it = nodeSessionOutputs.find(sessionKey);
             if (it == nodeSessionOutputs.end()) {
                 nodeSessionOutputs.emplace(sessionKey, SessionResult{newSessionMetadatas[i], TensorMap{
-                                                                                                 {tensorName, dividedTensor},
-                                                                                                 {std::string{"ORIG_"} + tensorName, tensor}}});
+                                                                                                 {tensorName, dividedTensor}
+                                                                                                 //{std::string{"ORIG_"} + tensorName, tensor}
+                                                                                                 }});
             } else {
                 it->second.second.emplace(tensorName, dividedTensor);
-                it->second.second.emplace(std::string{"ORIG_"} + tensorName, tensor);
+                //it->second.second.emplace(std::string{"ORIG_"} + tensorName, tensor);
             }
         }
     }
