@@ -200,4 +200,65 @@ Status deserializePredictRequest(
     }
     return status;
 }
+
+template <class TensorProtoDeserializator, class Sink>
+Status deserializePredictRequest(
+    const ::inference::ModelInferRequest& request,
+    const tensor_map_t& inputMap,
+    Sink& inputSink, bool isPipeline) {
+    OVMS_PROFILE_FUNCTION();
+    Status status;
+    for (const auto& pair : inputMap) {
+        try {
+            const auto& name = pair.first;
+            auto tensorInfo = pair.second;
+            auto requestInputItr = std::find_if(request.inputs().begin(), request.inputs().end(), [&name](const ::inference::ModelInferRequest::InferInputTensor& tensor) {return tensor.name() == name;});
+            if (requestInputItr == request.inputs().end()) {
+                SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
+                return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
+            }
+            ov::Tensor tensor;
+
+            //TODO implement binary inputs for KFS
+            // if (requestInput.datatype() == tensorflow::DataType::DT_STRING) {
+            //     SPDLOG_DEBUG("Request contains binary input: {}", name);
+            //     status = convertStringValToTensor(requestInput, tensor, tensorInfo);
+            //     if (!status.ok()) {
+            //         SPDLOG_DEBUG("Binary inputs conversion failed.");
+            //         return status;
+            //     }
+            // } else {
+            //     tensor = deserializeTensorProto<TensorProtoDeserializator>(
+            //         requestInput, tensorInfo);
+            // }
+
+            tensor = deserializeTensorProto<TensorProtoDeserializator>(
+            *requestInputItr, tensorInfo, request.raw_input_contents()[requestInputItr - request.inputs().begin()]);
+
+            if (!tensor) {
+                status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
+                SPDLOG_DEBUG(status.string());
+                return status;
+            }
+            const std::string ovTensorName = isPipeline ? name : tensorInfo->getName();
+            status = inputSink.give(ovTensorName, tensor);
+            if (!status.ok()) {
+                SPDLOG_DEBUG("Feeding input:{} to inference performer failed:{}", ovTensorName, status.string());
+                return status;
+            }
+            // OV implementation the ov::Exception is not
+            // a base class for all other exceptions thrown from OV.
+            // OV can throw exceptions derived from std::logic_error.
+        } catch (const ov::Exception& e) {
+            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+            return status;
+        } catch (std::logic_error& e) {
+            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
+            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+            return status;
+        }
+    }
+    return status;
+}
 }  // namespace ovms

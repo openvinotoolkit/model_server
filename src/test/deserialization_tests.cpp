@@ -39,6 +39,8 @@ using KFSTensorProto = ::inference::ModelInferRequest::InferInputTensor;
 using TFPredictRequest = tensorflow::serving::PredictRequest;
 using TFPredictResponse = tensorflow::serving::PredictResponse;
 
+using KFSPredictRequest = ::inference::ModelInferRequest;
+
 using namespace ovms;
 
 using testing::_;
@@ -116,6 +118,12 @@ public:
         deserializeTensorProto,
         (const tensorflow::TensorProto&,
             const std::shared_ptr<ovms::TensorInfo>&));
+
+    MOCK_METHOD(ov::Tensor,
+        deserializeTensorProto,
+        (const ::inference::ModelInferRequest::InferInputTensor&,
+            const std::shared_ptr<ovms::TensorInfo>&,
+            const std::string& buffer));
 };
 
 // Enables static method mock
@@ -126,6 +134,13 @@ public:
         const tensorflow::TensorProto& requestInput,
         const std::shared_ptr<ovms::TensorInfo>& tensorInfo) {
         return mock->deserializeTensorProto(requestInput, tensorInfo);
+    }
+
+    static ov::Tensor deserializeTensorProto(
+        const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+        const std::shared_ptr<TensorInfo>& tensorInfo,
+        const std::string& buffer) {
+        return mock->deserializeTensorProto(requestInput, tensorInfo, buffer);
     }
 };
 
@@ -193,6 +208,7 @@ protected:
         SetUpBuffer(bytes);
     }
     void SetUpTensorProto(std::string dataType) {
+        tensorProto.set_name(tensorName);
         tensorProto.set_datatype(dataType);
         tensorProto.mutable_shape()->Clear();
         tensorProto.add_shape(1);
@@ -245,11 +261,94 @@ TEST_F(KserveGRPCPredict, ShouldReturnValidTensor) {
     }
 }
 
+class KserveGRPCPredictRequest : public KserveGRPCPredict {
+public:
+    void SetUp() {
+        KserveGRPCPredict::SetUp();
+        *request.add_inputs() = tensorProto;
+        *request.add_raw_input_contents() = buffer;
+    }
+    void TearDown() {
+        request.Clear();
+    }
+
+public:
+    KFSPredictRequest request;
+};
+
+TEST_F(KserveGRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
+    ov::Core ieCore;
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
+    ov::InferRequest inferRequest = compiledModel.create_infer_request();
+    InputSink<ov::InferRequest&> inputSink(inferRequest);
+    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
+    EXPECT_TRUE(status.ok());
+    std::cout<<status.string();
+}
+
+class KserveGRPCPredictRequestNegative : public KserveGRPCPredictRequest {};
+
+TEST_P(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision) {
+    ovms::Precision testedPrecision = GetParam();
+    tensorMap[tensorName]->setPrecision(testedPrecision);
+    ov::InferRequest inferRequest;
+    InputSink<ov::InferRequest&> inputSink(inferRequest);
+    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
+    EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION)
+        << "Unsupported OVMS precision:"
+        << toString(testedPrecision)
+        << " should return error";
+}
+
+TEST_P(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorException) {
+    ovms::Precision testedPrecision = GetParam();
+    tensorMap[tensorName]->setPrecision(testedPrecision);
+    ov::InferRequest inferRequest;
+    InputSink<ov::InferRequest&> inputSink(inferRequest);
+    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
+    EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION) << status.string();
+}
+
+TEST_F(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorException2) {
+    ov::Core ieCore;
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
+    ov::InferRequest inferRequest = compiledModel.create_infer_request();
+    MockTensorProtoDeserializatorThrowingInferenceEngine mockTPobject;
+    MockTensorProtoDeserializator::mock = &mockTPobject;
+    EXPECT_CALL(mockTPobject, deserializeTensorProto(_, _, _))
+        .Times(1)
+        .WillRepeatedly(
+            Throw(ov::Exception("")));
+    InputSink<ov::InferRequest&> inputSink(inferRequest);
+    Status status;
+    status = deserializePredictRequest<MockTensorProtoDeserializator>(
+        request, tensorMap, inputSink, isPipeline);
+    EXPECT_EQ(status, ovms::StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR) << status.string();
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    TestDeserialize,
+    KserveGRPCPredictRequestNegative,
+    ::testing::ValuesIn(UNSUPPORTED_KFS_INPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<KserveGRPCPredictRequestNegative::ParamType>& info) {
+        return toString(info.param);
+    });
+
 INSTANTIATE_TEST_SUITE_P(
     TestDeserialize,
     GRPCPredictRequestNegative,
     ::testing::ValuesIn(UNSUPPORTED_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<GRPCPredictRequestNegative::ParamType>& info) {
+        return toString(info.param);
+    });
+
+INSTANTIATE_TEST_SUITE_P(
+    TestDeserialize,
+    KserveGRPCPredictRequest,
+    ::testing::ValuesIn(SUPPORTED_KFS_INPUT_PRECISIONS),
+    [](const ::testing::TestParamInfo<KserveGRPCPredictRequest::ParamType>& info) {
         return toString(info.param);
     });
 
