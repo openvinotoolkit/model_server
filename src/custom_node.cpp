@@ -65,6 +65,24 @@ Status CustomNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSe
         nodeSession.getSessionKey());
 }
 
+Status CustomNode::fetchResultsEx(NodeSession& nodeSession, SessionResultsEx& nodeSessionOutputs) {
+    auto& customNodeSession = static_cast<CustomNodeSession&>(nodeSession);
+    const auto& sessionMetadata = nodeSession.getNodeSessionMetadata();
+    SessionResultEx sessionResults{sessionMetadata, TensorMapEx{}};
+    auto it = nodeSessionOutputs.emplace(sessionMetadata.getSessionKey(), std::move(sessionResults));
+    if (!it.second) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to put node: {} session: {} results in node session outputs",
+            getName(), nodeSession.getSessionKey());
+        customNodeSession.release();
+        return StatusCode::INTERNAL_ERROR;
+    }
+    auto& metadataTensorResultsPair = it.first->second;
+    auto& tensorResults = metadataTensorResultsPair.second;
+    return this->fetchResultsEx(
+        tensorResults,
+        nodeSession.getSessionKey());
+}
+
 Status CustomNode::fetchResults(TensorMap& outputs, session_key_t sessionKey) {
     auto& session = static_cast<CustomNodeSession&>(this->getNodeSession(sessionKey));
     session.clearInputs();
@@ -88,6 +106,37 @@ Status CustomNode::fetchResults(TensorMap& outputs, session_key_t sessionKey) {
             }
 
             outputs.emplace(std::make_pair(output_name, std::move(resultTensor)));
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Tensor with name {} has been prepared under alias {}",
+                getName(), sessionKey, realOutputName, output_name);
+        }
+    }
+
+    return StatusCode::OK;
+}
+
+Status CustomNode::fetchResultsEx(TensorMapEx& outputs, session_key_t sessionKey) {
+    auto& session = static_cast<CustomNodeSession&>(this->getNodeSession(sessionKey));
+    session.clearInputs();
+
+    for (const auto& node : this->next) {
+        for (const auto& pair : node.get().getMappingByDependency(*this)) {
+            const auto& output_name = pair.first;
+            if (outputs.find(output_name) != outputs.end()) {
+                continue;
+            }
+            const auto& realOutputName = this->getRealOutputName(output_name);
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Getting custom node output tensor with name: {}",
+                getName(), sessionKey, realOutputName);
+
+            ov::Tensor resultTensor;
+            auto status = session.fetchResult(realOutputName, resultTensor);
+            if (!status.ok()) {
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} Custom node output with name {} is missing",
+                    getName(), sessionKey, realOutputName);
+                return StatusCode::NODE_LIBRARY_MISSING_OUTPUT;
+            }
+
+            outputs.emplace(std::make_pair(output_name, std::make_pair(std::move(resultTensor), ov::Tensor())));
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Tensor with name {} has been prepared under alias {}",
                 getName(), sessionKey, realOutputName, output_name);
         }

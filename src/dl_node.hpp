@@ -60,9 +60,11 @@ public:
     Status execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) override;
 
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
+    Status fetchResultsEx(NodeSession& nodeSession, SessionResultsEx& nodeSessionOutputs) override;
 
 private:
     Status fetchResults(TensorMap& outputs, ov::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey);
+    Status fetchResultsEx(TensorMapEx& outputs, ov::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey);
 
 public:
     void release(session_key_t sessionId) override;

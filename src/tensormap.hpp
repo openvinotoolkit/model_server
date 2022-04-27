@@ -26,6 +26,7 @@
 namespace ovms {
 
 using TensorMap = std::unordered_map<std::string, ov::Tensor>;
+using TensorMapEx = std::unordered_map<std::string, std::pair<ov::Tensor, ov::Tensor>>;
 using TensorVector = std::vector<ov::Tensor>;
 
 }  // namespace ovms

@@ -51,6 +51,7 @@ protected:
 
 public:
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
+    Status fetchResultsEx(NodeSession& nodeSession, SessionResultsEx& nodeSessionOutputs) override;
 
     // Exit nodes have no dependants
     void addDependant(Node& node) override {

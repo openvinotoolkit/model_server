@@ -38,6 +38,13 @@ Status ExitNode<ResponseType>::fetchResults(NodeSession& nodeSession, SessionRes
 }
 
 template <typename ResponseType>
+Status ExitNode<ResponseType>::fetchResultsEx(NodeSession& nodeSession, SessionResultsEx& nodeSessionOutputs) {
+    OVMS_PROFILE_FUNCTION();
+    auto& exitNodeSession = static_cast<ExitNodeSession&>(nodeSession);
+    return this->fetchResults(exitNodeSession.getInputTensors());
+}
+
+template <typename ResponseType>
 Status ExitNode<ResponseType>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
     OVMS_PROFILE_FUNCTION();
     notifyEndQueue.push(NodeSessionKeyPair(*this, sessionId));
@@ -67,6 +74,7 @@ std::unique_ptr<NodeSession> ExitNode<ResponseType>::createNodeSession(const Nod
 }
 
 template Status ExitNode<tensorflow::serving::PredictResponse>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
+template Status ExitNode<tensorflow::serving::PredictResponse>::fetchResultsEx(NodeSession& nodeSession, SessionResultsEx& nodeSessionOutputs);
 template Status ExitNode<tensorflow::serving::PredictResponse>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
 template Status ExitNode<tensorflow::serving::PredictResponse>::fetchResults(const TensorMap& inputTensors);
 template std::unique_ptr<NodeSession> ExitNode<tensorflow::serving::PredictResponse>::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails);

@@ -70,6 +70,23 @@ Status EntryNode<RequestType>::fetchResults(NodeSession& nodeSession, SessionRes
 }
 
 template <typename RequestType>
+Status EntryNode<RequestType>::fetchResultsEx(NodeSession& nodeSession, SessionResultsEx& nodeSessionOutputs) {
+    OVMS_PROFILE_FUNCTION();
+    TensorMapEx outputs;
+    auto status = fetchResultsEx(outputs);
+    if (!status.ok()) {
+        return status;
+    }
+    SessionResultEx metaOutputsPair{nodeSession.getNodeSessionMetadata(), std::move(outputs)};
+    auto it = nodeSessionOutputs.emplace(nodeSession.getSessionKey(), std::move(metaOutputsPair));
+    if (!it.second) {
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Failed to set entry node session results.");
+        return StatusCode::UNKNOWN_ERROR;
+    }
+    return StatusCode::OK;
+}
+
+template <typename RequestType>
 Status EntryNode<RequestType>::fetchResults(TensorMap& outputs) {
     auto status = validate();
     if (!status.ok()) {
@@ -80,9 +97,26 @@ Status EntryNode<RequestType>::fetchResults(TensorMap& outputs) {
     return deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, inputsInfo, inputSink, isPipeline);
 }
 
+template <typename RequestType>
+Status EntryNode<RequestType>::fetchResultsEx(TensorMapEx& outputs) {
+    auto status = validate();
+    if (!status.ok()) {
+        return status;
+    }
+    InputSink<TensorMapEx&> inputSink(outputs);
+    bool isPipeline = true;
+    return deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, inputsInfo, inputSink, isPipeline);
+}
+
 template <>
 Status InputSink<TensorMap&>::give(const std::string& name, ov::Tensor& tensor) {
     requester[name] = tensor;
+    return StatusCode::OK;
+}
+
+template <>
+Status InputSink<TensorMapEx&>::give(const std::string& name, ov::Tensor& tensor) {
+    requester[name] = std::make_pair(tensor, ov::Tensor());
     return StatusCode::OK;
 }
 
@@ -140,7 +174,9 @@ const Status EntryNode<RequestType>::validate() {
 // incremental compilation
 template Status EntryNode<tensorflow::serving::PredictRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
 template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
+template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResultsEx(NodeSession& nodeSession, SessionResultsEx& nodeSessionOutputs);
 template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(TensorMap& outputs);
+template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResultsEx(TensorMapEx& outputs);
 template Status EntryNode<tensorflow::serving::PredictRequest>::isInputBinary(const std::string& name, bool& isBinary) const;
 template Status EntryNode<tensorflow::serving::PredictRequest>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
 template const Status EntryNode<tensorflow::serving::PredictRequest>::validate();

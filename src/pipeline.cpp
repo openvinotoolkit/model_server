@@ -125,9 +125,9 @@ Status Pipeline::execute() {
                 finishedNode.release(sessionKey);
             }
             IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
-            SessionResults sessionResults;
+            SessionResultsEx sessionResults;
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Fetching results of pipeline: {} node: {} session: {}", getName(), finishedNode.getName(), sessionKey);
-            status = finishedNode.fetchResults(sessionKey, sessionResults);
+            status = finishedNode.fetchResultsEx(sessionKey, sessionResults);
             CHECK_AND_LOG_ERROR(finishedNode)
             IF_ERROR_OCCURRED_EARLIER_THEN_BREAK_IF_ALL_STARTED_FINISHED_CONTINUE_OTHERWISE
 
@@ -138,7 +138,7 @@ Status Pipeline::execute() {
             for (auto& nextNode : nextNodesFromFinished) {
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "setting pipeline: {} node: {} session: {} outputs as inputs for node: {}",
                     getName(), finishedNode.getName(), sessionKey, nextNode.get().getName());
-                status = nextNode.get().setInputs(finishedNode, sessionResults);
+                status = nextNode.get().setInputsEx(finishedNode, sessionResults);
                 CHECK_AND_LOG_ERROR(nextNode.get())
                 if (!firstErrorStatus.ok()) {
                     break;

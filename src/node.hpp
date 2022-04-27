@@ -63,15 +63,20 @@ public:
 
     virtual Status execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) = 0;
     Status fetchResults(session_key_t sessionId, SessionResults& nodeSessionOutputs);
+    Status fetchResultsEx(session_key_t sessionId, SessionResultsEx& nodeSessionOutputs);
 
 protected:
     virtual Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) = 0;
+    virtual Status fetchResultsEx(NodeSession& nodeSession, SessionResultsEx& nodeSessionOutputs) = 0;
     Status demultiplyOutputs(SessionResults& nodeSessionOutputs);
+    Status demultiplyOutputsEx(SessionResultsEx& nodeSessionOutputs);
     virtual Status createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
 
 public:
     Status setInputs(const Node& dependency, TensorMap& inputs, NodeSessionMetadata& metadata);
+    Status setInputsEx(const Node& dependency, TensorMapEx& inputs, NodeSessionMetadata& metadata);
     Status setInputs(const Node& dependency, SessionResults& inputs);
+    Status setInputsEx(const Node& dependency, SessionResultsEx& inputs);
 
     virtual void addDependency(Node& node, const Aliases& tensorNamesMapping) {
         this->previous.emplace_back(node);

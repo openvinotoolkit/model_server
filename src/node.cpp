@@ -75,6 +75,25 @@ Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOu
     return status;
 }
 
+Status Node::fetchResultsEx(session_key_t sessionId, SessionResultsEx& nodeSessionOutputs) {
+    OVMS_PROFILE_FUNCTION();
+    auto it = nodeSessions.find(sessionId);
+
+    auto& nodeSession = it->second;
+    if (it == nodeSessions.end()) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Could not find session: {} for node: {}", sessionId, getName());
+        return StatusCode::UNKNOWN_ERROR;
+    }
+    auto status = fetchResultsEx(*nodeSession, nodeSessionOutputs);
+    if (status.ok() && demultiplexCount) {
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs with demultiplyCount: {}", getName(), demultiplyCountSettingToString(demultiplexCount));
+        status = demultiplyOutputsEx(nodeSessionOutputs);
+    }
+    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will remove node: {} session: {}", getName(), sessionId);
+    nodeSessions.erase(sessionId);
+    return status;
+}
+
 void Node::printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const Aliases& pairs) {
     std::stringstream ss;
     ss << "Links from:" << sourceNode << " to:" << nodeName << ":\n";
@@ -90,6 +109,19 @@ Status Node::setInputs(const Node& dependency, SessionResults& sessionResults) {
     for (auto& [sessionKey, metadataInputsPair] : sessionResults) {
         auto& [metadata, inputs] = metadataInputsPair;
         auto status = this->setInputs(dependency, inputs, metadata);
+        if (!status.ok()) {
+            return status;
+        }
+    }
+    return StatusCode::OK;
+}
+
+Status Node::setInputsEx(const Node& dependency, SessionResultsEx& sessionResults) {
+    OVMS_PROFILE_FUNCTION();
+    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "node: {} set inputs from node: {}", getName(), dependency.getName());
+    for (auto& [sessionKey, metadataInputsPair] : sessionResults) {
+        auto& [metadata, inputs] = metadataInputsPair;
+        auto status = this->setInputsEx(dependency, inputs, metadata);
         if (!status.ok()) {
             return status;
         }
@@ -136,6 +168,62 @@ Status Node::setInputs(const Node& dependency, TensorMap& inputs, NodeSessionMet
                 current_node_input_name,
                 dependency_output_name);
             auto status = nodeSession->setInput(current_node_input_name, it->second, shardId);
+            if (!status.ok()) {
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "node: {} failed to set input: {}, shard: {}", getName(), current_node_input_name, shardId);
+                return status;
+            }
+        }
+    }
+    // {
+    //     OVMS_PROFILE_SCOPE("find orig");
+    //     for (auto it = inputs.begin(); it != inputs.end(); it++) {
+    //         if (it->first.rfind("ORIG_", 0) == 0) {
+    //             nodeSession->saveInput(it->second);
+    //         }
+    //     }
+    // }
+    return nodeSession->notifyFinishedDependency();
+}
+
+Status Node::setInputsEx(const Node& dependency, TensorMapEx& inputs, NodeSessionMetadata& metadata) {
+    // mapping for dependency - keeps mapping between dependency output name and this node input name
+    OVMS_PROFILE_SYNC_BEGIN("preparation");
+    const auto& mapping_for_dependency = this->getMappingByDependency(dependency);
+    NodeSession* nodeSession = getNodeSession(metadata);
+    if (!nodeSession) {
+        return StatusCode::INTERNAL_ERROR;
+    }
+    session_id_t shardId;
+    try {
+        static const std::set<std::string> emptySet;
+        shardId = metadata.getShardId(gatherFrom.value_or(emptySet));
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to get shardId for node: {}", getName());
+        return StatusCode::INTERNAL_ERROR;
+    }
+    OVMS_PROFILE_SYNC_END("preparation");
+    // assign all input tensors from inputs that are required by this node for future inference
+    {
+        OVMS_PROFILE_SCOPE("assign all inputs");
+        for (const auto& pair : mapping_for_dependency) {
+            const auto& dependency_output_name = pair.first;
+            const auto& current_node_input_name = pair.second;
+
+            // possibly incorrectly constructed pipeline - required input missing from previous node
+            auto it = inputs.find(dependency_output_name);
+            if (it == inputs.end()) {
+                SPDLOG_LOGGER_WARN(dag_executor_logger, "node: {} error setting required input from node: {} dependency is missing output name: {}",
+                    getName(),
+                    dependency.getName(),
+                    dependency_output_name);
+                return StatusCode::INVALID_MISSING_INPUT;
+            }
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "node: {} setting required input from node: {}, input name: {}, dependency output name: {}",
+                getName(),
+                dependency.getName(),
+                current_node_input_name,
+                dependency_output_name);
+            auto status = nodeSession->setInput(current_node_input_name, it->second.first, shardId);
             if (!status.ok()) {
                 SPDLOG_LOGGER_ERROR(dag_executor_logger, "node: {} failed to set input: {}, shard: {}", getName(), current_node_input_name, shardId);
                 return status;
@@ -274,6 +362,76 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
                                                                                                  }});
             } else {
                 it->second.second.emplace(tensorName, dividedTensor);
+                //it->second.second.emplace(std::string{"ORIG_"} + tensorName, tensor);
+            }
+        }
+    }
+    nodeSessionOutputs.erase(metadata.getSessionKey());
+    return StatusCode::OK;
+}
+
+Status Node::demultiplyOutputsEx(SessionResultsEx& nodeSessionOutputs) {
+    OVMS_PROFILE_FUNCTION();
+    if (!demultiplexCount) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} called demultiplyOutputs but node does not have demultiplexCount set", getName());
+        return StatusCode::INTERNAL_ERROR;
+    }
+    auto& [metadata, tensorMap] = nodeSessionOutputs.begin()->second;
+    auto firstTensorShape = tensorMap.begin()->second.first.get_shape();
+    uint32_t resultsDemultiplyCount = firstTensorShape[0];
+    if (firstTensorShape[0] > DEMULTIPLY_LIMIT) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} - too large dim[0] size: {} of tensor: {}. Maximum allowed is: {}",
+            getName(), firstTensorShape[0], tensorMap.begin()->first, DEMULTIPLY_LIMIT);
+        return StatusCode::PIPELINE_TOO_LARGE_DIMENSION_SIZE_TO_DEMULTIPLY;
+    }
+    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will demultiply node: {} outputs to: {} shards", getName(), resultsDemultiplyCount);
+    std::vector<NodeSessionMetadata> newSessionMetadatas;
+    try {
+        newSessionMetadatas = std::move(metadata.generateSubsessions(getName(), resultsDemultiplyCount));
+    } catch (std::exception& e) {
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} failed to generate subsessions due to error: {}", getName(), e.what());
+        return StatusCode::INTERNAL_ERROR;
+    }
+    for (auto& [tensorName, tensorPair] : tensorMap) {
+        OVMS_PROFILE_SCOPE("Demultiply Tensor");
+        auto& tensor = tensorPair.first;
+        auto newDims = tensor.get_shape();
+        if (newDims.size() < 3) {
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong number of dimensions: {} to demultiply. Must be at least 3", newDims.size());
+            return StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY;
+        }
+        if ((demultiplexCount.value() != -1) &&
+            (newDims[0] != demultiplexCount.value())) {
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong dim[0] size: {} of tensor: {} expected: {} to demultiply",
+                newDims[0], tensorName, demultiplexCount.value());
+            return StatusCode::PIPELINE_WRONG_DIMENSION_SIZE_TO_DEMULTIPLY;
+        }
+        if (resultsDemultiplyCount == 0) {
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} has no results. Dynamic demultiplexer with demultiply == 0 is not supported yet.", this->getName());
+            nodeSessionOutputs.erase(metadata.getSessionKey());
+            return StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS;
+        }
+
+        newDims.erase(newDims.begin());
+        const auto step = tensor.get_byte_size() / resultsDemultiplyCount;
+        for (size_t i = 0; i < newSessionMetadatas.size(); ++i) {
+            OVMS_PROFILE_SCOPE("Create Shard");
+            ov::Tensor dividedTensor;
+            this->createShardedTensor(dividedTensor, ovElementTypeToOvmsPrecision(tensor.get_element_type()), newDims, tensor, i, step, metadata, tensorName);
+            //ov::Tensor dividedTensor(tensor.get_element_type(), newDims, (void*)((char*)(tensor.data()) + i * step));
+            std::stringstream ss;
+            ss << "Node: " << getName() << " input demultiplied: " << tensorName
+               << "; Actual: " << TensorInfo::shapeToString(dividedTensor.get_shape());
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
+            auto sessionKey = newSessionMetadatas[i].getSessionKey();
+            auto it = nodeSessionOutputs.find(sessionKey);
+            if (it == nodeSessionOutputs.end()) {
+                nodeSessionOutputs.emplace(sessionKey, SessionResultEx{newSessionMetadatas[i], TensorMapEx{
+                                                                                                 {tensorName, std::make_pair(dividedTensor, ov::Tensor())}
+                                                                                                 //{std::string{"ORIG_"} + tensorName, tensor}
+                                                                                                 }});
+            } else {
+                it->second.second.emplace(tensorName, std::make_pair(dividedTensor, ov::Tensor()));
                 //it->second.second.emplace(std::string{"ORIG_"} + tensorName, tensor);
             }
         }

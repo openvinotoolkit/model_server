@@ -44,9 +44,11 @@ public:
     Status execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) override;
 
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
+    Status fetchResultsEx(NodeSession& nodeSession, SessionResultsEx& nodeSessionOutputs) override;
 
 protected:
     Status fetchResults(TensorMap& outputs);
+    Status fetchResultsEx(TensorMapEx& outputs);
     Status createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) override;
 
 public:
