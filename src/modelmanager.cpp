@@ -47,13 +47,13 @@
 #include "logging.hpp"
 #include "node_library.hpp"
 #include "openssl/md5.h"
+#include "ov_utils.hpp"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
 #include "pipelinedefinition.hpp"
 #include "s3filesystem.hpp"
 #include "schema.hpp"
 #include "stringutils.hpp"
-#include "ov_utils.hpp"
 
 namespace ovms {
 
