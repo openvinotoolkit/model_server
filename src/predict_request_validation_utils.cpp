@@ -39,39 +39,41 @@ struct RequestShapeInfo {
     const RequestTensorShapeType& getShape();
 };
 
-using KFSRequestType = ::inference::ModelInferRequest;
+using KFSRequestType = ::inference::ModelInferReequest;
 using KFSInputTensorType = inference::ModelInferRequest_InferInputTensor;
-using KFSInputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferRequest_InferInputTensor>;
+using KFSInputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const KFSRequestType_InferInputTensor>;
+using KFSShapeType = google::protobuf::RepeatedField<int64_t>;
 using TFSRequestType = tensorflow::serving::PredictRequest;
 using TFSInputTensorType = tensorflow::TensorProto;
-using TFSInputTensorIteratorType = google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator;
+using TFSInputTensorIteratorType = google::protobuf::Map<std::string, TFSInputTensorType>::const_iterator;
+using TFSShapeType = tensorflow::TensorShapeProto;
 
 template <>
-dimension_value_t RequestShapeInfo<KFSInputTensorType, google::protobuf::RepeatedField<int64_t>>::getDim(size_t i) {
+dimension_value_t RequestShapeInfo<KFSInputTensorType, KFSShapeType>::getDim(size_t i) {
     return r.shape()[i];
 }
 template <>
-dimension_value_t RequestShapeInfo<tensorflow::TensorProto, tensorflow::TensorShapeProto>::getDim(size_t i) {
+dimension_value_t RequestShapeInfo<TFSInputTensorType, TFSShapeType>::getDim(size_t i) {
     return r.tensor_shape().dim(i).size();
 }
 template <>
-size_t RequestShapeInfo<KFSInputTensorType, google::protobuf::RepeatedField<int64_t>>::getShapeSize() {
+size_t RequestShapeInfo<KFSInputTensorType, KFSShapeType>::getShapeSize() {
     return r.shape().size();
 }
 template <>
-size_t RequestShapeInfo<tensorflow::TensorProto, tensorflow::TensorShapeProto>::getShapeSize() {
+size_t RequestShapeInfo<TFSInputTensorType, TFSShapeType>::getShapeSize() {
     return r.tensor_shape().dim_size();
 }
 template <>
-const tensorflow::TensorShapeProto& RequestShapeInfo<tensorflow::TensorProto, tensorflow::TensorShapeProto>::getShape() {
+const TFSShapeType& RequestShapeInfo<TFSInputTensorType, TFSShapeType>::getShape() {
     return r.tensor_shape();
 }
 template <>
-const google::protobuf::RepeatedField<int64_t>& RequestShapeInfo<KFSInputTensorType, google::protobuf::RepeatedField<int64_t>>::getShape() {
+const KFSShapeType& RequestShapeInfo<KFSInputTensorType, KFSShapeType>::getShape() {
     return r.shape();
 }
 
-template <typename RequestType, typename InputType, typename InputIterator>
+template <typename RequestType, typename InputTensorType, typename InputIterator, typename ShapeType>
 class RequestValidator {
     const RequestType& request;
     const tensor_map_t& inputsInfo;
@@ -86,7 +88,7 @@ class RequestValidator {
     RequestValidator() = delete;
 
     const std::string& getCurrentlyValidatedInputName() const;
-    const InputType& getInputFromIt(const InputIterator& it) const;
+    const InputTensorType& getInputFromIt(const InputIterator& it) const;
 
 public:
     RequestValidator(
@@ -103,20 +105,20 @@ public:
 
     Status validateNumberOfInputs() const;
     Status validateAndGetInput(const RequestType& request, const std::string& name, InputIterator& it, size_t& bufferId);
-    Status checkIfShapeValuesNegative(const InputType& proto) const;
-    Status validateNumberOfBinaryInputShapeDimensions(const InputType& proto) const;
-    Status checkBatchSizeMismatch(const InputType& proto, const Dimension& servableBatchSize, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
-    Status checkBinaryBatchSizeMismatch(const InputType& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
-    Status checkShapeMismatch(const InputType& proto, const ovms::TensorInfo& inputInfo, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
-    Status validateTensorContentSize(const InputType& proto, ovms::Precision expectedPrecision, size_t bufferId) const;
-    Status validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const InputType& proto) const;
-    Status validatePrecision(const ovms::TensorInfo& inputInfo, const InputType& proto) const;
-    bool checkIfBinaryInputUsed(const InputType& proto, const std::string inputName) const;
+    Status checkIfShapeValuesNegative(const InputTensorType& proto) const;
+    Status validateNumberOfBinaryInputShapeDimensions(const InputTensorType& proto) const;
+    Status checkBatchSizeMismatch(const InputTensorType& proto, const Dimension& servableBatchSize, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
+    Status checkBinaryBatchSizeMismatch(const InputTensorType& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
+    Status checkShapeMismatch(const InputTensorType& proto, const ovms::TensorInfo& inputInfo, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const;
+    Status validateTensorContentSize(const InputTensorType& proto, ovms::Precision expectedPrecision, size_t bufferId) const;
+    Status validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
+    Status validatePrecision(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
+    bool checkIfBinaryInputUsed(const InputTensorType& proto, const std::string inputName) const;
     Status validate();
 };
 
 template <>
-Status RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSInputTensorIteratorType>::validateNumberOfInputs() const {
+Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::validateNumberOfInputs() const {
     size_t expectedNumberOfInputs = inputsInfo.size();
 
     if (optionalAllowedInputNames.size() > 0) {
@@ -139,26 +141,26 @@ Status RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSI
 }
 
 template <>
-const std::string& RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSInputTensorIteratorType>::getCurrentlyValidatedInputName() const {
+const std::string& RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::getCurrentlyValidatedInputName() const {
     return it->name();
 }
 
 template <>
-const std::string& RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator>::getCurrentlyValidatedInputName() const {
+const std::string& RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::getCurrentlyValidatedInputName() const {
     return it->first;
 }
 template <>
-const KFSInputTensorType& RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSInputTensorIteratorType>::getInputFromIt(const KFSInputTensorIteratorType& it) const {
+const KFSInputTensorType& RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::getInputFromIt(const KFSInputTensorIteratorType& it) const {
     return *it;
 }
 
 template <>
-const tensorflow::TensorProto& RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator>::getInputFromIt(const google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it) const {
+const TFSInputTensorType& RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::getInputFromIt(const TFSInputTensorIteratorType& it) const {
     return it->second;
 }
 
 template <>
-Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator>::validateNumberOfInputs() const {
+Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateNumberOfInputs() const {
     size_t expectedNumberOfInputs = inputsInfo.size();
     for (auto optionalAllowedInputName : optionalAllowedInputNames) {
         if (request.inputs().count(optionalAllowedInputName))
@@ -175,7 +177,7 @@ Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobu
 }
 
 template <>
-Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator>::validateAndGetInput(const TFSRequestType& request, const std::string& name, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator& it, size_t& bufferId) {
+Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateAndGetInput(const TFSRequestType& request, const std::string& name, TFSInputTensorIteratorType& it, size_t& bufferId) {
     it = request.inputs().find(name);
     if (it != request.inputs().end()) {
         return StatusCode::OK;
@@ -188,7 +190,7 @@ Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobu
 }
 
 template <>
-Status RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSInputTensorIteratorType>::validateAndGetInput(const ::inference::ModelInferRequest& request, const std::string& name, KFSInputTensorIteratorType& it, size_t& bufferId) {
+Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::validateAndGetInput(const KFSRequestType& request, const std::string& name, KFSInputTensorIteratorType& it, size_t& bufferId) {
     it = request.inputs().begin();
     bufferId = 0;
     while (it != request.inputs().end()) {
@@ -209,8 +211,9 @@ Status RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSI
 }
 
 template <>
-Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator>::checkIfShapeValuesNegative(const tensorflow::TensorProto& proto) const {
-    RequestShapeInfo<tensorflow::TensorProto, tensorflow::TensorShapeProto> rsi(proto);
+template <typename RequestType, typename InputTensorType, typename InputTensorIteratorType, typename ShapeType>
+Status RequestValidator<RequestType, InputTensorType, InputTensorIteratorType, ShapeType>::checkIfShapeValuesNegative(const InputTensorType& proto) const {
+    RequestShapeInfo<InputTensorType, ShapeType> rsi(proto);
     for (size_t i = 0; i < rsi.getShapeSize(); i++) {
         if (rsi.getDim(i) <= 0) {
             std::stringstream ss;
@@ -222,25 +225,10 @@ Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobu
     }
     return StatusCode::OK;
 }
-template <>
-Status RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSInputTensorIteratorType>::checkIfShapeValuesNegative(const KFSInputTensorType& proto) const {
-    RequestShapeInfo<KFSInputTensorType, google::protobuf::RepeatedField<int64_t>> rsi(proto);
-    const auto& shape = proto.shape();
-    for (size_t i = 0; i < rsi.getShapeSize(); ++i) {
-        if (rsi.getDim(i) <= 0) {
-            std::stringstream ss;
-            ss << "Negative or zero dimension size is not acceptable: " << TensorInfo::tensorShapeToString(shape) << "; input name: " << getCurrentlyValidatedInputName();
-            const std::string details = ss.str();
-            SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", servableName, servableVersion, details);
-            return Status(StatusCode::INVALID_SHAPE, details);
-        }
-    }
-    return StatusCode::OK;
-}
 
 template <>
-Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator>::validateNumberOfBinaryInputShapeDimensions(const tensorflow::TensorProto& proto) const {
-    RequestShapeInfo<tensorflow::TensorProto, tensorflow::TensorShapeProto> rsi(proto);
+Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateNumberOfBinaryInputShapeDimensions(const TFSInputTensorType& proto) const {
+    RequestShapeInfo<TFSInputTensorType, TFSShapeType> rsi(proto);
     if (rsi.getShapeSize() != 1) {
         std::stringstream ss;
         ss << "Expected number of binary input shape dimensions: 1; Actual: " << rsi.getShapeSize() << "; input name: " << getCurrentlyValidatedInputName();
@@ -252,31 +240,13 @@ Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobu
 }
 
 template <>
-Status RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSInputTensorIteratorType>::validateNumberOfBinaryInputShapeDimensions(const KFSInputTensorType& proto) const {
-    return StatusCode::OK;  //  TODO implement with KFS binary inputs
+Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::validateNumberOfBinaryInputShapeDimensions(const KFSInputTensorType& proto) const {
+    return StatusCode::OK;  // TODO implement with KFS binary inputs
 }
 
-template <>
-Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator>::checkBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& servableBatchSize, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
-    RequestShapeInfo<tensorflow::TensorProto, tensorflow::TensorShapeProto> rsi(proto);
-    if (servableBatchSize.match(rsi.getDim(batchSizeIndex))) {
-        return StatusCode::OK;
-    }
-    if (batchingMode == AUTO) {
-        finalStatus = StatusCode::BATCHSIZE_CHANGE_REQUIRED;
-        return StatusCode::OK;
-    } else if (shapeMode != AUTO) {
-        std::stringstream ss;
-        ss << "Expected: " << servableBatchSize.toString() << "; Actual: " << rsi.getDim(batchSizeIndex) << "; input name: " << getCurrentlyValidatedInputName();
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
-        return Status(StatusCode::INVALID_BATCH_SIZE, details);
-    }
-    return StatusCode::OK;
-}
-template <>
-Status RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSInputTensorIteratorType>::checkBatchSizeMismatch(const KFSInputTensorType& proto, const Dimension& servableBatchSize, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
-    RequestShapeInfo<KFSInputTensorType, google::protobuf::RepeatedField<int64_t>> rsi(proto);
+template <typename RequestType, typename InputTensorType, typename InputIteratorType, typename ShapeType>
+Status RequestValidator<RequestType, InputTensorType, InputIteratorType, ShapeType>::checkBatchSizeMismatch(const InputTensorType& proto, const Dimension& servableBatchSize, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+    RequestShapeInfo<InputTensorType, ShapeType> rsi(proto);
     if (servableBatchSize.match(rsi.getDim(batchSizeIndex))) {
         return StatusCode::OK;
     }
@@ -294,8 +264,8 @@ Status RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSI
 }
 
 template <>
-Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator>::checkBinaryBatchSizeMismatch(const tensorflow::TensorProto& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
-    RequestShapeInfo<tensorflow::TensorProto, tensorflow::TensorShapeProto> rsi(proto);
+Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::checkBinaryBatchSizeMismatch(const TFSInputTensorType& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+    RequestShapeInfo<TFSInputTensorType, TFSShapeType> rsi(proto);
     if (proto.string_val_size() <= 0) {
         std::stringstream ss;
         ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
@@ -319,15 +289,15 @@ Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobu
     return StatusCode::OK;
 }
 template <>
-Status RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSInputTensorIteratorType>::checkBinaryBatchSizeMismatch(const KFSInputTensorType& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
-    return StatusCode::OK;  //  TODO implement with KFS binary inputs
+Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::checkBinaryBatchSizeMismatch(const KFSInputTensorType& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+    return StatusCode::OK;  // TODO implement with KFS binary inputs ideally with one template
 }
 
-template <>
-Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator>::checkShapeMismatch(const tensorflow::TensorProto& proto, const ovms::TensorInfo& inputInfo, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+template <typename RequestType, typename InputTensorType, typename IteratorType, typename ShapeType>
+Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::checkShapeMismatch(const InputTensorType& proto, const ovms::TensorInfo& inputInfo, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
     const auto& shape = inputInfo.getShape();
     bool mismatch = false;
-    RequestShapeInfo<tensorflow::TensorProto, tensorflow::TensorShapeProto> rsi(proto);
+    RequestShapeInfo<InputTensorType, ShapeType> rsi(proto);
     if (batchingMode == AUTO) {  // Skip batch dimension
         for (int i = 0; i < batchSizeIndex; i++) {
             if (!shape[i].match(static_cast<dimension_value_t>(rsi.getDim(i)))) {
@@ -368,51 +338,7 @@ Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobu
 }
 
 template <>
-Status RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSInputTensorIteratorType>::checkShapeMismatch(const KFSInputTensorType& proto, const ovms::TensorInfo& inputInfo, const size_t batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
-    const auto& shape = inputInfo.getShape();
-    bool mismatch = false;
-    RequestShapeInfo<KFSInputTensorType, google::protobuf::RepeatedField<int64_t>> rsi(proto);
-    if (batchingMode == AUTO) {  // Skip batch dimension
-        for (int i = 0; i < batchSizeIndex; i++) {
-            if (!shape[i].match(static_cast<dimension_value_t>(rsi.getDim(i)))) {
-                mismatch = true;
-                break;
-            }
-        }
-        for (int i = batchSizeIndex + 1; i < rsi.getShapeSize(); i++) {
-            if (!shape[i].match(static_cast<dimension_value_t>(rsi.getDim(i)))) {
-                mismatch = true;
-                break;
-            }
-        }
-    } else {  // Do not skip batch dimension
-        for (int i = 0; i < rsi.getShapeSize(); i++) {
-            if (!shape[i].match(static_cast<dimension_value_t>(rsi.getDim(i)))) {
-                mismatch = true;
-                break;
-            }
-        }
-    }
-    if (!mismatch) {
-        return StatusCode::OK;
-    }
-    if (shapeMode == AUTO) {
-        finalStatus = StatusCode::RESHAPE_REQUIRED;
-        return StatusCode::OK;
-    } else {
-        std::stringstream ss;
-        ss << "Expected: " << inputInfo.getShape().toString()
-           << "; Actual: " << TensorInfo::tensorShapeToString(rsi.getShape())
-           << "; input name: " << getCurrentlyValidatedInputName();
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", servableName, servableVersion, details);
-        return Status(StatusCode::INVALID_SHAPE, details);
-    }
-    return StatusCode::OK;
-}
-
-template <>
-Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator>::validateTensorContentSize(const tensorflow::TensorProto& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
+Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateTensorContentSize(const TFSInputTensorType& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
     /*
     int8        data in request.tensor_content
     uint8       data in request.tensor_content
@@ -468,7 +394,7 @@ Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobu
 }
 
 template <>
-Status RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSInputTensorIteratorType>::validateTensorContentSize(const KFSInputTensorType& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
+Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::validateTensorContentSize(const KFSInputTensorType& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
     size_t expectedValueCount = 1;
     for (int i = 0; i < proto.shape().size(); i++) {
         expectedValueCount *= proto.shape()[i];
@@ -487,7 +413,7 @@ Status RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSI
 }
 
 template <>
-Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator>::validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const tensorflow::TensorProto& proto) const {
+Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const TFSInputTensorType& proto) const {
     // Network and request must have the same number of shape dimensions, higher than 0
     const auto& shape = inputInfo.getShape();
     if (proto.tensor_shape().dim_size() <= 0 ||
@@ -504,7 +430,7 @@ Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobu
 }
 
 template <>
-Status RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSInputTensorIteratorType>::validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const KFSInputTensorType& proto) const {
+Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const KFSInputTensorType& proto) const {
     // Network and request must have the same number of shape dimensions, higher than 0
     const auto& shape = inputInfo.getShape();
     if (proto.shape().size() <= 0 ||
@@ -521,7 +447,7 @@ Status RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSI
 }
 
 template <>
-Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator>::validatePrecision(const ovms::TensorInfo& inputInfo, const tensorflow::TensorProto& proto) const {
+Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validatePrecision(const ovms::TensorInfo& inputInfo, const TFSInputTensorType& proto) const {
     if (proto.dtype() != inputInfo.getPrecisionAsDataType()) {
         std::stringstream ss;
         ss << "Expected: " << inputInfo.getPrecisionAsString()
@@ -535,7 +461,7 @@ Status RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobu
 }
 
 template <>
-Status RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSInputTensorIteratorType>::validatePrecision(const ovms::TensorInfo& inputInfo, const KFSInputTensorType& proto) const {
+Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::validatePrecision(const ovms::TensorInfo& inputInfo, const KFSInputTensorType& proto) const {
     if (proto.datatype() != inputInfo.getPrecisionAsKFSPrecision()) {
         std::stringstream ss;
         ss << "Expected: " << inputInfo.getPrecisionAsString()
@@ -563,7 +489,7 @@ Mode getShapeMode(const shapes_info_map_t& shapeInfo, const std::string& name) {
 }
 
 template <>
-bool RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobuf::Map<std::string, tensorflow::TensorProto>::const_iterator>::checkIfBinaryInputUsed(const tensorflow::TensorProto& proto, const std::string inputName) const {
+bool RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::checkIfBinaryInputUsed(const TFSInputTensorType& proto, const std::string inputName) const {
     if (proto.dtype() == tensorflow::DataType::DT_STRING) {
         SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing binary input: name: {}; batch size: {}", servableName, servableVersion, inputName, proto.string_val_size());
         return true;
@@ -573,7 +499,7 @@ bool RequestValidator<TFSRequestType, tensorflow::TensorProto, google::protobuf:
 
 // TODO verify/implement for KFS binary inputs
 template <>
-bool RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSInputTensorIteratorType>::checkIfBinaryInputUsed(const KFSInputTensorType& proto, const std::string inputName) const {
+bool RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::checkIfBinaryInputUsed(const KFSInputTensorType& proto, const std::string inputName) const {
     if (proto.datatype() == "BYTES") {
         SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing binary input: name: {}; batch size: {}", servableName, servableVersion, inputName, 0);
         return true;
@@ -581,8 +507,8 @@ bool RequestValidator<::inference::ModelInferRequest, KFSInputTensorType, KFSInp
     return false;
 }
 
-template <typename RequestType, typename InputType, typename IteratorType>
-Status RequestValidator<RequestType, InputType, IteratorType>::validate() {
+template <typename RequestType, typename InputTensorType, typename IteratorType, typename ShapeType>
+Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::validate() {
     Status finalStatus = StatusCode::OK;
 
     auto status = validateNumberOfInputs();
@@ -649,13 +575,13 @@ Status RequestValidator<RequestType, InputType, IteratorType>::validate() {
 template <>
 Status validate(const TFSRequestType& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
     OVMS_PROFILE_FUNCTION();
-    return RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType>(request, inputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
+    return RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>(request, inputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
 }
 
 template <>
-Status validate(const ::inference::ModelInferRequest& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
+Status validate(const KFSRequestType& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
     OVMS_PROFILE_FUNCTION();
-    return RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType>(request, inputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
+    return RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>(request, inputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
 }
 
 }  // namespace request_validation_utils
