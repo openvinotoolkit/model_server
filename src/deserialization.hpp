@@ -219,7 +219,7 @@ Status deserializePredictRequest(
             }
             ov::Tensor tensor;
 
-            //TODO implement binary inputs for KFS
+            // TODO implement binary inputs for KFS
             // if (requestInput.datatype() == tensorflow::DataType::DT_STRING) {
             //     SPDLOG_DEBUG("Request contains binary input: {}", name);
             //     status = convertStringValToTensor(requestInput, tensor, tensorInfo);
