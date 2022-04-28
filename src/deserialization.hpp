@@ -232,8 +232,9 @@ Status deserializePredictRequest(
             //         requestInput, tensorInfo);
             // }
 
+            auto inputIndex = requestInputItr - request.inputs().begin();
             tensor = deserializeTensorProto<TensorProtoDeserializator>(
-                *requestInputItr, tensorInfo, request.raw_input_contents()[requestInputItr - request.inputs().begin()]);
+                *requestInputItr, tensorInfo, request.raw_input_contents()[inputIndex]);
 
             if (!tensor) {
                 status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
