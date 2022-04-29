@@ -23,8 +23,8 @@
 
 #include <spdlog/spdlog.h>
 
-#include "profiler.hpp"
 #include "logging.hpp"
+#include "profiler.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
