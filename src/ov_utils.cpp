@@ -15,11 +15,11 @@
 //*****************************************************************************
 #include "ov_utils.hpp"
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <sstream>
 #include <vector>
-#include <algorithm>
 
 #include <spdlog/spdlog.h>
 
