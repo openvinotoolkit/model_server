@@ -18,6 +18,8 @@
 #include <functional>
 #include <memory>
 #include <sstream>
+#include <vector>
+#include <algorithm>
 
 #include <spdlog/spdlog.h>
 
