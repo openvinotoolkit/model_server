@@ -285,6 +285,11 @@ template Status PipelineDefinition::create<tensorflow::serving::PredictRequest, 
     const tensorflow::serving::PredictRequest* request,
     tensorflow::serving::PredictResponse* response,
     ModelManager& manager);
+template Status PipelineDefinition::create<::inference::ModelInferRequest, ::inference::ModelInferResponse>(
+    std::unique_ptr<Pipeline>& pipeline,
+    const ::inference::ModelInferRequest* request,
+    ::inference::ModelInferResponse* response,
+    ModelManager& manager);
 
 void PipelineDefinition::resetSubscriptions(ModelManager& manager) {
     for (auto& [modelName, modelVersion] : subscriptions) {
