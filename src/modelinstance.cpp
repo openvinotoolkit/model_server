@@ -686,6 +686,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             config.getTargetDevice());
         return status;
     }
+
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Plugin config for device: {}", targetDevice);
     for (const auto pair : pluginConfig) {
         const auto key = pair.first;

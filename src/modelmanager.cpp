@@ -47,6 +47,7 @@
 #include "logging.hpp"
 #include "node_library.hpp"
 #include "openssl/md5.h"
+#include "ov_utils.hpp"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
 #include "pipelinedefinition.hpp"
@@ -159,6 +160,7 @@ Status ModelManager::start() {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't start model manager");
         return status;
     }
+
     startWatcher();
     startCleaner();
     return status;
@@ -208,6 +210,12 @@ Status ModelManager::startFromConfig() {
     auto status = modelConfig.parsePluginConfig(config.pluginConfig());
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse plugin config");
+        return status;
+    }
+
+    status = validatePluginConfiguration(modelConfig.getPluginConfig(), modelConfig.getTargetDevice(), *ieCore.get());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config contains unsupported keys");
         return status;
     }
 
@@ -570,6 +578,12 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed due to error: {}", modelConfig.getName(), status.string());
             modelsWithInvalidConfig.emplace(modelConfig.getName());
             continue;
+        }
+
+        status = validatePluginConfiguration(modelConfig.getPluginConfig(), modelConfig.getTargetDevice(), *ieCore.get());
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config contains unsupported keys");
+            return status;
         }
         modelConfig.setCacheDir(this->modelCacheDirectory);
 

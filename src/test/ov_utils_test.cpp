@@ -19,6 +19,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../filesystem.hpp"
+#include "../modelinstance.hpp"
 #include "../ov_utils.hpp"
 
 using testing::ElementsAre;
@@ -159,4 +161,26 @@ TEST(OVUtils, GetLayoutFromRTMap) {
     rtMap.insert(std::make_pair("param", ov::LayoutAttribute(ov::Layout(layoutStr))));
     layout = ovms::getLayoutFromRTMap(rtMap);
     EXPECT_EQ(layout, ov::Layout(layoutStr));
+}
+
+TEST(OVUtils, ValidatePluginConfigurationPositive) {
+    ov::Core ieCore;
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ovms::ModelConfig config;
+    config.setTargetDevice("CPU");
+    config.setPluginConfig({{"CPU_THROUGHPUT_STREAMS", "10"}});
+    ovms::plugin_config_t supportedPluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+    auto status = ovms::validatePluginConfiguration(supportedPluginConfig, "CPU", ieCore);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST(OVUtils, ValidatePluginConfigurationNegative) {
+    ov::Core ieCore;
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ovms::ModelConfig config;
+    config.setTargetDevice("CPU");
+    config.setPluginConfig({{"WRONG_KEY ", "10"}});
+    ovms::plugin_config_t unsupportedPluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+    auto status = ovms::validatePluginConfiguration(unsupportedPluginConfig, "CPU", ieCore);
+    EXPECT_FALSE(status.ok());
 }
