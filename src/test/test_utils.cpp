@@ -198,3 +198,65 @@ tensorflow::serving::PredictRequest prepareBinary4x4PredictRequest(const std::st
     tensor.mutable_tensor_shape()->add_dim()->set_size(batchSize);
     return request;
 }
+
+::inference::ModelInferRequest_InferInputTensor* findKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name) {
+    auto it = request.mutable_inputs()->begin();
+    while (it != request.mutable_inputs()->end()) {
+        if (it->name() == name)
+            break;
+        ++it;
+    }
+    return it == request.mutable_inputs()->end() ? nullptr : &(*it);
+}
+
+std::string* findKFSInferInputTensorContent(::inference::ModelInferRequest& request, const std::string& name) {
+    auto it = request.mutable_inputs()->begin();
+    size_t bufferId = 0;
+    std::string* content = nullptr;
+    while (it != request.mutable_inputs()->end()) {
+        if (it->name() == name)
+            break;
+        ++it;
+        ++bufferId;
+    }
+    if (it != request.mutable_inputs()->end()) {
+        content = request.mutable_raw_input_contents()->Mutable(bufferId);
+    }
+    return content;
+}
+
+void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,
+    const std::vector<float>& data) {
+    auto it = request.mutable_inputs()->begin();
+    size_t bufferId = 0;
+    while (it != request.mutable_inputs()->end()) {
+        if (it->name() == name)
+            break;
+        ++it;
+        ++bufferId;
+    }
+    ::inference::ModelInferRequest_InferInputTensor* tensor;
+    std::string* content;
+    if (it != request.mutable_inputs()->end()) {
+        tensor = &*it;
+        content = request.mutable_raw_input_contents()->Mutable(bufferId);
+    } else {
+        tensor = request.add_inputs();
+        content = request.add_raw_input_contents();
+    }
+    auto [shape, dtype] = inputInfo;
+    tensor->set_name(name);
+    tensor->set_datatype(dtype);
+    size_t numberOfElements = 1;
+    tensor->mutable_shape()->Clear();
+    for (auto const& dim : shape) {
+        tensor->add_shape(dim);
+        numberOfElements *= dim;
+    }
+    if (data.size() == 0) {
+        content->assign(numberOfElements * ovms::KFSDataTypeSize(dtype), '1');
+    } else {
+        content->resize(numberOfElements * ovms::KFSDataTypeSize(dtype));
+        std::memcpy(content->data(), data.data(), content->size());
+    }
+}

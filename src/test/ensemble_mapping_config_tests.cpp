@@ -365,7 +365,7 @@ public:
     std::shared_ptr<ModelInstance> instance;
 };
 
-TEST_F(ModelWithInputOutputNameMappedModel, GetModelMetadataOnKfsEndpoint) {
+TEST_F(ModelWithInputOutputNameMappedModel, GetModelMetadataOnKFSEndpoint) {
     // Create mapping config for model
     createConfigFileWithContent(R"({
         "inputs": {"b": "input_tensor"},

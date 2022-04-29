@@ -1083,7 +1083,7 @@ void ModelInstance::unloadModelComponents() {
 template <typename RequestType>
 const Status ModelInstance::validate(const RequestType* request) {
     OVMS_PROFILE_FUNCTION();
-    static const std::set<const char*> optionalInputNames = {};
+    static const std::set<std::string> optionalInputNames = {};
     return request_validation_utils::validate(
         *request,
         getInputsInfo(),
@@ -1093,6 +1093,9 @@ const Status ModelInstance::validate(const RequestType* request) {
         getModelConfig().getBatchingMode(),
         getModelConfig().getShapes());
 }
+
+template const Status ModelInstance::validate(const ::inference::ModelInferRequest* request);
+template const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request);
 
 Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
     OVMS_PROFILE_FUNCTION();

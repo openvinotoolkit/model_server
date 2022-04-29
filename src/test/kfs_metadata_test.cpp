@@ -280,7 +280,7 @@ TEST_F(PipelineMetadataResponseBuild, PipelineInputOutputResponseMetadata) {
     EXPECT_TRUE(isShapeTheSame(secondInput.shape(), {1, 3, 62, 62}));
     auto thirdInput = response.inputs().at(2);
     EXPECT_EQ(thirdInput.name(), "Input_Unspecified");
-    EXPECT_EQ(thirdInput.datatype(), "UNDEFINED");
+    EXPECT_EQ(thirdInput.datatype(), "INVALID");
     EXPECT_EQ(thirdInput.shape_size(), 0);
     EXPECT_TRUE(isShapeTheSame(thirdInput.shape(), {}));
 
@@ -297,7 +297,7 @@ TEST_F(PipelineMetadataResponseBuild, PipelineInputOutputResponseMetadata) {
     EXPECT_TRUE(isShapeTheSame(secondOutput.shape(), {2, 20, 3}));
     auto thirdOutput = response.outputs().at(2);
     EXPECT_EQ(thirdOutput.name(), "Output_Unspecified");
-    EXPECT_EQ(thirdOutput.datatype(), "UNDEFINED");
+    EXPECT_EQ(thirdOutput.datatype(), "INVALID");
     EXPECT_EQ(thirdOutput.shape_size(), 0);
     EXPECT_TRUE(isShapeTheSame(thirdOutput.shape(), {}));
 }

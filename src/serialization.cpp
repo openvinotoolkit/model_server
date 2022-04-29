@@ -103,7 +103,7 @@ Status serializeTensorToTensorProto(
     case ovms::Precision::U16:
     case ovms::Precision::U8:
     case ovms::Precision::BOOL:
-        responseOutput.set_datatype(servableOutput->getPrecisionAsKfsPrecision());
+        responseOutput.set_datatype(servableOutput->getPrecisionAsKFSPrecision());
         break;
     case ovms::Precision::UNDEFINED:
     case ovms::Precision::MIXED:
