@@ -76,7 +76,7 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
 }
 
     template<typename RequestType, typename ResponseType>
-Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline,
+Status PipelineFactory::createInternal(std::unique_ptr<Pipeline>& pipeline,
     const std::string& name,
     const RequestType* request,
     ResponseType* response,
@@ -89,6 +89,20 @@ Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline,
     auto& definition = *definitions.at(name);
     lock.unlock();
     return definition.create(pipeline, request, response, manager);
+}
+Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline,
+        const std::string& name,
+        const ::inference::ModelInferRequest* request,
+        ::inference::ModelInferResponse* response,
+        ModelManager& manager) const {
+    return this->createInternal(pipeline, name, request, response, manager);
+}
+Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline,
+        const std::string& name,
+        const tensorflow::serving::PredictRequest* request,
+        tensorflow::serving::PredictResponse* response,
+        ModelManager& manager) const {
+    return this->createInternal(pipeline, name, request, response, manager);
 }
 
 Status PipelineFactory::reloadDefinition(const std::string& pipelineName,
@@ -129,4 +143,4 @@ const std::vector<std::string> PipelineFactory::getPipelinesNames() const {
     }
     return names;
 }
-}  // namespace ovms
+}  // namespace 

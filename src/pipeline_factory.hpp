@@ -28,6 +28,7 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
+#include "kfs_grpc_inference_service.hpp"
 
 #include "nodeinfo.hpp"
 #include "status.hpp"
@@ -49,12 +50,23 @@ public:
         ModelManager& manager);
 
     bool definitionExists(const std::string& name) const;
-
+private:
     template<typename RequestType, typename ResponseType>
-    Status create(std::unique_ptr<Pipeline>& pipeline,
+    Status createInternal(std::unique_ptr<Pipeline>& pipeline,
         const std::string& name,
         const RequestType* request,
         ResponseType* response,
+        ModelManager& manager) const;
+public:
+    Status create(std::unique_ptr<Pipeline>& pipeline,
+        const std::string& name,
+        const ::inference::ModelInferRequest* request,
+        ::inference::ModelInferResponse* response,
+        ModelManager& manager) const;
+    Status create(std::unique_ptr<Pipeline>& pipeline,
+        const std::string& name,
+        const tensorflow::serving::PredictRequest* request,
+        tensorflow::serving::PredictResponse* response,
         ModelManager& manager) const;
 
     PipelineDefinition* findDefinitionByName(const std::string& name) const;
