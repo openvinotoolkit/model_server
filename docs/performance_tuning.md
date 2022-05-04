@@ -19,7 +19,7 @@ To enable Performance Hints for your application, use the following command:
 
         docker run --rm -d -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name my_model --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "THROUGHTPUT"}' \
+            --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
             --target_device CPU
 
 .. tab:: GPU
@@ -29,7 +29,7 @@ To enable Performance Hints for your application, use the following command:
         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
             -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name my_model --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "THROUGHTPUT"}' \
+            --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
             --target_device GPU
 
 @endsphinxdirective
@@ -70,7 +70,7 @@ OpenVINO&trade; Model Server can be tuned to a single client use case or a high 
 execution streams. They split the available resources to perform parallel execution of multiple requests.
 It is particularly efficient for models which cannot effectively consume all CPU cores or for CPUs with high number of cores.
 
-By default, for `CPU` target device, OpenVINO Model Server sets the value CPU_THROUGHPUT_AUTO and GPU_THROUGHTPUT_AUTO for `GPU` target device. It calculates the number of streams based on number of available CPUs. It gives a compromise between the single client scenario and the high concurrency.
+By default, for `CPU` target device, OpenVINO Model Server sets the value CPU_THROUGHPUT_AUTO and GPU_THROUGHPUT_AUTO for `GPU` target device. It calculates the number of streams based on number of available CPUs. It gives a compromise between the single client scenario and the high concurrency.
 
 If this default configuration is not suitable, adjust it with the `CPU_THROUGHPUT_STREAMS` parameter defined as part 
 of the device plugin configuration. 
