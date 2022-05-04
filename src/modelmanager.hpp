@@ -301,7 +301,7 @@ public:
         }
     }
 
-    template<typename RequestType, typename ResponseType>
+    template <typename RequestType, typename ResponseType>
     Status createPipeline(std::unique_ptr<Pipeline>& pipeline,
         const std::string name,
         const RequestType* request,

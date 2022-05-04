@@ -1218,7 +1218,6 @@ Status ModelInstance::infer(const ::inference::ModelInferRequest* requestProto,
         requestProto->model_name(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
 
     return StatusCode::OK;
-
 }
 
 const size_t ModelInstance::getBatchSizeIndex() const {

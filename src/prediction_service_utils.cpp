@@ -34,7 +34,7 @@ Status getModelInstance(const ::inference::ModelInferRequest* request,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
     OVMS_PROFILE_FUNCTION();
     ModelManager& manager = ModelManager::getInstance();
-    return manager.getModelInstance(request->model_name(), std::stoi(request->model_version()), modelInstance, modelInstanceUnloadGuardPtr); // TODO secure stoi
+    return manager.getModelInstance(request->model_name(), std::stoi(request->model_version()), modelInstance, modelInstanceUnloadGuardPtr);  // TODO secure stoi
 }
 
 std::optional<Dimension> getRequestBatchSize(const ::inference::ModelInferRequest* request, const size_t batchSizeIndex) {

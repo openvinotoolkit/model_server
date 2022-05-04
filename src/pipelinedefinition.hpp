@@ -115,12 +115,14 @@ public:
         const RequestType* request,
         ResponseType* response,
         ModelManager& manager);
+
 private:
     template <typename RequestType, typename ResponseType>
     Status createPrivate(std::unique_ptr<Pipeline>& pipeline,
         const RequestType* request,
         ResponseType* response,
         ModelManager& manager);
+
 public:
     Status reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections);
     void retire(ModelManager& manager);

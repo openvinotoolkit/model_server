@@ -21,10 +21,9 @@
 
 #include "deserialization.hpp"
 #include "modelmanager.hpp"
-#include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
-#include "prediction_service_utils.hpp"
 #include "pipelinedefinition.hpp"
+#include "prediction_service_utils.hpp"
 #include "serialization.hpp"
 #include "timer.hpp"
 
@@ -151,53 +150,6 @@ const std::string PLATFORM = "OpenVINO";
     timer.stop("total");
     SPDLOG_DEBUG("Total gRPC request processing time: {} ms", timer.elapsed<microseconds>("total") / 1000);
     return grpc::Status::OK;
-
-/*
-    std::cout << __FUNCTION__ << ":" << __LINE__
-              << " model:" << request->model_name()
-              << " version:" << request->model_version()
-              << " id:" << request->id()  // optional field - if specified should be put in response
-              << std::endl;
-    // TODO parameters - could hold eg. sequence id.
-    // TODO inputs
-    // TODO outputs
-    auto inst = ModelManager::getInstance().findModelInstance("dummy", 1);
-    inst->validate(request);
-    int floats = 1;
-    ov::Tensor tensor;
-    std::shared_ptr<TensorInfo> tensorInfo;
-    for (int i = 0; i < request->inputs_size(); i++) {
-        floats = 1;
-        auto input = request->inputs().at(i);
-        std::cout << " name:" << input.name()
-                  << " dataType:" << input.datatype()
-                  << " shape:";
-        auto sh = input.shape();
-        for (int j = 0; j < sh.size(); j++) {
-            std::cout << sh[j] << " ";
-            floats *= sh[j];
-        }
-        std::cout << std::endl;
-
-        tensorInfo = std::make_shared<TensorInfo>(input.name(), KFSPrecisionToOvmsPrecision(input.datatype()), ovms::Shape{1, 16});
-        tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(input, tensorInfo, request->raw_input_contents()[i]);
-    }
-
-    std::cout << tensor.get_element_type() << tensor.get_shape() << tensor.data() << std::endl;
-    // cast to expected input.datatype() to print data
-    char* data = (char*)tensor.data();
-    for (int i = 0; i < floats; ++i) {
-        std::cout << "data2[" << i << "]=" << (*(data + i)) << " ";
-    }
-    std::cout << std::endl;
-
-    // serialize
-    auto output = response->add_outputs();
-    serializeTensorToTensorProto(*output, response->add_raw_output_contents(), tensorInfo, tensor);
-    response->set_id(request->id());
-
-    return ::grpc::Status(::grpc::StatusCode::OK, "");
-    */
 }
 
 Status KFSInferenceServiceImpl::buildResponse(
