@@ -18,6 +18,7 @@
    ovms_demo_using_onnx_model
    ovms_demo_person_vehicle_bike_detection
    ovms_demo_vehicle_analysis_pipeline
+   ovms_demo_multi_object_classification_pipeline
    ovms_demo_real_time_stream_analysis
    ovms_demo_bert
    ovms_demo_speech_recognition
@@ -41,6 +42,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 |[Using ONNX Model](using_onnx_model/python/README.md)|Run prediction on a JPEG image using image classification ONNX model via gRPC API in two preprocessing variants. This demo uses [pipeline](../docs/dag_scheduler.md) with [image_transformation custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/image_transformation). |
 |[Person, Vehicle, Bike Detection](person_vehicle_bike_detection/python/README.md)|Run prediction on a video file or camera stream using person, vehicle, bike detection model via gRPC API.|
 |[Vehicle Analysis Pipeline](vehicle_analysis_pipeline/python/README.md)|Detect vehicles and recognize their attributes using a pipeline of vehicle detection and vehicle attributes recognition models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [model_zoo_intel_object_detection custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/model_zoo_intel_object_detection). |
+|[Multi Object Classification Pipeline](multi_object_classification_pipeline/python/README.md)|Detect multiple kinds of objects and classify using a pipeline of ssdlite_mobilenet_v2 and efficientnet-b0 models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [model_zoo_intel_object_detection custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/src/custom_nodes/model_zoo_intel_object_detection). |
 |[Real Time Stream Analysis](real_time_stream_analysis/python/README.md)| Analyze RTSP video stream in real time with generic application template for custom pre and post processing routines as well as simple results visualizer for displaying predictions in the browser. |
 |[Natural Language Processing with BERT](bert_question_answering/python/README.md)|Provide a knowledge source and a query and use BERT model for question answering use case via gRPC API. This demo uses dynamic shape feature. |
 |[Speech Recognition on Kaldi Model](speech_recognition_with_kaldi_model/python/README.md)|Run inference on a speech sample and use Kaldi model to perform speech recognition via gRPC API. This demo uses [stateful model](../docs/stateful_models.md). |

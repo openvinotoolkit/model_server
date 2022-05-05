@@ -1,0 +1,85 @@
+{
+    "model_config_list": [
+        {"config": {
+                "name": "efficientnet-b0",
+                "base_path": "/workspace/models/efficientnet-b0"}},
+        {"config": {
+                "name": "ssdlite_mobilenet_v2",
+                "base_path": "/workspace/models/ssdlite_mobilenet_v2"}}
+    ],
+    "custom_node_library_config_list": [
+        {"name": "object_detection_image_extractor",
+            "base_path": "/workspace/lib/libcustom_node_model_zoo_intel_object_detection.so"}
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "multi_object_classification",
+            "inputs": [
+                "image"
+            ],
+            "nodes": [
+                {
+                    "name": "ssdlite_mobilenet_v2_node",
+                    "model_name": "ssdlite_mobilenet_v2",
+                    "type": "DL model",
+                    "inputs": [
+                        {"image_tensor": {
+                                "node_name": "request",
+                                "data_item": "image"}}],
+                    "outputs": [
+                        {"data_item": "detection_boxes",
+                            "alias": "detection"}]
+                },
+                {
+                    "name": "extract_node",
+                    "library_name": "object_detection_image_extractor",
+                    "type": "custom",
+                    "demultiply_count": 0,
+                    "params": {
+                        "original_image_width": "300",
+                        "original_image_height": "300",
+                        "target_image_width": "224",
+                        "target_image_height": "224",
+                        "original_image_layout": "NHWC",
+                        "target_image_layout": "NHWC",
+                        "convert_to_gray_scale": "false",
+                        "max_output_batch": "100",
+                        "confidence_threshold": "0.5",
+                        "debug": "true"
+                    },
+                    "inputs": [
+                        {"image": {
+                                "node_name": "request",
+                                "data_item": "image"}},
+                        {"detection": {
+                                "node_name": "ssdlite_mobilenet_v2_node",
+                                "data_item": "detection"}}],
+                    "outputs": [
+                        {"data_item": "images",
+                            "alias": "images"},
+                        {"data_item": "coordinates",
+                            "alias": "coordinates"},
+                        {"data_item": "confidences",
+                            "alias": "confidence_levels"}]
+                },
+                {
+                    "name": "efficientnet-b0_node",
+                    "model_name": "efficientnet-b0",
+                    "type": "DL model",
+                    "inputs": [
+                        {"0:sub": {
+                                "node_name": "extract_node",
+                                "data_item": "images"}}],
+                    "outputs": [
+                        {"data_item": "efficientnet-b0/model/head/dense/BiasAdd:0",
+                            "alias": "probability"}]
+                }
+            ],
+            "outputs": [
+                {"probability": {
+                        "node_name": "efficientnet-b0_node",
+                        "data_item": "probability"}}
+            ]
+        }
+    ]
+}
