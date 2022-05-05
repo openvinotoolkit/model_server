@@ -127,13 +127,12 @@ const std::string PLATFORM = "OpenVINO";
 
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     auto status = getModelInstance(request, modelInstance, modelInstanceUnloadGuard);
-
     if (status == StatusCode::MODEL_NAME_MISSING) {
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", request->model_name());
         status = getPipeline(request, response, pipelinePtr);
     }
     if (!status.ok()) {
-        SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
+        SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
         return status.grpc();
     }
 
