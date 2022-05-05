@@ -109,7 +109,7 @@ Status EntryNode<::inference::ModelInferRequest>::isInputBinary(const std::strin
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Error during checking binary input; input: {} does not exist", name);
         return StatusCode::INTERNAL_ERROR;
     }
-    //isBinary = it->second.string_val_size() > 0; // TODO implement with KFS binary inputs
+    // isBinary = it->second.string_val_size() > 0; // TODO implement with KFS binary inputs
     isBinary = false;
     return StatusCode::OK;
 }
@@ -177,4 +177,4 @@ template Status EntryNode<tensorflow::serving::PredictRequest>::createShardedTen
 template Status EntryNode<::inference::ModelInferRequest>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
 template const Status EntryNode<tensorflow::serving::PredictRequest>::validate();
 template const Status EntryNode<::inference::ModelInferRequest>::validate();
-}  // namespace ovms
+}  //  namespace ovms

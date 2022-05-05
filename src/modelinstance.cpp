@@ -1191,7 +1191,6 @@ Status ModelInstance::infer(const ::inference::ModelInferRequest* requestProto,
     timer.start("deserialize");
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
-    SPDLOG_ERROR("{}", isPipeline);
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
     timer.stop("deserialize");
     if (!status.ok())
