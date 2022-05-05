@@ -18,7 +18,7 @@ import ovmsclient
 import os
 import numpy as np
 import argparse
-import label_mapping
+import classes
 parser = argparse.ArgumentParser(description='Client for multi object classification pipeline')
 parser.add_argument('--grpc_address', required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port', required=False, default=9178, help='Specify port to grpc service. default: 9178')
@@ -36,15 +36,19 @@ model_metadata = client.get_model_metadata(model_name=args.get('pipeline_name'))
 # If model has only one input, get its name like that
 input_name = next(iter(model_metadata["inputs"]))
 
-binary_image = None
+# Prepare binary input with single jpeg image
+inputs = dict()
 with open(args.get('image_input_path'), 'rb') as f:
-    binary_image = f.read()
-
-inputs = {input_name: binary_image}
+    inputs[input_name] = [
+        f.read()  # batch 1
+    ]
 
 # Run prediction and wait for the result
 result = client.predict(inputs=inputs, model_name=args.get('pipeline_name'))
 
+# For each batch (detected object)
 for batch_idx in range(result.shape[0]):
+    # For single output endpoints result is simply numpy array, access n-th probability tensor (batch_idx)
+    # Select most probable label
     label_id = np.argmax(result[batch_idx])
-    print(f"no: {batch_idx}; label id: {label_id}; name: {label_mapping.label_mapping[label_id]}")
+    print(f"no: {batch_idx}; label id: {label_id}; name: {classes.imagenet_classes[label_id]}")

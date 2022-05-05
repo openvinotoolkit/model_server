@@ -23,13 +23,12 @@ ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
 default: setup_repository
 
 setup_repository: venv
-	@. $(ACTIVATE);
-	@pip3 install openvino-dev openvino-dev[tensorflow]
-	@omz_downloader --name ssdlite_mobilenet_v2
-	@omz_downloader --name efficientnet-b0
+	@. $(ACTIVATE); pip3 install 'openvino-dev[tensorflow]'
+	@. $(ACTIVATE); omz_downloader --name ssdlite_mobilenet_v2
+	@. $(ACTIVATE); omz_downloader --name efficientnet-b0
 	# Additional parameter is required to ensure input precision is FP32
-	@omz_converter --name ssdlite_mobilenet_v2 --add_mo_arg=--input=image_tensor{f32}
-	@omz_converter --name efficientnet-b0
+	@. $(ACTIVATE); omz_converter --name ssdlite_mobilenet_v2 --add_mo_arg=--input=image_tensor{f32}
+	@. $(ACTIVATE); omz_converter --name efficientnet-b0
 	@mkdir -p workspace/models/ssdlite_mobilenet_v2/1
 	@mkdir -p workspace/models/efficientnet-b0/1
 	@cp public/ssdlite_mobilenet_v2/FP32/* workspace/models/ssdlite_mobilenet_v2/1/ -r
@@ -39,6 +38,7 @@ setup_repository: venv
 	make && \
 	mv lib ../../../demos/multi_object_classification_pipeline/python/workspace/lib
 	@cp config.json workspace/.
+	@cp ../../common/python/classes.py classes.py
 
 venv:$(ACTIVATE)
 	@echo -n "Using venv "
@@ -51,4 +51,4 @@ $(ACTIVATE):
 	@touch $(ACTIVATE)
 
 clean:
-	@rm -rf $(VIRTUALENV_DIR) workspace public
+	@rm -rf $(VIRTUALENV_DIR) workspace public venv .venv classes.py

@@ -34,7 +34,7 @@
                     "name": "extract_node",
                     "library_name": "object_detection_image_extractor",
                     "type": "custom",
-                    "demultiply_count": 0,
+                    "demultiply_count": -1,
                     "params": {
                         "original_image_width": "300",
                         "original_image_height": "300",

@@ -80,8 +80,5 @@ pip3 install -r requirements.txt
 
 Now you can run the client:
 ```bash
-python3 client.py --pipeline_name multi_object_classification --grpc_port 9000 --image_input_path ../../common/static/images/dogs/multiple_dogs.jpg
-no: 0; label id: 220; name: Sussex spaniel
-no: 1; label id: 188; name: wire-haired fox terrier
-no: 2; label id: 207; name: golden retriever
-no: 3; label id: 262; name: Brabancon griffon
+python3 client.py --pipeline_name multi_object_classification --grpc_port 9000 --image_input_path ../../common/static/images/pelican.jpeg
+no: 0; label id: 144; name: pelican
