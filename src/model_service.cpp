@@ -114,7 +114,7 @@ Status GetModelStatusImpl::getModelStatus(
         // return details only for a specific version of requested model; NOT_FOUND otherwise. If requested_version == 0, default is returned.
         std::shared_ptr<ModelInstance> model_instance = model_ptr->getModelInstanceByVersion(requested_version);
         if (!model_instance) {
-            SPDLOG_WARN("requested model {} in version {} was not found.", requested_model_name, requested_version);
+            SPDLOG_DEBUG("requested model {} in version {} was not found.", requested_model_name, requested_version);
             return StatusCode::MODEL_VERSION_MISSING;
         }
         const auto& status = model_instance->getStatus();

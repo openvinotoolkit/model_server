@@ -187,6 +187,7 @@ cc_library(
         "statefulmodelinstance.hpp",
         "status.cpp",
         "status.hpp",
+        "stringutils.cpp",
         "stringutils.hpp",
         "queue.hpp",
         "tensorinfo.cpp",

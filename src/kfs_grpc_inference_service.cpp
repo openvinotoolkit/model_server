@@ -76,7 +76,7 @@ const std::string PLATFORM = "OpenVINO";
 ::grpc::Status KFSInferenceServiceImpl::ModelMetadata(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) {
     auto& manager = ModelManager::getInstance();
     const auto& name = request->name();
-    const auto& version = request->version();
+    const auto& versionString = request->version();
 
     auto model = manager.findModelByName(name);
     if (model == nullptr) {
@@ -89,28 +89,26 @@ const std::string PLATFORM = "OpenVINO";
     }
 
     std::shared_ptr<ModelInstance> instance = nullptr;
-    if (!version.empty()) {
-        SPDLOG_DEBUG("GetModelMetadata requested model: name {}; version {}", name, version);
-        model_version_t vers = 0;
-        try {
-            vers = std::stoll(version);
-        } catch (const std::exception& e) {
-            SPDLOG_DEBUG("GetModelMetadata requested model: name {}; with version in invalid format: {}. Error: {}", name, version, e.what());
-            return Status(StatusCode::MODEL_VERSION_INVALID_FORMAT).grpc();
-        } catch (...) {
-            SPDLOG_DEBUG("GetModelMetadata requested model: name {}; with version in invalid format: {}", name, version);
+    if (!versionString.empty()) {
+        SPDLOG_DEBUG("GetModelMetadata requested model: name {}; version {}", name, versionString);
+        model_version_t requestedVersion = 0;
+        auto versionRead = stoi64(versionString);
+        if (versionRead) {
+            requestedVersion = versionRead.value();
+        } else {
+            SPDLOG_DEBUG("GetModelMetadata requested model: name {}; with version in invalid format: {}", name, versionString);
             return Status(StatusCode::MODEL_VERSION_INVALID_FORMAT).grpc();
         }
-        instance = model->getModelInstanceByVersion(vers);
+        instance = model->getModelInstanceByVersion(requestedVersion);
         if (instance == nullptr) {
-            SPDLOG_WARN("GetModelMetadata requested model {}; version {} is missing", name, version);
+            SPDLOG_DEBUG("GetModelMetadata requested model {}; version {} is missing", name, versionString);
             return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
         }
     } else {
         SPDLOG_DEBUG("GetModelMetadata requested model: name {}; default version", name);
         instance = model->getDefaultModelInstance();
         if (instance == nullptr) {
-            SPDLOG_WARN("GetModelMetadata requested model {}; version {} is missing", name, version);
+            SPDLOG_DEBUG("GetModelMetadata requested model {}; version {} is missing", name, versionString);
             return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
         }
     }
@@ -120,8 +118,6 @@ const std::string PLATFORM = "OpenVINO";
 
 ::grpc::Status KFSInferenceServiceImpl::ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) {
     (void)context;
-    (void)request;
-    (void)response;
     OVMS_PROFILE_FUNCTION();
     Timer timer;
     timer.start("total");

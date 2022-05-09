@@ -23,6 +23,7 @@
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "serialization.hpp"
+#include "stringutils.hpp"
 #include "timer.hpp"
 
 using tensorflow::serving::PredictRequest;
@@ -34,19 +35,17 @@ Status getModelInstance(const ::inference::ModelInferRequest* request,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
     OVMS_PROFILE_FUNCTION();
     ModelManager& manager = ModelManager::getInstance();
-    model_version_t vers = 0;
+    model_version_t requestedVersion = 0;
     if (!request->model_version().empty()) {
-        try {
-            vers = std::stoll(request->model_version());
-        } catch (const std::exception& e) {
-            SPDLOG_DEBUG("requested model: name {}; with version in invalid format: {}; error: {}", request->model_name(), request->model_version(), e.what());
-            return StatusCode::MODEL_VERSION_INVALID_FORMAT;
-        } catch (...) {
+        auto versionRead = stoi64(request->model_version());
+        if (versionRead) {
+            requestedVersion = versionRead.value();
+        } else {
             SPDLOG_DEBUG("requested model: name {}; with version in invalid format: {}", request->model_name(), request->model_version());
             return StatusCode::MODEL_VERSION_INVALID_FORMAT;
         }
     }
-    return manager.getModelInstance(request->model_name(), vers, modelInstance, modelInstanceUnloadGuardPtr);
+    return manager.getModelInstance(request->model_name(), requestedVersion, modelInstance, modelInstanceUnloadGuardPtr);
 }
 
 std::optional<Dimension> getRequestBatchSize(const ::inference::ModelInferRequest* request, const size_t batchSizeIndex) {

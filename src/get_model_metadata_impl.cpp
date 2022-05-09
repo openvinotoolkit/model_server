@@ -55,14 +55,14 @@ Status GetModelMetadataImpl::getModelStatus(
         SPDLOG_DEBUG("GetModelMetadata requested model: name {}; version {}", name, version);
         instance = model->getModelInstanceByVersion(version);
         if (instance == nullptr) {
-            SPDLOG_WARN("GetModelMetadata requested model {}; version {} is missing", name, version);
+            SPDLOG_DEBUG("GetModelMetadata requested model {}; version {} is missing", name, version);
             return StatusCode::MODEL_VERSION_MISSING;
         }
     } else {
         SPDLOG_DEBUG("GetModelMetadata requested model: name {}; default version", name);
         instance = model->getDefaultModelInstance();
         if (instance == nullptr) {
-            SPDLOG_WARN("GetModelMetadata requested model {}; default version is missing", name);
+            SPDLOG_DEBUG("GetModelMetadata requested model {}; default version is missing", name);
             return StatusCode::MODEL_VERSION_MISSING;
         }
     }
