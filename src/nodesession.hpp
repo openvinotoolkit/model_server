@@ -45,6 +45,7 @@ public:
     virtual ~NodeSession();
     const std::string& getName() const { return nodeName; }
     Status setInput(const std::string& inputName, ov::Tensor& tensor, session_id_t shardId);
+    void addSourceTensorRef(const ov::Tensor& tensor);
     const NodeSessionMetadata& getNodeSessionMetadata() const;
     const session_key_t& getSessionKey() const { return sessionKey; }
     bool isReady() const;

@@ -32,6 +32,10 @@ Status NodeSession::setInput(const std::string& inputName, ov::Tensor& tensor, s
     return inputHandler->setInput(inputName, tensor, shardId);
 }
 
+void NodeSession::addSourceTensorRef(const ov::Tensor& tensor) {
+    inputHandler->addSourceTensorRef(tensor);
+}
+
 std::unique_ptr<NodeInputHandler> createNodeInputHandler(uint32_t inputsCount, const CollapseDetails& collapsingDetails) {
     if (collapsingDetails.collapsedSessionNames.size() == 0) {
         return std::make_unique<NodeInputHandler>(inputsCount);

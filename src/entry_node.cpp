@@ -55,7 +55,7 @@ Status EntryNode<RequestType>::execute(session_key_t sessionId, PipelineEventQue
 template <typename RequestType>
 Status EntryNode<RequestType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
     OVMS_PROFILE_FUNCTION();
-    TensorMap outputs;
+    TensorWithSourceMap outputs;
     auto status = fetchResults(outputs);
     if (!status.ok()) {
         return status;
@@ -70,19 +70,19 @@ Status EntryNode<RequestType>::fetchResults(NodeSession& nodeSession, SessionRes
 }
 
 template <typename RequestType>
-Status EntryNode<RequestType>::fetchResults(TensorMap& outputs) {
+Status EntryNode<RequestType>::fetchResults(TensorWithSourceMap& outputs) {
     auto status = validate();
     if (!status.ok()) {
         return status;
     }
-    InputSink<TensorMap&> inputSink(outputs);
+    InputSink<TensorWithSourceMap&> inputSink(outputs);
     bool isPipeline = true;
     return deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, inputsInfo, inputSink, isPipeline);
 }
 
 template <>
-Status InputSink<TensorMap&>::give(const std::string& name, ov::Tensor& tensor) {
-    requester[name] = tensor;
+Status InputSink<TensorWithSourceMap&>::give(const std::string& name, ov::Tensor& tensor) {
+    requester.emplace(std::make_pair(name, TensorWithSource(tensor)));
     return StatusCode::OK;
 }
 
@@ -169,8 +169,8 @@ template Status EntryNode<tensorflow::serving::PredictRequest>::execute(session_
 template Status EntryNode<::inference::ModelInferRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
 template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
 template Status EntryNode<::inference::ModelInferRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
-template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(TensorMap& outputs);
-template Status EntryNode<::inference::ModelInferRequest>::fetchResults(TensorMap& outputs);
+template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(TensorWithSourceMap& outputs);
+template Status EntryNode<::inference::ModelInferRequest>::fetchResults(TensorWithSourceMap& outputs);
 template Status EntryNode<tensorflow::serving::PredictRequest>::isInputBinary(const std::string& name, bool& isBinary) const;
 template Status EntryNode<::inference::ModelInferRequest>::isInputBinary(const std::string& name, bool& isBinary) const;
 template Status EntryNode<tensorflow::serving::PredictRequest>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);

@@ -52,7 +52,7 @@ public:
     Status execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) override;
 
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) override;
-    Status fetchResults(TensorMap& outputs, session_key_t sessionKey);
+    Status fetchResults(TensorWithSourceMap& outputs, session_key_t sessionKey);
 
     const std::string& getRealOutputName(const std::string& alias) const {
         auto it = nodeOutputNameAlias.find(alias);

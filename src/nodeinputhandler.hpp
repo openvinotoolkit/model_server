@@ -31,12 +31,14 @@ namespace ovms {
 class NodeInputHandler {
 protected:
     TensorMap inputTensors;
+    TensorVector sourceTensorRefs;
     uint32_t remainingDependencies;
     bool isUsed = false;
 
 public:
     NodeInputHandler(uint32_t inputsMissingCount);
     virtual Status setInput(const std::string& inputName, ov::Tensor& tensor, session_id_t shardId);
+    void addSourceTensorRef(const ov::Tensor& tensor);
     const TensorMap& getInputs() {
         isUsed = true;
         return inputTensors;

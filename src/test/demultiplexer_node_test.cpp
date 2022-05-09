@@ -38,24 +38,25 @@ public:
         auto emplacePair = nodeSessions.emplace(meta.getSessionKey(), std::move(nodeSession));
         EXPECT_TRUE(emplacePair.second);
     }
-    void setFetchResult(ov::Tensor& intermediateResultTensor) {
-        this->intermediateResultTensor = intermediateResultTensor;
+    void setFetchResult(const TensorMap& intermediateResults) {
+        this->intermediateResults = intermediateResults;
     }
+
     using Node::fetchResults;
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
         const auto& sessionMetadata = nodeSession.getNodeSessionMetadata();
         const auto sessionKey = sessionMetadata.getSessionKey();
-        ov::Tensor secondOutput;
-        EXPECT_EQ(tensorClone(secondOutput, intermediateResultTensor), StatusCode::OK);
-        TensorMap tensors{{mockerDemutliplexerNodeOutputName, intermediateResultTensor},
-            {mockerDemutliplexerNodeOutputName2, secondOutput}};
-        std::pair<NodeSessionMetadata, TensorMap> metaTensorsPair{sessionMetadata, std::move(tensors)};
+        TensorWithSourceMap tensors;
+        for (const auto& [name, tensor] : intermediateResults) {
+            tensors.emplace(name, TensorWithSource(tensor));
+        }
+        std::pair<NodeSessionMetadata, TensorWithSourceMap> metaTensorsPair{sessionMetadata, std::move(tensors)};
         nodeSessionOutputs.emplace(sessionKey, std::move(metaTensorsPair));
         return StatusCode::OK;
     }
 
 private:
-    ov::Tensor intermediateResultTensor;
+    TensorMap intermediateResults;
 };
 
 using ::testing::AnyOf;
@@ -70,15 +71,20 @@ TEST(DemultiplexerTest, CheckDemultipliedTensorsMultipleOutputs) {
     const std::vector<size_t> shape{demultiplyCount, 1, tensorsData[0].size()};
     const auto precision{ov::element::Type_t::f32};
     std::vector<float> tensorDataNonDemultiplexed(tensorsData[0].size() * demultiplyCount);
+    std::vector<float> tensorDataNonDemultiplexed2(tensorsData[0].size() * demultiplyCount);
     std::copy(tensorsData[0].begin(), tensorsData[0].end(), tensorDataNonDemultiplexed.begin());
     std::copy(tensorsData[1].begin(), tensorsData[1].end(), tensorDataNonDemultiplexed.begin() + tensorsData[0].size());
-    ov::Tensor intermediateResultTensor = createSharedTensor(precision, shape, tensorDataNonDemultiplexed.data());
+    std::copy(tensorsData[0].begin(), tensorsData[0].end(), tensorDataNonDemultiplexed2.begin());
+    std::copy(tensorsData[1].begin(), tensorsData[1].end(), tensorDataNonDemultiplexed2.begin() + tensorsData[0].size());
+    TensorMap intermediateResultTensors{
+        {mockerDemutliplexerNodeOutputName, createSharedTensor(precision, shape, tensorDataNonDemultiplexed.data())},
+        {mockerDemutliplexerNodeOutputName2, createSharedTensor(precision, shape, tensorDataNonDemultiplexed2.data())}};
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;
     std::string demultiplexerNodeName("node");
     DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);
-    demultiplexerNode.setFetchResult(intermediateResultTensor);
+    demultiplexerNode.setFetchResult(intermediateResultTensors);
     SessionResults sessionResults;
     session_key_t sessionKey = meta.getSessionKey();
     // perform test
@@ -90,7 +96,8 @@ TEST(DemultiplexerTest, CheckDemultipliedTensorsMultipleOutputs) {
     for (size_t shardId = 0; shardId < demultiplyCount; ++shardId) {
         auto& sessionResult = sessionResults[demultiplexedMetadata[shardId].getSessionKey()];
         ASSERT_EQ(sessionResult.first.getSessionKey(), demultiplexedMetadata[shardId].getSessionKey());
-        for (auto& [tensorName, tensor] : sessionResult.second) {
+        for (auto& [tensorName, tensorWithSource] : sessionResult.second) {
+            auto& tensor = tensorWithSource.getActualTensor();
             EXPECT_THAT(tensorName, AnyOf(Eq(mockerDemutliplexerNodeOutputName),
                                         Eq(mockerDemutliplexerNodeOutputName2)));
             ASSERT_EQ(tensorsData[shardId].size(), tensor.get_size());
@@ -108,13 +115,14 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenWrongOutputDimensions) {
     // imitate (1, 2, 3) but shoudl be (1,3,x1, ..., xN)
     const std::vector<size_t> shape{1, demultiplyCount - 1, 3};
     const auto precision{ov::element::Type_t::f32};
-    ov::Tensor intermediateResultTensor = createSharedTensor(precision, shape, tensorData.data());
+    TensorMap intermediateResultTensors{
+        {mockerDemutliplexerNodeOutputName, createSharedTensor(precision, shape, tensorData.data())}};
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;
     std::string demultiplexerNodeName("node");
     DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);  // demultiplexer expects (1, 3, x1, ..., xN);
-    demultiplexerNode.setFetchResult(intermediateResultTensor);
+    demultiplexerNode.setFetchResult(intermediateResultTensors);
     SessionResults sessionResults;
     session_key_t sessionKey = meta.getSessionKey();
     // perform test
@@ -128,16 +136,53 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenNotEnoughDimensionsInOutp
     // imitate (1, 3) but should be at least (1,3,x1, ..., xN) N >= 1
     const std::vector<size_t> shape{1, demultiplyCount};
     const auto precision{ov::element::Type_t::f32};
-    ov::Tensor intermediateResultTensor = createSharedTensor(precision, shape, tensorData.data());
+    TensorMap intermediateResultTensors{
+        {mockerDemutliplexerNodeOutputName, createSharedTensor(precision, shape, tensorData.data())}};
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;
     std::string demultiplexerNodeName("node");
     DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);  // demultiplexer expects (1, 3, x1, ..., xN);
-    demultiplexerNode.setFetchResult(intermediateResultTensor);
+    demultiplexerNode.setFetchResult(intermediateResultTensors);
     SessionResults sessionResults;
     session_key_t sessionKey = meta.getSessionKey();
     // perform test
     auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults);
     ASSERT_EQ(status, StatusCode::PIPELINE_WRONG_NUMBER_OF_DIMENSIONS_TO_DEMULTIPLY);
+}
+
+TEST(DemultiplexerTest, ShardsShareDataWithSourceTensor) {
+    std::vector<float> tensorData{8, 9};
+    const uint16_t demultiplyCount = tensorData.size();
+    // imitate (2, 1, 1) to demultiply to 2x (1, 1)
+    const std::vector<size_t> shape{demultiplyCount, 1, 1};
+    const auto precision{ov::element::Type_t::f32};
+    auto intermediateTensor = createSharedTensor(precision, shape, tensorData.data());
+    TensorMap intermediateResultTensors{
+        {mockerDemutliplexerNodeOutputName, intermediateTensor}};
+    // construct demultiplexer node
+    NodeSessionMetadata meta;
+    ConstructorEnabledModelManager manager;
+    std::string demultiplexerNodeName("node");
+    DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);  // demultiplexer expects (1, 3, x1, ..., xN);
+    demultiplexerNode.setFetchResult(intermediateResultTensors);
+    SessionResults sessionResults;
+    session_key_t sessionKey = meta.getSessionKey();
+    // perform test
+    auto status = demultiplexerNode.fetchResults(sessionKey, sessionResults);
+    ASSERT_EQ(status, StatusCode::OK);
+    ASSERT_EQ(sessionResults.size(), demultiplyCount);
+    auto demultiplexedMetadata = meta.generateSubsessions(demultiplexerNodeName, demultiplyCount);
+    for (size_t shardId = 0; shardId < demultiplyCount; ++shardId) {
+        auto& sessionResult = sessionResults[demultiplexedMetadata[shardId].getSessionKey()];
+        ASSERT_EQ(sessionResult.first.getSessionKey(), demultiplexedMetadata[shardId].getSessionKey());
+        for (auto& [tensorName, tensorWithSource] : sessionResult.second) {
+            auto expectedPtr = ((char*)intermediateTensor.data()) + sizeof(float) * shardId;
+            auto actualPtr = (char*)tensorWithSource.getActualTensor().data();
+            // Actual sharded tensor need to share data with original tensor
+            EXPECT_THAT(actualPtr, expectedPtr);
+            // Source tensor ptr need to be equal to original intermediate tensor passed to demultiplexer
+            EXPECT_THAT(tensorWithSource.getSourceTensor().data(), intermediateTensor.data());
+        }
+    }
 }

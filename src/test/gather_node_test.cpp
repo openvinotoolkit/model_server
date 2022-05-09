@@ -233,8 +233,8 @@ TEST_F(GatherNodeTest, FullFlowGatherInNonExitNode) {
     auto originalTensor1 = createSharedTensor(precision, shape, nodeRawResults1.data());
     auto originalTensor2 = createSharedTensor(precision, shape, nodeRawResults2.data());
     // prepare session results
-    TensorMap dummy1Result{{DUMMY_MODEL_OUTPUT_NAME, originalTensor1}};
-    TensorMap dummy2Result{{DUMMY_MODEL_OUTPUT_NAME, originalTensor2}};
+    TensorWithSourceMap dummy1Result{{DUMMY_MODEL_OUTPUT_NAME, TensorWithSource(originalTensor1)}};
+    TensorWithSourceMap dummy2Result{{DUMMY_MODEL_OUTPUT_NAME, TensorWithSource(originalTensor2)}};
     NodeSessionMetadata meta;
     const session_id_t shardsCount = 2;
     auto subsessions = meta.generateSubsessions(demultiplexerNodeName, shardsCount);
