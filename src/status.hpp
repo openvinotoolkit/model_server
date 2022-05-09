@@ -123,6 +123,7 @@ enum class StatusCode {
 
     // Common request validation errors
     MODEL_SPEC_MISSING, /*!< Request lacks model_spec */
+    MODEL_VERSION_INVALID_FORMAT,
 
     INTERNAL_ERROR,
 

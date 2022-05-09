@@ -280,11 +280,6 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     }
     return status;
 }
-template Status PipelineDefinition::create<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(
-    std::unique_ptr<Pipeline>& pipeline,
-    const tensorflow::serving::PredictRequest* request,
-    tensorflow::serving::PredictResponse* response,
-    ModelManager& manager);
 
 void PipelineDefinition::resetSubscriptions(ModelManager& manager) {
     for (auto& [modelName, modelVersion] : subscriptions) {
@@ -1358,5 +1353,15 @@ Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
     std::reverse(shape.begin(), shape.end());
     return shape;
 }
+template Status PipelineDefinition::create<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(
+    std::unique_ptr<Pipeline>& pipeline,
+    const tensorflow::serving::PredictRequest* request,
+    tensorflow::serving::PredictResponse* response,
+    ModelManager& manager);
+template Status PipelineDefinition::create<::inference::ModelInferRequest, ::inference::ModelInferResponse>(
+    std::unique_ptr<Pipeline>& pipeline,
+    const ::inference::ModelInferRequest* request,
+    ::inference::ModelInferResponse* response,
+    ModelManager& manager);
 
 }  // namespace ovms

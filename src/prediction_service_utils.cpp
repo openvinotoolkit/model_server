@@ -23,22 +23,68 @@
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "serialization.hpp"
+#include "stringutils.hpp"
 #include "timer.hpp"
 
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
 
 namespace ovms {
+Status getModelInstance(const ::inference::ModelInferRequest* request,
+    std::shared_ptr<ovms::ModelInstance>& modelInstance,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
+    OVMS_PROFILE_FUNCTION();
+    ModelManager& manager = ModelManager::getInstance();
+    model_version_t requestedVersion = 0;
+    if (!request->model_version().empty()) {
+        auto versionRead = stoi64(request->model_version());
+        if (versionRead) {
+            requestedVersion = versionRead.value();
+        } else {
+            SPDLOG_DEBUG("requested model: name {}; with version in invalid format: {}", request->model_name(), request->model_version());
+            return StatusCode::MODEL_VERSION_INVALID_FORMAT;
+        }
+    }
+    return manager.getModelInstance(request->model_name(), requestedVersion, modelInstance, modelInstanceUnloadGuardPtr);
+}
+
+std::optional<Dimension> getRequestBatchSize(const ::inference::ModelInferRequest* request, const size_t batchSizeIndex) {
+    auto requestInputItr = request->inputs().begin();
+    if (requestInputItr == request->inputs().end()) {
+        SPDLOG_DEBUG("Failed to get batch size of a request. Validation of request failed");
+        return std::nullopt;
+    }
+    auto& requestInput = requestInputItr;  // assuming same batch size for all inputs
+    if (requestInput->shape().size() < batchSizeIndex + 1) {
+        SPDLOG_DEBUG("Failed to get batch size of a request. Batch size index out of shape range. Validation of request failed");
+        return std::nullopt;
+    }
+    return Dimension(requestInput->shape()[batchSizeIndex]);
+}
+
+std::map<std::string, shape_t> getRequestShapes(const ::inference::ModelInferRequest* request) {
+    std::map<std::string, shape_t> requestShapes;
+    for (auto& it : request->inputs()) {
+        shape_t requestShape;
+        std::string name = it.name();
+        auto& requestInput = it;
+        for (int i = 0; i < requestInput.shape().size(); i++) {
+            requestShape.push_back(requestInput.shape()[i]);
+        }
+        requestShapes[name] = std::move(requestShape);
+    }
+    return requestShapes;
+}
 
 std::optional<Dimension> getRequestBatchSize(const tensorflow::serving::PredictRequest* request, const size_t batchSizeIndex) {
     auto requestInputItr = request->inputs().begin();
     if (requestInputItr == request->inputs().end()) {
-        SPDLOG_WARN("Failed to get batch size of a request. Validation of request failed");
+        SPDLOG_DEBUG("Failed to get batch size of a request. Validation of request failed");
         return std::nullopt;
     }
     auto& requestInput = requestInputItr->second;  // assuming same batch size for all inputs
     if (requestInput.tensor_shape().dim_size() < batchSizeIndex + 1) {
-        SPDLOG_WARN("Failed to get batch size of a request. Batch size index out of shape range. Validation of request failed");
+        SPDLOG_DEBUG("Failed to get batch size of a request. Batch size index out of shape range. Validation of request failed");
         return std::nullopt;
     }
     return Dimension(requestInput.tensor_shape().dim(batchSizeIndex).size());

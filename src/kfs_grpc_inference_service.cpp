@@ -21,12 +21,23 @@
 
 #include "deserialization.hpp"
 #include "modelmanager.hpp"
+#include "ovinferrequestsqueue.hpp"
 #include "pipelinedefinition.hpp"
+#include "prediction_service_utils.hpp"
 #include "serialization.hpp"
+#include "timer.hpp"
 
 namespace ovms {
 
 using inference::GRPCInferenceService;
+
+Status getPipeline(const ::inference::ModelInferRequest* request,
+    ::inference::ModelInferResponse* response,
+    std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
+    OVMS_PROFILE_FUNCTION();
+    ModelManager& manager = ModelManager::getInstance();
+    return manager.createPipeline(pipelinePtr, request->model_name(), request, response);
+}
 
 const std::string PLATFORM = "OpenVINO";
 
@@ -65,7 +76,7 @@ const std::string PLATFORM = "OpenVINO";
 ::grpc::Status KFSInferenceServiceImpl::ModelMetadata(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) {
     auto& manager = ModelManager::getInstance();
     const auto& name = request->name();
-    const auto& version = request->version();
+    const auto& versionString = request->version();
 
     auto model = manager.findModelByName(name);
     if (model == nullptr) {
@@ -78,18 +89,26 @@ const std::string PLATFORM = "OpenVINO";
     }
 
     std::shared_ptr<ModelInstance> instance = nullptr;
-    if (!version.empty()) {
-        SPDLOG_DEBUG("GetModelMetadata requested model: name {}; version {}", name, version);
-        instance = model->getModelInstanceByVersion(std::stoi(version));
+    if (!versionString.empty()) {
+        SPDLOG_DEBUG("GetModelMetadata requested model: name {}; version {}", name, versionString);
+        model_version_t requestedVersion = 0;
+        auto versionRead = stoi64(versionString);
+        if (versionRead) {
+            requestedVersion = versionRead.value();
+        } else {
+            SPDLOG_DEBUG("GetModelMetadata requested model: name {}; with version in invalid format: {}", name, versionString);
+            return Status(StatusCode::MODEL_VERSION_INVALID_FORMAT).grpc();
+        }
+        instance = model->getModelInstanceByVersion(requestedVersion);
         if (instance == nullptr) {
-            SPDLOG_WARN("GetModelMetadata requested model {}; version {} is missing", name, version);
+            SPDLOG_DEBUG("GetModelMetadata requested model {}; version {} is missing", name, versionString);
             return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
         }
     } else {
         SPDLOG_DEBUG("GetModelMetadata requested model: name {}; default version", name);
         instance = model->getDefaultModelInstance();
         if (instance == nullptr) {
-            SPDLOG_WARN("GetModelMetadata requested model {}; version {} is missing", name, version);
+            SPDLOG_DEBUG("GetModelMetadata requested model {}; version {} is missing", name, versionString);
             return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
         }
     }
@@ -99,52 +118,41 @@ const std::string PLATFORM = "OpenVINO";
 
 ::grpc::Status KFSInferenceServiceImpl::ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) {
     (void)context;
-    (void)request;
-    (void)response;
-    std::cout << __FUNCTION__ << ":" << __LINE__
-              << " model:" << request->model_name()
-              << " version:" << request->model_version()
-              << " id:" << request->id()  // optional field - if specified should be put in response
-              << std::endl;
-    // TODO parameters - could hold eg. sequence id.
-    // TODO inputs
-    // TODO outputs
-    auto inst = ModelManager::getInstance().findModelInstance("dummy", 1);
-    inst->validate(request);
-    int floats = 1;
-    ov::Tensor tensor;
-    std::shared_ptr<TensorInfo> tensorInfo;
-    for (int i = 0; i < request->inputs_size(); i++) {
-        floats = 1;
-        auto input = request->inputs().at(i);
-        std::cout << " name:" << input.name()
-                  << " dataType:" << input.datatype()
-                  << " shape:";
-        auto sh = input.shape();
-        for (int j = 0; j < sh.size(); j++) {
-            std::cout << sh[j] << " ";
-            floats *= sh[j];
-        }
-        std::cout << std::endl;
+    OVMS_PROFILE_FUNCTION();
+    Timer timer;
+    timer.start("total");
+    using std::chrono::microseconds;
+    SPDLOG_DEBUG("Processing gRPC request for model: {}; version: {}",
+        request->model_name(),
+        request->model_version());
 
-        tensorInfo = std::make_shared<TensorInfo>(input.name(), KFSPrecisionToOvmsPrecision(input.datatype()), ovms::Shape{1, 16});
-        tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(input, tensorInfo, request->raw_input_contents()[i]);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::Pipeline> pipelinePtr;
+
+    std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    auto status = getModelInstance(request, modelInstance, modelInstanceUnloadGuard);
+    if (status == StatusCode::MODEL_NAME_MISSING) {
+        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", request->model_name());
+        status = getPipeline(request, response, pipelinePtr);
+    }
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
+        return status.grpc();
     }
 
-    std::cout << tensor.get_element_type() << tensor.get_shape() << tensor.data() << std::endl;
-    // cast to expected input.datatype() to print data
-    char* data = (char*)tensor.data();
-    for (int i = 0; i < floats; ++i) {
-        std::cout << "data2[" << i << "]=" << (*(data + i)) << " ";
+    if (pipelinePtr) {
+        status = pipelinePtr->execute();
+    } else {
+        status = modelInstance->infer(request, response, modelInstanceUnloadGuard);
     }
-    std::cout << std::endl;
 
-    // serialize
-    auto output = response->add_outputs();
-    serializeTensorToTensorProto(*output, response->add_raw_output_contents(), tensorInfo, tensor);
-    response->set_id(request->id());
+    if (!status.ok()) {
+        return status.grpc();
+    }
 
-    return ::grpc::Status(::grpc::StatusCode::OK, "");
+    timer.stop("total");
+    SPDLOG_DEBUG("Total gRPC request processing time: {} ms", timer.elapsed<microseconds>("total") / 1000);
+    return grpc::Status::OK;
 }
 
 Status KFSInferenceServiceImpl::buildResponse(
