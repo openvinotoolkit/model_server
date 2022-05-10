@@ -17,8 +17,11 @@
 #include <gtest/gtest.h>
 
 #include "../dl_node.hpp"
+#include "../dlnodesession.hpp"
+#include "../gathernodeinputhandler.hpp"
 #include "../logging.hpp"
 #include "../node.hpp"
+#include "../nodeinputhandler.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -38,7 +41,8 @@ public:
         auto emplacePair = nodeSessions.emplace(meta.getSessionKey(), std::move(nodeSession));
         EXPECT_TRUE(emplacePair.second);
     }
-    void setFetchResult(const TensorMap& intermediateResults) {
+
+    void setFetchResult(const TensorWithSourceMap& intermediateResults) {
         this->intermediateResults = intermediateResults;
     }
 
@@ -46,17 +50,13 @@ public:
     Status fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
         const auto& sessionMetadata = nodeSession.getNodeSessionMetadata();
         const auto sessionKey = sessionMetadata.getSessionKey();
-        TensorWithSourceMap tensors;
-        for (const auto& [name, tensor] : intermediateResults) {
-            tensors.emplace(name, TensorWithSource(tensor));
-        }
-        std::pair<NodeSessionMetadata, TensorWithSourceMap> metaTensorsPair{sessionMetadata, std::move(tensors)};
+        std::pair<NodeSessionMetadata, TensorWithSourceMap> metaTensorsPair{sessionMetadata, std::move(intermediateResults)};
         nodeSessionOutputs.emplace(sessionKey, std::move(metaTensorsPair));
         return StatusCode::OK;
     }
 
 private:
-    TensorMap intermediateResults;
+    TensorWithSourceMap intermediateResults;
 };
 
 using ::testing::AnyOf;
@@ -76,9 +76,9 @@ TEST(DemultiplexerTest, CheckDemultipliedTensorsMultipleOutputs) {
     std::copy(tensorsData[1].begin(), tensorsData[1].end(), tensorDataNonDemultiplexed.begin() + tensorsData[0].size());
     std::copy(tensorsData[0].begin(), tensorsData[0].end(), tensorDataNonDemultiplexed2.begin());
     std::copy(tensorsData[1].begin(), tensorsData[1].end(), tensorDataNonDemultiplexed2.begin() + tensorsData[0].size());
-    TensorMap intermediateResultTensors{
-        {mockerDemutliplexerNodeOutputName, createSharedTensor(precision, shape, tensorDataNonDemultiplexed.data())},
-        {mockerDemutliplexerNodeOutputName2, createSharedTensor(precision, shape, tensorDataNonDemultiplexed2.data())}};
+    TensorWithSourceMap intermediateResultTensors{
+        {mockerDemutliplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorDataNonDemultiplexed.data()))},
+        {mockerDemutliplexerNodeOutputName2, TensorWithSource(createSharedTensor(precision, shape, tensorDataNonDemultiplexed2.data()))}};
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;
@@ -115,8 +115,8 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenWrongOutputDimensions) {
     // imitate (1, 2, 3) but shoudl be (1,3,x1, ..., xN)
     const std::vector<size_t> shape{1, demultiplyCount - 1, 3};
     const auto precision{ov::element::Type_t::f32};
-    TensorMap intermediateResultTensors{
-        {mockerDemutliplexerNodeOutputName, createSharedTensor(precision, shape, tensorData.data())}};
+    TensorWithSourceMap intermediateResultTensors{
+        {mockerDemutliplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorData.data()))}};
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;
@@ -136,8 +136,8 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenNotEnoughDimensionsInOutp
     // imitate (1, 3) but should be at least (1,3,x1, ..., xN) N >= 1
     const std::vector<size_t> shape{1, demultiplyCount};
     const auto precision{ov::element::Type_t::f32};
-    TensorMap intermediateResultTensors{
-        {mockerDemutliplexerNodeOutputName, createSharedTensor(precision, shape, tensorData.data())}};
+    TensorWithSourceMap intermediateResultTensors{
+        {mockerDemutliplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorData.data()))}};
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;
@@ -158,8 +158,8 @@ TEST(DemultiplexerTest, ShardsShareDataWithSourceTensor) {
     const std::vector<size_t> shape{demultiplyCount, 1, 1};
     const auto precision{ov::element::Type_t::f32};
     auto intermediateTensor = createSharedTensor(precision, shape, tensorData.data());
-    TensorMap intermediateResultTensors{
-        {mockerDemutliplexerNodeOutputName, intermediateTensor}};
+    TensorWithSourceMap intermediateResultTensors{
+        {mockerDemutliplexerNodeOutputName, TensorWithSource(intermediateTensor)}};
     // construct demultiplexer node
     NodeSessionMetadata meta;
     ConstructorEnabledModelManager manager;
@@ -185,4 +185,106 @@ TEST(DemultiplexerTest, ShardsShareDataWithSourceTensor) {
             EXPECT_THAT(tensorWithSource.getSourceTensor().data(), intermediateTensor.data());
         }
     }
+}
+
+// In case of demultiplexer right before gather, the input tensor object (TensorWithShape) will contain source tensor.
+// This test ensures the gathering prodcues tensor with correct data (which implies it takes care of source tensor ownership).
+TEST(DemultiplexerTest, GatherShardsWithExistingSourceTensors) {
+    // Mock DLNode session to be possible to get inputs from its input handler.
+    class MockNodeSession : public DLNodeSession {
+    public:
+        using DLNodeSession::DLNodeSession;
+
+        const TensorMap& getInputs() {
+            return this->inputHandler->getInputs();
+        }
+    };
+
+    // Mock DLNode to inject factory method to be able to create Node with mocked NodeSession.
+    class MockDLNode : public DLNode {
+    protected:
+        std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) override {
+            return std::make_unique<MockNodeSession>(metadata, getName(), previous.size(), collapsingDetails,
+                this->modelManager, this->modelName, this->modelVersion.value_or(0));
+        }
+
+    public:
+        using DLNode::DLNode;
+
+        const TensorMap& getInputs(const session_key_t& key) {
+            auto& nodeSession = dynamic_cast<MockNodeSession&>(this->getNodeSession(key));
+            return nodeSession.getInputs();
+        }
+    };
+
+    ConstructorEnabledModelManager manager;
+    int32_t demultiplyCount = 3;
+
+    auto dl_demulti = std::make_unique<DLNode>(
+        std::string("dummy_node_1"),
+        std::string("dummy_model"),
+        1, manager,
+        std::unordered_map<std::string, std::string>{{"b", "b"}},
+        demultiplyCount);
+    auto dl_gather = std::make_unique<MockDLNode>(
+        std::string("dummy_node_2"),
+        std::string("dummy_model"),
+        1, manager,
+        std::unordered_map<std::string, std::string>{{"b", "b"}},
+        std::nullopt,
+        std::set<std::string>{"dummy_node_1"});
+
+    dl_demulti->addDependant(*dl_gather);
+    dl_gather->addDependency(*dl_demulti, Aliases{{"b", "b"}});
+
+    size_t size = 2;
+
+    // Prepare source tensors
+    std::vector<float> data{3.2, 5.9};
+    std::vector<std::shared_ptr<ov::Tensor>> tensors;
+    for (int i = 0; i < demultiplyCount; i++) {
+        tensors.push_back(std::make_shared<ov::Tensor>(ov::element::f32, ov::Shape{1, size}));
+        std::memcpy(tensors[i]->data(), data.data(), sizeof(float) * size);
+    }
+
+    // Prepare session results and pass to ::setInputs method - source and actual tensors.
+    NodeSessionMetadata meta;
+    auto subMetas = meta.generateSubsessions("dummy_node_1", demultiplyCount);
+    for (int i = 0; i < demultiplyCount; i++) {
+        TensorWithSource tensorWithSource{
+            ov::Tensor(tensors[i]->get_element_type(), {1, size}, tensors[i]->data()),
+            *tensors[i]};
+        TensorWithSourceMap tensorMap{{"b", tensorWithSource}};
+        SessionResult result{subMetas[i], tensorMap};
+        SessionResults results{
+            {"unused_session_key", result}};
+        // Last ::setInput will trigger gathering step.
+        dl_gather->setInputs(*dl_demulti, results);
+        tensors[i].reset();
+    }
+
+    // Fetch session and its gathered input.
+    auto sessions = dl_gather->getReadySessions();
+    ASSERT_EQ(sessions.size(), 1);
+    const auto& inputs = dl_gather->getInputs(sessions[0]);
+    ASSERT_EQ(inputs.size(), 1);
+    auto& input = inputs.begin()->second;
+
+    // Test tensor metadata
+    ASSERT_EQ(input.get_element_type(), ov::element::f32);
+    ASSERT_EQ(input.get_shape(), (ov::Shape{(size_t)demultiplyCount, 1, size}));
+
+    // Test actual data
+    std::vector<float> res;
+    for (int i = 0; i < demultiplyCount; i++) {
+        res.insert(res.end(), data.begin(), data.end());
+    }
+    ASSERT_EQ(res.size(), input.get_size());
+    EXPECT_EQ(
+        std::memcmp(
+            (char*)res.data(),
+            (char*)input.data(),
+            input.get_byte_size()),
+        0)
+        << "Failed comparison";
 }

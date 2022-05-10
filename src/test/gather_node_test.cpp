@@ -53,7 +53,9 @@ TEST_F(GatherNodeInputHandlerTest, ThreePredecessorNodesWithSubsessionSize2) {
     std::vector<std::vector<size_t>> shapes{{1, 10}, {1, 2}};
     std::vector<ov::element::Type_t> precisions{ov::element::Type_t::f32, ov::element::Type_t::f32};
     std::vector<std::vector<float>> tensorsData{{-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67}, {1., 3}};
-    std::vector<ov::Tensor> inputTensors{createSharedTensor(precisions[0], shapes[0], tensorsData[0].data()), createSharedTensor(precisions[1], shapes[1], tensorsData[1].data())};
+    std::vector<TensorWithSource> inputTensors{
+        TensorWithSource(createSharedTensor(precisions[0], shapes[0], tensorsData[0].data())),
+        TensorWithSource(createSharedTensor(precisions[1], shapes[1], tensorsData[1].data()))};
     NodeSessionMetadata meta;
     const std::string demultiplexerName = "NOT_IMPORTANT_NAME";
     auto newMeta = meta.generateSubsessions(demultiplexerName, shardsCount)[0];
@@ -109,7 +111,7 @@ TEST_F(GatherNodeInputHandlerTest, GatheringOnTwoDemultiplexersAtOnce) {
     for (size_t i = 0; i < demultiplyCounts[0]; ++i) {
         for (size_t j = 0; j < demultiplyCounts[1]; ++j) {
             auto index = i * demultiplyCounts[1] + j;
-            auto tensor = createSharedTensor(precision, shape, (void*)(tensorsData.data() + index * elementCountPerShard));
+            auto tensor = TensorWithSource(createSharedTensor(precision, shape, (void*)(tensorsData.data() + index * elementCountPerShard)));
             ASSERT_FALSE(gInputHandler.isReady());
             SPDLOG_DEBUG("i: {}, j: {}, metadatas.size: {}, metadatas[i].size() :{}", i, j, metadatas.size(), metadatas[i].size());
             auto shardId = metadatas[i][j].getShardId({demultiplexerNodeNames[0], demultiplexerNodeNames[1]});
@@ -134,7 +136,9 @@ TEST_F(GatherNodeInputHandlerTest, SetInputsWithShardsHavingDifferentShapesShoul
     std::vector<std::vector<size_t>> shapes{{1, 10}, {1, 9}};
     ov::element::Type_t precision{ov::element::Type_t::f32};
     std::vector<float> tensorsData{-1, 4, 5, 12, 3, 52, 12, 0.5, 9, 1.67};
-    std::vector<ov::Tensor> inputTensors{createSharedTensor(precision, shapes[0], tensorsData.data()), createSharedTensor(precision, shapes[1], tensorsData.data())};
+    std::vector<TensorWithSource> inputTensors{
+        TensorWithSource(createSharedTensor(precision, shapes[0], tensorsData.data())),
+        TensorWithSource(createSharedTensor(precision, shapes[1], tensorsData.data()))};
     const session_id_t shardsCount = 2;  // subsessionSize/demultiplyCount
     CollapseDetails collapsingDetails{{std::string("NOT_IMPORTANT_DEMULTIPLEXER_NAME")}, {shardsCount}};
     GatherNodeInputHandler gInputHandler(inputNames.size(), collapsingDetails);

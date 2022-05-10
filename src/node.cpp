@@ -131,13 +131,10 @@ Status Node::setInputs(const Node& dependency, TensorWithSourceMap& inputs, Node
             dependency.getName(),
             current_node_input_name,
             dependency_output_name);
-        auto status = nodeSession->setInput(current_node_input_name, it->second.getActualTensor(), shardId);
+        auto status = nodeSession->setInput(current_node_input_name, it->second, shardId);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "node: {} failed to set input: {}, shard: {}", getName(), current_node_input_name, shardId);
             return status;
-        }
-        if (it->second.hasSource()) {
-            nodeSession->addSourceTensorRef(it->second.getSourceTensor());
         }
     }
     return nodeSession->notifyFinishedDependency();
