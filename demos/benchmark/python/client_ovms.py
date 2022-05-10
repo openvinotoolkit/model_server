@@ -43,7 +43,9 @@ class OVmsClient(BaseClient):
     # override
     status_endpoint = "/v1/config"
     DTYPE_FLOAT_32 = "DT_FLOAT"
+    DTYPE_INT_8 = "DT_INT8"
     DTYPE_INT_32 = "DT_INT32"
+    DTYPE_INT_64 = "DT_INT64"
 
     # override
     def get_stub(self):

@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 #! /bin/bash
-echo "OVMS benchmark client 1.17"
+
+# internal version
+echo "XClient 2.1"
 
 PROXY="no"
 OPTIONS="$@"

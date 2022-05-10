@@ -39,7 +39,9 @@ class NvTrtClient(BaseClient):
     # override
     status_endpoint = "/v2/repository/index"
     DTYPE_FLOAT_32 = "FP32"
+    DTYPE_INT_8 = "INT8"
     DTYPE_INT_32 = "INT32"
+    DTYPE_INT_64 = "INT64"
 
     # override
     def get_stub(self):
@@ -134,6 +136,8 @@ class NvTrtClient(BaseClient):
                 if self.inputs[input_name]["dtype"] == self.DTYPE_FLOAT_32:
                     np_dtype = "float32"
                 elif self.inputs[input_name]["dtype"] == self.DTYPE_INT_32:
+                    np_dtype = "int32"
+                elif self.inputs[input_name]["dtype"] == self.DTYPE_INT_8:
                     np_dtype = "int8"
                 else:
                     raise ValueError(f"not supported type: {self.inputs[input_name]['dtype']}")
