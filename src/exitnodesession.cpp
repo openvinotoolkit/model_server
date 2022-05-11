@@ -23,9 +23,6 @@ namespace ovms {
 ExitNodeSession::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
     NodeSession(metadata, nodeName, inputsCount, collapsingDetails) {}
 
-ExitNodeSession::ExitNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
-    NodeSession(std::move(metadata), nodeName, inputsCount, collapsingDetails) {}
-
 ExitNodeSession::~ExitNodeSession() = default;
 
 void ExitNodeSession::release() {}

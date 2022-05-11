@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2021 Intel Corporation
+// Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,26 +15,15 @@
 //*****************************************************************************
 #pragma once
 
-#include <string>
-
-#include <openvino/openvino.hpp>
-
-#include "nodesession.hpp"
-#include "nodesessionmetadata.hpp"
-#include "status.hpp"
-#include "tensormap.hpp"
+#include "gathernodeinputhandler.hpp"
 
 namespace ovms {
 
-class Node;
-class TensorInfo;
+class CollapseDetails;
 
-class ExitNodeSession : public NodeSession {
+class GatherExitNodeInputHandler : public GatherNodeInputHandler {
 public:
-    ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
-    virtual ~ExitNodeSession();
-
-    const TensorMap& getInputTensors() const;
-    void release() override;
+    GatherExitNodeInputHandler(uint32_t inputsMissingCount, const CollapseDetails& collapsingDetails) : GatherNodeInputHandler(inputsMissingCount, collapsingDetails) {};
+    //Status notifyFinishedDependency() override;
 };
 }  // namespace ovms
