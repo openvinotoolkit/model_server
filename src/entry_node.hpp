@@ -47,7 +47,7 @@ public:
 
 protected:
     Status fetchResults(TensorWithSourceMap& outputs);
-    Status createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) override;
+    Status createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string& tensorName) override;
 
 public:
     // Entry nodes have no dependency

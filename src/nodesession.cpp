@@ -48,14 +48,6 @@ NodeSession::NodeSession(const NodeSessionMetadata& metadata, const std::string&
     inputHandler(createNodeInputHandler(inputsCount, collapsingDetails)),
     outputHandler(std::make_unique<NodeOutputHandler>()) {}
 
-NodeSession::NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
-    metadata(std::move(metadata)),
-    sessionKey(this->metadata.getSessionKey()),
-    nodeName(nodeName),
-    timer(std::make_unique<Timer>()),
-    inputHandler(std::make_unique<NodeInputHandler>(inputsCount)),
-    outputHandler(std::make_unique<NodeOutputHandler>()) {}
-
 bool NodeSession::isReady() const {
     bool isReady = inputHandler->isReady();
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "node: {} session: {} isReady: {}", getName(), getSessionKey(), isReady);
