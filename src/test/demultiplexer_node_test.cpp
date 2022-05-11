@@ -224,18 +224,18 @@ TEST(DemultiplexerTest, GatherShardsWithExistingSourceTensors) {
         std::string("dummy_node_1"),
         std::string("dummy_model"),
         1, manager,
-        std::unordered_map<std::string, std::string>{{"b", "b"}},
+        std::unordered_map<std::string, std::string>{{DUMMY_MODEL_INPUT_NAME, DUMMY_MODEL_INPUT_NAME}},
         demultiplyCount);
     auto dl_gather = std::make_unique<MockDLNode>(
         std::string("dummy_node_2"),
         std::string("dummy_model"),
         1, manager,
-        std::unordered_map<std::string, std::string>{{"b", "b"}},
+        std::unordered_map<std::string, std::string>{{DUMMY_MODEL_INPUT_NAME, DUMMY_MODEL_INPUT_NAME}},
         std::nullopt,
         std::set<std::string>{"dummy_node_1"});
 
     dl_demulti->addDependant(*dl_gather);
-    dl_gather->addDependency(*dl_demulti, Aliases{{"b", "b"}});
+    dl_gather->addDependency(*dl_demulti, Aliases{{DUMMY_MODEL_INPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
 
     size_t size = 2;
 
@@ -248,13 +248,14 @@ TEST(DemultiplexerTest, GatherShardsWithExistingSourceTensors) {
     }
 
     // Prepare session results and pass to ::setInputs method - source and actual tensors.
+    // This imitates demultiplexing (or any process in DAG that forces tensor to keep its source tensor).
     NodeSessionMetadata meta;
     auto subMetas = meta.generateSubsessions("dummy_node_1", demultiplyCount);
     for (int i = 0; i < demultiplyCount; i++) {
         TensorWithSource tensorWithSource{
             ov::Tensor(tensors[i]->get_element_type(), {1, size}, tensors[i]->data()),
             *tensors[i]};
-        TensorWithSourceMap tensorMap{{"b", tensorWithSource}};
+        TensorWithSourceMap tensorMap{{DUMMY_MODEL_INPUT_NAME, tensorWithSource}};
         SessionResult result{subMetas[i], tensorMap};
         SessionResults results{
             {"unused_session_key", result}};
