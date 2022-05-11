@@ -37,7 +37,7 @@ class GatherNodeInputHandler : public NodeInputHandler {
 
 public:
     GatherNodeInputHandler(uint32_t inputsMissingCount, const CollapseDetails& collapsingDetails);
-    Status setInput(const std::string& inputName, ov::Tensor& tensor, session_id_t shardId) override;
+    Status setInput(const std::string& inputName, TensorWithSource& tensor, session_id_t shardId) override;
     Status notifyFinishedDependency() override;
 };
 }  // namespace ovms

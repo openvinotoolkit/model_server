@@ -70,7 +70,7 @@ protected:
     virtual Status createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
 
 public:
-    Status setInputs(const Node& dependency, TensorMap& inputs, NodeSessionMetadata& metadata);
+    Status setInputs(const Node& dependency, TensorWithSourceMap& inputs, NodeSessionMetadata& metadata);
     Status setInputs(const Node& dependency, SessionResults& inputs);
 
     virtual void addDependency(Node& node, const Aliases& tensorNamesMapping) {

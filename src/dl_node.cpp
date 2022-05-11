@@ -56,7 +56,7 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
     return status;
 }
 
-Status DLNode::fetchResults(TensorMap& outputs, ov::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey) {
+Status DLNode::fetchResults(TensorWithSourceMap& outputs, ov::InferRequest& inferRequest, ModelInstance& model, session_key_t sessionKey) {
     ReleaseSessionGuard releaseSessionGuard(this->getNodeSession(sessionKey));
     // Wait for tensor results
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Waiting for infer request to finish", getName(), sessionKey);
@@ -106,7 +106,7 @@ Status DLNode::fetchResults(TensorMap& outputs, ov::InferRequest& inferRequest, 
                         realModelOutputName);
                     return status;
                 }
-                outputs.emplace(std::make_pair(output_name, std::move(copiedTensor)));
+                outputs.emplace(std::make_pair(output_name, TensorWithSource(std::move(copiedTensor))));
             } catch (const ov::Exception& e) {
                 Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
                 SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session:{} Error during getting tensor {}; exception message: {}", getName(), sessionKey, status.string(), e.what());

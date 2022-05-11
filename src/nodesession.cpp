@@ -28,7 +28,7 @@ const NodeSessionMetadata& NodeSession::getNodeSessionMetadata() const {
     return this->metadata;
 }
 
-Status NodeSession::setInput(const std::string& inputName, ov::Tensor& tensor, session_id_t shardId) {
+Status NodeSession::setInput(const std::string& inputName, TensorWithSource& tensor, session_id_t shardId) {
     return inputHandler->setInput(inputName, tensor, shardId);
 }
 

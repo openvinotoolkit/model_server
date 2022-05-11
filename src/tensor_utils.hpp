@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2021 Intel Corporation
+// Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,19 +15,32 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <vector>
-
 #include <openvino/openvino.hpp>
-
-#include "tensor_utils.hpp"
 
 namespace ovms {
 
-using TensorMap = std::unordered_map<std::string, ov::Tensor>;
-using TensorVector = std::vector<ov::Tensor>;
-using TensorWithSourceMap = std::unordered_map<std::string, TensorWithSource>;
+class TensorWithSource {
+public:
+    TensorWithSource(const ov::Tensor& actual) :
+        actual(actual) {}
+    TensorWithSource(const ov::Tensor& actual, const ov::Tensor& source) :
+        actual(actual),
+        source(source) {}
+
+    ov::Tensor& getActualTensor() {
+        return this->actual;
+    }
+
+    ov::Tensor& getSourceTensor() {
+        return this->source;
+    }
+
+    bool hasSource() const {
+        return (bool)this->source;
+    }
+
+private:
+    ov::Tensor actual, source;
+};
 
 }  // namespace ovms

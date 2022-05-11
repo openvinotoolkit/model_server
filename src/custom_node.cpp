@@ -65,7 +65,7 @@ Status CustomNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSe
         nodeSession.getSessionKey());
 }
 
-Status CustomNode::fetchResults(TensorMap& outputs, session_key_t sessionKey) {
+Status CustomNode::fetchResults(TensorWithSourceMap& outputs, session_key_t sessionKey) {
     auto& session = static_cast<CustomNodeSession&>(this->getNodeSession(sessionKey));
     session.clearInputs();
 
@@ -87,7 +87,7 @@ Status CustomNode::fetchResults(TensorMap& outputs, session_key_t sessionKey) {
                 return StatusCode::NODE_LIBRARY_MISSING_OUTPUT;
             }
 
-            outputs.emplace(std::make_pair(output_name, std::move(resultTensor)));
+            outputs.emplace(std::make_pair(output_name, TensorWithSource(std::move(resultTensor))));
             SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Node: {} session: {} Tensor with name {} has been prepared under alias {}",
                 getName(), sessionKey, realOutputName, output_name);
         }

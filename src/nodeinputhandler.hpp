@@ -24,19 +24,24 @@
 
 #include "session_id.hpp"
 #include "status.hpp"
+#include "tensor_utils.hpp"
 #include "tensormap.hpp"
 
 namespace ovms {
 
+// This class encapsulates input tensor gathering and preprocessing before node execution.
+// It is resposible for gathering multiple tensors into one (in case of demultiplexers)
+// and taking care of source tensor lifetime if source tensor is present.
 class NodeInputHandler {
 protected:
     TensorMap inputTensors;
+    TensorVector sourceTensorRefs;
     uint32_t remainingDependencies;
     bool isUsed = false;
 
 public:
     NodeInputHandler(uint32_t inputsMissingCount);
-    virtual Status setInput(const std::string& inputName, ov::Tensor& tensor, session_id_t shardId);
+    virtual Status setInput(const std::string& inputName, TensorWithSource& tensor, session_id_t shardId);
     const TensorMap& getInputs() {
         isUsed = true;
         return inputTensors;
