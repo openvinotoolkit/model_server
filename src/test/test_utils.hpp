@@ -39,6 +39,7 @@
 #include "../tensorinfo.hpp"
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;
+using inputs_info_t2 = std::map<std::string, std::tuple<ovms::shape_t, ovms::Precision>>;
 using inputs_info_kfs_t = std::map<std::string, std::tuple<ovms::shape_t, const std::string>>;
 
 const std::string dummy_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy";
@@ -134,70 +135,17 @@ ovms::tensor_map_t prepareTensors(
     const std::unordered_map<std::string, ovms::Shape>&& tensors,
     ovms::Precision precision = ovms::Precision::FP32);
 
-static tensorflow::serving::PredictRequest preparePredictRequest(inputs_info_t requestInputs, const std::vector<float>& data = {}) {
-    tensorflow::serving::PredictRequest request;
-    for (auto const& it : requestInputs) {
-        auto& name = it.first;
-        auto [shape, dtype] = it.second;
-
-        auto& input = (*request.mutable_inputs())[name];
-        input.set_dtype(dtype);
-        size_t numberOfElements = 1;
-        for (auto const& dim : shape) {
-            input.mutable_tensor_shape()->add_dim()->set_size(dim);
-            numberOfElements *= dim;
-        }
-        if (dtype == tensorflow::DataType::DT_HALF) {
-            if (data.size() == 0) {
-                for (size_t i = 0; i < numberOfElements; i++) {
-                    input.add_half_val('1');
-                }
-            } else {
-                for (size_t i = 0; i < data.size(); i++) {
-                    input.add_half_val(data[i]);
-                }
-            }
-            break;
-        }
-        if (dtype == tensorflow::DataType::DT_UINT16) {
-            if (data.size() == 0) {
-                for (size_t i = 0; i < numberOfElements; i++) {
-                    input.add_int_val('1');
-                }
-            } else {
-                for (size_t i = 0; i < data.size(); i++) {
-                    input.add_int_val(data[i]);
-                }
-            }
-            break;
-        }
-        if (data.size() == 0) {
-            *input.mutable_tensor_content() = std::string(numberOfElements * tensorflow::DataTypeSize(dtype), '1');
-        } else {
-            std::string content;
-            content.resize(numberOfElements * tensorflow::DataTypeSize(dtype));
-            std::memcpy(content.data(), data.data(), content.size());
-            *input.mutable_tensor_content() = content;
-        }
-    }
-    return request;
-}
+void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t2 requestInputs, const std::vector<float>& data = {});
 
 ::inference::ModelInferRequest_InferInputTensor* findKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name);
 std::string* findKFSInferInputTensorContent(::inference::ModelInferRequest& request, const std::string& name);
 
 void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,
     const std::vector<float>& data = {});
+void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
+    const std::vector<float>& data = {});
 
-static ::inference::ModelInferRequest prepareKFSPredictRequest(inputs_info_kfs_t requestInputs, const std::vector<float>& data = {}) {
-    ::inference::ModelInferRequest request;
-    request.mutable_inputs()->Clear();
-    request.mutable_raw_input_contents()->Clear();
-    for (auto const& it : requestInputs) {
-        prepareKFSInferInputTensor(request, it.first, it.second, data);
-    }
-    return request;
-}
+void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_t2 requestInputs, const std::vector<float>& data = {});
 
 tensorflow::serving::PredictRequest prepareBinaryPredictRequest(const std::string& inputName, const int batchSize = 1);
 tensorflow::serving::PredictRequest prepareBinary4x4PredictRequest(const std::string& inputName, const int batchSize = 1);
