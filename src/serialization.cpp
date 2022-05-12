@@ -23,7 +23,6 @@ Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
-    responseOutput.Clear();
     if (servableOutput->getOvPrecision() != tensor.get_element_type()) {
         SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in precision expected:{} vs actual:{}",
             servableOutput->getName(),
@@ -72,7 +71,10 @@ Status serializeTensorToTensorProto(
         }
         responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
-    responseOutput.mutable_tensor_content()->assign((char*)tensor.data(), tensor.get_byte_size());
+    // Output may already be filled during gathering
+    if (responseOutput.mutable_tensor_content()->size() == 0) {
+        responseOutput.mutable_tensor_content()->assign((char*)tensor.data(), tensor.get_byte_size());
+    }
     return StatusCode::OK;
 }
 

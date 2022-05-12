@@ -76,11 +76,12 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
         newDims.insert(newDims.begin(),
             collapsingDetails->collapsedSessionSizes.begin(),
             collapsingDetails->collapsedSessionSizes.end());
-        ov::Tensor consolidatedTensor;
-        auto status = createSharedTensor(consolidatedTensor, precision, newDims);
-        if (!status.ok()) {
-            return status;
-        }
+        ov::Tensor consolidatedTensor = makeTensorForWrite(inputName, precision, newDims);
+        // ov::Tensor consolidatedTensor;
+        // auto status = createSharedTensor(consolidatedTensor, precision, newDims);
+        // if (!status.ok()) {
+        //     return status;
+        // }
         for (auto& [shardId, tensor] : shardMap) {
             OVMS_PROFILE_SCOPE("Copy Shard");
             if ((tensor.get_element_type() != precision) ||

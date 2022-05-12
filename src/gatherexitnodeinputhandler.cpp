@@ -1,10 +1,11 @@
 //*****************************************************************************
-// Copyright 2021 Intel Corporation
+// Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,22 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "exitnodesession.hpp"
-
-#include <utility>
+#include "gatherexitnodeinputhandler.hpp"
 
 #include "logging.hpp"
-#include "nodeinputhandler.hpp"
+#include "profiler.hpp"
 
 namespace ovms {
-// ExitNodeSession::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
-//     NodeSession(metadata, nodeName, inputsCount, collapsingDetails) {}
 
-// ExitNodeSession::~ExitNodeSession() = default;
-
-// void ExitNodeSession::release() {}
-
-// const TensorMap& ExitNodeSession::getInputTensors() const {
-//     return this->inputHandler->getInputs();
-// }
 }  // namespace ovms
