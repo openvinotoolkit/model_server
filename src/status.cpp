@@ -241,6 +241,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_NO_OF_CHANNELS, "Invalid number of channels in binary input"},
     {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, "Binary input images for this endpoint are required to have the same resolution"},
     {StatusCode::STRING_VAL_EMPTY, "String val is empty"},
+    {StatusCode::BYTES_CONTENTS_EMPTY, "Bytes contents is empty"},
     {StatusCode::NODE_LIBRARY_INITIALIZE_FAILED, "Failure during custom node library initialization"},
 
     // Model control API
@@ -320,6 +321,7 @@ const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusM
     {StatusCode::INVALID_NO_OF_CHANNELS, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::STRING_VAL_EMPTY, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::BYTES_CONTENTS_EMPTY, grpc::StatusCode::INVALID_ARGUMENT},
 };
 
 const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::httpStatusMap = {

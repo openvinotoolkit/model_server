@@ -20,6 +20,12 @@
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#include "kfs_grpc_inference_service.hpp"
+#pragma GCC diagnostic pop
+
 namespace ovms {
 Status convertStringValToTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
+Status convertStringToTensor(const std::string& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
 }  // namespace ovms

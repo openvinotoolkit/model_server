@@ -262,6 +262,7 @@ enum class StatusCode {
     INVALID_NO_OF_CHANNELS,
     BINARY_IMAGES_RESOLUTION_MISMATCH,
     STRING_VAL_EMPTY,
+    BYTES_CONTENTS_EMPTY,
 
     // Model control API
     OK_NOT_RELOADED, /*!< Operation succeeded but no config reload was needed */

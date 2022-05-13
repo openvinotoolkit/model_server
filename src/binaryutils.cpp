@@ -158,6 +158,14 @@ bool checkBatchSizeMismatch(const std::shared_ptr<TensorInfo>& tensorInfo,
     return !tensorInfo->getBatchSize().value().match(batchSize);
 }
 
+bool validateStringLength(const std::shared_ptr<TensorInfo>& tensorInfo,
+    const int stringLength) {
+    if (!tensorInfo->getBatchSize().has_value()) {
+        return true;
+    }
+    return !tensorInfo->getBatchSize().value().match(batchSize);
+}
+
 Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage, bool enforceResolutionAlignment) {
     // Binary inputs are supported for any endpoint that is compatible with N...HWC layout.
     // With unknown layout, there is no way to deduce expected endpoint input resolution.
@@ -198,6 +206,40 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         if (src.string_val(i).size() <= 0) {
             return StatusCode::STRING_VAL_EMPTY;
         }
+    }
+
+    return StatusCode::OK;
+}
+
+Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
+    const std::string& src) {
+    auto status = validateLayout(tensorInfo);
+    if (!status.ok()) {
+        return status;
+    }
+    // 4 for default pipelines, 5 for pipelines with demultiplication at entry
+    bool isShapeLengthValid = tensorInfo->getShape().size() == 4 ||
+                              (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5);
+    if (!isShapeLengthValid) {
+        return StatusCode::INVALID_SHAPE;
+    }
+
+    // if (checkBatchSizeMismatch(tensorInfo, src.raw_input_contents_size())) {
+    //     SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}",
+    //         tensorInfo->getMappedName(),
+    //         tensorInfo->getBatchSize().has_value() ? tensorInfo->getBatchSize().value().toString() : std::string{"none"},
+    //         src.contents().bytes_contents_size());
+    //     return StatusCode::INVALID_BATCH_SIZE;
+    // }
+
+    // for (size_t i = 0; i < src.contents().bytes_contents_size(); i++) {
+    //     if (src.contents().bytes_contents(i).size() <= 0) {
+    //         return StatusCode::BYTES_CONTENTS_EMPTY;
+    //     }
+    // }
+
+    if (src.size() <= 0) {
+        return StatusCode::BYTES_CONTENTS_EMPTY;
     }
 
     return StatusCode::OK;
@@ -322,6 +364,63 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
     return StatusCode::OK;
 }
 
+Status convertTensorToMatsMatchingTensorInfo(const std::string& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    Dimension targetHeight = getTensorInfoHeightDim(tensorInfo);
+    Dimension targetWidth = getTensorInfoWidthDim(tensorInfo);
+
+    // Enforce resolution alignment against first image in the batch if resize is not supported.
+    bool resizeSupported = isResizeSupported(tensorInfo);
+    bool enforceResolutionAlignment = !resizeSupported;
+
+    // for (int i = 0; i < src.contents().bytes_contents_size(); i++) {
+        cv::Mat image = convertStringValToMat(src);
+        if (image.data == nullptr)
+            return StatusCode::IMAGE_PARSING_FAILED;
+
+        cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
+        auto status = validateInput(tensorInfo, image, firstImage, enforceResolutionAlignment);
+        if (status != StatusCode::OK) {
+            return status;
+        }
+
+//        if (i == 0) {
+            updateTargetResolution(targetHeight, targetWidth, image);
+//        }
+
+        if (!isPrecisionEqual(image.depth(), tensorInfo->getPrecision())) {
+            cv::Mat imageCorrectPrecision;
+            status = convertPrecision(image, imageCorrectPrecision, tensorInfo->getPrecision());
+
+            if (status != StatusCode::OK) {
+                return status;
+            }
+            image = std::move(imageCorrectPrecision);
+        }
+        if (!targetHeight.isStatic() || !targetWidth.isStatic()) {
+            return StatusCode::INTERNAL_ERROR;
+        }
+        if (resizeNeeded(image, targetHeight.getStaticValue(), targetWidth.getStaticValue())) {
+            if (!resizeSupported) {
+                return StatusCode::INVALID_SHAPE;
+            }
+            cv::Mat imageResized;
+            status = resizeMat(image, imageResized, targetHeight.getStaticValue(), targetWidth.getStaticValue());
+            if (!status.ok()) {
+                return status;
+            }
+            image = std::move(imageResized);
+        }
+
+        // if (i == 0 && src.contents().bytes_contents_size() > 1) {
+        //     // TODO: CVS-78796 Check if the total bytes for tensor will not exceed 1GB.
+        //     // Multiply src.string_val_size() * image resolution * precision size
+        // }
+
+        images.push_back(image);
+    // }
+
+    return StatusCode::OK;
+}
 shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
     shape_t dims;
     dims.push_back(images.size());
@@ -368,6 +467,26 @@ ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::shared_p
 }
 
 Status convertStringValToTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo) {
+    auto status = validateTensor(tensorInfo, src);
+    if (status != StatusCode::OK) {
+        return status;
+    }
+
+    std::vector<cv::Mat> images;
+
+    status = convertTensorToMatsMatchingTensorInfo(src, images, tensorInfo);
+    if (!status.ok()) {
+        return status;
+    }
+
+    tensor = convertMatsToTensor(images, tensorInfo);
+    if (!tensor) {
+        return StatusCode::IMAGE_PARSING_FAILED;
+    }
+    return StatusCode::OK;
+}
+
+Status convertStringToTensor(const std::string& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo) {
     auto status = validateTensor(tensorInfo, src);
     if (status != StatusCode::OK) {
         return status;

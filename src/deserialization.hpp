@@ -218,29 +218,26 @@ Status deserializePredictRequest(
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
             }
             ov::Tensor tensor;
-
-            // TODO implement binary inputs for KFS
-            // if (requestInput.datatype() == tensorflow::DataType::DT_STRING) {
-            //     SPDLOG_DEBUG("Request contains binary input: {}", name);
-            //     status = convertStringValToTensor(requestInput, tensor, tensorInfo);
-            //     if (!status.ok()) {
-            //         SPDLOG_DEBUG("Binary inputs conversion failed.");
-            //         return status;
-            //     }
-            // } else {
-            //     tensor = deserializeTensorProto<TensorProtoDeserializator>(
-            //         requestInput, tensorInfo);
-            // }
-
             auto inputIndex = requestInputItr - request.inputs().begin();
-            tensor = deserializeTensorProto<TensorProtoDeserializator>(
-                *requestInputItr, tensorInfo, request.raw_input_contents()[inputIndex]);
 
-            if (!tensor) {
-                status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
-                SPDLOG_DEBUG(status.string());
-                return status;
+            if (requestInputItr->datatype() == "BYTES") {
+                SPDLOG_DEBUG("Request contains binary input: {}", name);
+                status = convertStringToTensor(request.raw_input_contents()[inputIndex], tensor, tensorInfo);
+                if (!status.ok()) {
+                    SPDLOG_DEBUG("Binary inputs conversion failed.");
+                    return status;
+                }
+            } else {
+                tensor = deserializeTensorProto<TensorProtoDeserializator>(
+                    *requestInputItr, tensorInfo, request.raw_input_contents()[inputIndex]);
+
+                if (!tensor) {
+                    status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
+                    SPDLOG_DEBUG(status.string());
+                    return status;
+                }
             }
+
             const std::string ovTensorName = isPipeline ? name : tensorInfo->getName();
             status = inputSink.give(ovTensorName, tensor);
             if (!status.ok()) {
