@@ -425,7 +425,6 @@ public:
         })",
             mappingConfigPath);
     }
-    RequestType hack;
 };
 
 TYPED_TEST_SUITE(TestPredictWithMapping, MyTypes);

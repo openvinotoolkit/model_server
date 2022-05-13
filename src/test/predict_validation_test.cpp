@@ -1062,7 +1062,6 @@ TEST_P(KFSPredictValidationPrecision, ValidPrecisions) {
     preparePredictRequest(request,
         {
             {tensorName,
-                // TODO std::tuple<ovms::shape_t, ovms::KFSDataType>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::ovmsPrecisionToKFSPrecision(testedPrecision)}},
                 std::tuple<ovms::shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, testedPrecision}},
         });
     auto status = ovms::request_validation_utils::validate(request, mockedInputsInfo, "dummy", ovms::model_version_t{1});

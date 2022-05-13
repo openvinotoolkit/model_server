@@ -92,7 +92,7 @@ public:
     std::string modelPath;
     std::string dummyModelName;
     ovms::model_version_t modelVersion;
-    inputs_info_t2 modelInput;
+    inputs_info_t modelInput;
     std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
     std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
     std::unique_ptr<ov::Core> ieCore;
@@ -124,7 +124,7 @@ public:
 
 class StatefulModelInstanceInputValidation : public ::testing::Test {
 public:
-    inputs_info_t2 modelInput;
+    inputs_info_t modelInput;
     std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceId;
     std::pair<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>> sequenceControlStart;
     std::unique_ptr<ov::Core> ieCore;
@@ -297,7 +297,7 @@ public:
     }
 };
 
-void RunStatefulPredict(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t2 modelInput, uint64_t seqId, uint32_t sequenceControl) {
+void RunStatefulPredict(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, uint32_t sequenceControl) {
     tensorflow::serving::PredictRequest request;
     preparePredictRequest(request, modelInput);
     setRequestSequenceId(&request, seqId);
@@ -311,7 +311,7 @@ void RunStatefulPredict(const std::shared_ptr<ovms::ModelInstance> modelInstance
     EXPECT_TRUE(CheckSequenceIdResponse(response, seqId));
 }
 
-void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t2 modelInput, int numberOfNoControlRequests, uint64_t seqId,
+void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstance, inputs_info_t modelInput, int numberOfNoControlRequests, uint64_t seqId,
     std::future<void>* waitBeforeSequenceStarted,
     std::future<void>* waitAfterSequenceStarted,
     std::future<void>* waitBeforeSequenceFinished) {
@@ -348,7 +348,7 @@ void RunStatefulPredicts(const std::shared_ptr<ovms::ModelInstance> modelInstanc
     RunStatefulPredict(modelInstance, modelInput, seqId, ovms::SEQUENCE_END);
 }
 
-void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t2 modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario) {
+void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
 
@@ -440,7 +440,7 @@ void RunStatefulPredictsOnMockedInferStart(const std::shared_ptr<MockedStatefulM
     }
 }
 
-void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t2 modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario) {
+void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
 
@@ -543,7 +543,7 @@ void RunStatefulPredictsOnMockedInferMiddle(const std::shared_ptr<MockedStateful
     }
 }
 
-void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t2 modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario) {
+void RunStatefulPredictsOnMockedInferEnd(const std::shared_ptr<MockedStatefulModelInstance> modelInstance, inputs_info_t modelInput, uint64_t seqId, SequenceTimeoutScenarios sequenceTimeoutScenario) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> unload_guard;
     std::promise<void> waitBeforeSequenceStarted, waitAfterSequenceStarted, waitBeforeSequenceFinished;
 

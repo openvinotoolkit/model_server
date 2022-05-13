@@ -38,9 +38,7 @@
 #include "../node_library.hpp"
 #include "../tensorinfo.hpp"
 
-using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, tensorflow::DataType>>;
-using inputs_info_t2 = std::map<std::string, std::tuple<ovms::shape_t, ovms::Precision>>;
-using inputs_info_kfs_t = std::map<std::string, std::tuple<ovms::shape_t, const std::string>>;
+using inputs_info_t = std::map<std::string, std::tuple<ovms::shape_t, ovms::Precision>>;
 
 const std::string dummy_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy";
 const std::string dummy_fp64_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_fp64";
@@ -135,7 +133,7 @@ ovms::tensor_map_t prepareTensors(
     const std::unordered_map<std::string, ovms::Shape>&& tensors,
     ovms::Precision precision = ovms::Precision::FP32);
 
-void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t2 requestInputs, const std::vector<float>& data = {});
+void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {});
 
 ::inference::ModelInferRequest_InferInputTensor* findKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name);
 std::string* findKFSInferInputTensorContent(::inference::ModelInferRequest& request, const std::string& name);
@@ -145,7 +143,7 @@ void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const s
 void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data = {});
 
-void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_t2 requestInputs, const std::vector<float>& data = {});
+void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {});
 
 tensorflow::serving::PredictRequest prepareBinaryPredictRequest(const std::string& inputName, const int batchSize = 1);
 tensorflow::serving::PredictRequest prepareBinary4x4PredictRequest(const std::string& inputName, const int batchSize = 1);

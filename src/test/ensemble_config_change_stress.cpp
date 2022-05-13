@@ -1332,7 +1332,7 @@ public:
             }
         }
     }
-    virtual inputs_info_t2 getExpectedInputsInfo() {
+    virtual inputs_info_t getExpectedInputsInfo() {
         return {{pipelineInputName,
             std::tuple<ovms::shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}}};
     }
@@ -1762,7 +1762,7 @@ public:
         factors.mutable_tensor_content()->assign((char*)factorsData.data(), factorsData.size() * sizeof(float));
         return request;
     }
-    inputs_info_t2 getExpectedInputsInfo() override {
+    inputs_info_t getExpectedInputsInfo() override {
         return {{pipelineInputName,
                     std::tuple<ovms::shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}},
             {pipelineFactorsInputName,

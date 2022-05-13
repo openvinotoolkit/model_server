@@ -18,8 +18,6 @@
 
 #include <unordered_map>
 
-#include <spdlog/spdlog.h>
-
 namespace ovms {
 
 std::string toString(Precision precision) {

@@ -25,7 +25,7 @@ using tensorflow::serving::PredictResponse;
 
 using ovms::TensorInfo;
 
-void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_t2 requestInputs, const std::vector<float>& data) {
+void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_t requestInputs, const std::vector<float>& data) {
     request.mutable_inputs()->Clear();
     request.mutable_raw_input_contents()->Clear();
     for (auto const& it : requestInputs) {
@@ -33,7 +33,7 @@ void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_
     }
 }
 
-void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t2 requestInputs, const std::vector<float>& data) {
+void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data) {
     request.mutable_inputs()->clear();
     for (auto const& it : requestInputs) {
         auto& name = it.first;
