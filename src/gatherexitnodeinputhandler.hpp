@@ -55,6 +55,9 @@ public:
     //    return GatherNodeInputHandler::notifyFinishedDependency();
     //  }
 
+    ~GatherExitNodeInputHandler() {
+    }
+
     ov::Tensor makeTensorForWrite(const std::string& name, ov::element::Type_t precision, const ov::Shape& shape) override {
         OVMS_PROFILE_FUNCTION();
         size_t size = 1;
@@ -63,7 +66,6 @@ public:
         }
         size *= ov::element::Type(precision).size();
         auto* buf = prepareBuffer(response, name, size);
-        std::cout << buf << std::endl;
         return ov::Tensor(precision, shape, buf);
     }
 };

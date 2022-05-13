@@ -39,6 +39,24 @@ class GatherNodeInputHandler : public NodeInputHandler {
 
 public:
     GatherNodeInputHandler(uint32_t inputsMissingCount, const CollapseDetails& collapsingDetails);
+    ~GatherNodeInputHandler() {
+        {
+            OVMS_PROFILE_SCOPE("shardsStorage.clear");
+            shardsStorage.clear();
+        }
+        {
+            OVMS_PROFILE_SCOPE("collapsingDetails.reset");
+            collapsingDetails.reset();
+        }
+        {
+            OVMS_PROFILE_SCOPE("inputTensors.clear");
+            inputTensors.clear();
+        }
+        {
+            OVMS_PROFILE_SCOPE("sourceTensorRefs.clear");
+            sourceTensorRefs.clear();
+        }
+    }
     Status setInput(const std::string& inputName, TensorWithSource& tensor, session_id_t shardId) override;
     Status notifyFinishedDependency() override;
 

@@ -23,6 +23,8 @@ Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
+    OVMS_PROFILE_SYNC_BEGIN("Serialize Precision");
     if (servableOutput->getOvPrecision() != tensor.get_element_type()) {
         SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in precision expected:{} vs actual:{}",
             servableOutput->getName(),
@@ -54,6 +56,8 @@ Status serializeTensorToTensorProto(
         return status;
     }
     }
+    OVMS_PROFILE_SYNC_END("Serialize Precision");
+    OVMS_PROFILE_SYNC_BEGIN("Serialize Shape");
     responseOutput.mutable_tensor_shape()->Clear();
     auto& effectiveNetworkOutputShape = servableOutput->getShape();
     ov::Shape actualTensorShape = tensor.get_shape();
@@ -71,10 +75,13 @@ Status serializeTensorToTensorProto(
         }
         responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
+    OVMS_PROFILE_SYNC_END("Serialize Shape");
+    OVMS_PROFILE_SYNC_BEGIN("Serialize Buffer");
     // Output may already be filled during gathering
     if (responseOutput.mutable_tensor_content()->size() == 0) {
         responseOutput.mutable_tensor_content()->assign((char*)tensor.data(), tensor.get_byte_size());
     }
+    OVMS_PROFILE_SYNC_END("Serialize Buffer");
     return StatusCode::OK;
 }
 

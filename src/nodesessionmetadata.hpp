@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#include "profiler.hpp"
 #include "session_id.hpp"
 
 namespace ovms {
@@ -39,6 +40,12 @@ class NodeSessionMetadata {
     std::vector<std::string> sessionsLevels;
 
 public:
+    ~NodeSessionMetadata() {
+        OVMS_PROFILE_SCOPE("~NodeSessionMetadata");
+        details.clear();
+        sessionsLevels.clear();
+    }
+
     std::vector<NodeSessionMetadata> generateSubsessions(const std::string& nodeName, session_id_t subsessionSize) const;
     std::string getSessionKey(const std::set<std::string>& ignoredNodeNames = {}) const;
     std::pair<NodeSessionMetadata, CollapseDetails> getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const;

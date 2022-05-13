@@ -24,6 +24,7 @@
 #include "nodeinputhandler.hpp"
 #include "nodesession.hpp"
 #include "nodesessionmetadata.hpp"
+#include "profiler.hpp"
 #include "status.hpp"
 #include "tensormap.hpp"
 
@@ -44,7 +45,10 @@ public:
             this->inputHandler = std::make_unique<GatherExitNodeInputHandler<ResponseType>>(inputsCount, collapsingDetails, response);
         }
     }
-    virtual ~ExitNodeSession() = default;
+    virtual ~ExitNodeSession() {
+        OVMS_PROFILE_SCOPE("~ExitNodeSession()");
+        SPDLOG_INFO("~ExitNodeSession()");
+    }
 
     const TensorMap& getInputTensors() const { return this->inputHandler->getInputs(); }
     void release() override {}

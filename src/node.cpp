@@ -71,7 +71,10 @@ Status Node::fetchResults(session_key_t sessionId, SessionResults& nodeSessionOu
         status = demultiplyOutputs(nodeSessionOutputs);
     }
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Will remove node: {} session: {}", getName(), sessionId);
-    nodeSessions.erase(sessionId);
+    {
+        OVMS_PROFILE_SCOPE("Erase Exit Node Session");
+        nodeSessions.erase(it);
+    }
     return status;
 }
 

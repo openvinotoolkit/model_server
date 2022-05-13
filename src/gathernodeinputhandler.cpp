@@ -105,6 +105,9 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
                 tensor.data(),
                 memstep);
         }
+        OVMS_PROFILE_SYNC_BEGIN("Remove used shards");
+        shardMap.clear();
+        OVMS_PROFILE_SYNC_END("Remove used shards");
         inputTensors.insert({inputName, consolidatedTensor});
     }
     return StatusCode::OK;

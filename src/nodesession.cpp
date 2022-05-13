@@ -19,10 +19,26 @@
 #include "logging.hpp"
 #include "nodeinputhandler.hpp"
 #include "nodeoutputhandler.hpp"
+#include "profiler.hpp"
 #include "timer.hpp"
 
 namespace ovms {
-NodeSession::~NodeSession() = default;
+NodeSession::~NodeSession() {
+    OVMS_PROFILE_SCOPE("~NodeSession");
+    // 0.176ms
+    {
+        OVMS_PROFILE_SCOPE("timer.reset");
+        timer.reset();
+    }
+    {
+        OVMS_PROFILE_SCOPE("inputHandler.reset");
+        inputHandler.reset();
+    }
+    {
+        OVMS_PROFILE_SCOPE("outputHandler.reset");
+        outputHandler.reset();
+    }
+}
 
 const NodeSessionMetadata& NodeSession::getNodeSessionMetadata() const {
     return this->metadata;
