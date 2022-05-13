@@ -263,7 +263,15 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
 
 template <>
 Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::validateNumberOfBinaryInputShapeDimensions(const KFSInputTensorType& proto) const {
-    return StatusCode::OK;  // TODO implement with KFS binary inputs
+    RequestShapeInfo<KFSInputTensorType, KFSShapeType> rsi(proto);
+    if (rsi.getShapeSize() != 1) {
+        std::stringstream ss;
+        ss << "Expected number of binary input shape dimensions: 1; Actual: " << rsi.getShapeSize() << "; input name: " << getCurrentlyValidatedInputName();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of shape dimensions - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, details);
+    }
+    return StatusCode::OK;
 }
 
 template <typename RequestType, typename InputTensorType, typename InputIteratorType, typename ShapeType>
@@ -312,7 +320,28 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
 }
 template <>
 Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::checkBinaryBatchSizeMismatch(const KFSInputTensorType& proto, const Dimension& servableBatchSize, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
-    return StatusCode::OK;  // TODO implement with KFS binary inputs ideally with one template
+    RequestShapeInfo<KFSInputTensorType, KFSShapeType> rsi(proto);
+    if (proto.contents().bytes_contents_size() <= 0) {
+        std::stringstream ss;
+        ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_BATCH_SIZE, details);
+    }
+    if (servableBatchSize.match(rsi.getDim(0))) {
+        return StatusCode::OK;
+    }
+    if (batchingMode == AUTO) {
+        finalStatus = StatusCode::BATCHSIZE_CHANGE_REQUIRED;
+        return StatusCode::OK;
+    } else if (shapeMode != AUTO) {
+        std::stringstream ss;
+        ss << "Expected: " << servableBatchSize.toString() << "; Actual: " << proto.contents().bytes_contents_size() << "; input name: " << getCurrentlyValidatedInputName();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid batch size - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_BATCH_SIZE, details);
+    }
+    return StatusCode::OK;
 }
 
 template <typename RequestType, typename InputTensorType, typename IteratorType, typename ShapeType>

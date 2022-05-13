@@ -249,12 +249,10 @@ public:
         return performInferenceWithRequest(request, response, servableName);
     }
 
-    ovms::Status performInferenceWithBinaryImageInput(tensorflow::serving::PredictResponse& response, const std::string& inputName, const std::string& servableName = "increment_1x3x4x5", int batchSize = 1) {
-        auto request = prepareBinaryPredictRequest(inputName, batchSize);
+    ovms::Status performInferenceWithBinaryImageInput(ResponseType& response, const std::string& inputName, const std::string& servableName = "increment_1x3x4x5", int batchSize = 1) {
+        RequestType request;
+        prepareBinaryPredictRequest(request, inputName, batchSize);
         return performInferenceWithRequest(request, response, servableName);
-    }
-    ovms::Status performInferenceWithBinaryImageInput(KFSResponseType& response, const std::string& inputName, const std::string& servableName = "increment_1x3x4x5", int batchSize = 1) {
-        return StatusCode::OK;  // TODO FIXME
     }
 
 public:
@@ -937,8 +935,6 @@ TYPED_TEST(TestPredict, NetworkNotLoadedWhenLayoutAndDimsInconsistent) {
  * 6. Do the inference with single binary image tensor - expect status OK and result in NCHW layout
  * */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputChangeModelInputLayout) {
-    if (std::is_same<TypeParam, KFSInterface>::value)
-        GTEST_SKIP();
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -980,8 +976,6 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputChangeModelInputLayout) {
  * 2. Do the inference with single binary image tensor with witdth exceeding shape range - expect status OK and reshaped output tensor
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputAndShapeDynamic) {
-    if (std::is_same<TypeParam, KFSInterface>::value)
-        GTEST_SKIP();
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1006,8 +1000,6 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputAndShapeDynamic) {
  * 2. Do the inference with batch=5 binary image tensor - expect status OK and result in NCHW layout
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAuto) {
-    if (std::is_same<TypeParam, KFSInterface>::value)
-        GTEST_SKIP();
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1031,7 +1023,6 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAuto) {
  * 1. Load model with input layout=nhwc, batch_size=auto, initial internal layout: nchw, batch_size=1
  * 2. Do the inference with binary image tensor with no shape set - expect status INVALID_NO_OF_SHAPE_DIMENSIONS
 */
-/*
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputNoInputShape) {
     using namespace ovms;
 
@@ -1044,17 +1035,11 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputNoInputShape) {
 
     typename TypeParam::first_type request;
     typename TypeParam::second_type response;
-    auto& tensor = (*request.mutable_inputs())[INCREMENT_1x3x4x5_MODEL_INPUT_NAME];
-    size_t filesize = 0;
-    std::unique_ptr<char[]> image_bytes = nullptr;
-    readRgbJpg(filesize, image_bytes);
-    tensor.add_string_val(image_bytes.get(), filesize);
-    tensor.set_dtype(tensorflow::DataType::DT_STRING);
+    prepareBinaryPredictRequestNoShape(request, INCREMENT_1x3x4x5_MODEL_INPUT_NAME, 1);
 
     // Perform inference with binary input, ensure status INVALID_NO_OF_SHAPE_DIMENSIONS
     ASSERT_EQ(this->performInferenceWithRequest(request, response, "increment_1x3x4x5"), ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
-} */
-// TODO FIXME
+}
 
 /*
  * Scenario - perform inference with with batch size set to auto and batch size not matching on position other than first
@@ -1235,8 +1220,6 @@ TYPED_TEST(TestPredict, PerformInferenceDummyAllDimensionsHaveRange) {
  * 2. Do the inference with batch=5 binary image tensor 1x1 - expect status INVALID_SHAPE, because if any dimension is dynamic, we perform no resize operation.
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionNotMatching) {
-    if (std::is_same<TypeParam, KFSInterface>::value)
-        GTEST_SKIP();
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1259,8 +1242,6 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionNot
  * 2. Do the inference with batch=5 binary image tensor 1x1 - expect status OK, and correct results.
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionMatching) {
-    if (std::is_same<TypeParam, KFSInterface>::value)
-        GTEST_SKIP();
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1285,8 +1266,6 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionMat
  * 2. Do the inference with resolution 1x1 binary image tensor - expect status OK and result in NCHW layout
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputResolutionAny) {
-    if (std::is_same<TypeParam, KFSInterface>::value)
-        GTEST_SKIP();
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1310,7 +1289,6 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputResolutionAny) {
  * 2. Do the inference with resolution 4x4 binary image tensor - expect status OK and reshaped to 2x2
  * 3. Do the inference with resolution 1x1 binary image tensor - expect status OK and result in NCHW layout
  */
-/* TODO
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputResolutionRange) {
     using namespace ovms;
 
@@ -1322,10 +1300,12 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputResolutionRange) {
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
 
     typename TypeParam::second_type response;
+    typename TypeParam::first_type request;
+    prepareBinary4x4PredictRequest(request, INCREMENT_1x3x4x5_MODEL_INPUT_NAME);
 
     ASSERT_EQ(
         this->performInferenceWithRequest(
-            prepareBinary4x4PredictRequest(INCREMENT_1x3x4x5_MODEL_INPUT_NAME), response, "increment_1x3x4x5"),
+            request, response, "increment_1x3x4x5"),
         ovms::StatusCode::OK);
     this->checkOutputShape(response, {1, 3, 2, 2}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 
@@ -1335,6 +1315,6 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputResolutionRange) {
     ASSERT_EQ(this->performInferenceWithBinaryImageInput(response, INCREMENT_1x3x4x5_MODEL_INPUT_NAME, "increment_1x3x4x5"), ovms::StatusCode::OK);
     this->checkOutputShape(response, {1, 3, 1, 1}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
     this->checkOutputValues(response, {37.0, 28.0, 238.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
-}*/
+}
 
 #pragma GCC diagnostic pop

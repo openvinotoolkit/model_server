@@ -145,8 +145,17 @@ void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const s
 
 void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
 
-tensorflow::serving::PredictRequest prepareBinaryPredictRequest(const std::string& inputName, const int batchSize = 1);
-tensorflow::serving::PredictRequest prepareBinary4x4PredictRequest(const std::string& inputName, const int batchSize = 1);
+void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
+void prepareBinaryPredictRequest(::inference::ModelInferRequest& request, const std::string& inputName, const int batchSize);
+
+void prepareBinaryPredictRequestNoShape(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
+void prepareBinaryPredictRequestNoShape(::inference::ModelInferRequest& request, const std::string& inputName, const int batchSize);
+
+void prepareBinary4x4PredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize = 1);
+void prepareBinary4x4PredictRequest(::inference::ModelInferRequest& request, const std::string& inputName, const int batchSize = 1);
+
+template <typename TensorType>
+void prepareInvalidImageBinaryTensor(TensorType& tensor);
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,

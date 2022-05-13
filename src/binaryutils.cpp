@@ -65,8 +65,8 @@ bool isPrecisionEqual(int matPrecision, ovms::Precision tensorPrecision) {
     return false;
 }
 
-cv::Mat convertStringValToMat(const std::string& stringVal) {
-    std::vector<unsigned char> data(stringVal.begin(), stringVal.end());
+cv::Mat convertStringToMat(const std::string& image) {
+    std::vector<unsigned char> data(image.begin(), image.end());
     cv::Mat dataMat(data, true);
 
     try {
@@ -203,6 +203,40 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
     return StatusCode::OK;
 }
 
+Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
+    const ::inference::ModelInferRequest::InferInputTensor& src) {
+    auto status = validateLayout(tensorInfo);
+    if (!status.ok()) {
+        return status;
+    }
+    // 4 for default pipelines, 5 for pipelines with demultiplication at entry
+    bool isShapeLengthValid = tensorInfo->getShape().size() == 4 ||
+                              (tensorInfo->isInfluencedByDemultiplexer() && tensorInfo->getShape().size() == 5);
+    if (!isShapeLengthValid) {
+        return StatusCode::INVALID_SHAPE;
+    }
+
+    if (checkBatchSizeMismatch(tensorInfo, src.contents().bytes_contents_size())) {
+        SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}",
+            tensorInfo->getMappedName(),
+            tensorInfo->getBatchSize().has_value() ? tensorInfo->getBatchSize().value().toString() : std::string{"none"},
+            src.contents().bytes_contents_size());
+        return StatusCode::INVALID_BATCH_SIZE;
+    }
+
+    for (size_t i = 0; i < src.contents().bytes_contents_size(); i++) {
+        if (src.contents().bytes_contents(i).size() <= 0) {
+            return StatusCode::BYTES_CONTENTS_EMPTY;
+        }
+    }
+
+    if (src.contents().bytes_contents_size() <= 0) {
+        return StatusCode::BYTES_CONTENTS_EMPTY;
+    }
+
+    return StatusCode::OK;
+}
+
 Dimension getTensorInfoHeightDim(const std::shared_ptr<TensorInfo>& tensorInfo) {
     size_t numberOfShapeDimensions = tensorInfo->getShape().size();
     if (numberOfShapeDimensions < 4 || numberOfShapeDimensions > 5) {
@@ -264,7 +298,24 @@ bool isResizeSupported(const std::shared_ptr<TensorInfo>& tensorInfo) {
     return true;
 }
 
-Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+const std::string& getBinaryInput(const tensorflow::TensorProto& tensor, size_t i) {
+    return tensor.string_val(i);
+}
+
+const std::string& getBinaryInput(const ::inference::ModelInferRequest::InferInputTensor& tensor, size_t i) {
+    return tensor.contents().bytes_contents(i);
+}
+
+size_t getBinaryInputsSize(const tensorflow::TensorProto& tensor) {
+    return tensor.string_val_size();
+}
+
+size_t getBinaryInputsSize(const ::inference::ModelInferRequest::InferInputTensor& tensor) {
+    return tensor.contents().bytes_contents_size();
+}
+
+template <typename TensorType>
+Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
     Dimension targetHeight = getTensorInfoHeightDim(tensorInfo);
     Dimension targetWidth = getTensorInfoWidthDim(tensorInfo);
 
@@ -272,8 +323,8 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
     bool resizeSupported = isResizeSupported(tensorInfo);
     bool enforceResolutionAlignment = !resizeSupported;
 
-    for (int i = 0; i < src.string_val_size(); i++) {
-        cv::Mat image = convertStringValToMat(src.string_val(i));
+    for (int i = 0; i < getBinaryInputsSize(src); i++) {
+        cv::Mat image = convertStringToMat(getBinaryInput(src, i));
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
 
@@ -311,17 +362,16 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
             image = std::move(imageResized);
         }
 
-        if (i == 0 && src.string_val_size() > 1) {
-            // TODO: CVS-78796 Check if the total bytes for tensor will not exceed 1GB.
-            // Multiply src.string_val_size() * image resolution * precision size
-        }
+        // if (i == 0 && src.contents().bytes_contents_size() > 1) {
+        //     // TODO: CVS-78796 Check if the total bytes for tensor will not exceed 1GB.
+        //     // Multiply src.string_val_size() * image resolution * precision size
+        // }
 
         images.push_back(image);
     }
 
     return StatusCode::OK;
 }
-
 shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
     shape_t dims;
     dims.push_back(images.size());
@@ -367,7 +417,8 @@ ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const std::shared_p
     }
 }
 
-Status convertStringValToTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo) {
+template <typename TensorType>
+Status convertBinaryRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo) {
     auto status = validateTensor(tensorInfo, src);
     if (status != StatusCode::OK) {
         return status;
@@ -386,4 +437,7 @@ Status convertStringValToTensor(const tensorflow::TensorProto& src, ov::Tensor& 
     }
     return StatusCode::OK;
 }
+
+template Status convertBinaryRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
+template Status convertBinaryRequestTensorToOVTensor<::inference::ModelInferRequest::InferInputTensor>(const ::inference::ModelInferRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
 }  // namespace ovms
