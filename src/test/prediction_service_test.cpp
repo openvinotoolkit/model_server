@@ -68,7 +68,7 @@ void serializeAndCheck(int outputSize, ov::InferRequest& inferRequest, const std
     EXPECT_THAT(output, Each(Eq(1.)));
 }
 
-ovms::Status getOutput(const KFSResponseType& response, const std::string&  name, KFSOutputTensorIteratorType& it, size_t& bufferId) { // TODO FIXME
+ovms::Status getOutput(const KFSResponseType& response, const std::string& name, KFSOutputTensorIteratorType& it, size_t& bufferId) {
     it = response.outputs().begin();
     bufferId = 0;
     while (it != response.outputs().end()) {
@@ -84,7 +84,7 @@ ovms::Status getOutput(const KFSResponseType& response, const std::string&  name
     return StatusCode::INVALID_MISSING_INPUT;
 }
 
-ovms::Status getOutput(const TFSResponseType& response, const std::string&  name, TFSOutputTensorIteratorType& it, size_t& bufferId) {
+ovms::Status getOutput(const TFSResponseType& response, const std::string& name, TFSOutputTensorIteratorType& it, size_t& bufferId) {
     it = response.outputs().find(name);
     if (it != response.outputs().end()) {
         return StatusCode::OK;
@@ -93,8 +93,8 @@ ovms::Status getOutput(const TFSResponseType& response, const std::string&  name
 }
 
 template <typename Pair,
-          typename RequestType = typename Pair::first_type,
-          typename ResponseType = typename Pair::second_type>
+    typename RequestType = typename Pair::first_type,
+    typename ResponseType = typename Pair::second_type>
 class TestPredict : public ::testing::Test {
 public:
     void SetUp() {
@@ -196,10 +196,10 @@ public:
 
     void checkOutputShape(const ResponseType& response, const ovms::shape_t& shape, const std::string& outputName = "a");
 
-    static void checkOutputValues(const tensorflow::serving::PredictResponse& response, const std::vector<float>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
+    static void checkOutputValues(const TFSResponseType& response, const std::vector<float>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME) {
         ASSERT_EQ(response.outputs().count(outputName), 1);
         const auto& output_tensor = response.outputs().at(outputName);
-        float* buffer = (float*)output_tensor.tensor_content().data();
+        float* buffer = reinterpret_cast<float*>(const_cast<char*>(output_tensor.tensor_content().data()));
         std::vector<float> actualValues(buffer, buffer + output_tensor.tensor_content().size() / sizeof(float));
         ASSERT_EQ(0, std::memcmp(actualValues.data(), expectedValues.data(), expectedValues.size() * sizeof(float)))
             << readableError(expectedValues.data(), actualValues.data(), expectedValues.size() * sizeof(float));
@@ -208,8 +208,8 @@ public:
         KFSOutputTensorIteratorType it;
         size_t bufferId;
         auto status = getOutput(response, outputName, it, bufferId);
-        ASSERT_TRUE(status.ok());
-        float* buffer = (float*)&(response.raw_output_contents(bufferId));
+        ASSERT_TRUE(status.ok()) << "Couln't find output:" << outputName;
+        float* buffer = reinterpret_cast<float*>(const_cast<char*>(response.raw_output_contents(bufferId).data()));
         ASSERT_EQ(0, std::memcmp(buffer, expectedValues.data(), expectedValues.size() * sizeof(float)))
             << readableError(expectedValues.data(), buffer, expectedValues.size() * sizeof(float));
     }
@@ -254,9 +254,7 @@ public:
         return performInferenceWithRequest(request, response, servableName);
     }
     ovms::Status performInferenceWithBinaryImageInput(KFSResponseType& response, const std::string& inputName, const std::string& servableName = "increment_1x3x4x5", int batchSize = 1) {
-            return StatusCode::OK; // TODO FIXME
-   //     auto request = prepareBinaryPredictRequest(inputName, batchSize);
- //       return performInferenceWithRequest(request, response, servableName);
+        return StatusCode::OK;  // TODO FIXME
     }
 
 public:
@@ -267,8 +265,7 @@ public:
     }
 };
 
-
-template<>
+template <>
 void TestPredict<TFSInterface>::checkOutputShape(const TFSResponseType& response, const ovms::shape_t& shape, const std::string& outputName) {
     ASSERT_EQ(response.outputs().count(outputName), 1);
     const auto& output_tensor = response.outputs().at(outputName);
@@ -278,9 +275,7 @@ void TestPredict<TFSInterface>::checkOutputShape(const TFSResponseType& response
     }
 }
 
-
-
-template<>
+template <>
 void TestPredict<KFSInterface>::checkOutputShape(const KFSResponseType& response, const ovms::shape_t& shape, const std::string& outputName) {
     auto it = response.outputs().begin();
     size_t bufferId;
@@ -297,7 +292,6 @@ public:
     MockModelInstance(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", 42, ieCore) {}
     template <typename RequestType>
-    //const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
     const ovms::Status mockValidate(const RequestType* request) {
         return validate(request);
     }
@@ -306,7 +300,6 @@ public:
 template <typename RequestType>
 void performPrediction(const std::string modelName,
     const ovms::model_version_t modelVersion,
-    //const tensorflow::serving::PredictRequest& request,
     const RequestType& request,
     std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance,
     std::unique_ptr<std::future<void>> waitBeforePerformInference,
@@ -352,8 +345,8 @@ void performPrediction(const std::string modelName,
     serializeAndCheck(outputSize, inferRequest, outputName, modelInstance->getOutputsInfo());
 }
 template <typename Pair,
-          typename RequestType,
-          typename ResponseType>
+    typename RequestType,
+    typename ResponseType>
 void TestPredict<Pair, RequestType, ResponseType>::performPredict(const std::string modelName,
     const ovms::model_version_t modelVersion,
     const RequestType& request,
@@ -369,11 +362,7 @@ void TestPredict<Pair, RequestType, ResponseType>::performPredict(const std::str
         DUMMY_MODEL_OUTPUT_NAME);
 }
 
-using TestPredictTFS = TestPredict<TFSInterface>;
-
-//using MyTypes= ::testing::Types<TFSInterface, KFSInterface>;
-using MyTypes= ::testing::Types<TFSInterface>;
-//using MyTypes= ::testing::Types<KFSInterface>;
+using MyTypes = ::testing::Types<TFSInterface, KFSInterface>;
 TYPED_TEST_SUITE(TestPredict, MyTypes);
 
 TYPED_TEST(TestPredict, SuccesfullOnDummyModel) {
@@ -404,7 +393,7 @@ static const char* oneDummyWithMappedInputConfig = R"(
     ]
 })";
 
-template<typename RequestType>
+template <typename RequestType>
 class TestPredictWithMapping : public TestWithTempDir {
 public:
     std::string ovmsConfig;
@@ -591,7 +580,7 @@ TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     ASSERT_EQ(model->infer(&request, &response, unload_guard), ovms::StatusCode::OK);
 
     // Expect reshape to 1x5
-    this->checkOutputShape(response, {1,5}, DUMMY_MODEL_OUTPUT_NAME);
+    this->checkOutputShape(response, {1, 5}, DUMMY_MODEL_OUTPUT_NAME);
 }
 
 /* // TODO fix
@@ -867,7 +856,6 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelOutputLayoutAndShape) {
     ASSERT_EQ(this->performInferenceWithImageInput(response, {1, 3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}), ovms::StatusCode::OK);
     this->checkOutputShape(response, {1, 1, 2, 3}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
     this->checkOutputValues(response, {2.0, 4.0, 6.0, 3.0, 5.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
-
     // Reload model with layout setting removed
     ASSERT_EQ(config.parseLayoutParameter(""), ovms::StatusCode::OK);
     ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -886,7 +874,7 @@ TYPED_TEST(TestPredict, PerformInferenceChangeModelOutputLayoutAndShape) {
     this->checkOutputValues(response, {2.0, 3.0, 4.0, 5.0, 6.0, 7.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 }
 
- /* Scenario - change input layout and changing batch size at runtime. Expect shape dimension order to stay the same.
+/* Scenario - change input layout and changing batch size at runtime. Expect shape dimension order to stay the same.
  *
  * 1. Load model with output layout=nhwc:nchw, native unchanged shape (1,4,5,3) initial internal layout: nchw
  * 2. Do the inference with (1,4,5,3) shape - expect status OK and result in NCHW layout
@@ -950,6 +938,8 @@ TYPED_TEST(TestPredict, NetworkNotLoadedWhenLayoutAndDimsInconsistent) {
  * 6. Do the inference with single binary image tensor - expect status OK and result in NCHW layout
  * */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputChangeModelInputLayout) {
+    if (std::is_same<TypeParam, KFSInterface>::value)
+        GTEST_SKIP();
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -991,6 +981,8 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputChangeModelInputLayout) {
  * 2. Do the inference with single binary image tensor with witdth exceeding shape range - expect status OK and reshaped output tensor
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputAndShapeDynamic) {
+    if (std::is_same<TypeParam, KFSInterface>::value)
+        GTEST_SKIP();
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1015,6 +1007,8 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputAndShapeDynamic) {
  * 2. Do the inference with batch=5 binary image tensor - expect status OK and result in NCHW layout
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAuto) {
+    if (std::is_same<TypeParam, KFSInterface>::value)
+        GTEST_SKIP();
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1038,7 +1032,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAuto) {
  * 1. Load model with input layout=nhwc, batch_size=auto, initial internal layout: nchw, batch_size=1
  * 2. Do the inference with binary image tensor with no shape set - expect status INVALID_NO_OF_SHAPE_DIMENSIONS
 */
-/* TODO
+/*
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputNoInputShape) {
     using namespace ovms;
 
@@ -1060,7 +1054,9 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputNoInputShape) {
 
     // Perform inference with binary input, ensure status INVALID_NO_OF_SHAPE_DIMENSIONS
     ASSERT_EQ(this->performInferenceWithRequest(request, response, "increment_1x3x4x5"), ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
-}*/ //TODO FIXME
+}*/
+//TODO FIXME
+
 /*
  * Scenario - perform inference with with batch size set to auto and batch size not matching on position other than first
  * 
@@ -1167,7 +1163,8 @@ TYPED_TEST(TestPredict, PerformInferenceDummyBatchSizeAny) {
 */
 
 ovms::Precision getPrecisionFromResponse(KFSResponseType& response, const std::string& name) {
-    KFSOutputTensorIteratorType it;;
+    KFSOutputTensorIteratorType it;
+    ;
     size_t bufferId;
     auto status = getOutput(response, name, it, bufferId);
     EXPECT_TRUE(status.ok());
@@ -1179,7 +1176,7 @@ ovms::Precision getPrecisionFromResponse(TFSResponseType& response, const std::s
     auto status = getOutput(response, name, it, bufferId);
     EXPECT_TRUE(status.ok());
     if (!status.ok())
-       return ovms::Precision::UNDEFINED;
+        return ovms::Precision::UNDEFINED;
     return ovms::TFSPrecisionToOvmsPrecision(it->second.dtype());
 }
 TYPED_TEST(TestPredict, PerformInferenceDummyFp64) {
@@ -1192,10 +1189,10 @@ TYPED_TEST(TestPredict, PerformInferenceDummyFp64) {
     typename TypeParam::first_type request;
     typename TypeParam::second_type response;
 
-    preparePredictRequest(request,{{"input:0", std::tuple<ovms::shape_t, ovms::Precision>{{3, 10}, ovms::Precision::FP64}}});
+    preparePredictRequest(request, {{"input:0", std::tuple<ovms::shape_t, ovms::Precision>{{3, 10}, ovms::Precision::FP64}}});
     ASSERT_EQ(this->performInferenceWithRequest(request, response, "dummy_fp64"), ovms::StatusCode::OK);
     this->checkOutputShape(response, {3, 10}, "output:0");
-    ASSERT_EQ(getPrecisionFromResponse(response,"output:0"), ovms::Precision::FP64);
+    ASSERT_EQ(getPrecisionFromResponse(response, "output:0"), ovms::Precision::FP64);
 }
 
 /* Scenario - inference with different shapes with dynamic dummy, both dimensions reshaped to range.
@@ -1240,6 +1237,8 @@ TYPED_TEST(TestPredict, PerformInferenceDummyAllDimensionsHaveRange) {
  * 2. Do the inference with batch=5 binary image tensor 1x1 - expect status INVALID_SHAPE, because if any dimension is dynamic, we perform no resize operation.
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionNotMatching) {
+    if (std::is_same<TypeParam, KFSInterface>::value)
+        GTEST_SKIP();
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1262,6 +1261,8 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionNot
  * 2. Do the inference with batch=5 binary image tensor 1x1 - expect status OK, and correct results.
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionMatching) {
+    if (std::is_same<TypeParam, KFSInterface>::value)
+        GTEST_SKIP();
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)
@@ -1286,6 +1287,8 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputBatchSizeAnyResolutionMat
  * 2. Do the inference with resolution 1x1 binary image tensor - expect status OK and result in NCHW layout
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputResolutionAny) {
+    if (std::is_same<TypeParam, KFSInterface>::value)
+        GTEST_SKIP();
     using namespace ovms;
 
     // Prepare model with changed layout to nhwc (internal layout=nchw)

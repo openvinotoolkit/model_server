@@ -25,9 +25,7 @@ using tensorflow::serving::PredictResponse;
 
 using ovms::TensorInfo;
 
-//void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_kfs_t requestInputs, const std::vector<float>& data) {
 void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_t2 requestInputs, const std::vector<float>& data) {
- //   ::inference::ModelInferRequest request;
     request.mutable_inputs()->Clear();
     request.mutable_raw_input_contents()->Clear();
     for (auto const& it : requestInputs) {
@@ -36,7 +34,6 @@ void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_
 }
 
 void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t2 requestInputs, const std::vector<float>& data) {
-    //    tensorflow::serving::PredictRequest request;
     request.mutable_inputs()->clear();
     for (auto const& it : requestInputs) {
         auto& name = it.first;
@@ -294,10 +291,10 @@ std::string* findKFSInferInputTensorContent(::inference::ModelInferRequest& requ
 }
 void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data) {
-        auto [shape, type] = inputInfo;
+    auto [shape, type] = inputInfo;
     prepareKFSInferInputTensor(request, name,
-                    {shape, TensorInfo::getPrecisionAsKFSPrecision(type)}, 
-                    data);
+        {shape, TensorInfo::getPrecisionAsKFSPrecision(type)},
+        data);
 }
 
 void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,

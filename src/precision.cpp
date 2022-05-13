@@ -17,6 +17,7 @@
 #include "precision.hpp"
 
 #include <unordered_map>
+
 #include <spdlog/spdlog.h>
 
 namespace ovms {
@@ -104,7 +105,6 @@ Precision KFSPrecisionToOvmsPrecision(const KFSDataType& datatype) {
 }
 
 Precision TFSPrecisionToOvmsPrecision(const TFSDataType& datatype) {
-        SPDLOG_ERROR("ER");
     static std::unordered_map<TFSDataType, Precision> precisionMap{
         {TFSDataType::DT_FLOAT, Precision::FP32},
         {TFSDataType::DT_DOUBLE, Precision::FP64},
@@ -116,15 +116,12 @@ Precision TFSPrecisionToOvmsPrecision(const TFSDataType& datatype) {
         {TFSDataType::DT_UINT64, Precision::U64},
         {TFSDataType::DT_UINT16, Precision::U16},
         {TFSDataType::DT_UINT8, Precision::U8},
-        {TFSDataType::DT_BOOL, Precision::BOOL}
-    };
+        {TFSDataType::DT_BOOL, Precision::BOOL}};
     auto it = precisionMap.find(datatype);
-        SPDLOG_ERROR("ER");
     if (it == precisionMap.end()) {
         // TODO missing precisions
         return Precision::UNDEFINED;
     }
-        SPDLOG_ERROR("ER");
     return it->second;
 }
 

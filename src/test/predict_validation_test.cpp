@@ -786,8 +786,8 @@ TEST_F(KFSPredictValidation, RequestWrongAndCorrectBatchSizeAuto) {
     modelConfig.setBatchingParams("auto");
 
     // First is incorrect, second is correct
-    preparePredictRequest(request,{{"im_data", {{3, 3, 800, 1344}, ovms::Precision::FP32}},
-        {"im_info", {{1, 3}, ovms::Precision::FP32}}});
+    preparePredictRequest(request, {{"im_data", {{3, 3, 800, 1344}, ovms::Precision::FP32}},
+                                       {"im_info", {{1, 3}, ovms::Precision::FP32}}});
 
     servableInputs.clear();
     servableInputs = ovms::tensor_map_t{
@@ -798,8 +798,8 @@ TEST_F(KFSPredictValidation, RequestWrongAndCorrectBatchSizeAuto) {
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
 
-    preparePredictRequest(request,{{"im_data", {{1, 3, 800, 1344}, ovms::Precision::FP32}},
-        {"im_info", {{3, 3}, ovms::Precision::FP32}}});
+    preparePredictRequest(request, {{"im_data", {{1, 3, 800, 1344}, ovms::Precision::FP32}},
+                                       {"im_info", {{3, 3}, ovms::Precision::FP32}}});
 
     status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED) << status.string();
@@ -807,8 +807,8 @@ TEST_F(KFSPredictValidation, RequestWrongAndCorrectBatchSizeAuto) {
 
 TEST_F(KFSPredictValidation, RequestWrongAndCorrectShapeAuto) {
     modelConfig.parseShapeParameter("auto");
-    preparePredictRequest(request,{{"im_data", {{1, 3, 900, 1344}, ovms::Precision::FP32}},
-        {"im_info", {{1, 3}, ovms::Precision::FP32}}});
+    preparePredictRequest(request, {{"im_data", {{1, 3, 900, 1344}, ovms::Precision::FP32}},
+                                       {"im_info", {{1, 3}, ovms::Precision::FP32}}});
 
     // First is incorrect, second is correct
     servableInputs.clear();
@@ -821,8 +821,8 @@ TEST_F(KFSPredictValidation, RequestWrongAndCorrectShapeAuto) {
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED) << status.string();
 
     // First is correct, second is incorrect
-    preparePredictRequest(request,{{"im_data", {{1, 3, 800, 1344}, ovms::Precision::FP32}},
-        {"im_info", {{1, 6}, ovms::Precision::FP32}}});
+    preparePredictRequest(request, {{"im_data", {{1, 3, 800, 1344}, ovms::Precision::FP32}},
+                                       {"im_info", {{1, 6}, ovms::Precision::FP32}}});
 
     status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED) << status.string();
