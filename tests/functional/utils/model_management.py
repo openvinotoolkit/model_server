@@ -53,13 +53,13 @@ def convert_model(client,
 
     input_dir = os.path.dirname(model)
 
-    image = 'openvino/ubuntu20_dev:latest'
+    image = 'openvino/ubuntu20_dev:2022.1.0'
     volumes = {input_dir:   {'bind': '/mnt/input_dir',  'mode': 'ro'},
                output_dir:  {'bind': '/mnt/output_dir', 'mode': 'rw'}}
     user_id = os.getuid()
 
     command = ' '.join([
-        'python3 deployment_tools/model_optimizer/mo.py',
+        'python3 mo.py',
         '--input_model /mnt/input_dir/' + os.path.basename(model),
         '--model_name ' + model_name,
         '--output_dir /mnt/output_dir/',
