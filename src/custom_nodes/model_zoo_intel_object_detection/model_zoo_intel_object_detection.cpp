@@ -287,7 +287,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(detectionTensor->dimsCount == 4, "input detection shape must have 4 dimensions");
     NODE_ASSERT(detectionTensor->dims[0] == 1, "input detection dim[0] must be 1");
     NODE_ASSERT(detectionTensor->dims[1] == 1, "input detection dim[1] must be 1");
-    NODE_ASSERT(detectionTensor->dims[2] == 200, "input detection dim[2] must be 200");
+    NODE_ASSERT(detectionTensor->dims[2] > 0, "input detection dim[2] must be positive");
     NODE_ASSERT(detectionTensor->dims[3] == 7, "input detection dim[3] must be 7");
 
     uint64_t _imageHeight = imageTensor->dims[originalImageLayout == "NCHW" ? 2 : 1];
@@ -443,7 +443,7 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     }
     (*info)[1].dims[0] = 1;
     (*info)[1].dims[1] = 1;
-    (*info)[1].dims[2] = 200;
+    (*info)[1].dims[2] = 0;
     (*info)[1].dims[3] = 7;
     (*info)[1].precision = FP32;
     return 0;

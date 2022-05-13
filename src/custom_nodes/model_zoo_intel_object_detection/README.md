@@ -22,6 +22,9 @@ All [OpenVINO Model Zoo](https://github.com/openvinotoolkit/open_model_zoo/tree/
 - vehicle-license-plate-detection
 - pedestrian-and-vehicle-detector
 
+Public [OpenVINO Model Zoo](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/public) object detection models with output tensor shape: `[1, 1, 100, 7]`:
+- ssdlite_mobilenet_v2
+
 # Building custom node library
 
 You can build the shared library of the custom node simply by running command in this custom node folder context:
@@ -40,7 +43,7 @@ make BASE_OS=redhat
 | Input name       | Description           | Shape | Precision |
 | ------------- |:-------------:| -----:| -----:|
 | image      | Input image in an array format. Only batch size 1 is supported and images must have 3 channels. Resolution is configurable via parameters `original_image_width` and `original_image_height`. Color data required only in BGR format. | `1,3,H,W` | FP32 |
-| detection      | object detection model output | `1,1,200,7` | FP32 |
+| detection      | object detection model output where `D` is the number of detected bounding boxes | `1,1,D,7` | FP32 |
 
 
 # Custom node outputs
