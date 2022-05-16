@@ -1053,8 +1053,8 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputNoInputShape) {
 
     // Perform inference with binary input, ensure status INVALID_NO_OF_SHAPE_DIMENSIONS
     ASSERT_EQ(this->performInferenceWithRequest(request, response, "increment_1x3x4x5"), ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
-}*/
-//TODO FIXME
+} */
+// TODO FIXME
 
 /*
  * Scenario - perform inference with with batch size set to auto and batch size not matching on position other than first
@@ -1163,7 +1163,6 @@ TYPED_TEST(TestPredict, PerformInferenceDummyBatchSizeAny) {
 
 ovms::Precision getPrecisionFromResponse(KFSResponseType& response, const std::string& name) {
     KFSOutputTensorIteratorType it;
-    ;
     size_t bufferId;
     auto status = getOutput(response, name, it, bufferId);
     EXPECT_TRUE(status.ok());
