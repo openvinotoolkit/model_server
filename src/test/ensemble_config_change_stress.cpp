@@ -1334,11 +1334,12 @@ public:
     }
     virtual inputs_info_t getExpectedInputsInfo() {
         return {{pipelineInputName,
-            std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}}};
+            std::tuple<ovms::shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}}};
     }
 
     virtual tensorflow::serving::PredictRequest preparePipelinePredictRequest() {
-        tensorflow::serving::PredictRequest request = preparePredictRequest(getExpectedInputsInfo());
+        tensorflow::serving::PredictRequest request;
+        preparePredictRequest(request, getExpectedInputsInfo());
         auto& input = (*request.mutable_inputs())[pipelineInputName];
         input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
         return request;
@@ -1753,7 +1754,8 @@ class StressPipelineCustomNodesConfigChanges : public StressPipelineConfigChange
 
 public:
     tensorflow::serving::PredictRequest preparePipelinePredictRequest() override {
-        tensorflow::serving::PredictRequest request = preparePredictRequest(getExpectedInputsInfo());
+        tensorflow::serving::PredictRequest request;
+        preparePredictRequest(request, getExpectedInputsInfo());
         auto& input = (*request.mutable_inputs())[pipelineInputName];
         input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
         auto& factors = (*request.mutable_inputs())[pipelineFactorsInputName];
@@ -1762,9 +1764,9 @@ public:
     }
     inputs_info_t getExpectedInputsInfo() override {
         return {{pipelineInputName,
-                    std::tuple<ovms::shape_t, tensorflow::DataType>{{1, DUMMY_MODEL_INPUT_SIZE}, tensorflow::DataType::DT_FLOAT}},
+                    std::tuple<ovms::shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Precision::FP32}},
             {pipelineFactorsInputName,
-                std::tuple<ovms::shape_t, tensorflow::DataType>{{1, differentOpsFactorsInputSize}, tensorflow::DataType::DT_FLOAT}}};
+                std::tuple<ovms::shape_t, ovms::Precision>{{1, differentOpsFactorsInputSize}, ovms::Precision::FP32}}};
     }
     void checkPipelineResponse(const std::string& pipelineOutputName,
         tensorflow::serving::PredictRequest& request,

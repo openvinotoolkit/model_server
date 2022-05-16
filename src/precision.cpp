@@ -80,8 +80,8 @@ Precision fromString(const std::string& s) {
     return it->second;
 }
 
-Precision KFSPrecisionToOvmsPrecision(const KFSDataType& s) {
-    static std::unordered_map<std::string, Precision> precisionMap{
+Precision KFSPrecisionToOvmsPrecision(const KFSDataType& datatype) {
+    static std::unordered_map<KFSDataType, Precision> precisionMap{
         {"BOOL", Precision::BOOL},
         {"FP64", Precision::FP64},
         {"FP32", Precision::FP32},
@@ -95,8 +95,29 @@ Precision KFSPrecisionToOvmsPrecision(const KFSDataType& s) {
         {"UINT16", Precision::U16},
         // {"BYTES", Precision::??}, // TODO decide what to do with BYTES
         {"UINT8", Precision::U8}};
-    auto it = precisionMap.find(s);
+    auto it = precisionMap.find(datatype);
     if (it == precisionMap.end()) {
+        return Precision::UNDEFINED;
+    }
+    return it->second;
+}
+
+Precision TFSPrecisionToOvmsPrecision(const TFSDataType& datatype) {
+    static std::unordered_map<TFSDataType, Precision> precisionMap{
+        {TFSDataType::DT_FLOAT, Precision::FP32},
+        {TFSDataType::DT_DOUBLE, Precision::FP64},
+        {TFSDataType::DT_HALF, Precision::FP16},
+        {TFSDataType::DT_INT64, Precision::I64},
+        {TFSDataType::DT_INT32, Precision::I32},
+        {TFSDataType::DT_INT16, Precision::I16},
+        {TFSDataType::DT_INT8, Precision::I8},
+        {TFSDataType::DT_UINT64, Precision::U64},
+        {TFSDataType::DT_UINT16, Precision::U16},
+        {TFSDataType::DT_UINT8, Precision::U8},
+        {TFSDataType::DT_BOOL, Precision::BOOL}};
+    auto it = precisionMap.find(datatype);
+    if (it == precisionMap.end()) {
+        // TODO missing precisions
         return Precision::UNDEFINED;
     }
     return it->second;
