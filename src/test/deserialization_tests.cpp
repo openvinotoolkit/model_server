@@ -123,7 +123,7 @@ public:
         deserializeTensorProto,
         (const ::inference::ModelInferRequest::InferInputTensor&,
             const std::shared_ptr<ovms::TensorInfo>&,
-            const std::string& buffer));
+            const std::string* buffer));
 };
 
 // Enables static method mock
@@ -139,7 +139,7 @@ public:
     static ov::Tensor deserializeTensorProto(
         const ::inference::ModelInferRequest::InferInputTensor& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo,
-        const std::string& buffer) {
+        const std::string* buffer) {
         return mock->deserializeTensorProto(requestInput, tensorInfo, buffer);
     }
 };
@@ -234,7 +234,7 @@ class DeserializeKFSTensorProtoNegative : public KserveGRPCPredict {};
 TEST_P(DeserializeKFSTensorProtoNegative, ShouldReturnNullptrForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
-    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], buffer);
+    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], &buffer);
     EXPECT_FALSE((bool)tensor) << "Unsupported OVMS precision:"
                                << toString(testedPrecision)
                                << " should return nullptr";
@@ -244,14 +244,14 @@ TEST_P(DeserializeKFSTensorProto, ShouldReturnValidTensor) {
     ovms::Precision testedPrecision = GetParam();
     SetUpTensorProto(TensorInfo::getPrecisionAsString(testedPrecision));
     tensorMap[tensorName]->setPrecision(testedPrecision);
-    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], buffer);
+    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], &buffer);
     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
                               << toString(testedPrecision)
                               << " should return valid tensor ptr";
 }
 
 TEST_F(KserveGRPCPredict, ShouldReturnValidTensor) {
-    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], buffer);
+    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], &buffer);
 
     ASSERT_EQ(tensor.get_element_type(), ov::element::Type_t::f32);
     ASSERT_EQ(tensor.get_shape(), ov::Shape({1, DUMMY_MODEL_INPUT_SIZE}));
