@@ -163,7 +163,7 @@ bool validateStringLength(const std::shared_ptr<TensorInfo>& tensorInfo,
     if (!tensorInfo->getBatchSize().has_value()) {
         return true;
     }
-    return !tensorInfo->getBatchSize().value().match(batchSize);
+    return !tensorInfo->getBatchSize().value().match(stringLength);
 }
 
 Status validateInput(const std::shared_ptr<TensorInfo>& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage, bool enforceResolutionAlignment) {
@@ -364,7 +364,7 @@ Status convertTensorToMatsMatchingTensorInfo(const tensorflow::TensorProto& src,
     return StatusCode::OK;
 }
 
-Status convertTensorToMatsMatchingTensorInfo(const std::string& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
+Status convertStringToMatsMatchingTensorInfo(const std::string& src, std::vector<cv::Mat>& images, const std::shared_ptr<TensorInfo>& tensorInfo) {
     Dimension targetHeight = getTensorInfoHeightDim(tensorInfo);
     Dimension targetWidth = getTensorInfoWidthDim(tensorInfo);
 
@@ -494,7 +494,7 @@ Status convertStringToTensor(const std::string& src, ov::Tensor& tensor, const s
 
     std::vector<cv::Mat> images;
 
-    status = convertTensorToMatsMatchingTensorInfo(src, images, tensorInfo);
+    status = convertStringToMatsMatchingTensorInfo(src, images, tensorInfo);
     if (!status.ok()) {
         return status;
     }
