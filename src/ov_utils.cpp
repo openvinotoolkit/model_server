@@ -20,6 +20,7 @@
 #include <memory>
 #include <sstream>
 #include <vector>
+#include <set>
 
 #include <spdlog/spdlog.h>
 
