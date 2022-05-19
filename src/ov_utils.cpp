@@ -82,21 +82,22 @@ std::optional<ov::Layout> getLayoutFromRTMap(const ov::RTMap& rtMap) {
     return std::nullopt;
 }
 
-void insertSupportedKeys(std::vector<std::string>& pluginSupportedConfigKeys, const std::string& pluginName, const ov::Core& ieCore) {
+void insertSupportedKeys(std::set<std::string>& aggregatetPluginSupportedConfigKeys, const std::string& pluginName, const ov::Core& ieCore) {
     const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
     try {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Validating plugin: {}; configuration", pluginName);
-        std::vector<std::string> pluginSupportedConfigKeys2 = ieCore.get_property(pluginName, supportedConfigKey).as<std::vector<std::string>>();
-        pluginSupportedConfigKeys.insert(pluginSupportedConfigKeys.end(), pluginSupportedConfigKeys2.begin(), pluginSupportedConfigKeys2.end());
+        std::vector<std::string> pluginSupportedConfigKeys = ieCore.get_property(pluginName, supportedConfigKey).as<std::vector<std::string>>();
+        std::set<std::string> pluginSupportedConfigKeysSet(pluginSupportedConfigKeys.begin(), pluginSupportedConfigKeys.end());
+        aggregatetPluginSupportedConfigKeys.insert(pluginSupportedConfigKeys.begin(), pluginSupportedConfigKeys.end());
     } catch (std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", pluginName, supportedConfigKey, e.what());
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", pluginName, supportedConfigKey, e.what());
     } catch (...) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value.", pluginName, supportedConfigKey);
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value.", pluginName, supportedConfigKey);
     }
 }
 
 Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const std::string& targetDevice, const ov::Core& ieCore) {
-    std::vector<std::string> pluginSupportedConfigKeys;
+    std::set<std::string> pluginSupportedConfigKeys;
     std::string pluginDelimiter = ":";
     auto pluginDelimeterPos = targetDevice.find(pluginDelimiter);
     if (pluginDelimeterPos != std::string::npos) {
@@ -117,10 +118,8 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
         if (std::find(pluginSupportedConfigKeys.begin(), pluginSupportedConfigKeys.end(), config.first) == pluginSupportedConfigKeys.end()) {
             std::ostringstream pluginSupportedConfigKeysStr;
             if (!pluginSupportedConfigKeys.empty()) {
-                std::copy(pluginSupportedConfigKeys.begin(), pluginSupportedConfigKeys.end() - 1,
+                std::copy(pluginSupportedConfigKeys.begin(), pluginSupportedConfigKeys.end(),
                     std::ostream_iterator<std::string>(pluginSupportedConfigKeysStr, ","));
-
-                pluginSupportedConfigKeysStr << pluginSupportedConfigKeys.back();
             }
 
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config key: {} not found in supported config keys for device: {}. List of supported keys for this device: {}.", config.first, targetDevice, pluginSupportedConfigKeysStr.str());
