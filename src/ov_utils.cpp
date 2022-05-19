@@ -18,9 +18,9 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <set>
 #include <sstream>
 #include <vector>
-#include <set>
 
 #include <spdlog/spdlog.h>
 
