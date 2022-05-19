@@ -59,7 +59,7 @@ def convert_model(client,
     user_id = os.getuid()
 
     command = ' '.join([
-        'python3 mo.py',
+        'mo',
         '--input_model /mnt/input_dir/' + os.path.basename(model),
         '--model_name ' + model_name,
         '--output_dir /mnt/output_dir/',
