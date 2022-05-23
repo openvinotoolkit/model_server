@@ -67,15 +67,16 @@ public:
             case ovms::Precision::U8: {
                 return makeTensor(requestInput, tensorInfo, *buffer);
             }
+            case ovms::Precision::U1:
+            case ovms::Precision::CUSTOM:
+            case ovms::Precision::UNDEFINED:
+            case ovms::Precision::DYNAMIC:
+            case ovms::Precision::MIXED:
+            case ovms::Precision::Q78:
             default:
                 return ov::Tensor();
             }
         } else {
-            ov::Shape shape;
-            for (std::int64_t i = 0; i < requestInput.shape().size(); i++) {
-                shape.push_back(requestInput.shape().at(i));
-            }
-            // create tensor with requestInput.shape
             switch (tensorInfo->getPrecision()) {
                 // bool_contents
             case ovms::Precision::BOOL: {
@@ -377,7 +378,6 @@ Status deserializePredictRequest(
             auto inputIndex = requestInputItr - request.inputs().begin();
             auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
             tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputItr, tensorInfo, bufferLocation);
-
             if (!tensor) {
                 status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
                 SPDLOG_DEBUG(status.string());

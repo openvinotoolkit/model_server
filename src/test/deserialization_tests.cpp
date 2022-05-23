@@ -378,12 +378,22 @@ TEST_F(KserveGRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
     std::cout << status.string();
 }
 
-class KserveGRPCPredictRequestNegative : public KserveGRPCPredictRequest {};
+class KserveGRPCPredictRequestNegative : public KserveGRPCPredictRequest {
+public:
+    void SetUp(std::string dataType, bool bufferInRequestRawInputContent) {
+        SetUpTensorProto(dataType, bufferInRequestRawInputContent);
+        float value = 1.0;
+        auto bytes = static_cast<char*>(static_cast<void*>(&value));
+        SetUpBuffer(bytes);
+        if (bufferInRequestRawInputContent) {
+            *request.add_raw_input_contents() = buffer;
+        }
+        *request.add_inputs() = tensorProto;
+    }
+};
 
 TEST_P(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision) {
     auto [testedPrecision, getInputFromRawInputContents] = GetParam();
-    if (!getInputFromRawInputContents)
-        GTEST_SKIP() << "test setup not implemented yet";
     tensorMap[tensorName]->setPrecision(testedPrecision);
     ov::InferRequest inferRequest;
     InputSink<ov::InferRequest&> inputSink(inferRequest);
@@ -391,7 +401,7 @@ TEST_P(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrec
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION)
         << "Unsupported OVMS precision:"
         << toString(testedPrecision)
-        << " should return error";
+        << " should return error. Instead got:" << status.string();
 }
 
 TEST_P(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorException) {
@@ -406,7 +416,7 @@ TEST_P(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetT
 }
 
 std::string toString(const std::pair<ovms::Precision, bool>& pair) {
-    return toString(pair.first) + "_" + (pair.second ? "true" : "false");
+    return toString(pair.first) + "_" + (pair.second ? "BufferInRequestRawInputContents" : "BufferInRequestTensorInputContents");
 }
 
 TEST_F(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorException2) {
