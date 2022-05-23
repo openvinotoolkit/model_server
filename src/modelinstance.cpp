@@ -185,7 +185,7 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::M
         try {
             std::string name = input.get_any_name();
             std::string mappedName = config.getMappingInputByKey(name).empty() ? name : config.getMappingInputByKey(name);
-
+            // preproc.input(name).tensor().set_element_type(ov::element::i8); // TODO remove after full alternative buffer deserialization& serialization implemented
             if (config.getLayout().isSet()) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: Tensor Layout:{}; Network Layout:{}; single input",
                     modelName,
@@ -245,7 +245,7 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::M
         try {
             std::string name = output.get_any_name();
             std::string mappedName = config.getMappingOutputByKey(name).empty() ? name : config.getMappingOutputByKey(name);
-
+            // preproc.output(name).tensor().set_element_type(ov::element::i8); // TODO remove after full alternative buffer deserialization& serialization implemented
             if (config.getLayouts().count(mappedName) > 0) {
                 auto& layout = config.getLayouts().at(mappedName);
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding postprocessing step: Tensor Layout:{}; Network Layout:{}; output name: {}",

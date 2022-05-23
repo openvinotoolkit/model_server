@@ -78,7 +78,7 @@ public:
             // create tensor with requestInput.shape
             switch (tensorInfo->getPrecision()) {
                 // bool_contents
-            case ovms::Precision::BOOL: {  // TODO verify with triton
+            case ovms::Precision::BOOL: {
                 ov::Tensor tensor = makeTensor(requestInput, tensorInfo);
                 bool* ptr = reinterpret_cast<bool*>(tensor.data());
                 size_t i = 0;
@@ -375,8 +375,8 @@ Status deserializePredictRequest(
             // }
 
             auto inputIndex = requestInputItr - request.inputs().begin();
-            auto& bufferLocation = deserializeFromSharedInputContents ? request.raw_input_contents()[inputIndex] : nullptr;
-            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputItr, tensorInfo, &request.raw_input_contents()[inputIndex]);
+            auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
+            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputItr, tensorInfo, bufferLocation);
 
             if (!tensor) {
                 status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
