@@ -76,6 +76,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-c"]
 WORKDIR /
 
+COPY drivers/dg2/* /drivers/dg2/*
+
 RUN	set -e ; \
 	set -x ; \
         apt update -y ; \
@@ -113,15 +115,15 @@ RUN	set -e ; \
                 ;; \
                 "dg2") \
                         dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd ; \
-                        apt-get update && apt-get -y install curl dpkg-dev ; \
-                        WORKDIR="/home/lab_ddpqa/agama-ci-embargo-dg2" ; \
+                        apt-get update && apt-get -y install dpkg-dev ; \
+                        WORKDIR="/home/dg2/drivers" ; \
                         mkdir -p ${WORKDIR} && \
-                            curl -sL https://repository.toolbox.iotg.sclab.intel.com/openvino_deps/dg2/agama-ci-prerelease-402-CardBKC.tgz | tar -C ${WORKDIR} -xvz --warning=no-timestamp && \
+                            tar -xvz --warning=no-timestamp /drivers/dg2/*.tgz -C ${WORKDIR} && \
                             cd ${WORKDIR}/20.04 && \
                             dpkg-scanpackages .  > Packages && \
                             cd - ; \
 
-                        echo "deb [trusted=yes arch=amd64] file:////home/lab_ddpqa/agama-ci-embargo-dg2/20.04 ./" > /etc/apt/sources.list.d/intel-graphics-agama-ci-embargo-dg2.list ; \
+                        echo "deb [trusted=yes arch=amd64] file:/home/dg2/drivers/20.04 ./" > /etc/apt/sources.list.d/intel-graphics-dg2.list ; \
                         apt-get update && \
                         apt-get install -y \
                             intel-opencl-icd \
