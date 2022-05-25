@@ -59,5 +59,15 @@ ov::Tensor makeTensor(const ::inference::ModelInferRequest::InferInputTensor& re
     ov::Tensor tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(buffer.data())));
     return tensor;
 }
+ov::Tensor makeTensor(const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo) {
+    ov::Shape shape;
+    for (size_t i = 0; i < requestInput.shape_size(); i++) {
+        shape.push_back(requestInput.shape().at(i));
+    }
+    ov::element::Type precision = tensorInfo->getOvPrecision();
+    ov::Tensor tensor(precision, shape);
+    return tensor;
+}
 
 }  // namespace ovms

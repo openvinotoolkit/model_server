@@ -47,6 +47,17 @@ using testing::_;
 using testing::NiceMock;
 using testing::Throw;
 
+std::vector<std::pair<ovms::Precision, bool>> cartesianProduct(const std::vector<ovms::Precision>& precisions, const std::vector<bool>& bufferInRawInputContents) {
+    std::vector<std::pair<ovms::Precision, bool>> result;
+    result.reserve(precisions.size() * bufferInRawInputContents.size());
+    for (const auto& p : precisions) {
+        for (const auto& b : bufferInRawInputContents) {
+            result.emplace_back(p, b);
+        }
+    }
+    return result;
+}
+
 class TensorflowGRPCPredict : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     void SetUp() override {
@@ -123,7 +134,7 @@ public:
         deserializeTensorProto,
         (const ::inference::ModelInferRequest::InferInputTensor&,
             const std::shared_ptr<ovms::TensorInfo>&,
-            const std::string& buffer));
+            const std::string* buffer));
 };
 
 // Enables static method mock
@@ -139,7 +150,7 @@ public:
     static ov::Tensor deserializeTensorProto(
         const ::inference::ModelInferRequest::InferInputTensor& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo,
-        const std::string& buffer) {
+        const std::string* buffer) {
         return mock->deserializeTensorProto(requestInput, tensorInfo, buffer);
     }
 };
@@ -193,7 +204,7 @@ TEST_P(DeserializeTFTensorProto, ShouldReturnValidTensor) {
                               << " should return valid tensor ptr";
 }
 
-class KserveGRPCPredict : public ::testing::TestWithParam<ovms::Precision> {
+class KserveGRPCPredict : public ::testing::TestWithParam<std::pair<ovms::Precision, bool>> {
 protected:
     void SetUp() override {
         auto precision = ovms::Precision::FP32;
@@ -202,17 +213,92 @@ protected:
             precision,
             shape_t{1, 3},
             Layout{"NC"});
-        SetUpTensorProto(TensorInfo::getPrecisionAsString(precision));
+        SetUpTensorProto(TensorInfo::getPrecisionAsString(precision), true);
         float value = 1.0;
         auto bytes = static_cast<char*>(static_cast<void*>(&value));
         SetUpBuffer(bytes);
     }
-    void SetUpTensorProto(std::string dataType) {
+    void SetUpTensorProto(std::string dataType, bool getInputFromRawInputContents) {
+        ovms::Shape tensorShape{1, DUMMY_MODEL_INPUT_SIZE};
         tensorProto.set_name(tensorName);
         tensorProto.set_datatype(dataType);
         tensorProto.mutable_shape()->Clear();
-        tensorProto.add_shape(1);
-        tensorProto.add_shape(DUMMY_MODEL_INPUT_SIZE);
+        size_t elementsCount = 1;
+        for (const auto& d : tensorShape) {
+            tensorProto.add_shape(d.getStaticValue());
+            ++elementsCount;
+        }
+        if (!getInputFromRawInputContents) {
+            switch (KFSPrecisionToOvmsPrecision(dataType)) {
+            case ovms::Precision::FP64: {
+                for (size_t i = 0; i < elementsCount; ++i) {
+                    auto ptr = tensorProto.mutable_contents()->mutable_fp64_contents()->Add();
+                    *ptr = 1;
+                }
+                break;
+            }
+            case ovms::Precision::FP32: {
+                for (size_t i = 0; i < elementsCount; ++i) {
+                    auto ptr = tensorProto.mutable_contents()->mutable_fp32_contents()->Add();
+                    *ptr = 1;
+                }
+                break;
+            }
+            // uint64_contents
+            case ovms::Precision::U64: {
+                for (size_t i = 0; i < elementsCount; ++i) {
+                    auto ptr = tensorProto.mutable_contents()->mutable_uint64_contents()->Add();
+                    *ptr = 1;
+                }
+                break;
+            }
+            // uint_contents
+            case ovms::Precision::U8:
+            case ovms::Precision::U16:
+            case ovms::Precision::U32: {
+                for (size_t i = 0; i < elementsCount; ++i) {
+                    auto ptr = tensorProto.mutable_contents()->mutable_uint_contents()->Add();
+                    *ptr = 1;
+                }
+                break;
+            }
+            // int64_contents
+            case ovms::Precision::I64: {
+                for (size_t i = 0; i < elementsCount; ++i) {
+                    auto ptr = tensorProto.mutable_contents()->mutable_int64_contents()->Add();
+                    *ptr = 1;
+                }
+                break;
+            }
+            // bool_contents
+            case ovms::Precision::BOOL: {
+                for (size_t i = 0; i < elementsCount; ++i) {
+                    auto ptr = tensorProto.mutable_contents()->mutable_bool_contents()->Add();
+                    *ptr = 1;
+                }
+                break;
+            }
+            // int_contents
+            case ovms::Precision::I8:
+            case ovms::Precision::I16:
+            case ovms::Precision::I32: {
+                for (size_t i = 0; i < elementsCount; ++i) {
+                    auto ptr = tensorProto.mutable_contents()->mutable_int_contents()->Add();
+                    *ptr = 1;
+                }
+                break;
+            }
+            case ovms::Precision::FP16:
+            case ovms::Precision::U1:
+            case ovms::Precision::CUSTOM:
+            case ovms::Precision::UNDEFINED:
+            case ovms::Precision::DYNAMIC:
+            case ovms::Precision::MIXED:
+            case ovms::Precision::Q78:
+            case ovms::Precision::BIN:
+            default: {}
+            }
+        }
     }
     void SetUpBuffer(char* bytes) {
         buffer = "";
@@ -232,26 +318,31 @@ class DeserializeKFSTensorProto : public KserveGRPCPredict {};
 class DeserializeKFSTensorProtoNegative : public KserveGRPCPredict {};
 
 TEST_P(DeserializeKFSTensorProtoNegative, ShouldReturnNullptrForPrecision) {
-    ovms::Precision testedPrecision = GetParam();
+    auto [testedPrecision, getInputFromRawInputContents] = GetParam();
+    std::string* bufferPtr = (getInputFromRawInputContents ? &buffer : nullptr);
     tensorMap[tensorName]->setPrecision(testedPrecision);
-    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], buffer);
+    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], bufferPtr);
     EXPECT_FALSE((bool)tensor) << "Unsupported OVMS precision:"
                                << toString(testedPrecision)
                                << " should return nullptr";
 }
 
 TEST_P(DeserializeKFSTensorProto, ShouldReturnValidTensor) {
-    ovms::Precision testedPrecision = GetParam();
-    SetUpTensorProto(TensorInfo::getPrecisionAsString(testedPrecision));
+    auto [testedPrecision, getInputFromRawInputContents] = GetParam();
+    std::string* bufferPtr = (getInputFromRawInputContents ? &buffer : nullptr);
+    if (!getInputFromRawInputContents && (ovms::Precision::FP16 == testedPrecision)) {
+        GTEST_SKIP() << "Not supported";
+    }
+    SetUpTensorProto(TensorInfo::getPrecisionAsString(testedPrecision), getInputFromRawInputContents);
     tensorMap[tensorName]->setPrecision(testedPrecision);
-    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], buffer);
+    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], bufferPtr);
     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
                               << toString(testedPrecision)
                               << " should return valid tensor ptr";
 }
 
 TEST_F(KserveGRPCPredict, ShouldReturnValidTensor) {
-    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], buffer);
+    ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName], &buffer);
 
     ASSERT_EQ(tensor.get_element_type(), ov::element::Type_t::f32);
     ASSERT_EQ(tensor.get_shape(), ov::Shape({1, DUMMY_MODEL_INPUT_SIZE}));
@@ -287,10 +378,22 @@ TEST_F(KserveGRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
     std::cout << status.string();
 }
 
-class KserveGRPCPredictRequestNegative : public KserveGRPCPredictRequest {};
+class KserveGRPCPredictRequestNegative : public KserveGRPCPredictRequest {
+public:
+    void SetUp(std::string dataType, bool bufferInRequestRawInputContent) {
+        SetUpTensorProto(dataType, bufferInRequestRawInputContent);
+        float value = 1.0;
+        auto bytes = static_cast<char*>(static_cast<void*>(&value));
+        SetUpBuffer(bytes);
+        if (bufferInRequestRawInputContent) {
+            *request.add_raw_input_contents() = buffer;
+        }
+        *request.add_inputs() = tensorProto;
+    }
+};
 
 TEST_P(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision) {
-    ovms::Precision testedPrecision = GetParam();
+    auto [testedPrecision, getInputFromRawInputContents] = GetParam();
     tensorMap[tensorName]->setPrecision(testedPrecision);
     ov::InferRequest inferRequest;
     InputSink<ov::InferRequest&> inputSink(inferRequest);
@@ -298,16 +401,22 @@ TEST_P(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrec
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION)
         << "Unsupported OVMS precision:"
         << toString(testedPrecision)
-        << " should return error";
+        << " should return error. Instead got:" << status.string();
 }
 
 TEST_P(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorException) {
-    ovms::Precision testedPrecision = GetParam();
+    auto [testedPrecision, getInputFromRawInputContents] = GetParam();
+    if (!getInputFromRawInputContents)
+        GTEST_SKIP() << "test setup not implemented yet";
     tensorMap[tensorName]->setPrecision(testedPrecision);
     ov::InferRequest inferRequest;
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline);
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION) << status.string();
+}
+
+std::string toString(const std::pair<ovms::Precision, bool>& pair) {
+    return toString(pair.first) + "_" + (pair.second ? "BufferInRequestRawInputContents" : "BufferInRequestTensorInputContents");
 }
 
 TEST_F(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorException2) {
@@ -328,10 +437,12 @@ TEST_F(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetT
     EXPECT_EQ(status, ovms::StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR) << status.string();
 }
 
+std::vector<std::pair<ovms::Precision, bool>> KserveGRPCPredictRequestNegativeParams = cartesianProduct(UNSUPPORTED_KFS_INPUT_PRECISIONS, {true, false});
+
 INSTANTIATE_TEST_SUITE_P(
     TestDeserialize,
     KserveGRPCPredictRequestNegative,
-    ::testing::ValuesIn(UNSUPPORTED_KFS_INPUT_PRECISIONS),
+    ::testing::ValuesIn(KserveGRPCPredictRequestNegativeParams),
     [](const ::testing::TestParamInfo<KserveGRPCPredictRequestNegative::ParamType>& info) {
         return toString(info.param);
     });
@@ -344,10 +455,12 @@ INSTANTIATE_TEST_SUITE_P(
         return toString(info.param);
     });
 
+std::vector<std::pair<ovms::Precision, bool>> KserveGRPCPredictRequestParams = cartesianProduct(SUPPORTED_KFS_INPUT_PRECISIONS, {true, false});
+
 INSTANTIATE_TEST_SUITE_P(
     TestDeserialize,
     KserveGRPCPredictRequest,
-    ::testing::ValuesIn(SUPPORTED_KFS_INPUT_PRECISIONS),
+    ::testing::ValuesIn(KserveGRPCPredictRequestParams),
     [](const ::testing::TestParamInfo<KserveGRPCPredictRequest::ParamType>& info) {
         return toString(info.param);
     });
@@ -376,18 +489,22 @@ INSTANTIATE_TEST_SUITE_P(
         return toString(info.param);
     });
 
+std::vector<std::pair<ovms::Precision, bool>> DeserializeKFSTensorProtoNegativeParams = cartesianProduct(UNSUPPORTED_KFS_INPUT_PRECISIONS, {true, false});
+
 INSTANTIATE_TEST_SUITE_P(
     Test,
     DeserializeKFSTensorProtoNegative,
-    ::testing::ValuesIn(UNSUPPORTED_KFS_INPUT_PRECISIONS),
+    ::testing::ValuesIn(DeserializeKFSTensorProtoNegativeParams),
     [](const ::testing::TestParamInfo<DeserializeKFSTensorProtoNegative::ParamType>& info) {
         return toString(info.param);
     });
 
+std::vector<std::pair<ovms::Precision, bool>> DeserializeKFSTensorProtoParams = cartesianProduct(SUPPORTED_KFS_INPUT_PRECISIONS, {true, false});
+
 INSTANTIATE_TEST_SUITE_P(
     Test,
     DeserializeKFSTensorProto,
-    ::testing::ValuesIn(SUPPORTED_KFS_INPUT_PRECISIONS),
+    ::testing::ValuesIn(DeserializeKFSTensorProtoParams),
     [](const ::testing::TestParamInfo<DeserializeKFSTensorProto::ParamType>& info) {
         return toString(info.param);
     });

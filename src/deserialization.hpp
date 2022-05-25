@@ -42,30 +42,170 @@ ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
 ov::Tensor makeTensor(const ::inference::ModelInferRequest::InferInputTensor& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo,
     const std::string& buffer);
+ov::Tensor makeTensor(const ::inference::ModelInferRequest::InferInputTensor& requestInput,
+    const std::shared_ptr<TensorInfo>& tensorInfo);
 
 class ConcreteTensorProtoDeserializator {
 public:
     static ov::Tensor deserializeTensorProto(
         const ::inference::ModelInferRequest::InferInputTensor& requestInput,
         const std::shared_ptr<TensorInfo>& tensorInfo,
-        const std::string& buffer) {
-        switch (tensorInfo->getPrecision()) {
-        case ovms::Precision::FP64:
-        case ovms::Precision::FP32:
-        case ovms::Precision::FP16:
-        case ovms::Precision::I64:
-        case ovms::Precision::I32:
-        case ovms::Precision::I16:
-        case ovms::Precision::I8:
-        case ovms::Precision::U64:
-        case ovms::Precision::U32:
-        case ovms::Precision::U16:
-        case ovms::Precision::BOOL:
-        case ovms::Precision::U8: {
-            return makeTensor(requestInput, tensorInfo, buffer);
-        }
-        default:
-            return ov::Tensor();
+        const std::string* buffer) {
+        if (nullptr != buffer) {
+            switch (tensorInfo->getPrecision()) {
+            case ovms::Precision::FP64:
+            case ovms::Precision::FP32:
+            case ovms::Precision::FP16:
+            case ovms::Precision::I64:
+            case ovms::Precision::I32:
+            case ovms::Precision::I16:
+            case ovms::Precision::I8:
+            case ovms::Precision::U64:
+            case ovms::Precision::U32:
+            case ovms::Precision::U16:
+            case ovms::Precision::BOOL:
+            case ovms::Precision::U8: {
+                return makeTensor(requestInput, tensorInfo, *buffer);
+            }
+            case ovms::Precision::U1:
+            case ovms::Precision::CUSTOM:
+            case ovms::Precision::UNDEFINED:
+            case ovms::Precision::DYNAMIC:
+            case ovms::Precision::MIXED:
+            case ovms::Precision::Q78:
+            default:
+                return ov::Tensor();
+            }
+        } else {
+            switch (tensorInfo->getPrecision()) {
+                // bool_contents
+            case ovms::Precision::BOOL: {
+                ov::Tensor tensor = makeTensor(requestInput, tensorInfo);
+                bool* ptr = reinterpret_cast<bool*>(tensor.data());
+                size_t i = 0;
+                for (auto& number : requestInput.contents().bool_contents()) {
+                    ptr[i++] = *(const_cast<bool*>(reinterpret_cast<const bool*>(&number)));
+                }
+                return tensor;
+                break;
+            }
+                /// int_contents
+            case ovms::Precision::I8: {
+                ov::Tensor tensor = makeTensor(requestInput, tensorInfo);
+                int8_t* ptr = reinterpret_cast<int8_t*>(tensor.data());
+                size_t i = 0;
+                for (auto& number : requestInput.contents().int_contents()) {
+                    ptr[i++] = *(const_cast<int8_t*>(reinterpret_cast<const int8_t*>(&number)));
+                }
+                return tensor;
+                break;
+            }
+            case ovms::Precision::I16: {
+                ov::Tensor tensor = makeTensor(requestInput, tensorInfo);
+                int16_t* ptr = reinterpret_cast<int16_t*>(tensor.data());
+                size_t i = 0;
+                for (auto& number : requestInput.contents().int_contents()) {
+                    ptr[i++] = *(const_cast<int16_t*>(reinterpret_cast<const int16_t*>(&number)));
+                }
+                return tensor;
+                break;
+            }
+            case ovms::Precision::I32: {
+                ov::Tensor tensor = makeTensor(requestInput, tensorInfo);
+                int32_t* ptr = reinterpret_cast<int32_t*>(tensor.data());
+                size_t i = 0;
+                for (auto& number : requestInput.contents().int_contents()) {
+                    ptr[i++] = *(const_cast<int32_t*>(reinterpret_cast<const int32_t*>(&number)));
+                }
+                return tensor;
+                break;
+            }
+                /// int64_contents
+            case ovms::Precision::I64: {
+                ov::Tensor tensor = makeTensor(requestInput, tensorInfo);
+                int64_t* ptr = reinterpret_cast<int64_t*>(tensor.data());
+                size_t i = 0;
+                for (auto& number : requestInput.contents().int64_contents()) {
+                    ptr[i++] = *(const_cast<int64_t*>(reinterpret_cast<const int64_t*>(&number)));
+                }
+                return tensor;
+                break;
+            }
+                // uint_contents
+            case ovms::Precision::U8: {
+                ov::Tensor tensor = makeTensor(requestInput, tensorInfo);
+                uint8_t* ptr = reinterpret_cast<uint8_t*>(tensor.data());
+                size_t i = 0;
+                for (auto& number : requestInput.contents().uint_contents()) {
+                    ptr[i++] = *(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(&number)));
+                }
+                return tensor;
+                break;
+            }
+            case ovms::Precision::U16: {
+                ov::Tensor tensor = makeTensor(requestInput, tensorInfo);
+                uint16_t* ptr = reinterpret_cast<uint16_t*>(tensor.data());
+                size_t i = 0;
+                for (auto& number : requestInput.contents().uint_contents()) {
+                    ptr[i++] = *(const_cast<uint16_t*>(reinterpret_cast<const uint16_t*>(&number)));
+                }
+                return tensor;
+                break;
+            }
+            case ovms::Precision::U32: {
+                ov::Tensor tensor = makeTensor(requestInput, tensorInfo);
+                uint32_t* ptr = reinterpret_cast<uint32_t*>(tensor.data());
+                size_t i = 0;
+                for (auto& number : requestInput.contents().uint_contents()) {
+                    ptr[i++] = *(const_cast<uint32_t*>(reinterpret_cast<const uint32_t*>(&number)));
+                }
+                return tensor;
+                break;
+            }
+                // uint64_contents
+            case ovms::Precision::U64: {
+                ov::Tensor tensor = makeTensor(requestInput, tensorInfo);
+                uint64_t* ptr = reinterpret_cast<uint64_t*>(tensor.data());
+                size_t i = 0;
+                for (auto& number : requestInput.contents().uint64_contents()) {
+                    ptr[i++] = *(const_cast<uint64_t*>(reinterpret_cast<const uint64_t*>(&number)));
+                }
+                return tensor;
+                break;
+            }
+                // fp32_contents
+            case ovms::Precision::FP32: {
+                ov::Tensor tensor = makeTensor(requestInput, tensorInfo);
+                float* ptr = reinterpret_cast<float*>(tensor.data());
+                size_t i = 0;
+                for (auto& number : requestInput.contents().fp32_contents()) {
+                    ptr[i++] = *(const_cast<float*>(reinterpret_cast<const float*>(&number)));
+                }
+                return tensor;
+                break;
+            }
+                // fp64_contentes
+            case ovms::Precision::FP64: {
+                ov::Tensor tensor = makeTensor(requestInput, tensorInfo);
+                double* ptr = reinterpret_cast<double*>(tensor.data());
+                size_t i = 0;
+                for (auto& number : requestInput.contents().fp64_contents()) {
+                    ptr[i++] = *(const_cast<double*>(reinterpret_cast<const double*>(&number)));
+                }
+                return tensor;
+                break;
+            }
+            case ovms::Precision::FP16:
+            case ovms::Precision::U1:
+            case ovms::Precision::CUSTOM:
+            case ovms::Precision::UNDEFINED:
+            case ovms::Precision::DYNAMIC:
+            case ovms::Precision::MIXED:
+            case ovms::Precision::Q78:
+            case ovms::Precision::BIN:
+            default:
+                return ov::Tensor();
+            }
         }
     }
 
@@ -112,6 +252,8 @@ public:
             }
             return tensor;
         }
+        case ovms::Precision::U32:
+        case ovms::Precision::U64:
         default:
             return ov::Tensor();
         }
@@ -129,7 +271,7 @@ template <class TensorProtoDeserializator>
 ov::Tensor deserializeTensorProto(
     const ::inference::ModelInferRequest::InferInputTensor& requestInput,
     const std::shared_ptr<TensorInfo>& tensorInfo,
-    const std::string& buffer) {
+    const std::string* buffer) {
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, buffer);
 }
 
@@ -208,6 +350,7 @@ Status deserializePredictRequest(
     Sink& inputSink, bool isPipeline) {
     OVMS_PROFILE_FUNCTION();
     Status status;
+    bool deserializeFromSharedInputContents = request.raw_input_contents().size() > 0;
     for (const auto& pair : inputMap) {
         try {
             const auto& name = pair.first;
@@ -233,9 +376,8 @@ Status deserializePredictRequest(
             // }
 
             auto inputIndex = requestInputItr - request.inputs().begin();
-            tensor = deserializeTensorProto<TensorProtoDeserializator>(
-                *requestInputItr, tensorInfo, request.raw_input_contents()[inputIndex]);
-
+            auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
+            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputItr, tensorInfo, bufferLocation);
             if (!tensor) {
                 status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
                 SPDLOG_DEBUG(status.string());
