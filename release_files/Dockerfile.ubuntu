@@ -76,7 +76,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-c"]
 WORKDIR /
 
-COPY drivers/dg2/* /drivers/dg2/*
+COPY drivers/dg2 /drivers/dg2
 
 RUN	set -e ; \
 	set -x ; \
@@ -118,7 +118,7 @@ RUN	set -e ; \
                         apt-get update && apt-get -y install dpkg-dev ; \
                         WORKDIR="/home/dg2/drivers" ; \
                         mkdir -p ${WORKDIR} && \
-                            tar -xvz --warning=no-timestamp /drivers/dg2/*.tgz -C ${WORKDIR} && \
+                            tar -xvf /drivers/dg2/*.tgz -C ${WORKDIR} && \
                             cd ${WORKDIR}/20.04 && \
                             dpkg-scanpackages .  > Packages && \
                             cd - ; \
