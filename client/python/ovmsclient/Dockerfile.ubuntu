@@ -32,7 +32,7 @@ RUN apt-get install -y python3-pip python3-venv make && \
     cd /ovmsclient/lib && make build
 
 RUN cd /ovmsclient/lib && python3 -m venv .client_venv && . .client_venv/bin/activate && \ 
-    pip3 install dist/ovmsclient-0.2-py3-none-any.whl && \
+    pip3 install dist/ovmsclient-*-py3-none-any.whl && \
     cd .client_venv/lib && ln -s python3* python3 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
