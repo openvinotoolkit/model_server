@@ -83,13 +83,13 @@ std::optional<ov::Layout> getLayoutFromRTMap(const ov::RTMap& rtMap) {
     return std::nullopt;
 }
 
-void insertSupportedKeys(std::set<std::string>& aggregatetPluginSupportedConfigKeys, const std::string& pluginName, const ov::Core& ieCore) {
+void insertSupportedKeys(std::set<std::string>& aggregatedPluginSupportedConfigKeys, const std::string& pluginName, const ov::Core& ieCore) {
     const std::string supportedConfigKey = METRIC_KEY(SUPPORTED_CONFIG_KEYS);
     try {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Validating plugin: {}; configuration", pluginName);
         std::vector<std::string> pluginSupportedConfigKeys = ieCore.get_property(pluginName, supportedConfigKey).as<std::vector<std::string>>();
         std::set<std::string> pluginSupportedConfigKeysSet(pluginSupportedConfigKeys.begin(), pluginSupportedConfigKeys.end());
-        aggregatetPluginSupportedConfigKeys.insert(pluginSupportedConfigKeys.begin(), pluginSupportedConfigKeys.end());
+        aggregatedPluginSupportedConfigKeys.insert(pluginSupportedConfigKeys.begin(), pluginSupportedConfigKeys.end());
     } catch (std::exception& e) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", pluginName, supportedConfigKey, e.what());
     } catch (...) {
