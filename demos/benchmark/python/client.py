@@ -402,7 +402,7 @@ class BaseClient(metaclass=abc.ABCMeta):
         warmup_series = XSeries("warmup")
         total_series = XSeries("")
 
-        start_workload = time.time()
+        start_workload = time.perf_counter()
         if duration is None:
             stop_workload = math.inf
             error_msg = "one from step number or duration has to be set"
@@ -414,22 +414,22 @@ class BaseClient(metaclass=abc.ABCMeta):
         self.print_info(f"stop window: {stop_window}")
 
         self.print_info("Workload started!")
-        while time.time() <= stop_workload:
+        while time.perf_counter() <= stop_workload:
             if int(steps_number) > 0 and counter >= int(steps_number): break
 
             index = counter % self.dataset_length
             batch_size, request = self.requests[index]
-            start_step = time.time()
+            start_step = time.perf_counter()
             try:
                 response = self.predict(request, int(timeout))
-                end_step = time.time()
+                end_step = time.perf_counter()
                 request_time = end_step - start_step
                 current_status = True
 
                 # no response validation to save time
 
             except Exception:
-                end_step = time.time()
+                end_step = time.perf_counter()
                 request_time = end_step - start_step
                 self.final_status = False
                 current_status = False
@@ -440,7 +440,7 @@ class BaseClient(metaclass=abc.ABCMeta):
                     ex_type, ex_value, ex_tback = sys.exc_info()
                     traceback.print_exception(
                         ex_type, ex_value, ex_tback, file=sys.stderr)
-                    current_offset = time.time() - start_workload
+                    current_offset = time.perf_counter() - start_workload
                     info = f"Failed inference ({counter}) after: {current_offset}"
                     self.print_error(info)
 
@@ -451,9 +451,9 @@ class BaseClient(metaclass=abc.ABCMeta):
             counter += 1
 
             total_series.add(current_status, request_time, batch_size)
-            if time.time() < stop_warmup:
+            if time.perf_counter() < stop_warmup:
                 warmup_series.add(current_status, request_time, batch_size)
-            elif time.time() < stop_window:
+            elif time.perf_counter() < stop_window:
                 window_series.add(current_status, request_time, batch_size)
                 if warmup_series.stop():
                     warmup_ts = warmup_series.stop_timestamp
