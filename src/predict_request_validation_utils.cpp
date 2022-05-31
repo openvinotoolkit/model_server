@@ -129,9 +129,9 @@ Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIterat
         for (auto& input : request.inputs()) {
             if (input.has_contents()) {
                 std::stringstream ss;
-                ss << "Passing buffers both in ModelInferRequest::InferInputTensor::contents and in ModelInferRequest::raw_input_contents is not allowed. Detected buffer in ModelInferRequest::InferInputTensor::contents for input: " << input.name();
+                ss << "Passing buffers both in InferInputTensor contents and in raw_input_contents is not allowed. Detected buffer in InferInputTensor contents for input: " << input.name();
                 const std::string details = ss.str();
-                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of inputs - {}", servableName, servableVersion, details);
+                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid request message - {}", servableName, servableVersion, details);
                 return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
             }
         }
@@ -153,13 +153,6 @@ Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIterat
         }
     }
     if (request.inputs_size() > 0 && expectedNumberOfInputs == static_cast<size_t>(request.inputs_size())) {
-        if (!request.raw_input_contents().empty()) {
-            for (auto& input : request.inputs()) {
-                if (input.has_contents()) {
-                    return StatusCode::NOT_IMPLEMENTED;
-                }
-            }
-        }
         return StatusCode::OK;
     }
     std::stringstream ss;
@@ -422,6 +415,52 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
     return StatusCode::OK;
 }
 
+size_t getElementsCount(const KFSInputTensorType& proto, ovms::Precision expectedPrecision) {
+        switch (expectedPrecision) {
+        case ovms::Precision::BOOL: {
+            return proto.contents().bool_contents().size();
+        }
+            /// int_contents
+        case ovms::Precision::I8:
+        case ovms::Precision::I16:
+        case ovms::Precision::I32: {
+            return proto.contents().int_contents().size();
+        }
+            /// int64_contents
+        case ovms::Precision::I64: {
+            return proto.contents().int64_contents().size();
+        }
+            // uint_contents
+        case ovms::Precision::U8:
+        case ovms::Precision::U16:
+        case ovms::Precision::U32: {
+            return proto.contents().uint_contents().size();
+        }
+            // uint64_contents
+        case ovms::Precision::U64: {
+            return proto.contents().uint64_contents().size();
+        }
+            // fp32_contents
+        case ovms::Precision::FP32: {
+            return proto.contents().fp32_contents().size();
+        }
+            // fp64_contentes
+        case ovms::Precision::FP64: {
+            return proto.contents().fp64_contents().size();
+        }
+        case ovms::Precision::FP16:
+        case ovms::Precision::U1:
+        case ovms::Precision::CUSTOM:
+        case ovms::Precision::UNDEFINED:
+        case ovms::Precision::DYNAMIC:
+        case ovms::Precision::MIXED:
+        case ovms::Precision::Q78:
+        case ovms::Precision::BIN:
+        default:
+            return 0;
+        }
+}
+
 template <>
 Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::validateTensorContentSize(const KFSInputTensorType& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
     size_t expectedValueCount = 1;
@@ -440,57 +479,7 @@ Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIterat
     } else {  // buffers placed in InputTensor content
         // here we should check that the elements count is equal since for some precisions there is padding
         // we need to decide first which exact datatype_contents we extract that information from
-        size_t elementsCount = 0;
-        switch (expectedPrecision) {
-        case ovms::Precision::BOOL: {
-            elementsCount = proto.contents().bool_contents().size();
-            break;
-        }
-            /// int_contents
-        case ovms::Precision::I8:
-        case ovms::Precision::I16:
-        case ovms::Precision::I32: {
-            elementsCount = proto.contents().int_contents().size();
-            break;
-        }
-            /// int64_contents
-        case ovms::Precision::I64: {
-            elementsCount = proto.contents().int64_contents().size();
-            break;
-        }
-            // uint_contents
-        case ovms::Precision::U8:
-        case ovms::Precision::U16:
-        case ovms::Precision::U32: {
-            elementsCount = proto.contents().uint_contents().size();
-            break;
-        }
-            // uint64_contents
-        case ovms::Precision::U64: {
-            elementsCount = proto.contents().uint64_contents().size();
-            break;
-        }
-            // fp32_contents
-        case ovms::Precision::FP32: {
-            elementsCount = proto.contents().fp32_contents().size();
-            break;
-        }
-            // fp64_contentes
-        case ovms::Precision::FP64: {
-            elementsCount = proto.contents().fp64_contents().size();
-            break;
-        }
-        case ovms::Precision::FP16:
-        case ovms::Precision::U1:
-        case ovms::Precision::CUSTOM:
-        case ovms::Precision::UNDEFINED:
-        case ovms::Precision::DYNAMIC:
-        case ovms::Precision::MIXED:
-        case ovms::Precision::Q78:
-        case ovms::Precision::BIN:
-        default:
-            elementsCount = 0;
-        }
+        size_t elementsCount = getElementsCount(proto, expectedPrecision);
         if (expectedValueCount != elementsCount) {
             std::stringstream ss;
             ss << "Expected: " << expectedValueCount << " values; Actual: " << elementsCount << " values; input name: " << getCurrentlyValidatedInputName();
