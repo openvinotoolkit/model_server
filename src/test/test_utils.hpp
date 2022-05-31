@@ -136,14 +136,14 @@ ovms::tensor_map_t prepareTensors(
 void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {});
 
 ::inference::ModelInferRequest_InferInputTensor* findKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name);
-std::string* findKFSInferInputTensorContent(::inference::ModelInferRequest& request, const std::string& name);
+std::string* findKFSInferInputTensorContentInRawInputs(::inference::ModelInferRequest& request, const std::string& name);
 
 void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,
-    const std::vector<float>& data = {});
+    const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
 void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
-    const std::vector<float>& data = {});
+    const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
 
-void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {});
+void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
 
 tensorflow::serving::PredictRequest prepareBinaryPredictRequest(const std::string& inputName, const int batchSize = 1);
 tensorflow::serving::PredictRequest prepareBinary4x4PredictRequest(const std::string& inputName, const int batchSize = 1);
@@ -355,6 +355,46 @@ static const std::vector<ovms::Precision> UNSUPPORTED_KFS_INPUT_PRECISIONS{
     // ovms::Precision::FP64,
     // ovms::Precision::FP32,
     // ovms::Precision::FP16,
+    ovms::Precision::Q78,
+    // ovms::Precision::I16,
+    // ovms::Precision::U8,
+    // ovms::Precision::I8,
+    // ovms::Precision::U16,
+    // ovms::Precision::I32,
+    // ovms::Precision::I64,
+    // ovms::Precision::U32,
+    // ovms::Precision::U64,
+    ovms::Precision::BIN,
+    // ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
+};
+
+static const std::vector<ovms::Precision> SUPPORTED_KFS_INPUT_PRECISIONS_TENSORINPUTCONTENT{
+    // ovms::Precision::UNSPECIFIED,
+    // ovms::Precision::MIXED,
+    ovms::Precision::FP64,
+    ovms::Precision::FP32,
+    // ovms::Precision::FP16,
+    // ovms::Precision::Q78,
+    ovms::Precision::I16,
+    ovms::Precision::U8,
+    ovms::Precision::I8,
+    ovms::Precision::U16,
+    ovms::Precision::I32,
+    ovms::Precision::I64,
+    ovms::Precision::U32,
+    ovms::Precision::U64,
+    // ovms::Precision::BIN,
+    ovms::Precision::BOOL
+    // ovms::Precision::CUSTOM)
+};
+
+static const std::vector<ovms::Precision> UNSUPPORTED_KFS_INPUT_PRECISIONS_TENSORINPUTCONTENT{
+    ovms::Precision::UNDEFINED,
+    ovms::Precision::MIXED,
+    // ovms::Precision::FP64,
+    // ovms::Precision::FP32,
+    ovms::Precision::FP16,
     ovms::Precision::Q78,
     // ovms::Precision::I16,
     // ovms::Precision::U8,

@@ -25,11 +25,11 @@ using tensorflow::serving::PredictResponse;
 
 using ovms::TensorInfo;
 
-void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_t requestInputs, const std::vector<float>& data) {
+void preparePredictRequest(::inference::ModelInferRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, bool putBufferInInputTensorContent) {
     request.mutable_inputs()->Clear();
     request.mutable_raw_input_contents()->Clear();
     for (auto const& it : requestInputs) {
-        prepareKFSInferInputTensor(request, it.first, it.second, data);
+        prepareKFSInferInputTensor(request, it.first, it.second, data, putBufferInInputTensorContent);
     }
 }
 
@@ -274,7 +274,7 @@ tensorflow::serving::PredictRequest prepareBinary4x4PredictRequest(const std::st
     return it == request.mutable_inputs()->end() ? nullptr : &(*it);
 }
 
-std::string* findKFSInferInputTensorContent(::inference::ModelInferRequest& request, const std::string& name) {
+std::string* findKFSInferInputTensorContentInRawInputs(::inference::ModelInferRequest& request, const std::string& name) {
     auto it = request.mutable_inputs()->begin();
     size_t bufferId = 0;
     std::string* content = nullptr;
@@ -290,15 +290,15 @@ std::string* findKFSInferInputTensorContent(::inference::ModelInferRequest& requ
     return content;
 }
 void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const ovms::Precision>& inputInfo,
-    const std::vector<float>& data) {
+    const std::vector<float>& data, bool putBufferInInputTensorContent) {
     auto [shape, type] = inputInfo;
     prepareKFSInferInputTensor(request, name,
         {shape, TensorInfo::getPrecisionAsKFSPrecision(type)},
-        data);
+        data, putBufferInInputTensorContent);
 }
 
 void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name, const std::tuple<ovms::shape_t, const std::string>& inputInfo,
-    const std::vector<float>& data) {
+    const std::vector<float>& data, bool putBufferInInputTensorContent) {
     auto it = request.mutable_inputs()->begin();
     size_t bufferId = 0;
     while (it != request.mutable_inputs()->end()) {
@@ -308,27 +308,105 @@ void prepareKFSInferInputTensor(::inference::ModelInferRequest& request, const s
         ++bufferId;
     }
     ::inference::ModelInferRequest_InferInputTensor* tensor;
-    std::string* content;
+    std::string* content = nullptr;
     if (it != request.mutable_inputs()->end()) {
         tensor = &*it;
-        content = request.mutable_raw_input_contents()->Mutable(bufferId);
+        if (!putBufferInInputTensorContent) {
+            content = request.mutable_raw_input_contents()->Mutable(bufferId);
+        }
     } else {
         tensor = request.add_inputs();
-        content = request.add_raw_input_contents();
+        if (!putBufferInInputTensorContent) {
+            content = request.add_raw_input_contents();
+        }
     }
-    auto [shape, dtype] = inputInfo;
+    auto [shape, datatype] = inputInfo;
     tensor->set_name(name);
-    tensor->set_datatype(dtype);
-    size_t numberOfElements = 1;
+    tensor->set_datatype(datatype);
+    size_t elementsCount = 1;
     tensor->mutable_shape()->Clear();
     for (auto const& dim : shape) {
+        ASSERT_GE(dim, 0);
         tensor->add_shape(dim);
-        numberOfElements *= dim;
+        elementsCount *= dim;
     }
-    if (data.size() == 0) {
-        content->assign(numberOfElements * ovms::KFSDataTypeSize(dtype), '1');
+    if (!putBufferInInputTensorContent) {
+        if (data.size() == 0) {
+            content->assign(elementsCount * ovms::KFSDataTypeSize(datatype), '1');
+        } else {
+            content->resize(elementsCount * ovms::KFSDataTypeSize(datatype));
+            std::memcpy(content->data(), data.data(), content->size());
+        }
     } else {
-        content->resize(numberOfElements * ovms::KFSDataTypeSize(dtype));
-        std::memcpy(content->data(), data.data(), content->size());
+        switch (ovms::KFSPrecisionToOvmsPrecision(datatype)) {
+        case ovms::Precision::FP64: {
+            for (size_t i = 0; i < elementsCount; ++i) {
+                auto ptr = tensor->mutable_contents()->mutable_fp64_contents()->Add();
+                *ptr = (data.size() ? data[i] : 1);
+            }
+            break;
+        }
+        case ovms::Precision::FP32: {
+            for (size_t i = 0; i < elementsCount; ++i) {
+                auto ptr = tensor->mutable_contents()->mutable_fp32_contents()->Add();
+                *ptr = (data.size() ? data[i] : 1);
+            }
+            break;
+        }
+        // uint64_contents
+        case ovms::Precision::U64: {
+            for (size_t i = 0; i < elementsCount; ++i) {
+                auto ptr = tensor->mutable_contents()->mutable_uint64_contents()->Add();
+                *ptr = (data.size() ? data[i] : 1);
+            }
+            break;
+        }
+        // uint_contents
+        case ovms::Precision::U8:
+        case ovms::Precision::U16:
+        case ovms::Precision::U32: {
+            for (size_t i = 0; i < elementsCount; ++i) {
+                auto ptr = tensor->mutable_contents()->mutable_uint_contents()->Add();
+                *ptr = (data.size() ? data[i] : 1);
+            }
+            break;
+        }
+        // int64_contents
+        case ovms::Precision::I64: {
+            for (size_t i = 0; i < elementsCount; ++i) {
+                auto ptr = tensor->mutable_contents()->mutable_int64_contents()->Add();
+                *ptr = (data.size() ? data[i] : 1);
+            }
+            break;
+        }
+        // bool_contents
+        case ovms::Precision::BOOL: {
+            for (size_t i = 0; i < elementsCount; ++i) {
+                auto ptr = tensor->mutable_contents()->mutable_bool_contents()->Add();
+                *ptr = (data.size() ? data[i] : 1);
+            }
+            break;
+        }
+        // int_contents
+        case ovms::Precision::I8:
+        case ovms::Precision::I16:
+        case ovms::Precision::I32: {
+            for (size_t i = 0; i < elementsCount; ++i) {
+                auto ptr = tensor->mutable_contents()->mutable_int_contents()->Add();
+                *ptr = (data.size() ? data[i] : 1);
+            }
+            break;
+        }
+        case ovms::Precision::FP16:
+        case ovms::Precision::U1:
+        case ovms::Precision::CUSTOM:
+        case ovms::Precision::UNDEFINED:
+        case ovms::Precision::DYNAMIC:
+        case ovms::Precision::MIXED:
+        case ovms::Precision::Q78:
+        case ovms::Precision::BIN:
+        default: {
+        }
+        }
     }
 }

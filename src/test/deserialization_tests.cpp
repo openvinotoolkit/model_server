@@ -218,7 +218,7 @@ protected:
         auto bytes = static_cast<char*>(static_cast<void*>(&value));
         SetUpBuffer(bytes);
     }
-    void SetUpTensorProto(std::string dataType, bool getInputFromRawInputContents) {
+    void SetUpTensorProto(const std::string& dataType, bool getInputFromRawInputContents) {
         ovms::Shape tensorShape{1, DUMMY_MODEL_INPUT_SIZE};
         tensorProto.set_name(tensorName);
         tensorProto.set_datatype(dataType);

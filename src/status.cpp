@@ -97,6 +97,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_PRECISION, "Invalid input precision"},
     {StatusCode::INVALID_VALUE_COUNT, "Invalid number of values in tensor proto container"},
     {StatusCode::INVALID_CONTENT_SIZE, "Invalid content size of tensor proto"},
+    {StatusCode::INVALID_MESSAGE_STRUCTURE, "Passing buffers both in ModelInferRequest::InferInputTensor::contents and in ModelInferRequest::raw_input_contents is not allowed"},
     {StatusCode::UNSUPPORTED_LAYOUT, "Received binary image input but resource not configured to accept NHWC layout"},
 
     // Deserialization
@@ -296,6 +297,7 @@ const std::unordered_map<const StatusCode, grpc::StatusCode> Status::grpcStatusM
     {StatusCode::INVALID_PRECISION, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_VALUE_COUNT, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::INVALID_CONTENT_SIZE, grpc::StatusCode::INVALID_ARGUMENT},
+    {StatusCode::INVALID_MESSAGE_STRUCTURE, grpc::StatusCode::INVALID_ARGUMENT},
     {StatusCode::UNSUPPORTED_LAYOUT, grpc::StatusCode::INVALID_ARGUMENT},
 
     // Deserialization
@@ -392,6 +394,7 @@ const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> Status::htt
     {StatusCode::INVALID_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::INVALID_VALUE_COUNT, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::INVALID_CONTENT_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
+    {StatusCode::INVALID_MESSAGE_STRUCTURE, net_http::HTTPStatusCode::BAD_REQUEST},
     {StatusCode::UNSUPPORTED_LAYOUT, net_http::HTTPStatusCode::BAD_REQUEST},
 
     // Deserialization
