@@ -39,7 +39,6 @@ def resnet_multiple_batch_sizes(get_docker_context):
     for resnet in resnet_to_convert:
         logger.info("Converting model {}".format(resnet.name))
         input_shape = list(resnet.input_shape)
-        input_shape[1], input_shape[3] = input_shape[3], input_shape[1]
 
         converted_model = convert_model(get_docker_context, tensorflow_model_path,
                                         config.path_to_mount_cache + '/{}/{}'.format(resnet.name, resnet.version),
