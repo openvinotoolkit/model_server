@@ -106,9 +106,6 @@ class RequestingThread(threading.Thread):
         self.predict_durations = []
         self.input_ready_event = threading.Event()
         self.output_ready_event = threading.Event()
-    
-    def exit():
-        sys.exit()
 
     def is_initialized(self):
         return not (self.input_frame is None and self.output_frame is None)
