@@ -1017,7 +1017,7 @@ TEST_F(KFSPredictValidationInputTensorContentNegative, RequestIncorrectContentSi
     buf->Clear();
     buf->Add(1);  // There should be 1*6*128*128*16 values
     auto status = instance->mockValidate(&request);
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_VALUE_COUNT) << status.string();
 }
 
 TEST_F(KFSPredictValidationInputTensorContentNegative, RequestIncorrectContentSizeBatchAutoInputTensorContent) {
@@ -1025,14 +1025,14 @@ TEST_F(KFSPredictValidationInputTensorContentNegative, RequestIncorrectContentSi
     auto input = findKFSInferInputTensor(request, "Input_I64_1_6_128_128_16_NCDHW");
     (*input->mutable_shape()->Mutable(0)) = 2;
     auto status = instance->mockValidate(&request);
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_VALUE_COUNT) << status.string();
 }
 TEST_F(KFSPredictValidationInputTensorContentNegative, RequestIncorrectContentSizeShapeAutoInputTensorContent) {
     modelConfig.parseShapeParameter("auto");
     auto input = findKFSInferInputTensor(request, "Input_I64_1_6_128_128_16_NCDHW");
     (*input->mutable_shape()->Mutable(1)) = 2;
     auto status = instance->mockValidate(&request);
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_VALUE_COUNT) << status.string();
 }
 
 TEST_F(KFSPredictValidation, RequestWrongPrecision) {
