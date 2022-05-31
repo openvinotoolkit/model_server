@@ -86,6 +86,9 @@ rest_ovms_starting_port = get_int("TT_REST_OVMS_STARTING_PORT", 18001)
 """ TT_PORTS_POOL_SIZE- Ports pool size"""
 ports_pool_size = get_int("TT_PORTS_POOL_SIZE", 5000)
 
+""" TT_CONVERTED_MODELS_EXPIRE_TIME - Time after converted models are not up-to-date and needs to be refreshed(s) """
+converted_models_expire_time = get_int("TT_CONVERTED_MODELS_EXPIRE_TIME", 7*24*3600)  # Set default to one week
+
 """ TT_DEFAULT_INFER_TIMEOUT - Timeout for CPU target device"""
 default_infer_timeout = get_int("TT_DEFAULT_INFER_TIMEOUT", 10)
 
