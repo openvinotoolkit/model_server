@@ -106,6 +106,9 @@ class RequestingThread(threading.Thread):
         self.predict_durations = []
         self.input_ready_event = threading.Event()
         self.output_ready_event = threading.Event()
+    
+    def exit():
+        sys.exit()
 
     def is_initialized(self):
         return not (self.input_frame is None and self.output_frame is None)
@@ -175,18 +178,27 @@ threads = [RequestingThread(i) for i in range(args.num_threads)]
 for thread in threads:
     thread.start()
 
+def finish():
+    global force_exit
+    force_exit = True
+    for thread in threads:
+        thread.notify_input_ready()
+        thread.join()
 
 def grab_frame(cap):
     WIDTH = 704
     HEIGHT = 704
     ret, frame = cap.read()
-    # crop and resize if original image is too small or too big for the model
-    if frame.shape[0] > HEIGHT and frame.shape[1] > WIDTH:
-        frame = frame[0:HEIGHT, 0:WIDTH]
-    else:
-        res = min(frame.shape[0], frame.shape[1])
-        frame = frame[0:res, 0:res]
-        frame = cv2.resize(frame, (HEIGHT, WIDTH), interpolation=cv2.INTER_AREA)
+    if frame == None:
+        print(f"[WARNING] No Input frame")
+    if frame != None:
+        # crop and resize if original image is too small or too big for the model
+        if frame.shape[0] > HEIGHT and frame.shape[1] > WIDTH:
+            frame = frame[0:HEIGHT, 0:WIDTH]
+        else:
+            res = min(frame.shape[0], frame.shape[1])
+            frame = frame[0:res, 0:res]
+            frame = cv2.resize(frame, (HEIGHT, WIDTH), interpolation=cv2.INTER_AREA)
     return frame
 
 
@@ -195,38 +207,40 @@ frames_processed = 0
 last_display_time = time.time()
 app_start_time = time.time()
 
-while(True):
-    if not threads[i].is_initialized():
+if grab_frame(cap) == None:
+    print(f"[ERROR] Check camera input...")
+else:
+    while(True):
+        if not threads[i].is_initialized():
+            threads[i].set_input(grab_frame(cap))
+            i = (i + 1) % args.num_threads
+            continue
+
+        threads[i].wait_for_result()
+        avg_latency_for_thread = threads[i].get_average_latency()
+        frame_to_display = threads[i].get_output()
         threads[i].set_input(grab_frame(cap))
+
+        cv2.imshow('frame', frame_to_display)
+        now = time.time()
+        time_since_last_display = now - last_display_time
+        last_display_time = now
+
+        frames_processed += 1
+
+        current_fps = 1 / (time_since_last_display if time_since_last_display > 0 else 1)
+        avg_fps = 1 / ((now - app_start_time) / frames_processed)
+        
+        print(f"ThreadID: {i:3}; Current FPS: {current_fps:8.2f}; Average FPS: {avg_fps:8.2f}; Average latency: {avg_latency_for_thread:8.2f}ms")
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            finish()
+            break
+
         i = (i + 1) % args.num_threads
-        continue
-
-    threads[i].wait_for_result()
-    avg_latency_for_thread = threads[i].get_average_latency()
-    frame_to_display = threads[i].get_output()
-    threads[i].set_input(grab_frame(cap))
-
-    cv2.imshow('frame', frame_to_display)
-    now = time.time()
-    time_since_last_display = now - last_display_time
-    last_display_time = now
-
-    frames_processed += 1
-
-    current_fps = 1 / (time_since_last_display if time_since_last_display > 0 else 1)
-    avg_fps = 1 / ((now - app_start_time) / frames_processed)
-    
-    print(f"ThreadID: {i:3}; Current FPS: {current_fps:8.2f}; Average FPS: {avg_fps:8.2f}; Average latency: {avg_latency_for_thread:8.2f}ms")
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        force_exit = True
-        for thread in threads:
-            thread.notify_input_ready()
-            thread.join()
-        break
-
-    i = (i + 1) % args.num_threads
 
 
+finish()
 # When everything done, release the capture
 cap.release()
 cv2.destroyAllWindows()
+print(f"Finished.")
