@@ -416,49 +416,49 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
 }
 
 size_t getElementsCount(const KFSInputTensorType& proto, ovms::Precision expectedPrecision) {
-        switch (expectedPrecision) {
-        case ovms::Precision::BOOL: {
-            return proto.contents().bool_contents().size();
-        }
-            /// int_contents
-        case ovms::Precision::I8:
-        case ovms::Precision::I16:
-        case ovms::Precision::I32: {
-            return proto.contents().int_contents().size();
-        }
-            /// int64_contents
-        case ovms::Precision::I64: {
-            return proto.contents().int64_contents().size();
-        }
-            // uint_contents
-        case ovms::Precision::U8:
-        case ovms::Precision::U16:
-        case ovms::Precision::U32: {
-            return proto.contents().uint_contents().size();
-        }
-            // uint64_contents
-        case ovms::Precision::U64: {
-            return proto.contents().uint64_contents().size();
-        }
-            // fp32_contents
-        case ovms::Precision::FP32: {
-            return proto.contents().fp32_contents().size();
-        }
-            // fp64_contentes
-        case ovms::Precision::FP64: {
-            return proto.contents().fp64_contents().size();
-        }
-        case ovms::Precision::FP16:
-        case ovms::Precision::U1:
-        case ovms::Precision::CUSTOM:
-        case ovms::Precision::UNDEFINED:
-        case ovms::Precision::DYNAMIC:
-        case ovms::Precision::MIXED:
-        case ovms::Precision::Q78:
-        case ovms::Precision::BIN:
-        default:
-            return 0;
-        }
+    switch (expectedPrecision) {
+    case ovms::Precision::BOOL: {
+        return proto.contents().bool_contents().size();
+    }
+        /// int_contents
+    case ovms::Precision::I8:
+    case ovms::Precision::I16:
+    case ovms::Precision::I32: {
+        return proto.contents().int_contents().size();
+    }
+        /// int64_contents
+    case ovms::Precision::I64: {
+        return proto.contents().int64_contents().size();
+    }
+        // uint_contents
+    case ovms::Precision::U8:
+    case ovms::Precision::U16:
+    case ovms::Precision::U32: {
+        return proto.contents().uint_contents().size();
+    }
+        // uint64_contents
+    case ovms::Precision::U64: {
+        return proto.contents().uint64_contents().size();
+    }
+        // fp32_contents
+    case ovms::Precision::FP32: {
+        return proto.contents().fp32_contents().size();
+    }
+        // fp64_contentes
+    case ovms::Precision::FP64: {
+        return proto.contents().fp64_contents().size();
+    }
+    case ovms::Precision::FP16:
+    case ovms::Precision::U1:
+    case ovms::Precision::CUSTOM:
+    case ovms::Precision::UNDEFINED:
+    case ovms::Precision::DYNAMIC:
+    case ovms::Precision::MIXED:
+    case ovms::Precision::Q78:
+    case ovms::Precision::BIN:
+    default:
+        return 0;
+    }
 }
 
 template <>
