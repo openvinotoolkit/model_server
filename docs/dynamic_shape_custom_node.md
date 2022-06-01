@@ -58,8 +58,8 @@ cd ../../../models
 ```
 
 Create a new file named `config.json` in the `models` directory:
-```json
-{
+```Bash
+echo '{
     "model_config_list": [
         {
             "config": {
@@ -127,13 +127,13 @@ Create a new file named `config.json` in the `models` directory:
             ]
         }
     ]
-}
+}' >> config.json
 ```
 
 #### Start Model Server Container with Downloaded Model
 Start the container with the image pulled in the previous step and mount `<models_dir>` :
 ```Bash
-docker run --rm -d -v <models_dir>:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config.json --port 9000
+docker run --rm -d -v ${PWD}:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config.json --port 9000
 ```
 
 #### Run the Client
@@ -142,10 +142,12 @@ cd ../demos/face_detection/python
 virtualenv .venv
 . .venv/bin/activate
 pip install -r ../../common/python/requirements.txt
-mkdir results_500x500 results_600x400
+mkdir results_500x500
 
-python face_detection.py --width 500 --height 500 --input_images_dir ../../common/static/images/people --output_dir results_500x500 --model_name face_detection
+python face_detection.py --grpc_port 9000 --width 500 --height 500 --input_images_dir ../../common/static/images/people --output_dir results_500x500 --model_name face_detection
 
-python face_detection.py --width 600 --height 400 --input_images_dir ../../common/static/images/people --output_dir results_600x400 --model_name face_detection
+mkdir results_600x400
+
+python face_detection.py --grpc_port 9000 --width 600 --height 400 --input_images_dir ../../common/static/images/people --output_dir results_600x400 --model_name face_detection
 ```
 Results of running the client will be available in directories specified in `--output_dir`
