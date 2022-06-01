@@ -42,11 +42,13 @@ cd demos/face_detection/python
 virtualenv .venv
 . .venv/bin/activate
 pip install -r ../../common/python/requirements.txt
-mkdir results_500x500 results_600x400
+mkdir results_500x500
 
-python face_detection.py --width 500 --height 500 --input_images_dir ../../common/static/images/people --output_dir results_500x500
+python face_detection.py --grpc_port 9000 --width 500 --height 500 --input_images_dir ../../common/static/images/people --output_dir results_500x500
 
-python face_detection.py --width 600 --height 400 --input_images_dir ../../common/static/images/people --output_dir results_600x400
+mkdir results_600x400
+
+python face_detection.py --grpc_port 9000 --width 600 --height 400 --input_images_dir ../../common/static/images/people --output_dir results_600x400
 ```
 The results from running the client will be saved in the directory specified by `--output_dir`
 
