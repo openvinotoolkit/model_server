@@ -43,7 +43,8 @@ wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/202
 
 ### Run Inference
 
-```python
+```Bash
+echo '
 import numpy as np 
 from classes import imagenet_classes 
 from ovmsclient import make_grpc_client 
@@ -54,5 +55,7 @@ with open("zebra.jpeg", "rb") as f:
 
 output = client.predict(inputs={ "0": img}, model_name= "resnet") 
 result_index = np.argmax(output[0]) 
-print(imagenet_classes[result_index]) 
+print(imagenet_classes[result_index])' >> script.py
+
+python3 script.py
 ```
