@@ -593,6 +593,9 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
     auto status = validateNumberOfInputs();
     if (!status.ok())
         return status;
+    status = validateRequestCoherency();
+    if (!status.ok())
+        return status;
 
     size_t bufferId = 0;
     for (const auto& [name, inputInfo] : inputsInfo) {
@@ -646,7 +649,6 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
         if (!status.ok())
             return status;
     }
-
     return finalStatus;
 }
 

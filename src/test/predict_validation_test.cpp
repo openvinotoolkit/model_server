@@ -949,7 +949,7 @@ TEST_F(KFSPredictValidationInputTensorContent, RequestInputTensorContentAndRawIn
     buf->Add(1);
     buf->Add(1);
     auto status = instance->mockValidate(&request);
-    EXPECT_EQ(status, ovms::StatusCode::NOT_IMPLEMENTED) << status.string();
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_MESSAGE_STRUCTURE) << status.string();
 }
 
 TEST_P(KFSPredictValidationInputTensorContent, RequestCorrectContentSizeInputTensorContent) {
