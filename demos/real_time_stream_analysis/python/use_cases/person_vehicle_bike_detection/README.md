@@ -22,19 +22,19 @@ Once you have the model, launch OpenVINO Model Sever and mount model catalog to 
 
 Modify streaming app main script - [`real_time_stream_analysis.py`](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/real_time_stream_analysis/python/real_time_stream_analysis.py) to contain the following:
 
-`
+```
 from use_cases import PersonVehicleBikeDetection
-`
 
-`
+...
+
 io_processor = IOProcessor(PersonVehicleBikeDetection, visualizer_frames_queue)
-`
+```
 
 ## Run Stream Analysis
 
 As this use case implements only visualization in post processing, run with visualizer:
 
-```
+```bash
 python3 real_time_stream_analysis.py --stream_url <rtsp_stream_url> --ovms_url localhost:9000 --model_name person-vehicle-bike-detection --visualizer_port 5000
 ```
 

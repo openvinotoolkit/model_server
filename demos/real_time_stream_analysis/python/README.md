@@ -218,7 +218,7 @@ docker build . -t real-time-stream-analysis:latest
 
 2. Put the image in a repository accessible from your cluster
 3. Deploy with helm
-```
+```bash
 helm install rt-stream-analyzer ./deploy --set stream_url=rtsp://localhost:8554/mystream,ovms_url=localhost:9000,model_name=person-vehicle-bike-detection,visualizer_service.port=5000
 ```
 
