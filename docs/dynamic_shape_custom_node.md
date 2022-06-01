@@ -16,49 +16,49 @@ When using the `face_detection_retail_0004` model with the `face_detection.py` s
 
 ## Steps
 Clone OpenVINO&trade; Model Server GitHub repository and enter `model_server` directory.
-```
+```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 ```
 
 #### Download the Pretrained Model
 Download the model files and store them in the `models` directory:
-```Bash
+```bash
 mkdir -p models/face_detection/1
 curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/face-detection-retail-0004/FP32/face-detection-retail-0004.xml -o models/face_detection/1/face-detection-retail-0004.bin -o models/face_detection/1/face-detection-retail-0004.xml
 ```
 
 #### Pull the Latest Model Server Image
 Pull the latest version of OpenVINO&trade; Model Server from Docker Hub :
-```Bash
+```bash
 docker pull openvino/model_server:latest
 ```
 
 ### Build a Custom Node
 
 1. Go to the custom node directory:
-    ```
+    ```bash
     cd src/custom_nodes/image_transformation/
     ``` 
 
 3. Build the custom node:
-    ```
+    ```bash
     make
     ```
 
 4. Copy the custom node to the `models` repository:
-    ```
+    ```bash
     cp lib/libcustom_node_image_transformation.so ../../../models
     ```
 
 #### Create Model Server Configuration File
 Go to the `models` directory:
-```
+```bash
 cd ../../../models
 ```
 
 Create a new file named `config.json` in the `models` directory:
-```Bash
+```bash
 echo '{
     "model_config_list": [
         {
@@ -132,12 +132,12 @@ echo '{
 
 #### Start Model Server Container with Downloaded Model
 Start the container with the image pulled in the previous step and mount `<models_dir>` :
-```Bash
+```bash
 docker run --rm -d -v ${PWD}:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config.json --port 9000
 ```
 
 #### Run the Client
-```Bash
+```bash
 cd ../demos/face_detection/python
 virtualenv .venv
 . .venv/bin/activate

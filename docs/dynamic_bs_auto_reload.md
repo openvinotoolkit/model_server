@@ -13,31 +13,31 @@ Enabling dynamic batch size via model reload is as simple as setting the `batch_
 
 ## Steps
 Clone OpenVINO&trade; Model Server GitHub repository and enter `model_server` directory.
-```
+```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 ```
 #### Download the Pretrained Model
 Download the model files and store them in the `models` directory
-```Bash
+```bash
 mkdir -p models/resnet/1
 curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
 ```
 
 #### Pull the Latest Model Server Image
 Pull the latest version of OpenVINO&trade; Model Server from Docker Hub :
-```Bash
+```bash
 docker pull openvino/model_server:latest
 ```
 
 #### Start the Model Server Container with Downloaded Model and Dynamic Batch Size
 Start the server container with the image pulled in the previous step and mount the `models` directory :
-```Bash
+```bash
 docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9000
 ```
 
 #### Run the Client
-```Bash
+```bash
 cd client/python/tensorflow-serving-api/samples
 virtualenv .venv
 . .venv/bin/activate
@@ -49,7 +49,7 @@ python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.np
 
 #### Script Output
 Output with `batchsize 1` stored in `b1.txt`:
-```Bash
+```bash
 cat b1.txt
 Image data range: 0.0 : 255.0
 Start processing:
@@ -102,7 +102,7 @@ Classification accuracy: 100.00
 
 ```
 Output with `batchsize 8` stored in `b8.txt`:
-```Bash
+```bash
 cat b8.txt
 Image data range: 0.0 : 255.0
 Start processing:

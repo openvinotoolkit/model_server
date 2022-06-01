@@ -71,7 +71,7 @@ pip install -r requirements.txt
 ```
 
 Run the gRPC client sending the binary input:
-```
+```bash
 python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet --service_url localhost:9000
 Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
 Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican
@@ -87,7 +87,7 @@ Image ../../../../demos/common/static/images/golden_retriever.jpeg has been clas
 
 
 Run the REST client sending the binary input:
-```
+```bash
 python http_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet --service_url localhost:8000
 Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
 Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican

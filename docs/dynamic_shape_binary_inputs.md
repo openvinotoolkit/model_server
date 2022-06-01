@@ -11,31 +11,31 @@ Learn more about the [binary inputs](binary_input.md) feature.
 
 #### Download the Pretrained Model
 Download the model files and store them in the `models` directory
-```Bash
+```bash
 mkdir -p models/resnet/1
 curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
 ```
 
 #### Pull the Latest Model Server Image from Docker Hub
 Pull the latest version of OpenVINO&trade; Model Server from Docker Hub :
-```Bash
+```bash
 docker pull openvino/model_server:latest
 ```
 
 #### Start the Container with Downloaded Model
 Start the container with the image pulled in the previous step and mount the `models` directory :
-```Bash
+```bash
 docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --layout NHWC:NCHW --port 9000
 ```
 
 ### Download ovmsclient Package
 
-``` 
+```bash
 pip3 install ovmsclient 
 ```
 
 ### Download a Sample Image and Label Mappings
-```
+```bash
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/static/images/zebra.jpeg
 
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/python/classes.py
@@ -43,7 +43,7 @@ wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/202
 
 ### Run Inference
 
-```Bash
+```bash
 echo '
 import numpy as np 
 from classes import imagenet_classes 
