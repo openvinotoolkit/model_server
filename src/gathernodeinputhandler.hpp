@@ -23,7 +23,9 @@
 #include <openvino/openvino.hpp>
 
 #include "nodeinputhandler.hpp"
+#include "precision.hpp"
 #include "session_id.hpp"
+#include "shape.hpp"
 
 namespace ovms {
 
@@ -39,5 +41,8 @@ public:
     GatherNodeInputHandler(uint32_t inputsMissingCount, const CollapseDetails& collapsingDetails);
     Status setInput(const std::string& inputName, TensorWithSource& tensor, session_id_t shardId) override;
     Status notifyFinishedDependency() override;
+
+protected:
+    virtual Status prepareConsolidatedTensor(ov::Tensor& tensorOut, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape) const;
 };
 }  // namespace ovms
