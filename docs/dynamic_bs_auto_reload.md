@@ -50,11 +50,12 @@ python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.np
 #### Script Output
 Output with `batchsize 1` stored in `b1.txt`:
 ```Bash
+cat b1.txt
 Image data range: 0.0 : 255.0
 Start processing:
-	Model name: resnet50DAG
+	Model name: resnet
 	Iterations: 10
-	Images numpy path: imgs.npy
+	Images numpy path: ../../imgs.npy
 	Numpy file shape: (10, 3, 224, 224)
 
 Iteration 1; Processing time: 21.16 ms; speed 47.25 fps
@@ -102,11 +103,12 @@ Classification accuracy: 100.00
 ```
 Output with `batchsize 8` stored in `b8.txt`:
 ```Bash
+cat b8.txt
 Image data range: 0.0 : 255.0
 Start processing:
-	Model name: resnet50DAG
+	Model name: resnet
 	Iterations: 1
-	Images numpy path: imgs.npy
+	Images numpy path: ../../imgs.npy
 	Numpy file shape: (10, 3, 224, 224)
 
 Iteration 1; Processing time: 121.12 ms; speed 66.05 fps
