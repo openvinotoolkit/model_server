@@ -36,9 +36,10 @@ docker run -u $(id -u):$(id -g) -v ${PWD}/resnet_v2/:/resnet openvino/ubuntu20_d
 
 This operation will create model files in `${PWD}/resnet_v2/models/resnet/1/` folder.
 ```Bash
-saved_model.bin
-saved_model.mapping
-saved_model.xml
+tree ${PWD}/resnet_v2/models/resnet/1/
+├── saved_model.bin
+├── saved_model.mapping
+└── saved_model.xml
 ```
 
 ### OVMS Deployment
@@ -55,12 +56,13 @@ docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_ser
 ### Running the inference requests from the client
 
 ```Bash
-cd client/python/ovmsclient/samples
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/client/python/ovmsclient/samples
 virtualenv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
 
-python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet
+python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet --service_url localhost:9000
 
 Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
 Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican
