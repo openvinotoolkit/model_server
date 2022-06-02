@@ -435,7 +435,6 @@ Image ../../../../demos/common/static/images/golden_retriever.jpeg has been clas
 ## Prepare the model from OpenVINO Model Zoo
 
 ### Vehicle detection model
-
 OVMS container can be started using a command:
 ```bash
 docker run -d --rm -v ${PWD}/models/vehicle-detection:/models/vehicle-detection -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name vehicle-detection --model_path /models/vehicle-detection --port 9000 --rest_port 8000 --layout NHWC:NCHW
