@@ -23,7 +23,7 @@ When a new model version is detected, the server loads the model files and start
 
 
 Below are examples of incorrect structure :
-```bash
+```
 models/
 ├── model1
 │   ├── 1
