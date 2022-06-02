@@ -119,10 +119,8 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
         if (std::find(pluginSupportedConfigKeys.begin(), pluginSupportedConfigKeys.end(), config.first) == pluginSupportedConfigKeys.end()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config key: {} not found in supported config keys for device: {}.", config.first, targetDevice);
             SPDLOG_LOGGER_INFO(modelmanager_logger, "List of supported keys for this device:");
-            if (!pluginSupportedConfigKeys.empty()) {
-                for (auto supportedKey : pluginSupportedConfigKeys) {
-                    SPDLOG_LOGGER_INFO(modelmanager_logger, "{}", supportedKey);
-                }
+            for (std::string supportedKey : pluginSupportedConfigKeys) {
+                SPDLOG_LOGGER_INFO(modelmanager_logger, "{}", supportedKey);
             }
             return StatusCode::MODEL_CONFIG_INVALID;
         }
