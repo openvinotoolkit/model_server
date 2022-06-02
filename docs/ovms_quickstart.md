@@ -36,7 +36,7 @@ docker pull openvino/model_server:latest
 
 or build the openvino/model_server:latest docker image, using:
 
-```bash
+```
 make docker_build
 ```
 
@@ -44,7 +44,7 @@ make docker_build
 
 Store components of the downloaded or converted model in the `model/1` directory. Here is an example command using curl and a face detection model:
 
-```
+```bash
 curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/1/face-detection-retail-0004.xml -o model/1/face-detection-retail-0004.bin
 ```
 
@@ -63,7 +63,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/face-detection -p 900
 OpenVINO Model Server expects a particular folder structure  for models -  in this case it will be mounted as: 
 `/models/face-detection/1`
 
-```bash
+```
 models/
 └── face-detection
     └── 1
@@ -80,7 +80,7 @@ For more information on the folder structure and how to deploy more than one mod
 
 Model scripts are available to provide an easy way to access Model Server. Here is an example command, using face detection and curl, to download all necessary components:
 
-```
+```bash
 curl --fail https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/python/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/face_detection/python/face_detection.py -o face_detection.py https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/python/requirements.txt -o client_requirements.txt
 ```
 
@@ -96,7 +96,7 @@ Provide inference data by putting the files in a separate folder, as inference w
 In this case, you can download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/demos/common/static/images/people). This example uses a file named [people1.jpeg](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/demos/common/static/images/people/people1.jpeg) 
 and use a single people1.jpeg file to run the following script:
 
-```
+```bash
 curl --fail --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/static/images/people/people1.jpeg -o images/people1.jpeg
 ```
 
@@ -104,12 +104,12 @@ curl --fail --create-dirs https://raw.githubusercontent.com/openvinotoolkit/mode
 
 Go to the folder with the client script and install dependencies. Create a folder where inference results will be put and run the client script. For example:
 
-```
+```bash
 pip install -r client_requirements.txt
 
 mkdir results
 
-python face_detection.py --batch_size 1 --width 600 --height 400 --input_images_dir images --output_dir results
+python face_detection.py --batch_size 1 --width 600 --height 400 --input_images_dir images --output_dir results --grpc_port 9000
 ```
 
 ### Step 8: Review the Results
