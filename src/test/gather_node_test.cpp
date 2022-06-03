@@ -355,3 +355,10 @@ TEST_F(KFSGatherExitNodeInputHandlerTest, BufferHasCorrectSizeBufferHasCorrectSi
     ASSERT_EQ(response.raw_output_contents_size(), 1);
     ASSERT_EQ(response.mutable_raw_output_contents(0)->size(), requestedBufferSize);
 }
+
+TEST_F(KFSGatherExitNodeInputHandlerTest, TensorAlreadyExistsInProto) {
+    auto* existingProto = response.add_outputs();
+    existingProto->set_name(tensorName);
+    response.add_raw_output_contents();
+    ASSERT_EQ(prepareConsolidatedTensorImpl(&response, buffer, tensorName, requestedBufferSize), StatusCode::INTERNAL_ERROR);
+}
