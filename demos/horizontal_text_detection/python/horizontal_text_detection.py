@@ -208,13 +208,12 @@ i = 0
 frames_processed = 0
 last_display_time = time.time()
 app_start_time = time.time()
-cam_working = True
 
 if grab_frame(cap) == None:
     print(f"[ERROR] Check camera input...")
-    cam_working = False
+    force_exit = False
 
-while(cam_working):
+while(force_exit):
     if not threads[i].is_initialized():
         threads[i].set_input(grab_frame(cap))
         i = (i + 1) % args.num_threads
