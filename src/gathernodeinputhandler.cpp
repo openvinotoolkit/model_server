@@ -77,7 +77,7 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
             collapsingDetails->collapsedSessionSizes.begin(),
             collapsingDetails->collapsedSessionSizes.end());
         ov::Tensor consolidatedTensor;
-        auto status = createSharedTensor(consolidatedTensor, precision, newDims);
+        auto status = prepareConsolidatedTensor(consolidatedTensor, inputName, precision, newDims);
         if (!status.ok()) {
             return status;
         }
@@ -108,4 +108,9 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
     }
     return StatusCode::OK;
 }
+
+Status GatherNodeInputHandler::prepareConsolidatedTensor(ov::Tensor& tensorOut, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape) const {
+    return createSharedTensor(tensorOut, precision, shape);
+}
+
 }  // namespace ovms

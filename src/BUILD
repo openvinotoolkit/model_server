@@ -101,6 +101,8 @@ cc_library(
         "localfilesystem.hpp",
         "gathernodeinputhandler.cpp",
         "gathernodeinputhandler.hpp",
+        "gatherexitnodeinputhandler.cpp",
+        "gatherexitnodeinputhandler.hpp",
         "gcsfilesystem.cpp",
         "gcsfilesystem.hpp",
         "kfs_grpc_inference_service.cpp",
