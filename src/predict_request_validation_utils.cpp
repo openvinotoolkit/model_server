@@ -114,8 +114,30 @@ public:
     Status validateNumberOfShapeDimensions(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
     Status validatePrecision(const ovms::TensorInfo& inputInfo, const InputTensorType& proto) const;
     bool checkIfBinaryInputUsed(const InputTensorType& proto, const std::string inputName) const;
+    Status validateRequestCoherency() const;
     Status validate();
 };
+
+template <>
+Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validateRequestCoherency() const {
+    return StatusCode::OK;
+}
+
+template <>
+Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::validateRequestCoherency() const {
+    if (!request.raw_input_contents().empty()) {
+        for (auto& input : request.inputs()) {
+            if (input.has_contents()) {
+                std::stringstream ss;
+                ss << "Passing buffers both in InferInputTensor contents and in raw_input_contents is not allowed. Detected buffer in InferInputTensor contents for input: " << input.name();
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid request message - {}", servableName, servableVersion, details);
+                return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
+            }
+        }
+    }
+    return StatusCode::OK;
+}
 
 template <>
 Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::validateNumberOfInputs() const {
@@ -393,21 +415,78 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
     return StatusCode::OK;
 }
 
+size_t getElementsCount(const KFSInputTensorType& proto, ovms::Precision expectedPrecision) {
+    switch (expectedPrecision) {
+    case ovms::Precision::BOOL: {
+        return proto.contents().bool_contents().size();
+    }
+        /// int_contents
+    case ovms::Precision::I8:
+    case ovms::Precision::I16:
+    case ovms::Precision::I32: {
+        return proto.contents().int_contents().size();
+    }
+        /// int64_contents
+    case ovms::Precision::I64: {
+        return proto.contents().int64_contents().size();
+    }
+        // uint_contents
+    case ovms::Precision::U8:
+    case ovms::Precision::U16:
+    case ovms::Precision::U32: {
+        return proto.contents().uint_contents().size();
+    }
+        // uint64_contents
+    case ovms::Precision::U64: {
+        return proto.contents().uint64_contents().size();
+    }
+        // fp32_contents
+    case ovms::Precision::FP32: {
+        return proto.contents().fp32_contents().size();
+    }
+        // fp64_contentes
+    case ovms::Precision::FP64: {
+        return proto.contents().fp64_contents().size();
+    }
+    case ovms::Precision::FP16:
+    case ovms::Precision::U1:
+    case ovms::Precision::CUSTOM:
+    case ovms::Precision::UNDEFINED:
+    case ovms::Precision::DYNAMIC:
+    case ovms::Precision::MIXED:
+    case ovms::Precision::Q78:
+    case ovms::Precision::BIN:
+    default:
+        return 0;
+    }
+}
+
 template <>
 Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::validateTensorContentSize(const KFSInputTensorType& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
     size_t expectedValueCount = 1;
     for (int i = 0; i < proto.shape().size(); i++) {
         expectedValueCount *= proto.shape()[i];
     }
-
-    // TODO KFS can store buffer inside ModelInferRequest_InferInputTensor as well
-    size_t expectedContentSize = expectedValueCount * ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
-    if (expectedContentSize != request.raw_input_contents()[bufferId].size()) {
-        std::stringstream ss;
-        ss << "Expected: " << expectedContentSize << " bytes; Actual: " << request.raw_input_contents()[bufferId].size() << " bytes; input name: " << getCurrentlyValidatedInputName();
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", servableName, servableVersion, details);
-        return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+    if (request.raw_input_contents().size()) {
+        size_t expectedContentSize = expectedValueCount * ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
+        if (expectedContentSize != request.raw_input_contents()[bufferId].size()) {
+            std::stringstream ss;
+            ss << "Expected: " << expectedContentSize << " bytes; Actual: " << request.raw_input_contents()[bufferId].size() << " bytes; input name: " << getCurrentlyValidatedInputName();
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", servableName, servableVersion, details);
+            return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+        }
+    } else {  // buffers placed in InputTensor content
+        // here we should check that the elements count is equal since for some precisions there is padding
+        // we need to decide first which exact datatype_contents we extract that information from
+        size_t elementsCount = getElementsCount(proto, expectedPrecision);
+        if (expectedValueCount != elementsCount) {
+            std::stringstream ss;
+            ss << "Expected: " << expectedValueCount << " values; Actual: " << elementsCount << " values; input name: " << getCurrentlyValidatedInputName();
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("[servable name: {} version: {}] Invalid value count of tensor proto - {}", servableName, servableVersion, details);
+            return Status(StatusCode::INVALID_VALUE_COUNT, details);
+        }
     }
     return StatusCode::OK;
 }
@@ -514,6 +593,9 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
     auto status = validateNumberOfInputs();
     if (!status.ok())
         return status;
+    status = validateRequestCoherency();
+    if (!status.ok())
+        return status;
 
     size_t bufferId = 0;
     for (const auto& [name, inputInfo] : inputsInfo) {
@@ -563,12 +645,10 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
         status = checkShapeMismatch(proto, *inputInfo, batchIndex.value(), finalStatus, batchingMode, shapeMode);
         if (!status.ok())
             return status;
-
         status = validateTensorContentSize(proto, inputInfo->getPrecision(), bufferId);
         if (!status.ok())
             return status;
     }
-
     return finalStatus;
 }
 
@@ -583,6 +663,5 @@ Status validate(const KFSRequestType& request, const tensor_map_t& inputsInfo, c
     OVMS_PROFILE_FUNCTION();
     return RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>(request, inputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
 }
-
 }  // namespace request_validation_utils
 }  // namespace ovms
