@@ -42,7 +42,6 @@ protected:
 
 public:
     NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
-    NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
     virtual ~NodeSession();
     const std::string& getName() const { return nodeName; }
     Status setInput(const std::string& inputName, TensorWithSource& tensor, session_id_t shardId);

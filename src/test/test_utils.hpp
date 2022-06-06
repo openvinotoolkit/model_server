@@ -188,6 +188,30 @@ void checkIncrement4DimResponse(const std::string outputName,
         << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(T));
 }
 
+template <typename T>
+void checkIncrement4DimResponse(const std::string outputName,
+    const std::vector<T>& expectedData,
+    ::inference::ModelInferResponse& response,
+    const std::vector<size_t>& expectedShape) {
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.mutable_outputs(0)->name(), outputName);
+
+    auto elementsCount = std::accumulate(expectedShape.begin(), expectedShape.end(), 1, std::multiplies<size_t>());
+
+    ASSERT_EQ(response.raw_output_contents(0).size(), elementsCount * sizeof(T));
+    ASSERT_EQ(response.outputs(0).shape_size(), expectedShape.size());
+    for (size_t i = 0; i < expectedShape.size(); i++) {
+        ASSERT_EQ(response.outputs(0).shape(i), expectedShape[i]);
+    }
+
+    T* actual_output = (T*)response.raw_output_contents(0).data();
+    T* expected_output = (T*)expectedData.data();
+    const int dataLengthToCheck = elementsCount * sizeof(T);
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(T));
+}
+
 void checkIncrement4DimShape(const std::string outputName,
     tensorflow::serving::PredictResponse& response,
     const std::vector<size_t>& expectedShape);

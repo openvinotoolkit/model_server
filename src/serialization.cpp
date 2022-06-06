@@ -23,7 +23,6 @@ Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
-    responseOutput.Clear();
     if (servableOutput->getOvPrecision() != tensor.get_element_type()) {
         SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in precision expected:{} vs actual:{}",
             servableOutput->getName(),
@@ -72,7 +71,11 @@ Status serializeTensorToTensorProto(
         }
         responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
     }
-    responseOutput.mutable_tensor_content()->assign((char*)tensor.data(), tensor.get_byte_size());
+    // We only fill if the content is not already filled.
+    // It can be filled in gather exit node handler.
+    if (responseOutput.mutable_tensor_content()->size() == 0) {
+        responseOutput.mutable_tensor_content()->assign((char*)tensor.data(), tensor.get_byte_size());
+    }
     return StatusCode::OK;
 }
 
@@ -81,8 +84,7 @@ Status serializeTensorToTensorProto(
     std::string* rawOutputContents,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
-    responseOutput.Clear();
-    responseOutput.set_name(servableOutput->getName());
+    responseOutput.set_name(servableOutput->getMappedName());
     if (servableOutput->getOvPrecision() != tensor.get_element_type()) {
         SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in precision expected:{} vs actual:{}",
             servableOutput->getName(),
@@ -132,7 +134,11 @@ Status serializeTensorToTensorProto(
         }
         responseOutput.add_shape(dim);
     }
-    rawOutputContents->assign((char*)tensor.data(), tensor.get_byte_size());
+    // We only fill if the content is not already filled.
+    // It can be filled in gather exit node handler.
+    if (rawOutputContents->size() == 0) {
+        rawOutputContents->assign((char*)tensor.data(), tensor.get_byte_size());
+    }
     return StatusCode::OK;
 }
 
@@ -149,13 +155,40 @@ Status OutputGetter<ov::InferRequest&>::get(const std::string& name, ov::Tensor&
 }
 
 template <>
-tensorflow::TensorProto& ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&>::get(const std::string& name) {
+tensorflow::TensorProto& ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&>::getOutput(const std::string& name) {
     return (*protoStorage->mutable_outputs())[name];
 }
 
 template <>
-::inference::ModelInferResponse::InferOutputTensor& ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&>::get(const std::string& name) {
-    return *protoStorage->add_outputs();
+std::string* ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&>::getContent(const std::string& name) {
+    return nullptr;
+}
+
+template <>
+::inference::ModelInferResponse::InferOutputTensor& ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&>::getOutput(const std::string& name) {
+    for (int i = 0; i < protoStorage->outputs_size(); i++) {
+        auto& tensor = *protoStorage->mutable_outputs(i);
+        if (tensor.name() == name) {
+            return tensor;
+        }
+    }
+    auto* output = protoStorage->add_outputs();
+    output->set_name(name);
+    return *output;
+}
+
+template <>
+std::string* ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&>::getContent(const std::string& name) {
+    for (int i = 0; i < protoStorage->outputs_size(); i++) {
+        auto& tensor = *protoStorage->mutable_outputs(i);
+        if (tensor.name() == name) {
+            if (protoStorage->raw_output_contents_size() <= i) {
+                return protoStorage->add_raw_output_contents();
+            }
+            return protoStorage->mutable_raw_output_contents(i);
+        }
+    }
+    return protoStorage->add_raw_output_contents();
 }
 
 const std::string& getTensorInfoName(const std::string& first, const TensorInfo& tensorInfo) {

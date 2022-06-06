@@ -156,6 +156,61 @@ protected:
     const std::vector<float> bs1requestData{-5.0, 3.0, 0.0, -12.0, 9.0, -100.0, 102.0, 92.0, -1.0, 12.0};
 };
 
+class EnsembleFlowKFSTest : public TestWithTempDir {
+protected:
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        // Prepare manager
+        config = DUMMY_MODEL_CONFIG;
+        config.setNireq(NIREQ);
+
+        // Prepare request
+        prepareRequest(bs1requestData, request, customPipelineInputName);
+        requestData = bs1requestData;
+        dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+            ovms::Precision::FP32,
+            DUMMY_MODEL_SHAPE,
+            Layout{"NC"});
+        dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+            ovms::Precision::FP32,
+            DUMMY_MODEL_SHAPE,
+            Layout{"NC"});
+    }
+
+    void prepareRequest(const std::vector<float>& requestData, ::inference::ModelInferRequest& request, const std::string& customPipelineInputName, const std::vector<size_t>& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
+        request.Clear();
+        ::inference::ModelInferRequest_InferInputTensor* proto = request.add_inputs();
+        proto->set_name(customPipelineInputName);
+        proto->set_datatype(ovmsPrecisionToKFSPrecision(ovms::Precision::FP32));
+        for (auto dim : shape) {
+            proto->add_shape(dim);
+        }
+        std::string* content = request.add_raw_input_contents();
+        content->assign((char*)requestData.data(), requestData.size() * sizeof(float));
+    }
+
+    ModelConfig config;
+
+    ::inference::ModelInferRequest request;
+    ::inference::ModelInferResponse response;
+
+    std::string dummyModelName = "dummy";
+    std::optional<model_version_t> requestedModelVersion{std::nullopt};
+    const std::string customPipelineInputName = "custom_dummy_input";
+    const std::string customPipelineOutputName = "custom_dummy_output";
+    std::shared_ptr<ovms::TensorInfo> dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+        ovms::Precision::FP32,
+        DUMMY_MODEL_SHAPE,
+        Layout{"NC"});
+    std::shared_ptr<ovms::TensorInfo> dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+        ovms::Precision::FP32,
+        DUMMY_MODEL_SHAPE,
+        Layout{"NC"});
+
+    std::vector<float> requestData;
+    const std::vector<float> bs1requestData{-5.0, 3.0, 0.0, -12.0, 9.0, -100.0, 102.0, 92.0, -1.0, 12.0};
+};
+
 TEST_F(EnsembleFlowTest, DummyModel) {
     // Most basic configuration, just process single dummy model request
     // input   dummy    output
@@ -4534,6 +4589,22 @@ TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimInputNHWCDynamicBatch) {
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {2.0, 5.0, 3.0, 6.0, 4.0, 7.0, 11.0, 41.0, 21.0, 51.0, 31.0, 61.0}, request, response, {2, 1, 3, 1, 2});
+}
+
+TEST_F(EnsembleFlowKFSTest, ExecuteSingleIncrement4DimInputNHWCDynamicBatch) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleIncrement4DimInputNHWCDynamicBatch, fileToReload);
+    ConstructorEnabledModelManager manager;
+    std::unique_ptr<Pipeline> pipeline;
+
+    prepareRequest({1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0},
+        request, "pipeline_input", {2, 1, 1, 2, 3});
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+
+    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
+    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 5.0, 3.0, 6.0, 4.0, 7.0, 11.0, 41.0, 21.0, 51.0, 31.0, 61.0}, response, {2, 1, 3, 1, 2});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC = R"(
