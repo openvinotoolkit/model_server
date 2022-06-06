@@ -58,4 +58,5 @@ result_index = np.argmax(output[0])
 print(imagenet_classes[result_index])' >> script.py
 
 python3 script.py
+zebra
 ```
