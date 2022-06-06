@@ -26,9 +26,9 @@ Pull an image from Docker or [RedHat Ecosystem Catalog](https://catalog.redhat.c
 
 ```bash
 docker pull openvino/model_server:latest
-
-# or, alternatively 
-
+```
+or, alternatively 
+```
 docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
 ```
 
@@ -37,7 +37,7 @@ Start the container
 # start the container 
 docker run -p 9000:9000 openvino/model_server:latest \ 
 --model_name resnet --model_path gs://ovms-public-eu/resnet50-binary \ 
---layout NHWC --port 9000 
+--layout NHWC:NCHW --port 9000 
 
 # download input files, an image, and a label mapping file
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2022/1/demos/common/static/images/zebra.jpeg
@@ -48,19 +48,22 @@ pip3 install ovmsclient
 ```
 
 Run prediction
-```python
-import numpy as np
+```bash
+echo 'import numpy as np
 from classes import imagenet_classes
 from ovmsclient import make_grpc_client
 
 client = make_grpc_client("localhost:9000")
 
-with open("path/to/img.jpeg", "rb") as f:
+with open("zebra.jpeg", "rb") as f:
    img = f.read()
 
 output = client.predict({"0": img}, "resnet")
 result_index = np.argmax(output[0])
-predicted_class = imagenet_classes[result_index]
+print(imagenet_classes[result_index])' >> script.py
+
+python script.py
+zebra
 ```
 
 To learn how to set up OpenVINO Model Server, refer to the [Quick Start guide](./ovms_quickstart.md).
@@ -120,7 +123,7 @@ Currently, the following versions are available:
 - 21.48.21782 - Ubuntu
 
 Example:
-```bash
+```
 make docker_build INSTALL_DRIVER_VERSION=21.38.21026
 ```
 If not provided, version 21.38.21026 is used for Redhat and 21.48.21782 is used for Ubuntu.
