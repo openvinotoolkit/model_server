@@ -15,14 +15,51 @@
 #
 
 import os
+import re
 import shutil
+from datetime import datetime
 from pathlib import Path
 
 import logging
 from utils.parametrization import get_tests_suffix, generate_test_object_name
+from utils.process import Process
+
+from config import converted_models_expire_time
 
 logger = logging.getLogger(__name__)
 
+def wget_file(url, dst):
+    Path(dst).parent.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Downloading file via wget\n{url} => {dst}")
+    proc = Process()
+    proc.set_log_silence()
+    cmd = f"wget {url} -O {dst}"
+    proc.policy['log-check-output']['stderr'] = False
+    proc.run_and_check(cmd)
+
+
+def _get_file_size_from_url(url):
+    cmd = f"wget -e robots=off --spider -r --server-response --no-parent {url}"
+    # .group(1) - url
+    # .group(2) - wget spider details
+    # .group(3) - Content-Lenght:
+    spider_entry_re = re.compile("--  (https?://[\S]+)\n(.+?)Content-Length: (\S+)", flags=re.MULTILINE | re.DOTALL)
+    proc = Process()
+    proc.set_log_silence()
+    proc.policy['log-check-output']['stderr'] = False
+    code, out, err = proc.run_and_check_return_all(cmd)
+
+    all_entries_match = spider_entry_re.findall(err)
+    # filter only files (entries specified Length: )
+    model_files_match = list(filter(lambda x: x[2] != "unspecified" and x[2] != '0', all_entries_match))
+    assert(len(model_files_match) == 1)
+    return int(model_files_match[0][2])
+
+def download_missing_file(url, output_path):
+    size = _get_file_size_from_url(url)
+    while not Path(output_path).exists() or Path(output_path).stat().st_size != size:
+        wget_file(url, output_path)
+    return output_path
 
 def copy_model(model, version, destination_path):
     dir_to_cpy = destination_path + str(version)
@@ -37,12 +74,17 @@ def convert_model(client,
                   model,
                   output_dir,
                   model_name,
-                  input_shape):
+                  input_shape,
+                  framework="tf"):
+
 
     files = (os.path.join(output_dir, model_name) + '.bin',
              os.path.join(output_dir, model_name) + '.xml')
 
-    if os.path.exists(files[0]) and os.path.exists(files[1]):
+    # Check if file exists and is not expired
+    if all(map(lambda x: os.path.exists(x) and \
+                         datetime.now().timestamp() - os.path.getmtime(x) < converted_models_expire_time,
+               files)):
         return files
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -63,7 +105,8 @@ def convert_model(client,
         '--input_model /mnt/input_dir/' + os.path.basename(model),
         '--model_name ' + model_name,
         '--output_dir /mnt/output_dir/',
-        '--input_shape ' + input_shape_str
+        '--input_shape ' + input_shape_str,
+        '--framework ' + framework
     ])
 
     client.containers.run(image=image,
