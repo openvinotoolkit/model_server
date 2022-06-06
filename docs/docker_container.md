@@ -28,7 +28,7 @@ Pull an image from Docker or [RedHat Ecosystem Catalog](https://catalog.redhat.c
 docker pull openvino/model_server:latest
 ```
 or, alternatively 
-```
+```bash
 docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
 ```
 
