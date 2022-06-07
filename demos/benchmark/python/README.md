@@ -98,8 +98,6 @@ form `-l` is available):
 ```bash
 docker run --network host benchmark_client -a localhost -r 30002 --list_models
 
-OVMS benchmark client 1.17
-NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 30002 --list_models
 XI worker: try to send request to endpoint: http://localhost:30002/v1/config
 XI worker: received status code is 200.
 XI worker: found models and their status:
@@ -113,9 +111,6 @@ of an application instance. For example:
 ```bash
 docker run --network host benchmark_client -a localhost -r 30002 -l -m resnet50-binary-0001 -p 30001 -i id
 
-OVMS benchmark client 1.17
-NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 30002 -l -m resnet50-binary-0001 -p 30001 -i id
-XW id: Finished execution. If you want to run inference remove --list_models.
 XI id: try to send request to endpoint: http://localhost:30002/v1/config
 XI id: received status code is 200.
 XI id: found models and their status:
@@ -148,8 +143,6 @@ will be generated as follows (remamber to add `--print_all` to show metrics in s
 ```bash
 docker run --network host benchmark_client -a localhost -r 30002 -m resnet50-binary-0001 -p 30001 -n 8 --print_all
 
-OVMS benchmark client 1.17
-NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 30002 -m resnet50-binary-0001 -p 30001 -n 8 --print_all
 XI worker: request for metadata of model resnet50-binary-0001...
 XI worker: Metadata for model resnet50-binary-0001 is downloaded...
 XI worker: set version of model resnet50-binary-0001: 1
