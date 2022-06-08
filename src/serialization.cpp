@@ -19,7 +19,7 @@
 
 namespace ovms {
 
-Status serializeTensorToTensorProto(
+Status serializePrecision(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
@@ -54,34 +54,11 @@ Status serializeTensorToTensorProto(
         return status;
     }
     }
-    responseOutput.mutable_tensor_shape()->Clear();
-    auto& effectiveNetworkOutputShape = servableOutput->getShape();
-    ov::Shape actualTensorShape = tensor.get_shape();
-    if (effectiveNetworkOutputShape.size() != actualTensorShape.size()) {
-        SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in number of dimensions expected:{} vs actual:{}",
-            servableOutput->getName(), effectiveNetworkOutputShape.size(), actualTensorShape.size());
-        return StatusCode::INTERNAL_ERROR;
-    }
-    for (size_t i = 0; i < effectiveNetworkOutputShape.size(); ++i) {
-        dimension_value_t dim = actualTensorShape[i];
-        if (!effectiveNetworkOutputShape[i].match(dim)) {
-            SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in dimension:{} expected:{} vs actual:{}",
-                servableOutput->getName(), i, effectiveNetworkOutputShape[i].toString(), dim);
-            return StatusCode::INTERNAL_ERROR;
-        }
-        responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
-    }
-    // We only fill if the content is not already filled.
-    // It can be filled in gather exit node handler.
-    if (responseOutput.mutable_tensor_content()->size() == 0) {
-        responseOutput.mutable_tensor_content()->assign((char*)tensor.data(), tensor.get_byte_size());
-    }
     return StatusCode::OK;
 }
 
-Status serializeTensorToTensorProto(
+Status serializePrecision(
     ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
-    std::string* rawOutputContents,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     if (servableOutput->getOvPrecision() != tensor.get_element_type()) {
@@ -116,6 +93,37 @@ Status serializeTensorToTensorProto(
         return status;
     }
     }
+    return StatusCode::OK;
+}
+
+Status serializeShape(
+    tensorflow::TensorProto& responseOutput,
+    const std::shared_ptr<TensorInfo>& servableOutput,
+    ov::Tensor& tensor) {
+    responseOutput.mutable_tensor_shape()->Clear();
+    auto& effectiveNetworkOutputShape = servableOutput->getShape();
+    ov::Shape actualTensorShape = tensor.get_shape();
+    if (effectiveNetworkOutputShape.size() != actualTensorShape.size()) {
+        SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in number of dimensions expected:{} vs actual:{}",
+            servableOutput->getName(), effectiveNetworkOutputShape.size(), actualTensorShape.size());
+        return StatusCode::INTERNAL_ERROR;
+    }
+    for (size_t i = 0; i < effectiveNetworkOutputShape.size(); ++i) {
+        dimension_value_t dim = actualTensorShape[i];
+        if (!effectiveNetworkOutputShape[i].match(dim)) {
+            SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in dimension:{} expected:{} vs actual:{}",
+                servableOutput->getName(), i, effectiveNetworkOutputShape[i].toString(), dim);
+            return StatusCode::INTERNAL_ERROR;
+        }
+        responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
+    }
+    return StatusCode::OK;
+}
+
+Status serializeShape(
+    ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
+    const std::shared_ptr<TensorInfo>& servableOutput,
+    ov::Tensor& tensor) {
     responseOutput.clear_shape();
     auto& effectiveNetworkOutputShape = servableOutput->getShape();
     ov::Shape actualTensorShape = tensor.get_shape();
@@ -133,11 +141,47 @@ Status serializeTensorToTensorProto(
         }
         responseOutput.add_shape(dim);
     }
+    return StatusCode::OK;
+}
+
+void serializeContent(std::string* content, ov::Tensor& tensor) {
     // We only fill if the content is not already filled.
     // It can be filled in gather exit node handler.
-    if (rawOutputContents->size() == 0) {
-        rawOutputContents->assign((char*)tensor.data(), tensor.get_byte_size());
+    if (content->size() == 0) {
+        content->assign((char*)tensor.data(), tensor.get_byte_size());
     }
+}
+
+Status serializeTensorToTensorProto(
+    tensorflow::TensorProto& responseOutput,
+    const std::shared_ptr<TensorInfo>& servableOutput,
+    ov::Tensor& tensor) {
+    auto status = serializePrecision(responseOutput, servableOutput, tensor);
+    if (!status.ok()) {
+        return status;
+    }
+    status = serializeShape(responseOutput, servableOutput, tensor);
+    if (!status.ok()) {
+        return status;
+    }
+    serializeContent(responseOutput.mutable_tensor_content(), tensor);
+    return StatusCode::OK;
+}
+
+Status serializeTensorToTensorProto(
+    ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
+    std::string* rawOutputContents,
+    const std::shared_ptr<TensorInfo>& servableOutput,
+    ov::Tensor& tensor) {
+    auto status = serializePrecision(responseOutput, servableOutput, tensor);
+    if (!status.ok()) {
+        return status;
+    }
+    status = serializeShape(responseOutput, servableOutput, tensor);
+    if (!status.ok()) {
+        return status;
+    }
+    serializeContent(rawOutputContents, tensor);
     return StatusCode::OK;
 }
 

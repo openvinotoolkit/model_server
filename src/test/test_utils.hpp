@@ -23,6 +23,7 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <gmock/gmock.h>
@@ -127,6 +128,22 @@ constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
 
 constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life
 
+using KFSRequestType = ::inference::ModelInferRequest;
+using KFSResponseType = ::inference::ModelInferResponse;
+using KFSInputTensorType = ::inference::ModelInferRequest_InferInputTensor;
+using KFSShapeType = google::protobuf::RepeatedField<int64_t>;
+using KFSInputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferRequest_InferInputTensor>;
+using KFSOutputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferResponse_InferOutputTensor>;
+using TFSRequestType = tensorflow::serving::PredictRequest;
+using TFSResponseType = tensorflow::serving::PredictResponse;
+using TFSInputTensorType = tensorflow::TensorProto;
+using TFSOutputTensorType = tensorflow::TensorProto;
+using TFSShapeType = tensorflow::TensorShapeProto;
+using TFSInputTensorIteratorType = google::protobuf::Map<std::string, TFSInputTensorType>::const_iterator;
+using TFSOutputTensorIteratorType = google::protobuf::Map<std::string, TFSOutputTensorType>::const_iterator;
+using TFSInterface = std::pair<TFSRequestType, TFSResponseType>;
+using KFSInterface = std::pair<KFSRequestType, KFSResponseType>;
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 ovms::tensor_map_t prepareTensors(
@@ -151,6 +168,10 @@ tensorflow::serving::PredictRequest prepareBinary4x4PredictRequest(const std::st
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
     tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1);
+
+void checkDummyResponse(const std::string outputName,
+    const std::vector<float>& requestData,
+    ::inference::ModelInferRequest& request, ::inference::ModelInferResponse& response, int seriesLength, int batchSize = 1);
 
 template <typename T>
 std::string readableError(const T* expected_output, const T* actual_output, const size_t size) {
@@ -191,6 +212,7 @@ void checkIncrement4DimResponse(const std::string outputName,
 template <typename T>
 void checkIncrement4DimResponse(const std::string outputName,
     const std::vector<T>& expectedData,
+    ::inference::ModelInferRequest& request,
     ::inference::ModelInferResponse& response,
     const std::vector<size_t>& expectedShape) {
     ASSERT_EQ(response.outputs_size(), 1);

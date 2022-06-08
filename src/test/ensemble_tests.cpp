@@ -47,6 +47,71 @@ using ::testing::ElementsAre;
 
 const uint NIREQ = 2;
 
+template <typename Pair,
+    typename RequestType = typename Pair::first_type,
+    typename ResponseType = typename Pair::second_type>
+class EnsembleFlowBothApiTest : public TestWithTempDir {
+public:
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        // Prepare manager
+        config = DUMMY_MODEL_CONFIG;
+        config.setNireq(NIREQ);
+
+        // Prepare request
+        prepareRequest(bs1requestData, request, customPipelineInputName);
+        requestData = bs1requestData;
+        dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+            ovms::Precision::FP32,
+            DUMMY_MODEL_SHAPE,
+            Layout{"NC"});
+        dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+            ovms::Precision::FP32,
+            DUMMY_MODEL_SHAPE,
+            Layout{"NC"});
+    }
+
+    void prepareRequest(const std::vector<float>& requestData, TFSRequestType& request, const std::string& customPipelineInputName, const std::vector<size_t>& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
+        request.Clear();
+        preparePredictRequest(request, inputs_info_t{{customPipelineInputName, {shape, ovms::Precision::FP32}}}, requestData);
+    }
+
+    void prepareRequest(const std::vector<float>& requestData, KFSRequestType& request, const std::string& customPipelineInputName, const std::vector<size_t>& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
+        request.Clear();
+        prepareKFSInferInputTensor(request, customPipelineInputName, std::make_tuple(shape, ovmsPrecisionToKFSPrecision(ovms::Precision::FP32)), requestData);
+    }
+
+    void checkDummyResponse(int seriesLength, int batchSize = 1) {
+        ::checkDummyResponse(customPipelineOutputName, requestData, request, response, seriesLength, batchSize);
+    }
+
+    ModelConfig config;
+    RequestType request;
+    ResponseType response;
+
+    std::string dummyModelName = "dummy";
+    std::optional<model_version_t> requestedModelVersion{std::nullopt};
+    const std::string customPipelineInputName = "custom_dummy_input";
+    const std::string customPipelineOutputName = "custom_dummy_output";
+    std::shared_ptr<ovms::TensorInfo> dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+        ovms::Precision::FP32,
+        DUMMY_MODEL_SHAPE,
+        Layout{"NC"});
+    std::shared_ptr<ovms::TensorInfo> dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+        ovms::Precision::FP32,
+        DUMMY_MODEL_SHAPE,
+        Layout{"NC"});
+
+    std::vector<float> requestData;
+    const std::vector<float> bs1requestData{-5.0, 3.0, 0.0, -12.0, 9.0, -100.0, 102.0, 92.0, -1.0, 12.0};
+};
+
+// New test suite. Tests both - TFS and KFS.
+// Currently only tests which contain gather in exit node.
+using MyTypes = ::testing::Types<TFSInterface, KFSInterface>;
+TYPED_TEST_SUITE(EnsembleFlowBothApiTest, MyTypes);
+
+// Old test suite. Tests only TFS API.
 class EnsembleFlowTest : public TestWithTempDir {
 protected:
     void SetUp() override {
@@ -156,77 +221,22 @@ protected:
     const std::vector<float> bs1requestData{-5.0, 3.0, 0.0, -12.0, 9.0, -100.0, 102.0, 92.0, -1.0, 12.0};
 };
 
-class EnsembleFlowKFSTest : public TestWithTempDir {
-protected:
-    void SetUp() override {
-        TestWithTempDir::SetUp();
-        // Prepare manager
-        config = DUMMY_MODEL_CONFIG;
-        config.setNireq(NIREQ);
-
-        // Prepare request
-        prepareRequest(bs1requestData, request, customPipelineInputName);
-        requestData = bs1requestData;
-        dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
-            ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
-            Layout{"NC"});
-        dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
-            ovms::Precision::FP32,
-            DUMMY_MODEL_SHAPE,
-            Layout{"NC"});
-    }
-
-    void prepareRequest(const std::vector<float>& requestData, ::inference::ModelInferRequest& request, const std::string& customPipelineInputName, const std::vector<size_t>& shape = {1, DUMMY_MODEL_INPUT_SIZE}) {
-        request.Clear();
-        ::inference::ModelInferRequest_InferInputTensor* proto = request.add_inputs();
-        proto->set_name(customPipelineInputName);
-        proto->set_datatype(ovmsPrecisionToKFSPrecision(ovms::Precision::FP32));
-        for (auto dim : shape) {
-            proto->add_shape(dim);
-        }
-        std::string* content = request.add_raw_input_contents();
-        content->assign((char*)requestData.data(), requestData.size() * sizeof(float));
-    }
-
-    ModelConfig config;
-
-    ::inference::ModelInferRequest request;
-    ::inference::ModelInferResponse response;
-
-    std::string dummyModelName = "dummy";
-    std::optional<model_version_t> requestedModelVersion{std::nullopt};
-    const std::string customPipelineInputName = "custom_dummy_input";
-    const std::string customPipelineOutputName = "custom_dummy_output";
-    std::shared_ptr<ovms::TensorInfo> dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
-        ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
-        Layout{"NC"});
-    std::shared_ptr<ovms::TensorInfo> dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
-        ovms::Precision::FP32,
-        DUMMY_MODEL_SHAPE,
-        Layout{"NC"});
-
-    std::vector<float> requestData;
-    const std::vector<float> bs1requestData{-5.0, 3.0, 0.0, -12.0, 9.0, -100.0, 102.0, 92.0, -1.0, 12.0};
-};
-
-TEST_F(EnsembleFlowTest, DummyModel) {
+TYPED_TEST(EnsembleFlowBothApiTest, DummyModel) {
     // Most basic configuration, just process single dummy model request
     // input   dummy    output
     //  O------->O------->O
     ConstructorEnabledModelManager managerWithDummyModel;
-    managerWithDummyModel.reloadModelWithVersions(config);
+    managerWithDummyModel.reloadModelWithVersions(this->config);
 
     // Configure pipeline
-    const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
-    auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
-    auto model_node = std::make_unique<DLNode>("dummy_node", dummyModelName, requestedModelVersion, managerWithDummyModel);
-    const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
-    auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
+    const tensor_map_t inputsInfo{{this->customPipelineInputName, this->dagDummyModelInputTensorInfo}};
+    auto input_node = std::make_unique<EntryNode<typename TypeParam::first_type>>(&this->request, inputsInfo);
+    auto model_node = std::make_unique<DLNode>("dummy_node", this->dummyModelName, this->requestedModelVersion, managerWithDummyModel);
+    const tensor_map_t outputsInfo{{this->customPipelineOutputName, this->dagDummyModelOutputTensorInfo}};
+    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo);
     Pipeline pipeline(*input_node, *output_node);
-    pipeline.connect(*input_node, *model_node, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
-    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+    pipeline.connect(*input_node, *model_node, {{this->customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, this->customPipelineOutputName}});
 
     pipeline.push(std::move(input_node));
     pipeline.push(std::move(model_node));
@@ -234,49 +244,49 @@ TEST_F(EnsembleFlowTest, DummyModel) {
 
     ASSERT_EQ(pipeline.execute(), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
-    checkDummyResponse(dummySeriallyConnectedCount);
+    this->checkDummyResponse(dummySeriallyConnectedCount);
 }
 
-TEST_F(EnsembleFlowTest, TwoInnerNodesConnectedShapeRangePartiallyMatching) {
+TYPED_TEST(EnsembleFlowBothApiTest, TwoInnerNodesConnectedShapeRangePartiallyMatching) {
     ConstructorEnabledModelManager managerWithDummyModel;
 
-    config = DUMMY_MODEL_CONFIG;
-    config.setName("dummy_A");
-    config.setBatchSize(std::nullopt);
-    config.parseShapeParameter("(-1,1:3)");
-    managerWithDummyModel.reloadModelWithVersions(config);
+    this->config = DUMMY_MODEL_CONFIG;
+    this->config.setName("dummy_A");
+    this->config.setBatchSize(std::nullopt);
+    this->config.parseShapeParameter("(-1,1:3)");
+    managerWithDummyModel.reloadModelWithVersions(this->config);
 
-    config = DUMMY_MODEL_CONFIG;
-    config.setName("dummy_B");
-    config.setBatchSize(std::nullopt);
-    config.parseShapeParameter("(-1,2:4)");
-    managerWithDummyModel.reloadModelWithVersions(config);
+    this->config = DUMMY_MODEL_CONFIG;
+    this->config.setName("dummy_B");
+    this->config.setBatchSize(std::nullopt);
+    this->config.parseShapeParameter("(-1,2:4)");
+    managerWithDummyModel.reloadModelWithVersions(this->config);
 
     // Configure pipeline
-    dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineOutputName,
+    this->dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(this->customPipelineOutputName,
         ovms::Precision::FP32,
         ovms::Shape{Dimension::any(), {1, 3}},
         Layout{"NC"});
-    dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(customPipelineInputName,
+    this->dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(this->customPipelineInputName,
         ovms::Precision::FP32,
         ovms::Shape{Dimension::any(), {2, 4}},
         Layout{"NC"});
 
     // 2x2 passing
     {
-        prepareRequest(std::vector<float>{5.0, 6.0, 15.0, 16.0}, request, customPipelineInputName, {2, 2});
-        response.Clear();
+        this->prepareRequest(std::vector<float>{5.0, 6.0, 15.0, 16.0}, this->request, this->customPipelineInputName, {2, 2});
+        this->response.Clear();
 
-        const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
-        auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
-        auto model_node_A = std::make_unique<DLNode>("dummy_node_A", "dummy_A", requestedModelVersion, managerWithDummyModel);
-        auto model_node_B = std::make_unique<DLNode>("dummy_node_B", "dummy_B", requestedModelVersion, managerWithDummyModel);
-        const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
-        auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
+        const tensor_map_t inputsInfo{{this->customPipelineInputName, this->dagDummyModelInputTensorInfo}};
+        auto input_node = std::make_unique<EntryNode<typename TypeParam::first_type>>(&this->request, inputsInfo);
+        auto model_node_A = std::make_unique<DLNode>("dummy_node_A", "dummy_A", this->requestedModelVersion, managerWithDummyModel);
+        auto model_node_B = std::make_unique<DLNode>("dummy_node_B", "dummy_B", this->requestedModelVersion, managerWithDummyModel);
+        const tensor_map_t outputsInfo{{this->customPipelineOutputName, this->dagDummyModelOutputTensorInfo}};
+        auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo);
         Pipeline pipeline(*input_node, *output_node);
-        pipeline.connect(*input_node, *model_node_A, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*input_node, *model_node_A, {{this->customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
         pipeline.connect(*model_node_A, *model_node_B, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
-        pipeline.connect(*model_node_B, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+        pipeline.connect(*model_node_B, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, this->customPipelineOutputName}});
 
         pipeline.push(std::move(input_node));
         pipeline.push(std::move(model_node_A));
@@ -284,35 +294,24 @@ TEST_F(EnsembleFlowTest, TwoInnerNodesConnectedShapeRangePartiallyMatching) {
         pipeline.push(std::move(output_node));
 
         ASSERT_EQ(pipeline.execute(), StatusCode::OK);
-        ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
-        const auto& output_proto = response.outputs().at(customPipelineOutputName);
-
-        ASSERT_EQ(output_proto.tensor_content().size(), 2 * 2 * sizeof(float));
-        ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
-        ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), 2);
-        ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), 2);
-
-        std::vector<float> responseData = {7.0, 8.0, 17.0, 18.0};
-        float* actual_output = (float*)output_proto.tensor_content().data();
-        float* expected_output = responseData.data();
-        EXPECT_EQ(0, std::memcmp(actual_output, expected_output, 2 * 2 * sizeof(float)));
+        checkIncrement4DimResponse<float>(this->customPipelineOutputName, std::vector<float>{7.0, 8.0, 17.0, 18.0}, this->request, this->response, {2, 2});
     }
 
     // 2x4 not passing due to not matched dummy_A (but matching dummy_B)
     {
-        prepareRequest(std::vector<float>{5.0, 6.0, 15.0, 16.0, 5.0, 6.0, 15.0, 16.0}, request, customPipelineInputName, {2, 4});
-        response.Clear();
+        this->prepareRequest(std::vector<float>{5.0, 6.0, 15.0, 16.0, 5.0, 6.0, 15.0, 16.0}, this->request, this->customPipelineInputName, {2, 4});
+        this->response.Clear();
 
-        const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
-        auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
-        auto model_node_A = std::make_unique<DLNode>("dummy_node_A", "dummy_A", requestedModelVersion, managerWithDummyModel);
-        auto model_node_B = std::make_unique<DLNode>("dummy_node_B", "dummy_B", requestedModelVersion, managerWithDummyModel);
-        const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
-        auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
+        const tensor_map_t inputsInfo{{this->customPipelineInputName, this->dagDummyModelInputTensorInfo}};
+        auto input_node = std::make_unique<EntryNode<typename TypeParam::first_type>>(&this->request, inputsInfo);
+        auto model_node_A = std::make_unique<DLNode>("dummy_node_A", "dummy_A", this->requestedModelVersion, managerWithDummyModel);
+        auto model_node_B = std::make_unique<DLNode>("dummy_node_B", "dummy_B", this->requestedModelVersion, managerWithDummyModel);
+        const tensor_map_t outputsInfo{{this->customPipelineOutputName, this->dagDummyModelOutputTensorInfo}};
+        auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo);
         Pipeline pipeline(*input_node, *output_node);
-        pipeline.connect(*input_node, *model_node_A, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*input_node, *model_node_A, {{this->customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
         pipeline.connect(*model_node_A, *model_node_B, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
-        pipeline.connect(*model_node_B, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+        pipeline.connect(*model_node_B, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, this->customPipelineOutputName}});
 
         pipeline.push(std::move(input_node));
         pipeline.push(std::move(model_node_A));
@@ -324,19 +323,19 @@ TEST_F(EnsembleFlowTest, TwoInnerNodesConnectedShapeRangePartiallyMatching) {
 
     // 2x1 not passing due to not matched dummy_B (but matching dummy_A)
     {
-        prepareRequest(std::vector<float>{5.0, 6.0}, request, customPipelineInputName, {2, 1});
-        response.Clear();
+        this->prepareRequest(std::vector<float>{5.0, 6.0}, this->request, this->customPipelineInputName, {2, 1});
+        this->response.Clear();
 
-        const tensor_map_t inputsInfo{{customPipelineInputName, dagDummyModelInputTensorInfo}};
-        auto input_node = std::make_unique<EntryNode<PredictRequest>>(&request, inputsInfo);
-        auto model_node_A = std::make_unique<DLNode>("dummy_node_A", "dummy_A", requestedModelVersion, managerWithDummyModel);
-        auto model_node_B = std::make_unique<DLNode>("dummy_node_B", "dummy_B", requestedModelVersion, managerWithDummyModel);
-        const tensor_map_t outputsInfo{{customPipelineOutputName, dagDummyModelOutputTensorInfo}};
-        auto output_node = std::make_unique<ExitNode<PredictResponse>>(&response, outputsInfo);
+        const tensor_map_t inputsInfo{{this->customPipelineInputName, this->dagDummyModelInputTensorInfo}};
+        auto input_node = std::make_unique<EntryNode<typename TypeParam::first_type>>(&this->request, inputsInfo);
+        auto model_node_A = std::make_unique<DLNode>("dummy_node_A", "dummy_A", this->requestedModelVersion, managerWithDummyModel);
+        auto model_node_B = std::make_unique<DLNode>("dummy_node_B", "dummy_B", this->requestedModelVersion, managerWithDummyModel);
+        const tensor_map_t outputsInfo{{this->customPipelineOutputName, this->dagDummyModelOutputTensorInfo}};
+        auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo);
         Pipeline pipeline(*input_node, *output_node);
-        pipeline.connect(*input_node, *model_node_A, {{customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
+        pipeline.connect(*input_node, *model_node_A, {{this->customPipelineInputName, DUMMY_MODEL_INPUT_NAME}});
         pipeline.connect(*model_node_A, *model_node_B, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_INPUT_NAME}});
-        pipeline.connect(*model_node_B, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}});
+        pipeline.connect(*model_node_B, *output_node, {{DUMMY_MODEL_OUTPUT_NAME, this->customPipelineOutputName}});
 
         pipeline.push(std::move(input_node));
         pipeline.push(std::move(model_node_A));
@@ -3944,7 +3943,7 @@ TEST_F(EnsembleFlowTest, EnablingDynamicParametersAndRemovingPipeline) {
     ASSERT_EQ(instance->getStatus().getState(), ModelVersionState::AVAILABLE);
 }
 
-TEST_F(EnsembleFlowTest, EnablingStatefulParamteresForModelUsedInPipeline) {
+TEST_F(EnsembleFlowTest, EnablingStatefulParametersForModelUsedInPipeline) {
     /*
         This test modifies config.json to enable stateful model used in pipeline.
         In the same time, we remove pipeline from config file.
@@ -4260,8 +4259,8 @@ static const char* pipelineDemultiplexerShapeNotEqualToDemultiplyCount = R"(
     ]
 })";
 
-TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeWithShapeNotEqualToDemultiplyCountNotAllowed) {
-    std::string fileToReload = directoryPath + "/config.json";
+TYPED_TEST(EnsembleFlowBothApiTest, DemultiplexerMultipleBatchSizeWithShapeNotEqualToDemultiplyCountNotAllowed) {
+    std::string fileToReload = this->directoryPath + "/config.json";
     createConfigFileWithContent(pipelineDemultiplexerShapeNotEqualToDemultiplyCount, fileToReload);
     ConstructorEnabledModelManager manager;
 
@@ -4461,8 +4460,8 @@ static const char* pipelineDemultiplexerShapeEqualToDemultiplyCount = R"(
     ]
 })";
 
-TEST_F(EnsembleFlowTest, DemultiplexerMultipleBatchSizeWithShapeEqualToDemultiplyCountAllowed) {
-    std::string fileToReload = directoryPath + "/config.json";
+TYPED_TEST(EnsembleFlowBothApiTest, DemultiplexerMultipleBatchSizeWithShapeEqualToDemultiplyCountAllowed) {
+    std::string fileToReload = this->directoryPath + "/config.json";
     createConfigFileWithContent(pipelineDemultiplexerShapeEqualToDemultiplyCount, fileToReload);
     ConstructorEnabledModelManager manager;
 
@@ -4575,36 +4574,20 @@ static const char* pipelineSingleIncrement4DimInputNHWCDynamicBatch = R"(
     ]
 })";
 
-TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimInputNHWCDynamicBatch) {
-    std::string fileToReload = directoryPath + "/config.json";
+TYPED_TEST(EnsembleFlowBothApiTest, ExecuteSingleIncrement4DimInputNHWCDynamicBatch) {
+    std::string fileToReload = this->directoryPath + "/config.json";
     createConfigFileWithContent(pipelineSingleIncrement4DimInputNHWCDynamicBatch, fileToReload);
     ConstructorEnabledModelManager manager;
     std::unique_ptr<Pipeline> pipeline;
 
-    prepareRequest({1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0},
-        request, "pipeline_input", {2, 1, 1, 2, 3});
+    this->prepareRequest({1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0},
+        this->request, "pipeline_input", {2, 1, 1, 2, 3});
 
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
-    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &this->request, &this->response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 5.0, 3.0, 6.0, 4.0, 7.0, 11.0, 41.0, 21.0, 51.0, 31.0, 61.0}, request, response, {2, 1, 3, 1, 2});
-}
-
-TEST_F(EnsembleFlowKFSTest, ExecuteSingleIncrement4DimInputNHWCDynamicBatch) {
-    std::string fileToReload = directoryPath + "/config.json";
-    createConfigFileWithContent(pipelineSingleIncrement4DimInputNHWCDynamicBatch, fileToReload);
-    ConstructorEnabledModelManager manager;
-    std::unique_ptr<Pipeline> pipeline;
-
-    prepareRequest({1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0},
-        request, "pipeline_input", {2, 1, 1, 2, 3});
-
-    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
-    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
-
-    ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 5.0, 3.0, 6.0, 4.0, 7.0, 11.0, 41.0, 21.0, 51.0, 31.0, 61.0}, response, {2, 1, 3, 1, 2});
+    checkIncrement4DimResponse<float>(std::string{"pipeline_output"}, {2.0, 5.0, 3.0, 6.0, 4.0, 7.0, 11.0, 41.0, 21.0, 51.0, 31.0, 61.0}, this->request, this->response, {2, 1, 3, 1, 2});
 }
 
 static const char* pipelineSingleIncrement4DimOutputNHWC = R"(
@@ -4709,21 +4692,21 @@ static const char* pipelineSingleIncrement4DimOutputNHWCDynamicBatch = R"(
     ]
 })";
 
-TEST_F(EnsembleFlowTest, ExecuteSingleIncrement4DimOutputNHWCDynamicBatch) {
-    std::string fileToReload = directoryPath + "/config.json";
+TYPED_TEST(EnsembleFlowBothApiTest, ExecuteSingleIncrement4DimOutputNHWCDynamicBatch) {
+    std::string fileToReload = this->directoryPath + "/config.json";
     createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWCDynamicBatch, fileToReload);
     ConstructorEnabledModelManager manager;
     std::unique_ptr<Pipeline> pipeline;
 
-    prepareRequest({1.0, 2.0, 3.0, 4.0, 5.0, 6.0,
-                       10.0, 20.0, 30.0, 40.0, 50.0, 60.0},
-        request, "pipeline_input", {2, 1, 3, 1, 2});
+    this->prepareRequest({1.0, 2.0, 3.0, 4.0, 5.0, 6.0,
+                             10.0, 20.0, 30.0, 40.0, 50.0, 60.0},
+        this->request, "pipeline_input", {2, 1, 3, 1, 2});
 
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
-    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &request, &response, manager), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "increment_pipeline", &this->request, &this->response, manager), StatusCode::OK);
 
     ASSERT_EQ(pipeline->execute(), StatusCode::OK);
-    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0, 11.0, 31.0, 51, 21.0, 41.0, 61.0}, request, response, {2, 1, 1, 2, 3});
+    checkIncrement4DimResponse<float>("pipeline_output", {2.0, 4.0, 6.0, 3.0, 5.0, 7.0, 11.0, 31.0, 51, 21.0, 41.0, 61.0}, this->request, this->response, {2, 1, 1, 2, 3});
 }
 
 static const char* pipelineAmbiguousInputMeta = R"(
@@ -5817,15 +5800,15 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
     ASSERT_EQ(pipeline->execute(), StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH);
 }
 
-TEST_F(EnsembleFlowTest, TensorContentInputWithPipelineInputLayoutANYAndDemultiplexer_RequestNhwc) {
-    std::string fileToReload = directoryPath + "/config.json";
+TYPED_TEST(EnsembleFlowBothApiTest, TensorContentInputWithPipelineInputLayoutANYAndDemultiplexer_RequestNhwc) {
+    std::string fileToReload = this->directoryPath + "/config.json";
     createConfigFileWithContent(pipelineWithOnlyDynamicCustomNodeAndDemultiplexer, fileToReload);
     ConstructorEnabledModelManager manager;
     std::unique_ptr<Pipeline> pipeline;
 
-    prepareRequest({1.0, 2.0, 3.0, 4.0}, request, "pipeline_input", {1, 1, 4, 1});  // should be [1, 1, 4, 1, 1]
+    this->prepareRequest({1.0, 2.0, 3.0, 4.0}, this->request, "pipeline_input", {1, 1, 4, 1});  // should be [1, 1, 4, 1, 1]
     ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::OK);
-    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &request, &response, manager), StatusCode::OK);
+    ASSERT_EQ(manager.getPipelineFactory().create(pipeline, "my_pipeline", &this->request, &this->response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(), StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
