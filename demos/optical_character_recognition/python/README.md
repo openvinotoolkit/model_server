@@ -73,7 +73,7 @@ docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw -w /EAST tensorflow/tensorfl
 
 Convert the TensorFlow frozen model to Intermediate Representation format using the model_optimizer tool:
 ```bash
-docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw openvino/ubuntu20_dev:2022.1 mo \
+docker run -u $(id -u):$(id -g) -v ${PWD}/:/EAST:rw openvino/ubuntu20_dev:2022.1.0 mo \
 --framework=tf --input_shape=[1,1024,1920,3] --input=input_images --output=feature_fusion/Conv_7/Sigmoid,feature_fusion/concat_3 \
 --input_model /EAST/model.pb --output_dir /EAST/IR/1/
 ```
