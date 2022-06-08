@@ -564,9 +564,9 @@ TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
     this->checkOutputShape(response, {1, 5}, DUMMY_MODEL_OUTPUT_NAME);
 }
 
-/* // TODO fix
+/*
  * Scenario - perform inferences with different shapes and model reload via this->config.json change
- * 
+ *
  * 1. Load model with shape=auto, initial internal shape (1,10)
  * 2. Do the inference with (1,12) shape - expect status OK and result (1,12)
  * 3. Reshape model to fixed=(1,11) with this->config.json change
@@ -574,7 +574,7 @@ TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
  * 5. Do the inference with (1,11) shape - expect status OK and result (1,11)
  * 6. Reshape model back to shape=auto, initial internal shape (1,10)
  * 7. Do the inference with (1,12) shape - expect status OK and result (1,12)
- * // TODO fix
+ *
  */
 TYPED_TEST(TestPredict, ReshapeViaRequestAndConfigChange) {
     using namespace ovms;

@@ -15,20 +15,15 @@
 //*****************************************************************************
 #pragma once
 
-#include <grpcpp/server_context.h>  // TODO
-// TODO
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-// TODO
-#include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
-#include "src/kfserving_api/grpc_predict_v2.pb.h"
-#pragma GCC diagnostic pop
-
 #include <memory>
 #include <string>
 #include <utility>
 
+#include <grpcpp/server_context.h>
+
 #include "modelinstance.hpp"
+#include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
+#include "src/kfserving_api/grpc_predict_v2.pb.h"
 
 namespace ovms {
 

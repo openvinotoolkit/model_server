@@ -862,7 +862,20 @@ TEST_F(KFSPredictValidation, RequestWrongShapeValuesAuto) {
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED) << status.string();
 }
 
-TEST_F(KFSPredictValidation, RequestWrongShapeValuesAutoNoNamedInput) {  // TODO really required?
+TEST_F(KFSPredictValidation, RequestWrongShapeValuesAutoTwoInputs) {
+    modelConfig.parseShapeParameter("{\"Input_U8_1_3_62_62_NCHW\": \"auto\", \"Input_U16_1_2_8_4_NCHW\": \"auto\"}");
+    prepareKFSInferInputTensor(request, "Input_U8_1_3_62_62_NCHW", {{1, 4, 63, 63}, "UINT8"});
+    prepareKFSInferInputTensor(request, "Input_U16_1_2_8_4_NCHW", {{1, 2, 16, 8}, "UINT16"});
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
+}
+
+TEST_F(KFSPredictValidation, RequestWrongShapeValuesAutoNoNamedInput) {
+    modelConfig.parseShapeParameter("auto");
+    prepareKFSInferInputTensor(request, "Input_U8_1_3_62_62_NCHW", {{1, 4, 63, 63}, "UINT8"});
+    prepareKFSInferInputTensor(request, "Input_U16_1_2_8_4_NCHW", {{1, 2, 16, 8}, "UINT16"});
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
 }
 
 TEST_F(KFSPredictValidation, RequestWrongShapeValuesAutoFirstDim) {

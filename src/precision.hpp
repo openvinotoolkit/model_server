@@ -18,15 +18,14 @@
 #include <string>
 
 #include <openvino/openvino.hpp>
-// TODO remove from here
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
+
+using KFSDataType = std::string;
+namespace tensorflow {
+enum DataType : int;
+}
 
 namespace ovms {
 
-using KFSDataType = std::string;
 using TFSDataType = tensorflow::DataType;
 
 enum class Precision {
