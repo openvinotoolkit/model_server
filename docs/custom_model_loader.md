@@ -100,7 +100,7 @@ curl --fail --create-dirs https://raw.githubusercontent.com/openvinotoolkit/mode
 
 Step 6: Prepare the config json.
 
-Example configuration file: Copy the following contents into a file and name it sampleloader.json
+Example configuration file: Create a sampleloader.json file:
 ```bash
 echo '	
 		{
