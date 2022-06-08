@@ -234,8 +234,7 @@ void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
     return readImage("/ovms/src/test/binaryutils/rgb4x4.jpg", filesize, image_bytes);
 }
 
-tensorflow::serving::PredictRequest prepareBinaryPredictRequest(const std::string& inputName, const int batchSize) {
-    tensorflow::serving::PredictRequest request;
+void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize) {
     auto& tensor = (*request.mutable_inputs())[inputName];
     size_t filesize = 0;
     std::unique_ptr<char[]> image_bytes = nullptr;
@@ -246,11 +245,50 @@ tensorflow::serving::PredictRequest prepareBinaryPredictRequest(const std::strin
     }
     tensor.set_dtype(tensorflow::DataType::DT_STRING);
     tensor.mutable_tensor_shape()->add_dim()->set_size(batchSize);
-    return request;
 }
 
-tensorflow::serving::PredictRequest prepareBinary4x4PredictRequest(const std::string& inputName, const int batchSize) {
-    tensorflow::serving::PredictRequest request;
+void prepareBinaryPredictRequest(::inference::ModelInferRequest& request, const std::string& inputName, const int batchSize) {
+    request.add_inputs();
+    auto tensor = request.mutable_inputs()->Mutable(0);
+    tensor->set_name(inputName);
+    size_t filesize = 0;
+    std::unique_ptr<char[]> image_bytes = nullptr;
+    readRgbJpg(filesize, image_bytes);
+
+    for (int i = 0; i < batchSize; i++) {
+        tensor->mutable_contents()->add_bytes_contents(image_bytes.get(), filesize);
+    }
+    tensor->set_datatype("BYTES");
+    tensor->mutable_shape()->Add(batchSize);
+}
+
+void prepareBinaryPredictRequestNoShape(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize) {
+    auto& tensor = (*request.mutable_inputs())[inputName];
+    size_t filesize = 0;
+    std::unique_ptr<char[]> image_bytes = nullptr;
+    readRgbJpg(filesize, image_bytes);
+
+    for (int i = 0; i < batchSize; i++) {
+        tensor.add_string_val(image_bytes.get(), filesize);
+    }
+    tensor.set_dtype(tensorflow::DataType::DT_STRING);
+}
+
+void prepareBinaryPredictRequestNoShape(::inference::ModelInferRequest& request, const std::string& inputName, const int batchSize) {
+    request.add_inputs();
+    auto tensor = request.mutable_inputs()->Mutable(0);
+    tensor->set_name(inputName);
+    size_t filesize = 0;
+    std::unique_ptr<char[]> image_bytes = nullptr;
+    readRgbJpg(filesize, image_bytes);
+
+    for (int i = 0; i < batchSize; i++) {
+        tensor->mutable_contents()->add_bytes_contents(image_bytes.get(), filesize);
+    }
+    tensor->set_datatype("BYTES");
+}
+
+void prepareBinary4x4PredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize) {
     auto& tensor = (*request.mutable_inputs())[inputName];
     size_t filesize = 0;
     std::unique_ptr<char[]> image_bytes = nullptr;
@@ -261,7 +299,21 @@ tensorflow::serving::PredictRequest prepareBinary4x4PredictRequest(const std::st
     }
     tensor.set_dtype(tensorflow::DataType::DT_STRING);
     tensor.mutable_tensor_shape()->add_dim()->set_size(batchSize);
-    return request;
+}
+
+void prepareBinary4x4PredictRequest(::inference::ModelInferRequest& request, const std::string& inputName, const int batchSize) {
+    request.add_inputs();
+    auto tensor = request.mutable_inputs()->Mutable(0);
+    tensor->set_name(inputName);
+    size_t filesize = 0;
+    std::unique_ptr<char[]> image_bytes = nullptr;
+    read4x4RgbJpg(filesize, image_bytes);
+
+    for (int i = 0; i < batchSize; i++) {
+        tensor->mutable_contents()->add_bytes_contents(image_bytes.get(), filesize);
+    }
+    tensor->set_datatype("BYTES");
+    tensor->mutable_shape()->Add(batchSize);
 }
 
 ::inference::ModelInferRequest_InferInputTensor* findKFSInferInputTensor(::inference::ModelInferRequest& request, const std::string& name) {

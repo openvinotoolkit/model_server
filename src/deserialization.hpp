@@ -306,7 +306,7 @@ Status deserializePredictRequest(
 
             if (requestInput.dtype() == tensorflow::DataType::DT_STRING) {
                 SPDLOG_DEBUG("Request contains binary input: {}", name);
-                status = convertStringValToTensor(requestInput, tensor, tensorInfo);
+                status = convertBinaryRequestTensorToOVTensor(requestInput, tensor, tensorInfo);
                 if (!status.ok()) {
                     SPDLOG_DEBUG("Binary inputs conversion failed.");
                     return status;
@@ -362,27 +362,25 @@ Status deserializePredictRequest(
             }
             ov::Tensor tensor;
 
-            // TODO implement binary inputs for KFS
-            // if (requestInput.datatype() == tensorflow::DataType::DT_STRING) {
-            //     SPDLOG_DEBUG("Request contains binary input: {}", name);
-            //     status = convertStringValToTensor(requestInput, tensor, tensorInfo);
-            //     if (!status.ok()) {
-            //         SPDLOG_DEBUG("Binary inputs conversion failed.");
-            //         return status;
-            //     }
-            // } else {
-            //     tensor = deserializeTensorProto<TensorProtoDeserializator>(
-            //         requestInput, tensorInfo);
-            // }
+            if (requestInputItr->datatype() == "BYTES") {
+                SPDLOG_DEBUG("Request contains binary input: {}", name);
+                status = convertBinaryRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo);
+                if (!status.ok()) {
+                    SPDLOG_DEBUG("Binary inputs conversion failed.");
+                    return status;
+                }
+            } else {
+                auto inputIndex = requestInputItr - request.inputs().begin();
+                auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
 
-            auto inputIndex = requestInputItr - request.inputs().begin();
-            auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
-            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputItr, tensorInfo, bufferLocation);
-            if (!tensor) {
-                status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
-                SPDLOG_DEBUG(status.string());
-                return status;
+                tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputItr, tensorInfo, bufferLocation);
+                if (!tensor) {
+                    status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
+                    SPDLOG_DEBUG(status.string());
+                    return status;
+                }
             }
+
             const std::string ovTensorName = isPipeline ? name : tensorInfo->getName();
             status = inputSink.give(ovTensorName, tensor);
             if (!status.ok()) {
