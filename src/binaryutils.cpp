@@ -32,6 +32,11 @@
 #include "opencv2/opencv.hpp"
 #include "status.hpp"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#include "kfs_grpc_inference_service.hpp"
+#pragma GCC diagnostic pop
+
 namespace ovms {
 
 int getMatTypeFromTensorPrecision(ovms::Precision tensorPrecision) {
