@@ -15,35 +15,23 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
 #include <string>
 
 #include <openvino/openvino.hpp>
 
-#include "gatherexitnodeinputhandler.hpp"
 #include "nodeinputhandler.hpp"
 #include "nodesession.hpp"
 #include "nodesessionmetadata.hpp"
-#include "status.hpp"
 #include "tensormap.hpp"
 
 namespace ovms {
 
-class Node;
-class TensorInfo;
-
 template <typename ResponseType>
 class ExitNodeSession : public NodeSession {
 public:
-    ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ResponseType* response) :
-        NodeSession(metadata, nodeName, inputsCount, collapsingDetails) {
-        if (collapsingDetails.collapsedSessionNames.size() != 0) {
-            this->inputHandler = std::make_unique<GatherExitNodeInputHandler<ResponseType>>(inputsCount, collapsingDetails, response);
-        }
-    }
-    virtual ~ExitNodeSession() = default;
-
-    const TensorMap& getInputTensors() const { return this->inputHandler->getInputs(); }
-    void release() override {}
+    ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ResponseType* response);
+    virtual ~ExitNodeSession();
+    const TensorMap& getInputTensors() const;
 };
+
 }  // namespace ovms

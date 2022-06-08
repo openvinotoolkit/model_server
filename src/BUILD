@@ -82,6 +82,7 @@ cc_library(
         "executingstreamidguard.hpp",
         "exit_node.cpp",
         "exit_node.hpp",
+        "exitnodesession.cpp",
         "exitnodesession.hpp",
         "filesystem.hpp",
         "get_model_metadata_impl.cpp",

@@ -84,7 +84,6 @@ Status serializeTensorToTensorProto(
     std::string* rawOutputContents,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
-    responseOutput.set_name(servableOutput->getMappedName());
     if (servableOutput->getOvPrecision() != tensor.get_element_type()) {
         SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in precision expected:{} vs actual:{}",
             servableOutput->getName(),
@@ -155,17 +154,17 @@ Status OutputGetter<ov::InferRequest&>::get(const std::string& name, ov::Tensor&
 }
 
 template <>
-tensorflow::TensorProto& ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&>::getOutput(const std::string& name) {
+tensorflow::TensorProto& ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&>::createOutput(const std::string& name) {
     return (*protoStorage->mutable_outputs())[name];
 }
 
 template <>
-std::string* ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&>::getContent(const std::string& name) {
+std::string* ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&>::createContent(const std::string& name) {
     return nullptr;
 }
 
 template <>
-::inference::ModelInferResponse::InferOutputTensor& ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&>::getOutput(const std::string& name) {
+::inference::ModelInferResponse::InferOutputTensor& ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&>::createOutput(const std::string& name) {
     for (int i = 0; i < protoStorage->outputs_size(); i++) {
         auto& tensor = *protoStorage->mutable_outputs(i);
         if (tensor.name() == name) {
@@ -178,7 +177,7 @@ template <>
 }
 
 template <>
-std::string* ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&>::getContent(const std::string& name) {
+std::string* ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&>::createContent(const std::string& name) {
     for (int i = 0; i < protoStorage->outputs_size(); i++) {
         auto& tensor = *protoStorage->mutable_outputs(i);
         if (tensor.name() == name) {
