@@ -30,7 +30,7 @@ parser.add_argument('--model_name', default='resnet', help='Model name to query.
 parser.add_argument('--model_version', default=0, type=int, help='Model version to query. default: latest available',
                     dest='model_version')
 parser.add_argument('--timeout', default=10.0, help='Request timeout. default: 10.0',
-                    dest='timeout')
+                    dest='timeout', type=float)
 args = vars(parser.parse_args())
 
 # configuration
