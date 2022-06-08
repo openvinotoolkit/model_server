@@ -60,9 +60,9 @@ with open("zebra.jpeg", "rb") as f:
 
 output = client.predict({"0": img}, "resnet")
 result_index = np.argmax(output[0])
-print(imagenet_classes[result_index])' >> script.py
+print(imagenet_classes[result_index])' >> predict.py
 
-python script.py
+python predict.py
 zebra
 ```
 
