@@ -1,0 +1,141 @@
+# Preview support of KServe gRPC API{#ovms_kserve}
+
+OpenVINO Model Server 2022.2 release introduce preview of support for KServe gRPC API.
+
+Inference does support putting tensor buffers both in `ModelInferRequest` `InferTensorContents` and `raw_input_contents`. There is no support for BF16 data type and there is no support for using FP16 in `InferTensorContents`.
+In case of sending raw images BYTES data type is used. When using raw images `InferTensorContents`.
+
+In current release there is support for:
+* Model Metadata
+* Inference
+
+In current release there is no support for:
+* Server Live
+* Server Ready
+* Server Metadata
+* Model Ready
+
+## Introduction
+This guide shows how to get model metadata and perform basic inference with Resnet50 model using KServe API and example client in Python.
+
+- A sample [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/resnet50-binary-0001/README.md) model.
+
+ When using the resnet model with `grpc_predict_resnet.py`, the script processes the output from the server and displays the inference results using the previously prepared file containing labels. Inside this file, each image has an assigned number, which indicates the correct classification result.
+
+## Steps
+Clone OpenVINO&trade; Model Server GitHub repository and enter `model_server` directory.
+```
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+```
+#### Download the Pretrained Model
+Download the model files and store them in the `models` directory
+```Bash
+mkdir -p models/resnet/1
+curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
+```
+
+#### Pull the Latest Model Server Image
+Pull the latest version of OpenVINO&trade; Model Server from Docker Hub :
+```Bash
+docker pull openvino/model_server:latest
+```
+
+#### Start the Model Server Container with Downloaded Model and Dynamic Batch Size
+Start the server container with the image pulled in the previous step and mount the `models` directory :
+```Bash
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9000
+```
+
+#### Prepare virtualenv
+```Bash
+cd client/python/kserve-api/samples
+virtualenv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+```
+
+#### Run the Client to get metadata
+```Bash
+python3 ./kfs_grpc_model_metadata.py --grpc_port 9000 --grpc_address localhost --model_name resnet
+```
+
+#### Script Output
+```Bash
+server metadata:
+name: "resnet"
+versions: "1"
+platform: "OpenVINO"
+inputs {
+  name: "0"
+  datatype: "FP32"
+  shape: 1
+  shape: 3
+  shape: 224
+  shape: 224
+}
+outputs {
+  name: "1463"
+  datatype: "FP32"
+  shape: 1
+  shape: 1000
+}
+```
+
+#### Run the Client to perform inference
+```Bash
+python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False;
+```
+
+#### Script Output
+```Bash
+Image data range: 0.0 : 255.0
+Start processing:
+	Model name: resnet
+	Iterations: 10
+	Images numpy path: imgs.npy
+	Numpy file shape: (10, 3, 224, 224)
+
+Iteration 1; Processing time: 21.16 ms; speed 47.25 fps
+imagenet top results in a single batch:
+	 0 airliner 404 ; Correct match.
+Iteration 2; Processing time: 8.08 ms; speed 123.79 fps
+imagenet top results in a single batch:
+	 0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
+Iteration 3; Processing time: 104.76 ms; speed 9.55 fps
+imagenet top results in a single batch:
+	 0 bee 309 ; Correct match.
+Iteration 4; Processing time: 8.86 ms; speed 112.83 fps
+imagenet top results in a single batch:
+	 0 golden retriever 207 ; Correct match.
+Iteration 5; Processing time: 19.05 ms; speed 52.48 fps
+imagenet top results in a single batch:
+	 0 gorilla, Gorilla gorilla 366 ; Correct match.
+Iteration 6; Processing time: 9.31 ms; speed 107.47 fps
+imagenet top results in a single batch:
+	 0 magnetic compass 635 ; Correct match.
+Iteration 7; Processing time: 7.10 ms; speed 140.81 fps
+imagenet top results in a single batch:
+	 0 peacock 84 ; Correct match.
+Iteration 8; Processing time: 6.83 ms; speed 146.50 fps
+imagenet top results in a single batch:
+	 0 pelican 144 ; Correct match.
+Iteration 9; Processing time: 6.74 ms; speed 148.26 fps
+imagenet top results in a single batch:
+	 0 snail 113 ; Correct match.
+Iteration 10; Processing time: 7.08 ms; speed 141.26 fps
+imagenet top results in a single batch:
+	 0 zebra 340 ; Correct match.
+
+processing time for all iterations
+average time: 19.50 ms; average speed: 51.28 fps
+median time: 8.00 ms; median speed: 125.00 fps
+max time: 104.00 ms; min speed: 9.62 fps
+min time: 6.00 ms; max speed: 166.67 fps
+time percentile 90: 29.30 ms; speed percentile 90: 34.13 fps
+time percentile 50: 8.00 ms; speed percentile 50: 125.00 fps
+time standard deviation: 28.63
+time variance: 819.45
+Classification accuracy: 100.00
+
+Each iteration presents the results of each inference request and details for each image in the batch.
