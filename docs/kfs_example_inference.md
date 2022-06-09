@@ -1,7 +1,7 @@
 # Inference with KServe API{#ovms_kserve_inference}
 
 ## Introduction
-This guide shows how to perform basic inference with Resnet50 model using KServe API with example client in Python [kfs_grpc_predict_resne.py](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/client/python/tensorflow-serving-api/samples/kfs_grpc_predict_resnet.py).
+This guide shows how to get model metadata and perform basic inference with Resnet50 model using KServe API and example client in Python.
 
 - A sample [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/resnet50-binary-0001/README.md) model.
 
@@ -32,13 +32,43 @@ Start the server container with the image pulled in the previous step and mount 
 docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9000
 ```
 
-#### Run the Client
+#### Prepare virtualenv
 ```Bash
 cd client/python/tensorflow-serving-api/samples
 virtualenv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
+```
 
+#### Run the Client to get metadata
+```Bash
+python3 ./kfs_grpc_model_metadata.py --grpc_port 9000 --grpc_address localhost --model_name resnet
+```
+
+#### Script Output
+```Bash
+server metadata:
+name: "resnet"
+versions: "1"
+platform: "OpenVINO"
+inputs {
+  name: "0"
+  datatype: "FP32"
+  shape: 1
+  shape: 3
+  shape: 224
+  shape: 224
+}
+outputs {
+  name: "1463"
+  datatype: "FP32"
+  shape: 1
+  shape: 1000
+}
+```
+
+#### Run the Client to perform inference
+```Bash
 python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False;
 ```
 

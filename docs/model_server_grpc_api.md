@@ -13,7 +13,7 @@ This document covers following API coming from Tensorflow Serving gRPC API:
 These are the most generic function calls and should address most of the usage scenarios.
 
 
-Additionally in 2022.2 release of KServe gRPC API support is available. API is documented in [KServe](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md) repository.
+Additionally in 2022.2 release of OpenVINO Model Server there is preview support for KServe gRPC API. API is documented in [KServe](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md) repository.
 
 * <a href="#kfs-model-metadata">Kserve Model Metadata API </a>
 * <a href="#kfs-inference">KServe Inference API</a>
@@ -55,18 +55,21 @@ Read more about [Predict API usage](https://github.com/openvinotoolkit/model_ser
 
 Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
 
-### KFS placeholder
-https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md
 
 ## KServe Model Metadata API <a name="kfs-model-metadata"></a>
 Gets information about the served models. Model name and model version are accepted as parameters.
 
 Check KServe documentation for more [details](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#model-metadata-1).
 
+Example of getting model metadata with KServe API is available [here](TODO).
+
 ## KServe Inference API <a name="kfs-inference"></a>
 Run inference with requested model or [DAGs](./demultiplexing.md).
 Check KServe documentation for more [details](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#inference-1) about API.
-Read supported features in 2022.2 release [TODO](TODO).
+
+Example of inference with KServe API is available [here](TODO).
+
+Read supported about supported scope in 2022.2 release [TODO](TODO).
 
 
 
