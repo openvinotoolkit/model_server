@@ -188,8 +188,8 @@ static const char* configDummy1BsDummy2Bs = R"(
 
 class DLNodeSessionWithGetInputsExposed : public DLNodeSession {
 public:
-    DLNodeSessionWithGetInputsExposed(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
-        DLNodeSession(metadata, nodeName, inputsCount, collapsingDetails, manager, modelName, modelVersion) {}
+ /*   DLNodeSessionWithGetInputsExposed(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
+        DLNodeSession(metadata, nodeName, inputsCount, collapsingDetails, manager, modelName, modelVersion) {}*/
     DLNodeSessionWithGetInputsExposed(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
         DLNodeSession(std::move(metadata), nodeName, inputsCount, collapsingDetails, manager, modelName, modelVersion) {}
 
@@ -209,8 +209,8 @@ public:
         DLNodeSessionWithGetInputsExposed& dlnodesessionWithGetInputsExposed = static_cast<DLNodeSessionWithGetInputsExposed&>(*nodeSessions.at(sessionId));
         return dlnodesessionWithGetInputsExposed.getInputs();
     }
-    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) override {
-        return std::make_unique<DLNodeSessionWithGetInputsExposed>(metadata, getName(), previous.size(), collapsingDetails,
+    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata&& metadata, const CollapseDetails& collapsingDetails) override {
+        return std::make_unique<DLNodeSessionWithGetInputsExposed>(std::move(metadata), getName(), previous.size(), collapsingDetails,
             this->modelManager, this->modelName, this->modelVersion.value_or(0));
     }
 };

@@ -96,8 +96,8 @@ Status CustomNode::fetchResults(TensorWithSourceMap& outputs, session_key_t sess
     return StatusCode::OK;
 }
 
-std::unique_ptr<NodeSession> CustomNode::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {
-    return std::make_unique<CustomNodeSession>(metadata, getName(), previous.size(), collapsingDetails);
+std::unique_ptr<NodeSession> CustomNode::createNodeSession(const NodeSessionMetadata&& metadata, const CollapseDetails& collapsingDetails) {
+    return std::make_unique<CustomNodeSession>(std::move(metadata), getName(), previous.size(), collapsingDetails);
 }
 
 }  // namespace ovms

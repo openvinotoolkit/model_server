@@ -37,8 +37,9 @@ public:
         DLNode(nodeName, modelName, modelVersion, modelManager, nodeOutputNameAlias, demultiplyCount.value_or(0)) {
         // createSession to have source session for fetchResults()
         CollapseDetails collapsingDetails;
-        std::unique_ptr<NodeSession> nodeSession = createNodeSession(meta, collapsingDetails);
-        auto emplacePair = nodeSessions.emplace(meta.getSessionKey(), std::move(nodeSession));
+        auto key = meta.getSessionKey();
+        std::unique_ptr<NodeSession> nodeSession = createNodeSession(std::move(meta), collapsingDetails);
+        auto emplacePair = nodeSessions.emplace(key, std::move(nodeSession));
         EXPECT_TRUE(emplacePair.second);
     }
 
@@ -81,9 +82,10 @@ TEST(DemultiplexerTest, CheckDemultipliedTensorsMultipleOutputs) {
         {mockerDemutliplexerNodeOutputName2, TensorWithSource(createSharedTensor(precision, shape, tensorDataNonDemultiplexed2.data()))}};
     // construct demultiplexer node
     NodeSessionMetadata meta;
+    NodeSessionMetadata meta2 = meta;
     ConstructorEnabledModelManager manager;
     std::string demultiplexerNodeName("node");
-    DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);
+    DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta2);
     demultiplexerNode.setFetchResult(intermediateResultTensors);
     SessionResults sessionResults;
     session_key_t sessionKey = meta.getSessionKey();
@@ -119,9 +121,10 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenWrongOutputDimensions) {
         {mockerDemutliplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorData.data()))}};
     // construct demultiplexer node
     NodeSessionMetadata meta;
+    NodeSessionMetadata meta2 = meta;
     ConstructorEnabledModelManager manager;
     std::string demultiplexerNodeName("node");
-    DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);  // demultiplexer expects (1, 3, x1, ..., xN);
+    DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta2);  // demultiplexer expects (1, 3, x1, ..., xN);
     demultiplexerNode.setFetchResult(intermediateResultTensors);
     SessionResults sessionResults;
     session_key_t sessionKey = meta.getSessionKey();
@@ -140,9 +143,10 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenNotEnoughDimensionsInOutp
         {mockerDemutliplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorData.data()))}};
     // construct demultiplexer node
     NodeSessionMetadata meta;
+    NodeSessionMetadata meta2 = meta;
     ConstructorEnabledModelManager manager;
     std::string demultiplexerNodeName("node");
-    DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);  // demultiplexer expects (1, 3, x1, ..., xN);
+    DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta2);  // demultiplexer expects (1, 3, x1, ..., xN);
     demultiplexerNode.setFetchResult(intermediateResultTensors);
     SessionResults sessionResults;
     session_key_t sessionKey = meta.getSessionKey();
@@ -162,9 +166,10 @@ TEST(DemultiplexerTest, ShardsShareDataWithSourceTensor) {
         {mockerDemutliplexerNodeOutputName, TensorWithSource(intermediateTensor)}};
     // construct demultiplexer node
     NodeSessionMetadata meta;
+    NodeSessionMetadata meta2 = meta;
     ConstructorEnabledModelManager manager;
     std::string demultiplexerNodeName("node");
-    DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta);  // demultiplexer expects (1, 3, x1, ..., xN);
+    DemultiplexerDLNode demultiplexerNode(demultiplexerNodeName, "model", 1, manager, std::unordered_map<std::string, std::string>{{"NOT_USED", "NOT_USED"}}, demultiplyCount, meta2);  // demultiplexer expects (1, 3, x1, ..., xN);
     demultiplexerNode.setFetchResult(intermediateResultTensors);
     SessionResults sessionResults;
     session_key_t sessionKey = meta.getSessionKey();
@@ -203,8 +208,8 @@ TEST(DemultiplexerTest, GatherShardsWithExistingSourceTensors) {
     // Mock DLNode to inject factory method to be able to create Node with mocked NodeSession.
     class MockDLNode : public DLNode {
     protected:
-        std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) override {
-            return std::make_unique<MockNodeSession>(metadata, getName(), previous.size(), collapsingDetails,
+        std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata&& metadata, const CollapseDetails& collapsingDetails) override {
+            return std::make_unique<MockNodeSession>(std::move(metadata), getName(), previous.size(), collapsingDetails,
                 this->modelManager, this->modelName, this->modelVersion.value_or(0));
         }
 

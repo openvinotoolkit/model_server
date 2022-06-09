@@ -57,7 +57,7 @@ public:
         throw std::logic_error("This node cannot have dependant");
     }
 
-    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) override;
+    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata&& metadata, const CollapseDetails& collapsingDetails) override;
 };
 
 }  // namespace ovms

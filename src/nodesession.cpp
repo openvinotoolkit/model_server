@@ -40,13 +40,13 @@ std::unique_ptr<NodeInputHandler> createNodeInputHandler(uint32_t inputsCount, c
     }
 }
 
-NodeSession::NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
+/*NodeSession::NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
     metadata(metadata),
     sessionKey(metadata.getSessionKey()),
     nodeName(nodeName),
     timer(std::make_unique<Timer>()),
     inputHandler(createNodeInputHandler(inputsCount, collapsingDetails)),
-    outputHandler(std::make_unique<NodeOutputHandler>()) {}
+    outputHandler(std::make_unique<NodeOutputHandler>()) { throw 2}*/
 
 NodeSession::NodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails) :
     metadata(std::move(metadata)),

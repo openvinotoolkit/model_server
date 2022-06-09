@@ -180,13 +180,13 @@ NodeSession* Node::getNodeSession(const NodeSessionMetadata& metadata) {
     } else {
         newSessionMetadata = metadata;
     }
-    std::unique_ptr<NodeSession> nodeSession = createNodeSession(newSessionMetadata, collapsingDetails);
+    std::unique_ptr<NodeSession> nodeSession = createNodeSession(std::move(newSessionMetadata), collapsingDetails);
     auto emplacePair = nodeSessions.emplace(sessionKey, std::move(nodeSession));
     return emplacePair.first->second.get();
 }
 
-std::unique_ptr<NodeSession> Node::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {
-    return std::make_unique<NodeSession>(metadata, getName(), previous.size(), collapsingDetails);
+std::unique_ptr<NodeSession> Node::createNodeSession(const NodeSessionMetadata&& metadata, const CollapseDetails& collapsingDetails) {
+    return std::make_unique<NodeSession>(std::move(metadata), getName(), previous.size(), collapsingDetails);
 }
 
 std::vector<session_key_t> Node::getReadySessions() const {

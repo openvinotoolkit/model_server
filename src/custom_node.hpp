@@ -59,7 +59,7 @@ public:
         return it != nodeOutputNameAlias.end() ? it->second : alias;
     }
 
-    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) override;
+    std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata&& metadata, const CollapseDetails& collapsingDetails) override;
 };
 
 }  // namespace ovms

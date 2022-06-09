@@ -62,8 +62,8 @@ Status ExitNode<ResponseType>::fetchResults(const TensorMap& inputTensors) {
 }
 
 template <typename ResponseType>
-std::unique_ptr<NodeSession> ExitNode<ResponseType>::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {
-    return std::make_unique<ExitNodeSession>(metadata, getName(), previous.size(), collapsingDetails);
+std::unique_ptr<NodeSession> ExitNode<ResponseType>::createNodeSession(const NodeSessionMetadata&& metadata, const CollapseDetails& collapsingDetails) {
+    return std::make_unique<ExitNodeSession>(std::move(metadata), getName(), previous.size(), collapsingDetails);
 }
 
 template Status ExitNode<::inference::ModelInferResponse>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
@@ -72,6 +72,6 @@ template Status ExitNode<::inference::ModelInferResponse>::execute(session_key_t
 template Status ExitNode<tensorflow::serving::PredictResponse>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
 template Status ExitNode<::inference::ModelInferResponse>::fetchResults(const TensorMap& inputTensors);
 template Status ExitNode<tensorflow::serving::PredictResponse>::fetchResults(const TensorMap& inputTensors);
-template std::unique_ptr<NodeSession> ExitNode<::inference::ModelInferResponse>::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails);
-template std::unique_ptr<NodeSession> ExitNode<tensorflow::serving::PredictResponse>::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails);
+template std::unique_ptr<NodeSession> ExitNode<::inference::ModelInferResponse>::createNodeSession(const NodeSessionMetadata&& metadata, const CollapseDetails& collapsingDetails);
+template std::unique_ptr<NodeSession> ExitNode<tensorflow::serving::PredictResponse>::createNodeSession(const NodeSessionMetadata&& metadata, const CollapseDetails& collapsingDetails);
 }  // namespace ovms
