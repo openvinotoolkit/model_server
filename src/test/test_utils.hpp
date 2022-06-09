@@ -23,6 +23,7 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <gmock/gmock.h>
@@ -127,6 +128,22 @@ constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
 
 constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life
 
+using KFSRequestType = ::inference::ModelInferRequest;
+using KFSResponseType = ::inference::ModelInferResponse;
+using KFSInputTensorType = ::inference::ModelInferRequest_InferInputTensor;
+using KFSShapeType = google::protobuf::RepeatedField<int64_t>;
+using KFSInputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferRequest_InferInputTensor>;
+using KFSOutputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferResponse_InferOutputTensor>;
+using TFSRequestType = tensorflow::serving::PredictRequest;
+using TFSResponseType = tensorflow::serving::PredictResponse;
+using TFSInputTensorType = tensorflow::TensorProto;
+using TFSOutputTensorType = tensorflow::TensorProto;
+using TFSShapeType = tensorflow::TensorShapeProto;
+using TFSInputTensorIteratorType = google::protobuf::Map<std::string, TFSInputTensorType>::const_iterator;
+using TFSOutputTensorIteratorType = google::protobuf::Map<std::string, TFSOutputTensorType>::const_iterator;
+using TFSInterface = std::pair<TFSRequestType, TFSResponseType>;
+using KFSInterface = std::pair<KFSRequestType, KFSResponseType>;
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 ovms::tensor_map_t prepareTensors(
@@ -161,6 +178,10 @@ void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
     tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1);
 
+void checkDummyResponse(const std::string outputName,
+    const std::vector<float>& requestData,
+    ::inference::ModelInferRequest& request, ::inference::ModelInferResponse& response, int seriesLength, int batchSize = 1);
+
 template <typename T>
 std::string readableError(const T* expected_output, const T* actual_output, const size_t size) {
     std::stringstream ss;
@@ -191,6 +212,31 @@ void checkIncrement4DimResponse(const std::string outputName,
     }
 
     T* actual_output = (T*)output_proto.tensor_content().data();
+    T* expected_output = (T*)expectedData.data();
+    const int dataLengthToCheck = elementsCount * sizeof(T);
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(T));
+}
+
+template <typename T>
+void checkIncrement4DimResponse(const std::string outputName,
+    const std::vector<T>& expectedData,
+    ::inference::ModelInferRequest& request,
+    ::inference::ModelInferResponse& response,
+    const std::vector<size_t>& expectedShape) {
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.mutable_outputs(0)->name(), outputName);
+
+    auto elementsCount = std::accumulate(expectedShape.begin(), expectedShape.end(), 1, std::multiplies<size_t>());
+
+    ASSERT_EQ(response.raw_output_contents(0).size(), elementsCount * sizeof(T));
+    ASSERT_EQ(response.outputs(0).shape_size(), expectedShape.size());
+    for (size_t i = 0; i < expectedShape.size(); i++) {
+        ASSERT_EQ(response.outputs(0).shape(i), expectedShape[i]);
+    }
+
+    T* actual_output = (T*)response.raw_output_contents(0).data();
     T* expected_output = (T*)expectedData.data();
     const int dataLengthToCheck = elementsCount * sizeof(T);
     EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))

@@ -19,23 +19,19 @@
 
 #include <openvino/openvino.hpp>
 
+#include "nodeinputhandler.hpp"
 #include "nodesession.hpp"
 #include "nodesessionmetadata.hpp"
-#include "status.hpp"
 #include "tensormap.hpp"
 
 namespace ovms {
 
-class Node;
-class TensorInfo;
-
+template <typename ResponseType>
 class ExitNodeSession : public NodeSession {
 public:
-    ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
-    ExitNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
+    ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ResponseType* response);
     virtual ~ExitNodeSession();
-
     const TensorMap& getInputTensors() const;
-    void release() override;
 };
+
 }  // namespace ovms

@@ -33,7 +33,7 @@ namespace ovms {
 template <typename ResponseType>
 Status ExitNode<ResponseType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
     OVMS_PROFILE_FUNCTION();
-    auto& exitNodeSession = static_cast<ExitNodeSession&>(nodeSession);
+    auto& exitNodeSession = static_cast<ExitNodeSession<ResponseType>&>(nodeSession);
     return this->fetchResults(exitNodeSession.getInputTensors());
 }
 
@@ -63,7 +63,7 @@ Status ExitNode<ResponseType>::fetchResults(const TensorMap& inputTensors) {
 
 template <typename ResponseType>
 std::unique_ptr<NodeSession> ExitNode<ResponseType>::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) {
-    return std::make_unique<ExitNodeSession>(metadata, getName(), previous.size(), collapsingDetails);
+    return std::make_unique<ExitNodeSession<ResponseType>>(metadata, getName(), previous.size(), collapsingDetails, response);
 }
 
 template Status ExitNode<::inference::ModelInferResponse>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);

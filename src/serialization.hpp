@@ -52,7 +52,8 @@ class ProtoGetter {
 public:
     ProtoGetter(ProtoStorage protoStorage) :
         protoStorage(protoStorage) {}
-    ProtoType get(const std::string& name);
+    ProtoType createOutput(const std::string& name);
+    std::string* createContent(const std::string& name);
 };
 
 Status serializeTensorToTensorProto(
@@ -92,7 +93,7 @@ Status serializePredictResponse(
         if (!status.ok()) {
             return status;
         }
-        auto& tensorProto = protoGetter.get(outputInfo->getMappedName());
+        auto& tensorProto = protoGetter.createOutput(outputInfo->getMappedName());
         status = serializeTensorToTensorProto(tensorProto, outputInfo, tensor);
         if (!status.ok()) {
             return status;
@@ -114,8 +115,8 @@ Status serializePredictResponse(
         if (!status.ok()) {
             return status;
         }
-        auto& inferOutputTensor = protoGetter.get(outputInfo->getMappedName());
-        status = serializeTensorToTensorProto(inferOutputTensor, response->add_raw_output_contents(), outputInfo, tensor);
+        auto& inferOutputTensor = protoGetter.createOutput(outputInfo->getMappedName());
+        status = serializeTensorToTensorProto(inferOutputTensor, protoGetter.createContent(outputInfo->getMappedName()), outputInfo, tensor);
         if (!status.ok()) {
             return status;
         }

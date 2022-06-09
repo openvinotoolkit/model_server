@@ -284,9 +284,12 @@ protected:
 
 TEST_F(KFServingGRPCPredict, ValidSerialization) {
     ov::Tensor tensor(ov::element::f32, shape_t{1, 3, 1, 1});
-    KFSTensorProto responseOutput;
+    KFSPredictResponse response;
+    ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&> protoGetter(&response);
+    auto& responseOutput = protoGetter.createOutput(tensorName);
+    auto* content = protoGetter.createContent(tensorName);
     auto status = serializeTensorToTensorProto(responseOutput,
-        response.add_raw_output_contents(),
+        content,
         tensorMap[tensorName],
         tensor);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
@@ -301,9 +304,12 @@ TEST_F(KFServingGRPCPredict, ValidSerialization) {
 
 TEST_F(KFServingGRPCPredict, NegativeMismatchBetweenTensorInfoAndTensorPrecision) {
     ov::Tensor tensor(ov::element::i32, shape_t{1, 3, 1, 1});
-    KFSTensorProto responseOutput;
+    KFSPredictResponse response;
+    ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&> protoGetter(&response);
+    auto& responseOutput = protoGetter.createOutput(tensorName);
+    auto* content = protoGetter.createContent(tensorName);
     auto status = serializeTensorToTensorProto(responseOutput,
-        response.add_raw_output_contents(),
+        content,
         tensorMap[tensorName],
         tensor);
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
@@ -311,9 +317,12 @@ TEST_F(KFServingGRPCPredict, NegativeMismatchBetweenTensorInfoAndTensorPrecision
 
 TEST_F(KFServingGRPCPredict, NegativeMismatchBetweenTensorInfoAndTensorShape) {
     ov::Tensor tensor(ov::element::i32, shape_t{2, 3, 1, 1});
-    KFSTensorProto responseOutput;
+    KFSPredictResponse response;
+    ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&> protoGetter(&response);
+    auto& responseOutput = protoGetter.createOutput(tensorName);
+    auto* content = protoGetter.createContent(tensorName);
     auto status = serializeTensorToTensorProto(responseOutput,
-        response.add_raw_output_contents(),
+        content,
         tensorMap[tensorName],
         tensor);
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
@@ -340,10 +349,13 @@ public:
 TEST_P(SerializeKFSInferOutputTensor, SerializeTensorProtoShouldSucceedForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
-    KFSTensorProto responseOutput;
+    KFSPredictResponse response;
+    ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&> protoGetter(&response);
+    auto& responseOutput = protoGetter.createOutput(tensorName);
+    auto* content = protoGetter.createContent(tensorName);
     ov::Tensor mockTensor = std::get<1>(inputs);
     auto status = serializeTensorToTensorProto(responseOutput,
-        response.add_raw_output_contents(),
+        content,
         std::get<0>(inputs),
         mockTensor);
     EXPECT_TRUE(status.ok())
@@ -357,9 +369,12 @@ class SerializeKFSInferOutputTensorNegative : public SerializeKFSInferOutputTens
 TEST_P(SerializeKFSInferOutputTensorNegative, SerializeTensorProtoShouldSucceedForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     auto inputs = getInputs(testedPrecision);
-    KFSTensorProto responseOutput;
+    KFSPredictResponse response;
+    ProtoGetter<::inference::ModelInferResponse*, ::inference::ModelInferResponse::InferOutputTensor&> protoGetter(&response);
+    auto& responseOutput = protoGetter.createOutput(tensorName);
+    auto* content = protoGetter.createContent(tensorName);
     auto status = serializeTensorToTensorProto(responseOutput,
-        response.add_raw_output_contents(),
+        content,
         std::get<0>(inputs),
         std::get<1>(inputs));
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION)

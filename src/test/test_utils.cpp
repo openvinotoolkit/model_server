@@ -150,6 +150,30 @@ void checkDummyResponse(const std::string outputName,
         << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
 }
 
+void checkDummyResponse(const std::string outputName,
+    const std::vector<float>& requestData,
+    ::inference::ModelInferRequest& request, ::inference::ModelInferResponse& response, int seriesLength, int batchSize) {
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.outputs().begin()->name(), outputName) << "Did not find:" << outputName;
+    const auto& output_proto = *response.outputs().begin();
+    std::string* content = response.mutable_raw_output_contents(0);
+
+    ASSERT_EQ(content->size(), batchSize * DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
+    ASSERT_EQ(output_proto.shape_size(), 2);
+    ASSERT_EQ(output_proto.shape(0), batchSize);
+    ASSERT_EQ(output_proto.shape(1), DUMMY_MODEL_OUTPUT_SIZE);
+
+    std::vector<float> responseData = requestData;
+    std::for_each(responseData.begin(), responseData.end(), [seriesLength](float& v) { v += 1.0 * seriesLength; });
+
+    float* actual_output = (float*)content->data();
+    float* expected_output = responseData.data();
+    const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(float);
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
+}
+
 void checkIncrement4DimShape(const std::string outputName,
     PredictResponse& response,
     const std::vector<size_t>& expectedShape) {

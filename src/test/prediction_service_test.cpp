@@ -39,22 +39,6 @@ using testing::Eq;
 
 using ovms::StatusCode;
 
-using KFSRequestType = ::inference::ModelInferRequest;
-using KFSResponseType = ::inference::ModelInferResponse;
-using KFSInputTensorType = ::inference::ModelInferRequest_InferInputTensor;
-using KFSShapeType = google::protobuf::RepeatedField<int64_t>;
-using KFSInputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferRequest_InferInputTensor>;
-using KFSOutputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferResponse_InferOutputTensor>;
-using TFSRequestType = tensorflow::serving::PredictRequest;
-using TFSResponseType = tensorflow::serving::PredictResponse;
-using TFSInputTensorType = tensorflow::TensorProto;
-using TFSOutputTensorType = tensorflow::TensorProto;
-using TFSShapeType = tensorflow::TensorShapeProto;
-using TFSInputTensorIteratorType = google::protobuf::Map<std::string, TFSInputTensorType>::const_iterator;
-using TFSOutputTensorIteratorType = google::protobuf::Map<std::string, TFSOutputTensorType>::const_iterator;
-using TFSInterface = std::pair<TFSRequestType, TFSResponseType>;
-using KFSInterface = std::pair<KFSRequestType, KFSResponseType>;
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnarrowing"
 void serializeAndCheck(int outputSize, ov::InferRequest& inferRequest, const std::string& outputName, const ovms::tensor_map_t& outputsInfo) {
