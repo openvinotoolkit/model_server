@@ -22,31 +22,38 @@ Some models might take the whole sequence of data as an input and iterate over t
 
 Serving stateful model in OpenVINO Model Server is very similar to serving stateless models. The only difference is that for stateful models you need to set `stateful` flag in the model configuration.
 
+* Download and prepare example model from [rm_lstm4f](https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/)
+```bash
+mkdir models && cd models
+wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/
+docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu18_dev:latest mo --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1
+```
+
 * Starting OVMS with stateful model via command line:
 
-```
-docker run -d -u $(id -u):$(id -g) -v <host_model_path>:/models/stateful_model -p 9000:9000 openvino/model_server:latest \ 
---port 9000 --model_path /models/stateful_model --model_name stateful_model --stateful
+```bash
+docker run -d -u $(id -u):$(id -g) -v $(pwd)/rm_lstm4f:/models/stateful_model -p 9000:9000 openvino/model_server:latest \
+--port 9000 --model_path /models/stateful_model --model_name rm_lstm4f --stateful
 ```
 
 * Starting OVMS with stateful model via config file:
 
-```
-{
+```bash
+echo '{
    "model_config_list":[
       {
          "config": {
-            "name":"stateful_model",
+            "name":"rm_lstm4f",
             "base_path":"/models/stateful_model",
             "stateful": true
          }
       }
    ]
-}
+}' >> config.json
 ```
 
-```
-docker run -d -u $(id -u):$(id -g) -v <host_model_path>:/models/stateful_model -v <host_config_path>:/models/config.json -p 9000:9000 openvino/model_server:latest \ 
+```bash
+docker run -d -u $(id -u):$(id -g) -v $(pwd)/rm_lstm4f:/models/stateful_model -v $(pwd)/config.json:/models/config.json -p 9000:9000 openvino/model_server:latest \
 --port 9000 --config_path /models/config.json
 ```
 
