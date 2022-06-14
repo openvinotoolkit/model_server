@@ -1,5 +1,15 @@
 # Using AI Accelerators {#ovms_docs_target_devices}
 
+## Prepare test model
+
+Download ResNet50 model
+
+```bash
+mkdir -p model/1
+wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin
+wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
+```
+
 
 ## Starting the server with the Intel® Neural Compute Stick 2
 
@@ -13,14 +23,14 @@ To start the server with Neural Compute Stick use either of the two options:
 1. More securely, without the docker privileged mode and mounting only the usb devices.
 
    ```bash
-   docker run --rm -it -u 0 --device-cgroup-rule='c 189:* rmw' -v /opt/model:/opt/model -v /dev/bus/usb:/dev/bus/usb -p 9001:9001 openvino/model_server \
-   --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
+   docker run --rm -it -u 0 --device-cgroup-rule='c 189:* rmw' -v $(pwd)/model:/opt/model -v /dev/bus/usb:/dev/bus/usb -p 9001:9001 openvino/model_server \
+   --model_path /opt/model --model_name resnet --port 9001 --target_device MYRIAD
    ```
 
 2. less securely, in the docker privileged mode and mounting all devices.
    ```bash
-   docker run --rm -it --net=host -u root --privileged -v /opt/model:/opt/model -v /dev:/dev -p 9001:9001 openvino/model_server \
-   --model_path /opt/model --model_name my_model --port 9001 --target_device MYRIAD
+   docker run --rm -it --net=host -u root --privileged -v $(pwd)/model:/opt/model -v /dev:/dev -p 9001:9001 openvino/model_server \
+   --model_path /opt/model --model_name resnet --port 9001 --target_device MYRIAD
    ```
 
 ## Starting a Docker Container with HDDL
@@ -34,9 +44,8 @@ An example of a command starting a server with HDDL:
 
 # --device=/dev/ion:/dev/ion mounts the accelerator device
 # -v /var/tmp:/var/tmp enables communication with _hddldaemon_ running on the host machine
-docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest \
-
---model_path /opt/model --model_name my_model --port 9001 --target_device HDDL
+docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v $(pwd)/model:/opt/model -p 9001:9001 openvino/model_server:latest \
+--model_path /opt/model --model_name resnet --port 9001 --target_device HDDL
 ```
 
 Check out our recommendations for [throughput optimization on HDDL](performance_tuning.md).
@@ -63,8 +72,8 @@ A command example:
 
 ```bash
 
-docker run --rm -it --device=/dev/dri -v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
---model_path /opt/model --model_name my_model --port 9001 --target_device GPU
+docker run --rm -it --device=/dev/dri -v $(pwd)/model:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+--model_path /opt/model --model_name resnet --port 9001 --target_device GPU
 
 ```
 
@@ -80,9 +89,9 @@ The default account in the docker image is preconfigured. If you change the secu
 
 docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
 
--v /opt/model:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+-v $(pwd)/model:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
 
---model_path /opt/model --model_name my_model --port 9001 --target_device GPU
+--model_path /opt/model --model_name resnet --port 9001 --target_device GPU
 
 ```
 
@@ -91,6 +100,8 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 
 Support for [Intel Arc](https://www.intel.com/content/www/us/en/architecture-and-technology/visual-technology/arc-discrete-graphics.html), which is in preview now, requires newer driver version `22.10.22597`. You can build OpenVINO Model server with ubuntu base image and that driver using the command below:
 ```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
 make docker_build INSTALL_DRIVER_VERSION=22.10.22597
 ```
 
@@ -106,30 +117,30 @@ The order of the devices will define their priority, in this case making `device
 
 This example of a config.json file sets up the Multi-Device Plugin for a resnet model, using Intel Movidius Neural Compute Stick and CPU as devices:
 
-```json
-{"model_config_list": [
+```bash
+echo '{"model_config_list": [
    {"config": {
       "name": "resnet",
-      "base_path": "/opt/ml/resnet",
+      "base_path": "/opt/model",
       "batch_size": "1",
       "target_device": "MULTI:MYRIAD,CPU"}
    }]
-}
+}' >> ./model/config.json
 ```
 
 To start OpenVINO Model Server, with the described config file placed as `./models/config.json`, set the `grpc_workers` parameter to match the `nireq` field in config.json 
 and use the run command, like so:
 
 ```
-docker run -d --net=host -u root --privileged --rm -v $(pwd)/models/:/opt/ml:ro -v /dev:/dev -p 9001:9001 \
-openvino/model_server:latest --config_path /opt/ml/config.json --port 9001 
+docker run -d --net=host -u root --privileged --rm -v $(pwd)/model/:/opt/model:ro -v /dev:/dev -p 9001:9001 \
+openvino/model_server:latest --config_path /opt/model/config.json --port 9001
 ```
 
 2. When using just a single model, you can start OpenVINO Model Server without the config.json file. To do so, use the run command together with additional parameters, like so: 
 
 ```
-docker run -d --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/models/:/opt/ml:ro -v \ 
-/dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/ml/resnet --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
+docker run -d --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/model/:/opt/model:ro -v \ 
+/dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/model --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
 ```
  
 The deployed model will perform inference on both Intel Movidius Neural Compute Stick and CPU. 
@@ -147,15 +158,15 @@ The order of devices will define their priority, in this case making `device_1` 
 
 Here is a config example using heterogeneous plugin with GPU as the primary device and CPU as a fallback.
 
-```json
-{"model_config_list": [
+```bash
+echo '{"model_config_list": [
    {"config": {
       "name": "resnet",
-      "base_path": "/opt/ml/resnet",
+      "base_path": "/opt/model",
       "batch_size": "1",
       "target_device": "HETERO:GPU,CPU"}
    }]
-}
+}' >> ./model/config.json
 ```
 
 ## Using AUTO Plugin
@@ -171,11 +182,12 @@ Below is an example of the command with AUTO Plugin as target device. It include
 
    .. code-block:: sh
 
+```bash
         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)\
-            -u $(id -u):$(id -g) -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
-            --model_path /opt/model --model_name my_model --port 9001 \
+            -u $(id -u):$(id -g) -v $(pwd)/model:/opt/model -p 9001:9001 openvino/model_server:latest \
+            --model_path /opt/model --model_name resnet --port 9001 \
             --target_device AUTO
-
+```
 @endsphinxdirective
 
 The `Auto Device` plugin can also use the [PERFORMANCE_HINT](performance_tuning.md) plugin config property that enables you to specify a performance mode for the plugin.
@@ -189,21 +201,25 @@ To enable Performance Hints for your application, use the following command:
 
    .. code-block:: sh
 
+```bash
         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-            -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
-            --model_path /opt/model --model_name my_model --port 9001 \
+            -v $(pwd)/model:/opt/model -p 9001:9001 openvino/model_server:latest \
+            --model_path /opt/model --model_name resnet --port 9001 \
             --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
             --target_device AUTO
+```
 
 .. tab:: THROUGHTPUT
 
    .. code-block:: sh  
    
+```bash
         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-            -v <model_path>:/opt/model -p 9001:9001 openvino/model_server:latest \
-            --model_path /opt/model --model_name my_model --port 9001 \
+            -v $(pwd)/model:/opt/model -p 9001:9001 openvino/model_server:latest \
+            --model_path /opt/model --model_name resnet --port 9001 \
             --plugin_config '{"PERFORMANCE_HINT": "THROUGHTPUT"}' \
             --target_device AUTO
+```
 
 @endsphinxdirective
 
