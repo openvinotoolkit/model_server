@@ -94,8 +94,8 @@ usage: grpc_stateful_client.py [--input_path INPUT_PATH]
 | --score_path | Path to reference scores ark file. Default: ```rm_lstm4f/test_score_1_10.ark``` |
 | --grpc_address GRPC_ADDRESS | Specify url to grpc service. Default:```localhost``` | 
 | --grpc_port GRPC_PORT | Specify port to grpc service. Default: ```9000``` |
-| --input_name | Specify input tensor name. Default: ```Parameter``` |
-| --output_name | Specify output name. Default: ```affinetransform/Fused_Add_``` |
+| --input_name | Specify input tensor name. Default: ```Parameter:0``` |
+| --output_name | Specify output name. Default: ```affinetransform:0``` |
 | --model_name | Define model name, must be same as is in service. Default: ```rm_lstm4f```|
 | --cw_l | Number of requests for left context window. Works only with context window networks. Default: ```0``` |
 | --cw_r | Number of requests for right context window. Works only with context window networks. Default: ```0``` |
@@ -106,7 +106,7 @@ usage: grpc_stateful_client.py [--input_path INPUT_PATH]
 - Usage example
 
 ```bash
-python3 grpc_stateful_client.py --input_path $(pwd)/models/test_feat_1_10.ark --score_path $(pwd)/models/test_score_1_10.ark --grpc_address localhost --grpc_port 9000 --input_name Parameter --output_name affinetransform/Fused_Add_ --model_name rm_lstm4f --sequence_id 1
+python3 grpc_stateful_client.py --input_path $(pwd)/models/test_feat_1_10.ark --score_path $(pwd)/models/test_score_1_10.ark --grpc_address localhost --grpc_port 9000 --input_name Parameter:0 --output_name affinetransform:0 --model_name rm_lstm4f --sequence_id 1
 
 ### Starting grpc_stateful_client.py client ###
 Context window left width cw_l: 0
@@ -116,69 +116,80 @@ Start processing:
 Model name: rm_lstm4f
 Reading input ark file /some_path/test_feat_1_10.ark
 Reading scores ark file /some_path/test_score_1_10.ark
-Adding input name Parameter
-Adding output name affinetransform/Fused_Add_
-	Sequence name: aem02_st0049_oct89
-	Sequence size: 250
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0049_oct89 ; Average RMS Error: 0.0000015199
+Adding input name Parameter:0
+Adding output name affinetransform:0
 
-	Sequence name: aem02_st0122_oct89
-	Sequence size: 441
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0122_oct89 ; Average RMS Error: 0.0000015155
+        Sequence name: aem02_st0049_oct89
+        Sequence size: 250
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0049_oct89 ; Average RMS Error: 0.0000022994
 
-	Sequence name: aem02_st0182_oct89
-	Sequence size: 347
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0182_oct89 ; Average RMS Error: 0.0000016066
 
-	Sequence name: aem02_st0276_oct89
-	Sequence size: 407
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0276_oct89 ; Average RMS Error: 0.0000015985
+        Sequence name: aem02_st0122_oct89
+        Sequence size: 441
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0122_oct89 ; Average RMS Error: 0.0000021833
 
-	Sequence name: aem02_st0343_oct89
-	Sequence size: 353
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0343_oct89 ; Average RMS Error: 0.0000017223
 
-	Sequence name: aem02_st0421_oct89
-	Sequence size: 372
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0421_oct89 ; Average RMS Error: 0.0000016378
+        Sequence name: aem02_st0182_oct89
+        Sequence size: 347
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0182_oct89 ; Average RMS Error: 0.0000024054
 
-	Sequence name: aem02_st0490_oct89
-	Sequence size: 214
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0490_oct89 ; Average RMS Error: 0.0000014651
 
-	Sequence name: aem02_st0554_oct89
-	Sequence size: 318
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0554_oct89 ; Average RMS Error: 0.0000017802
+        Sequence name: aem02_st0276_oct89
+        Sequence size: 407
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0276_oct89 ; Average RMS Error: 0.0000024259
 
-	Sequence name: aem02_st0623_oct89
-	Sequence size: 285
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0623_oct89 ; Average RMS Error: 0.0000015983
 
-	Sequence name: aem02_st0705_oct89
-	Sequence size: 414
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0705_oct89 ; Average RMS Error: 0.0000014956
+        Sequence name: aem02_st0343_oct89
+        Sequence size: 353
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0343_oct89 ; Average RMS Error: 0.0000025725
 
-Global average rms error: 0.0000015940
+
+        Sequence name: aem02_st0421_oct89
+        Sequence size: 372
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0421_oct89 ; Average RMS Error: 0.0000021470
+
+
+        Sequence name: aem02_st0490_oct89
+        Sequence size: 214
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0490_oct89 ; Average RMS Error: 0.0000020102
+
+
+        Sequence name: aem02_st0554_oct89
+        Sequence size: 318
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0554_oct89 ; Average RMS Error: 0.0000023627
+
+
+        Sequence name: aem02_st0623_oct89
+        Sequence size: 285
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0623_oct89 ; Average RMS Error: 0.0000023717
+
+
+        Sequence name: aem02_st0705_oct89
+        Sequence size: 414
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0705_oct89 ; Average RMS Error: 0.0000021335
+
+Global average rms error: 0.0000022912
+
 
 processing time for all iterations
-average time: 2.06 ms; average speed: 201.14 fps
-median time: 2.00 ms; median speed: 207.00 fps
-max time: 12.00 ms; min speed: 34.50 fps
-min time: 1.00 ms; max speed: 414.00 fps
-time percentile 90: 2.00 ms; speed percentile 90: 207.00 fps
-time percentile 50: 2.00 ms; speed percentile 50: 207.00 fps
-time standard deviation: 0.49
-time variance: 0.24
+average time: 1.10 ms; average speed: 375.77 fps
+median time: 1.00 ms; median speed: 414.00 fps
+max time: 18.00 ms; min speed: 23.00 fps
+min time: 0.00 ms; max speed: inf fps
+time percentile 90: 1.00 ms; speed percentile 90: 414.00 fps
+time percentile 50: 1.00 ms; speed percentile 50: 414.00 fps
+time standard deviation: 0.52
+time variance: 0.27
 ### Finished grpc_stateful_client.py client processing ###
 ```
 
@@ -214,8 +225,8 @@ usage: rest_stateful_client.py [--input_path INPUT_PATH]
 | --score_path | Path to reference scores ark file. Default: ```rm_lstm4f/test_score_1_10.ark``` |
 | --rest_url REST_URL | Specify url to rest service. Default: ```localhost``` | 
 | --rest_port REST_PORT | Specify port to grpc service. Default: ```9000``` |
-| --input_name | Specify input tensor name. Default: ```Parameter``` |
-| --output_name | Specify output name. Default: ```affinetransform/Fused_Add_``` |
+| --input_name | Specify input tensor name. Default: ```Parameter:0``` |
+| --output_name | Specify output name. Default: ```affinetransform:0``` |
 | --model_name | Define model name, must be same as is in service. Default: ```rm_lstm4f```|
 | --cw_l | Number of requests for left context window. Works only with context window networks. Default: ```0``` |
 | --cw_r | Number of requests for right context window. Works only with context window networks. Default: ```0``` |
@@ -230,7 +241,7 @@ usage: rest_stateful_client.py [--input_path INPUT_PATH]
 - Usage example
 
 ```bash
-python3 rest_stateful_client.py --input_path $(pwd)/models/test_feat_1_10.ark --score_path $(pwd)/models/test_score_1_10.ark --rest_url localhost --rest_port 5555 --input_name Parameter --output_name affinetransform/Fused_Add_ --model_name rm_lstm4f --sequence_id 1
+python3 rest_stateful_client.py --input_path $(pwd)/models/test_feat_1_10.ark --score_path $(pwd)/models/test_score_1_10.ark --rest_url localhost --rest_port 5555 --input_name Parameter:0 --output_name affinetransform:0 --model_name rm_lstm4f --sequence_id 1
 
 ### Starting rest_stateful_client.py client ###
 Context window left width cw_l: 0
@@ -240,69 +251,79 @@ Start processing:
 Model name: rm_lstm4f
 Reading input ark file test_feat_1_10.ark
 Reading scores ark file test_score_1_10.ark
-Adding input name Parameter
-Adding output name affinetransform/Fused_Add_
+Adding input name Parameter:0
+Adding output name affinetransform:0
 
-	Sequence name: aem02_st0049_oct89
-	Sequence size: 250
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0049_oct89 ; Average RMS Error: 0.0000015206
+        Sequence name: aem02_st0049_oct89
+        Sequence size: 250
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0049_oct89 ; Average RMS Error: 0.0000022999
 
-	Sequence name: aem02_st0122_oct89
-	Sequence size: 441
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0122_oct89 ; Average RMS Error: 0.0000015164
 
-	Sequence name: aem02_st0182_oct89
-	Sequence size: 347
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0182_oct89 ; Average RMS Error: 0.0000016075
+        Sequence name: aem02_st0122_oct89
+        Sequence size: 441
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0122_oct89 ; Average RMS Error: 0.0000021839
 
-	Sequence name: aem02_st0276_oct89
-	Sequence size: 407
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0276_oct89 ; Average RMS Error: 0.0000015992
 
-	Sequence name: aem02_st0343_oct89
-	Sequence size: 353
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0343_oct89 ; Average RMS Error: 0.0000017230
+        Sequence name: aem02_st0182_oct89
+        Sequence size: 347
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0182_oct89 ; Average RMS Error: 0.0000024058
 
-	Sequence name: aem02_st0421_oct89
-	Sequence size: 372
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0421_oct89 ; Average RMS Error: 0.0000016386
 
-	Sequence name: aem02_st0490_oct89
-	Sequence size: 214
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0490_oct89 ; Average RMS Error: 0.0000014658
+        Sequence name: aem02_st0276_oct89
+        Sequence size: 407
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0276_oct89 ; Average RMS Error: 0.0000024263
 
-	Sequence name: aem02_st0554_oct89
-	Sequence size: 318
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0554_oct89 ; Average RMS Error: 0.0000017808
 
-	Sequence name: aem02_st0623_oct89
-	Sequence size: 285
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0623_oct89 ; Average RMS Error: 0.0000015989
+        Sequence name: aem02_st0343_oct89
+        Sequence size: 353
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0343_oct89 ; Average RMS Error: 0.0000025731
 
-	Sequence name: aem02_st0705_oct89
-	Sequence size: 414
-	Sequence id: 1
-	Sequence id: 1 ; Sequence name: aem02_st0705_oct89 ; Average RMS Error: 0.0000014963
 
-Global average rms error: 0.0000015947
+        Sequence name: aem02_st0421_oct89
+        Sequence size: 372
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0421_oct89 ; Average RMS Error: 0.0000021476
+
+
+        Sequence name: aem02_st0490_oct89
+        Sequence size: 214
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0490_oct89 ; Average RMS Error: 0.0000020109
+
+
+        Sequence name: aem02_st0554_oct89
+        Sequence size: 318
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0554_oct89 ; Average RMS Error: 0.0000023632
+
+
+        Sequence name: aem02_st0623_oct89
+        Sequence size: 285
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0623_oct89 ; Average RMS Error: 0.0000023723
+
+
+        Sequence name: aem02_st0705_oct89
+        Sequence size: 414
+        Sequence id: 1
+        Sequence id: 1 ; Sequence name: aem02_st0705_oct89 ; Average RMS Error: 0.0000021341
+
+Global average rms error: 0.0000022917
+
 
 processing time for all iterations
-average time: 4.17 ms; average speed: 99.19 fps
-median time: 3.00 ms; median speed: 138.00 fps
-max time: 14.00 ms; min speed: 29.57 fps
-min time: 2.00 ms; max speed: 207.00 fps
-time percentile 90: 7.00 ms; speed percentile 90: 59.14 fps
-time percentile 50: 3.00 ms; speed percentile 50: 138.00 fps
-time standard deviation: 1.73
-time variance: 2.98
+average time: 5.04 ms; average speed: 82.21 fps
+median time: 5.00 ms; median speed: 82.80 fps
+max time: 17.00 ms; min speed: 24.35 fps
+min time: 4.00 ms; max speed: 103.50 fps
+time percentile 90: 5.00 ms; speed percentile 90: 82.80 fps
+time percentile 50: 5.00 ms; speed percentile 50: 82.80 fps
+time standard deviation: 0.40
+time variance: 0.16
 ### Finished rest_stateful_client.py client processing ###
 ```
