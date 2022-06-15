@@ -223,7 +223,6 @@ protected:
          */
     Status loadOVModelUsingCustomLoader();
 
-public:  // TODO remove public when ModelInstance::infer implemented
     template <typename RequestType>
     const Status validate(const RequestType* request);
 
