@@ -26,7 +26,7 @@
 #include <spdlog/spdlog.h>
 
 #include "config.hpp"
-#include "filesystem.hpp"
+#include "localfilesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "model_service.hpp"
 #include "modelinstanceunloadguard.hpp"
@@ -47,6 +47,7 @@ const std::string HttpRestApiHandler::modelstatusRegexExp =
     R"((.?)\/v1\/models(?:\/([^\/:]+))?(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+)))?(?:\/(metadata))?)";
 const std::string HttpRestApiHandler::configReloadRegexExp = R"((.?)\/v1\/config\/reload)";
 const std::string HttpRestApiHandler::configStatusRegexExp = R"((.?)\/v1\/config)";
+const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics)";
 
 Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version) {
     if (!model_version_str.empty()) {
@@ -90,6 +91,9 @@ Status HttpRestApiHandler::dispatchToProcessor(
         auto& manager = ModelManager::getInstance();
         return processConfigStatusRequest(*response, manager);
     }
+    if (request_components.type == Metrics){
+        return processMetricsRequest(*response);
+    }
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
 }
 
@@ -98,7 +102,6 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
     const std::string& request_path) {
     std::smatch sm;
     requestComponents.http_method = http_method;
-
     if (http_method != "POST" && http_method != "GET") {
         return StatusCode::REST_UNSUPPORTED_METHOD;
     }
@@ -156,6 +159,10 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         }
         if (std::regex_match(request_path, sm, configStatusRegex)) {
             requestComponents.type = ConfigStatus;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, metricsRegex)) {
+            requestComponents.type = Metrics;
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, predictionRegex))
@@ -433,6 +440,12 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
         return StatusCode::OK_NOT_RELOADED;
     }
     return StatusCode::OK_RELOADED;
+}
+
+Status HttpRestApiHandler::processMetricsRequest(std::string& response){
+    LocalFileSystem lfs;
+    Status status = lfs.readTextFile("./mock/metrics.txt", &response);
+    return status;
 }
 
 Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, ModelManager& manager) {

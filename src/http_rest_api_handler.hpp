@@ -34,7 +34,8 @@ enum RequestType { Predict,
     GetModelStatus,
     GetModelMetadata,
     ConfigReload,
-    ConfigStatus };
+    ConfigStatus,
+    Metrics };
 struct HttpRequestComponents {
     RequestType type;
     std::string_view http_method;
@@ -51,6 +52,7 @@ public:
     static const std::string modelstatusRegexExp;
     static const std::string configReloadRegexExp;
     static const std::string configStatusRegexExp;
+    static const std::string metricsRegexExp;
 
     /**
      * @brief Construct a new HttpRest Api Handler
@@ -62,6 +64,7 @@ public:
         modelstatusRegex(modelstatusRegexExp),
         configReloadRegex(configReloadRegexExp),
         configStatusRegex(configStatusRegexExp),
+        metricsRegex(metricsRegexExp),
         timeout_in_ms(timeout_in_ms) {}
 
     Status parseRequestComponents(HttpRequestComponents& components,
@@ -159,11 +162,15 @@ public:
 
     Status processConfigStatusRequest(std::string& response, ModelManager& manager);
 
+    Status processMetricsRequest(std::string& response);
+
+
 private:
     const std::regex predictionRegex;
     const std::regex modelstatusRegex;
     const std::regex configReloadRegex;
     const std::regex configStatusRegex;
+    const std::regex metricsRegex;
 
     int timeout_in_ms;
 };
