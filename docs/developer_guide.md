@@ -37,7 +37,6 @@ In-case of problems, see <a href="#debug">Debugging</a>.
    ```
    or
    ```
-   ```
    make docker_build DLDT_PACKAGE_URL=<URL>
    ```
    > **Note**: URL to OpenVINO Toolkit package can be received after registration on [OpenVINO&trade; Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download)
@@ -79,7 +78,7 @@ In-case of problems, see <a href="#debug">Debugging</a>.
 
 	* Without a Docker cache :
 
-	```bash
+	```
 	make docker_build NO_DOCKER_CACHE=true
 	```
 
