@@ -211,7 +211,7 @@ LABEL description=${PROJECT_NAME}
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
-RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep l_openvino | cut -d'_' -f7`#g" /ovms/src/version.hpp
+RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | rev | cut -d'_' -f1 | rev`#g" /ovms/src/version.hpp
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12`#g" /ovms/src/version.hpp
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/extras/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
