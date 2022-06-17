@@ -6,10 +6,13 @@ This document gives an overview of various parameters that can be configured to 
 
 ## Example model
 
+Download ResNet50 model
+
 ```bash
-mkdir -p models/resnet/1
-wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin
-wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
+mkdir models
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models openvino/ubuntu18_dev:latest omz_downloader --name resnet-50-tf --output_dir /models
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models:rw openvino/ubuntu18_dev:latest omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
+mv ${PWD}/models/public/resnet-50-tf/FP32 ${PWD}/models/public/resnet-50-tf/1
 ```
 
 ## Performance Hints
@@ -26,7 +29,7 @@ To enable Performance Hints for your application, use the following command:
    .. code-block:: sh
 
 ```bash
-        docker run --rm -d -v ${PWD}/models/resnet:/opt/model -p 9001:9001 openvino/model_server:latest \
+        docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name resnet --port 9001 \
             --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
             --target_device CPU
@@ -38,7 +41,7 @@ To enable Performance Hints for your application, use the following command:
 
 ```bash
         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-            -v ${PWD}/models/resnet:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+            -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
             --model_path /opt/model --model_name resnet --port 9001 \
             --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
             --target_device GPU
@@ -58,7 +61,7 @@ To enable Performance Hints for your application, use the following command:
    .. code-block:: sh
 
 ```bash
-        docker run --rm -d -v ${PWD}/models/resnet:/opt/model -p 9001:9001 openvino/model_server:latest \
+        docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name resnet --port 9001 \
             --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
             --target_device CPU
@@ -70,7 +73,7 @@ To enable Performance Hints for your application, use the following command:
    
 ```bash
         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-            -v ${PWD}/models/resnet:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+            -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
             --model_path /opt/model --model_name resnet --port 9001 \
             --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
             --target_device GPU
@@ -137,7 +140,7 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 2. Following docker command will set `KEY_CPU_THROUGHPUT_STREAMS` parameter to a value `KEY_CPU_THROUGHPUT_NUMA`:
 
 ```bash
-docker run --rm -d --cpuset-cpus 0,1,2,3 -v ${PWD}/models/resnet:/opt/model -p 9001:9001 openvino/model_server:latest \
+docker run --rm -d --cpuset-cpus 0,1,2,3 -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 \
 --plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}'
 
@@ -176,7 +179,7 @@ Model's plugin configuration is a dictionary of param:value pairs passed to Open
 Following docker command sets a parameter `KEY_CPU_THROUGHPUT_STREAMS` to a value `32` and `KEY_CPU_BIND_THREAD` to `NUMA`.
 
 ```bash
-docker run --rm -d -v ${PWD}/models/resnet:/opt/model -p 9001:9001 openvino/model_server:latest \
+docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 --grpc_workers 8  --nireq 32 \
 --plugin_config '{"CPU_THROUGHPUT_STREAMS": "32", "CPU_BIND_THREAD": "NUMA"}'
 ```

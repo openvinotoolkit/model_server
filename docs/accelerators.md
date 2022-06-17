@@ -126,7 +126,7 @@ echo '{"model_config_list": [
       "batch_size": "1",
       "target_device": "MULTI:MYRIAD,CPU"}
    }]
-}' >> ./model/config.json
+}' >> models/public/resnet-50-tf/config.json
 ```
 
 To start OpenVINO Model Server, with the described config file placed as `./models/config.json`, set the `grpc_workers` parameter to match the `nireq` field in config.json 
@@ -167,7 +167,7 @@ echo '{"model_config_list": [
       "batch_size": "1",
       "target_device": "HETERO:GPU,CPU"}
    }]
-}' >> ./model/config.json
+}' >> models/public/resnet-50-tf/config.json
 ```
 
 ## Using AUTO Plugin
