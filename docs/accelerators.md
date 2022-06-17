@@ -5,9 +5,10 @@
 Download ResNet50 model
 
 ```bash
-mkdir -p model/1
-wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin
-wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
+mkdir models
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models openvino/ubuntu18_dev:latest omz_downloader --name resnet-50-tf --output_dir /models
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models:rw openvino/ubuntu18_dev:latest omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
+mv ${PWD}/models/public/resnet-50-tf/FP32 ${PWD}/models/public/resnet-50-tf/1
 ```
 
 
@@ -23,13 +24,13 @@ To start the server with Neural Compute Stick use either of the two options:
 1. More securely, without the docker privileged mode and mounting only the usb devices.
 
    ```bash
-   docker run --rm -it -u 0 --device-cgroup-rule='c 189:* rmw' -v $(pwd)/model:/opt/model -v /dev/bus/usb:/dev/bus/usb -p 9001:9001 openvino/model_server \
+   docker run --rm -it -u 0 --device-cgroup-rule='c 189:* rmw' -v ${PWD}/models/public/resnet-50-tf:/opt/model -v /dev/bus/usb:/dev/bus/usb -p 9001:9001 openvino/model_server \
    --model_path /opt/model --model_name resnet --port 9001 --target_device MYRIAD
    ```
 
 2. less securely, in the docker privileged mode and mounting all devices.
    ```bash
-   docker run --rm -it --net=host -u root --privileged -v $(pwd)/model:/opt/model -v /dev:/dev -p 9001:9001 openvino/model_server \
+   docker run --rm -it --net=host -u root --privileged -v ${PWD}/models/public/resnet-50-tf:/opt/model -v /dev:/dev -p 9001:9001 openvino/model_server \
    --model_path /opt/model --model_name resnet --port 9001 --target_device MYRIAD
    ```
 
@@ -44,7 +45,7 @@ An example of a command starting a server with HDDL:
 
 # --device=/dev/ion:/dev/ion mounts the accelerator device
 # -v /var/tmp:/var/tmp enables communication with _hddldaemon_ running on the host machine
-docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v $(pwd)/model:/opt/model -p 9001:9001 openvino/model_server:latest \
+docker run --rm -it --device=/dev/ion:/dev/ion -v /var/tmp:/var/tmp -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 --target_device HDDL
 ```
 
@@ -72,7 +73,7 @@ A command example:
 
 ```bash
 
-docker run --rm -it --device=/dev/dri -v $(pwd)/model:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+docker run --rm -it --device=/dev/dri -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
 --model_path /opt/model --model_name resnet --port 9001 --target_device GPU
 
 ```
@@ -89,7 +90,7 @@ The default account in the docker image is preconfigured. If you change the secu
 
 docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
 
--v $(pwd)/model:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+-v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
 
 --model_path /opt/model --model_name resnet --port 9001 --target_device GPU
 
@@ -132,14 +133,14 @@ To start OpenVINO Model Server, with the described config file placed as `./mode
 and use the run command, like so:
 
 ```
-docker run -d --net=host -u root --privileged --rm -v $(pwd)/model/:/opt/model:ro -v /dev:/dev -p 9001:9001 \
+docker run -d --net=host -u root --privileged --rm -v ${PWD}/models/public/resnet-50-tf/:/opt/model:ro -v /dev:/dev -p 9001:9001 \
 openvino/model_server:latest --config_path /opt/model/config.json --port 9001
 ```
 
 2. When using just a single model, you can start OpenVINO Model Server without the config.json file. To do so, use the run command together with additional parameters, like so: 
 
 ```
-docker run -d --net=host -u root --privileged --name ie-serving --rm -v $(pwd)/model/:/opt/model:ro -v \ 
+docker run -d --net=host -u root --privileged --name ie-serving --rm -v ${PWD}/models/public/resnet-50-tf/:/opt/model:ro -v \ 
 /dev:/dev -p 9001:9001 openvino/model_server:latest model --model_path /opt/model --model_name resnet --port 9001 --target_device 'MULTI:MYRIAD,CPU'
 ```
  
@@ -184,7 +185,7 @@ Below is an example of the command with AUTO Plugin as target device. It include
 
 ```bash
         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)\
-            -u $(id -u):$(id -g) -v $(pwd)/model:/opt/model -p 9001:9001 openvino/model_server:latest \
+            -u $(id -u):$(id -g) -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name resnet --port 9001 \
             --target_device AUTO
 ```
@@ -203,7 +204,7 @@ To enable Performance Hints for your application, use the following command:
 
 ```bash
         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-            -v $(pwd)/model:/opt/model -p 9001:9001 openvino/model_server:latest \
+            -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name resnet --port 9001 \
             --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
             --target_device AUTO
@@ -215,7 +216,7 @@ To enable Performance Hints for your application, use the following command:
    
 ```bash
         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-            -v $(pwd)/model:/opt/model -p 9001:9001 openvino/model_server:latest \
+            -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
             --model_path /opt/model --model_name resnet --port 9001 \
             --plugin_config '{"PERFORMANCE_HINT": "THROUGHTPUT"}' \
             --target_device AUTO
