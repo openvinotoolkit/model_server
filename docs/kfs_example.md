@@ -18,7 +18,7 @@ In current release there is no support for:
 ## Introduction
 This guide shows how to get model metadata and perform basic inference with [ResNet50](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/resnet50-binary-0001/README.md) model using KServe API and example client in Python.
 
-The script `grpc_predict_resnet.py` performs image classification task using ResNet50 model.
+The script `kfs_grpc_predict_resnet.py` performs image classification task using ResNet50 model.
 
 ## Steps
 Clone OpenVINO&trade; Model Server GitHub repository and enter `model_server` directory.
@@ -29,8 +29,7 @@ cd model_server
 #### Download the Pretrained Model
 Download the model files and store them in the `models` directory
 ```Bash
-mkdir -p models/resnet/1
-curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
+curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
 ```
 
 #### Pull the Latest Model Server Image
@@ -82,58 +81,57 @@ outputs {
 
 #### Run the Client to perform inference
 ```Bash
-python grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False;
+python kfs_grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False;
 ```
 
 #### Script Output
 ```Bash
 Image data range: 0.0 : 255.0
 Start processing:
-	Model name: resnet
-	Iterations: 10
-	Images numpy path: imgs.npy
-	Numpy file shape: (10, 3, 224, 224)
+        Model name: resnet
+        Iterations: 10
+        Images numpy path: ../../imgs.npy
+        Numpy file shape: (10, 3, 224, 224)
 
-Iteration 1; Processing time: 21.16 ms; speed 47.25 fps
+Iteration 1; Processing time: 29.98 ms; speed 33.36 fps
 imagenet top results in a single batch:
-	 0 airliner 404 ; Correct match.
-Iteration 2; Processing time: 8.08 ms; speed 123.79 fps
+         0 airliner 404 ; Correct match.
+Iteration 2; Processing time: 23.50 ms; speed 42.56 fps
 imagenet top results in a single batch:
-	 0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
-Iteration 3; Processing time: 104.76 ms; speed 9.55 fps
+         0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
+Iteration 3; Processing time: 23.42 ms; speed 42.71 fps
 imagenet top results in a single batch:
-	 0 bee 309 ; Correct match.
-Iteration 4; Processing time: 8.86 ms; speed 112.83 fps
+         0 bee 309 ; Correct match.
+Iteration 4; Processing time: 23.25 ms; speed 43.01 fps
 imagenet top results in a single batch:
-	 0 golden retriever 207 ; Correct match.
-Iteration 5; Processing time: 19.05 ms; speed 52.48 fps
+         0 golden retriever 207 ; Correct match.
+Iteration 5; Processing time: 24.08 ms; speed 41.53 fps
 imagenet top results in a single batch:
-	 0 gorilla, Gorilla gorilla 366 ; Correct match.
-Iteration 6; Processing time: 9.31 ms; speed 107.47 fps
+         0 gorilla, Gorilla gorilla 366 ; Correct match.
+Iteration 6; Processing time: 26.38 ms; speed 37.91 fps
 imagenet top results in a single batch:
-	 0 magnetic compass 635 ; Correct match.
-Iteration 7; Processing time: 7.10 ms; speed 140.81 fps
+         0 magnetic compass 635 ; Correct match.
+Iteration 7; Processing time: 25.46 ms; speed 39.27 fps
 imagenet top results in a single batch:
-	 0 peacock 84 ; Correct match.
-Iteration 8; Processing time: 6.83 ms; speed 146.50 fps
+         0 peacock 84 ; Correct match.
+Iteration 8; Processing time: 24.60 ms; speed 40.65 fps
 imagenet top results in a single batch:
-	 0 pelican 144 ; Correct match.
-Iteration 9; Processing time: 6.74 ms; speed 148.26 fps
+         0 pelican 144 ; Correct match.
+Iteration 9; Processing time: 23.52 ms; speed 42.52 fps
 imagenet top results in a single batch:
-	 0 snail 113 ; Correct match.
-Iteration 10; Processing time: 7.08 ms; speed 141.26 fps
+         0 snail 113 ; Correct match.
+Iteration 10; Processing time: 22.40 ms; speed 44.64 fps
 imagenet top results in a single batch:
-	 0 zebra 340 ; Correct match.
+         0 zebra 340 ; Correct match.
 
 processing time for all iterations
-average time: 19.50 ms; average speed: 51.28 fps
-median time: 8.00 ms; median speed: 125.00 fps
-max time: 104.00 ms; min speed: 9.62 fps
-min time: 6.00 ms; max speed: 166.67 fps
-time percentile 90: 29.30 ms; speed percentile 90: 34.13 fps
-time percentile 50: 8.00 ms; speed percentile 50: 125.00 fps
-time standard deviation: 28.63
-time variance: 819.45
+average time: 24.20 ms; average speed: 41.32 fps
+median time: 23.50 ms; median speed: 42.55 fps
+max time: 29.00 ms; min speed: 34.48 fps
+min time: 22.00 ms; max speed: 45.45 fps
+time percentile 90: 26.30 ms; speed percentile 90: 38.02 fps
+time percentile 50: 23.50 ms; speed percentile 50: 42.55 fps
+time standard deviation: 1.94
+time variance: 3.76
 Classification accuracy: 100.00
-
-Each iteration presents the results of each inference request and details for each image in the batch.
+```
