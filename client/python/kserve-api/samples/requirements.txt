@@ -1,3 +1,2 @@
 protobuf==3.19.3
-tensorflow-serving-api==2.*
 tritonclient==2.22.3
