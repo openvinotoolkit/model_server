@@ -2,8 +2,8 @@
 
 OpenVINO Model Server 2022.2 release introduce preview of support for KServe gRPC API.
 
-Inference does support putting tensor buffers both in `ModelInferRequest` `InferTensorContents` and `raw_input_contents`. There is no support for BF16 data type and there is no support for using FP16 in `InferTensorContents`.
-In case of sending raw images BYTES data type is used. When using raw images `InferTensorContents`.
+Inference supports putting tensor buffers either in `ModelInferRequest`'s (`InferTensorContents`)[https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L155] and (`raw_input_contents`)[https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L202]. There is no support for BF16 data type and there is no support for using FP16 in `InferTensorContents`.
+In case of sending raw images jpeg files BYTES data type should be used and data should be put in `InferTensorContents`'s `bytes_contents`.
 
 In current release there is support for:
 * Model Metadata
@@ -16,11 +16,9 @@ In current release there is no support for:
 * Model Ready
 
 ## Introduction
-This guide shows how to get model metadata and perform basic inference with Resnet50 model using KServe API and example client in Python.
+This guide shows how to get model metadata and perform basic inference with [ResNet50](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/resnet50-binary-0001/README.md) model using KServe API and example client in Python.
 
-- A sample [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/resnet50-binary-0001/README.md) model.
-
- When using the resnet model with `grpc_predict_resnet.py`, the script processes the output from the server and displays the inference results using the previously prepared file containing labels. Inside this file, each image has an assigned number, which indicates the correct classification result.
+The script `grpc_predict_resnet.py` performs image classification task using ResNet50 model.
 
 ## Steps
 Clone OpenVINO&trade; Model Server GitHub repository and enter `model_server` directory.

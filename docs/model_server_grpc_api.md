@@ -1,7 +1,7 @@
 # gRPC API {#ovms_docs_grpc_api}
 
 ## Introduction 
-This document gives information about OpenVINO&trade; Model Server gRPC API. It is documented in the proto buffer files in [tensorflow_serving_api](https://github.com/tensorflow/serving/tree/r1.14/tensorflow_serving/apis). 
+This document gives information about OpenVINO&trade; Model Server gRPC API. It is documented in the proto buffer files in [tensorflow_serving_api](https://github.com/tensorflow/serving/tree/r2.9/tensorflow_serving/apis). 
 Using the gRPC interface is recommended for optimal performance due to its faster implementation of input data deserialization. gRPC achieves lower latency, especially with larger input messages like images. 
 
 This document covers following API's endpoints coming from Tensorflow Serving gRPC API:
@@ -45,7 +45,7 @@ Read more about [Get Model Metadata API usage](https://github.com/openvinotoolki
 
 Endpoint for running an inference with loaded models or [DAGs](./dag_scheduler.md).
 
-[Predict proto](https://github.com/tensorflow/serving/blob/r1.14/tensorflow_serving/apis/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.
+[Predict proto](https://github.com/tensorflow/serving/blob/r2.9/tensorflow_serving/apis/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.
  * *PredictRequest* specifies information about the model spec, a map of input data serialized via 
 [TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) to a string format.
  * *PredictResponse* includes a map of outputs serialized by
@@ -61,18 +61,11 @@ Gets information about the served models. Model name and model version are accep
 
 Check KServe documentation for more [details](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#model-metadata-1).
 
-Example of getting model metadata with KServe API is available [here](../client/python/kserve-api/samples/kfs_grpc_model_metadata.py).
-
 ## KServe Inference API <a name="kfs-inference"></a>
 Run inference with requested model or [DAGs](./dag_scheduler.md).
 Check KServe documentation for more [details](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#inference-1) about API.
 
-Example of inference with KServe API is available [here](../client/python/kserve-api/samples/kfs_grpc_predict_resnet.py).
-
-KServe API support limitations in 2022.2 release:
- * support only for Model Metadata & Inference
- * FP16 precision support only with buffers put in InputTensorContent contetns
- * binary inputs only with buffers put in InputTensorContent contetns
+Details and examples of getting model metadata and inference with KServe API is available [here](kfs_example.md).
 
 ## See Also
 
