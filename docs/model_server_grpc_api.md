@@ -61,28 +61,22 @@ Gets information about the served models. Model name and model version are accep
 
 Check KServe documentation for more [details](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#model-metadata-1).
 
-Example of getting model metadata with KServe API is available [here](TODO).
+Example of getting model metadata with KServe API is available [here](../client/python/kserve-api/samples/kfs_grpc_model_metadata.py).
 
 ## KServe Inference API <a name="kfs-inference"></a>
 Run inference with requested model or [DAGs](./dag_scheduler.md).
 Check KServe documentation for more [details](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#inference-1) about API.
 
-Example of inference with KServe API is available [here](TODO).
+Example of inference with KServe API is available [here](../client/python/kserve-api/samples/kfs_grpc_predict_resnet.py).
 
-Read supported about supported scope in 2022.2 release [TODO](TODO).
-
+KServe API support limitations in 2022.2 release:
+ * support only for Model Metadata & Inference
+ * FP16 precision support only with buffers put in InputTensorContent contetns
+ * binary inputs only with buffers put in InputTensorContent contetns
 
 ## See Also
 
 - [Example client code](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/client/python/tensorflow-serving-api/samples/README.md) shows how to use GRPC API and REST API.
 - [TensorFlow Serving](https://github.com/tensorflow/serving)
 - [gRPC](https://grpc.io/)
-
-
-
-
- 
-
-
-
 
