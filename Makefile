@@ -73,7 +73,7 @@ ifeq ($(BASE_OS),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
   INSTALL_DRIVER_VERSION ?= "21.48.21782"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_dev_ubuntu20_p_2022.2.0.1.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_dev_ubuntu20_p_2022.2.0.2.tgz
   OPENVINO_OPENCV_DOWNLOAD_SERVER ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.1/opencv
 endif
 ifeq ($(BASE_OS),redhat)
@@ -81,7 +81,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "21.38.21026"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_dev_rhel8_p_2022.2.0.1.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_dev_rhel8_p_2022.2.0.2.tgz
   OPENVINO_OPENCV_DOWNLOAD_SERVER ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.1/opencv
 endif
 
