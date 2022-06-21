@@ -23,7 +23,7 @@ Here is an example of this process:
 
 ```bash
 
-git clone https://github.com/openvinotoolkit/model_server
+git clone https://github.com/openvinotoolkit/model_server.git
 
 cd model_server   
    
