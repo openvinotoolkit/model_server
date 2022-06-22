@@ -63,6 +63,18 @@ TEST(Dimension, CreateIntersection) {
     EXPECT_EQ(Dimension(1, 2).createIntersection(Dimension(3)), std::nullopt);
     EXPECT_EQ(Dimension(1, 2).createIntersection(Dimension(3, 4)), std::nullopt);
 }
+
+TEST(Dimension, Constructor) {
+    EXPECT_THROW(Dimension(-2, -2), std::invalid_argument);
+    EXPECT_THROW(Dimension(-2, -1), std::invalid_argument);
+    EXPECT_THROW(Dimension(-1, -2), std::invalid_argument);
+    EXPECT_THROW(Dimension(-2, 2), std::invalid_argument);
+    EXPECT_THROW(Dimension(2, -2), std::invalid_argument);
+    EXPECT_THROW(Dimension(2, 1), std::invalid_argument);
+    EXPECT_THROW(Dimension(-6, -2), std::invalid_argument);
+    EXPECT_THROW(Dimension(5, 4), std::invalid_argument);
+}
+
 TEST(Shape, CreateIntersection) {
     EXPECT_EQ(Shape({1, 6, 8}).createIntersection(Shape({1, 6})), std::nullopt);
     EXPECT_EQ(Shape({1, 6, 8}).createIntersection(Shape({1, 6, 8})), Shape({1, 6, 8}));
