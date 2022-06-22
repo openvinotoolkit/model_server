@@ -21,11 +21,9 @@
 
 #include <grpcpp/server_context.h>
 
-//#include "modelinstance.hpp"
-//#include "modelmanager.hpp"
-#include "status.hpp"
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
 #include "src/kfserving_api/grpc_predict_v2.pb.h"
+#include "status.hpp"
 
 namespace ovms {
 
@@ -48,7 +46,7 @@ public:
     static Status buildResponse(std::shared_ptr<ModelInstance> instance, ::inference::ModelReadyResponse* response);
     static Status buildResponse(PipelineDefinition& pipelineDefinition, ::inference::ModelReadyResponse* response);
     static void convert(const std::pair<std::string, std::shared_ptr<TensorInfo>>& from, ::inference::ModelMetadataResponse::TensorMetadata* to);
-static Status getModelReady(const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, ModelManager& manager);
+    static Status getModelReady(const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, ModelManager& manager);
 };
 
 }  // namespace ovms

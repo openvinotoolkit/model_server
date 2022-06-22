@@ -20,8 +20,8 @@
 #include <string>
 
 #include "deserialization.hpp"
-#include "modelmanager.hpp"
 #include "modelinstance.hpp"
+#include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "pipelinedefinition.hpp"
 #include "prediction_service_utils.hpp"
@@ -60,7 +60,7 @@ const std::string PLATFORM = "OpenVINO";
 }
 
 Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, ModelManager& manager) {
-    // Return true/false
+    // Return in response true/false
     // if no version requested give response for default version
     const auto& name = request->name();
     const auto& versionString = request->version();
@@ -99,7 +99,6 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
         }
     }
     return buildResponse(instance, response);
-
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelReady(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response) {
@@ -129,34 +128,32 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
             return Status(StatusCode::MODEL_NAME_MISSING).grpc();
         }
         return buildResponse(*pipelineDefinition, response);
-    } else {
-        std::shared_ptr<ModelInstance> instance = nullptr;
-        if (!versionString.empty()) {
-            SPDLOG_DEBUG("GetModelMetadata requested model: name {}; version {}", name, versionString);
-            model_version_t requestedVersion = 0;
-            auto versionRead = stoi64(versionString);
-            if (versionRead) {
-                requestedVersion = versionRead.value();
-            } else {
-                SPDLOG_DEBUG("GetModelMetadata requested model: name {}; with version in invalid format: {}", name, versionString);
-                return Status(StatusCode::MODEL_VERSION_INVALID_FORMAT).grpc();
-            }
-            instance = model->getModelInstanceByVersion(requestedVersion);
-            if (instance == nullptr) {
-                SPDLOG_DEBUG("GetModelMetadata requested model {}; version {} is missing", name, versionString);
-                return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
-            }
-        } else {
-            SPDLOG_DEBUG("GetModelMetadata requested model: name {}; default version", name);
-            instance = model->getDefaultModelInstance();
-            if (instance == nullptr) {
-                SPDLOG_DEBUG("GetModelMetadata requested model {}; version {} is missing", name, versionString);
-                return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
-            }
-        }
-
-        return buildResponse(instance, response).grpc();
     }
+    std::shared_ptr<ModelInstance> instance = nullptr;
+    if (!versionString.empty()) {
+        SPDLOG_DEBUG("GetModelMetadata requested model: name {}; version {}", name, versionString);
+        model_version_t requestedVersion = 0;
+        auto versionRead = stoi64(versionString);
+        if (versionRead) {
+            requestedVersion = versionRead.value();
+        } else {
+            SPDLOG_DEBUG("GetModelMetadata requested model: name {}; with version in invalid format: {}", name, versionString);
+            return Status(StatusCode::MODEL_VERSION_INVALID_FORMAT).grpc();
+        }
+        instance = model->getModelInstanceByVersion(requestedVersion);
+        if (instance == nullptr) {
+            SPDLOG_DEBUG("GetModelMetadata requested model {}; version {} is missing", name, versionString);
+            return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
+        }
+    } else {
+        SPDLOG_DEBUG("GetModelMetadata requested model: name {}; default version", name);
+        instance = model->getDefaultModelInstance();
+        if (instance == nullptr) {
+            SPDLOG_DEBUG("GetModelMetadata requested model {}; version {} is missing", name, versionString);
+            return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
+        }
+    }
+    return buildResponse(instance, response).grpc();
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) {
