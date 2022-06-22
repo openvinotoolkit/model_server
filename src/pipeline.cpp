@@ -21,8 +21,6 @@
 #include <string>
 #include <utility>
 
-#include "entry_node.hpp"
-#include "exit_node.hpp"
 #include "logging.hpp"
 #include "node.hpp"
 #include "pipelineeventqueue.hpp"
