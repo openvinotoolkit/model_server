@@ -444,7 +444,7 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
 
 Status HttpRestApiHandler::processMetricsRequest(std::string& response){
     LocalFileSystem lfs;
-    Status status = lfs.readTextFile("./mock/metrics.txt", &response);
+    Status status = lfs.readTextFile("/config/metrics.txt", &response);
     return status;
 }
 
