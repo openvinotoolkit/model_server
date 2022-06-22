@@ -36,6 +36,9 @@ using namespace ovms;
 using TFSGetModelStatusRequest = tensorflow::serving::GetModelStatusRequest;
 using TFSGetModelStatusResponse = tensorflow::serving::GetModelStatusResponse;
 using TFSGetModelStatusInterface = std::pair<TFSGetModelStatusRequest, TFSGetModelStatusResponse>;
+using KFSGetModelStatusRequest = ::inference::ModelReadyRequest;
+using KFSGetModelStatusResponse =::inference::ModelReadyResponse;
+using KFSGetModelStatusInterface = std::pair<KFSGetModelStatusRequest, KFSGetModelStatusResponse>;
 
 template <typename Pair,
     typename RequestType = typename Pair::first_type,
@@ -53,38 +56,11 @@ public:
     }
 };
 
-using MyTypes = ::testing::Types<TFSGetModelStatusInterface>;
+using MyTypes = ::testing::Types<
+    TFSGetModelStatusInterface,
+    KFSGetModelStatusInterface>;
+
 TYPED_TEST_SUITE(ModelService, MyTypes);
-using TFSModelService = ModelService<TFSGetModelStatusInterface>;
-
-TEST_F(TFSModelService, config_reload) {
-    ModelServiceImpl s;
-    tensorflow::serving::ReloadConfigRequest req;
-    tensorflow::serving::ReloadConfigResponse res;
-
-    spdlog::info("req={} this->res={}", this->req.DebugString(), this->res.DebugString());
-    ::grpc::Status ret = s.HandleReloadConfigRequest(nullptr, &req, &res);
-    spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
-    EXPECT_EQ(ret.ok(), true);
-}
-
-void verifyModelStatusResponse(const TFSGetModelStatusResponse& res, const std::vector<int>& versions = {1}) {
-    ASSERT_EQ(res.model_version_status_size(), versions.size());
-    for (size_t i = 0; i < versions.size(); i++) {
-        auto& model_version_status = res.model_version_status()[i];
-        ASSERT_EQ(model_version_status.state(), tensorflow::serving::ModelVersionStatus_State_AVAILABLE);
-        ASSERT_EQ(model_version_status.version(), versions[i]);
-        ASSERT_EQ(model_version_status.has_status(), true);
-        ASSERT_EQ(model_version_status.status().error_code(), tensorflow::error::OK);
-        ASSERT_EQ(model_version_status.status().error_message(), "OK");
-    }
-    return;
-    ASSERT_EQ(res.model_version_status().begin()->state(), tensorflow::serving::ModelVersionStatus_State_AVAILABLE);
-    ASSERT_EQ(res.model_version_status().begin()->version(), 1);
-    ASSERT_EQ(res.model_version_status().begin()->has_status(), true);
-    ASSERT_EQ(res.model_version_status().begin()->status().error_code(), tensorflow::error::OK);
-    ASSERT_EQ(res.model_version_status().begin()->status().error_message(), "OK");
-}
 
 void executeModelStatus(const TFSGetModelStatusRequest& req, TFSGetModelStatusResponse& res, ModelManager& manager, ovms::StatusCode statusCode = StatusCode::OK) {
     res.Clear();
@@ -99,6 +75,34 @@ void setModelStatusRequest(TFSGetModelStatusRequest& req, const std::string& nam
     if (version) {
         model_spec->mutable_version()->set_value(version);
     }
+}
+
+void verifyModelStatusResponse(const TFSGetModelStatusResponse& res, const std::vector<int>& versions = {1}) {
+    ASSERT_EQ(res.model_version_status_size(), versions.size());
+    for (size_t i = 0; i < versions.size(); i++) {
+        auto& model_version_status = res.model_version_status()[i];
+        ASSERT_EQ(model_version_status.state(), tensorflow::serving::ModelVersionStatus_State_AVAILABLE);
+        ASSERT_EQ(model_version_status.version(), versions[i]);
+        ASSERT_EQ(model_version_status.has_status(), true);
+        ASSERT_EQ(model_version_status.status().error_code(), tensorflow::error::OK);
+        ASSERT_EQ(model_version_status.status().error_message(), "OK");
+    }
+}
+
+void verifyModelStatusResponse(const KFSGetModelStatusResponse& res, const std::vector<int>& versions = {1}) {
+    ASSERT_TRUE(res.ready());
+}
+
+void executeModelStatus(const KFSGetModelStatusRequest& req, KFSGetModelStatusResponse& res, ModelManager& manager, ovms::StatusCode statusCode = StatusCode::OK) {
+    res.Clear();
+    ASSERT_EQ(KFSInferenceServiceImpl::getModelReady(&req, &res, manager), statusCode);
+}
+
+void setModelStatusRequest(KFSGetModelStatusRequest& req, const std::string& name, int version) {
+    req.Clear();
+    req.set_name(name);
+    if (version)
+        req.set_version(std::to_string(version));
 }
 
 TYPED_TEST(ModelService, empty_request) {
@@ -180,50 +184,6 @@ TYPED_TEST(ModelService, pipeline) {
     verifyModelStatusResponse(this->res);
 }
 
-class ModelServiceDummyWith2Versions : public ::testing::Test {
-protected:
-    ConstructorEnabledModelManager manager;
-    void SetUp() override {
-        const ::testing::TestInfo* const test_info =
-            ::testing::UnitTest::GetInstance()->current_test_info();
-
-        const std::string directoryName = std::string(test_info->test_suite_name());
-        directoryPath = "/tmp/" + directoryName;
-        modelPath = directoryPath + "/dummy";
-
-        // Copy dummy model to temporary destination
-        std::filesystem::remove_all(directoryPath);
-        std::filesystem::create_directories(modelPath + "/1/");
-        std::filesystem::create_directories(modelPath + "/2/");
-        std::filesystem::copy("/ovms/src/test/dummy/1", modelPath + "/1", std::filesystem::copy_options::recursive);
-        std::filesystem::copy("/ovms/src/test/dummy/1", modelPath + "/2", std::filesystem::copy_options::recursive);
-    }
-
-    void TearDown() override {
-        // Clean up temporary destination
-        std::filesystem::remove_all(directoryPath);
-    }
-
-    std::string directoryPath;
-    std::string modelPath;
-};
-
-TEST_F(ModelServiceDummyWith2Versions, all_versions) {
-    tensorflow::serving::GetModelStatusRequest req;
-    tensorflow::serving::GetModelStatusResponse res;
-    auto config = DUMMY_MODEL_CONFIG;
-    config.setBasePath(modelPath);
-    config.setModelVersionPolicy(std::make_shared<AllModelVersionPolicy>());
-    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
-
-    // no version specified
-    const std::string name = "dummy";
-    int version = 0;
-    setModelStatusRequest(req, name, version);
-    executeModelStatus(req, res, this->manager);
-    verifyModelStatusResponse(res, {1, 2});
-}
-
 TYPED_TEST(ModelService, non_existing_model) {
     const std::string name = "non_existing_model";
     int version = 0;
@@ -303,24 +263,6 @@ const ovms::ModelConfig DUMMY_MODEL_WITH_ONLY_NAME_CONFIG{
     "dummy",
 };
 
-TYPED_TEST(ModelService, getAllModelsStatuses_one_model_one_version) {
-    ConstructorEnabledModelManager manager;  // intentionally uses separate manager as we don't want any unloaded models
-    auto config = DUMMY_MODEL_WITH_ONLY_NAME_CONFIG;
-    manager.reloadModelWithVersions(config);
-    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
-    GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
-    EXPECT_EQ(modelsStatuses.size(), 1);
-    EXPECT_EQ(modelsStatuses.begin()->second.model_version_status_size(), 0);
-
-    config = DUMMY_MODEL_CONFIG;
-    manager.reloadModelWithVersions(config);
-    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesAfterReload;
-    GetModelStatusImpl::getAllModelsStatuses(modelsStatusesAfterReload, manager);
-
-    ASSERT_EQ(modelsStatusesAfterReload.size(), 1);
-    verifyModelStatusResponse(modelsStatusesAfterReload.begin()->second);
-}
-
 TYPED_TEST(ModelService, getAllModelsStatuses_two_models_with_one_versions) {
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, this->manager);
@@ -337,6 +279,51 @@ TYPED_TEST(ModelService, getAllModelsStatuses_two_models_with_one_versions) {
     ASSERT_NE(sumModelStatus, modelsStatusesAfterReload.end());
     verifyModelStatusResponse(dummyModelStatus->second);
     verifyModelStatusResponse(sumModelStatus->second);
+}
+
+// Some tests are specific for TFS because you can ask for more versions than one in one request
+class ModelServiceDummyWith2Versions : public ::testing::Test {
+protected:
+    ConstructorEnabledModelManager manager;
+    void SetUp() override {
+        const ::testing::TestInfo* const test_info =
+            ::testing::UnitTest::GetInstance()->current_test_info();
+
+        const std::string directoryName = std::string(test_info->test_suite_name());
+        directoryPath = "/tmp/" + directoryName;
+        modelPath = directoryPath + "/dummy";
+
+        // Copy dummy model to temporary destination
+        std::filesystem::remove_all(directoryPath);
+        std::filesystem::create_directories(modelPath + "/1/");
+        std::filesystem::create_directories(modelPath + "/2/");
+        std::filesystem::copy("/ovms/src/test/dummy/1", modelPath + "/1", std::filesystem::copy_options::recursive);
+        std::filesystem::copy("/ovms/src/test/dummy/1", modelPath + "/2", std::filesystem::copy_options::recursive);
+    }
+
+    void TearDown() override {
+        // Clean up temporary destination
+        std::filesystem::remove_all(directoryPath);
+    }
+
+    std::string directoryPath;
+    std::string modelPath;
+};
+
+TEST_F(ModelServiceDummyWith2Versions, all_versions) {
+    tensorflow::serving::GetModelStatusRequest req;
+    tensorflow::serving::GetModelStatusResponse res;
+    auto config = DUMMY_MODEL_CONFIG;
+    config.setBasePath(modelPath);
+    config.setModelVersionPolicy(std::make_shared<AllModelVersionPolicy>());
+    ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
+
+    // no version specified
+    const std::string name = "dummy";
+    int version = 0;
+    setModelStatusRequest(req, name, version);
+    executeModelStatus(req, res, this->manager);
+    verifyModelStatusResponse(res, {1, 2});
 }
 
 TEST_F(ModelServiceDummyWith2Versions, getAllModelsStatuses_one_model_two_versions) {
@@ -356,6 +343,39 @@ TEST_F(ModelServiceDummyWith2Versions, getAllModelsStatuses_one_model_two_versio
 
     ASSERT_EQ(modelsStatusesAfterReload.size(), 1);
     verifyModelStatusResponse(modelsStatusesAfterReload.begin()->second, {1, 2});
+}
+
+// Some tests are specific for TFS because you can ask for more versions than one in one request
+using TFSModelService = ModelService<TFSGetModelStatusInterface>;
+
+
+TEST_F(TFSModelService, config_reload) {
+    ModelServiceImpl s;
+    tensorflow::serving::ReloadConfigRequest req;
+    tensorflow::serving::ReloadConfigResponse res;
+
+    spdlog::info("req={} this->res={}", this->req.DebugString(), this->res.DebugString());
+    ::grpc::Status ret = s.HandleReloadConfigRequest(nullptr, &req, &res);
+    spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
+    EXPECT_EQ(ret.ok(), true);
+}
+
+TEST_F(TFSModelService, getAllModelsStatuses_one_model_one_version) {
+    ConstructorEnabledModelManager manager;  // intentionally uses separate manager as we don't want any unloaded models
+    auto config = DUMMY_MODEL_WITH_ONLY_NAME_CONFIG;
+    manager.reloadModelWithVersions(config);
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, manager);
+    EXPECT_EQ(modelsStatuses.size(), 1);
+    EXPECT_EQ(modelsStatuses.begin()->second.model_version_status_size(), 0);
+
+    config = DUMMY_MODEL_CONFIG;
+    manager.reloadModelWithVersions(config);
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesAfterReload;
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatusesAfterReload, manager);
+
+    ASSERT_EQ(modelsStatusesAfterReload.size(), 1);
+    verifyModelStatusResponse(modelsStatusesAfterReload.begin()->second);
 }
 
 TEST_F(TFSModelService, serializeModelsStatuses2Json_with_one_response) {
