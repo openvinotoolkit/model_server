@@ -39,6 +39,8 @@ public:
     ::grpc::Status ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) override;
     static Status buildResponse(std::shared_ptr<ModelInstance> instance, ::inference::ModelMetadataResponse* response);
     static Status buildResponse(PipelineDefinition& pipelineDefinition, ::inference::ModelMetadataResponse* response);
+    static Status buildResponse(std::shared_ptr<ModelInstance> instance, ::inference::ModelReadyResponse* response);
+    static Status buildResponse(PipelineDefinition& pipelineDefinition, ::inference::ModelReadyResponse* response);
     static void convert(const std::pair<std::string, std::shared_ptr<TensorInfo>>& from, ::inference::ModelMetadataResponse::TensorMetadata* to);
 };
 
