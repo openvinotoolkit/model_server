@@ -116,8 +116,8 @@ Click the test that needs to be run:
 2. Start OVMS docker container with downloaded model
 
 ```bash
-docker run -d -v ~/resnet50-binary:/models/resnet50-binary -p 9178:9178 openvino/model_server:latest \
---model_name resnet-binary --model_path /models/resnet50-binary --port 9178
+docker run -d --name server-test -v ~/resnet50-binary:/models/resnet50-binary -p 9178:9178 \
+openvino/model_server:latest --model_name resnet-binary --model_path /models/resnet50-binary --port 9178
 ```
 
 3. The grpc client connects to the OpenVINO Model Server service that is running on port 9178.
@@ -279,7 +279,13 @@ Debugging options are available. Click on the required option :
 	```
 3.	Prepare resnet50 model for OVMS in /models catalog and recompile the OpenVINO Model Server in docker container with debug symbols using command:
 	```bash
-	mkdir -p /models/1 && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
+	mkdir -p /models/1
+	```
+	```bash
+	wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin
+	```
+	```bash
+	wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
 	```
     ```bash
 	bazel build //src:ovms -c dbg
