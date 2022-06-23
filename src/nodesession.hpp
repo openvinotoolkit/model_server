@@ -19,15 +19,13 @@
 #include <string>
 #include <utility>
 
-#include <openvino/openvino.hpp>
-
 #include "nodesessionmetadata.hpp"
 #include "status.hpp"
-#include "tensor_utils.hpp"
 
 namespace ovms {
 struct NodeInputHandler;
 struct NodeOutputHandler;
+class TensorWithSource;
 class Timer;
 
 class NodeSession {

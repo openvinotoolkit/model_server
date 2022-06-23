@@ -19,6 +19,7 @@
 #include "logging.hpp"
 #include "nodeinputhandler.hpp"
 #include "nodeoutputhandler.hpp"
+#include "tensor_utils.hpp"
 #include "timer.hpp"
 
 namespace ovms {
