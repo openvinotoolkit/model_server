@@ -263,24 +263,6 @@ const ovms::ModelConfig DUMMY_MODEL_WITH_ONLY_NAME_CONFIG{
     "dummy",
 };
 
-TYPED_TEST(ModelService, getAllModelsStatuses_two_models_with_one_versions) {
-    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
-    GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, this->manager);
-    verifyModelStatusResponse(modelsStatuses.begin()->second);
-
-    auto config = SUM_MODEL_CONFIG;
-    this->manager.reloadModelWithVersions(config);
-    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesAfterReload;
-    GetModelStatusImpl::getAllModelsStatuses(modelsStatusesAfterReload, this->manager);
-    ASSERT_EQ(modelsStatusesAfterReload.size(), 2);
-    auto dummyModelStatus = modelsStatusesAfterReload.find("dummy");
-    auto sumModelStatus = modelsStatusesAfterReload.find("sum");
-    ASSERT_NE(dummyModelStatus, modelsStatusesAfterReload.end());
-    ASSERT_NE(sumModelStatus, modelsStatusesAfterReload.end());
-    verifyModelStatusResponse(dummyModelStatus->second);
-    verifyModelStatusResponse(sumModelStatus->second);
-}
-
 // Some tests are specific for TFS because you can ask for more versions than one in one request
 class ModelServiceDummyWith2Versions : public ::testing::Test {
 protected:
@@ -347,6 +329,24 @@ TEST_F(ModelServiceDummyWith2Versions, getAllModelsStatuses_one_model_two_versio
 
 // Some tests are specific for TFS because you can ask for more versions than one in one request
 using TFSModelService = ModelService<TFSGetModelStatusInterface>;
+
+TEST_F(TFSModelService, getAllModelsStatuses_two_models_with_one_versions) {
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, this->manager);
+    verifyModelStatusResponse(modelsStatuses.begin()->second);
+
+    auto config = SUM_MODEL_CONFIG;
+    this->manager.reloadModelWithVersions(config);
+    std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesAfterReload;
+    GetModelStatusImpl::getAllModelsStatuses(modelsStatusesAfterReload, this->manager);
+    ASSERT_EQ(modelsStatusesAfterReload.size(), 2);
+    auto dummyModelStatus = modelsStatusesAfterReload.find("dummy");
+    auto sumModelStatus = modelsStatusesAfterReload.find("sum");
+    ASSERT_NE(dummyModelStatus, modelsStatusesAfterReload.end());
+    ASSERT_NE(sumModelStatus, modelsStatusesAfterReload.end());
+    verifyModelStatusResponse(dummyModelStatus->second);
+    verifyModelStatusResponse(sumModelStatus->second);
+}
 
 TEST_F(TFSModelService, config_reload) {
     ModelServiceImpl s;
