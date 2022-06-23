@@ -49,6 +49,9 @@ Dimension::Dimension(dimension_value_t dim) :
 }
 
 Dimension::Dimension(dimension_value_t minimum, dimension_value_t maximum) {
+    if (minimum == -1 && maximum != -1) {
+        throw std::invalid_argument("Invalid range");
+    }
     if (minimum < -1 || maximum < -1) {
         throw std::invalid_argument("Range must not be lower than -1");
     }

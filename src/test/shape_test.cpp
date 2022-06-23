@@ -73,6 +73,15 @@ TEST(Dimension, Constructor) {
     EXPECT_THROW(Dimension(2, 1), std::invalid_argument);
     EXPECT_THROW(Dimension(-6, -2), std::invalid_argument);
     EXPECT_THROW(Dimension(5, 4), std::invalid_argument);
+    EXPECT_THROW(Dimension(-1, 0), std::invalid_argument);
+    EXPECT_THROW(Dimension(-1, 1), std::invalid_argument);
+    EXPECT_THROW(Dimension(1, -1), std::invalid_argument);
+}
+
+TEST(Dimension, Equals){
+    EXPECT_TRUE(Dimension(0,0) == Dimension(0));
+    EXPECT_TRUE(Dimension(1,1) == Dimension(1));
+    EXPECT_TRUE(Dimension(-1,-1) == Dimension(-1));
 }
 
 TEST(Shape, CreateIntersection) {
