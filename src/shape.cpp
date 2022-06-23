@@ -49,8 +49,16 @@ Dimension::Dimension(dimension_value_t dim) :
 }
 
 Dimension::Dimension(dimension_value_t minimum, dimension_value_t maximum) {
-    // TODO we should either throw or make separate factory to disallo
-    // calling with eg (10,9) or (-2,-1) etc
+    if (minimum == -1 && maximum != -1) {
+        throw std::invalid_argument("Invalid range");
+    }
+    if (minimum < -1 || maximum < -1) {
+        throw std::invalid_argument("Range must not be lower than -1");
+    }
+    if (minimum > maximum) {
+        throw std::invalid_argument("Range maximum must be higher or equal to minimum");
+    }
+
     this->minimum = minimum;
     this->maximum = maximum;
 }
