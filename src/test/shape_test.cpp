@@ -78,10 +78,10 @@ TEST(Dimension, Constructor) {
     EXPECT_THROW(Dimension(1, -1), std::invalid_argument);
 }
 
-TEST(Dimension, Equals){
-    EXPECT_TRUE(Dimension(0,0) == Dimension(0));
-    EXPECT_TRUE(Dimension(1,1) == Dimension(1));
-    EXPECT_TRUE(Dimension(-1,-1) == Dimension(-1));
+TEST(Dimension, Equals) {
+    EXPECT_TRUE(Dimension(0, 0) == Dimension(0));
+    EXPECT_TRUE(Dimension(1, 1) == Dimension(1));
+    EXPECT_TRUE(Dimension(-1, -1) == Dimension(-1));
 }
 
 TEST(Shape, CreateIntersection) {
