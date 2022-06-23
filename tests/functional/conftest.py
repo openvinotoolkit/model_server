@@ -177,12 +177,10 @@ def exception_catcher(when: str, outcome):
 
 def get_docker_image_os_version_from_container():
     client = docker.from_env()
-    cmd = 'cat /etc/*-release'
+    cmd = 'cat /etc/os-release'
     os_distname = "__invalid__"
     try:
-        output = client.containers.run(image=image,
-                                       entrypoint=["/bin/bash", "-c"],
-                                       command=cmd)
+        output = client.containers.run(image=image, entrypoint=cmd)
         output = output.decode("utf-8")
         os_distname = re.search('^PRETTY_NAME="(.+)"\n', output, re.MULTILINE).group(1)
     except AttributeError as e:
@@ -193,12 +191,10 @@ def get_docker_image_os_version_from_container():
 
 def get_ov_and_ovms_version_from_container():
     client = docker.from_env()
-    cmd = ["/ovms/bin/ovms", "--version"]
-
+    cmd = "/ovms/bin/ovms --version"
     _ov_version, _ovms_version = ["__invalid__"] * 2
     try:
-        output = client.containers.run(image=image,
-                                       entrypoint=cmd)
+        output = client.containers.run(image=image, entrypoint=cmd)
         output = output.decode("utf-8")
         _ovms_version = re.search('OpenVINO Model Server (.+)\n', output, re.MULTILINE).group(1)
         _ov_version = re.search('OpenVINO backend (.+)\n', output, re.MULTILINE).group(1)
