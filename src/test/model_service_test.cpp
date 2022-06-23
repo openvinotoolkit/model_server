@@ -43,7 +43,7 @@ using KFSGetModelStatusInterface = std::pair<KFSGetModelStatusRequest, KFSGetMod
 template <typename Pair,
     typename RequestType = typename Pair::first_type,
     typename ResponseType = typename Pair::second_type>
-class ModelService : public ::testing::Test {
+class ModelServiceTest : public ::testing::Test {
 public:
     ConstructorEnabledModelManager manager;
     RequestType modelStatusRequest;
@@ -60,7 +60,7 @@ using MyTypes = ::testing::Types<
     TFSGetModelStatusInterface,
     KFSGetModelStatusInterface>;
 
-TYPED_TEST_SUITE(ModelService, MyTypes);
+TYPED_TEST_SUITE(ModelServiceTest, MyTypes);
 
 void executeModelStatus(const TFSGetModelStatusRequest& modelStatusRequest, TFSGetModelStatusResponse& modelStatusResponse, ModelManager& manager, ovms::StatusCode statusCode = StatusCode::OK) {
     modelStatusResponse.Clear();
@@ -105,11 +105,11 @@ void setModelStatusRequest(KFSGetModelStatusRequest& modelStatusRequest, const s
         modelStatusRequest.set_version(std::to_string(version));
 }
 
-TYPED_TEST(ModelService, empty_request) {
+TYPED_TEST(ModelServiceTest, empty_request) {
     executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, StatusCode::MODEL_NAME_MISSING);
 }
 
-TYPED_TEST(ModelService, single_version_model) {
+TYPED_TEST(ModelServiceTest, single_version_model) {
     const std::string name = "dummy";
     auto version = 1;  // existing version
     setModelStatusRequest(this->modelStatusRequest, name, version);
@@ -158,7 +158,7 @@ static const char* pipelineOneDummyConfig = R"(
     ]
 })";
 
-TYPED_TEST(ModelService, pipeline) {
+TYPED_TEST(ModelServiceTest, pipeline) {
     std::string fileToReload = "/tmp/ovms_single_version_pipeline.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ASSERT_EQ(this->manager.startFromFile(fileToReload), StatusCode::OK);
@@ -184,21 +184,21 @@ TYPED_TEST(ModelService, pipeline) {
     verifyModelStatusResponse(this->modelStatusResponse);
 }
 
-TYPED_TEST(ModelService, non_existing_model) {
+TYPED_TEST(ModelServiceTest, non_existing_model) {
     const std::string name = "non_existing_model";
     int version = 0;
     setModelStatusRequest(this->modelStatusRequest, name, version);
     executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, StatusCode::MODEL_NAME_MISSING);
 }
 
-TYPED_TEST(ModelService, non_existing_version) {
+TYPED_TEST(ModelServiceTest, non_existing_version) {
     const std::string name = "dummy";
     int version = 989464;
     setModelStatusRequest(this->modelStatusRequest, name, version);
     executeModelStatus(this->modelStatusRequest, this->modelStatusResponse, this->manager, StatusCode::MODEL_VERSION_MISSING);
 }
 
-TYPED_TEST(ModelService, negative_version) {
+TYPED_TEST(ModelServiceTest, negative_version) {
     const std::string name = "dummy";
     int version = -1;
     setModelStatusRequest(this->modelStatusRequest, name, version);
@@ -328,9 +328,9 @@ TEST_F(ModelServiceDummyWith2Versions, getAllModelsStatuses_one_model_two_versio
 }
 
 // Some tests are specific for TFS because you can ask for more versions than one in one request
-using TFSModelService = ModelService<TFSGetModelStatusInterface>;
+using TFSModelServiceTest = ModelServiceTest<TFSGetModelStatusInterface>;
 
-TEST_F(TFSModelService, getAllModelsStatuses_two_models_with_one_versions) {
+TEST_F(TFSModelServiceTest, getAllModelsStatuses_two_models_with_one_versions) {
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatuses;
     GetModelStatusImpl::getAllModelsStatuses(modelsStatuses, this->manager);
     verifyModelStatusResponse(modelsStatuses.begin()->second);
@@ -348,7 +348,7 @@ TEST_F(TFSModelService, getAllModelsStatuses_two_models_with_one_versions) {
     verifyModelStatusResponse(sumModelStatus->second);
 }
 
-TEST_F(TFSModelService, config_reload) {
+TEST_F(TFSModelServiceTest, config_reload) {
     ModelServiceImpl s;
     tensorflow::serving::ReloadConfigRequest modelStatusRequest;
     tensorflow::serving::ReloadConfigResponse modelStatusResponse;
@@ -359,7 +359,7 @@ TEST_F(TFSModelService, config_reload) {
     EXPECT_EQ(ret.ok(), true);
 }
 
-TEST_F(TFSModelService, getAllModelsStatuses_one_model_one_version) {
+TEST_F(TFSModelServiceTest, getAllModelsStatuses_one_model_one_version) {
     ConstructorEnabledModelManager manager;  // intentionally uses separate manager as we don't want any unloaded models
     auto config = DUMMY_MODEL_WITH_ONLY_NAME_CONFIG;
     manager.reloadModelWithVersions(config);
@@ -377,7 +377,7 @@ TEST_F(TFSModelService, getAllModelsStatuses_one_model_one_version) {
     verifyModelStatusResponse(modelsStatusesAfterReload.begin()->second);
 }
 
-TEST_F(TFSModelService, serializeModelsStatuses2Json_with_one_response) {
+TEST_F(TFSModelServiceTest, serializeModelsStatuses2Json_with_one_response) {
     const char* expectedJson = R"({
 "dummy" : 
 {
@@ -406,7 +406,7 @@ TEST_F(TFSModelService, serializeModelsStatuses2Json_with_one_response) {
     EXPECT_EQ(jsonOutput, expectedJson);
 }
 
-TEST_F(TFSModelService, serializeModelsStatuses2Json_with_two_responses) {
+TEST_F(TFSModelServiceTest, serializeModelsStatuses2Json_with_two_responses) {
     const char* expectedJson = R"({
 "dummy1" : 
 {
@@ -457,7 +457,7 @@ TEST_F(TFSModelService, serializeModelsStatuses2Json_with_two_responses) {
     EXPECT_EQ(jsonOutput, expectedJson);
 }
 
-TEST_F(TFSModelService, serializeModelsStatuses2Json_one_response_with_two_versions) {
+TEST_F(TFSModelServiceTest, serializeModelsStatuses2Json_one_response_with_two_versions) {
     const char* expectedJson = R"({
 "dummy" : 
 {
