@@ -279,13 +279,7 @@ Debugging options are available. Click on the required option :
 	```
 3.	Prepare resnet50 model for OVMS in /models catalog and recompile the OpenVINO Model Server in docker container with debug symbols using command:
 	```bash
-	mkdir -p /models/1
-	```
-	```bash
-	wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin
-	```
-	```bash
-	wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
+	mkdir -p /models/1 && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
 	```
     ```bash
 	bazel build //src:ovms -c dbg
