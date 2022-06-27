@@ -40,5 +40,5 @@ if __name__ == '__main__':
     request = service_pb2.ModelMetadataRequest(name=args.get("model_name"),
                                                version=args.get("model_version"))
     response = grpc_stub.ModelMetadata(request)
-    print("server metadata:\n{}".format(response))
+    print("model metadata:\n{}".format(response))
 
