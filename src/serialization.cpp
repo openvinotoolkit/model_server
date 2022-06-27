@@ -43,11 +43,11 @@ Status serializePrecision(
         responseOutput.set_dtype(servableOutput->getPrecisionAsDataType());
         break;
 
-    case ovms::Precision::Q78:  // TODO: This does not exist in OV 2.0
-    case ovms::Precision::BIN:  // TODO: This does not exist in OV 2.0
+    case ovms::Precision::Q78:
+    case ovms::Precision::BIN:
     case ovms::Precision::BOOL:
-    case ovms::Precision::MIXED:   // TODO: This does not exist in OV 2.0
-    case ovms::Precision::CUSTOM:  // TODO: This does not exist in OV 2.0
+    case ovms::Precision::MIXED:
+    case ovms::Precision::CUSTOM:
     default: {
         Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
         SPDLOG_ERROR(status.string());

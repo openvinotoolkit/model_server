@@ -33,7 +33,7 @@ class GetModelMetadataSignature : public ::testing::Test {
 
 protected:
     ovms::tensor_map_t inputs;
-    ovms::proto_signature_map_t signature;
+    google::protobuf::Map<std::string, tensorflow::TensorInfo> signature;
 
     void SetUp() override {
         tensors = tensor_desc_map_t{

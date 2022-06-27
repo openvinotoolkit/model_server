@@ -17,6 +17,7 @@
 
 #include <google/protobuf/util/json_util.h>
 
+#include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
 
 using google::protobuf::util::JsonPrintOptions;
@@ -92,7 +93,7 @@ Status GetModelMetadataImpl::validate(
 
 void GetModelMetadataImpl::convert(
     const tensor_map_t& from,
-    proto_signature_map_t* to) {
+    google::protobuf::Map<std::string, tensorflow::TensorInfo>* to) {
     for (const auto& [name, tensor] : from) {
         auto& input = (*to)[name];
 
@@ -107,10 +108,6 @@ void GetModelMetadataImpl::convert(
             if (dim.isStatic()) {
                 input.mutable_tensor_shape()->add_dim()->set_size(dim.getStaticValue());
             } else {
-                // TODO: Add more detailed information about dimension.
-                // Possible range and name of dimension.
-                // Use TensorShapeProto_Dim::name string field.
-                // JIRA: https://jira.devtools.intel.com/browse/CVS-74881
                 input.mutable_tensor_shape()->add_dim()->set_size(DYNAMIC_DIMENSION);
             }
         }

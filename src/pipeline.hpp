@@ -37,8 +37,6 @@ void printNodeConnections(const std::string& nodeName, const std::string& source
 class Pipeline {
     std::vector<std::unique_ptr<Node>> nodes;
     const std::string name;
-    // TODO removed specific types in order not to templatize Pipeline class
-    // consider if this is best way
     Node& entry;
     Node& exit;
 

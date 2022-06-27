@@ -19,18 +19,22 @@
 #include <memory>
 #include <string>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/get_model_metadata.pb.h"
-#pragma GCC diagnostic pop
 
-#include "modelmanager.hpp"
 #include "status.hpp"
+#include "tensorinfo.hpp"
+
+namespace tensorflow{
+        namespace serving {
+        class GetModelMetadataRequest;
+        class GetModelMetadataResponse;
+        }
+}
 
 namespace ovms {
 
-using proto_signature_map_t = google::protobuf::Map<std::string, tensorflow::TensorInfo>;
 
+class ModelInstance;
+class ModelManager;
 class PipelineDefinition;
 
 class GetModelMetadataImpl {
@@ -40,7 +44,7 @@ public:
 
     static void convert(
         const tensor_map_t& from,
-        proto_signature_map_t* to);
+        google::protobuf::Map<std::string, tensorflow::TensorInfo>* to);
 
     static Status buildResponse(
         std::shared_ptr<ModelInstance> instance,

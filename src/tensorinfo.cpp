@@ -149,7 +149,6 @@ tensorflow::DataType TensorInfo::getPrecisionAsDataType(Precision precision) {
     };
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
-        // TODO missing precisions
         return tensorflow::DataType::DT_INVALID;
     }
     return it->second;
