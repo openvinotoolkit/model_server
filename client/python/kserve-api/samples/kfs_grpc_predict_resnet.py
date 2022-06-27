@@ -14,9 +14,6 @@
 # limitations under the License.
 #
 
-import sys
-sys.path.append("../../../../demos/common/python")
-
 import grpc
 import numpy as np
 import classes
