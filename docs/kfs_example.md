@@ -7,6 +7,7 @@ In case of sending raw images jpeg files BYTES data type should be used and data
 
 In current release there is support for:
 * Model Metadata
+* Model Ready
 * Inference
 
 In current release there is no support for:
@@ -50,6 +51,17 @@ cd client/python/kserve-api/samples
 virtualenv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
+```
+
+#### Run the Client to get model readiness
+```Bash
+python3 ./kfs_grpc_model_ready.py --grpc_port 9000 --grpc_address localhost --model_name resnet
+```
+
+#### Script Output
+```Bash
+Model Ready:
+ready: true
 ```
 
 #### Run the Client to get metadata
