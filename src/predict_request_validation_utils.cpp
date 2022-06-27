@@ -605,7 +605,6 @@ bool RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterator
     return false;
 }
 
-// TODO verify/implement for KFS binary inputs
 template <>
 bool RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::checkIfBinaryInputUsed(const KFSInputTensorType& proto, const std::string inputName) const {
     if (proto.datatype() == "BYTES") {

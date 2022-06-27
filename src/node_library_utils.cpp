@@ -90,7 +90,8 @@ std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const Ten
         if (dimsIt == tensorsDims.end()) {
             return nullptr;
         }
-        const auto& dims = dimsIt->second;  // TODO compile time asser uint64_t == size_t
+        static_assert(sizeof(size_t) == sizeof(uint64_t));
+        const auto& dims = dimsIt->second;
         inputTensors[i].name = static_cast<const char*>(name.c_str());
         inputTensors[i].data = static_cast<uint8_t*>(tensor.data());
         inputTensors[i].dataBytes = static_cast<uint64_t>(tensor.get_byte_size());

@@ -49,8 +49,6 @@ class ModelInferResponse;
 
 namespace ovms {
 
-using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
-
 class DynamicModelParameter {
 public:
     DynamicModelParameter() :

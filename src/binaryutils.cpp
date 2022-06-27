@@ -368,7 +368,6 @@ Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<
         }
 
         // if (i == 0 && src.contents().bytes_contents_size() > 1) {
-        //     // TODO: CVS-78796 Check if the total bytes for tensor will not exceed 1GB.
         //     // Multiply src.string_val_size() * image resolution * precision size
         // }
 

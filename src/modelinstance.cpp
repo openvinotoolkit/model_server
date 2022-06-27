@@ -185,7 +185,6 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::M
         try {
             std::string name = input.get_any_name();
             std::string mappedName = config.getMappingInputByKey(name).empty() ? name : config.getMappingInputByKey(name);
-            // preproc.input(name).tensor().set_element_type(ov::element::i8); // TODO remove after full alternative buffer deserialization& serialization implemented
             if (config.getLayout().isSet()) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding preprocessing step: Tensor Layout:{}; Network Layout:{}; single input",
                     modelName,
@@ -193,7 +192,6 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::M
                     config.getLayout().getTensorLayout(),
                     config.getLayout().getModelLayout());
 
-                // TODO: Validate rank vs layout string len?
                 preproc.input().tensor().set_layout(ov::Layout(config.getLayout().getTensorLayout()));
                 preproc.input().model().set_layout(ov::Layout(config.getLayout().getModelLayout()));
             } else if (config.getLayouts().count(mappedName) > 0) {
@@ -205,7 +203,6 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::M
                     layout.getModelLayout(),
                     mappedName);
 
-                // TODO: Validate rank vs layout string len?
                 preproc.input(name).tensor().set_layout(ov::Layout(layout.getTensorLayout()));
                 preproc.input(name).model().set_layout(ov::Layout(layout.getModelLayout()));
             } else {
@@ -245,7 +242,6 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::M
         try {
             std::string name = output.get_any_name();
             std::string mappedName = config.getMappingOutputByKey(name).empty() ? name : config.getMappingOutputByKey(name);
-            // preproc.output(name).tensor().set_element_type(ov::element::i8); // TODO remove after full alternative buffer deserialization& serialization implemented
             if (config.getLayouts().count(mappedName) > 0) {
                 auto& layout = config.getLayouts().at(mappedName);
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Adding postprocessing step: Tensor Layout:{}; Network Layout:{}; output name: {}",
@@ -274,8 +270,6 @@ Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::M
                 modelName,
                 modelVersion,
                 e.what());
-            // TODO potentially allow for empty names if OV will load such model. Then potentially use empty string as input/output names
-            // and adjust validation, metadata, dags for that
             return StatusCode::UNKNOWN_ERROR;
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure output layout for model:{}; version:{}; from OpenVINO with error:{}",
@@ -420,8 +414,6 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
                 getName(),
                 getVersion(),
                 e.what());
-            // TODO potentially allow for empty names if OV will load such model. Then potentially use empty string as input/output names
-            // and adjust validation, metadata, dags for that
             return StatusCode::UNKNOWN_ERROR;
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get input name for model:{}; version:{}; from OpenVINO with error:{}",
@@ -471,8 +463,6 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
                 getName(),
                 getVersion(),
                 e.what());
-            // TODO potentially allow for empty names if OV will load such model. Then potentially use empty string as input/output names
-            // and adjust validation, metadata, dags for that
             return StatusCode::UNKNOWN_ERROR;
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get output name for model:{}; version:{}; from OpenVINO with error:{}",
