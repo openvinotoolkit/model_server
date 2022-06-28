@@ -24,6 +24,8 @@
 #include "tensorflow_serving/util/json_tensor.h"
 #pragma GCC diagnostic pop
 
+#include "tfs_frontend/tfstensorinfo.hpp"
+
 #include "timer.hpp"
 
 using tensorflow::DataType;

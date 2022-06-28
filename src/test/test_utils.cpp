@@ -19,6 +19,7 @@
 
 #include "../prediction_service_utils.hpp"
 #include "../tensorinfo.hpp"
+#include "../tfs_frontend/tfstensorinfo.hpp"
 
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
@@ -40,7 +41,7 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
         auto [shape, precision] = it.second;
 
         auto& input = (*request.mutable_inputs())[name];
-        auto datatype = TensorInfo::getPrecisionAsDataType(precision);
+        auto datatype = getPrecisionAsDataType(precision);
         input.set_dtype(datatype);
         size_t numberOfElements = 1;
         for (auto const& dim : shape) {

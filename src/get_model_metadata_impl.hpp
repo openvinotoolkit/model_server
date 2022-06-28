@@ -19,15 +19,14 @@
 #include <memory>
 #include <string>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#include "tensorflow/core/framework/tensor.h"
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma GCC diagnostic pop
+
 #include "status.hpp"
 #include "tensorinfo.hpp"
-
-namespace tensorflow {
-namespace serving {
-class GetModelMetadataRequest;
-class GetModelMetadataResponse;
-}  // namespace serving
-}  // namespace tensorflow
 
 namespace ovms {
 

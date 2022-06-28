@@ -19,6 +19,7 @@
 
 #include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
+#include "tfs_frontend/tfstensorinfo.hpp"
 
 using google::protobuf::util::JsonPrintOptions;
 using google::protobuf::util::MessageToJsonString;
@@ -97,7 +98,7 @@ void GetModelMetadataImpl::convert(
     for (const auto& [name, tensor] : from) {
         auto& input = (*to)[name];
 
-        input.set_dtype(tensor->getPrecisionAsDataType());
+        input.set_dtype(getPrecisionAsDataType(tensor->getPrecision()));
 
         // Since this method is used for models and pipelines we cannot rely on tensor getMappedName().
         // In both cases we can rely on tensor_map key values as final names.

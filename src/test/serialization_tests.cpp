@@ -29,6 +29,7 @@
 #pragma GCC diagnostic pop
 
 #include "../serialization.hpp"
+#include "../tfs_frontend/tfstensorinfo.hpp"
 #include "test_utils.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>
@@ -133,7 +134,7 @@ protected:
             precision,
             shape_t{1, 3, 1, 1},
             Layout{"NHWC"});
-        SetUpTensorProto(TensorInfo::getPrecisionAsDataType(precision));
+        SetUpTensorProto(getPrecisionAsDataType(precision));
     }
 
     void SetUpTensorProto(tensorflow::DataType dataType) {

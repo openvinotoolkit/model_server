@@ -49,7 +49,7 @@ std::string toString(Precision precision) {
         {Precision::CUSTOM, "CUSTOM"}};
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
-        return "DT_INVALID";
+        return "UNKNOWN";
     }
     return it->second;
 }

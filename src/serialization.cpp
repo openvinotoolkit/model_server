@@ -16,6 +16,7 @@
 #include "serialization.hpp"
 
 #include "ov_utils.hpp"
+#include "tfs_frontend/tfstensorinfo.hpp"
 
 namespace ovms {
 
@@ -40,7 +41,7 @@ Status serializePrecision(
     case ovms::Precision::U16:
     case ovms::Precision::FP16:
     case ovms::Precision::I64:
-        responseOutput.set_dtype(servableOutput->getPrecisionAsDataType());
+        responseOutput.set_dtype(getPrecisionAsDataType(servableOutput->getPrecision()));
         break;
 
     case ovms::Precision::Q78:

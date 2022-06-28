@@ -29,6 +29,7 @@
 #pragma GCC diagnostic pop
 
 #include "../deserialization.hpp"
+#include "../tfs_frontend/tfstensorinfo.hpp"
 #include "test_utils.hpp"
 
 #include <gmock/gmock-generated-function-mockers.h>
@@ -67,7 +68,7 @@ protected:
             precision,
             shape_t{1, 3},
             Layout{"NC"});
-        SetUpTensorProto(TensorInfo::getPrecisionAsDataType(precision));
+        SetUpTensorProto(getPrecisionAsDataType(precision));
     }
     void SetUpTensorProto(tensorflow::DataType dataType) {
         tensorProto.set_dtype(dataType);
@@ -196,7 +197,7 @@ TEST_P(DeserializeTFTensorProtoNegative, ShouldReturnNullptrForPrecision) {
 
 TEST_P(DeserializeTFTensorProto, ShouldReturnValidTensor) {
     ovms::Precision testedPrecision = GetParam();
-    SetUpTensorProto(TensorInfo::getPrecisionAsDataType(testedPrecision));
+    SetUpTensorProto(getPrecisionAsDataType(testedPrecision));
     tensorMap[tensorName]->setPrecision(testedPrecision);
     ov::Tensor tensor = deserializeTensorProto<ConcreteTensorProtoDeserializator>(tensorProto, tensorMap[tensorName]);
     EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
