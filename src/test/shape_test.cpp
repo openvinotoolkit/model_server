@@ -31,7 +31,7 @@ TEST(Dimension, Match) {
     EXPECT_TRUE(Dimension::any().match(-1));
     EXPECT_TRUE(Dimension::any().match(1));
     EXPECT_TRUE(Dimension::any().match(42));
-    EXPECT_TRUE(Dimension::any().match(-42));  // TODO
+    EXPECT_FALSE(Dimension::any().match(-42));
     EXPECT_FALSE(Dimension(10, 20).match(2));
     EXPECT_FALSE(Dimension(10, 20).match(22));
     EXPECT_FALSE(Dimension(10, 20).match(-12));

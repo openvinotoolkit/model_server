@@ -49,7 +49,7 @@ std::string toString(Precision precision) {
         {Precision::CUSTOM, "CUSTOM"}};
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
-        return "DT_INVALID";  // TODO other way? why translate it to TF equivalent maybe UNDEFINED?
+        return "DT_INVALID";
     }
     return it->second;
 }
@@ -97,7 +97,7 @@ Precision KFSPrecisionToOvmsPrecision(const KFSDataType& datatype) {
         {"UINT64", Precision::U64},
         {"UINT32", Precision::U32},
         {"UINT16", Precision::U16},
-        // {"BYTES", Precision::??}, // TODO decide what to do with BYTES
+        // {"BYTES", Precision::??},
         {"UINT8", Precision::U8}};
     auto it = precisionMap.find(datatype);
     if (it == precisionMap.end()) {
@@ -121,7 +121,6 @@ Precision TFSPrecisionToOvmsPrecision(const TFSDataType& datatype) {
         {TFSDataType::DT_BOOL, Precision::BOOL}};
     auto it = precisionMap.find(datatype);
     if (it == precisionMap.end()) {
-        // TODO missing precisions
         return Precision::UNDEFINED;
     }
     return it->second;
@@ -141,7 +140,7 @@ size_t KFSDataTypeSize(const KFSDataType& datatype) {
         {"FP16", 2},
         {"FP32", 4},
         {"FP64", 8}
-        // {"BYTES", }, // TODO decide what to do with BYTES
+        // {"BYTES", },
     };
     auto it = datatypeSizeMap.find(datatype);
     if (it == datatypeSizeMap.end()) {
@@ -164,16 +163,16 @@ KFSDataType ovmsPrecisionToKFSPrecision(Precision precision) {
         {Precision::U16, "UINT16"},
         {Precision::U8, "UINT8"},
         {Precision::BOOL, "BOOL"}};
-    // {Precision::BF16, ""}, TODO
-    // {Precision::U4, ""}, TODO
-    // {Precision::U1, ""}, TODO
-    // {Precision::CUSTOM, ""}, TODO
-    // {Precision::DYNAMIC, ""}, TODO
-    // {Precision::MIXED, ""}, TODO
-    // {Precision::Q78, ""}, TODO
-    // {Precision::BIN, ""}, TODO
-    // {Precision::I4, ""}, TODO
-    // {Precision::UNDEFINED, "UNDEFINED"}}; TODO
+    // {Precision::BF16, ""},
+    // {Precision::U4, ""},
+    // {Precision::U1, ""},
+    // {Precision::CUSTOM, ""},
+    // {Precision::DYNAMIC, ""},
+    // {Precision::MIXED, ""},
+    // {Precision::Q78, ""},
+    // {Precision::BIN, ""},
+    // {Precision::I4, ""},
+    // {Precision::UNDEFINED, "UNDEFINED"}};
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
         return "INVALID";
@@ -198,16 +197,16 @@ ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision) {
         {Precision::U4, ov::element::Type_t::u4},
         {Precision::U1, ov::element::Type_t::u1},
         {Precision::BOOL, ov::element::Type_t::boolean},
-        {Precision::UNDEFINED, ov::element::Type_t::undefined},  // TODO
-        {Precision::DYNAMIC, ov::element::Type_t::dynamic}       // TODO
-        //    {Precision::MIXED, ov::element::Type_t::MIXED}, // TODO
-        //    {Precision::Q78, ov::element::Type_t::Q78}, // TODO
-        //    {Precision::BIN, ov::element::Type_t::BIN}, // TODO
-        //    {Precision::CUSTOM, ov::element::Type_t::CUSTOM // TODO
+        {Precision::UNDEFINED, ov::element::Type_t::undefined},
+        {Precision::DYNAMIC, ov::element::Type_t::dynamic}
+        //    {Precision::MIXED, ov::element::Type_t::MIXED},
+        //    {Precision::Q78, ov::element::Type_t::Q78},
+        //    {Precision::BIN, ov::element::Type_t::BIN},
+        //    {Precision::CUSTOM, ov::element::Type_t::CUSTOM
     };
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
-        return ov::element::Type_t::undefined;  // TODO other way?
+        return ov::element::Type_t::undefined;
     }
     return it->second;
 }
@@ -231,11 +230,11 @@ Precision ovElementTypeToOvmsPrecision(ov::element::Type_t type) {
         {ov::element::Type_t::u1, Precision::U1},
         {ov::element::Type_t::undefined, Precision::UNDEFINED},
         {ov::element::Type_t::dynamic, Precision::DYNAMIC},
-        //    {ov::element::Type_t::???, Precision::MIXED}, // TODO
-        //    {ov::element::Type_t::???, Precision::Q78}, // TODO
-        //    {ov::element::Type_t::???, Precision::BIN}, // TODO
+        //    {ov::element::Type_t::???, Precision::MIXED},
+        //    {ov::element::Type_t::???, Precision::Q78},
+        //    {ov::element::Type_t::???, Precision::BIN},
         {ov::element::Type_t::boolean, Precision::BOOL}
-        //    {ov::element::Type_t::CUSTOM, Precision::CUSTOM} // TODO
+        //    {ov::element::Type_t::CUSTOM, Precision::CUSTOM}
         /*
     undefined,
     dynamic,
@@ -243,7 +242,7 @@ Precision ovElementTypeToOvmsPrecision(ov::element::Type_t type) {
     };
     auto it = precisionMap.find(type);
     if (it == precisionMap.end()) {
-        return Precision::UNDEFINED;  // TODO other way?
+        return Precision::UNDEFINED;
     }
     return it->second;
 }

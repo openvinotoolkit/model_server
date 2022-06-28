@@ -220,6 +220,8 @@ bool Dimension::partiallyFitsInto(const Dimension& next) const {
 }
 
 bool Dimension::match(dimension_value_t value) const {
+    if (value < -1)
+        return false;
     if (isAny()) {
         return true;
     }
@@ -284,7 +286,7 @@ Shape::Shape(std::initializer_list<Dimension> list) :
 Shape::Shape(const shape_t& s) {
     auto status = fromFlatShape(s, *this);
     if (!status.ok()) {
-        throw 42;  // TODO this constructor is to be removed during 1.0 API cleanup
+        throw std::invalid_argument("Could not convert from flat shape");
     }
 }
 

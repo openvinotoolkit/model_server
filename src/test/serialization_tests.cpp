@@ -81,8 +81,6 @@ const std::vector<ovms::Precision> UNSUPPORTED_OUTPUT_PRECISIONS{
     // ovms::Precision::BIN, // Cannot create tensor with such precision
     ovms::Precision::BOOL
     // ovms::Precision::CUSTOM),
-
-    // TODO: There are new API 2.0 precisions we do not support. Add tests for those.
 };
 
 const std::vector<ovms::Precision> SUPPORTED_KFS_OUTPUT_PRECISIONS{
@@ -205,7 +203,6 @@ TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
     auto inputs = getInputs(testedPrecision);
     TFTensorProto responseOutput;
     ov::Tensor mockTensor = std::get<1>(inputs);
-    // EXPECT_CALL(*mockTensor, get_byte_size()); // TODO: Mock it properly with templates
     auto status = serializeTensorToTensorProto(responseOutput,
         std::get<0>(inputs),
         mockTensor);

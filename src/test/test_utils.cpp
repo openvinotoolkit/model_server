@@ -74,7 +74,6 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
         }
         default: {
             if (data.size() == 0) {
-                // TODO in case of DT_HALF & DT_UINT16 we add tensor content two times
                 *input.mutable_tensor_content() = std::string(numberOfElements * tensorflow::DataTypeSize(datatype), '1');
             } else {
                 std::string content;
