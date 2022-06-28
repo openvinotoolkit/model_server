@@ -27,10 +27,9 @@
 #include "precision.hpp"
 #include "shape.hpp"
 
-
 namespace google::protobuf {
-        template <typename T>
-                class RepeatedField;
+template <typename T>
+class RepeatedField;
 }
 
 namespace ovms {

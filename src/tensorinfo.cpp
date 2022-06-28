@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include "tensorinfo.hpp"
+
 #include <map>
 #include <memory>
 #include <sstream>
@@ -20,9 +22,7 @@
 #include <unordered_map>
 
 #include "kfs_grpc_inference_service.hpp"
-
 #include "logging.hpp"
-#include "tensorinfo.hpp"
 
 namespace ovms {
 
