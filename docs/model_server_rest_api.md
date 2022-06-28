@@ -150,7 +150,7 @@ Read more about [Get Model Metadata API usage](https://github.com/openvinotoolki
 ## Predict API <a name="predict"></a>
 **Description**
 
-Endpoint for running an inference with loaded models or [DAGs](./demultiplexing.md).
+Endpoint for running an inference with loaded models or [DAGs](./model_server_rest_api.md).
 
 **URL**
 ```

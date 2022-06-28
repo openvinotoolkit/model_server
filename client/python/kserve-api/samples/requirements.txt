@@ -1,0 +1,3 @@
+protobuf==3.19.3
+tritonclient==2.22.3
+grpcio
