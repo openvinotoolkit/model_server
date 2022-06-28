@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-import grpc
 import numpy as np
 import classes
 import datetime
