@@ -20,11 +20,13 @@
 #include <string>
 
 #include "deserialization.hpp"
+#include "modelinstance.hpp"
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "pipelinedefinition.hpp"
 #include "prediction_service_utils.hpp"
 #include "serialization.hpp"
+#include "tensorinfo.hpp"
 #include "timer.hpp"
 
 namespace ovms {
@@ -57,12 +59,52 @@ const std::string PLATFORM = "OpenVINO";
     return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
+Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, ModelManager& manager) {
+    // Return in response true/false
+    // if no version requested give response for default version
+    const auto& name = request->name();
+    const auto& versionString = request->version();
+    auto model = manager.findModelByName(name);
+    SPDLOG_DEBUG("ModelReady requested name: {}, version: {}", name, versionString);
+    if (model == nullptr) {
+        SPDLOG_DEBUG("ModelReady requested model {} is missing, trying to find pipeline with such name", name);
+        auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(name);
+        if (!pipelineDefinition) {
+            return Status(StatusCode::MODEL_NAME_MISSING);
+        }
+        return buildResponse(*pipelineDefinition, response);
+    }
+    std::shared_ptr<ModelInstance> instance = nullptr;
+    if (!versionString.empty()) {
+        SPDLOG_DEBUG("ModelReady requested model: name {}; version {}", name, versionString);
+        model_version_t requestedVersion = 0;
+        auto versionRead = stoi64(versionString);
+        if (versionRead) {
+            requestedVersion = versionRead.value();
+        } else {
+            SPDLOG_DEBUG("ModelReady requested model: name {}; with version in invalid format: {}", name, versionString);
+            return Status(StatusCode::MODEL_VERSION_INVALID_FORMAT);
+        }
+        instance = model->getModelInstanceByVersion(requestedVersion);
+        if (instance == nullptr) {
+            SPDLOG_DEBUG("ModelReady requested model {}; version {} is missing", name, versionString);
+            return Status(StatusCode::MODEL_VERSION_MISSING);
+        }
+    } else {
+        SPDLOG_DEBUG("ModelReady requested model: name {}; default version", name);
+        instance = model->getDefaultModelInstance();
+        if (instance == nullptr) {
+            SPDLOG_DEBUG("ModelReady requested model {}; version {} is missing", name, versionString);
+            return Status(StatusCode::MODEL_VERSION_MISSING);
+        }
+    }
+    return buildResponse(instance, response);
+}
+
 ::grpc::Status KFSInferenceServiceImpl::ModelReady(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response) {
     (void)context;
-    (void)request;
-    (void)response;
-    std::cout << __FUNCTION__ << ":" << __LINE__ << std::endl;
-    return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    auto& manager = ModelManager::getInstance();
+    return this->getModelReady(request, response, manager).grpc();
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ServerMetadata(::grpc::ServerContext* context, const ::inference::ServerMetadataRequest* request, ::inference::ServerMetadataResponse* response) {
@@ -87,7 +129,6 @@ const std::string PLATFORM = "OpenVINO";
         }
         return buildResponse(*pipelineDefinition, response);
     }
-
     std::shared_ptr<ModelInstance> instance = nullptr;
     if (!versionString.empty()) {
         SPDLOG_DEBUG("GetModelMetadata requested model: name {}; version {}", name, versionString);
@@ -112,7 +153,6 @@ const std::string PLATFORM = "OpenVINO";
             return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
         }
     }
-
     return buildResponse(instance, response).grpc();
 }
 
@@ -153,6 +193,20 @@ const std::string PLATFORM = "OpenVINO";
     timer.stop("total");
     SPDLOG_DEBUG("Total gRPC request processing time: {} ms", timer.elapsed<microseconds>("total") / 1000);
     return grpc::Status::OK;
+}
+
+Status KFSInferenceServiceImpl::buildResponse(
+    std::shared_ptr<ModelInstance> instance,
+    ::inference::ModelReadyResponse* response) {
+    response->set_ready(instance->getStatus().getState() == ModelVersionState::AVAILABLE);
+    return StatusCode::OK;
+}
+
+Status KFSInferenceServiceImpl::buildResponse(
+    PipelineDefinition& pipelineDefinition,
+    ::inference::ModelReadyResponse* response) {
+    response->set_ready(pipelineDefinition.getStatus().isAvailable());
+    return StatusCode::OK;
 }
 
 Status KFSInferenceServiceImpl::buildResponse(

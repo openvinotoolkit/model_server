@@ -21,13 +21,17 @@
 
 #include <grpcpp/server_context.h>
 
-#include "modelinstance.hpp"
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
 #include "src/kfserving_api/grpc_predict_v2.pb.h"
+#include "status.hpp"
 
 namespace ovms {
 
 using inference::GRPCInferenceService;
+class ModelManager;
+class ModelInstance;
+class TensorInfo;
+class PipelineDefinition;
 
 class KFSInferenceServiceImpl final : public GRPCInferenceService::Service {
 public:
@@ -39,7 +43,10 @@ public:
     ::grpc::Status ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) override;
     static Status buildResponse(std::shared_ptr<ModelInstance> instance, ::inference::ModelMetadataResponse* response);
     static Status buildResponse(PipelineDefinition& pipelineDefinition, ::inference::ModelMetadataResponse* response);
+    static Status buildResponse(std::shared_ptr<ModelInstance> instance, ::inference::ModelReadyResponse* response);
+    static Status buildResponse(PipelineDefinition& pipelineDefinition, ::inference::ModelReadyResponse* response);
     static void convert(const std::pair<std::string, std::shared_ptr<TensorInfo>>& from, ::inference::ModelMetadataResponse::TensorMetadata* to);
+    static Status getModelReady(const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, ModelManager& manager);
 };
 
 }  // namespace ovms
