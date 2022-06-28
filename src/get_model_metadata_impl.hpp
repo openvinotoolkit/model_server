@@ -19,19 +19,17 @@
 #include <memory>
 #include <string>
 
-
 #include "status.hpp"
 #include "tensorinfo.hpp"
 
-namespace tensorflow{
-        namespace serving {
-        class GetModelMetadataRequest;
-        class GetModelMetadataResponse;
-        }
-}
+namespace tensorflow {
+namespace serving {
+class GetModelMetadataRequest;
+class GetModelMetadataResponse;
+}  // namespace serving
+}  // namespace tensorflow
 
 namespace ovms {
-
 
 class ModelInstance;
 class ModelManager;
