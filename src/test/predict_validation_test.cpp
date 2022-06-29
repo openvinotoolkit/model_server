@@ -777,7 +777,7 @@ TEST_F(KFSPredictValidation, ValidRequestBinaryInputs) {
     modelConfig.setBatchingParams("auto");
     std::string inputName = "Binary_Input";
     ::inference::ModelInferRequest binaryInputRequest;
-    
+
     auto input = binaryInputRequest.add_inputs();
     input->set_name(inputName);
     input->set_datatype("BYTES");
