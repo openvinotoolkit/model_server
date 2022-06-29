@@ -94,7 +94,7 @@ Status GetModelMetadataImpl::validate(
 
 void GetModelMetadataImpl::convert(
     const tensor_map_t& from,
-    google::protobuf::Map<std::string, tensorflow::TensorInfo>* to) {
+    proto_signature_map_t* to) {
     for (const auto& [name, tensor] : from) {
         auto& input = (*to)[name];
 

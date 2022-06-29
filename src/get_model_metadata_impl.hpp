@@ -30,6 +30,8 @@
 
 namespace ovms {
 
+using proto_signature_map_t = google::protobuf::Map<std::string, tensorflow::TensorInfo>;
+
 class ModelInstance;
 class ModelManager;
 class PipelineDefinition;
@@ -41,7 +43,7 @@ public:
 
     static void convert(
         const tensor_map_t& from,
-        google::protobuf::Map<std::string, tensorflow::TensorInfo>* to);
+        proto_signature_map_t* to);
 
     static Status buildResponse(
         std::shared_ptr<ModelInstance> instance,
