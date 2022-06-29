@@ -772,16 +772,87 @@ TEST_F(KFSPredictValidation, RequestWrongBatchSizeAuto) {
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED) << status.string();
 }
-/*
-TEST_F(KFSPredictValidation, ValidRequestBinaryInputs) { // TODO
+
+TEST_F(KFSPredictValidation, ValidRequestBinaryInputs) {
+    modelConfig.setBatchingParams("auto");
+    std::string inputName = "Binary_Input";
+    ::inference::ModelInferRequest binaryInputRequest;
+    
+    auto input = binaryInputRequest.add_inputs();
+    input->set_name(inputName);
+    input->set_datatype("BYTES");
+    const int requestBatchSize = 1;
+    std::string bytes_contents = "BYTES_CONTENTS";
+    for (int i = 0; i < requestBatchSize; i++) {
+        input->mutable_contents()->add_bytes_contents(bytes_contents.c_str(), bytes_contents.size());
+    }
+    input->mutable_shape()->Add(requestBatchSize);
+
+    servableInputs.clear();
+    ovms::shape_t shape = {1, 3, 224, 224};
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+        inputName,
+        ovms::Precision::FP32,
+        shape,
+        ovms::Layout{"NHWC"});
+
+    auto status = instance->mockValidate(&binaryInputRequest);
+    EXPECT_TRUE(status.ok());
 }
 
-TEST_F(KFSPredictValidation, RequestWrongBatchSizeBinaryInputs) { // TODO
+TEST_F(KFSPredictValidation, RequestWrongBatchSizeBinaryInputs) {
+    std::string inputName = "Binary_Input";
+    ::inference::ModelInferRequest binaryInputRequest;
+
+    auto input = binaryInputRequest.add_inputs();
+    input->set_name(inputName);
+    input->set_datatype("BYTES");
+    const int requestBatchSize = 2;
+    std::string bytes_contents = "BYTES_CONTENTS";
+    for (int i = 0; i < requestBatchSize; i++) {
+        input->mutable_contents()->add_bytes_contents(bytes_contents.c_str(), bytes_contents.size());
+    }
+    input->mutable_shape()->Add(requestBatchSize);
+
+    servableInputs.clear();
+    ovms::shape_t shape = {1, 3, 224, 224};
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+        inputName,
+        ovms::Precision::FP32,
+        shape,
+        ovms::Layout{"NHWC"});
+
+    auto status = instance->mockValidate(&binaryInputRequest);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
 }
 
-TEST_F(KFSPredictValidation, RequestWrongBatchSizeAutoBinaryInputs) { // TODO
+TEST_F(KFSPredictValidation, RequestWrongBatchSizeAutoBinaryInputs) {
+    modelConfig.setBatchingParams("auto");
+    std::string inputName = "Binary_Input";
+    ::inference::ModelInferRequest binaryInputRequest;
+
+    auto input = binaryInputRequest.add_inputs();
+    input->set_name(inputName);
+    input->set_datatype("BYTES");
+    const int requestBatchSize = 2;
+    std::string bytes_contents = "BYTES_CONTENTS";
+    for (int i = 0; i < requestBatchSize; i++) {
+        input->mutable_contents()->add_bytes_contents(bytes_contents.c_str(), bytes_contents.size());
+    }
+    input->mutable_shape()->Add(requestBatchSize);
+
+    servableInputs.clear();
+    ovms::shape_t shape = {1, 3, 224, 224};
+    servableInputs[inputName] = std::make_shared<ovms::TensorInfo>(
+        inputName,
+        ovms::Precision::FP32,
+        shape,
+        ovms::Layout{"NHWC"});
+
+    auto status = instance->mockValidate(&binaryInputRequest);
+    EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED);
 }
-*/
+
 TEST_F(KFSPredictValidation, RequestWrongAndCorrectBatchSizeAuto) {
     modelConfig.setBatchingParams("auto");
 

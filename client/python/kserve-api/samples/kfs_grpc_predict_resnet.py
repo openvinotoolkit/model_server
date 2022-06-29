@@ -145,7 +145,7 @@ if __name__ == '__main__':
                 mark_message = ""
                 if args.get('labels_numpy_path') is not None:
                     total_executed += 1
-                    if ma == lb[i]:
+                    if ma == lbs[i]:
                         matched_count += 1
                         mark_message = "; Correct match."
                     else:
