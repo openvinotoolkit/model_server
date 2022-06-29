@@ -51,7 +51,7 @@ def as_numpy(response, name):
     return None
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using images in numpy format. '
+    parser = argparse.ArgumentParser(description='Sends requests via KFS gRPC API using images in format supported by OpenCV. '
                                                  'It displays performance statistics and optionally the model accuracy')
     parser.add_argument('--images_list', required=False, default='input_images.txt', help='path to a file with a list of labeled images')
     parser.add_argument('--labels_numpy_path', required=False, help='numpy in shape [n,1] - can be used to check model accuracy')
@@ -60,8 +60,6 @@ if __name__ == '__main__':
     parser.add_argument('--input_name',required=False, default='input', help='Specify input tensor name. default: input')
     parser.add_argument('--output_name',required=False, default='resnet_v1_50/predictions/Reshape_1',
                         help='Specify output name. default: resnet_v1_50/predictions/Reshape_1')
-    # If input numpy file has too few frames according to the value of iterations and the batch size, it will be
-    # duplicated to match requested number of frames
     parser.add_argument('--batchsize', default=1,
                         help='Number of images in a single request. default: 1',
                         dest='batchsize')
@@ -69,7 +67,6 @@ if __name__ == '__main__':
                         dest='model_name')
     parser.add_argument('--pipeline_name', default='', help='Define pipeline name, must be same as is in service',
                         dest='pipeline_name')
-    parser.add_argument('--dag-batch-size-auto', default=False, action='store_true', help='add demultiplexer dimension at front', dest='dag-batch-size-auto')
 
     args = vars(parser.parse_args())
 
