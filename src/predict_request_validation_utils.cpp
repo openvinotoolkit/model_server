@@ -26,7 +26,7 @@
 #include "kfs_grpc_inference_service.hpp"
 #include "modelconfig.hpp"
 #include "profiler.hpp"
-#include "tfs_frontend/tfstensorinfo.hpp"
+#include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
 namespace request_validation_utils {

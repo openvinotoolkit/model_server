@@ -16,7 +16,7 @@
 #include "serialization.hpp"
 
 #include "ov_utils.hpp"
-#include "tfs_frontend/tfstensorinfo.hpp"
+#include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
 

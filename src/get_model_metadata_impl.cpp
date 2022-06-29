@@ -19,7 +19,7 @@
 
 #include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
-#include "tfs_frontend/tfstensorinfo.hpp"
+#include "tfs_frontend/tfs_utils.hpp"
 
 using google::protobuf::util::JsonPrintOptions;
 using google::protobuf::util::MessageToJsonString;

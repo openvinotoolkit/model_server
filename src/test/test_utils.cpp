@@ -19,7 +19,7 @@
 
 #include "../prediction_service_utils.hpp"
 #include "../tensorinfo.hpp"
-#include "../tfs_frontend/tfstensorinfo.hpp"
+#include "../tfs_frontend/tfs_utils.hpp"
 
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
