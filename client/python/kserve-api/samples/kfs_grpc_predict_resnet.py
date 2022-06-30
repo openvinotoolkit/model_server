@@ -56,7 +56,6 @@ if __name__ == '__main__':
 
     address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
 
-    #stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     triton_client = grpcclient.InferenceServerClient(
                 url=address,
                 verbose=False)

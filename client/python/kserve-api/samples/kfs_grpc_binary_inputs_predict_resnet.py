@@ -22,8 +22,7 @@ import numpy as np
 import classes
 import datetime
 import argparse
-from client_utils import print_statistics, prepare_certs
-import tritonclient.grpc as grpcclient
+from client_utils import print_statistics
 from tritonclient.grpc import service_pb2, service_pb2_grpc
 from tritonclient.utils import *
 
@@ -71,11 +70,6 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
 
     address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
-
-    #stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-    triton_client = grpcclient.InferenceServerClient(
-                url=address,
-                verbose=False)
 
     processing_times = np.zeros((0),int)
 
@@ -136,7 +130,6 @@ if __name__ == '__main__':
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times,np.array([int(duration)]))
         output = as_numpy(response, args['output_name'])
-        #print(output)
         nu = np.array(output)
         # for object classification models show imagenet class
         print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps'.format(iteration,round(np.average(duration), 2),
@@ -146,11 +139,6 @@ if __name__ == '__main__':
         print("imagenet top results in a single batch:")
         for i in range(nu.shape[0]):
             lbs_i = iteration * batch_size
-            # if is_pipeline_request:
-            #     # shape (1,)
-            #     ma = nu[0] - 1 # indexes needs to be shifted left due to 1x1001 shape
-            # else:
-            # shape (1,1000)
             single_result = nu[[i],...]
             offset = 0
             if nu.shape[1] == 1001:
