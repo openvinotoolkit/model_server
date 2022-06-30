@@ -116,14 +116,11 @@ RUN	set -e ; \
                 "dg2") \
                         dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd ; \
                         apt-get update && apt-get -y install dpkg-dev ; \
-                        WORKDIR="/home/dg2/drivers" ; \
-                        mkdir -p ${WORKDIR} && \
-                            tar -xvf /drivers/dg2/*.tgz -C ${WORKDIR} && \
-                            cd ${WORKDIR}/20.04 && \
+                        cd /drivers/dg2 && \
                             dpkg-scanpackages .  > Packages && \
                             cd - ; \
 
-                        echo "deb [trusted=yes arch=amd64] file:/home/dg2/drivers/20.04 ./" > /etc/apt/sources.list.d/intel-graphics-dg2.list ; \
+                        echo "deb [trusted=yes arch=amd64] file:/drivers/dg2 ./" > /etc/apt/sources.list.d/intel-graphics-dg2.list ; \
                         apt-get update && \
                         apt-get install -y \
                             intel-opencl-icd \
