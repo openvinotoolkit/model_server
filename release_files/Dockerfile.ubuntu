@@ -76,7 +76,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-c"]
 WORKDIR /
 
-COPY drivers/dg2 /drivers/dg2
+COPY drivers /drivers
 
 RUN	set -e ; \
 	set -x ; \
@@ -113,23 +113,19 @@ RUN	set -e ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-level-zero-gpu_1.3.22597_amd64.deb ; \
                         dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
                 ;; \
-                "dg2") \
+                *) \
                         dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd ; \
                         apt-get update && apt-get -y install dpkg-dev ; \
-                        cd /drivers/dg2 && \
+                        cd /drivers/${INSTALL_DRIVER_VERSION} && \
                             dpkg-scanpackages .  > Packages && \
                             cd - ; \
 
-                        echo "deb [trusted=yes arch=amd64] file:/drivers/dg2 ./" > /etc/apt/sources.list.d/intel-graphics-dg2.list ; \
+                        echo "deb [trusted=yes arch=amd64] file:/drivers/${INSTALL_DRIVER_VERSION} ./" > /etc/apt/sources.list.d/intel-graphics-${INSTALL_DRIVER_VERSION}.list ; \
                         apt-get update && \
                         apt-get install -y \
                             intel-opencl-icd \
                             intel-level-zero-gpu level-zero \
                             intel-media-va-driver-non-free libmfx1 ; \
-                ;; \
-                        *) \
-                        echo "ERROR: Unrecognized driver ${INSTALL_DRIVER_VERSION}." ; \
-                        exit 1 ; \
                 esac ; \
 	fi ; \
 	apt clean ; \
