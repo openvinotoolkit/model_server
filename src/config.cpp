@@ -24,6 +24,7 @@
 #include <boost/algorithm/string.hpp>
 #include <sysexits.h>
 
+#include "logging.hpp"
 #include "version.hpp"
 
 namespace ovms {

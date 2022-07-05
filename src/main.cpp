@@ -14,8 +14,11 @@
 // limitations under the License.
 //*****************************************************************************
 
-int server_main(int argc, char** argv);
+#include "server.hpp"
+
+using ovms::Server;
 
 int main(int argc, char** argv) {
-    return server_main(argc, argv);
+    Server& server = Server::instance();
+    return server.start(argc, argv);
 }

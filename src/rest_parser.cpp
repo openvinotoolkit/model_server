@@ -98,7 +98,7 @@ bool RestParser::parseSpecialInput(rapidjson::Value& doc, tensorflow::TensorProt
     return false;
 }
 
-bool isBinary(const rapidjson::Value& value) {
+static bool isBinary(const rapidjson::Value& value) {
     if (!value.IsObject()) {
         return false;
     }
