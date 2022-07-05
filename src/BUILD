@@ -176,6 +176,8 @@ cc_library(
         "schema.cpp",
         "serialization.cpp",
         "serialization.hpp",
+        "servablemanagermodule.cpp",
+        "servablemanagermodule.hpp",
         "server.cpp",
         "server.hpp",
         "session_id.hpp",

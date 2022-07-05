@@ -26,6 +26,8 @@
 #include "pipelinedefinition.hpp"
 #include "prediction_service_utils.hpp"
 #include "serialization.hpp"
+#include "servablemanagermodule.hpp"
+#include "server.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
 
@@ -47,7 +49,7 @@ const std::string PLATFORM = "OpenVINO";
     (void)context;
     (void)request;
     (void)response;
-    response->set_live(true);
+    response->set_live(this->ovmsServer.isLive());
     return grpc::Status::OK;
 }
 
@@ -55,11 +57,11 @@ const std::string PLATFORM = "OpenVINO";
     (void)context;
     (void)request;
     (void)response;
-    std::cout << __FUNCTION__ << ":" << __LINE__ << std::endl;
-    return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    response->set_ready(this->ovmsServer.isReady());
+    return grpc::Status::OK;
 }
 
-Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, ModelManager& manager) {
+Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, const ModelManager& manager) {
     // Return in response true/false
     // if no version requested give response for default version
     const auto& name = request->name();
@@ -103,7 +105,13 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
 
 ::grpc::Status KFSInferenceServiceImpl::ModelReady(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response) {
     (void)context;
-    auto& manager = ModelManager::getInstance();
+    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == module) {
+        return grpc::Status(grpc::StatusCode::NOT_FOUND, SERVABLE_MANAGER_MODULE_NAME + " module not started yet");
+    }
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    // TODO if not succeed then return error
+    auto& manager = servableManagerModule->getServableManager();
     return this->getModelReady(request, response, manager).grpc();
 }
 
@@ -236,6 +244,9 @@ Status KFSInferenceServiceImpl::buildResponse(
 
     return StatusCode::OK;
 }
+
+KFSInferenceServiceImpl::KFSInferenceServiceImpl(const Server& server) :
+    ovmsServer(server) {}
 
 Status KFSInferenceServiceImpl::buildResponse(
     PipelineDefinition& pipelineDefinition,

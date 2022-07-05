@@ -1,4 +1,4 @@
-//*****************************************************************************
+//****************************************************************************
 // Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,11 +41,18 @@
 #include "modelmanager.hpp"
 #include "prediction_service.hpp"
 #include "profiler.hpp"
+#include "servablemanagermodule.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 
 using grpc::ServerBuilder;
 
+namespace ovms {
+const std::string PROFILER_MODULE_NAME = "ProfilerModule";
+const std::string GRPC_SERVER_MODULE_NAME = "GRPCServerModule";
+const std::string HTTP_SERVER_MODULE_NAME = "HTTPServerModule";
+const std::string SERVABLE_MANAGER_MODULE_NAME = "ServableManagerModule";
+}  // namespace ovms
 using namespace ovms;
 
 namespace {
@@ -178,6 +185,8 @@ ModuleState Module::getState() const {
 }
 
 class ServableManagerModule : public Module {
+    ModelManager servableManager;
+
 public:
     int start(const ovms::Config& config) override {
         state = ModuleState::STARTED_INITIALIZE;
@@ -195,16 +204,22 @@ public:
         ModelManager::getInstance().join();
         state = ModuleState::SHUTDOWN;
     }
+    ModelManager& getServableManager() {
+        return servableManager;
+    }
 };
 
 class GRPCServerModule : public Module {
+    const Server& server;
     PredictionServiceImpl tfsPredictService;
     ModelServiceImpl tfsModelService;
     KFSInferenceServiceImpl kfsGrpcInferenceService;
     std::vector<std::unique_ptr<grpc::Server>> servers;
 
 public:
-    GRPCServerModule() {}
+    GRPCServerModule(const Server& server) :
+        server(server),
+        kfsGrpcInferenceService(this->server) {}
     int start(const ovms::Config& config) override {
         state = ModuleState::STARTED_INITIALIZE;
         std::vector<GrpcChannelArgument> channel_arguments;
@@ -237,7 +252,6 @@ public:
                 SPDLOG_WARN("Out of range parameter {} : {}", channel_argument.key, channel_argument.value);
             }
         }
-
         uint grpcServersCount = getGRPCServersCount(config);
         servers.reserve(grpcServersCount);
         SPDLOG_DEBUG("Starting gRPC servers: {}", grpcServersCount);
@@ -305,6 +319,25 @@ public:
     }
 };
 
+bool Server::isReady() const {
+    auto it = modules.find("ServableManagerModule");
+    if (it == modules.end())
+        return false;
+    if (ModuleState::INITIALIZED != it->second->getState())
+        return false;
+    return true;
+}
+
+bool Server::isLive() const {
+    // TODO we might want at some time start REST only/ or respond with true only if both servers started if both are requested to start. This is to be resolved especially if we implement REST API for Kserver & potentially switch to check for starting specific module
+    auto it = modules.find("GRPCServerModule");
+    if (it == modules.end())
+        return false;
+    if (ModuleState::INITIALIZED != it->second->getState())
+        return false;
+    return true;
+}
+
 ModuleState Server::getModuleState(const std::string& name) const {
     auto it = modules.find(name);
     if (it == modules.end())
@@ -312,13 +345,20 @@ ModuleState Server::getModuleState(const std::string& name) const {
     return it->second->getState();
 }
 
+const Module* Server::getModule(const std::string& name) const {
+    auto it = modules.find(name);
+    if (it == modules.end())
+        return nullptr;
+    return it->second.get();
+}
+
+#ifdef MTR_ENABLED
 class ProfilerModule : public Module {
     std::unique_ptr<Profiler> profiler;
 
 public:
     ProfilerModule() = default;
     int start(const Config& config) override {
-#ifdef MTR_ENABLED
         state = ModuleState::STARTED_INITIALIZE;
         auto profiler = std::make_unique<Profiler>(config.tracePath());
         if (!profiler.isInitialized()) {
@@ -326,7 +366,6 @@ public:
             return EXIT_FAILURE;
         }
         state = ModuleState::INITIALIZED;
-#endif
         return EXIT_SUCCESS;
     }
     void shutdown() override {
@@ -337,9 +376,26 @@ public:
 #endif
     }
 };
+#endif
 
 void Server::setShutdownRequest(int i) {
     shutdown_request = 1;
+}
+
+Server::~Server() = default;
+
+std::unique_ptr<Module> Server::createModule(const std::string& name) const {
+#ifdef MTR_ENABLED
+    if (name == PROFILER_MODULE_NAME)
+        return std::make_unique<ProfilerModule>();
+#endif
+    if (name == GRPC_SERVER_MODULE_NAME)
+        return std::make_unique<GRPCServerModule>(*this);
+    if (name == HTTP_SERVER_MODULE_NAME)
+        return std::make_unique<HTTPServerModule>();
+    if (name == SERVABLE_MANAGER_MODULE_NAME)
+        return std::make_unique<ServableManagerModule>();
+    return nullptr;
 }
 
 int Server::start(int argc, char** argv) {
@@ -349,24 +405,28 @@ int Server::start(int argc, char** argv) {
     try {
         auto& config = ovms::Config::instance().parse(argc, argv);
         configure_logger(config.logLevel(), config.logPath());
+        bool inserted = false;
+        auto it = modules.end();
 #ifdef MTR_ENABLED
-        this->modules.emplace("ProfilerModule", std::make_unique<ProfilerModule>());
-        retCode = modules.at("ProfilerModule")->start(config);
+        std::tie(it, inserted) = this->modules.emplace(PROFILER_MODULE_NAME, this->createModule(PROFILER_MODULE_NAME));
+        retCode = modules.at(PROFILER_MODULE_NAME)->start(config);
         if (retCode)
             return retCode;
 #endif
-        this->modules.emplace(std::string("GRPCServerModule"), std::make_unique<GRPCServerModule>());
-        retCode = modules.at("GRPCServerModule")->start(config);
+        std::tie(it, inserted) = this->modules.emplace(GRPC_SERVER_MODULE_NAME, this->createModule(GRPC_SERVER_MODULE_NAME));
+        if (!inserted)
+            return EXIT_FAILURE;
+        retCode = it->second->start(config);
         if (retCode)
             return retCode;
         if (config.restPort() != 0) {
-            this->modules.emplace("HTTPServerModule", std::make_unique<HTTPServerModule>());
-            retCode = modules.at("HTTPServerModule")->start(config);
+            std::tie(it, inserted) = this->modules.emplace(HTTP_SERVER_MODULE_NAME, this->createModule(HTTP_SERVER_MODULE_NAME));
+            retCode = it->second->start(config);
             if (retCode)
                 return retCode;
         }
-        this->modules.emplace("ServableManagerModule", std::make_unique<ServableManagerModule>());
-        retCode = modules.at("ServableManagerModule")->start(config);
+        std::tie(it, inserted) = this->modules.emplace(SERVABLE_MANAGER_MODULE_NAME, this->createModule(SERVABLE_MANAGER_MODULE_NAME));
+        retCode = it->second->start(config);
         if (retCode)
             return retCode;
         while (!shutdown_request) {
@@ -376,12 +436,12 @@ int Server::start(int argc, char** argv) {
             SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
         }
         SPDLOG_INFO("Shutting down");
-        modules.at("GRPCServerModule")->shutdown();
+        modules.at(GRPC_SERVER_MODULE_NAME)->shutdown();
         if (config.restPort() != 0)
-            modules.at("HTTPServerModule")->shutdown();
-        modules.at("ServableManagerModule")->shutdown();
+            modules.at(HTTP_SERVER_MODULE_NAME)->shutdown();
+        modules.at(SERVABLE_MANAGER_MODULE_NAME)->shutdown();
 #ifdef MTR_ENABLED
-        modules.at("ProfilerModule")->shutdown();
+        modules.at(PROFILER_MODULE_NAME)->shutdown();
 #endif
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());

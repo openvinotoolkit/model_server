@@ -29,9 +29,15 @@
 #include "../modelmanager.hpp"
 #include "../node_library.hpp"
 #include "../prediction_service_utils.hpp"
+#include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
+
+using ovms::ModelManager;
+using ovms::Module;
+using ovms::ModuleState;
+using ovms::Server;
 
 using testing::_;
 using testing::ContainerEq;
@@ -66,9 +72,25 @@ public:
         ASSERT_EQ(status.error_code(), expectedStatus);
         EXPECT_EQ(response.live(), alive);
     }
+    void verifyReady(grpc::StatusCode expectedStatus = grpc::StatusCode::OK, bool ready = true) {
+        ClientContext context;
+        ::inference::ServerReadyRequest request;
+        ::inference::ServerReadyResponse response;
 
-private:
-    ::inference::ServerLiveRequest request;
+        auto status = stub_->ServerReady(&context, request, &response);
+        ASSERT_EQ(status.error_code(), expectedStatus);
+        EXPECT_EQ(response.ready(), ready);
+    }
+    void verifyModelReady(const std::string& modelName, grpc::StatusCode expectedStatus = grpc::StatusCode::OK, bool ready = true) {
+        ClientContext context;
+        ::inference::ModelReadyRequest request;
+        ::inference::ModelReadyResponse response;
+        request.set_name(modelName);
+
+        auto status = stub_->ModelReady(&context, request, &response);
+        ASSERT_EQ(status.error_code(), expectedStatus);
+        EXPECT_EQ(response.ready(), ready);
+    }
 };
 
 void requestServerAlive(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
@@ -77,11 +99,69 @@ void requestServerAlive(const char* grpcPort, grpc::StatusCode status = grpc::St
     ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args));
     client.verifyLive(status, expectedStatus);
 }
+void requestServerReady(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
+    grpc::ChannelArguments args;
+    std::string address = std::string("localhost") + ":" + grpcPort;
+    SPDLOG_DEBUG("Verying if server is ready on address: {}", address);
+    ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args));
+    client.verifyReady(status, expectedStatus);
+}
+
+void requestModelReady(const char* grpcPort, const std::string& modelName, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
+    grpc::ChannelArguments args;
+    std::string address = std::string("localhost") + ":" + grpcPort;
+    SPDLOG_DEBUG("Verying if server is ready on address: {}", address);
+    ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args));
+    client.verifyModelReady(modelName, status, expectedStatus);
+}
 
 TEST(Server, ServerNotAliveBeforeStart) {
     // here we should fail to connect before starting server
     requestServerAlive("9178", grpc::StatusCode::UNAVAILABLE, false);
 }
+
+class MockedServableManagerModule : public ovms::ServableManagerModule {
+public:
+    bool waitWithStart = true;
+    bool waitWithChangingState = true;
+    MockedServableManagerModule() = default;
+    int start(const ovms::Config& config) override {
+        state = ModuleState::STARTED_INITIALIZE;
+        while (waitWithStart)  // TODO add 3s failsafe
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        auto status = this->servableManager->start(config);
+        if (status.ok()) {
+            while (waitWithChangingState)
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+            state = ModuleState::INITIALIZED;
+            return EXIT_SUCCESS;
+        }
+        SPDLOG_ERROR("ovms::ModelManager::Start() Error: {}", status.string());
+        return EXIT_FAILURE;
+    }
+};
+
+class MockedServer : public Server {
+protected:
+    MockedServer() = default;
+
+public:
+    static MockedServer& instance() {
+        static MockedServer global;
+        return global;
+    }
+    std::unique_ptr<Module> createModule(const std::string& name) const override {
+        if (name != ovms::SERVABLE_MANAGER_MODULE_NAME)
+            return Server::createModule(name);
+        return std::make_unique<MockedServableManagerModule>();
+    };
+    Module* getModule(const std::string& name) {
+        return const_cast<Module*>(Server::getModule(name));
+    }
+};
+
+using ovms::SERVABLE_MANAGER_MODULE_NAME;
 
 TEST(Server, ServerAliveBeforeLoadingModels) {
     // purpose of this test is to ensure that the server responds with alive=true before loading any models.
@@ -102,20 +182,57 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
         (char*)"dummy",
         (char*)"--model_path",
         (char*)"/ovms/src/test/dummy",
+        (char*)"--log_level",
+        (char*)"DEBUG",
         (char*)"--port",
         (char*)port.c_str(),
         nullptr};
-    requestServerAlive(argv[6], grpc::StatusCode::UNAVAILABLE, false);
-    ovms::Server& server = ovms::Server::instance();
+
+    // start testing
+    requestServerAlive(argv[8], grpc::StatusCode::UNAVAILABLE, false);
+    MockedServer& server = MockedServer::instance();
     std::thread t([&argv, &server]() {
-        server.start(7, argv);
+        ASSERT_EQ(EXIT_SUCCESS, server.start(9, argv));
     });
     auto start = std::chrono::high_resolution_clock::now();
-    while ((ovms::Server::instance().getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
+    while ((server.getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
     }
-    requestServerAlive(argv[6], grpc::StatusCode::OK, true);
-    ovms::Server::instance().setShutdownRequest(1);
+
+    // here ensure that server is already live but not ready yeet TODO
+    requestServerAlive(argv[8], grpc::StatusCode::OK, true);
+    requestServerReady(argv[8], grpc::StatusCode::OK, false);
+    requestModelReady(argv[8], argv[2], grpc::StatusCode::NOT_FOUND, false);
+
+    // here check that model & server still is not ready since servable manager module only started loading
+    // we have to wait for module to start loading
+    while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) == ovms::ModuleState::NOT_INITIALIZED) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
+    }
+    requestModelReady(argv[8], argv[2], grpc::StatusCode::NOT_FOUND, false);
+    auto mockedServableManagerModule = dynamic_cast<MockedServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
+    ASSERT_NE(nullptr, mockedServableManagerModule);
+
+    // here we start loading model
+    // however modelmanager adds instance of the model only after it was properly loaded
+    // this could be potentially changed TODO
+    mockedServableManagerModule->waitWithStart = false;
+    requestServerReady(argv[8], grpc::StatusCode::OK, false);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));  // average:32ms on CLX3
+    requestModelReady(argv[8], argv[2], grpc::StatusCode::NOT_FOUND, false);
+
+    // here check that server eventually is still not ready beceause module is not initialized
+    // sleep potentially to improve with signaling
+    std::this_thread::sleep_for(std::chrono::milliseconds(70));  // average:32ms on CLX3
+    requestModelReady(argv[8], argv[2], grpc::StatusCode::OK, true);
+    requestServerReady(argv[8], grpc::StatusCode::OK, false);
+
+    // here check that server is finally ready
+    mockedServableManagerModule->waitWithChangingState = false;
+    requestServerReady(argv[8], grpc::StatusCode::OK, false);
+    server.setShutdownRequest(1);
     t.join();
-    requestServerAlive(argv[6], grpc::StatusCode::UNAVAILABLE, false);
+    requestModelReady(argv[8], argv[2], grpc::StatusCode::UNAVAILABLE, false);
+    requestServerReady(argv[8], grpc::StatusCode::UNAVAILABLE, false);
+    requestServerAlive(argv[8], grpc::StatusCode::UNAVAILABLE, false);
 }
