@@ -47,8 +47,8 @@ const std::string PLATFORM = "OpenVINO";
     (void)context;
     (void)request;
     (void)response;
-    std::cout << __FUNCTION__ << ":" << __LINE__ << std::endl;
-    return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    response->set_live(true);
+    return grpc::Status::OK;
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ServerReady(::grpc::ServerContext* context, const ::inference::ServerReadyRequest* request, ::inference::ServerReadyResponse* response) {

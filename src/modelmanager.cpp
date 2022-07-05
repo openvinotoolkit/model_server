@@ -141,8 +141,7 @@ void ModelManager::logPluginConfiguration() {
 
 ModelManager::~ModelManager() = default;
 
-Status ModelManager::start() {
-    auto& config = ovms::Config::instance();
+Status ModelManager::start(const Config& config) {
     watcherIntervalSec = config.filesystemPollWaitSeconds();
     sequenceCleaupIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
     resourcesCleanupIntervalSec = config.resourcesCleanerPollWaitSeconds();
