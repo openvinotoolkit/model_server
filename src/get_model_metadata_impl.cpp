@@ -17,7 +17,9 @@
 
 #include <google/protobuf/util/json_util.h>
 
+#include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
+#include "tfs_frontend/tfs_utils.hpp"
 
 using google::protobuf::util::JsonPrintOptions;
 using google::protobuf::util::MessageToJsonString;
@@ -96,7 +98,7 @@ void GetModelMetadataImpl::convert(
     for (const auto& [name, tensor] : from) {
         auto& input = (*to)[name];
 
-        input.set_dtype(tensor->getPrecisionAsDataType());
+        input.set_dtype(getPrecisionAsDataType(tensor->getPrecision()));
 
         // Since this method is used for models and pipelines we cannot rely on tensor getMappedName().
         // In both cases we can rely on tensor_map key values as final names.
@@ -107,10 +109,6 @@ void GetModelMetadataImpl::convert(
             if (dim.isStatic()) {
                 input.mutable_tensor_shape()->add_dim()->set_size(dim.getStaticValue());
             } else {
-                // TODO: Add more detailed information about dimension.
-                // Possible range and name of dimension.
-                // Use TensorShapeProto_Dim::name string field.
-                // JIRA: https://jira.devtools.intel.com/browse/CVS-74881
                 input.mutable_tensor_shape()->add_dim()->set_size(DYNAMIC_DIMENSION);
             }
         }

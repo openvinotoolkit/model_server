@@ -30,8 +30,6 @@
 #include <rapidjson/document.h>
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
-// TODO consider forward declare
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 
 #include "custom_node_library_internal_manager_wrapper.hpp"
 #include "customloaders.hpp"

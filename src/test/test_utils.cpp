@@ -19,6 +19,7 @@
 
 #include "../prediction_service_utils.hpp"
 #include "../tensorinfo.hpp"
+#include "../tfs_frontend/tfs_utils.hpp"
 
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
@@ -40,7 +41,7 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
         auto [shape, precision] = it.second;
 
         auto& input = (*request.mutable_inputs())[name];
-        auto datatype = TensorInfo::getPrecisionAsDataType(precision);
+        auto datatype = getPrecisionAsDataType(precision);
         input.set_dtype(datatype);
         size_t numberOfElements = 1;
         for (auto const& dim : shape) {
@@ -74,7 +75,6 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
         }
         default: {
             if (data.size() == 0) {
-                // TODO in case of DT_HALF & DT_UINT16 we add tensor content two times
                 *input.mutable_tensor_content() = std::string(numberOfElements * tensorflow::DataTypeSize(datatype), '1');
             } else {
                 std::string content;

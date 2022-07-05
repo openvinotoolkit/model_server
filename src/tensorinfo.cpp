@@ -13,20 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include "tensorinfo.hpp"
+
 #include <map>
 #include <memory>
 #include <sstream>
 #include <string>
 #include <unordered_map>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-
+#include "kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
-#include "tensorinfo.hpp"
 
 namespace ovms {
 
@@ -125,36 +121,6 @@ void TensorInfo::setPrecision(const ovms::Precision& requestedPrecision) {
     precision = requestedPrecision;
 }
 
-tensorflow::DataType TensorInfo::getPrecisionAsDataType() const {
-    return getPrecisionAsDataType(precision);
-}
-
-tensorflow::DataType TensorInfo::getPrecisionAsDataType(Precision precision) {
-    static std::unordered_map<Precision, tensorflow::DataType> precisionMap{
-        {Precision::FP32, tensorflow::DataType::DT_FLOAT},
-        {Precision::FP64, tensorflow::DataType::DT_DOUBLE},
-        {Precision::FP16, tensorflow::DataType::DT_HALF},
-        {Precision::I64, tensorflow::DataType::DT_INT64},
-        {Precision::I32, tensorflow::DataType::DT_INT32},
-        {Precision::I16, tensorflow::DataType::DT_INT16},
-        {Precision::I8, tensorflow::DataType::DT_INT8},
-        {Precision::U64, tensorflow::DataType::DT_UINT64},
-        {Precision::U16, tensorflow::DataType::DT_UINT16},
-        {Precision::U8, tensorflow::DataType::DT_UINT8},
-        //    {Precision::MIXED, tensorflow::DataType::DT_INVALID},
-        //    {Precision::Q78, tensorflow::DataType::DT_INVALID},
-        //    {Precision::BIN, tensorflow::DataType::DT_INVALID},
-        {Precision::BOOL, tensorflow::DataType::DT_BOOL}
-        //    {Precision::CUSTOM, tensorflow::DataType::DT_INVALID}
-    };
-    auto it = precisionMap.find(precision);
-    if (it == precisionMap.end()) {
-        // TODO missing precisions
-        return tensorflow::DataType::DT_INVALID;
-    }
-    return it->second;
-}
-
 std::string TensorInfo::getPrecisionAsString(Precision precision) {
     return toString(precision);
 }
@@ -173,37 +139,6 @@ std::string TensorInfo::getPrecisionAsKFSPrecision(Precision precision) {
 
 std::string TensorInfo::getPrecisionAsKFSPrecision() const {
     return getPrecisionAsKFSPrecision(precision);
-}
-
-const std::string TensorInfo::getDataTypeAsString(tensorflow::DataType dataType) {
-    switch (dataType) {
-    case tensorflow::DataType::DT_FLOAT:
-        return "FP32";
-    case tensorflow::DataType::DT_DOUBLE:
-        return "FP64";
-    case tensorflow::DataType::DT_INT32:
-        return "I32";
-    case tensorflow::DataType::DT_INT8:
-        return "I8";
-    case tensorflow::DataType::DT_UINT8:
-        return "U8";
-    case tensorflow::DataType::DT_HALF:
-        return "FP16";
-    case tensorflow::DataType::DT_INT16:
-        return "I16";
-    case tensorflow::DataType::DT_UINT16:
-        return "U16";
-    case tensorflow::DataType::DT_UINT64:
-        return "U64";
-    case tensorflow::DataType::DT_INT64:
-        return "I64";
-    case tensorflow::DataType::DT_BOOL:
-        return "BOOL";
-    case tensorflow::DataType::DT_STRING:
-        return "STRING";
-    default:
-        return "DT_INVALID";
-    }
 }
 
 std::string TensorInfo::getStringFromLayout(const Layout& layout) {
@@ -311,22 +246,7 @@ std::string TensorInfo::shapeToString(const shape_t& shape) {
     return oss.str();
 }
 
-std::string TensorInfo::tensorShapeToString(const tensorflow::TensorShapeProto& tensorShape) {
-    std::ostringstream oss;
-    oss << "(";
-    int i = 0;
-    if (tensorShape.dim_size() > 0) {
-        for (; i < tensorShape.dim_size() - 1; i++) {
-            oss << tensorShape.dim(i).size() << ",";
-        }
-        oss << tensorShape.dim(i).size();
-    }
-    oss << ")";
-
-    return oss.str();
-}
-
-std::string TensorInfo::tensorShapeToString(const google::protobuf::RepeatedField<int64_t>& shape) {
+std::string tensorShapeToString(const google::protobuf::RepeatedField<int64_t>& shape) {
     std::ostringstream oss;
     oss << "(";
     size_t i = 0;

@@ -35,7 +35,6 @@ class ModelManager;
 class Pipeline;
 
 using pipeline_connections_t = std::unordered_map<std::string, std::unordered_map<std::string, Aliases>>;
-using tensor_map_t = std::map<std::string, std::shared_ptr<TensorInfo>>;
 using parameters_t = std::unordered_map<std::string, std::string>;
 
 enum class NodeKind {

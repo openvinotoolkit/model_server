@@ -163,8 +163,6 @@ const Status EntryNode<::inference::ModelInferRequest>::validate() {
         optionalInputNames);  // Pipelines are not versioned and always reports version 1
 }
 
-// TODO move this declarations outside entrynode.cpp in the future together with KFS RequestType for faster
-// incremental compilation
 template Status EntryNode<tensorflow::serving::PredictRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
 template Status EntryNode<::inference::ModelInferRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
 template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);

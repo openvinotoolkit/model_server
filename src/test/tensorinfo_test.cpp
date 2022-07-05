@@ -47,7 +47,7 @@ TEST(TensorInfo, Intersection) {
     intersect = first->createIntersection(*second);
     ASSERT_NE(intersect, nullptr);
     EXPECT_TRUE(intersect->isTensorSpecEqual(*second)) << intersect->asString();
-    // default layout should match any // TODO this is intentional for now until stricter layout checking implementation
+    // default layout should match any
     first = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, Dimension::any(), {220, 225}, {200, 300}}), Layout::getDefaultLayout());
     second = std::make_shared<TensorInfo>("a", "b", Precision::FP32, Shape({1, Dimension::any(), {220, 225}, {200, 300}}), Layout{"NCHW"});
     intersect = first->createIntersection(*second);

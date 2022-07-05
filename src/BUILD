@@ -194,6 +194,8 @@ cc_library(
         "queue.hpp",
         "tensorinfo.cpp",
         "tensorinfo.hpp",
+        "tfs_frontend/tfs_utils.cpp",
+        "tfs_frontend/tfs_utils.hpp",
         "tensormap.hpp",
         "tensor_utils.hpp",
         "threadsafequeue.hpp",

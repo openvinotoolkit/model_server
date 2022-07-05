@@ -26,6 +26,7 @@
 #include "kfs_grpc_inference_service.hpp"
 #include "modelconfig.hpp"
 #include "profiler.hpp"
+#include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
 namespace request_validation_utils {
@@ -239,7 +240,7 @@ Status RequestValidator<RequestType, InputTensorType, InputTensorIteratorType, S
     for (size_t i = 0; i < rsi.getShapeSize(); i++) {
         if (rsi.getDim(i) <= 0) {
             std::stringstream ss;
-            ss << "Negative or zero dimension size is not acceptable: " << TensorInfo::tensorShapeToString(rsi.getShape()) << "; input name: " << getCurrentlyValidatedInputName();
+            ss << "Negative or zero dimension size is not acceptable: " << tensorShapeToString(rsi.getShape()) << "; input name: " << getCurrentlyValidatedInputName();
             const std::string details = ss.str();
             SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", servableName, servableVersion, details);
             return Status(StatusCode::INVALID_SHAPE, details);
@@ -379,7 +380,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
     } else {
         std::stringstream ss;
         ss << "Expected: " << inputInfo.getShape().toString()
-           << "; Actual: " << TensorInfo::tensorShapeToString(rsi.getShape())
+           << "; Actual: " << tensorShapeToString(rsi.getShape())
            << "; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", servableName, servableVersion, details);
@@ -528,7 +529,7 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
         shape.size() != static_cast<size_t>(proto.tensor_shape().dim_size())) {
         std::stringstream ss;
         ss << "Expected: " << shape.toString()
-           << "; Actual: " << TensorInfo::tensorShapeToString(proto.tensor_shape())
+           << "; Actual: " << tensorShapeToString(proto.tensor_shape())
            << "; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of shape dimensions - {}", servableName, servableVersion, details);
@@ -545,7 +546,7 @@ Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIterat
         shape.size() != static_cast<size_t>(proto.shape().size())) {
         std::stringstream ss;
         ss << "Expected: " << shape.toString()
-           << "; Actual: " << TensorInfo::tensorShapeToString(proto.shape())
+           << "; Actual: " << tensorShapeToString(proto.shape())
            << "; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of shape dimensions - {}", servableName, servableVersion, details);
@@ -556,10 +557,10 @@ Status RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIterat
 
 template <>
 Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>::validatePrecision(const ovms::TensorInfo& inputInfo, const TFSInputTensorType& proto) const {
-    if (proto.dtype() != inputInfo.getPrecisionAsDataType()) {
+    if (proto.dtype() != getPrecisionAsDataType(inputInfo.getPrecision())) {
         std::stringstream ss;
         ss << "Expected: " << inputInfo.getPrecisionAsString()
-           << "; Actual: " << TensorInfo::getDataTypeAsString(proto.dtype())
+           << "; Actual: " << getDataTypeAsString(proto.dtype())
            << "; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid precision - {}", servableName, servableVersion, details);
@@ -605,7 +606,6 @@ bool RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterator
     return false;
 }
 
-// TODO verify/implement for KFS binary inputs
 template <>
 bool RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::checkIfBinaryInputUsed(const KFSInputTensorType& proto, const std::string inputName) const {
     if (proto.datatype() == "BYTES") {

@@ -21,16 +21,19 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/get_model_metadata.pb.h"
+#include "tensorflow/core/framework/tensor.h"
+#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "modelmanager.hpp"
 #include "status.hpp"
+#include "tensorinfo.hpp"
 
 namespace ovms {
 
 using proto_signature_map_t = google::protobuf::Map<std::string, tensorflow::TensorInfo>;
 
+class ModelInstance;
+class ModelManager;
 class PipelineDefinition;
 
 class GetModelMetadataImpl {

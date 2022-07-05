@@ -19,6 +19,7 @@
 #include <string>
 
 #include "rest_utils.hpp"
+#include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
 
@@ -28,7 +29,7 @@ RestParser::RestParser(const tensor_map_t& tensors) {
         const auto& tensor = kv.second;
         tensorPrecisionMap[name] = tensor->getPrecision();
         auto& input = (*requestProto.mutable_inputs())[name];
-        input.set_dtype(tensor->getPrecisionAsDataType());
+        input.set_dtype(getPrecisionAsDataType(tensor->getPrecision()));
 
         auto fold = [](size_t a, const Dimension& b) {
             if (b.isDynamic()) {
@@ -46,7 +47,7 @@ RestParser::RestParser(const tensor_map_t& tensors) {
                                                     tensor->getShape().cend(),
                                                     1,
                                                     fold) *
-                                                DataTypeSize(tensor->getPrecisionAsDataType()));
+                                                DataTypeSize(getPrecisionAsDataType(tensor->getPrecision())));
     }
 }
 
@@ -460,7 +461,7 @@ bool RestParser::setDTypeIfNotSet(const rapidjson::Value& value, tensorflow::Ten
     else
         return false;
 
-    proto.set_dtype(TensorInfo::getPrecisionAsDataType(tensorPrecisionMap[tensorName]));
+    proto.set_dtype(getPrecisionAsDataType(tensorPrecisionMap[tensorName]));
     return true;
 }
 

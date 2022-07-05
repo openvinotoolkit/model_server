@@ -16,6 +16,7 @@
 #include "serialization.hpp"
 
 #include "ov_utils.hpp"
+#include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
 
@@ -40,14 +41,14 @@ Status serializePrecision(
     case ovms::Precision::U16:
     case ovms::Precision::FP16:
     case ovms::Precision::I64:
-        responseOutput.set_dtype(servableOutput->getPrecisionAsDataType());
+        responseOutput.set_dtype(getPrecisionAsDataType(servableOutput->getPrecision()));
         break;
 
-    case ovms::Precision::Q78:  // TODO: This does not exist in OV 2.0
-    case ovms::Precision::BIN:  // TODO: This does not exist in OV 2.0
+    case ovms::Precision::Q78:
+    case ovms::Precision::BIN:
     case ovms::Precision::BOOL:
-    case ovms::Precision::MIXED:   // TODO: This does not exist in OV 2.0
-    case ovms::Precision::CUSTOM:  // TODO: This does not exist in OV 2.0
+    case ovms::Precision::MIXED:
+    case ovms::Precision::CUSTOM:
     default: {
         Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
         SPDLOG_ERROR(status.string());
