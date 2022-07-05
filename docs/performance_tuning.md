@@ -171,6 +171,7 @@ Recommended steps to investigate achievable performance and discover bottlenecks
 1. [Launch OV benchmark app](https://docs.openvino.ai/latest/openvino_inference_engine_tools_benchmark_tool_README.html?highlight=benchmark)
 
 **Note:** It is useful to drop plugin configuration from benchmark app using `-dump_config` and then use the same plugin configuration in model loaded into OVMS
+
 **Note:** When launching benchmark app use `-inference_only=false`. Otherwise OV avoids setting input tensor of inference each time which is not comparable flow to OVMS.
 2. [Launch OVMS benchmark client](https://docs.openvino.ai/latest/ovms_demo_benchmark_client.html) on the same machine as OVMS
 3. [Launch OVMS benchmark client](https://docs.openvino.ai/latest/ovms_demo_benchmark_client.html) from remote machine
