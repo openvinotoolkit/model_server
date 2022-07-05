@@ -38,6 +38,13 @@ def load_img(path):
     img_f = img_f.transpose(2,0,1).reshape(1,3,img_f.shape[0], img_f.shape[1])
     return img, {"x": img_f}
 
+def get_mask(img, segmentation_output):
+    mask = np.zeros(img.shape, np.uint8)
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            mask[i, j] = colors[segmentation_output[0, i, j]]
+    return mask
+
 def build_parser():
     parser = argparse.ArgumentParser(description='Client for OCR pipeline')
     parser.add_argument('--grpc_address', required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
@@ -54,12 +61,9 @@ if __name__ == "__main__":
     img, input = load_img(img_path)
 
     client = make_grpc_client(address)
-    output = client.predict(input, "ocrnet")
+    segmentation_output = client.predict(input, "ocrnet")
 
-    mask = np.zeros(img.shape, np.uint8)
-    for i in range(img.shape[0]):
-        for j in range(img.shape[1]):
-            mask[i, j] = colors[output[0, i, j]]
+    mask = get_mask(img, segmentation_output)
     img = cv2.addWeighted(img, .5, mask, .5, 0)
             
                 
