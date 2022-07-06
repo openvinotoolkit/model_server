@@ -1,4 +1,4 @@
-//*****************************************************************************
+//****************************************************************************
 // Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -110,13 +110,16 @@ void logConfig(const Config& config) {
     SPDLOG_INFO(PROJECT_NAME);
     SPDLOG_INFO("OpenVINO backend {}", OPENVINO_NAME);
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
+    SPDLOG_ERROR("ER");
     if (config.configPath().empty()) {
+    SPDLOG_ERROR("ER");
         SPDLOG_DEBUG("model_path: {}", config.modelPath());
         SPDLOG_DEBUG("model_name: {}", config.modelName());
         SPDLOG_DEBUG("batch_size: {}", config.batchSize());
         SPDLOG_DEBUG("shape: {}", config.shape());
         SPDLOG_DEBUG("model_version_policy: {}", config.modelVersionPolicy());
         SPDLOG_DEBUG("nireq: {}", config.nireq());
+    SPDLOG_ERROR("ER");
         SPDLOG_DEBUG("target_device: {}", config.targetDevice());
         SPDLOG_DEBUG("plugin_config: {}", config.pluginConfig());
         SPDLOG_DEBUG("stateful: {}", config.stateful());
@@ -124,19 +127,27 @@ void logConfig(const Config& config) {
         SPDLOG_DEBUG("max_sequence_number: {}", config.maxSequenceNumber());
         SPDLOG_DEBUG("low_latency_transformation: {}", config.lowLatencyTransformation());
     } else {
+    SPDLOG_ERROR("ER");
         SPDLOG_DEBUG("config_path: {}", config.configPath());
     }
+    SPDLOG_ERROR("ER");
     SPDLOG_DEBUG("gRPC port: {}", config.port());
+    SPDLOG_ERROR("ER");
     SPDLOG_DEBUG("REST port: {}", config.restPort());
     SPDLOG_DEBUG("gRPC bind address: {}", config.grpcBindAddress());
+    SPDLOG_ERROR("ER");
     SPDLOG_DEBUG("REST bind address: {}", config.restBindAddress());
+    SPDLOG_ERROR("ER");
     SPDLOG_DEBUG("REST workers: {}", config.restWorkers());
     SPDLOG_DEBUG("gRPC workers: {}", config.grpcWorkers());
+    SPDLOG_ERROR("ER");
     SPDLOG_DEBUG("gRPC channel arguments: {}", config.grpcChannelArguments());
     SPDLOG_DEBUG("log level: {}", config.logLevel());
     SPDLOG_DEBUG("log path: {}", config.logPath());
     SPDLOG_DEBUG("file system poll wait seconds: {}", config.filesystemPollWaitSeconds());
     SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
+    SPDLOG_ERROR("ER");
+    SPDLOG_ERROR("ER");
 }
 
 void onInterrupt(int status) {
@@ -210,11 +221,11 @@ struct GRPCServerModule : Module {
         auto status = parseGrpcChannelArgs(config.grpcChannelArguments(), channel_arguments);
         if (!status.ok()) {
             SPDLOG_ERROR("grpc channel arguments passed in wrong format: {}", config.grpcChannelArguments());
-            exit(1);
             return EXIT_FAILURE;
         }
 
         logConfig(config);
+    SPDLOG_ERROR("ER");
 
         ServerBuilder builder;
         builder.SetMaxReceiveMessageSize(GIGABYTE);
@@ -243,11 +254,15 @@ struct GRPCServerModule : Module {
         SPDLOG_DEBUG("Starting grpc servers: {}", grpcServersCount);
 
         if (!isPortAvailable(config.port())) {
+            SPDLOG_ERROR("ER");
+                return EXIT_FAILURE;
             throw std::runtime_error("Failed to start GRPC server at " + config.grpcBindAddress() + ":" + std::to_string(config.port()));
         }
         for (uint i = 0; i < grpcServersCount; ++i) {
             std::unique_ptr<grpc::Server> server = builder.BuildAndStart();
             if (server == nullptr) {
+                SPDLOG_ERROR("ER");
+                return EXIT_FAILURE;
                 throw std::runtime_error("Failed to start GRPC server at " + std::to_string(config.port()));
             }
             servers.push_back(std::move(server));
@@ -337,15 +352,12 @@ int Server::start(int argc, char** argv) {
     try {
         auto& config = ovms::Config::instance().parse(argc, argv);
         configure_logger(config.logLevel(), config.logPath());
-
 #ifdef MTR_ENABLED
-        this->modules.emplace("ProfilerModule", std::make_unique<GRPCServerModule>());
+        this->modules.emplace("ProfilerModule", std::make_unique<ProfilerModule>());
         retCode = modules.at("ProfilerModule")->start(config);
         if (retCode)
             return retCode;
 #endif
-
-        // start GRPC module
         this->modules.emplace("GRPCServerModule", std::make_unique<GRPCServerModule>());
         retCode = modules.at("GRPCServerModule")->start(config);
         if (retCode)
@@ -368,6 +380,9 @@ int Server::start(int argc, char** argv) {
         modules.at("GRPCServerModule")->shutdown();
         modules.at("HTTPServerModule")->shutdown();
         modules.at("ServableManagerModule")->shutdown();
+#ifdef MTR_ENABLED
+        modules.at("ProfilerModule")->shutdown();
+#endif
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
         return EXIT_FAILURE;

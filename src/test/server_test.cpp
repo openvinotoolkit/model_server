@@ -82,11 +82,11 @@ private:
     ::inference::ServerLiveRequest request;
 };
 
-void requestServerAlive(grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
+void requestServerAlive(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
     grpc::ChannelArguments args;
     Configuration config;
-    config.address = "localhost";
-    config.port = "9178";
+    config.address = "localhost"; //adaw
+    config.port = grpcPort;
     std::string address = config.address + ":" + config.port;
     ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args), config);
     client.verifyLive(status, expectedStatus);
@@ -94,200 +94,44 @@ void requestServerAlive(grpc::StatusCode status = grpc::StatusCode::OK, bool exp
 
 TEST(Server, ServerNotAliveBeforeStart) {
     // here we should fail to connect before starting server
-    requestServerAlive(grpc::StatusCode::UNAVAILABLE, false);
+    requestServerAlive("9178", grpc::StatusCode::UNAVAILABLE, false);
 }
 
+static int i = 0;
 TEST(Server, ServerAliveBeforeLoadingModels) {
     // purpose of this test is to ensure that the server responds with alive=true before loading any models.
-    // this is to make sure that eg. k8s won't restart container until all models are loaded because of not being alive
-    requestServerAlive(grpc::StatusCode::UNAVAILABLE, false);
+    // this is to make sure that eg. k8s won't restart container until all models are loaded because of not being alivea
+    const char* testPort = "9170";
+    char* last = (char*) testPort + 3;
+    last += (i % 10);
+    SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX             :i :{}", ++i);
+
     char* argv[] = {
         (char*)"OpenVINO Model Server",
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
         (char*)"/ovms/src/test/dummy",
+        (char*)"--port",
+        (char*)testPort,
         nullptr};
+    SPDLOG_ERROR("ER");
+    requestServerAlive(argv[6], grpc::StatusCode::UNAVAILABLE, false);
     SPDLOG_ERROR("ER");
     ovms::Server& server = ovms::Server::instance();
     std::thread t([&argv, &server]() {
-        server.start(5, argv);
+        server.start(7, argv);
     });
     auto start = std::chrono::high_resolution_clock::now();
-    while (ovms::Server::instance().getModuleState("GRPCModule") != ovms::ModuleState::INITIALIZED &&
+    while ((ovms::Server::instance().getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
     }
-    requestServerAlive(grpc::StatusCode::OK, true);
+    SPDLOG_ERROR("ER");
+    requestServerAlive(argv[6], grpc::StatusCode::OK, true);
+    SPDLOG_ERROR("ER");
     ovms::Server::instance().setShutdownRequest(1);
     t.join();
-    requestServerAlive(grpc::StatusCode::UNAVAILABLE, false);
-}
-class MockModel2 : public ovms::Model {
-public:
-    MockModel2() :
-        Model("MOCK_NAME", false, nullptr) {}
-    MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&, ov::Core&), (override));
-};
-
-std::shared_ptr<MockModel2> modelMock;
-
-class MockModelManagerR : public ovms::ModelManager {
-public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
-        return modelMock;
-    }
-};
-
-TEST(ModelManager, ConfigParseNoModelsR) {
-    std::string configFile = createConfigFileWithContent("{ \"model_config_list\": [ ] }\n");
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.startFromFile(configFile);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-}
-
-TEST(ModelManager, ConfigParseEmptyJsonR) {
-    std::string configFile = createConfigFileWithContent("{}\n");
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.startFromFile(configFile);
-    EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
-}
-
-TEST(ModelManager, ConfigParseNodeConfigWithoutNameKeyR) {
-    const char* configWithoutNameKey = R"({
-       "model_config_list": [
-       {
-          "config": {
-            "base_path": "/tmp/models/dummy2"
-          }
-       }]
-    })";
-
-    std::string configFile = createConfigFileWithContent(configWithoutNameKey);
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.startFromFile(configFile);
-    EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
-}
-
-TEST(ModelManager, ConfigParseNodeConfigWihoutBasePathKeyR) {
-    const char* configWithoutBasePathKey = R"({
-       "model_config_list": [
-       {
-          "config": {
-            "name": "alpha"
-          }
-       }]
-    })";
-
-    std::string configFile = createConfigFileWithContent(configWithoutBasePathKey);
-    ovms::ModelManager& manager = ovms::ModelManager::getInstance();
-    auto status = manager.startFromFile(configFile);
-    EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
-}
-
-TEST(ModelManager, parseConfigWhenPipelineDefinitionMatchSchemaR) {
-    const char* configWithPipelineDefinitionMatchSchema = R"({
-        "model_config_list": [
-            {
-                "config": {
-                    "name": "alpha",
-                    "base_path": "/tmp/models/dummy1"
-                }
-            },
-            {
-                "config": {
-                    "name": "beta",
-                    "base_path": "/tmp/models/dummy2"
-                }
-            }
-        ],
-        "pipeline_config_list": 
-        [
-            {
-                "name": "ensemble_name1", 
-                "inputs": ["in"], 
-                "outputs": [{"a":{"node_name": "beta","data_item": "text"}}], 
-                "nodes": [  
-                    { 
-                        "name": "alpha", 
-                        "model_name": "dummy",
-                        "type": "DL model", 
-                        "inputs": [{"a":{"node_name": "input","data_item": "in"}}], 
-                        "outputs": [{"data_item": "prob","alias": "prob"}] 
-                    }, 
-                    { 
-                        "name": "beta", 
-                        "model_name": "dummy",
-                        "type": "DL model",
-                        "inputs": [{"a":{"node_name": "alpha","data_item": "prob"}}],
-                        "outputs": [{"data_item": "text","alias": "text"}] 
-                    }
-                ]
-            }
-        ]
-    })";
-
-    std::string configFile = "/tmp/ovms_config_file.json";
-    createConfigFileWithContent(configWithPipelineDefinitionMatchSchema, configFile);
-    modelMock = std::make_shared<MockModel2>();
-    MockModelManagerR manager;
-
-    auto status = manager.startFromFile(configFile);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-    manager.join();
-    modelMock.reset();
-}
-
-void setupModelsDirsR() {
-    std::filesystem::create_directory("/tmp/models");
-    std::filesystem::create_directory("/tmp/models/dummy1");
-    std::filesystem::create_directory("/tmp/models/dummy2");
-}
-
-const char* config_2_modelsR = R"({
-   "model_config_list": [
-    {
-      "config": {
-        "name": "resnet",
-        "base_path": "/tmp/models/dummy1",
-        "target_device": "CPU",
-        "model_version_policy": {"all": {}}
-      }
-    },
-    {
-      "config": {
-        "name": "alpha",
-        "base_path": "/tmp/models/dummy2",
-        "target_device": "CPU",
-        "model_version_policy": {"all": {}}
-      }
-    }]
-})";
-TEST(ModelManager, configRelodNotNeededManyThreadsR) {
-    std::string configFile = "/tmp/config.json";
-
-    modelMock = std::make_shared<MockModel2>();
-    MockModelManagerR manager;
-    setupModelsDirsR();
-    createConfigFileWithContent(config_2_modelsR, configFile);
-    auto status = manager.startFromFile(configFile);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-
-    int numberOfThreads = 10;
-    std::vector<std::thread> threads;
-    std::function<void()> func = [&manager]() {
-        bool isNeeded = false;
-        manager.configFileReloadNeeded(isNeeded);
-        EXPECT_EQ(isNeeded, false);
-    };
-
-    for (int i = 0; i < numberOfThreads; i++) {
-        threads.push_back(std::thread(func));
-    }
-
-    for (auto& thread : threads) {
-        thread.join();
-    }
-    manager.join();
-    modelMock.reset();
+    SPDLOG_ERROR("ER");
+    requestServerAlive(argv[6], grpc::StatusCode::UNAVAILABLE, false);
+    SPDLOG_ERROR("ER");
 }
