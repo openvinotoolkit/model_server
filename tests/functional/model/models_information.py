@@ -168,7 +168,7 @@ class ResnetONNX:
     output_name = "gpu_0/softmax_1"
     output_shape = (1, 1000)
     rest_request_format = 'row_name'
-    url = "https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-caffe2-v1-9"
+    url = "https://github.com/onnx/models/raw/cf382db7781fc8193249386d6b50a4753659d058/vision/classification/resnet/model/resnet50-caffe2-v1-9"
     download_extensions = [".onnx"]
     version = 1
     model_path = os.path.join(config.models_path, name)
