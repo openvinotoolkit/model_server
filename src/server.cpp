@@ -110,16 +110,13 @@ void logConfig(const Config& config) {
     SPDLOG_INFO(PROJECT_NAME);
     SPDLOG_INFO("OpenVINO backend {}", OPENVINO_NAME);
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
-    SPDLOG_ERROR("ER");
     if (config.configPath().empty()) {
-    SPDLOG_ERROR("ER");
         SPDLOG_DEBUG("model_path: {}", config.modelPath());
         SPDLOG_DEBUG("model_name: {}", config.modelName());
         SPDLOG_DEBUG("batch_size: {}", config.batchSize());
         SPDLOG_DEBUG("shape: {}", config.shape());
         SPDLOG_DEBUG("model_version_policy: {}", config.modelVersionPolicy());
         SPDLOG_DEBUG("nireq: {}", config.nireq());
-    SPDLOG_ERROR("ER");
         SPDLOG_DEBUG("target_device: {}", config.targetDevice());
         SPDLOG_DEBUG("plugin_config: {}", config.pluginConfig());
         SPDLOG_DEBUG("stateful: {}", config.stateful());
@@ -127,27 +124,19 @@ void logConfig(const Config& config) {
         SPDLOG_DEBUG("max_sequence_number: {}", config.maxSequenceNumber());
         SPDLOG_DEBUG("low_latency_transformation: {}", config.lowLatencyTransformation());
     } else {
-    SPDLOG_ERROR("ER");
         SPDLOG_DEBUG("config_path: {}", config.configPath());
     }
-    SPDLOG_ERROR("ER");
     SPDLOG_DEBUG("gRPC port: {}", config.port());
-    SPDLOG_ERROR("ER");
     SPDLOG_DEBUG("REST port: {}", config.restPort());
     SPDLOG_DEBUG("gRPC bind address: {}", config.grpcBindAddress());
-    SPDLOG_ERROR("ER");
     SPDLOG_DEBUG("REST bind address: {}", config.restBindAddress());
-    SPDLOG_ERROR("ER");
     SPDLOG_DEBUG("REST workers: {}", config.restWorkers());
     SPDLOG_DEBUG("gRPC workers: {}", config.grpcWorkers());
-    SPDLOG_ERROR("ER");
     SPDLOG_DEBUG("gRPC channel arguments: {}", config.grpcChannelArguments());
     SPDLOG_DEBUG("log level: {}", config.logLevel());
     SPDLOG_DEBUG("log path: {}", config.logPath());
     SPDLOG_DEBUG("file system poll wait seconds: {}", config.filesystemPollWaitSeconds());
     SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
-    SPDLOG_ERROR("ER");
-    SPDLOG_ERROR("ER");
 }
 
 void onInterrupt(int status) {
@@ -191,7 +180,12 @@ void installSignalHandlers(ovms::Server& server) {
 
 static const int GIGABYTE = 1024 * 1024 * 1024;
 
-struct ServableManagerModule : Module {
+ModuleState Module::getState() const {
+    return state;
+}
+
+class ServableManagerModule : public Module {
+public:
     int start(const ovms::Config& config) override {
         state = ModuleState::STARTED_INITIALIZE;
         auto& manager = ModelManager::getInstance();
@@ -210,11 +204,14 @@ struct ServableManagerModule : Module {
     }
 };
 
-struct GRPCServerModule : Module {
+class GRPCServerModule : public Module {
     PredictionServiceImpl tfsPredictService;
     ModelServiceImpl tfsModelService;
     KFSInferenceServiceImpl kfsGrpcInferenceService;
     std::vector<std::unique_ptr<grpc::Server>> servers;
+
+public:
+    GRPCServerModule() {}
     int start(const ovms::Config& config) override {
         state = ModuleState::STARTED_INITIALIZE;
         std::vector<GrpcChannelArgument> channel_arguments;
@@ -225,7 +222,6 @@ struct GRPCServerModule : Module {
         }
 
         logConfig(config);
-    SPDLOG_ERROR("ER");
 
         ServerBuilder builder;
         builder.SetMaxReceiveMessageSize(GIGABYTE);
@@ -254,16 +250,14 @@ struct GRPCServerModule : Module {
         SPDLOG_DEBUG("Starting grpc servers: {}", grpcServersCount);
 
         if (!isPortAvailable(config.port())) {
-            SPDLOG_ERROR("ER");
-                return EXIT_FAILURE;
-            throw std::runtime_error("Failed to start GRPC server at " + config.grpcBindAddress() + ":" + std::to_string(config.port()));
+            SPDLOG_ERROR("Failed to start GRPC server at " + config.grpcBindAddress() + ":" + std::to_string(config.port()));
+            return EXIT_FAILURE;
         }
         for (uint i = 0; i < grpcServersCount; ++i) {
             std::unique_ptr<grpc::Server> server = builder.BuildAndStart();
             if (server == nullptr) {
-                SPDLOG_ERROR("ER");
+                SPDLOG_ERROR("Failed to start GRPC server at " + config.grpcBindAddress() + ":" + std::to_string(config.port()));
                 return EXIT_FAILURE;
-                throw std::runtime_error("Failed to start GRPC server at " + std::to_string(config.port()));
             }
             servers.push_back(std::move(server));
         }
@@ -280,21 +274,23 @@ struct GRPCServerModule : Module {
         state = ModuleState::SHUTDOWN;
     }
 };
-struct HTTPServerModule : Module {
+class HTTPServerModule : public Module {
     std::unique_ptr<ovms::http_server> server;
+
+public:
+    HTTPServerModule() = default;
     int start(const ovms::Config& config) override {
         if (config.restPort() != 0) {
             state = ModuleState::STARTED_INITIALIZE;
             const std::string server_address = config.restBindAddress() + ":" + std::to_string(config.restPort());
-
             int workers = config.restWorkers() ? config.restWorkers() : 10;
-            SPDLOG_INFO("Will start {} REST workers", workers);
 
+            SPDLOG_INFO("Will start {} REST workers", workers);
             server = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), workers);
             if (server != nullptr) {
                 SPDLOG_INFO("Started REST server at {}", server_address);
             } else {
-                throw std::runtime_error("Failed to start REST server at " + server_address);
+                SPDLOG_ERROR("Failed to start REST server at " + server_address);
                 return EXIT_FAILURE;
             }
             state = ModuleState::INITIALIZED;
@@ -312,15 +308,18 @@ struct HTTPServerModule : Module {
     }
 };
 
-ModuleState Server::getModuleState(const std::string& name) {
+ModuleState Server::getModuleState(const std::string& name) const {
     auto it = modules.find(name);
     if (it == modules.end())
         return ModuleState::NOT_INITIALIZED;
-    return it->second->state;
+    return it->second->getState();
 }
 
-struct ProfilerModule : Module {
+class ProfilerModule : public Module {
     std::unique_ptr<Profiler> profiler;
+
+public:
+    ProfilerModule() = default;
     int start(const Config& config) override {
 #ifdef MTR_ENABLED
         state = ModuleState::STARTED_INITIALIZE;
@@ -333,7 +332,7 @@ struct ProfilerModule : Module {
 #endif
         return EXIT_SUCCESS;
     }
-    void shutdown() {
+    void shutdown() override {
         state = ModuleState::STARTED_SHUTDOWN;
         profiler.reset();
         state = ModuleState::SHUTDOWN;
@@ -358,7 +357,7 @@ int Server::start(int argc, char** argv) {
         if (retCode)
             return retCode;
 #endif
-        this->modules.emplace("GRPCServerModule", std::make_unique<GRPCServerModule>());
+        this->modules.emplace(std::string("GRPCServerModule"), std::make_unique<GRPCServerModule>());
         retCode = modules.at("GRPCServerModule")->start(config);
         if (retCode)
             return retCode;
@@ -392,4 +391,3 @@ int Server::start(int argc, char** argv) {
     }
     return EXIT_SUCCESS;
 }
-

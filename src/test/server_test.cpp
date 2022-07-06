@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <chrono>
+#include <random>
 #include <thread>
 
 #include <gmock/gmock.h>
@@ -85,7 +86,7 @@ private:
 void requestServerAlive(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
     grpc::ChannelArguments args;
     Configuration config;
-    config.address = "localhost"; //adaw
+    config.address = "localhost";
     config.port = grpcPort;
     std::string address = config.address + ":" + config.port;
     ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args), config);
@@ -97,14 +98,18 @@ TEST(Server, ServerNotAliveBeforeStart) {
     requestServerAlive("9178", grpc::StatusCode::UNAVAILABLE, false);
 }
 
-static int i = 0;
 TEST(Server, ServerAliveBeforeLoadingModels) {
     // purpose of this test is to ensure that the server responds with alive=true before loading any models.
     // this is to make sure that eg. k8s won't restart container until all models are loaded because of not being alivea
-    const char* testPort = "9170";
-    char* last = (char*) testPort + 3;
-    last += (i % 10);
-    SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX             :i :{}", ++i);
+    std::string port = "9000";
+    const char* testPort = port.c_str();
+    std::mt19937_64 eng{std::random_device{}()};
+    std::uniform_int_distribution<> dist{0, 9};
+    std::this_thread::sleep_for(std::chrono::milliseconds{dist(eng)});
+    for (auto j : {1, 2, 3}) {
+        char* digitToRandomize = (char*)testPort + j;
+        *digitToRandomize += dist(eng);
+    }
 
     char* argv[] = {
         (char*)"OpenVINO Model Server",
@@ -113,11 +118,9 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
         (char*)"--model_path",
         (char*)"/ovms/src/test/dummy",
         (char*)"--port",
-        (char*)testPort,
+        (char*)port.c_str(),
         nullptr};
-    SPDLOG_ERROR("ER");
     requestServerAlive(argv[6], grpc::StatusCode::UNAVAILABLE, false);
-    SPDLOG_ERROR("ER");
     ovms::Server& server = ovms::Server::instance();
     std::thread t([&argv, &server]() {
         server.start(7, argv);
@@ -126,12 +129,8 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
     while ((ovms::Server::instance().getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
     }
-    SPDLOG_ERROR("ER");
     requestServerAlive(argv[6], grpc::StatusCode::OK, true);
-    SPDLOG_ERROR("ER");
     ovms::Server::instance().setShutdownRequest(1);
     t.join();
-    SPDLOG_ERROR("ER");
     requestServerAlive(argv[6], grpc::StatusCode::UNAVAILABLE, false);
-    SPDLOG_ERROR("ER");
 }

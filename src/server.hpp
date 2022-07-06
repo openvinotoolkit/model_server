@@ -31,14 +31,18 @@ enum class ModuleState {
     SHUTDOWN
 };
 
-struct Module {
+class Module {
+protected:
     ModuleState state = ModuleState::NOT_INITIALIZED;
+
+public:
     virtual int start(const ovms::Config& config) = 0;
     virtual void shutdown() = 0;
     virtual ~Module() = default;
+    ModuleState getState() const;
 };
 
-struct Server {
+class Server {
     volatile sig_atomic_t shutdownRequest = 0;
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;
     Server() = default;
@@ -49,7 +53,7 @@ public:
         return global;
     }
     int start(int argc, char** argv);
-    ModuleState getModuleState(const std::string& name);
+    ModuleState getModuleState(const std::string& name) const;
 
     void setShutdownRequest(int i);
 };
