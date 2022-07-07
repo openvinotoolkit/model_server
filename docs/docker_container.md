@@ -76,7 +76,7 @@ You can build your own Docker image executing the `make docker_build` command in
 In the `./dist` directory it will generate: 
 
 - image tagged as openvino/model_server:latest - with CPU, NCS, and HDDL support
-- image tagged as openvino/model_server-gpu:latest - with CPU, NCS, HDDL, and iGPU support
+- image tagged as openvino/model_server:latest-gpu - with CPU, NCS, HDDL, and iGPU support
 - image tagged as openvino/model_server:latest-nginx-mtls - with CPU, NCS, and HDDL support and a reference nginx setup of mTLS integration
 - release package (.tar.gz, with ovms binary and necessary libraries)
 
