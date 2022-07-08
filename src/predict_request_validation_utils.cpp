@@ -609,7 +609,7 @@ bool RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterator
 template <>
 bool RequestValidator<KFSRequestType, KFSInputTensorType, KFSInputTensorIteratorType, KFSShapeType>::checkIfBinaryInputUsed(const KFSInputTensorType& proto, const std::string inputName) const {
     if (proto.datatype() == "BYTES") {
-        SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing binary input: name: {}; batch size: {}", servableName, servableVersion, inputName, 0);
+        SPDLOG_DEBUG("[servable name: {} version: {}] Received request containing binary input: name: {}; batch size: {}", servableName, servableVersion, inputName, proto.contents().bytes_contents_size());
         return true;
     }
     return false;

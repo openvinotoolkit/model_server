@@ -109,8 +109,7 @@ Status EntryNode<::inference::ModelInferRequest>::isInputBinary(const std::strin
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Error during checking binary input; input: {} does not exist", name);
         return StatusCode::INTERNAL_ERROR;
     }
-    // isBinary = it->second.string_val_size() > 0; // TODO implement with KFS binary inputs
-    isBinary = false;
+    isBinary = it->contents().bytes_contents_size() > 0;
     return StatusCode::OK;
 }
 

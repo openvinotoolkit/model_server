@@ -23,7 +23,7 @@ import tritonclient.grpc as grpcclient
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using images in numpy format. '
+    parser = argparse.ArgumentParser(description='Sends requests via KFS gRPC API using images in numpy format. '
                                                  'It displays performance statistics and optionally the model accuracy')
     parser.add_argument('--images_numpy_path', required=True, help='numpy in shape [n,w,h,c] or [n,c,h,w]')
     parser.add_argument('--labels_numpy_path', required=False, help='numpy in shape [n,1] - can be used to check model accuracy')
@@ -56,7 +56,6 @@ if __name__ == '__main__':
 
     address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
 
-    #stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     triton_client = grpcclient.InferenceServerClient(
                 url=address,
                 verbose=False)
@@ -145,7 +144,7 @@ if __name__ == '__main__':
                 mark_message = ""
                 if args.get('labels_numpy_path') is not None:
                     total_executed += 1
-                    if ma == lb[i]:
+                    if ma == lbs[i]:
                         matched_count += 1
                         mark_message = "; Correct match."
                     else:
