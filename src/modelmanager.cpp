@@ -37,6 +37,7 @@
 #include "azurefilesystem.hpp"
 #include "cleaner_utils.hpp"
 #include "config.hpp"
+#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "custom_node_library_manager.hpp"
 #include "customloaders.hpp"
 #include "entry_node.hpp"  // need for ENTRY_NODE_NAME

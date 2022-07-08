@@ -20,6 +20,7 @@
 #include <tuple>
 
 #include "logging.hpp"
+#include "status.hpp"
 
 const char* DEFAULT_LAYOUT = "N...";
 const char* UNSPECIFIED_LAYOUT = "...";

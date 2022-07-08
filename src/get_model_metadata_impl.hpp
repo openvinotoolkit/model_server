@@ -37,6 +37,7 @@ class ModelInstance;
 class ModelManager;
 class PipelineDefinition;
 class Server;
+class Status;
 
 class GetModelMetadataImpl {
     ModelManager& modelManager;

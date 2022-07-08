@@ -23,12 +23,12 @@
 #include <utility>
 #include <vector>
 
-#include "filesystem.hpp"
 #include "modelchangesubscription.hpp"
-#include "modelinstance.hpp"
 #include "statefulmodelinstance.hpp"
 
 namespace ovms {
+class FileSystem;
+class ModelInstance;
 class PipelineDefinition;
 class MetricRegistry;
 /*     * @brief This class represent inference models

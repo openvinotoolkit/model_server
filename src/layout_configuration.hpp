@@ -19,10 +19,10 @@
 #include <unordered_map>
 
 #include "layout.hpp"
-#include "status.hpp"
 
 namespace ovms {
 
+class Status;
 static const char LAYOUT_CONFIGURATION_DELIMETER = ':';
 
 class LayoutConfiguration {

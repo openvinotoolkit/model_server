@@ -57,8 +57,6 @@ const std::string GRPC_SERVER_MODULE_NAME = "GRPCServerModule";
 const std::string HTTP_SERVER_MODULE_NAME = "HTTPServerModule";
 const std::string SERVABLE_MANAGER_MODULE_NAME = "ServableManagerModule";
 const std::string METRICS_MODULE_NAME = "MetricsModule";
-}  // namespace ovms
-using namespace ovms;
 
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
@@ -347,3 +345,4 @@ int Server::start(int argc, char** argv) {
     }
     return EXIT_SUCCESS;
 }
+}  // namespace ovms

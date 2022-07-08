@@ -30,10 +30,14 @@
 
 #include "execution_context.hpp"
 #include "modelmanager.hpp"
+#include "modelversion.hpp"
 #include "status.hpp"
 
 namespace ovms {
+class ModelManager;
+class ModelVersionStatus;
 class Server;
+class Status;
 
 void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, model_version_t version, const ModelVersionStatus& model_version_status);
 

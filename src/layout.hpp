@@ -22,9 +22,10 @@
 #include <openvino/openvino.hpp>
 
 #include "shape.hpp"
-#include "status.hpp"
 
 namespace ovms {
+
+class Status;
 
 static const std::string ALLOWED_DIMENSION_LETTERS = "NCHWD";
 static const char ETC_CHAR = '.';

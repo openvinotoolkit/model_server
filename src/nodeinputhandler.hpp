@@ -23,11 +23,11 @@
 #include <openvino/openvino.hpp>
 
 #include "session_id.hpp"
-#include "status.hpp"
-#include "tensor_utils.hpp"
 #include "tensormap.hpp"
 
 namespace ovms {
+class Status;
+class TensorWithSource;
 
 // This class encapsulates input tensor gathering and preprocessing before node execution.
 // It is resposible for gathering multiple tensors into one (in case of demultiplexers)

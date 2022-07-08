@@ -26,6 +26,7 @@
 #include "kfs_grpc_inference_service.hpp"
 #include "modelconfig.hpp"
 #include "profiler.hpp"
+#include "status.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {

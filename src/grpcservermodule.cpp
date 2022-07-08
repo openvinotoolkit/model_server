@@ -45,8 +45,6 @@
 using grpc::ServerBuilder;
 
 namespace ovms {
-}  // namespace ovms
-using namespace ovms;
 static const int GIGABYTE = 1024 * 1024 * 1024;
 
 bool isPortAvailable(uint64_t port) {
@@ -185,3 +183,4 @@ const GetModelMetadataImpl& GRPCServerModule::getTFSModelMetadataImpl() const {
 KFSInferenceServiceImpl& GRPCServerModule::getKFSGrpcImpl() const {
     return this->kfsGrpcInferenceService;
 }
+}  // namespace ovms

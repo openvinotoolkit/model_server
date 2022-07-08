@@ -15,29 +15,20 @@
 //*****************************************************************************
 #pragma once
 
-#include "global_sequences_viewer.hpp"
-#include "modelmanager.hpp"
-
 namespace ovms {
+class GlobalSequencesViewer;
+class ModelManager;
 struct FunctorSequenceCleaner {
     GlobalSequencesViewer& globalSequencesViewer;
 
-    FunctorSequenceCleaner(GlobalSequencesViewer& globalSequencesViewer) :
-        globalSequencesViewer(globalSequencesViewer) {}
-
-    virtual void cleanup() {
-        globalSequencesViewer.removeIdleSequences();
-    }
+    FunctorSequenceCleaner(GlobalSequencesViewer& globalSequencesViewer);
+    virtual void cleanup();
 };
 
 struct FunctorResourcesCleaner {
     ModelManager& modelManager;
 
-    FunctorResourcesCleaner(ModelManager& modelManager) :
-        modelManager(modelManager) {}
-
-    virtual void cleanup() {
-        modelManager.cleanupResources();
-    }
+    FunctorResourcesCleaner(ModelManager& modelManager);
+    virtual void cleanup();
 };
 }  // namespace ovms

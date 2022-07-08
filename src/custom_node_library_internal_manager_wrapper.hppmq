@@ -15,12 +15,26 @@
 //*****************************************************************************
 #pragma once
 
+#include <iostream>
 #include <memory>
 
-#include "tensorinfo.hpp"
+#include "node_library.hpp"
 
 namespace ovms {
-class Status;
-template <typename TensorType>
-Status convertBinaryRequestTensorToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::shared_ptr<TensorInfo>& tensorInfo);
+
+struct CNLIMWrapper {
+    void* ptr;
+    deinitialize_fn deinitialize = nullptr;
+
+    CNLIMWrapper(void* CNLIM, deinitialize_fn deinitialize) :
+        ptr(CNLIM),
+        deinitialize(deinitialize) {}
+
+    ~CNLIMWrapper() {
+        deinitialize(ptr);
+    }
+};
+
+void* getCNLIMWrapperPtr(const std::shared_ptr<CNLIMWrapper>& wrapper);
+
 }  // namespace ovms

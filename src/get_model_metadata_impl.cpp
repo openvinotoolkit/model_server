@@ -19,8 +19,11 @@
 
 #include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
+#include "pipelinedefinitionstatus.hpp"
+#include "pipelinedefinitionunloadguard.hpp"
 #include "servablemanagermodule.hpp"
 #include "server.hpp"
+#include "status.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
 using google::protobuf::util::JsonPrintOptions;

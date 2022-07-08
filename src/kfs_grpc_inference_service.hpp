@@ -24,9 +24,9 @@
 #include "execution_context.hpp"
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
 #include "src/kfserving_api/grpc_predict_v2.pb.h"
-#include "status.hpp"
 
 namespace ovms {
+class Status;
 
 using inference::GRPCInferenceService;
 class Model;

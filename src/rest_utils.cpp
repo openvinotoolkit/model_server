@@ -29,6 +29,7 @@
 #pragma GCC diagnostic pop
 #include "precision.hpp"
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
+#include "status.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 #include "timer.hpp"
 
@@ -48,7 +49,7 @@ enum : unsigned int {
 
 namespace ovms {
 
-Status checkValField(const size_t& fieldSize, const size_t& expectedElementsNumber) {
+static Status checkValField(const size_t& fieldSize, const size_t& expectedElementsNumber) {
     if (fieldSize == 0)
         return StatusCode::REST_SERIALIZE_NO_DATA;
     if (fieldSize != expectedElementsNumber)

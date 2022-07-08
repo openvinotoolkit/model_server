@@ -24,6 +24,7 @@
 #include "binaryutils.hpp"
 #include "deserialization.hpp"
 #include "logging.hpp"
+#include "nodesession.hpp"
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "profiler.hpp"

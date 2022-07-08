@@ -76,9 +76,9 @@ RUN apt update && apt install -y \
             unzip \
             wget \
             unzip \
+            vim \
             xz-utils && \
             apt clean
-
 
 # Set up Bazel
 ENV BAZEL_VERSION 3.7.2
@@ -239,3 +239,4 @@ RUN ./bazel-bin/src/./ovms --version
 RUN ./bazel-bin/src/./ovms
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE
+

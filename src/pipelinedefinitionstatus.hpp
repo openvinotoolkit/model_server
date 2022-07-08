@@ -22,11 +22,8 @@
 #include <utility>
 #include <variant>
 
-#include <spdlog/spdlog.h>
-
 #include "logging.hpp"
 #include "modelversionstatus.hpp"
-#include "status.hpp"
 
 namespace ovms {
 

@@ -37,15 +37,15 @@
 #include "modelversion.hpp"
 #include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"
-#include "pipelinedefinitionunloadguard.hpp"
-#include "status.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
 
 class ModelManager;
-class Pipeline;
 class NodeValidator;
+class Pipeline;
+class PipelineDefinitionUnloadGuard;
+class Status;
 
 class PipelineDefinition {
     friend NodeValidator;
@@ -159,8 +159,8 @@ public:
     ServableMetricReporter& getMetricReporter() const { return *this->reporter; }
 
 protected:
-    virtual Status updateInputsInfo(const ModelManager& manager);
-    virtual Status updateOutputsInfo(const ModelManager& manager);
+    Status updateInputsInfo(const ModelManager& manager);
+    Status updateOutputsInfo(const ModelManager& manager);
 
 public:
     const tensor_map_t getInputsInfo() const;

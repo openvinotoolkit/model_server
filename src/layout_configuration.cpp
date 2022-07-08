@@ -19,6 +19,7 @@
 #include <sstream>
 #include <vector>
 
+#include "status.hpp"
 #include "stringutils.hpp"
 
 namespace ovms {

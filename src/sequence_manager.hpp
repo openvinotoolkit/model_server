@@ -24,13 +24,15 @@
 #include "modelversion.hpp"
 #include "sequence.hpp"
 #include "sequence_processing_spec.hpp"
-#include "status.hpp"
 
 namespace ovms {
 
 const uint32_t NO_CONTROL_INPUT = 0;
 const uint32_t SEQUENCE_START = 1;
 const uint32_t SEQUENCE_END = 2;
+
+class SequenceProcessingSpec;
+class Status;
 
 class SequenceManager {
 private:

@@ -26,13 +26,13 @@
 #include "aliases.hpp"
 #include "modelversion.hpp"
 #include "node_library.hpp"
-#include "status.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
 
 class ModelManager;
 class Pipeline;
+class Status;
 
 using pipeline_connections_t = std::unordered_map<std::string, std::unordered_map<std::string, Aliases>>;
 using parameters_t = std::unordered_map<std::string, std::string>;

@@ -32,6 +32,8 @@
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
 #include "../nodeinputhandler.hpp"
+#include "../nodestreamidguard.hpp"
+#include "../ov_utils.hpp"
 #include "../pipeline.hpp"
 #include "../pipeline_factory.hpp"
 #include "../pipelinedefinition.hpp"

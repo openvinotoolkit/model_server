@@ -19,6 +19,8 @@
 #include <utility>
 
 #include "logging.hpp"
+#include "sequence_processing_spec.hpp"
+#include "status.hpp"
 
 namespace ovms {
 

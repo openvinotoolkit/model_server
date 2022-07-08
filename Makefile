@@ -150,6 +150,9 @@ sdl-check: venv
 	fi
 	@rm forbidden_functions.txt
 
+	@echo "Checking cppclean..."
+	@. $(ACTIVATE); bash -c "./cppclean.sh"
+
 clang-format: venv
 	@echo "Formatting files with clang-format.."
 	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format-6.0 -style=file -i {} \;

@@ -31,12 +31,9 @@
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
 
-#include "custom_node_library_internal_manager_wrapper.hpp"
 #include "customloaders.hpp"
-#include "filesystem.hpp"
 #include "global_sequences_viewer.hpp"
 #include "model.hpp"
-#include "pipeline.hpp"
 #include "pipeline_factory.hpp"
 
 namespace ovms {
@@ -46,8 +43,10 @@ extern const std::string DEFAULT_MODEL_CACHE_DIRECTORY;
 
 class Config;
 class IVersionReader;
+class CNLIMWrapper;
 class CustomNodeLibraryManager;
 class MetricRegistry;
+class FileSystem;
 struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
 /**

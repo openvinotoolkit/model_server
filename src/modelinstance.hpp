@@ -40,7 +40,6 @@
 #include "modelversionstatus.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "sequence_processing_spec.hpp"
-#include "status.hpp"
 #include "tensorinfo.hpp"
 
 namespace inference {
@@ -49,6 +48,7 @@ class ModelInferResponse;
 }  // namespace inference
 
 namespace ovms {
+class Status;
 
 class DynamicModelParameter {
 public:

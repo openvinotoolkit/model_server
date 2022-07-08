@@ -32,6 +32,7 @@
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
+#include "pipeline.hpp"
 #include "prediction_service_utils.hpp"
 #include "profiler.hpp"
 #include "servablemanagermodule.hpp"

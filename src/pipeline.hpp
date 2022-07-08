@@ -28,12 +28,14 @@
 namespace ovms {
 
 class ServableMetricReporter;
-
 class Node;
+
 template <typename PredictRequest>
 class EntryNode;
 template <typename PredictResponse>
 class ExitNode;
+class Node;
+class Status;
 
 void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const Aliases& pairs);
 

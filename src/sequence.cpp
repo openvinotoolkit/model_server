@@ -17,6 +17,9 @@
 
 #include <utility>
 
+#include "ov_utils.hpp"
+#include "status.hpp"
+
 using namespace InferenceEngine;
 
 namespace ovms {

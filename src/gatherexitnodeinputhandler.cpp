@@ -18,6 +18,7 @@
 #include <utility>
 
 #include "logging.hpp"
+#include "status.hpp"
 
 namespace ovms {
 

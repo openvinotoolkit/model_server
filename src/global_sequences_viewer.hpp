@@ -25,9 +25,9 @@
 #include <unordered_map>
 
 #include "sequence_manager.hpp"
-#include "status.hpp"
 
 namespace ovms {
+class Status;
 const uint32_t DEFAULT_SEQUENCE_CLEANER_INTERVAL = 5;  // in minutes
 class GlobalSequencesViewer {
 private:

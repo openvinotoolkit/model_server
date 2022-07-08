@@ -20,7 +20,7 @@
 
 namespace ovms {
 
-Status serializePrecision(
+static Status serializePrecision(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
@@ -59,7 +59,7 @@ Status serializePrecision(
     return StatusCode::OK;
 }
 
-Status serializePrecision(
+static Status serializePrecision(
     ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
@@ -99,7 +99,7 @@ Status serializePrecision(
     return StatusCode::OK;
 }
 
-Status serializeShape(
+static Status serializeShape(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
@@ -124,7 +124,7 @@ Status serializeShape(
     return StatusCode::OK;
 }
 
-Status serializeShape(
+static Status serializeShape(
     ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
     const std::shared_ptr<TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
@@ -149,7 +149,7 @@ Status serializeShape(
     return StatusCode::OK;
 }
 
-void serializeContent(std::string* content, ov::Tensor& tensor) {
+static void serializeContent(std::string* content, ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     // We only fill if the content is not already filled.
     // It can be filled in gather exit node handler.
