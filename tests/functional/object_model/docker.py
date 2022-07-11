@@ -47,6 +47,7 @@ TARGET_DEVICE_CONFIGURATION = {
         "devices": ["/dev/dri:/dev/dri:mrw"],
         "privileged": False,
         "user": None,
+        "group_add": [getgrnam('render').gr_gid, getgrnam('video').gr_gid]
     },
 
     TARGET_DEVICE_CUDA: {
