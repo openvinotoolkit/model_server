@@ -1,3 +1,16 @@
+## Overview
+
+This guide demonstrates how to run inference requests for PaddlePaddle model with OpenVINO Model Server.
+As an example, we will use [ocrnet-hrnet-w48-paddle](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/public/ocrnet-hrnet-w48-paddle) to perform segmentation on an image.
+
+## Prerequisites
+
+- Docker
+
+- Python 3.6 or newer
+
+  - paddlapaddle
+
 ## Preparing to Run
 
 Clone the repository and enter segmentation_using_paddlepaddle_model directory
@@ -7,18 +20,7 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/segmentation_using_paddlepaddle_model/python
 ```
 
-You can download models using the [Model Downloader and other automation tools](https://github.com/openvinotoolkit/open_model_zoo/blob/master/tools/model_tools/README.md) as shown in the example below.
-```bash
-omz_downloader --name ocrnet-hrnet-w48-paddle
-cd public/ocrnet-hrnet-w48-paddle
-python3 export.py --config configs/ocrnet/ocrnet_hrnetw48_cityscapes_1024x512_160k.yml --model_path ./model.pdparams
-mkdir -p ../../model/1
-mv output/model.pdiparams ../../model/1/model.pdiparams
-mv output/model.pdmodel ../../model/1/model.pdmodel
-cd ../../
-```
-
-You can prepare the workspace that contains all the above by just running
+You can prepare the workspace by just running
 
 ```bash
 make
