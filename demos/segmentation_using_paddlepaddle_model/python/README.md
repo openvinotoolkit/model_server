@@ -44,6 +44,6 @@ Now you can run the client:
 ```bash
 python3 segmentation_using_paddlepaddle_model.py --grpc_port 9000 --image_input_path ../../common/static/images/cars/road1.jpg --image_output_path ./road2.jpg
 ```
-Examplary result of running the demo:
+Exemplary result of running the demo:
 
 ![Road](road2.jpg)
