@@ -5,11 +5,11 @@ As an example, we will use [ocrnet-hrnet-w48-paddle](https://github.com/openvino
 
 ## Prerequisites
 
-- Docker
+- [Docker](https://docs.docker.com/engine/install/) installed
 
-- Python 3.6 or newer
+- Python 3.6 or newer installed
 
-  - paddlapaddle
+- [paddlepaddle](https://pypi.org/project/paddlepaddle/) Python package installed
 
 ## Preparing to Run
 
