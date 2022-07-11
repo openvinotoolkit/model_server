@@ -164,3 +164,15 @@ docker run --rm -d -v <model_path>:/opt/model -p 9001:9001 openvino/model_server
 --model_path /opt/model --model_name my_model --port 9001 --grpc_workers 8  --nireq 32 \
 --plugin_config '{"CPU_THROUGHPUT_STREAMS": "32", "CPU_BIND_THREAD": "NUMA"}'
 ```
+
+## Analyzing performance issues
+
+Recommended steps to investigate achievable performance and discover bottlenecks:
+1. [Launch OV benchmark app](https://docs.openvino.ai/latest/openvino_inference_engine_tools_benchmark_tool_README.html?highlight=benchmark)
+
+**Note:** It is useful to drop plugin configuration from benchmark app using `-dump_config` and then use the same plugin configuration in model loaded into OVMS
+
+**Note:** When launching benchmark app use `-inference_only=false`. Otherwise OV avoids setting input tensor of inference each time which is not comparable flow to OVMS.
+2. [Launch OVMS benchmark client](https://docs.openvino.ai/latest/ovms_demo_benchmark_client.html) on the same machine as OVMS
+3. [Launch OVMS benchmark client](https://docs.openvino.ai/latest/ovms_demo_benchmark_client.html) from remote machine
+4. Measure achievable network bandwidth with tools such as [iperf](https://github.com/esnet/iperf)
