@@ -18,6 +18,15 @@
 
 set -e
 
+finally() {
+    ARG = $?
+    echo "Cleaning up temp directories"
+    rm -rf tf/ tfs/
+    exit $ARG
+}
+
+trap finally EXIT
+
 git clone --branch v2.5.0 --depth 1 https://github.com/tensorflow/tensorflow.git tf
 git clone --branch 2.5.1 --depth 1 https://github.com/tensorflow/serving.git tfs
 
@@ -32,4 +41,4 @@ $PWD/tfs/tensorflow_serving/apis/*.proto
 
 cp tfs/tensorflow_serving/apis/prediction_service_pb2_grpc.py tensorflow_serving/apis/.
 cp tfs/tensorflow_serving/apis/model_service_pb2_grpc.py tensorflow_serving/apis/.
-rm -rf tf/ tfs/
+
