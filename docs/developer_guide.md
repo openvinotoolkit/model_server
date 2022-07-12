@@ -295,7 +295,7 @@ Debugging options are available. Click on the required option :
 	gdb --args ./bazel-bin/src/./ovms_test --gtest_filter='OvmsConfigTest.emptyInput'
 	```
 
-- For forking tests debugging, enable fork follow mode by running command :
+- For forking tests debugging, enable fork follow mode by running command:
 	```
 	# (in gdb cli) set follow-fork-mode child
 	```
@@ -303,27 +303,33 @@ Debugging options are available. Click on the required option :
 
 <details><summary>Use minitrace to display flame graph</summary>
 
+Download the model files and store them in the `models` directory
+```bash
+mkdir -p models/resnet/1
+curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
+```
+
 ### Option 1. Use OpenVINO Model Server build image.
 This is convenient way during development in case it is needed to add new or remove already existing traces.
 
 1. Build OVMS build image locally.
-```
-$ make docker_build
+```bash
+make docker_build
 ```
 
 2. Start the container.
-```
-$ docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest 
+```bash
+docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest 
 ```
 
 3. Build OVMS with minitrace enabled.
-```
-$ bazel build --copt="-DMTR_ENABLED" //src:ovms
+```bash
+bazel build --copt="-DMTR_ENABLED" //src:ovms
 ```
 
 4. Run OVMS with `--trace_path` specifying where to save flame graph JSON file.
-```
-$ bazel-bin/src/ovms --model_name resnet --model_path models/resnet --trace_path trace.json
+```bash
+bazel-bin/src/ovms --model_name resnet --model_path models/resnet --trace_path trace.json
 ```
 
 5. During app exit, the trace info will be saved into `trace.json`.
@@ -334,13 +340,13 @@ $ bazel-bin/src/ovms --model_name resnet --model_path models/resnet --trace_path
 This is convenient when final image has to be used on different machine and no changes to existing traces do not need to be modified for debugging.
 
 1. Build OVMS with minitrace enabled locally.
-```
-$ make docker_build MINITRACE=ON
+```bash
+make docker_build MINITRACE=ON
 ```
 
 2. Run OVMS with minitrace enabled and `--trace_path` to specify where to save trace JSON file. Since the file is flushed and saved at container shutdown, mount the host directory with write access to persist the file after container stops.
-```
-$ docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/trace.json 
+```bash
+docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/trace.json 
 ```
 
 3. During app exit, the trace info will be saved into `${PWD}/trace.json`.
