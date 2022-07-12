@@ -57,11 +57,11 @@ ThreadID:   3; Current FPS:    30.30; Average FPS:    25.73; Average latency:   
 ```
 
 You can also change the camera ID:
-```
+```bash
 python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --video_source 0
 ```
 Or choose to work with video file as well:
-```
+```bash
 python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --video_source ~/video.mp4
 ```
 
@@ -88,7 +88,7 @@ cd model_server/demos/horizontal_text_detection/python
 
 You can prepare the workspace that contains all the above by just running
 
-```
+```bash
 make
 ```
 

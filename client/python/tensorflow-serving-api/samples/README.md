@@ -13,8 +13,15 @@ It covers following topics:
 
 **Note**: Provided examples and their dependencies are updated and validated for Python 3.6+ version. For older versions of Python, dependencies versions adjustment might be required.
 
-Install client dependencies:
+Clone the repository and enter directory:
+
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/client/python/tensorflow-serving-api/samples
 ```
+
+Install client dependencies:
+```bash
 pip3 install -r requirements.txt
 ```
 
@@ -33,7 +40,8 @@ docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 
 ```bash
 python grpc_get_model_status.py --help
 usage: grpc_get_model_status.py [-h] [--grpc_address GRPC_ADDRESS]
-                           [--grpc_port GRPC_PORT] [--model_name MODEL_NAME]
+                           [--grpc_port GRPC_PORT]
+                           [--model_name MODEL_NAME]
                            [--model_version MODEL_VERSION]
 
 ```
@@ -71,7 +79,8 @@ Error message:  OK
 ```bash
 python grpc_get_model_metadata.py --help
 usage: grpc_get_model_metadata.py [-h] [--grpc_address GRPC_ADDRESS]
-                           [--grpc_port GRPC_PORT] [--model_name MODEL_NAME]
+                           [--grpc_port GRPC_PORT]
+                           [--model_name MODEL_NAME]
                            [--model_version MODEL_VERSION]
 
 ```
@@ -272,7 +281,7 @@ Average latency= 28.2 ms
 
 ### Model Status API
 - Command
-```Bash 
+```bash 
 python rest_get_model_status.py --help
 usage: rest_get_model_status.py [-h] [--rest_url REST_URL]
                                 [--rest_port REST_PORT]
@@ -316,7 +325,7 @@ python rest_get_model_status.py --rest_port 8000 --model_version 1
 
 ### Model Metadata API
 - Command
-```Bash
+```bash
 python rest_get_model_metadata.py --help
 usage: rest_get_model_metadata.py [-h] [--rest_url REST_URL]
                                   [--rest_port REST_PORT]
@@ -342,7 +351,7 @@ usage: rest_get_model_metadata.py [-h] [--rest_url REST_URL]
 |  --server_cert SERVER_CERT | Path to a custom directory containing trusted CA certificates, server certificate, or a CA_BUNDLE file. |
 
 - Usage Example
-```Bash
+```bash
 python rest_get_model_metadata.py --rest_port 8000
 {
  "modelSpec": {
@@ -526,6 +535,7 @@ docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 
 ```
 
 ```bash
+python rest_predict_binary_resnet.py --help
 usage: rest_predict_binary_resnet.py [-h] [--images_list IMAGES_LIST]
                                      [--rest_url REST_URL]
                                      [--input_name INPUT_NAME]

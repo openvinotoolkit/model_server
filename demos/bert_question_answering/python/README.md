@@ -24,10 +24,10 @@ cd model_server/demos/bert_question_answering/python
 ```
 
 Build and start the docker container which runs the client
-```
+```bash
 docker build -t bert-client:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} .
 
-docker run -it --network host -e no_proxy=localhost bert-client:latest --grpc_address localhost
+docker run -it --network host -e no_proxy=localhost bert-client:latest --grpc_address localhost --grpc_port 9000
 ```
 
 Docker image with BERT client by default start the container with a command:
