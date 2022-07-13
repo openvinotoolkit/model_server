@@ -240,16 +240,16 @@ public:
 
         uint grpcServersCount = getGRPCServersCount(config);
         servers.reserve(grpcServersCount);
-        SPDLOG_DEBUG("Starting grpc servers: {}", grpcServersCount);
+        SPDLOG_DEBUG("Starting gRPC servers: {}", grpcServersCount);
 
         if (!isPortAvailable(config.port())) {
-            SPDLOG_ERROR("Failed to start GRPC server at " + config.grpcBindAddress() + ":" + std::to_string(config.port()));
+            SPDLOG_ERROR("Failed to start gRPC server at " + config.grpcBindAddress() + ":" + std::to_string(config.port()));
             return EXIT_FAILURE;
         }
         for (uint i = 0; i < grpcServersCount; ++i) {
             std::unique_ptr<grpc::Server> server = builder.BuildAndStart();
             if (server == nullptr) {
-                SPDLOG_ERROR("Failed to start GRPC server at " + config.grpcBindAddress() + ":" + std::to_string(config.port()));
+                SPDLOG_ERROR("Failed to start gRPC server at " + config.grpcBindAddress() + ":" + std::to_string(config.port()));
                 return EXIT_FAILURE;
             }
             servers.push_back(std::move(server));
@@ -267,37 +267,41 @@ public:
         state = ModuleState::SHUTDOWN;
     }
 };
+
+// TODO should replace all messages like
+// start REST Server with start HTTP Server
+// start Server with start gRPC server
+// this should be synchronized with validation tests changes
+
 class HTTPServerModule : public Module {
     std::unique_ptr<ovms::http_server> server;
 
 public:
     HTTPServerModule() = default;
     int start(const ovms::Config& config) override {
-        if (config.restPort() != 0) {
-            state = ModuleState::STARTED_INITIALIZE;
-            const std::string server_address = config.restBindAddress() + ":" + std::to_string(config.restPort());
-            int workers = config.restWorkers() ? config.restWorkers() : 10;
+        state = ModuleState::STARTED_INITIALIZE;
+        const std::string server_address = config.restBindAddress() + ":" + std::to_string(config.restPort());
+        int workers = config.restWorkers() ? config.restWorkers() : 10;
 
-            SPDLOG_INFO("Will start {} REST workers", workers);
-            server = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), workers);
-            if (server != nullptr) {
-                SPDLOG_INFO("Started REST server at {}", server_address);
-            } else {
-                SPDLOG_ERROR("Failed to start REST server at " + server_address);
-                return EXIT_FAILURE;
-            }
-            state = ModuleState::INITIALIZED;
+        SPDLOG_INFO("Will start {} REST workers", workers);
+        server = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), workers);
+        if (server != nullptr) {
+            SPDLOG_INFO("Started REST server at {}", server_address);
+        } else {
+            SPDLOG_ERROR("Failed to start REST server at " + server_address);
+            return EXIT_FAILURE;
         }
+        state = ModuleState::INITIALIZED;
         return EXIT_SUCCESS;
     }
     void shutdown() override {
-        if (server != nullptr) {
-            state = ModuleState::STARTED_SHUTDOWN;
-            server->Terminate();
-            server->WaitForTermination();
-            SPDLOG_INFO("Shutdown HTTP server");
-            state = ModuleState::SHUTDOWN;
-        }
+        if (server == nullptr)
+            return;
+        state = ModuleState::STARTED_SHUTDOWN;
+        server->Terminate();
+        server->WaitForTermination();
+        SPDLOG_INFO("Shutdown HTTP server");
+        state = ModuleState::SHUTDOWN;
     }
 };
 
@@ -354,10 +358,12 @@ int Server::start(int argc, char** argv) {
         retCode = modules.at("GRPCServerModule")->start(config);
         if (retCode)
             return retCode;
-        this->modules.emplace("HTTPServerModule", std::make_unique<HTTPServerModule>());
-        retCode = modules.at("HTTPServerModule")->start(config);
-        if (retCode)
-            return retCode;
+        if (config.restPort() != 0) {
+            this->modules.emplace("HTTPServerModule", std::make_unique<HTTPServerModule>());
+            retCode = modules.at("HTTPServerModule")->start(config);
+            if (retCode)
+                return retCode;
+        }
         this->modules.emplace("ServableManagerModule", std::make_unique<ServableManagerModule>());
         retCode = modules.at("ServableManagerModule")->start(config);
         if (retCode)
@@ -370,7 +376,8 @@ int Server::start(int argc, char** argv) {
         }
         SPDLOG_INFO("Shutting down");
         modules.at("GRPCServerModule")->shutdown();
-        modules.at("HTTPServerModule")->shutdown();
+        if (config.restPort() != 0)
+            modules.at("HTTPServerModule")->shutdown();
         modules.at("ServableManagerModule")->shutdown();
 #ifdef MTR_ENABLED
         modules.at("ProfilerModule")->shutdown();
