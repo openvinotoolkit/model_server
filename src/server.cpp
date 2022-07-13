@@ -1,4 +1,4 @@
-//****************************************************************************
+//*****************************************************************************
 // Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -151,8 +151,6 @@ void onIllegal(int status) {
     shutdown_request = 2;
 }
 
-std::shared_ptr<std::function<void(int)>> fl;
-
 void installSignalHandlers(ovms::Server& server) {
     static struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = onInterrupt;
@@ -161,11 +159,6 @@ void installSignalHandlers(ovms::Server& server) {
     sigaction(SIGINT, &sigIntHandler, NULL);
 
     static struct sigaction sigTermHandler;
-    fl = std::make_shared<std::function<void(int)>>(
-        [&server](int status) {
-            shutdown_request = 1;
-            server.setShutdownRequest(status);
-        });
     sigTermHandler.sa_handler = onTerminate;
     sigemptyset(&sigTermHandler.sa_mask);
     sigTermHandler.sa_flags = 0;
