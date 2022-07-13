@@ -28,6 +28,7 @@
 #include "config.hpp"
 #include "localfilesystem.hpp"
 #include "get_model_metadata_impl.hpp"
+#include "metric_registry.hpp"
 #include "model_service.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "pipelinedefinition.hpp"
@@ -443,9 +444,10 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
 }
 
 Status HttpRestApiHandler::processMetricsRequest(std::string& response){
-    LocalFileSystem lfs;
-    Status status = lfs.readTextFile("./mock/metrics.txt", &response);
-    return status;
+    //LocalFileSystem lfs;
+    response = MetricRegistry::getInstance().serializeToString();
+    //Status status = lfs.readTextFile("./mock/metrics.txt", &response);
+    return StatusCode::OK;
 }
 
 Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, ModelManager& manager) {
