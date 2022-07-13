@@ -330,9 +330,11 @@ public:
         return EXIT_SUCCESS;
     }
     void shutdown() override {
+#ifdef MTR_ENABLED
         state = ModuleState::STARTED_SHUTDOWN;
         profiler.reset();
         state = ModuleState::SHUTDOWN;
+#endif
     }
 };
 
