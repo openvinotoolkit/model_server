@@ -43,7 +43,6 @@ public:
 };
 
 class Server {
-    volatile sig_atomic_t shutdownRequest = 0;
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;
     Server() = default;
 

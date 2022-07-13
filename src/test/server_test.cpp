@@ -42,16 +42,6 @@ using testing::UnorderedElementsAre;
 using grpc::Channel;
 using grpc::ClientContext;
 
-template <typename T>
-class ResourceGuard {
-    T* ptr;
-
-public:
-    ResourceGuard(T* ptr) :
-        ptr(ptr) {}
-    ~ResourceGuard() { delete ptr; }
-};
-
 struct Configuration {
     std::string address = "localhost";
     std::string port = "9178";
@@ -61,9 +51,8 @@ class ServingClient {
     std::unique_ptr<inference::GRPCInferenceService::Stub> stub_;
 
 public:
-    ServingClient(std::shared_ptr<Channel> channel, const Configuration& config) :
+    ServingClient(std::shared_ptr<Channel> channel) :
         stub_(inference::GRPCInferenceService::NewStub(channel)) {
-        this->config = config;
     }
 
     // Pre-processing function for synthetic data.
@@ -79,17 +68,13 @@ public:
     }
 
 private:
-    Configuration config;
     ::inference::ServerLiveRequest request;
 };
 
 void requestServerAlive(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
     grpc::ChannelArguments args;
-    Configuration config;
-    config.address = "localhost";
-    config.port = grpcPort;
-    std::string address = config.address + ":" + config.port;
-    ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args), config);
+    std::string address = std::string("localhost") + ":" + grpcPort;
+    ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args));
     client.verifyLive(status, expectedStatus);
 }
 

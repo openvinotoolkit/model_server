@@ -337,7 +337,6 @@ public:
 };
 
 void Server::setShutdownRequest(int i) {
-    shutdownRequest = 1;
     shutdown_request = 1;
 }
 
