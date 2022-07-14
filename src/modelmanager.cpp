@@ -61,10 +61,11 @@ static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
 static bool watcherStarted = false;
 static bool cleanerStarted = false;
 
-ModelManager::ModelManager(const std::string& modelCacheDirectory) :
+ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry& metricRegistry) :
     ieCore(std::make_unique<ov::Core>()),
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
-    modelCacheDirectory(modelCacheDirectory) {
+    modelCacheDirectory(modelCacheDirectory),
+    metricRegistry(metricRegistry) {
     // Take --cache_dir from CLI
     if (this->modelCacheDirectory.empty()) {
         this->modelCacheDirectory = ovms::Config::instance().cacheDir();

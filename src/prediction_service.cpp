@@ -28,7 +28,6 @@
 #pragma GCC diagnostic pop
 
 #include "get_model_metadata_impl.hpp"
-#include "metric_registry.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
@@ -75,8 +74,6 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         request->model_spec().name(),
         request->model_spec().version().value());
 
-    MetricRegistry::getInstance().getGrpcRequestsTotalCounter().Add({{"api", "TFS"}}).Increment();
-
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::Pipeline> pipelinePtr;
 
@@ -96,6 +93,11 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         status = pipelinePtr->execute();
     } else {
         status = modelInstance->infer(request, response, modelInstanceUnloadGuard);
+        if (status.ok()) {
+            modelInstance->getInferOkMetric()->increment(1);
+        } else {
+            modelInstance->getInferFailMetric()->increment(1);
+        }
     }
 
     if (!status.ok()) {

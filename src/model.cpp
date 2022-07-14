@@ -24,6 +24,7 @@
 #include "customloaders.hpp"
 #include "localfilesystem.hpp"
 #include "logging.hpp"
+#include "metric_registry.hpp"
 #include "pipelinedefinition.hpp"
 
 namespace ovms {
@@ -113,10 +114,10 @@ std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::stri
     if (isStateful()) {
         SPDLOG_DEBUG("Creating new stateful model instance - model name: {}; model version: {};", modelName, modelVersion);
         return std::move(std::static_pointer_cast<ModelInstance>(
-            std::make_shared<StatefulModelInstance>(modelName, modelVersion, ieCore, this->globalSequencesViewer)));
+            std::make_shared<StatefulModelInstance>(modelName, modelVersion, ieCore, this->globalSequencesViewer)));  // TODO: ?
     } else {
         SPDLOG_DEBUG("Creating new model instance - model name: {}; model version: {};", modelName, modelVersion);
-        return std::move(std::make_shared<ModelInstance>(modelName, modelVersion, ieCore));
+        return std::move(std::make_shared<ModelInstance>(modelName, modelVersion, ieCore, &MetricRegistry::getInstance()));
     }
 }
 

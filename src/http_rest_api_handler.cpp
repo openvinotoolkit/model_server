@@ -26,8 +26,8 @@
 #include <spdlog/spdlog.h>
 
 #include "config.hpp"
-#include "localfilesystem.hpp"
 #include "get_model_metadata_impl.hpp"
+#include "localfilesystem.hpp"
 #include "metric_registry.hpp"
 #include "model_service.hpp"
 #include "modelinstanceunloadguard.hpp"
@@ -92,7 +92,7 @@ Status HttpRestApiHandler::dispatchToProcessor(
         auto& manager = ModelManager::getInstance();
         return processConfigStatusRequest(*response, manager);
     }
-    if (request_components.type == Metrics){
+    if (request_components.type == Metrics) {
         return processMetricsRequest(*response);
     }
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
@@ -443,10 +443,8 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
     return StatusCode::OK_RELOADED;
 }
 
-Status HttpRestApiHandler::processMetricsRequest(std::string& response){
-    //LocalFileSystem lfs;
+Status HttpRestApiHandler::processMetricsRequest(std::string& response) {
     response = MetricRegistry::getInstance().serializeToString();
-    //Status status = lfs.readTextFile("./mock/metrics.txt", &response);
     return StatusCode::OK;
 }
 

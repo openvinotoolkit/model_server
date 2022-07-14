@@ -33,6 +33,7 @@
 
 #include "customloaderconfig.hpp"
 #include "customloaderinterface.hpp"
+#include "metric_registry.hpp"
 #include "modelchangesubscription.hpp"
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
@@ -314,12 +315,18 @@ public:
     /**
          * @brief A default constructor
          */
-    ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore) :
+    ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry = nullptr) :
         ieCore(ieCore),
         name(name),
         version(version),
         subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)),
-        status(name, version) { isCustomLoaderConfigChanged = false; }
+        status(name, version) {
+        isCustomLoaderConfigChanged = false;
+        if (registry) {
+            this->inferOkMetric = registry->getInferOkFamily().add({{"model_name", name}, {"model_version", std::to_string(version)}});
+            this->inferFailMetric = registry->getInferFailFamily().add({{"model_name", name}, {"model_version", std::to_string(version)}});
+        }
+    }
 
     /**
          * @brief Destroy the Model Instance object
@@ -552,5 +559,15 @@ public:
     virtual Status infer(const ::inference::ModelInferRequest* requestProto,
         ::inference::ModelInferResponse* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
+
+    // Metrics
+
+private:
+    std::shared_ptr<Metric> inferOkMetric;
+    std::shared_ptr<Metric> inferFailMetric;
+
+public:
+    std::shared_ptr<Metric> getInferOkMetric() { return this->inferOkMetric; }
+    std::shared_ptr<Metric> getInferFailMetric() { return this->inferFailMetric; }
 };
 }  // namespace ovms

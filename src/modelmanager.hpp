@@ -35,6 +35,7 @@
 #include "customloaders.hpp"
 #include "filesystem.hpp"
 #include "global_sequences_viewer.hpp"
+#include "metric_registry.hpp"
 #include "model.hpp"
 #include "pipeline.hpp"
 #include "pipeline_factory.hpp"
@@ -48,6 +49,7 @@ class IVersionReader;
 class CustomNodeLibraryManager;
 struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
+
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
@@ -56,7 +58,7 @@ protected:
     /**
      * @brief A default constructor is private
      */
-    ModelManager(const std::string& modelCacheDirectory = "");
+    ModelManager(const std::string& modelCacheDirectory = "", MetricRegistry& metricRegistry = MetricRegistry::getInstance());
 
     void logPluginConfiguration();
 
@@ -185,6 +187,8 @@ private:
      * @brief Directory for OpenVINO to store cache files.
      */
     std::string modelCacheDirectory;
+
+    MetricRegistry& metricRegistry;
 
 public:
     /**

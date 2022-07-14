@@ -164,7 +164,6 @@ public:
 
     Status processMetricsRequest(std::string& response);
 
-
 private:
     const std::regex predictionRegex;
     const std::regex modelstatusRegex;
