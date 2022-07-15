@@ -48,6 +48,10 @@ const std::string HttpRestApiHandler::modelstatusRegexExp =
 const std::string HttpRestApiHandler::configReloadRegexExp = R"((.?)\/v1\/config\/reload)";
 const std::string HttpRestApiHandler::configStatusRegexExp = R"((.?)\/v1\/config)";
 
+const std::string HttpRestApiHandler::kfs_modelstatusRegexExp =
+    R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(ready)))";
+const std::string HttpRestApiHandler::kfs_modelmetadataRegexExp = 
+    R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/))";
 Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version) {
     if (!model_version_str.empty()) {
         try {
@@ -60,37 +64,90 @@ Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std
     return StatusCode::OK;
 }
 
+void HttpRestApiHandler::registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&)> f){
+    handlers[type] = f;
+}
+
+void HttpRestApiHandler::registerAll(){
+    registerHandler(Predict, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body){
+        if (request_components.processing_method == "predict") {
+            return processPredictRequest(request_components.model_name, request_components.model_version,
+                request_components.model_version_label, request_body, &response);
+        } else {
+            SPDLOG_WARN("Requested REST resource not found");
+            return (Status)StatusCode::REST_NOT_FOUND;
+        }
+    });
+
+    registerHandler(GetModelMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body){
+        return processModelMetadataRequest(request_components.model_name, request_components.model_version,
+            request_components.model_version_label, &response);
+    });
+    registerHandler(GetModelStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body){
+        return processModelStatusRequest(request_components.model_name, request_components.model_version,
+            request_components.model_version_label, &response);
+    });
+    registerHandler(ConfigReload, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body){
+        auto& manager = ModelManager::getInstance();
+        return processConfigReloadRequest(response, manager);
+    });
+    registerHandler(ConfigStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body){
+        auto& manager = ModelManager::getInstance();
+        return processConfigStatusRequest(response, manager);
+    });
+    registerHandler(KFS_GetModelStatus, processModelStatusKFSRequest);
+    registerHandler(KFS_GetModelMetadata, processModelMetadataKFSRequest);
+}
+
+
 Status HttpRestApiHandler::dispatchToProcessor(
     const std::string& request_body,
     std::string* response,
     const HttpRequestComponents& request_components) {
 
-    if (request_components.type == Predict) {
-        if (request_components.processing_method == "predict") {
-            return processPredictRequest(request_components.model_name, request_components.model_version,
-                request_components.model_version_label, request_body, response);
-        } else {
-            SPDLOG_WARN("Requested REST resource not found");
-            return StatusCode::REST_NOT_FOUND;
-        }
+
+    if(handlers.count(request_components.type) > 0){
+        return handlers[request_components.type](request_components, *response, request_body);
+    }else{
+        return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
     }
-    if (request_components.type == GetModelMetadata) {
-        return processModelMetadataRequest(request_components.model_name, request_components.model_version,
-            request_components.model_version_label, response);
-    }
-    if (request_components.type == GetModelStatus) {
-        return processModelStatusRequest(request_components.model_name, request_components.model_version,
-            request_components.model_version_label, response);
-    }
-    if (request_components.type == ConfigReload) {
-        auto& manager = ModelManager::getInstance();
-        return processConfigReloadRequest(*response, manager);
-    }
-    if (request_components.type == ConfigStatus) {
-        auto& manager = ModelManager::getInstance();
-        return processConfigStatusRequest(*response, manager);
-    }
+
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
+}
+
+Status HttpRestApiHandler::processModelStatusKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body){
+    ::inference::ModelReadyRequest grpc_request;
+    ::inference::ModelReadyResponse grpc_response;
+    Status status;
+    std::string modelName(request_components.model_name);
+    grpc_request.set_name(modelName);
+    grpc_request.set_version(std::to_string(request_components.model_version.value_or(0)));
+    KFSInferenceServiceImpl service;
+    google::protobuf::util::JsonPrintOptions opts;
+    service.ModelReady(nullptr, &grpc_request, &grpc_response);
+    std::string output;
+    google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
+    response = output;
+    return StatusCode::OK;
+
+}
+
+Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body){
+    ::inference::ModelMetadataRequest grpc_request;
+    ::inference::ModelMetadataResponse grpc_response;
+    Status status;
+    std::string modelName(request_components.model_name);
+
+    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, request_components.model_version.value_or(0));
+    grpc_request.set_name(modelName);
+    grpc_request.set_version(std::to_string(request_components.model_version.value_or(0)));
+    KFSInferenceServiceImpl service;
+    google::protobuf::util::JsonPrintOptions opts;
+    service.ModelMetadata(nullptr, &grpc_request, &grpc_response);
+    std::string output;
+    google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
+    response = output;
+    return StatusCode::OK;
 }
 
 Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& requestComponents,
@@ -156,6 +213,24 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         }
         if (std::regex_match(request_path, sm, configStatusRegex)) {
             requestComponents.type = ConfigStatus;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, kfs_modelmetadataRegex)) {
+            requestComponents.model_name = sm[1];
+            std::string model_version_str = sm[2];
+            auto status = parseModelVersion(model_version_str, requestComponents.model_version);
+            if (!status.ok())
+                return status;
+            requestComponents.type = KFS_GetModelMetadata;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, kfs_modelstatusRegex)) {
+            requestComponents.model_name = sm[1];
+            std::string model_version_str = sm[2];
+            auto status = parseModelVersion(model_version_str, requestComponents.model_version);
+            if (!status.ok())
+                return status;
+            requestComponents.type = KFS_GetModelStatus;
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, predictionRegex))
