@@ -18,14 +18,14 @@
 
 set -e
 
-finally() {
+cleanup_tmp_dirs() {
     ARG = $?
     echo "Cleaning up temp directories"
     rm -rf tf/ tfs/
     exit $ARG
 }
 
-trap finally EXIT
+trap cleanup_tmp_dirs EXIT
 
 git clone --branch v2.5.0 --depth 1 https://github.com/tensorflow/tensorflow.git tf
 git clone --branch 2.5.1 --depth 1 https://github.com/tensorflow/serving.git tfs
