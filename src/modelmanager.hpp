@@ -44,6 +44,7 @@ namespace ovms {
 const uint32_t DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
 const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 
+class Config;
 class IVersionReader;
 class CustomNodeLibraryManager;
 struct FunctorSequenceCleaner;
@@ -340,7 +341,7 @@ public:
      * 
      * @return status
      */
-    Status start();
+    Status start(const Config& config);
 
     /**
      * @brief Starts monitoring as new thread

@@ -28,7 +28,6 @@
 
 namespace ovms {
 
-class ModelManager;
 class Node;
 class NodeLibrary;
 

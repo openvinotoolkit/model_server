@@ -24,9 +24,9 @@
 #include <openvino/openvino.hpp>
 
 #include "executingstreamidguard.hpp"
-#include "model_version_policy.hpp"  // for model_version_t typename
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
+#include "modelversion.hpp"
 #include "node.hpp"
 #include "nodestreamidguard.hpp"
 
