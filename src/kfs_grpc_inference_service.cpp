@@ -33,13 +33,41 @@
 
 namespace ovms {
 
-using inference::GRPCInferenceService;
+Status KFSInferenceServiceImpl::getModelInstance(const ::inference::ModelInferRequest* request,
+    std::shared_ptr<ovms::ModelInstance>& modelInstance,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
+    OVMS_PROFILE_FUNCTION();
+    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == module) {
+        return StatusCode::MODEL_NOT_LOADED;  // TODO consider other + add details
+    }
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    // TODO if not succeed then return error
+    auto& manager = servableManagerModule->getServableManager();
+    model_version_t requestedVersion = 0;
+    if (!request->model_version().empty()) {
+        auto versionRead = stoi64(request->model_version());
+        if (versionRead) {
+            requestedVersion = versionRead.value();
+        } else {
+            SPDLOG_DEBUG("requested model: name {}; with version in invalid format: {}", request->model_name(), request->model_version());
+            return StatusCode::MODEL_VERSION_INVALID_FORMAT;
+        }
+    }
+    return manager.getModelInstance(request->model_name(), requestedVersion, modelInstance, modelInstanceUnloadGuardPtr);
+}
 
-Status getPipeline(const ::inference::ModelInferRequest* request,
+Status KFSInferenceServiceImpl::getPipeline(const ::inference::ModelInferRequest* request,
     ::inference::ModelInferResponse* response,
     std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
     OVMS_PROFILE_FUNCTION();
-    ModelManager& manager = ModelManager::getInstance();
+    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == module) {
+        return StatusCode::MODEL_NOT_LOADED;  // TODO consider other + add details
+    }
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    // TODO if not succeed then return error
+    auto& manager = servableManagerModule->getServableManager();
     return manager.createPipeline(pipelinePtr, request->model_name(), request, response);
 }
 
@@ -124,7 +152,13 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelMetadata(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) {
-    auto& manager = ModelManager::getInstance();
+    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == module) {
+        return grpc::Status(grpc::StatusCode::NOT_FOUND, SERVABLE_MANAGER_MODULE_NAME + " module not started yet");
+    }
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    // TODO if not succeed then return error
+    auto& manager = servableManagerModule->getServableManager();
     const auto& name = request->name();
     const auto& versionString = request->version();
 

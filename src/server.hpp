@@ -51,7 +51,7 @@ class Server {
 protected:
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;
     Server() = default;
-    virtual std::unique_ptr<Module> createModule(const std::string& name) const;
+    virtual std::unique_ptr<Module> createModule(const std::string& name);
 
 public:
     static Server& instance() {
@@ -66,5 +66,10 @@ public:
 
     void setShutdownRequest(int i);
     virtual ~Server();
+
+    // TODO potentially to be hiden under protected and exposed only in tests by inheritance
+    // #KFS_CLEANUP
+    int startModules(ovms::Config& config);
+    void shutdownModules(ovms::Config& config);
 };
 }  // namespace ovms

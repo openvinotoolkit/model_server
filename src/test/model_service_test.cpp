@@ -28,6 +28,7 @@
 #include "../modelmanager.hpp"
 #include "../modelversionstatus.hpp"
 #include "../pipelinedefinition.hpp"
+#include "../server.hpp"
 #include "gtest/gtest.h"
 #include "test_utils.hpp"
 
@@ -349,7 +350,8 @@ TEST_F(TFSModelServiceTest, getAllModelsStatuses_two_models_with_one_versions) {
 }
 
 TEST_F(TFSModelServiceTest, config_reload) {
-    ModelServiceImpl s;
+    ovms::Server& server = ovms::Server::instance();
+    ModelServiceImpl s(server);
     tensorflow::serving::ReloadConfigRequest modelStatusRequest;
     tensorflow::serving::ReloadConfigResponse modelStatusResponse;
 

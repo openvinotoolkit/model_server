@@ -30,7 +30,10 @@ namespace ovms {
 using inference::GRPCInferenceService;
 class ModelManager;
 class ModelInstance;
+class ModelInstanceUnloadGuard;
+class Pipeline;
 class Server;
+class Status;
 class TensorInfo;
 class PipelineDefinition;
 
@@ -51,6 +54,14 @@ public:
     static Status buildResponse(PipelineDefinition& pipelineDefinition, ::inference::ModelReadyResponse* response);
     static void convert(const std::pair<std::string, std::shared_ptr<TensorInfo>>& from, ::inference::ModelMetadataResponse::TensorMetadata* to);
     static Status getModelReady(const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, const ModelManager& manager);
+
+protected:
+    Status getModelInstance(const ::inference::ModelInferRequest* request,
+        std::shared_ptr<ovms::ModelInstance>& modelInstance,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
+    Status getPipeline(const ::inference::ModelInferRequest* request,
+        ::inference::ModelInferResponse* response,
+        std::unique_ptr<ovms::Pipeline>& pipelinePtr);
 };
 
 }  // namespace ovms

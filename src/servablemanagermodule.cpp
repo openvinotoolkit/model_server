@@ -41,7 +41,7 @@ void ServableManagerModule::shutdown() {
     servableManager->join();
     state = ModuleState::SHUTDOWN;
 }
-const ModelManager& ServableManagerModule::getServableManager() const {
+ModelManager& ServableManagerModule::getServableManager() const {
     return *servableManager;
 }
 }  // namespace ovms

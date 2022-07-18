@@ -28,12 +28,14 @@
 #include "config.hpp"
 #include "filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
+#include "grpcservermodule.hpp"
 #include "model_service.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "pipelinedefinition.hpp"
 #include "prediction_service_utils.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
+#include "server.hpp"
 #include "timer.hpp"
 
 using tensorflow::serving::PredictRequest;
@@ -52,6 +54,19 @@ const std::string HttpRestApiHandler::kfs_modelreadyRegexExp =
     R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(ready)))";
 const std::string HttpRestApiHandler::kfs_modelmetadataRegexExp =
     R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/)?)";
+HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms) :
+    predictionRegex(predictionRegexExp),
+    modelstatusRegex(modelstatusRegexExp),
+    configReloadRegex(configReloadRegexExp),
+    configStatusRegex(configStatusRegexExp),
+    kfs_modelreadyRegex(kfs_modelreadyRegexExp),
+    kfs_modelmetadataRegex(kfs_modelmetadataRegexExp),
+    timeout_in_ms(timeout_in_ms),
+    ovmsServer(ovmsServer),
+    grpcGetModelMetadataImpl(dynamic_cast<const GRPCServerModule*>(this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))->getTFSModelMetadataImpl()) {
+    registerAll();
+}
+
 Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version) {
     if (!model_version_str.empty()) {
         try {
@@ -403,15 +418,15 @@ Status HttpRestApiHandler::processModelMetadataRequest(
     tensorflow::serving::GetModelMetadataResponse grpc_response;
     Status status;
     std::string modelName(model_name);
-    status = GetModelMetadataImpl::createGrpcRequest(modelName, model_version, &grpc_request);
+    status = grpcGetModelMetadataImpl.createGrpcRequest(modelName, model_version, &grpc_request);
     if (!status.ok()) {
         return status;
     }
-    status = GetModelMetadataImpl::getModelStatus(&grpc_request, &grpc_response);
+    status = grpcGetModelMetadataImpl.getModelStatus(&grpc_request, &grpc_response);
     if (!status.ok()) {
         return status;
     }
-    status = GetModelMetadataImpl::serializeResponse2Json(&grpc_response, response);
+    status = grpcGetModelMetadataImpl.serializeResponse2Json(&grpc_response, response);
     if (!status.ok()) {
         return status;
     }

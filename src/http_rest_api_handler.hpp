@@ -32,6 +32,8 @@
 #include "status.hpp"
 
 namespace ovms {
+class GetModelMetadataImpl;
+class Server;
 enum RequestType { Predict,
     GetModelStatus,
     GetModelMetadata,
@@ -63,14 +65,7 @@ public:
      *
      * @param timeout_in_ms
      */
-    HttpRestApiHandler(int timeout_in_ms) :
-        predictionRegex(predictionRegexExp),
-        modelstatusRegex(modelstatusRegexExp),
-        configReloadRegex(configReloadRegexExp),
-        configStatusRegex(configStatusRegexExp),
-        kfs_modelreadyRegex(kfs_modelreadyRegexExp),
-        kfs_modelmetadataRegex(kfs_modelmetadataRegexExp),
-        timeout_in_ms(timeout_in_ms) { registerAll(); }
+    HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms);
 
     Status parseRequestComponents(HttpRequestComponents& components,
         const std::string_view http_method,
@@ -183,6 +178,9 @@ private:
 
     std::map<RequestType, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&)>> handlers;
     int timeout_in_ms;
+
+    ovms::Server& ovmsServer;
+    const GetModelMetadataImpl& grpcGetModelMetadataImpl;
 };
 
 }  // namespace ovms

@@ -151,7 +151,7 @@ public:
         static MockedServer global;
         return global;
     }
-    std::unique_ptr<Module> createModule(const std::string& name) const override {
+    std::unique_ptr<Module> createModule(const std::string& name) override {
         if (name != ovms::SERVABLE_MANAGER_MODULE_NAME)
             return Server::createModule(name);
         return std::make_unique<MockedServableManagerModule>();
@@ -204,8 +204,8 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
     requestServerReady(argv[8], grpc::StatusCode::OK, false);
     requestModelReady(argv[8], argv[2], grpc::StatusCode::NOT_FOUND, false);
 
-    SPDLOG_INFO("here check that model & server still is not ready since servable manager module only started loading \n\
-    we have to wait for module to start loading");
+    SPDLOG_INFO(R"(here check that model & server still is not ready since servable manager module only started loading
+    we have to wait for module to start loading)");
     while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) == ovms::ModuleState::NOT_INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
     }
@@ -213,16 +213,16 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
     auto mockedServableManagerModule = dynamic_cast<MockedServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
     ASSERT_NE(nullptr, mockedServableManagerModule);
 
-    SPDLOG_INFO("here we start loading model \n\
-    however modelmanager adds instance of the model only after it was properly loaded \n\
-     this could be potentially changed");
+    SPDLOG_INFO(R"(here we start loading model
+    however modelmanager adds instance of the model only after it was properly loaded
+     this could be potentially changed)");
     mockedServableManagerModule->waitWithStart = false;
     requestServerReady(argv[8], grpc::StatusCode::OK, false);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));  // average:32ms on CLX3 to load model
     requestModelReady(argv[8], argv[2], grpc::StatusCode::NOT_FOUND, false);
 
-    SPDLOG_INFO("/ here check that server eventually is still not ready beceause module is not initialized \n\
-    // sleep potentially to improve with signaling");
+    SPDLOG_INFO(R"(here check that server eventually is still not ready beceause module is not initialized
+    sleep potentially to improve with signaling)");
     std::this_thread::sleep_for(std::chrono::milliseconds(70));  // average:32ms on CLX3
     requestModelReady(argv[8], argv[2], grpc::StatusCode::OK, true);
     requestServerReady(argv[8], grpc::StatusCode::OK, false);

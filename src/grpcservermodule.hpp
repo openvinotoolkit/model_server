@@ -15,21 +15,31 @@
 //*****************************************************************************
 #pragma once
 #include <memory>
+#include <utility>
+#include <vector>
 
+#include <grpcpp/server.h>
+
+#include "model_service.hpp"
+#include "prediction_service.hpp"
+#include "servablemanagermodule.hpp"
 #include "server.hpp"
 
 namespace ovms {
 class Config;
-class ModelManager;
 
-class ServableManagerModule : public Module {
-protected:
-    mutable std::unique_ptr<ModelManager> servableManager;
+class GRPCServerModule : public Module {
+    Server& server;
+    PredictionServiceImpl tfsPredictService;
+    ModelServiceImpl tfsModelService;
+    KFSInferenceServiceImpl kfsGrpcInferenceService;
+    std::vector<std::unique_ptr<grpc::Server>> servers;
 
 public:
-    ServableManagerModule();
+    GRPCServerModule(Server& server);
     int start(const ovms::Config& config) override;
     void shutdown() override;
-    ModelManager& getServableManager() const;
+
+    const GetModelMetadataImpl& getTFSModelMetadataImpl() const;
 };
 }  // namespace ovms

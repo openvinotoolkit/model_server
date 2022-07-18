@@ -105,6 +105,8 @@ cc_library(
         "gatherexitnodeinputhandler.hpp",
         "gcsfilesystem.cpp",
         "gcsfilesystem.hpp",
+        "grpcservermodule.cpp",
+        "grpcservermodule.hpp",
         "kfs_grpc_inference_service.cpp",
         "kfs_grpc_inference_service.hpp",
         "model.cpp",

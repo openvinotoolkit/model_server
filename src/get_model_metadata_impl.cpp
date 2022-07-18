@@ -19,20 +19,32 @@
 
 #include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
+#include "servablemanagermodule.hpp"
+#include "server.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
 using google::protobuf::util::JsonPrintOptions;
 using google::protobuf::util::MessageToJsonString;
 
 namespace ovms {
+GetModelMetadataImpl::GetModelMetadataImpl(ovms::Server& ovmsServer) :
+    ovmsServer(ovmsServer) {}
+
 Status GetModelMetadataImpl::getModelStatus(
     const tensorflow::serving::GetModelMetadataRequest* request,
-    tensorflow::serving::GetModelMetadataResponse* response) {
+    tensorflow::serving::GetModelMetadataResponse* response) const {
     auto status = validate(request);
     if (!status.ok()) {
         return status;
     }
-    return getModelStatus(request, response, ModelManager::getInstance());
+    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == module) {
+        return StatusCode::MODEL_NOT_LOADED;
+    }
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    // TODO if not succeed then return error
+    auto& manager = servableManagerModule->getServableManager();
+    return getModelStatus(request, response, manager);
 }
 
 Status GetModelMetadataImpl::getModelStatus(
