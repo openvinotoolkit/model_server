@@ -37,7 +37,7 @@ enum RequestType { Predict,
     GetModelMetadata,
     ConfigReload,
     ConfigStatus,
-    KFS_GetModelStatus,
+    KFS_GetModelReady,
     KFS_GetModelMetadata };
 struct HttpRequestComponents {
     RequestType type;
@@ -56,7 +56,7 @@ public:
     static const std::string configReloadRegexExp;
     static const std::string configStatusRegexExp;
 
-    static const std::string kfs_modelstatusRegexExp;
+    static const std::string kfs_modelreadyRegexExp;
     static const std::string kfs_modelmetadataRegexExp;
     /**
      * @brief Construct a new HttpRest Api Handler
@@ -68,7 +68,7 @@ public:
         modelstatusRegex(modelstatusRegexExp),
         configReloadRegex(configReloadRegexExp),
         configStatusRegex(configStatusRegexExp),
-        kfs_modelstatusRegex(kfs_modelstatusRegexExp),
+        kfs_modelreadyRegex(kfs_modelreadyRegexExp),
         kfs_modelmetadataRegex(kfs_modelmetadataRegexExp),
         timeout_in_ms(timeout_in_ms) {registerAll();}
 
@@ -170,7 +170,7 @@ public:
 
     Status processConfigStatusRequest(std::string& response, ModelManager& manager);
     static Status processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
-    static Status processModelStatusKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    static Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
  
 private:
     const std::regex predictionRegex;
@@ -178,7 +178,7 @@ private:
     const std::regex configReloadRegex;
     const std::regex configStatusRegex;
 
-    const std::regex kfs_modelstatusRegex;
+    const std::regex kfs_modelreadyRegex;
     const std::regex kfs_modelmetadataRegex;
 
     std::map<RequestType, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&)>> handlers;
