@@ -17,6 +17,7 @@
 #include <any>
 #include <csignal>
 #include <memory>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 
@@ -48,6 +49,7 @@ extern const std::string HTTP_SERVER_MODULE_NAME;
 extern const std::string SERVABLE_MANAGER_MODULE_NAME;
 
 class Server {
+    mutable std::shared_mutex modulesMtx;
 protected:
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;
     Server() = default;

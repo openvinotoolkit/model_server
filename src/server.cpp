@@ -171,7 +171,8 @@ public:
 };
 
 bool Server::isReady() const {
-    auto it = modules.find("ServableManagerModule");
+    std::shared_lock lock(modulesMtx);
+    auto it = modules.find(SERVABLE_MANAGER_MODULE_NAME);
     if (it == modules.end())
         return false;
     if (ModuleState::INITIALIZED != it->second->getState())
@@ -181,6 +182,7 @@ bool Server::isReady() const {
 
 bool Server::isLive() const {
     // TODO we might want at some time start REST only/ or respond with true only if both servers started if both are requested to start. This is to be resolved especially if we implement REST API for Kserver & potentially switch to check for starting specific module
+    std::shared_lock lock(modulesMtx);
     auto it = modules.find(GRPC_SERVER_MODULE_NAME);
     if (it == modules.end())
         return false;
@@ -190,6 +192,7 @@ bool Server::isLive() const {
 }
 
 ModuleState Server::getModuleState(const std::string& name) const {
+    std::shared_lock lock(modulesMtx);
     auto it = modules.find(name);
     if (it == modules.end())
         return ModuleState::NOT_INITIALIZED;
@@ -197,6 +200,7 @@ ModuleState Server::getModuleState(const std::string& name) const {
 }
 
 const Module* Server::getModule(const std::string& name) const {
+    std::shared_lock lock(modulesMtx);
     auto it = modules.find(name);
     if (it == modules.end())
         return nullptr;
@@ -244,6 +248,7 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         return std::make_unique<GRPCServerModule>(*this);
     if (name == HTTP_SERVER_MODULE_NAME)
         return std::make_unique<HTTPServerModule>(*this);
+    SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYY");
     if (name == SERVABLE_MANAGER_MODULE_NAME)
         return std::make_unique<ServableManagerModule>();
     return nullptr;
@@ -254,27 +259,45 @@ int Server::startModules(ovms::Config& config) {
     bool inserted = false;
     auto it = modules.end();
 #if MTR_ENABLED
+    {
+    std::unique_lock lock(modulesMtx);
     std::tie(it, inserted) = this->modules.emplace(PROFILER_MODULE_NAME, this->createModule(PROFILER_MODULE_NAME));
+    }
     retCode = modules.at(PROFILER_MODULE_NAME)->start(config);
     if (retCode)
         return retCode;
 #endif
+    SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYY");
+    {
+    std::unique_lock lock(modulesMtx);
     std::tie(it, inserted) = this->modules.emplace(GRPC_SERVER_MODULE_NAME, this->createModule(GRPC_SERVER_MODULE_NAME));
+    }
 
+    SPDLOG_ERROR("ER");
     if (!inserted)
         return EXIT_FAILURE;
+    SPDLOG_ERROR("ER");
     // if we ever decide not to start GRPC module then we need to implement HTTP responses without using grpc implementations
     retCode = it->second->start(config);
     if (retCode)
         return retCode;
+    SPDLOG_ERROR("ER");
     if (config.restPort() != 0) {
+    {
+    std::unique_lock lock(modulesMtx);
         std::tie(it, inserted) = this->modules.emplace(HTTP_SERVER_MODULE_NAME, this->createModule(HTTP_SERVER_MODULE_NAME));
+    }
         retCode = it->second->start(config);
         if (retCode)
             return retCode;
     }
+    {
+    std::unique_lock lock(modulesMtx);
     std::tie(it, inserted) = this->modules.emplace(SERVABLE_MANAGER_MODULE_NAME, this->createModule(SERVABLE_MANAGER_MODULE_NAME));
+    }
+    SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYY");
     retCode = it->second->start(config);
+    SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYY");
     return retCode;
 }
 

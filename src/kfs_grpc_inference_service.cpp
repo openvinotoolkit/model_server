@@ -77,7 +77,9 @@ const std::string PLATFORM = "OpenVINO";
     (void)context;
     (void)request;
     (void)response;
+    SPDLOG_ERROR("DUP");
     response->set_live(this->ovmsServer.isLive());
+    SPDLOG_ERROR("DUP");
     return grpc::Status::OK;
 }
 

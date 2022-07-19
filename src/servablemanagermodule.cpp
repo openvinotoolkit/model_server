@@ -1,4 +1,4 @@
-//****************************************************************************
+//***************************************************************************tq
 // Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,18 +28,24 @@ ServableManagerModule::ServableManagerModule() :
 
 int ServableManagerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
+    SPDLOG_INFO("{} starting", SERVABLE_MANAGER_MODULE_NAME);
+    SPDLOG_ERROR("ER");
     auto status = servableManager->start(config);
     if (status.ok()) {
         state = ModuleState::INITIALIZED;
+        SPDLOG_INFO("{} started", SERVABLE_MANAGER_MODULE_NAME);
         return EXIT_SUCCESS;
     }
     SPDLOG_ERROR("ovms::ModelManager::Start() Error: {}", status.string());
+    SPDLOG_ERROR("ER");
     return EXIT_FAILURE;
 }
 void ServableManagerModule::shutdown() {
     state = ModuleState::STARTED_SHUTDOWN;
+    SPDLOG_INFO("{} shutting down", SERVABLE_MANAGER_MODULE_NAME);
     servableManager->join();
     state = ModuleState::SHUTDOWN;
+    SPDLOG_INFO("{} shutdown", SERVABLE_MANAGER_MODULE_NAME);
 }
 ModelManager& ServableManagerModule::getServableManager() const {
     return *servableManager;

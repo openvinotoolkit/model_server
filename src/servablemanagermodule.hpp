@@ -30,6 +30,6 @@ public:
     ServableManagerModule();
     int start(const ovms::Config& config) override;
     void shutdown() override;
-    ModelManager& getServableManager() const;
+    ModelManager& getServableManager() const ;
 };
 }  // namespace ovms
