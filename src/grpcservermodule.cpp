@@ -147,28 +147,16 @@ int GRPCServerModule::start(const ovms::Config& config) {
         return EXIT_FAILURE;
     }
     for (uint i = 0; i < grpcServersCount; ++i) {
-        try {
-    SPDLOG_ERROR("ER");
         std::unique_ptr<grpc::Server> server = builder.BuildAndStart();
-        SPDLOG_ERROR("ER");
         if (server == nullptr) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            SPDLOG_ERROR("ER");
             SPDLOG_ERROR("Failed to start gRPC server at " + config.grpcBindAddress() + ":" + std::to_string(config.port()));
             return EXIT_FAILURE;
         }
-        SPDLOG_ERROR("ER");
         servers.push_back(std::move(server));
-        } catch (std::exception& e) {
-        SPDLOG_ERROR("ER:{}", e.what());
-        } catch (...) {
-        SPDLOG_ERROR("ER");
-        }
     }
     state = ModuleState::INITIALIZED;
-    SPDLOG_INFO("Server started on port {}", config.port());
     SPDLOG_INFO("{} started", GRPC_SERVER_MODULE_NAME);
-    SPDLOG_ERROR("ER");
+    SPDLOG_INFO("Server started on port {}", config.port());
     return EXIT_SUCCESS;
 }
 

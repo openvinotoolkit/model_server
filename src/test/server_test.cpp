@@ -68,38 +68,25 @@ public:
         ::inference::ServerLiveRequest request;
         ::inference::ServerLiveResponse response;
 
-    SPDLOG_ERROR("ER:{}", expectedStatus);
         if ((expectedStatus == grpc::StatusCode::UNAVAILABLE) && (nullptr == stub_)) {
-                SPDLOG_ERROR("stub_ is:{}", (void*)stub_.get());
-                EXPECT_NE(nullptr, stub_);
-                return;
-
+            EXPECT_NE(nullptr, stub_);
+            return;
         }
-    SPDLOG_ERROR("ER:{}   {}", expectedStatus, grpc::StatusCode::UNAVAILABLE);
-                SPDLOG_ERROR("stub_ is:{}", (void*)stub_.get());
         if ((expectedStatus == grpc::StatusCode::UNAVAILABLE))
-                return;
+            return;
 
-                SPDLOG_ERROR("stub_ is:{}", (void*)stub_.get());
-    SPDLOG_ERROR("ER:{}   {}", expectedStatus, grpc::StatusCode::UNAVAILABLE);
-                ASSERT_NE(nullptr, stub_);
-    SPDLOG_ERROR("ER:{}", expectedStatus);
+        ASSERT_NE(nullptr, stub_);
         auto status = stub_->ServerLive(&context, request, &response);
         // if we failed to connect it is ok return here
-    SPDLOG_ERROR("ER:{}", expectedStatus);
         ASSERT_EQ(status.error_code(), expectedStatus);
-    SPDLOG_ERROR("ER:{}", expectedStatus);
         EXPECT_EQ(response.live(), alive);
-    SPDLOG_ERROR("ER:{}", expectedStatus);
     }
     void verifyReady(grpc::StatusCode expectedStatus = grpc::StatusCode::OK, bool ready = true) {
         ClientContext context;
         ::inference::ServerReadyRequest request;
         ::inference::ServerReadyResponse response;
 
-    SPDLOG_ERROR("ER");
-                ASSERT_NE(nullptr, stub_);
-    SPDLOG_ERROR("ER");
+        ASSERT_NE(nullptr, stub_);
         auto status = stub_->ServerReady(&context, request, &response);
         ASSERT_EQ(status.error_code(), expectedStatus);
         EXPECT_EQ(response.ready(), ready);
@@ -110,9 +97,7 @@ public:
         ::inference::ModelReadyResponse response;
         request.set_name(modelName);
 
-    SPDLOG_ERROR("ER");
-                ASSERT_NE(nullptr, stub_);
-    SPDLOG_ERROR("ER");
+        ASSERT_NE(nullptr, stub_);
         auto status = stub_->ModelReady(&context, request, &response);
         ASSERT_EQ(status.error_code(), expectedStatus);
         EXPECT_EQ(response.ready(), ready);
@@ -123,7 +108,6 @@ void requestServerAlive(const char* grpcPort, grpc::StatusCode status = grpc::St
     grpc::ChannelArguments args;
     std::string address = std::string("localhost") + ":" + grpcPort;
     ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args));
-    SPDLOG_ERROR("ER");
     client.verifyLive(status, expectedStatus);
 }
 void requestServerReady(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
@@ -131,7 +115,6 @@ void requestServerReady(const char* grpcPort, grpc::StatusCode status = grpc::St
     std::string address = std::string("localhost") + ":" + grpcPort;
     SPDLOG_DEBUG("Verying if server is ready on address: {}", address);
     ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args));
-    SPDLOG_ERROR("ER");
     client.verifyReady(status, expectedStatus);
 }
 
@@ -140,7 +123,6 @@ void requestModelReady(const char* grpcPort, const std::string& modelName, grpc:
     std::string address = std::string("localhost") + ":" + grpcPort;
     SPDLOG_DEBUG("Verying if server is ready on address: {}", address);
     ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args));
-    SPDLOG_ERROR("ER");
     client.verifyModelReady(modelName, status, expectedStatus);
 }
 
@@ -219,21 +201,14 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
 
     SPDLOG_INFO("server should not respond with live when not started");
     requestServerAlive(argv[8], grpc::StatusCode::UNAVAILABLE, false);
-    SPDLOG_ERROR("ER");
     MockedServer& server = MockedServer::instance();
-    SPDLOG_ERROR("ER");
     std::thread t([&argv, &server]() {
-    SPDLOG_ERROR("ER");
         ASSERT_EQ(EXIT_SUCCESS, server.start(9, argv));
-    SPDLOG_ERROR("ER");
     });
-    SPDLOG_ERROR("ER");
     auto start = std::chrono::high_resolution_clock::now();
     while ((server.getModuleState(ovms::GRPC_SERVER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
-    SPDLOG_ERROR("ER");
     }
-    SPDLOG_ERROR("ER");
 
     SPDLOG_INFO("here ensure that server is already live but not ready yet");
     requestServerAlive(argv[8], grpc::StatusCode::OK, true);

@@ -50,6 +50,7 @@ extern const std::string SERVABLE_MANAGER_MODULE_NAME;
 
 class Server {
     mutable std::shared_mutex modulesMtx;
+
 protected:
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;
     Server() = default;

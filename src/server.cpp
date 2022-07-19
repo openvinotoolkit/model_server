@@ -260,8 +260,8 @@ int Server::startModules(ovms::Config& config) {
     auto it = modules.end();
 #if MTR_ENABLED
     {
-    std::unique_lock lock(modulesMtx);
-    std::tie(it, inserted) = this->modules.emplace(PROFILER_MODULE_NAME, this->createModule(PROFILER_MODULE_NAME));
+        std::unique_lock lock(modulesMtx);
+        std::tie(it, inserted) = this->modules.emplace(PROFILER_MODULE_NAME, this->createModule(PROFILER_MODULE_NAME));
     }
     retCode = modules.at(PROFILER_MODULE_NAME)->start(config);
     if (retCode)
@@ -269,35 +269,30 @@ int Server::startModules(ovms::Config& config) {
 #endif
     SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYY");
     {
-    std::unique_lock lock(modulesMtx);
-    std::tie(it, inserted) = this->modules.emplace(GRPC_SERVER_MODULE_NAME, this->createModule(GRPC_SERVER_MODULE_NAME));
+        std::unique_lock lock(modulesMtx);
+        std::tie(it, inserted) = this->modules.emplace(GRPC_SERVER_MODULE_NAME, this->createModule(GRPC_SERVER_MODULE_NAME));
     }
 
-    SPDLOG_ERROR("ER");
     if (!inserted)
         return EXIT_FAILURE;
-    SPDLOG_ERROR("ER");
     // if we ever decide not to start GRPC module then we need to implement HTTP responses without using grpc implementations
     retCode = it->second->start(config);
     if (retCode)
         return retCode;
-    SPDLOG_ERROR("ER");
     if (config.restPort() != 0) {
-    {
-    std::unique_lock lock(modulesMtx);
-        std::tie(it, inserted) = this->modules.emplace(HTTP_SERVER_MODULE_NAME, this->createModule(HTTP_SERVER_MODULE_NAME));
-    }
+        {
+            std::unique_lock lock(modulesMtx);
+            std::tie(it, inserted) = this->modules.emplace(HTTP_SERVER_MODULE_NAME, this->createModule(HTTP_SERVER_MODULE_NAME));
+        }
         retCode = it->second->start(config);
         if (retCode)
             return retCode;
     }
     {
-    std::unique_lock lock(modulesMtx);
-    std::tie(it, inserted) = this->modules.emplace(SERVABLE_MANAGER_MODULE_NAME, this->createModule(SERVABLE_MANAGER_MODULE_NAME));
+        std::unique_lock lock(modulesMtx);
+        std::tie(it, inserted) = this->modules.emplace(SERVABLE_MANAGER_MODULE_NAME, this->createModule(SERVABLE_MANAGER_MODULE_NAME));
     }
-    SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYY");
     retCode = it->second->start(config);
-    SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYY");
     return retCode;
 }
 
