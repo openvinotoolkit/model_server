@@ -484,6 +484,7 @@ cc_test(
         "test/get_model_metadata_validation_test.cpp",
         "test/http_rest_api_handler_test.cpp",
         "test/kfs_metadata_test.cpp",
+        "test/kfs_rest_test.cpp",
         "test/layout_test.cpp",
         "test/localfilesystem_test.cpp",
         "test/mockmodelinstancechangingstates.hpp",
