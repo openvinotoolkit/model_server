@@ -72,7 +72,6 @@ RUN     set -e ; \
                 ;; \
                 "22.10.22597") \
                         microdnf install -y libedit ; \
-                        rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/mesa-filesystem-21.1.5-1.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.1.2-i755.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.11378-i755.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/level-zero-1.7.9-i699.3.el8.x86_64.rpm ; \
