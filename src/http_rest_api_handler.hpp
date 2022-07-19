@@ -15,12 +15,12 @@
 //*****************************************************************************
 #pragma once
 
+#include <functional>
+#include <map>
 #include <regex>
 #include <string>
 #include <utility>
 #include <vector>
-#include <map>
-#include <functional>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -70,7 +70,7 @@ public:
         configStatusRegex(configStatusRegexExp),
         kfs_modelreadyRegex(kfs_modelreadyRegexExp),
         kfs_modelmetadataRegex(kfs_modelmetadataRegexExp),
-        timeout_in_ms(timeout_in_ms) {registerAll();}
+        timeout_in_ms(timeout_in_ms) { registerAll(); }
 
     Status parseRequestComponents(HttpRequestComponents& components,
         const std::string_view http_method,
@@ -171,7 +171,7 @@ public:
     Status processConfigStatusRequest(std::string& response, ModelManager& manager);
     static Status processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     static Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
- 
+
 private:
     const std::regex predictionRegex;
     const std::regex modelstatusRegex;

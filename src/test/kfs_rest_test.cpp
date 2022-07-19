@@ -14,14 +14,14 @@
 // limitations under the License.
 //*****************************************************************************
 
-
 #include <gtest/gtest.h>
+
 #include "../http_rest_api_handler.hpp"
 
 using ovms::KFS_GetModelMetadata;
 using ovms::KFS_GetModelReady;
 
-TEST(HttpRestApiHandler, RegexParseReady){
+TEST(HttpRestApiHandler, RegexParseReady) {
     std::string request = "/v2/models/dummy/versions/1/ready";
     ovms::HttpRestApiHandler handler(5);
     ovms::HttpRequestComponents comp;
@@ -33,7 +33,7 @@ TEST(HttpRestApiHandler, RegexParseReady){
     ASSERT_EQ(comp.model_name, "dummy");
 }
 
-TEST(HttpRestApiHandler, RegexParseMetadata){
+TEST(HttpRestApiHandler, RegexParseMetadata) {
     std::string request = "/v2/models/dummy/versions/1/";
     ovms::HttpRestApiHandler handler(5);
     ovms::HttpRequestComponents comp;
@@ -45,7 +45,7 @@ TEST(HttpRestApiHandler, RegexParseMetadata){
     ASSERT_EQ(comp.model_name, "dummy");
 }
 
-TEST(HttpRestApiHandler, dispatchMetadata){
+TEST(HttpRestApiHandler, dispatchMetadata) {
     std::string request = "/v2/models/dummy/versions/1/";
     ovms::HttpRestApiHandler handler(5);
     ovms::HttpRequestComponents comp;
@@ -62,7 +62,7 @@ TEST(HttpRestApiHandler, dispatchMetadata){
     ASSERT_EQ(c, 1);
 }
 
-TEST(HttpRestApiHandler, dispatchReady){
+TEST(HttpRestApiHandler, dispatchReady) {
     std::string request = "/v2/models/dummy/versions/1/ready";
     ovms::HttpRestApiHandler handler(5);
     ovms::HttpRequestComponents comp;
