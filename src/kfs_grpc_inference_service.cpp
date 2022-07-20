@@ -77,9 +77,9 @@ const std::string PLATFORM = "OpenVINO";
     (void)context;
     (void)request;
     (void)response;
-    SPDLOG_ERROR("DUP");
-    response->set_live(this->ovmsServer.isLive());
-    SPDLOG_ERROR("DUP");
+    bool isLive = this->ovmsServer.isLive();
+    SPDLOG_DEBUG("Requested Server liveness state: {}", isLive);
+    response->set_live(isLive);
     return grpc::Status::OK;
 }
 
@@ -87,7 +87,9 @@ const std::string PLATFORM = "OpenVINO";
     (void)context;
     (void)request;
     (void)response;
-    response->set_ready(this->ovmsServer.isReady());
+    bool isReady = this->ovmsServer.isReady();
+    SPDLOG_DEBUG("Requested Server readiness state: {}", isReady);
+    response->set_ready(isReady);
     return grpc::Status::OK;
 }
 

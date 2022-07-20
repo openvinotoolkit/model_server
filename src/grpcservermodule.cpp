@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "grpcservermodule.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <string>
 #include <utility>

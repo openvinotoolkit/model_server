@@ -248,7 +248,6 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         return std::make_unique<GRPCServerModule>(*this);
     if (name == HTTP_SERVER_MODULE_NAME)
         return std::make_unique<HTTPServerModule>(*this);
-    SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYY");
     if (name == SERVABLE_MANAGER_MODULE_NAME)
         return std::make_unique<ServableManagerModule>();
     return nullptr;
@@ -260,17 +259,18 @@ int Server::startModules(ovms::Config& config) {
     auto it = modules.end();
 #if MTR_ENABLED
     {
+        auto module = this->createModule(PROFILER_MODULE_NAME);
         std::unique_lock lock(modulesMtx);
-        std::tie(it, inserted) = this->modules.emplace(PROFILER_MODULE_NAME, this->createModule(PROFILER_MODULE_NAME));
+        std::tie(it, inserted) = this->modules.emplace(PROFILER_MODULE_NAME, std::move(module));
     }
     retCode = modules.at(PROFILER_MODULE_NAME)->start(config);
     if (retCode)
         return retCode;
 #endif
-    SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYY");
     {
+        auto module = this->createModule(GRPC_SERVER_MODULE_NAME);
         std::unique_lock lock(modulesMtx);
-        std::tie(it, inserted) = this->modules.emplace(GRPC_SERVER_MODULE_NAME, this->createModule(GRPC_SERVER_MODULE_NAME));
+        std::tie(it, inserted) = this->modules.emplace(GRPC_SERVER_MODULE_NAME, std::move(module));
     }
 
     if (!inserted)
@@ -281,16 +281,18 @@ int Server::startModules(ovms::Config& config) {
         return retCode;
     if (config.restPort() != 0) {
         {
+            auto module = this->createModule(HTTP_SERVER_MODULE_NAME);
             std::unique_lock lock(modulesMtx);
-            std::tie(it, inserted) = this->modules.emplace(HTTP_SERVER_MODULE_NAME, this->createModule(HTTP_SERVER_MODULE_NAME));
+            std::tie(it, inserted) = this->modules.emplace(HTTP_SERVER_MODULE_NAME, std::move(module));
         }
         retCode = it->second->start(config);
         if (retCode)
             return retCode;
     }
     {
+        auto module = this->createModule(SERVABLE_MANAGER_MODULE_NAME);
         std::unique_lock lock(modulesMtx);
-        std::tie(it, inserted) = this->modules.emplace(SERVABLE_MANAGER_MODULE_NAME, this->createModule(SERVABLE_MANAGER_MODULE_NAME));
+        std::tie(it, inserted) = this->modules.emplace(SERVABLE_MANAGER_MODULE_NAME, std::move(module));
     }
     retCode = it->second->start(config);
     return retCode;
@@ -321,7 +323,7 @@ int Server::start(int argc, char** argv) {
             return retCode;
 
         while (!shutdown_request) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
         if (shutdown_request == 2) {
             SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");

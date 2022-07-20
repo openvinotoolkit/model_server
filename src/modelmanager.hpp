@@ -81,6 +81,8 @@ protected:
 
     GlobalSequencesViewer globalSequencesViewer;
     uint32_t waitForModelLoadedTimeoutMs;
+    bool watcherStarted = false;
+    bool cleanerStarted = false;
 
 private:
     /**

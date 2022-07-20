@@ -68,13 +68,6 @@ public:
         ::inference::ServerLiveRequest request;
         ::inference::ServerLiveResponse response;
 
-        /*if ((expectedStatus == grpc::StatusCode::UNAVAILABLE) && (nullptr == stub_)) {
-            EXPECT_NE(nullptr, stub_);
-            return;
-        }*/
-        //if ((expectedStatus == grpc::StatusCode::UNAVAILABLE))
-        //    return;
-
         ASSERT_NE(nullptr, stub_);
         auto status = stub_->ServerLive(&context, request, &response);
         // if we failed to connect it is ok return here
@@ -131,21 +124,30 @@ TEST(Server, ServerNotAliveBeforeStart) {
     requestServerAlive("9178", grpc::StatusCode::UNAVAILABLE, false);
 }
 
+using ovms::Config;
+using ovms::SERVABLE_MANAGER_MODULE_NAME;
+
 class MockedServableManagerModule : public ovms::ServableManagerModule {
 public:
     bool waitWithStart = true;
     bool waitWithChangingState = true;
     MockedServableManagerModule() = default;
-    int start(const ovms::Config& config) override {
+    int start(const Config& config) override {
         state = ModuleState::STARTED_INITIALIZE;
-        while (waitWithStart)  // TODO add 3s failsafe
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        SPDLOG_INFO("Mocked {} starting", SERVABLE_MANAGER_MODULE_NAME);
+        auto start = std::chrono::high_resolution_clock::now();
+        while (waitWithStart &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5))
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         auto status = this->servableManager->start(config);
         if (status.ok()) {
-            while (waitWithChangingState)
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            start = std::chrono::high_resolution_clock::now();
+            while (waitWithChangingState &&
+                   (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5))
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
             state = ModuleState::INITIALIZED;
+            SPDLOG_INFO("Mocked {} started", SERVABLE_MANAGER_MODULE_NAME);
             return EXIT_SUCCESS;
         }
         SPDLOG_ERROR("ovms::ModelManager::Start() Error: {}", status.string());
@@ -181,7 +183,6 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
     const char* testPort = port.c_str();
     std::mt19937_64 eng{std::random_device{}()};
     std::uniform_int_distribution<> dist{0, 9};
-    std::this_thread::sleep_for(std::chrono::milliseconds{dist(eng)});
     for (auto j : {1, 2, 3}) {
         char* digitToRandomize = (char*)testPort + j;
         *digitToRandomize += dist(eng);
@@ -207,7 +208,7 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
     });
     auto start = std::chrono::high_resolution_clock::now();
     while ((server.getModuleState(ovms::GRPC_SERVER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
     }
 
     SPDLOG_INFO("here ensure that server is already live but not ready yet");
@@ -218,7 +219,7 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
     SPDLOG_INFO(R"(here check that model & server still is not ready since servable manager module only started loading
     we have to wait for module to start loading)");
     while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) == ovms::ModuleState::NOT_INITIALIZED) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
     }
     requestModelReady(argv[8], argv[2], grpc::StatusCode::NOT_FOUND, false);
     auto mockedServableManagerModule = dynamic_cast<MockedServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
@@ -229,18 +230,33 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
      this could be potentially changed)");
     mockedServableManagerModule->waitWithStart = false;
     requestServerReady(argv[8], grpc::StatusCode::OK, false);
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));  // average:32ms on CLX3 to load model
     requestModelReady(argv[8], argv[2], grpc::StatusCode::NOT_FOUND, false);
 
     SPDLOG_INFO(R"(here check that server eventually is still not ready beceause module is not initialized
     sleep potentially to improve with signaling)");
-    std::this_thread::sleep_for(std::chrono::milliseconds(70));  // average:32ms on CLX3
+    auto& manager = mockedServableManagerModule->getServableManager();
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    start = std::chrono::high_resolution_clock::now();
+    while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));  // average:32ms on CLX3 to load model
+        std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+        auto status = manager.getModelInstance("dummy", 1, modelInstance, modelInstanceUnloadGuard);
+        if (!status.ok())
+            continue;
+        if (modelInstance->getStatus().getState() == ovms::ModelVersionState::AVAILABLE)
+            break;
+    }
+
     requestModelReady(argv[8], argv[2], grpc::StatusCode::OK, true);
     requestServerReady(argv[8], grpc::StatusCode::OK, false);
 
     SPDLOG_INFO("here check that server is finally ready");
+    start = std::chrono::high_resolution_clock::now();
     mockedServableManagerModule->waitWithChangingState = false;
-    requestServerReady(argv[8], grpc::StatusCode::OK, false);
+    while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
+    }
+    requestServerReady(argv[8], grpc::StatusCode::OK, true);
     server.setShutdownRequest(1);
     t.join();
     SPDLOG_INFO("here check end statuses");

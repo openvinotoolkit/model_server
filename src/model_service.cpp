@@ -66,7 +66,6 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
     tensorflow::serving::GetModelStatusResponse* response) {
     auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
     if (nullptr == module) {
-        //return StatusCode::MODEL_NOT_LOADED;  // TODO consider other + add details
         return grpc::Status(grpc::StatusCode::NOT_FOUND, SERVABLE_MANAGER_MODULE_NAME + " module not started yet");
     }
     auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
