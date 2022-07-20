@@ -119,3 +119,40 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
     t.join();
     requestServerAlive(argv[6], grpc::StatusCode::UNAVAILABLE, false);
 }
+
+TEST(Server, ServerMetadata) {
+    char* argv[] = {
+        (char*)"OpenVINO Model Server",
+        (char*)"--model_name",
+        (char*)"dummy",
+        (char*)"--model_path",
+        (char*)"/ovms/src/test/dummy",
+        (char*)"--port",
+        (char*)"9178",
+        nullptr};
+
+    ovms::Server& server = ovms::Server::instance();
+    std::thread t([&argv, &server]() {
+        server.start(7, argv);
+    });
+    auto start = std::chrono::high_resolution_clock::now();
+    while ((ovms::Server::instance().getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
+    }
+
+    grpc::ChannelArguments args;
+    std::string address = "localhost:9178";
+    std::unique_ptr<inference::GRPCInferenceService::Stub> stub(inference::GRPCInferenceService::NewStub(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args)));
+    ClientContext context;
+    ::inference::ServerMetadataRequest request;
+    ::inference::ServerMetadataResponse response;
+
+    auto status = stub->ServerMetadata(&context, request, &response);
+    ASSERT_EQ(status.error_code(), grpc::StatusCode::OK);
+    EXPECT_EQ(response.name(), "REPLACE_PROJECT_NAME");
+    EXPECT_EQ(response.version(), "REPLACE_PROJECT_VERSION");
+    EXPECT_EQ(response.extensions().size(), 0);
+
+    ovms::Server::instance().setShutdownRequest(1);
+    t.join();
+}
