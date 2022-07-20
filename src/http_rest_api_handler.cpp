@@ -103,11 +103,25 @@ void HttpRestApiHandler::registerAll() {
             request_components.model_version_label, &response);
     });
     registerHandler(ConfigReload, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-        auto& manager = ModelManager::getInstance();
+        // TODO #KFS_CLEANUP
+        auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+        if (nullptr == module) {
+            return StatusCode::MODEL_NOT_LOADED;
+        }
+        auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+        // TODO #KFS_CLEANUP
+        auto& manager = servableManagerModule->getServableManager();
         return processConfigReloadRequest(response, manager);
     });
     registerHandler(ConfigStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-        auto& manager = ModelManager::getInstance();
+        // TODO #KFS_CLEANUP
+        auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+        if (nullptr == module) {
+            return StatusCode::MODEL_NOT_LOADED;
+        }
+        auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+        // TODO #KFS_CLEANUP
+        auto& manager = servableManagerModule->getServableManager();
         return processConfigStatusRequest(response, manager);
     });
     registerHandler(KFS_GetModelReady, processModelReadyKFSRequest);
@@ -125,7 +139,6 @@ Status HttpRestApiHandler::dispatchToProcessor(
     } else {
         return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
     }
-
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
 }
 
@@ -294,7 +307,14 @@ Status HttpRestApiHandler::processPredictRequest(
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}",
         modelName, modelVersion.value_or(0));
 
-    ModelManager& modelManager = ModelManager::getInstance();
+    // TODO #KFS_CLEANUP
+    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == module) {
+        return StatusCode::MODEL_NOT_LOADED;
+    }
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    // TODO #KFS_CLEANUP
+    auto& modelManager = servableManagerModule->getServableManager();
     Order requestOrder;
     tensorflow::serving::PredictResponse responseProto;
     Status status;
@@ -329,7 +349,15 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
 
     std::shared_ptr<ModelInstance> modelInstance;
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
-    auto status = ModelManager::getInstance().getModelInstance(
+    // TODO #KFS_CLEANUP
+    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == module) {
+        return StatusCode::MODEL_NOT_LOADED;
+    }
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    // TODO #KFS_CLEANUP
+    auto& modelManager = servableManagerModule->getServableManager();
+    auto status = modelManager.getModelInstance(
         modelName,
         modelVersion.value_or(0),
         modelInstance,
@@ -359,8 +387,16 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
     return status;
 }
 
-Status getPipelineInputs(const std::string& modelName, ovms::tensor_map_t& inputs) {
-    auto pipelineDefinition = ModelManager::getInstance().getPipelineFactory().findDefinitionByName(modelName);
+Status HttpRestApiHandler::getPipelineInputs(const std::string& modelName, ovms::tensor_map_t& inputs) {
+    // TODO #KFS_CLEANUP
+    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == module) {
+        return StatusCode::MODEL_NOT_LOADED;
+    }
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    // TODO #KFS_CLEANUP
+    auto& modelManager = servableManagerModule->getServableManager();
+    auto pipelineDefinition = modelManager.getPipelineFactory().findDefinitionByName(modelName);
     if (!pipelineDefinition) {
         return StatusCode::MODEL_MISSING;
     }
@@ -400,7 +436,15 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
 
     tensorflow::serving::PredictRequest& requestProto = requestParser.getProto();
     requestProto.mutable_model_spec()->set_name(modelName);
-    status = ModelManager::getInstance().createPipeline(pipelinePtr, modelName, &requestProto, &responseProto);
+    // TODO #KFS_CLEANUP
+    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == module) {
+        return StatusCode::MODEL_NOT_LOADED;
+    }
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    // TODO #KFS_CLEANUP
+    auto& manager = servableManagerModule->getServableManager();
+    status = manager.createPipeline(pipelinePtr, modelName, &requestProto, &responseProto);
     if (!status.ok()) {
         return status;
     }
@@ -448,7 +492,15 @@ Status HttpRestApiHandler::processModelStatusRequest(
     if (!status.ok()) {
         return status;
     }
-    status = GetModelStatusImpl::getModelStatus(&grpc_request, &grpc_response, ModelManager::getInstance());
+    // TODO #KFS_CLEANUP
+    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == module) {
+        return StatusCode::MODEL_NOT_LOADED;
+    }
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    // TODO #KFS_CLEANUP
+    auto& manager = servableManagerModule->getServableManager();
+    status = GetModelStatusImpl::getModelStatus(&grpc_request, &grpc_response, manager);
     if (!status.ok()) {
         return status;
     }

@@ -181,6 +181,8 @@ private:
 
     ovms::Server& ovmsServer;
     const GetModelMetadataImpl& grpcGetModelMetadataImpl;
+
+    Status getPipelineInputs(const std::string& modelName, ovms::tensor_map_t& inputs);
 };
 
 }  // namespace ovms
