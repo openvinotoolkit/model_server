@@ -8,12 +8,16 @@ As OpenVINO Model Server API is compatible with TensorFlow Serving, it's possibl
 
 See [API documentation](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/client/python/ovmsclient/lib/docs/README.md) for details on what the library provides.
 
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/client/python/ovmsclient/lib
+```
 
 ## Installation
 
 **Note:** The client library requires Python in version >= 3.6.
 
-```
+```bash
 pip3 install ovmsclient
 ```
 
@@ -29,7 +33,9 @@ Prerequisites:
 
 **To build the package run:**
 
-   `make build`
+```bash
+make build
+```
 
 This command will create pip wheel placed in `dist` directory.
 
@@ -37,20 +43,32 @@ This command will create pip wheel placed in `dist` directory.
 Assuming you have TFS API built, you can use `make build-package` target to build only the `ovmsclient` package and ommit downloading and building the TFS API.
 
 **To install the package run:**
-
-   `pip3 install dist/ovmsclient-0.2-py3-none-any.whl`
+```bash
+pip3 install --force-reinstall --no-deps dist/ovmsclient-2022.1-py3-none-any.whl
+```
 
 *Note*: For development purposes you may want to repeatedly reinstall the package.
 For that consider using `pip3 install` with `--force-reinstall` and `--no-deps` options.
 
 Apart from `make build`, there are also other targets available:
  - `make build-deps` - downloads and compiles TFS API protos
+```bash
+make build-deps
+```
  - `make build-package` - builds only `ovmsclient` package (requires TFS API protos compiled)
+ ```bash
+make build-package
+```
  - `make test` - runs tests on `ovmsclient` package. By default the package located in `dist/` directory is used. To specify custom package path pass `PACKAGE_PATH` option like: 
 
    `make test PACKAGE_PATH=/opt/packages/ovmsclient-0.2-py3-none-any.whl`
-
+```bash
+make test
+```
  - `make clean` - removes all intermediate files generated while building the package
+```bash
+make clean
+```
 
 ## Usage
 
