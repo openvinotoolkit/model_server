@@ -72,10 +72,10 @@ RUN     set -e ; \
                 ;; \
                 "22.10.22597") \
                         microdnf install -y libedit ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.1.2-i755.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.11378-i755.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.0.3-i699.3.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.10409-i699.3.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/level-zero-1.7.9-i699.3.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-opencl-1.0.11378-i755.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-opencl-1.0.10409-i699.3.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-ocloc-22.10.22597-i699.3.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-opencl-22.10.22597-i699.3.el8.x86_64.rpm ; \
                 ;; \
