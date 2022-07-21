@@ -30,6 +30,7 @@
 #include "../node_library.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../server.hpp"
+#include "../version.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
 
@@ -149,8 +150,8 @@ TEST(Server, ServerMetadata) {
 
     auto status = stub->ServerMetadata(&context, request, &response);
     ASSERT_EQ(status.error_code(), grpc::StatusCode::OK);
-    EXPECT_EQ(response.name(), "REPLACE_PROJECT_NAME");
-    EXPECT_EQ(response.version(), "REPLACE_PROJECT_VERSION");
+    EXPECT_EQ(response.name(), PROJECT_NAME);
+    EXPECT_EQ(response.version(), PROJECT_VERSION);
     EXPECT_EQ(response.extensions().size(), 0);
 
     ovms::Server::instance().setShutdownRequest(1);
