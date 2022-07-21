@@ -10,9 +10,16 @@ the functionality of dynamic shape in OpenVINO Model Server and how to process t
 
 The example relies on the model [face-detection-retail-0004](https://docs.openvinotoolkit.org/2022.1/omz_models_model_face_detection_retail_0004.html).
 
+
+Clone the repository and enter face_detection directory
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/face_detection/python
+```
+
+Prepare environment:
+```bash
+pip install -r ../../common/python/requirements.txt
 ```
 
 ```bash
@@ -28,16 +35,16 @@ usage: face_detection.py [-h] [--input_images_dir INPUT_IMAGES_DIR]
 Demo for face detection requests via TFS gRPC API analyses input images and
 saves images with bounding boxes drawn around detected faces. It relies on face_detection model...
 
-Arguments:
+optional arguments:
   -h, --help            show this help message and exit
   --input_images_dir INPUT_IMAGES_DIR
                         Directory with input images
   --output_dir OUTPUT_DIR
                         Directory for storing images with detection results
   --batch_size BATCH_SIZE
-                        how many images should be grouped in one batch
-  --width WIDTH         how the input image width should be resized in pixels
-  --height HEIGHT       how the input height should be resized in pixels
+                        How many images should be grouped in one batch
+  --width WIDTH         How the input image width should be resized in pixels
+  --height HEIGHT       How the input image width should be resized in pixels
   --grpc_address GRPC_ADDRESS
                         Specify url to grpc service. default:localhost
   --grpc_port GRPC_PORT
@@ -64,15 +71,8 @@ wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/
 docker run --rm -d -u $(id -u):$(id -g) -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name face-detection --port 9000  --shape auto
 ```
 
-Clone the repository and enter face_detection directory
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server/demos/face_detection/python
-```
-
 Run the client:
 ```bash
-pip install -r ../../common/python/requirements.txt
 mkdir results
 
 python face_detection.py --batch_size 1 --width 300 --height 300 --grpc_port 9000
