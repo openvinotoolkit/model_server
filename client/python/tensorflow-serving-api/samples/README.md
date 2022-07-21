@@ -279,6 +279,12 @@ Average latency= 28.2 ms
 
 ## REST API Client Examples<a name="rest-api"></a>
 
+Access to Google Cloud Storage might require proper configuration of https_proxy in the docker engine or in the docker container.
+In the examples listed below, OVMS can be started using a command:
+```bash
+docker run -d --rm -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path gs://ovms-public-eu/resnet50 --port 9000 --rest_port 8000
+```
+
 ### Model Status API
 - Command
 ```bash 
