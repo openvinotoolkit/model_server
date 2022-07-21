@@ -182,8 +182,6 @@ Run the live-demo.py script to record and send audio files to the server:
 <SERVER_HOME_PATH> - is the path of the $HOME directory from steps 1 to 5.
 <SERVER_USER_NAME> - is the owner of the $HOME path and a user of the server used to run steps 1 to 5.
 ```bash
-#CLIENT SIDE:
-#python live-demo.py <SERVER_IP> <SERVER_HOME_PATH>/asr_demo/data <SERVER_USER_NAME>
 python live-demo.py localhost $HOME/asr_demo/data $USER
 ```
 
