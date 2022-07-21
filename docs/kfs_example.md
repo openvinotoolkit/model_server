@@ -14,7 +14,6 @@ In current release there is no support for:
 * Server Live
 * Server Ready
 * Server Metadata
-* Model Ready
 
 ## Introduction
 This guide shows how to get model metadata and perform basic inference with [ResNet50](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/resnet50-binary-0001/README.md) model using KServe API and example client in Python.
