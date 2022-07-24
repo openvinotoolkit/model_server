@@ -104,8 +104,8 @@ class Resnet:
     name = "resnet"
     dtype = np.float32
     input_name = "map/TensorArrayStack/TensorArrayGatherV3"
-    input_shape = (1, 3, 224, 224)
-    output_name = "softmax_tensor"
+    input_shape = (1, 224, 224, 3)
+    output_name = "softmax_tensor:0"
     output_shape = (1, 1001)
     rest_request_format = 'column_name'
     model_path = os.path.join(config.models_path, name)
@@ -120,8 +120,8 @@ class ResnetBS4:
     name = "resnet_bs4"
     dtype = np.float32
     input_name = "map/TensorArrayStack/TensorArrayGatherV3"
-    input_shape = (4, 3, 224, 224)
-    output_name = "softmax_tensor"
+    input_shape = (4, 224, 224, 3)
+    output_name = "softmax_tensor:0"
     output_shape = (4, 1001)
     rest_request_format = 'row_noname'
     version = 1
@@ -131,8 +131,8 @@ class ResnetBS8:
     name = "resnet_bs8"
     dtype = np.float32
     input_name = "map/TensorArrayStack/TensorArrayGatherV3"
-    input_shape = (8, 3, 224, 224)
-    output_name = "softmax_tensor"
+    input_shape = (8, 224, 224, 3)
+    output_name = "softmax_tensor:0"
     output_shape = (8, 1001)
     rest_request_format = 'row_noname'
     model_path = os.path.join(config.models_path, name)
@@ -143,8 +143,8 @@ class ResnetS3:
     name = "resnet_s3"
     dtype = np.float32
     input_name = "map/TensorArrayStack/TensorArrayGatherV3"
-    input_shape = (1, 3, 224, 224)
-    output_name = "softmax_tensor"
+    input_shape = (1, 224, 224, 3)
+    output_name = "softmax_tensor:0"
     output_shape = (1, 1001)
     rest_request_format = 'row_name'
     model_path = "s3://inference/resnet"
