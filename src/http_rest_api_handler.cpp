@@ -146,6 +146,7 @@ Status HttpRestApiHandler::dispatchToProcessor(
     } else {
         return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
     }
+
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
 }
 
