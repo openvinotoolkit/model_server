@@ -21,6 +21,7 @@
 
 #include "../model.hpp"
 #include "../modelinstance.hpp"
+#include "../modelversionstatus.hpp"
 #include "../status.hpp"
 #include "test_utils.hpp"
 
@@ -52,6 +53,9 @@ public:
     }
     void cleanupFailedLoad() override {
         status.setLoading(ovms::ModelVersionStatusErrorCode::UNKNOWN);
+    }
+    void setState(ovms::ModelVersionState state) {
+        status.setState(state);
     }
 };
 

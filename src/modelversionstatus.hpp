@@ -96,6 +96,7 @@ public:
     void setUnloading(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK);
 
     void setEnd(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK);
+    void setState(ModelVersionState state, ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK);
 
 private:
     void logStatus();
