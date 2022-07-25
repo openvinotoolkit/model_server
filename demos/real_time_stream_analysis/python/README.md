@@ -109,6 +109,27 @@ python3 real_time_stream_analysis.py --stream_url rtsp://localhost:8554/mystream
 
 __Console output:__
 
+```bash
+2022-07-25 10:49:46,216 - stream_reader - INFO - Initializing Stream Reader for stream: rtsp://localhost:8001/mystream ...
+2022-07-25 10:49:49,639 - stream_reader - INFO - Stream Reader initialized successfully
+2022-07-25 10:49:49,640 - inference_manager - INFO - OVMS Endpoint spec - ovms_url: localhost:9001; model_name: person-vehicle-bike-detection; model_version: latest
+2022-07-25 10:49:49,640 - inference_manager - INFO - Input buffer capacity set to: 100 frames
+2022-07-25 10:49:49,640 - inference_manager - INFO - Number of Inference Executors: 4
+2022-07-25 10:49:49,655 - io_processor - INFO - Initializing IO Processor
+2022-07-25 10:49:49,655 - io_processor - INFO - IO Processor initialized successfully
+2022-07-25 10:49:49,656 - stream_analyzer - INFO - Starting Stream Analyzer
+2022-07-25 10:49:49,656 - inference_manager - INFO - Initializing Inference Manager...
+2022-07-25 10:49:49,656 - inference_manager - INFO - Starting Inference Executors...
+2022-07-25 10:49:49,668 - inference_manager - INFO - Starting inference pipeline thread
+2022-07-25 10:49:49,670 - inference_manager - INFO - Starting inference executors monitoring thread
+2022-07-25 10:49:49,680 - inference_manager - INFO - Inference Manager initialized successfully
+2022-07-25 10:49:52,806 - stream_analyzer - INFO - For 100 received frames - FPS: 22; Frames dropped: 0;
+2022-07-25 10:49:56,973 - stream_analyzer - INFO - For 100 received frames - FPS: 23; Frames dropped: 0;
+2022-07-25 10:50:01,142 - stream_analyzer - INFO - For 100 received frames - FPS: 23; Frames dropped: 0;
+2022-07-25 10:50:05,307 - stream_analyzer - INFO - For 100 received frames - FPS: 24; Frames dropped: 0;
+2022-07-25 10:50:09,470 - stream_analyzer - INFO - For 100 received frames - FPS: 24; Frames dropped: 0;
+```
+
 ![minimal example](assets/minimal_example.jpg)
 
 ### Running with visualizer
@@ -125,6 +146,30 @@ python3 real_time_stream_analysis.py --stream_url rtsp://localhost:8554/mystream
 ```
 
 __Console output:__
+
+```bash
+2022-07-25 10:50:50,401 - stream_reader - INFO - Initializing Stream Reader for stream: rtsp://localhost:8001/mystream ...
+2022-07-25 10:50:52,318 - stream_reader - INFO - Stream Reader initialized successfully
+2022-07-25 10:50:52,319 - inference_manager - INFO - OVMS Endpoint spec - ovms_url: localhost:9001; model_name: person-vehicle-bike-detection; model_version: latest
+2022-07-25 10:50:52,319 - inference_manager - INFO - Input buffer capacity set to: 100 frames
+2022-07-25 10:50:52,319 - inference_manager - INFO - Number of Inference Executors: 4
+2022-07-25 10:50:52,339 - http_visualizer - INFO - Visualizer frames buffer capacity set to 100 frames
+2022-07-25 10:50:52,340 - io_processor - INFO - Initializing IO Processor
+2022-07-25 10:50:52,340 - io_processor - INFO - IO Processor initialized successfully
+2022-07-25 10:50:52,340 - stream_analyzer - INFO - Starting Stream Analyzer
+2022-07-25 10:50:52,340 - inference_manager - INFO - Initializing Inference Manager...
+2022-07-25 10:50:52,340 - inference_manager - INFO - Starting Inference Executors...
+2022-07-25 10:50:52,351 - inference_manager - INFO - Starting inference pipeline thread
+2022-07-25 10:50:52,352 - inference_manager - INFO - Starting inference executors monitoring thread
+2022-07-25 10:50:52,360 - inference_manager - INFO - Inference Manager initialized successfully
+2022-07-25 10:50:52,360 - http_visualizer - INFO - Starting Flask webserver...
+ * Running on http://localhost:5000 (Press CTRL+C to quit)
+2022-07-25 10:50:55,239 - stream_analyzer - INFO - For 100 received frames - FPS: 24; Frames dropped: 0;
+2022-07-25 10:50:59,413 - stream_analyzer - INFO - For 100 received frames - FPS: 23; Frames dropped: 0;
+2022-07-25 10:51:03,571 - stream_analyzer - INFO - For 100 received frames - FPS: 24; Frames dropped: 0;
+2022-07-25 10:51:07,919 - stream_analyzer - INFO - For 100 received frames - FPS: 22; Frames dropped: 0;
+2022-07-25 10:51:12,086 - stream_analyzer - INFO - For 100 received frames - FPS: 23; Frames dropped: 0;
+```
 
 ![visualizer example console](assets/visualizer_example_console.jpg)
 
