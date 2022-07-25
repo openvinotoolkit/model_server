@@ -63,7 +63,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/face-detection -p 900
 OpenVINO Model Server expects a particular folder structure  for models -  in this case it will be mounted as: 
 `/models/face-detection/1`
 
-```
+```bash
 models/
 └── face-detection
     └── 1
