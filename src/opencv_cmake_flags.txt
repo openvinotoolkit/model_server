@@ -1,0 +1,3 @@
+-D BUILD_LIST=core,improc,imgcodecs \
+-D CMAKE_BUILD_TYPE=Release \
+-D CMAKE_INSTALL_PREFIX=/opt/opencv_install
