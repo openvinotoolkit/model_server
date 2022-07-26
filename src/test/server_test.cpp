@@ -127,6 +127,7 @@ TEST(Server, ServerNotAliveBeforeStart) {
 using ovms::Config;
 using ovms::SERVABLE_MANAGER_MODULE_NAME;
 
+namespace {
 class MockedServableManagerModule : public ovms::ServableManagerModule {
 public:
     bool waitWithStart = true;
@@ -173,7 +174,7 @@ public:
         return const_cast<Module*>(Server::getModule(name));
     }
 };
-
+}  // namespace
 using ovms::SERVABLE_MANAGER_MODULE_NAME;
 
 TEST(Server, ServerAliveBeforeLoadingModels) {
@@ -259,6 +260,7 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
     requestServerReady(argv[8], grpc::StatusCode::OK, true);
     server.setShutdownRequest(1);
     t.join();
+    server.setShutdownRequest(0);
     SPDLOG_INFO("here check end statuses");
     requestModelReady(argv[8], argv[2], grpc::StatusCode::UNAVAILABLE, false);
     requestServerReady(argv[8], grpc::StatusCode::UNAVAILABLE, false);

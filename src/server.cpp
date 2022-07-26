@@ -234,7 +234,7 @@ public:
 #endif
 
 void Server::setShutdownRequest(int i) {
-    shutdown_request = 1;
+    shutdown_request = i;
 }
 
 Server::~Server() = default;

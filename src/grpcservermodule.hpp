@@ -32,7 +32,7 @@ class GRPCServerModule : public Module {
     Server& server;
     PredictionServiceImpl tfsPredictService;
     ModelServiceImpl tfsModelService;
-    KFSInferenceServiceImpl kfsGrpcInferenceService;
+    mutable KFSInferenceServiceImpl kfsGrpcInferenceService;
     std::vector<std::unique_ptr<grpc::Server>> servers;
 
 public:
@@ -41,5 +41,6 @@ public:
     void shutdown() override;
 
     const GetModelMetadataImpl& getTFSModelMetadataImpl() const;
+    KFSInferenceServiceImpl& getKFSGrpcImpl() const;
 };
 }  // namespace ovms

@@ -32,6 +32,7 @@
 #include "status.hpp"
 
 namespace ovms {
+class KFSInferenceServiceImpl;
 class GetModelMetadataImpl;
 class Server;
 enum RequestType { Predict,
@@ -164,8 +165,8 @@ public:
     Status processConfigReloadRequest(std::string& response, ModelManager& manager);
 
     Status processConfigStatusRequest(std::string& response, ModelManager& manager);
-    static Status processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
-    static Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
 private:
     const std::regex predictionRegex;
@@ -180,6 +181,7 @@ private:
     int timeout_in_ms;
 
     ovms::Server& ovmsServer;
+    ovms::KFSInferenceServiceImpl& kfsGrpcImpl;
     const GetModelMetadataImpl& grpcGetModelMetadataImpl;
 
     Status getPipelineInputs(const std::string& modelName, ovms::tensor_map_t& inputs);

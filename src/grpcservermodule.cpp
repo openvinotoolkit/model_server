@@ -178,3 +178,6 @@ void GRPCServerModule::shutdown() {
 const GetModelMetadataImpl& GRPCServerModule::getTFSModelMetadataImpl() const {
     return this->tfsPredictService.getTFSModelMetadataImpl();
 }
+KFSInferenceServiceImpl& GRPCServerModule::getKFSGrpcImpl() const {
+    return this->kfsGrpcInferenceService;
+}

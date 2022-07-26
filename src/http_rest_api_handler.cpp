@@ -29,6 +29,7 @@
 #include "filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpcservermodule.hpp"
+#include "kfs_grpc_inference_service.hpp"
 #include "model_service.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "pipelinedefinition.hpp"
@@ -63,6 +64,8 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     kfs_modelmetadataRegex(kfs_modelmetadataRegexExp),
     timeout_in_ms(timeout_in_ms),
     ovmsServer(ovmsServer),
+
+    kfsGrpcImpl(dynamic_cast<const GRPCServerModule*>(this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))->getKFSGrpcImpl()),
     grpcGetModelMetadataImpl(dynamic_cast<const GRPCServerModule*>(this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))->getTFSModelMetadataImpl()) {
     registerAll();
 }
@@ -102,7 +105,7 @@ void HttpRestApiHandler::registerAll() {
         return processModelStatusRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, &response);
     });
-    registerHandler(ConfigReload, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    registerHandler(ConfigReload, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
         // TODO #KFS_CLEANUP
         auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
         if (nullptr == module) {
@@ -113,7 +116,7 @@ void HttpRestApiHandler::registerAll() {
         auto& manager = servableManagerModule->getServableManager();
         return processConfigReloadRequest(response, manager);
     });
-    registerHandler(ConfigStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    registerHandler(ConfigStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
         // TODO #KFS_CLEANUP
         auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
         if (nullptr == module) {
@@ -124,8 +127,12 @@ void HttpRestApiHandler::registerAll() {
         auto& manager = servableManagerModule->getServableManager();
         return processConfigStatusRequest(response, manager);
     });
-    registerHandler(KFS_GetModelReady, processModelReadyKFSRequest);
-    registerHandler(KFS_GetModelMetadata, processModelMetadataKFSRequest);
+    registerHandler(KFS_GetModelReady, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+        return processModelReadyKFSRequest(request_components, response, request_body);
+    });
+    registerHandler(KFS_GetModelMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+        return processModelReadyKFSRequest(request_components, response, request_body);
+    });
 }
 
 Status HttpRestApiHandler::dispatchToProcessor(
@@ -151,8 +158,8 @@ Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponen
     grpc_request.set_name(modelName);
     grpc_request.set_version(modelVersion);
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
-    KFSInferenceServiceImpl service;
-    service.ModelReady(nullptr, &grpc_request, &grpc_response);
+
+    kfsGrpcImpl.ModelReady(nullptr, &grpc_request, &grpc_response);
     std::string output;
     google::protobuf::util::JsonPrintOptions opts;
     google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
@@ -169,8 +176,7 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     grpc_request.set_name(modelName);
     grpc_request.set_version(modelVersion);
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
-    KFSInferenceServiceImpl service;
-    service.ModelMetadata(nullptr, &grpc_request, &grpc_response);
+    kfsGrpcImpl.ModelMetadata(nullptr, &grpc_request, &grpc_response);
     std::string output;
     google::protobuf::util::JsonPrintOptions opts;
     google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
