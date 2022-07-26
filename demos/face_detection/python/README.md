@@ -23,11 +23,6 @@ pip install -r ../../common/python/requirements.txt
 ```
 
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server/demos/face_detection/python
-```
-
-```bash
 python face_detection.py --help
 usage: face_detection.py [-h] [--input_images_dir INPUT_IMAGES_DIR]
                          [--output_dir OUTPUT_DIR] [--batch_size BATCH_SIZE]

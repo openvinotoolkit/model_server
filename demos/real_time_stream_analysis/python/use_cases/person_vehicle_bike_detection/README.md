@@ -34,7 +34,7 @@ io_processor = IOProcessor(PersonVehicleBikeDetection, visualizer_frames_queue)
 
 As this use case implements only visualization in post processing, run with visualizer:
 
-```bash
+```
 python3 real_time_stream_analysis.py --stream_url <rtsp_stream_url> --ovms_url localhost:9000 --model_name person-vehicle-bike-detection --visualizer_port 5000
 ```
 
