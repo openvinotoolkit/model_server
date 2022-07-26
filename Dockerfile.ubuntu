@@ -182,11 +182,74 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 #################### END OF OPENVINO BINARY INSTALL
 
 # install opencv
-ARG OPENVINO_OPENCV_DOWNLOAD_SERVER=""
-RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; \
-    cd /opt/intel/openvino/ && echo URL ${OPENVINO_OPENCV_DOWNLOAD_SERVER}/openvino_opencv_ubuntu20.tgz && \
-    curl ${OPENVINO_OPENCV_DOWNLOAD_SERVER}/openvino_opencv_ubuntu20.tgz -o ${TMPDIR:-/tmp}/openvino_opencv_linux.tgz && \
-    tar -xf ${TMPDIR:-/tmp}/openvino_opencv_linux.tgz
+#ARG OPENVINO_OPENCV_DOWNLOAD_SERVER=""
+#RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; \
+#    cd /opt/intel/openvino/ && echo URL ${OPENVINO_OPENCV_DOWNLOAD_SERVER}/openvino_opencv_ubuntu20.tgz && \
+#    curl ${OPENVINO_OPENCV_DOWNLOAD_SERVER}/openvino_opencv_ubuntu20.tgz -o ${TMPDIR:-/tmp}/openvino_opencv_linux.tgz && \
+#    tar -xf ${TMPDIR:-/tmp}/openvino_opencv_linux.tgz
+
+# opencv start
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive \
+    apt-get install -y --no-install-recommends \
+        apt-utils \
+        cmake \
+        git \
+        git-lfs \
+        ca-certificates \
+        sudo \
+        tzdata \
+        build-essential \
+        cmake \
+        libva-dev \
+        libgtk-3-dev \
+        libavcodec-dev \
+        libavformat-dev \
+        libavutil-dev \
+        libswscale-dev \
+        libavresample-dev \
+        libgstreamer1.0-dev \
+        libgstreamer-plugins-base1.0-dev \
+        libgstreamer-plugins-good1.0-dev \
+        libgstreamer-plugins-bad1.0-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+ARG OPENCV_BRANCH="4.6.0"
+
+ARG BUILD_OPENCV_CONTRIB="no"
+ARG OPENCV_CONTRIB_BRANCH="master"
+
+WORKDIR /opt/intel/repo
+RUN git clone https://github.com/opencv/opencv.git --depth 1 -b ${OPENCV_BRANCH} && \
+    if [ "$BUILD_OPENCV_CONTRIB" = "yes" ]; then \
+    git clone https://github.com/opencv/opencv_contrib.git --depth 1 -b ${OPENCV_CONTRIB_BRANCH}; fi
+
+COPY opencv_cmake_flags.txt /opt/intel/repo
+
+WORKDIR /opt/intel/repo/opencv/build
+# hadolint ignore=SC2046
+RUN if [ "$BUILD_OPENCV_CONTRIB" = "yes" ]; then \
+      apt-get update && \
+      apt-get install -y --no-install-recommends libtesseract-dev && \
+      cmake $(cat /opt/intel/repo/opencv_cmake_flags.txt) -D OPENCV_EXTRA_MODULES_PATH=/opt/intel/repo/opencv_contrib/modules /opt/intel/repo/opencv && \
+      rm -rf /var/lib/apt/lists/* ; \
+    else \
+      cmake $(cat /opt/intel/repo/opencv_cmake_flags.txt) /opt/intel/repo/opencv; \
+    fi; \
+    make "-j$(nproc)"; \
+    make install
+
+ENV INTEL_OPENVINO_DIR=/opt/intel/openvino
+WORKDIR /opt/intel/repo/opencv/build/install
+RUN mkdir -p "${INTEL_OPENVINO_DIR}/extras"; \
+    cp -r . "${INTEL_OPENVINO_DIR}/extras/opencv"; \
+    rm -r "${INTEL_OPENVINO_DIR}/extras/opencv/python"; \
+    echo "export OpenCV_DIR=${INTEL_OPENVINO_DIR}/extras/opencv/cmake" | tee -a "${INTEL_OPENVINO_DIR}/extras/opencv/setupvars.sh"; \
+    echo "export LD_LIBRARY_PATH=${INTEL_OPENVINO_DIR}/extras/opencv/lib:\$LD_LIBRARY_PATH" | tee -a "${INTEL_OPENVINO_DIR}/extras/opencv/setupvars.sh"; \
+    rm -rf /opt/intel/repo/opencv/build/install
+
+# opencv end
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
@@ -220,7 +283,7 @@ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/example/SampleCpuExtension/ && make
 
-RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
+# RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
