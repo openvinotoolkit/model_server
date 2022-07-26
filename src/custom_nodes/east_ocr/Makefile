@@ -29,6 +29,7 @@ docker_build:
 	@mkdir common
 	@cp -r ../common/utils.hpp ./common/utils.hpp
 	@cp -r ../common/opencv_utils.hpp ./common/opencv_utils.hpp
+	@cp -r ../opencv_cmake_flags.txt ./common/opencv_cmake_flags.txt
 	@docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} --build-arg OPENCV_DOWNLOAD_FOLDER=$(OPENCV_DOWNLOAD_FOLDER) .
 	@rm -Rf lib
 	@docker cp $$(docker create --rm custom_node_build_image:latest):/custom_nodes/lib/ .

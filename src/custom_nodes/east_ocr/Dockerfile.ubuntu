@@ -17,7 +17,7 @@
 FROM ubuntu:20.04
 RUN apt update && apt install -y build-essential curl
 ARG OPENCV_DOWNLOAD_FOLDER
-RUN curl -s ${OPENCV_DOWNLOAD_FOLDER}/openvino_opencv_ubuntu20.tgz | tar -xzf -
+#RUN curl -s ${OPENCV_DOWNLOAD_FOLDER}/openvino_opencv_ubuntu20.tgz | tar -xzf -
 ARG NODE_NAME=east_ocr
 
 ARG OPS="-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv"
@@ -25,8 +25,73 @@ ARG OPS="-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -
 COPY ./common /custom_nodes/common
 COPY . /custom_nodes/${NODE_NAME}/
 COPY custom_node_interface.h /
+
+# opencv start
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive \
+    apt-get install -y --no-install-recommends \
+        apt-utils \
+        cmake \
+        git \
+        git-lfs \
+        ca-certificates \
+        sudo \
+        tzdata \
+        build-essential \
+        cmake \
+        libva-dev \
+        libgtk-3-dev \
+        libavcodec-dev \
+        libavformat-dev \
+        libavutil-dev \
+        libswscale-dev \
+        libavresample-dev \
+        libgstreamer1.0-dev \
+        libgstreamer-plugins-base1.0-dev \
+        libgstreamer-plugins-good1.0-dev \
+        libgstreamer-plugins-bad1.0-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+ARG OPENCV_BRANCH="4.6.0"
+
+ARG BUILD_OPENCV_CONTRIB="no"
+ARG OPENCV_CONTRIB_BRANCH="master"
+
+WORKDIR /opt/intel/repo
+RUN git clone https://github.com/opencv/opencv.git --depth 1 -b ${OPENCV_BRANCH} && \
+    if [ "$BUILD_OPENCV_CONTRIB" = "yes" ]; then \
+    git clone https://github.com/opencv/opencv_contrib.git --depth 1 -b ${OPENCV_CONTRIB_BRANCH}; fi
+
+# COPY opencv_cmake.txt /opt/intel/repo
+
+WORKDIR /opt/intel/repo/opencv/build
+# hadolint ignore=SC2046
+RUN if [ "$BUILD_OPENCV_CONTRIB" = "yes" ]; then \
+      apt-get update && \
+      apt-get install -y --no-install-recommends libtesseract-dev && \
+      cmake $(cat /custom_nodes/common/opencv_cmake_flags.txt) -D OPENCV_EXTRA_MODULES_PATH=/opt/intel/repo/opencv_contrib/modules /opt/intel/repo/opencv && \
+      rm -rf /var/lib/apt/lists/* ; \
+    else \
+      cmake $(cat /custom_nodes/common/opencv_cmake_flags.txt) /opt/intel/repo/opencv; \
+    fi; \
+    make "-j$(nproc)"; \
+    make install
+
+ENV INTEL_OPENVINO_DIR=/opt/intel/openvino
+WORKDIR /opt/intel/repo/opencv/build/install
+RUN mkdir -p "${INTEL_OPENVINO_DIR}/extras"; \
+    cp -r . "${INTEL_OPENVINO_DIR}/extras/opencv"; \
+    rm -r "${INTEL_OPENVINO_DIR}/extras/opencv/python"; \
+    echo "export OpenCV_DIR=${INTEL_OPENVINO_DIR}/extras/opencv/cmake" | tee -a "${INTEL_OPENVINO_DIR}/extras/opencv/setupvars.sh"; \
+    echo "export LD_LIBRARY_PATH=${INTEL_OPENVINO_DIR}/extras/opencv/lib:\$LD_LIBRARY_PATH" | tee -a "${INTEL_OPENVINO_DIR}/extras/opencv/setupvars.sh"; \
+    rm -rf /opt/intel/repo/opencv/build/install
+
+# opencv end
+
+
 WORKDIR /custom_nodes/${NODE_NAME}/
 RUN mkdir -p /custom_nodes/lib
-RUN g++ -c -std=c++17 ${NODE_NAME}.cpp ${OPS} -I/extras/opencv/include/
+RUN g++ -c -std=c++17 ${NODE_NAME}.cpp ${OPS} -I${INTEL_OPENVINO_DIR}/extras/opencv/include/
 RUN g++ -shared ${OPS} -o /custom_nodes/lib/libcustom_node_${NODE_NAME}.so ${NODE_NAME}.o \
-    -L/extras/opencv/lib/ -I/extras/opencv/include/ -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+    -L${INTEL_OPENVINO_DIR}/extras/opencv/lib/ -I${INTEL_OPENVINO_DIR}/extras/opencv/include/ -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
