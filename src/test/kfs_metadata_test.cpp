@@ -154,7 +154,7 @@ TEST_F(ModelMetadataResponseBuild, BasicResponseMetadata) {
 TEST_F(ModelMetadataResponseBuild, BasicResponseMetadata2Versions) {
     prepare();
     // we add version - 1 since the default is the highest. We don't want to bother preparing inputs/outputs info for them as well
-    // for second version - we just want for it to in various states
+    // for second version - we just want it to be in various states
     model_version_t secondVersion = instance->getVersion() - 1;
     auto secondInstance = std::make_shared<MockModelInstanceChangingStates>(modelName, secondVersion, *ieCore);
     model->addOneVersion(secondVersion, secondInstance);
