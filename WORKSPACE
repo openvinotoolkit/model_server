@@ -230,7 +230,7 @@ new_local_repository(
 ################## END OF OPENVINO DEPENDENCY ##########
 
 ##################### OPEN CV ######################
-# OPENCV DEFINITION FOR ARTIFACTS BUILT FROM SOURCE IN PRIOR STEPS: ##########################
+# OPENCV DEFINITION FOR ARTIFACTS BUILT FROM SOURCE: ##########################
 new_local_repository(
     name = "opencv",
     build_file = "@//third_party/opencv:BUILD",

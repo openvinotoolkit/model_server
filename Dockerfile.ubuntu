@@ -181,21 +181,12 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; 
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
 #################### END OF OPENVINO BINARY INSTALL
 
-# install opencv
-#ARG OPENVINO_OPENCV_DOWNLOAD_SERVER=""
-#RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; \
-#    cd /opt/intel/openvino/ && echo URL ${OPENVINO_OPENCV_DOWNLOAD_SERVER}/openvino_opencv_ubuntu20.tgz && \
-#    curl ${OPENVINO_OPENCV_DOWNLOAD_SERVER}/openvino_opencv_ubuntu20.tgz -o ${TMPDIR:-/tmp}/openvino_opencv_linux.tgz && \
-#    tar -xf ${TMPDIR:-/tmp}/openvino_opencv_linux.tgz
-
-# opencv start
-
+# Build OpenCV from source (for binary inputs and custom nodes)
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive \
     apt-get install -y --no-install-recommends \
         cmake \
     && rm -rf /var/lib/apt/lists/*
-
 ARG OPENCV_BRANCH="4.6.0"
 
 WORKDIR /opt
@@ -208,8 +199,7 @@ WORKDIR /opt/opencv/build
 RUN cmake $(cat /opt/opencv/opencv_cmake_flags.txt) /opt/opencv && \
     make "-j$(nproc)" && \
     make install
-
-# opencv end
+# End of OpenCV building
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
@@ -221,6 +211,7 @@ RUN apt install -y python-is-python3
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
+# Copy example clients into build image for static analysis
 WORKDIR /example_cpp_client
 COPY demos/common/cpp /example_cpp_client/cpp
 COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classification/cpp/*.cpp /example_cpp_client/cpp/src/
@@ -243,7 +234,7 @@ RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
 
 RUN cd /ovms/src/example/SampleCpuExtension/ && make
 
-# RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
+RUN bazel test ${debug_bazel_flags} --jobs $JOBS --test_summary=detailed --test_output=streamed //src:ovms_test
 
 ARG ovms_metadata_file
 COPY ${ovms_metadata_file} metadata.json
