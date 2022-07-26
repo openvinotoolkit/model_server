@@ -77,8 +77,6 @@ public:
 class HttpRestApiHandlerTest : public ::testing::Test {
 public:
     static void SetUpTestSuite() {
-        static int starts = 0;
-        SPDLOG_ERROR("Start XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX : {}", ++starts);
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
         char* argv[] = {
