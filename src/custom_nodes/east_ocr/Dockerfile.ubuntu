@@ -24,7 +24,7 @@ COPY ./common /custom_nodes/common
 COPY . /custom_nodes/${NODE_NAME}/
 COPY custom_node_interface.h /
 
-# Build OpenCV from source (for binary inputs and custom nodes)
+# Build OpenCV from source
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive \
     apt-get install -y --no-install-recommends \
