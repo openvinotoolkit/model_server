@@ -44,14 +44,14 @@ cd model_server/demos/multi_faces_analysis_pipeline/python
 
 You can prepare the workspace that contains all the above by just running
 
-```
+```bash
 make
 ```
 
 ### Final directory structure
 
 Once the `make` procedure is finished, you should have `workspace` directory ready with the following content.
-```
+```bash
 workspace
 ├── age-gender-recognition-retail-0013
 │   └── 1

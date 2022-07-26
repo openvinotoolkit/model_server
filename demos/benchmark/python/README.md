@@ -27,7 +27,7 @@ be specified in the command line.
 
 First at all, download a model and create an appropriate directory tree. For example, for some resnet 50 model from Intel's Open Model Zoo:
 
-```
+```bash
 mkdir -p workspace/resnet50-binary-0001/1
 cd workspace/resnet50-binary-0001/1
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
@@ -36,12 +36,12 @@ cd ../../..
 ```
 
 Let's start OVMS before building and running the benchmark client as follows:
-```
+```bash
 docker run -p 30001:30001 -p 30002:30002 -d -v ${PWD}/workspace:/workspace openvino/model_server --model_path \
                      /workspace/resnet50-binary-0001 --model_name resnet50-binary-0001 --port 30001 --rest_port 30002
 ```
 where a model directory looks like that:
-```
+```bash
 workspace
 └── resnet50-binary-0001
     └── 1
@@ -52,7 +52,8 @@ workspace
 ## Build Client Docker Image
 
 To build the docker image and tag it as `benchmark_client` run:
-```
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/benchmark/python
 docker build . -t benchmark_client
 ```
@@ -60,7 +61,7 @@ docker build . -t benchmark_client
 ## Selected Commands
 
 To check available option use `-h`, `--help` switches:
-```
+```bash
   docker run benchmark_client --help
 
   [-h] [-i ID] [-c CONCURRENCY] [-a SERVER_ADDRESS]
@@ -84,7 +85,7 @@ internet protocol to communicate with serving services (like OVMS, TFS, etc.).
 ```
 
 The version can be checked by using `--internal_version` switch as follows:
-```
+```bash
   docker run benchmark_client --internal_version
 
   1.17
@@ -94,7 +95,7 @@ The client is able to download the metadata of the served models. If you are
 unsure which models and versions are served and what status they have, you can
 list this information by specifying the `--list_models` switch (also a short
 form `-l` is available):
-```
+```bash
 docker run --network host benchmark_client -a localhost -r 30002 --list_models
 
 OVMS benchmark client 1.17
@@ -109,7 +110,7 @@ outputs can also be downloaded for all available models using the same listing
 switches and adding `-m <model-name>` and `-v <model-version>` to the command
 line. The option `-i` is only to add a prefix to the standard output with a name
 of an application instance. For example:
-```
+```bash
 docker run --network host benchmark_client -a localhost -r 30002 -l -m resnet50-binary-0001 -p 30001 -i id
 
 OVMS benchmark client 1.17
@@ -144,7 +145,7 @@ to specify this parameter.
 The workload cen be generated only if its length is specified by iteration number
 `-n`, `--steps_number` or duration length `-t`, `--duration`. For example 8 request
 will be generated as follows (remamber to add `--print_all` to show metrics in stdout):
-```
+```bash
 docker run --network host benchmark_client -a localhost -r 30002 -m resnet50-binary-0001 -p 30001 -n 8 --print_all
 
 OVMS benchmark client 1.17

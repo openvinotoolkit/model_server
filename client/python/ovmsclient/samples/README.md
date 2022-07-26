@@ -19,8 +19,15 @@ It covers following topics:
 
 ## Requirement
 
-Install samples dependencies:
+Clone the repository and enter directory:
+
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/client/python/ovmsclient/samples
 ```
+
+Install samples dependencies:
+```bash
 pip3 install -r requirements.txt
 ```
 
@@ -56,16 +63,19 @@ usage: grpc_get_model_status.py [-h] [--service_url SERVICE_URL]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --service_url SERVICE_URL Specify url to grpc service. default:localhost:9000
-  --model_name MODEL_NAME Model name to query. default: resnet
-  --model_version MODEL_VERSION Model version to query. Lists all versions if omitted
-  --timeout TIMEOUT Request timeout. default: 10.0
+  --service_url SERVICE_URL
+                        Specify url to grpc service. default:localhost:9000
+  --model_name MODEL_NAME
+                        Model name to query. default: resnet
+  --model_version MODEL_VERSION
+                        Model version to query. Lists all versions if omitted
+  --timeout TIMEOUT     Request timeout. default: 10.0
 ```
 
 - Usage Example
 
-```
-python grpc_get_model_status.py --model_name resnet
+```bash
+python grpc_get_model_status.py --model_name resnet --service_url localhost:9000
 {1: {'state': 'AVAILABLE', 'error_code': 0, 'error_message': 'OK'}}
 ```
 
@@ -78,7 +88,7 @@ python grpc_get_model_status.py --model_name resnet
 
 ```bash
 python grpc_get_model_metadata.py --help
-usage: grpc_get__model_metadata.py [-h] [--service_url SERVICE_URL]
+usage: grpc_get_model_metadata.py [-h] [--service_url SERVICE_URL]
                                   [--model_name MODEL_NAME]
                                   [--model_version MODEL_VERSION]
                                   [--timeout TIMEOUT]
@@ -86,15 +96,19 @@ usage: grpc_get__model_metadata.py [-h] [--service_url SERVICE_URL]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --service_url SERVICE_URL Specify url to grpc service. default:localhost:9000
-  --model_name MODEL_NAME Model name to query. default: resnet
-  --model_version MODEL_VERSION Model version to query. If ommited or set to 0 returns result for latest version
-  --timeout TIMEOUT Request timeout. default: 10.0
+  --service_url SERVICE_URL
+                        Specify url to grpc service. default:localhost:9000
+  --model_name MODEL_NAME
+                        Model name to query. default: resnet
+  --model_version MODEL_VERSION
+                        Model version to query. If ommited or set to 0 returns
+                        result for latest version
+  --timeout TIMEOUT     Request timeout. default: 10.0
 ```
 - Usage Example
 
-```
-python grpc_get_model_metadata.py --model_name resnet --model_version 1
+```bash
+python grpc_get_model_metadata.py --model_name resnet --model_version 1 --service_url localhost:9000
 {'model_version': 1, 'inputs': {'map/TensorArrayStack/TensorArrayGatherV3': {'shape': [1, 3, 224, 224], 'dtype': 'DT_FLOAT'}}, 'outputs': {'softmax_tensor': {'shape': [1, 1001], 'dtype': 'DT_FLOAT'}}}
 ```
 
@@ -116,18 +130,24 @@ usage: grpc_predict_resnet.py [-h] --images_numpy IMAGES_NUMPY
 
 optional arguments:
   -h, --help            show this help message and exit
-  --images_numpy IMAGES_NUMPY Path to a .npy file with data to infer
-  --service_url SERVICE_URL Specify url to grpc service. default:localhost:9000
-  --model_name MODEL_NAME Model name to query. default: resnet
-  --model_version MODEL_VERSION Model version to query. default: latest available
-  --iterations ITERATIONS Total number of requests to be sent. default: 0 - all elements in numpy
-  --timeout TIMEOUT Request timeout. default: 10.0
+  --images_numpy IMAGES_NUMPY
+                        Path to a .npy file with data to infer
+  --service_url SERVICE_URL
+                        Specify url to grpc service. default:localhost:9000
+  --model_name MODEL_NAME
+                        Model name to query. default: resnet
+  --model_version MODEL_VERSION
+                        Model version to query. default: latest available
+  --iterations ITERATIONS
+                        Total number of requests to be sent. default: 0 - all
+                        elements in numpy
+  --timeout TIMEOUT     Request timeout. default: 10.0
 
 ```
 - Usage example
 
-```
-python grpc_predict_resnet.py --images_numpy ../../imgs.npy --model_name resnet
+```bash
+python grpc_predict_resnet.py --images_numpy ../../imgs.npy --model_name resnet --service_url localhost:9000
 Image #0 has been classified as airliner
 Image #1 has been classified as Arctic fox, white fox, Alopex lagopus
 Image #2 has been classified as bee
@@ -162,17 +182,21 @@ usage: grpc_predict_binary_resnet.py [-h] [--images_dir IMAGES_DIR]
 
 
 optional arguments:
-  -h, --help            show this help message and exit 
-  --images_dir IMAGES_DIR Path to a directory with images in JPG or PNG format
-  --service_url SERVICE_URL Specify url to grpc service. default:localhost:9000
-  --model_name MODEL_NAME Model name to query. default: resnet
-  --model_version MODEL_VERSION Model version to query. default: latest available
-  --timeout TIMEOUT Request timeout. default: 10.0
+  -h, --help            show this help message and exit
+  --images_dir IMAGES_DIR
+                        Path to a directory with images in JPG or PNG format
+  --service_url SERVICE_URL
+                        Specify url to grpc service. default:localhost:9000
+  --model_name MODEL_NAME
+                        Model name to query. default: resnet
+  --model_version MODEL_VERSION
+                        Model version to query. default: latest available
+  --timeout TIMEOUT     Request timeout. default: 10.0
 ```
 - Usage example
 
-```
-python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet
+```bash
+python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet --service_url localhost:9000
 Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
 Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican
 Image ../../../../demos/common/static/images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
@@ -188,7 +212,7 @@ Image ../../../../demos/common/static/images/golden_retriever.jpeg has been clas
 ## Prepare the model from OpenVINO Model Zoo
 
 ### Vehicle detection model
-```
+```bash
 mkdir -p models
 curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.xml -o ${PWD}/models/vehicle-detection/1/vehicle-detection-0202.xml
 curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.bin -o ${PWD}/models/vehicle-detection/1/vehicle-detection-0202.bin
@@ -219,23 +243,33 @@ usage: grpc_predict_binary_vehicle_detection.py [-h] [--images_dir IMAGES_DIR]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --images_dir IMAGES_DIR Path to a directory with images in JPG or PNG format
-  --service_url SERVICE_URL Specify url to grpc service. default:localhost:9000
-  --model_name MODEL_NAME Model name to query. default: vehicle-detection
-  --model_version MODEL_VERSION Model version to query. default: latest available
-  --output_dir OUTPUT_DIR Path to store output.
-  --timeout TIMEOUT Request timeout. default: 10.0
+  --images_dir IMAGES_DIR
+                        Path to a directory with images in JPG or PNG format
+  --service_url SERVICE_URL
+                        Specify url to grpc service. default:localhost:9000
+  --model_name MODEL_NAME
+                        Model name to query. default: vehicle-detection
+  --model_version MODEL_VERSION
+                        Model version to query. default: latest available
+  --output_dir OUTPUT_DIR
+                        Path to store output.
+  --timeout TIMEOUT     Request timeout. default: 10.0
 ```
 
 - Usage example
 
 ```bash
-python grpc_predict_binary_vehicle_detection.py --images_dir ../../../../demos/common/static/images/cars/ --output_dir ./output
+python grpc_predict_binary_vehicle_detection.py --images_dir ../../../../demos/common/static/images/cars/ --output_dir ./output --service_url localhost:9000
 Making directory for output: ./output
 Detection results in file:  ./output/road1.jpg
 ```
 
 ## HTTP Client Examples <a name="http-api"></a>
+
+OVMS can be started using a command:
+```bash
+docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 
+```
 
 ### Model Status <a name="http-model-status">
 
@@ -253,16 +287,19 @@ usage: http_get_model_status.py [-h] [--service_url SERVICE_URL]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --service_url SERVICE_URL Specify url to http service. default:localhost:8000
-  --model_name MODEL_NAME Model name to query. default: resnet
-  --model_version MODEL_VERSION Model version to query. Lists all versions if omitted
-  --timeout TIMEOUT Request timeout. default: 10.0
+  --service_url SERVICE_URL
+                        Specify url to http service. default:localhost:8000
+  --model_name MODEL_NAME
+                        Model name to query. default: resnet
+  --model_version MODEL_VERSION
+                        Model version to query. Lists all versions if omitted
+  --timeout TIMEOUT     Request timeout. default: 10.0
 ```
 
 - Usage Example
 
-```
-python http_get_model_status.py --model_name resnet
+```bash
+python http_get_model_status.py --model_name resnet --service_url localhost:8000
 {1: {'state': 'AVAILABLE', 'error_code': 0, 'error_message': 'OK'}}
 ```
 
@@ -283,15 +320,19 @@ usage: http_get_model_metadata.py [-h] [--service_url SERVICE_URL]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --service_url SERVICE_URL Specify url to http service. default:localhost:8000
-  --model_name MODEL_NAME Model name to query. default: resnet
-  --model_version MODEL_VERSION Model version to query. If ommited or set to 0 returns result for latest version
-  --timeout TIMEOUT Request timeout. default: 10.0
+  --service_url SERVICE_URL
+                        Specify url to http service. default:localhost:8000
+  --model_name MODEL_NAME
+                        Model name to query. default: resnet
+  --model_version MODEL_VERSION
+                        Model version to query. If ommited or set to 0 returns
+                        result for latest version
+  --timeout TIMEOUT     Request timeout. default: 10.0
 ```
 - Usage Example
 
-```
-python http_get_model_metadata.py --model_name resnet --model_version 1
+```bash
+python http_get_model_metadata.py --model_name resnet --model_version 1 --service_url localhost:8000
 {'inputs': {'map/TensorArrayStack/TensorArrayGatherV3': {'dtype': 'DT_FLOAT', 'shape': [1, 3, 224, 224]}}, 'outputs': {'softmax_tensor': {'dtype': 'DT_FLOAT', 'shape': [1, 1001]}}, 'model_version': 1}
 ```
 
@@ -312,17 +353,23 @@ usage: http_predict_resnet.py [-h] --images_numpy IMAGES_NUMPY
 
 optional arguments:
   -h, --help            show this help message and exit 
-  --images_numpy IMAGES_NUMPY Path to a .npy file with data to infer
-  --service_url SERVICE_URL Specify url to http service. default:localhost:8000
-  --model_name MODEL_NAME Model name to query. default: resnet
-  --model_version MODEL_VERSION Model version to query. default: latest available
-  --iterations ITERATIONS Total number of requests to be sent. default: 0 - all elements in numpy
-  --timeout TIMEOUT Request timeout. default: 10.0
+  --images_numpy IMAGES_NUMPY
+                        Path to a .npy file with data to infer
+  --service_url SERVICE_URL
+                        Specify url to http service. default:localhost:8000
+  --model_name MODEL_NAME
+                        Model name to query. default: resnet
+  --model_version MODEL_VERSION
+                        Model version to query. default: latest available
+  --iterations ITERATIONS
+                        Total number of requests to be sent. default: 0 - all
+                        elements in numpy
+  --timeout TIMEOUT     Request timeout. default: 10.0
 ```
 - Usage example
 
-```
-python http_predict_resnet.py --images_numpy ../../imgs.npy --model_name resnet
+```bash
+python http_predict_resnet.py --images_numpy ../../imgs.npy --model_name resnet --service_url localhost:8000
 Image #0 has been classified as airliner
 Image #1 has been classified as Arctic fox, white fox, Alopex lagopus
 Image #2 has been classified as bee
@@ -359,16 +406,20 @@ usage: http_predict_binary_resnet.py [-h] --images_dir IMAGES_DIR
 
 optional arguments:
   -h, --help            show this help message and exit 
-  --images_dir IMAGES_DIR Path to a directory with images in JPG or PNG format
-  --service_url SERVICE_URL Specify url to http service. default:localhost:8000
-  --model_name MODEL_NAME Model name to query. default: resnet
-  --model_version MODEL_VERSION Model version to query. default: latest available
-  --timeout TIMEOUT Request timeout. default: 10.0
+  --images_dir IMAGES_DIR
+                        Path to a directory with images in JPG or PNG format
+  --service_url SERVICE_URL
+                        Specify url to http service. default:localhost:8000
+  --model_name MODEL_NAME
+                        Model name to query. default: resnet
+  --model_version MODEL_VERSION
+                        Model version to query. default: latest available
+  --timeout TIMEOUT     Request timeout. default: 10.0
 ```
 - Usage example
 
-```
-python http_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet
+```bash
+python http_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet --service_url localhost:8000
 Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
 Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican
 Image ../../../../demos/common/static/images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
@@ -384,12 +435,7 @@ Image ../../../../demos/common/static/images/golden_retriever.jpeg has been clas
 ## Prepare the model from OpenVINO Model Zoo
 
 ### Vehicle detection model
-```
-mkdir -p models
-curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.xml -o ${PWD}/models/vehicle-detection/1/vehicle-detection-0202.xml
-curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/vehicle-detection-0202/FP32/vehicle-detection-0202.bin -o ${PWD}/models/vehicle-detection/1/vehicle-detection-0202.bin
-chmod -R 755 ${PWD}/models/vehicle-detection
-```
+
 OVMS container can be started using a command:
 ```bash
 docker run -d --rm -v ${PWD}/models/vehicle-detection:/models/vehicle-detection -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name vehicle-detection --model_path /models/vehicle-detection --port 9000 --rest_port 8000 --layout NHWC:NCHW
@@ -416,18 +462,23 @@ usage: http_predict_binary_vehicle_detection.py [-h] --images_dir IMAGES_DIR
 
 optional arguments:
   -h, --help            show this help message and exit
-  --images_dir IMAGES_DIR Path to a directory with images in JPG or PNG format
-  --service_url SERVICE_URL Specify url to http service. default:localhost:8000
-  --model_name MODEL_NAME Model name to query. default: vehicle-detection
-  --model_version MODEL_VERSION Model version to query. default: latest available
-  --output_dir OUTPUT_DIR Path to store output.
-  --timeout TIMEOUT Request timeout. default: 10.0
+  --images_dir IMAGES_DIR
+                        Path to a directory with images in JPG or PNG format
+  --service_url SERVICE_URL
+                        Specify url to http service. default:localhost:8000
+  --model_name MODEL_NAME
+                        Model name to query. default: vehicle-detection
+  --model_version MODEL_VERSION
+                        Model version to query. default: latest available
+  --output_dir OUTPUT_DIR
+                        Path to store output.
+  --timeout TIMEOUT     Request timeout. default: 10.0
 ```
 
 - Usage example
 
 ```bash
-python http_predict_binary_vehicle_detection.py --images_dir ../../../../demos/common/static/images/cars/ --output_dir ./output
+python http_predict_binary_vehicle_detection.py --images_dir ../../../../demos/common/static/images/cars/ --output_dir ./output --service_url localhost:8000
 Making directory for output: ./output
 Detection results in file:  ./output/road1.jpg
 ```

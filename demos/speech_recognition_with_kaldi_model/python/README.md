@@ -15,7 +15,7 @@ cd model_server/demos/speech_recognition_with_kaldi_model/python
 ```
 
 Install client dependencies:
-```
+```bash
 pip3 install -r requirements.txt
 ```
 
@@ -31,19 +31,22 @@ wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoo
 
 This command downloads following files:
 
-```
+`
 rm_lstm4f.counts rm_lstm4f.nnet rm_lstm4f.mapping rm_lstm4f.md
-```
+`
+
 rm_lstm4f model files in Kaldi format.
 
-```
+`
 test_feat_1_10.ark
-```
+`
+
 [Kaldi's](http://kaldi-asr.org/doc/io.html) binary archive file with input data for the model
 
-```
+`
 test_score_1_10.ark
-```
+`
+
 [Kaldi's](http://kaldi-asr.org/doc/io.html) binary archive file with reference model results
 
 2. [Convert model to IR](https://docs.openvino.ai/2022.1/openvino_inference_engine_samples_speech_sample_README.html)
@@ -73,7 +76,8 @@ cd ..
 - Command
 
 ```bash
-usage: grpc_stateful_client.py [--input_path INPUT_PATH]
+python grpc_stateful_client.py --help
+usage: grpc_stateful_client.py [-h] [--input_path INPUT_PATH]
                               [--score_path SCORE_PATH]
                               [--grpc_address GRPC_ADDRESS]
                               [--grpc_port GRPC_PORT]
@@ -106,7 +110,7 @@ usage: grpc_stateful_client.py [--input_path INPUT_PATH]
 - Usage example
 
 ```bash
-python3 grpc_stateful_client.py --input_path $(pwd)/models/test_feat_1_10.ark --score_path $(pwd)/models/test_score_1_10.ark --grpc_address localhost --grpc_port 9000 --input_name Parameter:0 --output_name affinetransform:0 --model_name rm_lstm4f --sequence_id 1
+python3 grpc_stateful_client.py --input_path models/test_feat_1_10.ark --score_path models/test_score_1_10.ark --grpc_address localhost --grpc_port 9000 --input_name Parameter:0 --output_name affinetransform:0 --model_name rm_lstm4f --sequence_id 1
 
 ### Starting grpc_stateful_client.py client ###
 Context window left width cw_l: 0
@@ -114,8 +118,8 @@ Context window right width cw_r: 0
 Starting sequence_id: 1
 Start processing:
 Model name: rm_lstm4f
-Reading input ark file /some_path/test_feat_1_10.ark
-Reading scores ark file /some_path/test_score_1_10.ark
+Reading input ark file models/test_feat_1_10.ark
+Reading scores ark file models/test_score_1_10.ark
 Adding input name Parameter:0
 Adding output name affinetransform:0
 
@@ -200,7 +204,8 @@ time variance: 0.27
 - Command
 
 ```bash
-usage: rest_stateful_client.py [--input_path INPUT_PATH]
+python rest_stateful_client.py --help
+usage: rest_stateful_client.py [-h] [--input_path INPUT_PATH]
                               [--score_path SCORE_PATH]
                               [--rest_url REST_URL]
                               [--rest_port REST_PORT]
@@ -241,7 +246,7 @@ usage: rest_stateful_client.py [--input_path INPUT_PATH]
 - Usage example
 
 ```bash
-python3 rest_stateful_client.py --input_path $(pwd)/models/test_feat_1_10.ark --score_path $(pwd)/models/test_score_1_10.ark --rest_url localhost --rest_port 5555 --input_name Parameter:0 --output_name affinetransform:0 --model_name rm_lstm4f --sequence_id 1
+python3 rest_stateful_client.py --input_path models/test_feat_1_10.ark --score_path models/test_score_1_10.ark --rest_url localhost --rest_port 5555 --input_name Parameter:0 --output_name affinetransform:0 --model_name rm_lstm4f --sequence_id 1
 
 ### Starting rest_stateful_client.py client ###
 Context window left width cw_l: 0
@@ -249,8 +254,8 @@ Context window right width cw_r: 0
 Starting sequence_id: 1
 Start processing:
 Model name: rm_lstm4f
-Reading input ark file test_feat_1_10.ark
-Reading scores ark file test_score_1_10.ark
+Reading input ark file models/test_feat_1_10.ark
+Reading scores ark file models/test_score_1_10.ark
 Adding input name Parameter:0
 Adding output name affinetransform:0
 
