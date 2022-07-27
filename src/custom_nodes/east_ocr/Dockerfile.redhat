@@ -36,6 +36,7 @@ RUN cmake $(cat /opt/opencv/opencv_cmake_flags.txt) /opt/opencv && \
     make install
 # End of OpenCV building
 
+WORKDIR /
 COPY ./common /custom_nodes/common
 COPY . /custom_nodes/${NODE_NAME}/
 COPY custom_node_interface.h /
