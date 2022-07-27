@@ -149,11 +149,10 @@ TEST(Server, ServerMetadata) {
     ::inference::ServerMetadataResponse response;
 
     auto status = stub->ServerMetadata(&context, request, &response);
+    ovms::Server::instance().setShutdownRequest(1);
+    t.join();
     ASSERT_EQ(status.error_code(), grpc::StatusCode::OK);
     EXPECT_EQ(response.name(), PROJECT_NAME);
     EXPECT_EQ(response.version(), PROJECT_VERSION);
     EXPECT_EQ(response.extensions().size(), 0);
-
-    ovms::Server::instance().setShutdownRequest(1);
-    t.join();
 }
