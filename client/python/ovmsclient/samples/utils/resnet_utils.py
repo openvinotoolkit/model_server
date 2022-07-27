@@ -28,12 +28,12 @@ def get_model_io_names(client, model_name, model_version):
     input_name = next(iter(metadata['inputs']))  # by default resnet has only one input and one output in shape (1,1000) or (1,1001)
     output_name = None
     for name, meta in metadata['outputs'].items():
-        if meta["shape"] in [[1,1001], [1, 1000]]:
+        if meta["shape"] in [[1,1001], [1, 1000], [-1,1000], [-1,1001]]:
             if output_name is not None:
-                raise ValueError("Unexpected multiple models outputs with shapes in [(1,1001), (1, 1000)]")
+                raise ValueError("Unexpected multiple models outputs with shapes in [(1,1001), (1, 1000), (-1,1001), (-1, 1000)]")
             output_name = name
     if output_name is None:
-        raise ValueError("Could not find output with shape (1,1001) or (1, 1000) among model outputs")
+        raise ValueError("Could not find output with shape (1,1001), (1, 1000), (-1,1001) or (-1, 1000) among model outputs")
     return input_name, output_name
 
 def resnet_postprocess(response, output_name):
