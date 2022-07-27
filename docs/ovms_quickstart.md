@@ -60,11 +60,10 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/face-detection -p 900
 --model_path /models/face-detection --model_name face-detection --port 9000 --plugin_config '{"CPU_THROUGHPUT_STREAMS": "1"}' --shape auto
 ```
 
-OpenVINO Model Server expects a particular folder structure  for models -  in this case it will be mounted as: 
-`/models/face-detection/1`
+OpenVINO Model Server expects a particular folder structure for models - in this case `model` directory should have following content: 
 
 ```bash
-models/
+model/
 └── face-detection
     └── 1
         ├── face-detection-retail-0004.bin
