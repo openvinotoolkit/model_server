@@ -32,11 +32,15 @@
 #include "status.hpp"
 
 namespace ovms {
+class Server;
 
 void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, model_version_t version, const ModelVersionStatus& model_version_status);
 
 class ModelServiceImpl final : public tensorflow::serving::ModelService::Service {
+    ovms::Server& ovmsServer;
+
 public:
+    ModelServiceImpl(ovms::Server& ovmsServer);
     ::grpc::Status GetModelStatus(::grpc::ServerContext* context,
         const tensorflow::serving::GetModelStatusRequest* request,
         tensorflow::serving::GetModelStatusResponse* response) override;
@@ -46,7 +50,10 @@ public:
 };
 
 class GetModelStatusImpl {
+    ovms::Server& ovmsServer;
+
 public:
+    GetModelStatusImpl(ovms::Server& ovmsServer);
     static Status getModelStatus(const tensorflow::serving::GetModelStatusRequest* request, tensorflow::serving::GetModelStatusResponse* response, ModelManager& manager);
     static Status createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request);
     static Status serializeResponse2Json(const tensorflow::serving::GetModelStatusResponse* response, std::string* output);

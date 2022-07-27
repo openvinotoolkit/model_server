@@ -53,12 +53,13 @@ struct FunctorResourcesCleaner;
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
 class ModelManager {
-protected:
+public:
     /**
      * @brief A default constructor is private
      */
     ModelManager(const std::string& modelCacheDirectory = "");
 
+protected:
     void logPluginConfiguration();
 
     Status checkStatefulFlagChange(const std::string& modelName, bool configStatefulFlag);
@@ -80,6 +81,8 @@ protected:
 
     GlobalSequencesViewer globalSequencesViewer;
     uint32_t waitForModelLoadedTimeoutMs;
+    bool watcherStarted = false;
+    bool cleanerStarted = false;
 
 private:
     /**
