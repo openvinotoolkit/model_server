@@ -281,11 +281,11 @@ TEST(Server, ServerMetadata) {
 
     ovms::Server& server = ovms::Server::instance();
     std::thread t([&argv, &server]() {
-        server.start(7, argv);
+        ASSERT_EQ(EXIT_SUCCESS, server.start(9, argv));
     });
     auto start = std::chrono::high_resolution_clock::now();
-    while ((ovms::Server::instance().getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 1)) {
+    while ((server.getModuleState(ovms::GRPC_SERVER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
     }
 
     grpc::ChannelArguments args;

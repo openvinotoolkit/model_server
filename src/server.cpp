@@ -330,30 +330,14 @@ int Server::start(int argc, char** argv) {
 int Server::start(int argc, char** argv) {
     ovms::Server& server = ovms::Server::instance();
     installSignalHandlers(server);
-    auto retCode = EXIT_SUCCESS;
     try {
         auto& config = ovms::Config::instance().parse(argc, argv);
         configure_logger(config.logLevel(), config.logPath());
-#ifdef MTR_ENABLED
-        this->modules.emplace("ProfilerModule", std::make_unique<ProfilerModule>());
-        retCode = modules.at("ProfilerModule")->start(config);
+        logConfig(config);
+        auto retCode = this->startModules(config);
         if (retCode)
             return retCode;
-#endif
-        this->modules.emplace(std::string("GRPCServerModule"), std::make_unique<GRPCServerModule>());
-        retCode = modules.at("GRPCServerModule")->start(config);
-        if (retCode)
-            return retCode;
-        if (config.restPort() != 0) {
-            this->modules.emplace("HTTPServerModule", std::make_unique<HTTPServerModule>());
-            retCode = modules.at("HTTPServerModule")->start(config);
-            if (retCode)
-                return retCode;
-        }
-        this->modules.emplace("ServableManagerModule", std::make_unique<ServableManagerModule>());
-        retCode = modules.at("ServableManagerModule")->start(config);
-        if (retCode)
-            return retCode;
+
         while (!shutdown_request) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
