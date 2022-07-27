@@ -107,7 +107,9 @@ Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std::vecto
 }
 
 void logConfig(const Config& config) {
-    SPDLOG_INFO(PROJECT_NAME);
+    std::string project_name(PROJECT_NAME);
+    std::string project_version(PROJECT_VERSION);
+    SPDLOG_INFO(project_name + " " + project_version);
     SPDLOG_INFO("OpenVINO backend {}", OPENVINO_NAME);
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
     if (config.configPath().empty()) {

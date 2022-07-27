@@ -28,6 +28,7 @@
 #include "serialization.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
+#include "version.hpp"
 
 namespace ovms {
 
@@ -111,8 +112,9 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
     (void)context;
     (void)request;
     (void)response;
-    std::cout << __FUNCTION__ << ":" << __LINE__ << std::endl;
-    return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    response->set_name(PROJECT_NAME);
+    response->set_version(PROJECT_VERSION);
+    return grpc::Status::OK;
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelMetadata(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) {
