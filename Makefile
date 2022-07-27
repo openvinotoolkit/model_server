@@ -44,6 +44,7 @@ INSTALL_RPMS_FROM_URL ?=
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= master
+OPENCV_BRANCH ?= 4.6.0
 
 OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
@@ -74,7 +75,6 @@ ifeq ($(BASE_OS),ubuntu)
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
   INSTALL_DRIVER_VERSION ?= "21.48.21782"
   DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_dev_ubuntu20_p_2022.2.0.006.tgz
-  OPENVINO_OPENCV_DOWNLOAD_SERVER ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.1/opencv
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
@@ -82,7 +82,6 @@ ifeq ($(BASE_OS),redhat)
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "21.38.21026"
   DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_dev_rhel8_p_2022.2.0.006.tgz
-  OPENVINO_OPENCV_DOWNLOAD_SERVER ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.1/opencv
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -182,7 +181,7 @@ endif
 		--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		--build-arg OPENVINO_OPENCV_DOWNLOAD_SERVER=$(OPENVINO_OPENCV_DOWNLOAD_SERVER) \
+		--build-arg OPENCV_BRANCH=$(OPENCV_BRANCH) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) \
 		--build-arg JOBS=$(JOBS)
 	docker build $(NO_CACHE_OPTION) -f DockerfileMakePackage . \
