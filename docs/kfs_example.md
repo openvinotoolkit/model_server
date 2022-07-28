@@ -22,30 +22,31 @@ The script `kfs_grpc_predict_resnet.py` performs image classification task using
 
 ## Steps
 Clone OpenVINO&trade; Model Server GitHub repository and enter `model_server` directory.
-```
+```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 ```
 #### Download the Pretrained Model
 Download the model files and store them in the `models` directory
-```Bash
+```bash
 curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
+chmod -R 755 ./models
 ```
 
 #### Pull the Latest Model Server Image
 Pull the latest version of OpenVINO&trade; Model Server from Docker Hub :
-```Bash
+```bash
 docker pull openvino/model_server:latest
 ```
 
 #### Start the Model Server Container with Downloaded Model and Dynamic Batch Size
 Start the server container with the image pulled in the previous step and mount the `models` directory :
-```Bash
+```bash
 docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9000
 ```
 
 #### Prepare virtualenv
-```Bash
+```bash
 cd client/python/kserve-api/samples
 virtualenv .venv
 . .venv/bin/activate
@@ -53,24 +54,24 @@ pip install -r requirements.txt
 ```
 
 #### Run the Client to get model readiness
-```Bash
+```bash
 python3 ./kfs_grpc_model_ready.py --grpc_port 9000 --grpc_address localhost --model_name resnet
 ```
 
 #### Script Output
-```Bash
+```bash
 Model Ready:
 ready: true
 ```
 
 #### Run the Client to get metadata
-```Bash
+```bash
 python3 ./kfs_grpc_model_metadata.py --grpc_port 9000 --grpc_address localhost --model_name resnet
 ```
 
 #### Script Output
-```Bash
-server metadata:
+```bash
+model metadata:
 name: "resnet"
 versions: "1"
 platform: "OpenVINO"
@@ -91,12 +92,12 @@ outputs {
 ```
 
 #### Run the Client to perform inference
-```Bash
+```bash
 python kfs_grpc_predict_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False;
 ```
 
 #### Script Output
-```Bash
+```bash
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
