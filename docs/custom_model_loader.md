@@ -61,7 +61,6 @@ Download the model server code & build the docker (make docker_build).
 Once the docker is ready, create a folder where all the artifacts can be downloaded. Make sure that the models, client components, and images are all downloaded to this folder. Additionally, create a json file required for this folder.
 ```bash
 mkdir test_custom_loader
-cd test_custom_loader
 ```
 
 Step 2: Prepare the example of the custom loader library
@@ -74,6 +73,10 @@ make docker_build
 It will generate the library in the `lib/libsampleloader.so` path.
 
 Copy `lib` folder to the previously created directory `test_custom_loader`.
+```bash
+cp -r lib ../../../../test_custom_loader/lib
+cd ../../../../test_custom_loader
+```
 
 Step 3:  Download a Model
 
@@ -135,6 +138,82 @@ Step 8: Run inference & Review the results
 
 ```bash
 python3 face_detection.py --batch_size 1 --width 300 --height 300 --input_images_dir images --output_dir results --model_name sampleloader-model --grpc_port 9000
+
+['people1.jpeg']
+Start processing 1 iterations with batch size 1
+
+Request shape (1, 3, 300, 300)
+Response shape (1, 1, 200, 7)
+image in batch item 0 , output shape (3, 300, 300)
+detection 0 [[[0.         1.         0.9999999  0.22627862 0.35042182 0.27032945
+   0.43312052]]]
+x_min 67
+y_min 105
+x_max 81
+y_max 129
+detection 1 [[[0.         1.         0.9999999  0.7980574  0.35572374 0.8422255
+   0.42749226]]]
+x_min 239
+y_min 106
+x_max 252
+y_max 128
+detection 2 [[[0.         1.         0.9999927  0.4413453  0.29417545 0.48191014
+   0.37180012]]]
+x_min 132
+y_min 88
+x_max 144
+y_max 111
+detection 3 [[[0.         1.         0.99964225 0.55356365 0.30400735 0.59468836
+   0.38264883]]]
+x_min 166
+y_min 91
+x_max 178
+y_max 114
+detection 4 [[[0.         1.         0.9993523  0.32912934 0.38222942 0.36873418
+   0.44978413]]]
+x_min 98
+y_min 114
+x_max 110
+y_max 134
+detection 5 [[[0.         1.         0.9992501  0.33522347 0.6249954  0.38323137
+   0.7104612 ]]]
+x_min 100
+y_min 187
+x_max 114
+y_max 213
+detection 6 [[[0.        1.        0.9976745 0.6488881 0.5992611 0.6988456 0.6907843]]]
+x_min 194
+y_min 179
+x_max 209
+y_max 207
+detection 7 [[[0.        1.        0.9962077 0.5180316 0.5640176 0.5703776 0.6516389]]]
+x_min 155
+y_min 169
+x_max 171
+y_max 195
+detection 8 [[[0.        1.        0.722986  0.6746904 0.3287916 0.7198625 0.4061382]]]
+x_min 202
+y_min 98
+x_max 215
+y_max 121
+detection 9 [[[0.         1.         0.566281   0.13994813 0.36546633 0.18363091
+   0.44829145]]]
+x_min 41
+y_min 109
+x_max 55
+y_max 134
+saving result to results/1_0.jpg
+Iteration 1; Processing time: 21.92 ms; speed 45.61 fps
+
+processing time for all iterations
+average time: 21.00 ms; average speed: 47.62 fps
+median time: 21.00 ms; median speed: 47.62 fps
+max time: 21.00 ms; min speed: 47.62 fps
+min time: 21.00 ms; max speed: 47.62 fps
+time percentile 90: 21.00 ms; speed percentile 90: 47.62 fps
+time percentile 50: 21.00 ms; speed percentile 50: 47.62 fps
+time standard deviation: 0.00
+time variance: 0.00
 ```
 
 #### Blacklisting the model
