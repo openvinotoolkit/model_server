@@ -36,7 +36,8 @@ docker run -u $(id -u):$(id -g) -v ${PWD}/resnet_v2/:/resnet openvino/ubuntu20_d
 
 This operation will create model files in `${PWD}/resnet_v2/models/resnet/1/` folder.
 ```bash
-tree ${PWD}/resnet_v2/models/resnet/1/
+tree resnet_v2/models/resnet/1
+resnet_v2/models/resnet/1
 ├── saved_model.bin
 ├── saved_model.mapping
 └── saved_model.xml
