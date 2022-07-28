@@ -15,8 +15,10 @@
 #
 
 HEADER_FILE_PATH ?= ../../custom_node_interface.h
+OPENCV_BUILD_FLAGS ?= ../../opencv_cmake_flags.txt
+
 BASE_OS ?= ubuntu
-OPENCV_DOWNLOAD_FOLDER ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.1/opencv
+OPENCV_BRANCH ?= 4.6.0
 
 .PHONY: default build
 
@@ -24,11 +26,13 @@ default: docker_build
 
 docker_build:
 	@cp $(HEADER_FILE_PATH) ./custom_node_interface.h
+	@cp $(OPENCV_BUILD_FLAGS) ./opencv_cmake_flags.txt
 	@mkdir common
 	@cp -r ../common/utils.hpp ./common/utils.hpp
 	@cp -r ../common/opencv_utils.hpp ./common/opencv_utils.hpp
-	@docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} --build-arg OPENCV_DOWNLOAD_FOLDER=$(OPENCV_DOWNLOAD_FOLDER) .
+	@docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} --build-arg OPENCV_BRANCH=$(OPENCV_BRANCH) .
 	@rm -Rf lib
 	@docker cp $$(docker create --rm custom_node_build_image:latest):/custom_nodes/lib/ .
 	@rm -rf ./common
+	@rm opencv_cmake_flags.txt
 	@rm custom_node_interface.h
