@@ -190,13 +190,13 @@ RUN apt-get update && \
 ARG OPENCV_BRANCH="4.6.0"
 
 WORKDIR /opt
-RUN git clone https://github.com/opencv/opencv.git --depth 1 -b ${OPENCV_BRANCH}
+RUN git clone https://github.com/opencv/opencv.git --depth 1 -b ${OPENCV_BRANCH} /opt/opencv_repo
 
-COPY src/opencv_cmake_flags.txt /opt/opencv
+COPY src/opencv_cmake_flags.txt /opt/opencv_repo
 
-WORKDIR /opt/opencv/build
+WORKDIR /opt/opencv_repo/build
 # hadolint ignore=SC2046
-RUN cmake $(cat /opt/opencv/opencv_cmake_flags.txt) /opt/opencv && \
+RUN cmake $(cat /opt/opencv_repo/opencv_cmake_flags.txt) /opt/opencv_repo && \
     make "-j$(nproc)" && \
     make install
 # End of OpenCV building
@@ -227,7 +227,7 @@ LABEL description=${PROJECT_NAME}
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | rev | cut -d'_' -f1 | rev`#g" /ovms/src/version.hpp
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12`#g" /ovms/src/version.hpp
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv_install/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
