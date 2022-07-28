@@ -118,6 +118,18 @@ RUN mv .deps/install/lib64 .deps/install/lib
 
 ####### End of AWS S3 SDK
 
+# Build OpenCV from source (for binary inputs and custom nodes)
+ARG OPENCV_BRANCH="4.6.0"
+WORKDIR /opt
+RUN git clone https://github.com/opencv/opencv.git --depth 1 -b ${OPENCV_BRANCH} /opt/opencv_repo
+COPY src/opencv_cmake_flags.txt /opt/opencv_repo
+WORKDIR /opt/opencv_repo/build
+# hadolint ignore=SC2046
+RUN cmake $(cat /opt/opencv_repo/opencv_cmake_flags.txt) /opt/opencv_repo && \
+    make "-j$(nproc)" && \
+    make install
+# End of OpenCV building
+
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
 ARG OPENVINO_NAME=${DLDT_PACKAGE_URL}
@@ -132,12 +144,6 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2022
 
-# install opencv
-ARG OPENVINO_OPENCV_DOWNLOAD_SERVER
-RUN cd /opt/intel/openvino/ && echo URL ${OPENVINO_OPENCV_DOWNLOAD_SERVER}/openvino_opencv_ubuntu18.tgz && \
-    curl ${OPENVINO_OPENCV_DOWNLOAD_SERVER}/openvino_opencv_ubuntu18.tgz -o ${TMPDIR:-/tmp}/openvino_opencv_linux.tgz && \
-    tar -xf ${TMPDIR:-/tmp}/openvino_opencv_linux.tgz ; 
-
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc WORKSPACE /ovms/
@@ -151,9 +157,9 @@ RUN alternatives --set python /usr/bin/python3
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto
 
-
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
+# Copy example clients into build image for static analysis
 WORKDIR /example_cpp_client
 COPY demos/common/cpp /example_cpp_client/cpp
 COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classification/cpp/*.cpp /example_cpp_client/cpp/src/
@@ -169,7 +175,7 @@ LABEL description=${PROJECT_NAME}
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
 RUN if [ "$ov_use_binary" == "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#`find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep l_openvino | cut -d'_' -f7`#g" /ovms/src/version.hpp
 
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/extras/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
 RUN bazel build ${debug_bazel_flags} ${minitrace_flags} --jobs $JOBS //src:ovms
 RUN bazel build ${debug_bazel_flags} --jobs $JOBS //src:libsampleloader.so
