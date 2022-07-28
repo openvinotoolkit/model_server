@@ -48,7 +48,6 @@ OPENCV_BRANCH ?= 4.6.0
 
 OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
-APT_OVCV_PACKAGE ?= openvino-opencv-2022.1.0
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
 MINITRACE ?= OFF
@@ -176,7 +175,6 @@ endif
 		--build-arg ovms_metadata_file=.workspace/metadata.json --build-arg ov_source_branch="$(OV_SOURCE_BRANCH)" \
 		--build-arg ov_use_binary=$(OV_USE_BINARY) --build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL) \
 		--build-arg APT_OV_PACKAGE=$(APT_OV_PACKAGE) \
-		--build-arg APT_OVCV_PACKAGE=$(APT_OVCV_PACKAGE) \
 		--build-arg build_type=$(BAZEL_BUILD_TYPE) --build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS) \
 		--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
 		--build-arg PROJECT_NAME=${PROJECT_NAME} \
