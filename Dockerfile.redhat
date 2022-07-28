@@ -118,6 +118,18 @@ RUN mv .deps/install/lib64 .deps/install/lib
 
 ####### End of AWS S3 SDK
 
+# Build OpenCV from source (for binary inputs and custom nodes)
+ARG OPENCV_BRANCH="4.6.0"
+WORKDIR /opt
+RUN git clone https://github.com/opencv/opencv.git --depth 1 -b ${OPENCV_BRANCH} /opt/opencv_repo
+COPY src/opencv_cmake_flags.txt /opt/opencv_repo
+WORKDIR /opt/opencv_repo/build
+# hadolint ignore=SC2046
+RUN cmake $(cat /opt/opencv_repo/opencv_cmake_flags.txt) /opt/opencv_repo && \
+    make "-j$(nproc)" && \
+    make install
+# End of OpenCV building
+
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
 ARG OPENVINO_NAME=${DLDT_PACKAGE_URL}
@@ -131,21 +143,6 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2022
-
-# Build OpenCV from source (for binary inputs and custom nodes)
-ARG OPENCV_BRANCH="4.6.0"
-
-WORKDIR /opt
-RUN git clone https://github.com/opencv/opencv.git --depth 1 -b ${OPENCV_BRANCH} /opt/opencv_repo
-
-COPY src/opencv_cmake_flags.txt /opt/opencv_repo
-
-WORKDIR /opt/opencv_repo/build
-# hadolint ignore=SC2046
-RUN cmake $(cat /opt/opencv_repo/opencv_cmake_flags.txt) /opt/opencv_repo && \
-    make "-j$(nproc)" && \
-    make install
-# End of OpenCV building
 
 # Build OpenVINO Model Server
 WORKDIR /ovms

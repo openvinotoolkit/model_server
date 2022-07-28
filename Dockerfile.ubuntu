@@ -128,6 +128,23 @@ RUN make --jobs=$JOBS
 
 ####### End of AWS S3 SDK
 
+# Build OpenCV from source (for binary inputs and custom nodes)
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive \
+    apt-get install -y --no-install-recommends \
+        cmake \
+    && rm -rf /var/lib/apt/lists/*
+ARG OPENCV_BRANCH="4.6.0"
+WORKDIR /opt
+RUN git clone https://github.com/opencv/opencv.git --depth 1 -b ${OPENCV_BRANCH} /opt/opencv_repo
+COPY src/opencv_cmake_flags.txt /opt/opencv_repo
+WORKDIR /opt/opencv_repo/build
+# hadolint ignore=SC2046
+RUN cmake $(cat /opt/opencv_repo/opencv_cmake_flags.txt) /opt/opencv_repo && \
+    make "-j$(nproc)" && \
+    make install
+# End of OpenCV building
+
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
 ARG OPENVINO_NAME=${DLDT_PACKAGE_URL}
@@ -179,26 +196,6 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; 
 # install sample apps including benchmark_app
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
 #################### END OF OPENVINO BINARY INSTALL
-
-# Build OpenCV from source (for binary inputs and custom nodes)
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive \
-    apt-get install -y --no-install-recommends \
-        cmake \
-    && rm -rf /var/lib/apt/lists/*
-ARG OPENCV_BRANCH="4.6.0"
-
-WORKDIR /opt
-RUN git clone https://github.com/opencv/opencv.git --depth 1 -b ${OPENCV_BRANCH} /opt/opencv_repo
-
-COPY src/opencv_cmake_flags.txt /opt/opencv_repo
-
-WORKDIR /opt/opencv_repo/build
-# hadolint ignore=SC2046
-RUN cmake $(cat /opt/opencv_repo/opencv_cmake_flags.txt) /opt/opencv_repo && \
-    make "-j$(nproc)" && \
-    make install
-# End of OpenCV building
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
