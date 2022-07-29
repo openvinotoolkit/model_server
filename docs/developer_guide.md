@@ -178,8 +178,8 @@ export IMAGE="openvino/model_server:latest"
 
 - Example:
 
-```bash
-echo 'os.environ["IMAGE"] = "openvino/model_server"' >> user_config.py
+```
+os.environ["IMAGE"] = "openvino/model_server"
 ```
 </details>
 
@@ -243,7 +243,11 @@ tar -xvzf dist/<os_name>/ovms.tar.gz -C dist/<os_name>/
 ```
 
 ```bash
-echo 'os.environ["OVMS_BINARY_PATH"] = "'${PWD}'/dist/<os_name>/ovms/bin/ovms"' >> user_config.py
+export OVMS_BINARY_PATH="'${PWD}'/dist/<os_name>/ovms/bin/ovms"
+```
+
+```
+os.environ["OVMS_BINARY_PATH"] = "'${PWD}'/dist/<os_name>/ovms/bin/ovms"
 ```
 
 2. The following command executed in the of OpenVINO Model Server binary file should return paths to the unpacked `lib` directory included in `ovms.tar.gz` (`ovms/bin/./../lib`).
@@ -254,7 +258,11 @@ ldd dist/<os_name>/ovms/bin/ovms
 3. Otherwise use export to specify the following variable in `user_config.py` file or in the environment :
 
 ```bash
-echo 'os.environ["LD_LIBRARY_PATH"] = "'${PWD}'/dist/<os_name>/ovms/lib"' >> user_config.py
+export LD_LIBRARY_PATH="'${PWD}'/dist/<os_name>/ovms/lib"
+```
+
+```
+os.environ["LD_LIBRARY_PATH"] = "'${PWD}'/dist/<os_name>/ovms/lib"
 ```
 
 </details>
@@ -281,7 +289,7 @@ Debugging options are available. Click on the required option :
 	```bash
 	mkdir -p /models/1 && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
 	```
-    ```bash
+	```bash
 	bazel build //src:ovms -c dbg
 	```
 	```bash
@@ -306,7 +314,7 @@ Debugging options are available. Click on the required option :
 Download the model files and store them in the `models` directory
 ```bash
 mkdir -p models/resnet/1
-curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
+curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
 ```
 
 ### Option 1. Use OpenVINO Model Server build image.
