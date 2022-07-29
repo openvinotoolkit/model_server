@@ -64,10 +64,9 @@ OpenVINO Model Server expects a particular folder structure for models - in this
 
 ```bash
 model/
-└── face-detection
-    └── 1
-        ├── face-detection-retail-0004.bin
-        └── face-detection-retail-0004.xml
+└── 1
+    ├── face-detection-retail-0004.bin
+    └── face-detection-retail-0004.xml
 ``` 
 
 For more information on the folder structure and how to deploy more than one model at a time, check these links:
