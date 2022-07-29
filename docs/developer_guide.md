@@ -242,12 +242,12 @@ Replace `"/home/<example_path>/dist/<os_name>/ovms/bin/ovms"` with the path to y
 tar -xvzf dist/<os_name>/ovms.tar.gz -C dist/<os_name>/
 ```
 
-```bash
-export OVMS_BINARY_PATH="'${PWD}'/dist/<os_name>/ovms/bin/ovms"
-```
-
 ```python
 os.environ["OVMS_BINARY_PATH"] = "'${PWD}'/dist/<os_name>/ovms/bin/ovms"
+```
+
+```bash
+export OVMS_BINARY_PATH="'${PWD}'/dist/<os_name>/ovms/bin/ovms"
 ```
 
 2. The following command executed in the of OpenVINO Model Server binary file should return paths to the unpacked `lib` directory included in `ovms.tar.gz` (`ovms/bin/./../lib`).
@@ -257,12 +257,12 @@ ldd dist/<os_name>/ovms/bin/ovms
 
 3. Otherwise use export to specify the following variable in `user_config.py` file or in the environment :
 
-```bash
-export LD_LIBRARY_PATH="'${PWD}'/dist/<os_name>/ovms/lib"
-```
-
 ```python
 os.environ["LD_LIBRARY_PATH"] = "'${PWD}'/dist/<os_name>/ovms/lib"
+```
+
+```bash
+export LD_LIBRARY_PATH="'${PWD}'/dist/<os_name>/ovms/lib"
 ```
 
 </details>
