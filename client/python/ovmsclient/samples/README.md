@@ -34,8 +34,8 @@ pip3 install -r requirements.txt
 Download [Resnet50-tf Model](https://docs.openvino.ai/2022.1/omz_models_model_resnet_50_tf.html) and convert it into Intermediate Representation format:
 ```bash
 mkdir models
-docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models openvino/ubuntu18_dev:latest omz_downloader --name resnet-50-tf --output_dir /models
-docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models:rw openvino/ubuntu18_dev:latest omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models openvino/ubuntu20_dev:latest omz_downloader --name resnet-50-tf --output_dir /models
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models:rw openvino/ubuntu20_dev:latest omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
 mv ${PWD}/models/public/resnet-50-tf/FP32 ${PWD}/models/public/resnet-50-tf/1
 ```
 

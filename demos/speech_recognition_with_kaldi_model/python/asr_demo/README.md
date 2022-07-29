@@ -24,7 +24,7 @@ To successfully run this demo, you will need 3 docker images:
 Pull OpenVINO and OpenVINO Model Server images:
 ```bash
 docker pull openvino/model_server
-docker pull openvino/ubuntu18_dev
+docker pull openvino/ubuntu20_dev
 ```
 
 Download Kaldi dockerfile and modify it to contain necessary dependencies:
@@ -76,7 +76,7 @@ tar -xvf 0001_aspire_chain_model.tar.gz -C $WORKSPACE_DIR/aspire_kaldi
 Use temporary OpenVINO development container with model optimizer to convert model to IR format:
 
 ```bash
-docker run --rm -it -u 0 -v $WORKSPACE_DIR:/opt/workspace openvino/ubuntu18_dev mo --input_model /opt/workspace/aspire_kaldi/exp/chain/tdnn_7b/final.mdl --output output --output_dir /opt/workspace
+docker run --rm -it -u 0 -v $WORKSPACE_DIR:/opt/workspace openvino/ubuntu20_dev mo --input_model /opt/workspace/aspire_kaldi/exp/chain/tdnn_7b/final.mdl --output output --output_dir /opt/workspace
 ```
 
 After running this command you should have `final.xml` and `final.bin` files in your `WORKSPACE_DIR` directory.
