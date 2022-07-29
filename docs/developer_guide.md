@@ -178,7 +178,7 @@ export IMAGE="openvino/model_server:latest"
 
 - Example:
 
-```
+```python
 os.environ["IMAGE"] = "openvino/model_server"
 ```
 </details>
@@ -246,7 +246,7 @@ tar -xvzf dist/<os_name>/ovms.tar.gz -C dist/<os_name>/
 export OVMS_BINARY_PATH="'${PWD}'/dist/<os_name>/ovms/bin/ovms"
 ```
 
-```
+```python
 os.environ["OVMS_BINARY_PATH"] = "'${PWD}'/dist/<os_name>/ovms/bin/ovms"
 ```
 
@@ -261,7 +261,7 @@ ldd dist/<os_name>/ovms/bin/ovms
 export LD_LIBRARY_PATH="'${PWD}'/dist/<os_name>/ovms/lib"
 ```
 
-```
+```python
 os.environ["LD_LIBRARY_PATH"] = "'${PWD}'/dist/<os_name>/ovms/lib"
 ```
 
