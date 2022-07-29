@@ -64,20 +64,20 @@ To check available option use `-h`, `--help` switches:
 ```bash
   docker run benchmark_client --help
 
-  [-h] [-i ID] [-c CONCURRENCY] [-a SERVER_ADDRESS]
-  [-p GRPC_PORT] [-r REST_PORT] [-l] [-b [BS [BS ...]]]
-  [-s [SHAPE [SHAPE ...]]] [-d [DATA [DATA ...]]] [-j]
-  [-m MODEL_NAME] [-k DATASET_LENGTH] [-v MODEL_VERSION]
-  [-n STEPS_NUMBER] [-t DURATION] [-u WARMUP] [-w WINDOW]
-  [-e ERROR_LIMIT] [-x ERROR_EXPOSITION] [--max_value MAX_VALUE]
-  [--min_value MIN_VALUE] [--step_timeout STEP_TIMEOUT]
-  [--metadata_timeout METADATA_TIMEOUT] [-y DB_CONFIG]
-  [--print_all] [--certs_dir CERTS_DIR] [-q STATEFUL_LENGTH]
-  [--stateful_id STATEFUL_ID] [--stateful_hop STATEFUL_HOP]
-  [--nv_triton] [--sync_interval SYNC_INTERVAL]
-  [--quantile_list [QUANTILE_LIST [QUANTILE_LIST ...]]]
-  [--hist_factor HIST_FACTOR] [--hist_base HIST_BASE]
-  [--internal_version]
+usage: main.py [-h] [-i ID] [-c CONCURRENCY] [-a SERVER_ADDRESS]
+               [-p GRPC_PORT] [-r REST_PORT] [-l] [-b [BS [BS ...]]]
+               [-s [SHAPE [SHAPE ...]]] [-d [DATA [DATA ...]]] [-j]
+               [-m MODEL_NAME] [-k DATASET_LENGTH] [-v MODEL_VERSION]
+               [-n STEPS_NUMBER] [-t DURATION] [-u WARMUP] [-w WINDOW]
+               [-e ERROR_LIMIT] [-x ERROR_EXPOSITION] [--max_value MAX_VALUE]
+               [--min_value MIN_VALUE] [--step_timeout STEP_TIMEOUT]
+               [--metadata_timeout METADATA_TIMEOUT] [-y DB_CONFIG]
+               [--print_all] [--certs_dir CERTS_DIR] [-q STATEFUL_LENGTH]
+               [--stateful_id STATEFUL_ID] [--stateful_hop STATEFUL_HOP]
+               [--nv_triton] [--sync_interval SYNC_INTERVAL]
+               [--quantile_list [QUANTILE_LIST [QUANTILE_LIST ...]]]
+               [--hist_factor HIST_FACTOR] [--hist_base HIST_BASE]
+               [--internal_version]
 
 
 This is a benchmarking client (version 1.17) which uses TF API over the gRPC
