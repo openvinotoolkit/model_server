@@ -26,26 +26,22 @@ To enable Performance Hints for your application, use the following command:
 
 .. tab:: CPU  
 
-   .. code-block:: sh
-
-```bash
-        docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
-            --model_path /opt/model --model_name resnet --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
-            --target_device CPU
-```
+   ```bash
+         docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+               --model_path /opt/model --model_name resnet --port 9001 \
+               --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+               --target_device CPU
+   ```
 
 .. tab:: GPU
 
-   .. code-block:: sh  
-
-```bash
-        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-            -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
-            --model_path /opt/model --model_name resnet --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
-            --target_device GPU
-```
+   ```bash
+         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+               -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+               --model_path /opt/model --model_name resnet --port 9001 \
+               --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+               --target_device GPU
+   ```
 
 @endsphinxdirective
 
@@ -58,26 +54,22 @@ To enable Performance Hints for your application, use the following command:
 
 .. tab:: CPU  
 
-   .. code-block:: sh
-
-```bash
-        docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
-            --model_path /opt/model --model_name resnet --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
-            --target_device CPU
-```
+   ```bash
+         docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+               --model_path /opt/model --model_name resnet --port 9001 \
+               --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+               --target_device CPU
+   ```
 
 .. tab:: GPU
-
-   .. code-block:: sh  
    
-```bash
-        docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-            -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
-            --model_path /opt/model --model_name resnet --port 9001 \
-            --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
-            --target_device GPU
-```
+   ```bash
+         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+               -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+               --model_path /opt/model --model_name resnet --port 9001 \
+               --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+               --target_device GPU
+   ```
 
 @endsphinxdirective
 

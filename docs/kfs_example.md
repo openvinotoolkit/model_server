@@ -2,7 +2,7 @@
 
 OpenVINO Model Server 2022.2 release introduce preview of support for [KServe gRPC API](https://github.com/kserve/kserve/tree/master/docs/predict-api/v2).
 
-Inference supports putting tensor buffers either in `ModelInferRequest`'s [`InferTensorContents`](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L155) and [`raw_input_contents`](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L202). There is no support for BF16 data type and there is no support for using FP16 in `InferTensorContents`.
+Inference supports putting tensor buffers either in `ModelInferRequest's [InferTensorContents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L155)` and `[raw_input_contents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L202)`. There is no support for BF16 data type and there is no support for using FP16 in `InferTensorContents`.
 In case of sending raw images jpeg files BYTES data type should be used and data should be put in `InferTensorContents`'s `bytes_contents`.
 
 In current release there is support for:
