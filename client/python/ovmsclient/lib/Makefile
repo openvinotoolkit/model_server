@@ -60,6 +60,6 @@ clean:
 	@rm -rf tf/ tfs/ tensorflow/ tensorflow_serving/ build/ dist/
 
 style: venv
-	@. $(ACTIVATE); pip3 install flake8
+	@. $(ACTIVATE); pip3 install flake8==5.0.1
 	@echo "Running ovmsclient style checks",
 	@. $(ACTIVATE); flake8 ovmsclient tests/ --max-line-length=100 --count

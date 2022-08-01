@@ -63,7 +63,7 @@ def raise_from_grpc(grpc_error):
     error_message = error.get("message", grpc_error.details()) if error else grpc_error.details()
     details = f"Error occurred during handling the request: {error_message}"
 
-    raise(error_class(details))
+    raise (error_class(details))
 
 
 def raise_from_http(http_error):
@@ -73,7 +73,7 @@ def raise_from_http(http_error):
     error_message = error.get("message", str(http_error)) if error else str(http_error)
     details = f"Error occurred during handling the request: {error_message}"
 
-    raise(error_class(details))
+    raise (error_class(details))
 
 
 def raise_from_http_response(error_code, error_message):
@@ -84,4 +84,4 @@ def raise_from_http_response(error_code, error_message):
 
     details = f"Error occurred during handling the request: {error_message}"
 
-    raise(error_class(details))
+    raise (error_class(details))
