@@ -123,7 +123,7 @@ Currently, the following versions are available:
 - 21.48.21782 - Ubuntu
 
 Example:
-```
+```bash
 make docker_build INSTALL_DRIVER_VERSION=21.38.21026
 ```
 If not provided, version 21.38.21026 is used for Redhat and 21.48.21782 is used for Ubuntu.
