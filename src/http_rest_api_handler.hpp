@@ -31,6 +31,7 @@
 #include "rest_parser.hpp"
 #include "status.hpp"
 
+
 namespace ovms {
 class KFSInferenceServiceImpl;
 class GetModelMetadataImpl;
@@ -41,6 +42,7 @@ enum RequestType { Predict,
     ConfigReload,
     ConfigStatus,
     KFS_GetModelReady,
+    KFS_Infer,
     KFS_GetModelMetadata };
 struct HttpRequestComponents {
     RequestType type;
@@ -61,6 +63,7 @@ public:
 
     static const std::string kfs_modelreadyRegexExp;
     static const std::string kfs_modelmetadataRegexExp;
+    static const std::string kfs_inferRegexExp;
     /**
      * @brief Construct a new HttpRest Api Handler
      *
@@ -73,6 +76,7 @@ public:
         const std::string& request_path);
 
     Status parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version);
+    static void parseParams(rapidjson::Value&, rapidjson::Document&);
 
     void registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&)>);
     void registerAll();
@@ -167,6 +171,7 @@ public:
     Status processConfigStatusRequest(std::string& response, ModelManager& manager);
     Status processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
 private:
     const std::regex predictionRegex;
@@ -176,6 +181,7 @@ private:
 
     const std::regex kfs_modelreadyRegex;
     const std::regex kfs_modelmetadataRegex;
+    const std::regex kfs_inferRegex;
 
     std::map<RequestType, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&)>> handlers;
     int timeout_in_ms;
