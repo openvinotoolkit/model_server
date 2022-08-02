@@ -31,7 +31,6 @@
 #include "rest_parser.hpp"
 #include "status.hpp"
 
-
 namespace ovms {
 class KFSInferenceServiceImpl;
 class GetModelMetadataImpl;
