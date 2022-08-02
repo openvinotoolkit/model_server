@@ -138,7 +138,7 @@ In the `model_config_list` section, three models are defined as usual. We can re
 
 ## Step 3: Start the Model Server
 
-1. Run command to start the Model Server
+Run command to start the Model Server
 ```bash
 docker run --rm -v $(pwd)/models/:/models:ro -p 9100:9100 -p 8100:8100 openvino/model_server:latest --config_path /models/config.json --port 9100 --rest_port 8100
 ```
@@ -147,7 +147,7 @@ docker run --rm -v $(pwd)/models/:/models:ro -p 9100:9100 -p 8100:8100 openvino/
 
 Input images can be sent to the service requesting resource name `image_classification_pipeline`. There is an example client doing that:
 
-1. Check accuracy of the pipeline by running the client in another terminal:
+Check accuracy of the pipeline by running the client in another terminal:
 ```bash
 cd ../../../client/python/tensorflow-serving-api/samples
 virtualenv .venv
