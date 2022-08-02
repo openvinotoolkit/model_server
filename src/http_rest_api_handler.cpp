@@ -172,7 +172,7 @@ void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
     }
 }
 
-Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& response_body) {
+Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
     ::inference::ModelInferRequest grpc_request;
     ::inference::ModelInferResponse grpc_response;
 
@@ -191,7 +191,7 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
         {"BYTES", "bytes_contents"}};
 
     Document doc;
-    doc.Parse(response_body.c_str());
+    doc.Parse(request_body.c_str());
     SPDLOG_DEBUG("Processing REST request for model: {}; ", doc.GetParseError());
     Value& inputs = doc["inputs"];
     for (SizeType i = 0; i < inputs.Size(); i++) {
@@ -211,10 +211,10 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     doc.Accept(writer);
 
-    std::string request_body(buffer.GetString());
+    std::string request(buffer.GetString());
     google::protobuf::util::JsonParseOptions opts;
     opts.ignore_unknown_fields = true;
-    google::protobuf::util::JsonStringToMessage(request_body, &grpc_request, opts);
+    google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);
     std::string modelName(request_components.model_name);
     std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
     grpc_request.set_model_name(modelName);
