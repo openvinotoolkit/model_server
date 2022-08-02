@@ -30,7 +30,7 @@ class HttpPredictResponse(PredictResponse):
         outputs = response_json.get("outputs", None)
 
         if not error_message and not outputs:
-            raise(ValueError("No outputs or error found in response"))
+            raise (ValueError("No outputs or error found in response"))
 
         if error_message:
             raise_from_http_response(self.raw_response.status_code, error_message)
@@ -101,7 +101,7 @@ class HttpModelStatusResponse(ModelStatusResponse):
         error_message = response_json.get("error", None)
         model_version_status = response_json.get("model_version_status", None)
         if not error_message and not model_version_status:
-            raise(ValueError("No model status or error found in response"))
+            raise (ValueError("No model status or error found in response"))
 
         if error_message:
             raise_from_http_response(self.raw_response.status_code, error_message)
