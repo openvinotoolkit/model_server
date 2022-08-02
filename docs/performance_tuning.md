@@ -22,9 +22,8 @@ The `PERFORMANCE_HINT` plugin config property enables you to specify a performan
 This mode prioritizes high throughput, balancing between latency and power. It is best suited for tasks involving multiple jobs, like inference of video feeds or large numbers of images.
 
 To enable Performance Hints for your application, use the following command:
-@sphinxdirective
 
-.. tab:: CPU  
+CPU
 
    ```bash
          docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
@@ -33,7 +32,7 @@ To enable Performance Hints for your application, use the following command:
                --target_device CPU
    ```
 
-.. tab:: GPU
+GPU
 
    ```bash
          docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
@@ -43,16 +42,13 @@ To enable Performance Hints for your application, use the following command:
                --target_device GPU
    ```
 
-@endsphinxdirective
-
 #### LATENCY
 This mode prioritizes low latency, providing short response time for each inference job. It performs best for tasks where inference is required for a single input image, like a medical analysis of an ultrasound scan image. It also fits the tasks of real-time or nearly real-time applications, such as an industrial robot's response to actions in its environment or obstacle avoidance for autonomous vehicles.
 Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://docs.openvino.ai/2022.1/openvino_docs_IE_DG_supported_plugins_AUTO.html#performance-hints).
 
 To enable Performance Hints for your application, use the following command:
-@sphinxdirective
 
-.. tab:: CPU  
+CPU
 
    ```bash
          docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
@@ -61,7 +57,7 @@ To enable Performance Hints for your application, use the following command:
                --target_device CPU
    ```
 
-.. tab:: GPU
+GPU
    
    ```bash
          docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
@@ -70,8 +66,6 @@ To enable Performance Hints for your application, use the following command:
                --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
                --target_device GPU
    ```
-
-@endsphinxdirective
 
 > **NOTE**: CPU_THROUGHPUT_STREAMS and PERFORMANCE_HINT should not be used together.
 
