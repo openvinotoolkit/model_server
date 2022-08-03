@@ -19,7 +19,7 @@
 set -e
 
 cleanup_tmp_dirs() {
-    ARG = $?
+    ARG=$?
     echo "Cleaning up temp directories"
     rm -rf tf/ tfs/
     exit $ARG
