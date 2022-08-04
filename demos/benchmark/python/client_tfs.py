@@ -34,7 +34,7 @@ except ModuleNotFoundError:
     from client import BaseClient
 
 
-class OVmsClient(BaseClient):
+class TFS_Client(BaseClient):
     """
     Inference client for benchmarks
     for Open Vino Model Server
@@ -42,8 +42,20 @@ class OVmsClient(BaseClient):
 
     # override
     status_endpoint = "/v1/config"
+
+    DTYPE_FLOAT_16 = "DT_FLOAT16"
     DTYPE_FLOAT_32 = "DT_FLOAT"
+    DTYPE_FLOAT_64 = "DT_FLOAT64"
+
+    DTYPE_INT_8 = "DT_INT8"
+    DTYPE_INT_16 = "DT_INT16"
     DTYPE_INT_32 = "DT_INT32"
+    DTYPE_INT_64 = "DT_INT64"
+
+    DTYPE_UINT_8 = "DT_UINT8"
+    DTYPE_UINT_16 = "DT_UINT16"
+    DTYPE_UINT_32 = "DT_UINT32"
+    DTYPE_UINT_64 = "DT_UINT64"
 
     # override
     def get_stub(self):
@@ -147,6 +159,11 @@ class OVmsClient(BaseClient):
     def prepare_batch_requests(self):
         for key, values in self.xdata.items():
             assert len(values) == self.dataset_length, f"{key} data has wrong length"
+
+        # self.xdata -> {
+        #     input-name-0: [  (data-0-0, meta-0-0), (data-0-1, meta-0-1), ...  ],
+        #     input-name-1: [  (data-1-0, meta-1-0), (data-1-1, meta-1-1), ...  ],
+        # }
 
         for index in range(self.dataset_length):
             request = predict_pb2.PredictRequest()
