@@ -112,4 +112,11 @@ void ModelVersionStatus::logStatus() {
         ModelVersionStateToString(state),
         ModelVersionStatusErrorCodeToString(errorCode));
 }
+
+void ModelVersionStatus::setState(ModelVersionState state, ModelVersionStatusErrorCode error_code) {
+    SPDLOG_DEBUG("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
+    this->state = state;
+    errorCode = error_code;
+    logStatus();
+}
 }  // namespace ovms

@@ -153,7 +153,7 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
             return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
         }
     }
-    return buildResponse(instance, response).grpc();
+    return buildResponse(*model, *instance, response).grpc();
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) {
@@ -209,28 +209,38 @@ Status KFSInferenceServiceImpl::buildResponse(
     return StatusCode::OK;
 }
 
+void addReadyVersions(Model& model,
+    ::inference::ModelMetadataResponse* response) {
+    auto modelVersions = model.getModelVersionsMapCopy();
+    for (auto& [modelVersion, modelInstance] : modelVersions) {
+        if (modelInstance.getStatus().getState() == ModelVersionState::AVAILABLE)
+            response->add_versions(std::to_string(modelVersion));
+    }
+}
+
 Status KFSInferenceServiceImpl::buildResponse(
-    std::shared_ptr<ModelInstance> instance,
+    Model& model,
+    ModelInstance& instance,
     ::inference::ModelMetadataResponse* response) {
 
     std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
 
     // 0 meaning immediately return unload guard if possible, otherwise do not wait for available state
-    auto status = instance->waitForLoaded(0, unloadGuard);
+    auto status = instance.waitForLoaded(0, unloadGuard);
     if (!status.ok()) {
         return status;
     }
 
     response->Clear();
-    response->set_name(instance->getName());
-    response->add_versions(std::to_string(instance->getVersion()));
+    response->set_name(instance.getName());
+    addReadyVersions(model, response);
     response->set_platform(PLATFORM);
 
-    for (const auto& input : instance->getInputsInfo()) {
+    for (const auto& input : instance.getInputsInfo()) {
         convert(input, response->add_inputs());
     }
 
-    for (const auto& output : instance->getOutputsInfo()) {
+    for (const auto& output : instance.getOutputsInfo()) {
         convert(output, response->add_outputs());
     }
 
