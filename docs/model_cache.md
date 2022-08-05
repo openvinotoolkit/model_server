@@ -63,7 +63,7 @@ The first time the model server container is started, it will populate the cache
 
 Logs from the first initialization - model loading takes ~3.5s
 ```
-[2021-11-12 16:03:43.325][1][serving][info][modelinstance.cpp:558] Loading model: model, version: 1, from path: /model//1, with target device: GPU ...
+[2021-11-12 16:03:43.325][1][serving][info][modelinstance.cpp:558] Loading model: model, version: 1, from path: /model/1, with target device: GPU ...
 [2021-11-12 16:03:43.325][1][serving][info][modelversionstatus.hpp:155] STATUS CHANGE: Version 1 of model model status change. New status: ( "state": "START", "error_code": "OK" )
 [2021-11-12 16:03:43.325][1][serving][info][modelversionstatus.hpp:155] STATUS CHANGE: Version 1 of model model status change. New status: ( "state": "LOADING", "error_code": "OK" )
 [2021-11-12 16:03:43.342][1][serving][info][modelinstance.cpp:175] Final network inputs:
@@ -77,7 +77,7 @@ Input name: data; mapping_name: ; shape: (1,3,300,300); effective shape: (1,3,30
 
 Sequential model server initialization is faster. Based on logs below, it is ~400ms.
 ```
-[2021-11-12 16:06:08.377][1][serving][info][modelinstance.cpp:558] Loading model: model, version: 1, from path: /model//1, with target device: GPU ...
+[2021-11-12 16:06:08.377][1][serving][info][modelinstance.cpp:558] Loading model: model, version: 1, from path: /model/1, with target device: GPU ...
 [2021-11-12 16:06:08.377][1][serving][info][modelversionstatus.hpp:155] STATUS CHANGE: Version 1 of model model status change. New status: ( "state": "START", "error_code": "OK" )
 [2021-11-12 16:06:08.377][1][serving][info][modelversionstatus.hpp:155] STATUS CHANGE: Version 1 of model model status change. New status: ( "state": "LOADING", "error_code": "OK" )
 [2021-11-12 16:06:08.384][1][serving][info][modelinstance.cpp:175] Final network inputs:
