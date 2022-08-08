@@ -412,7 +412,7 @@ public:
     Status checkForForbiddenDynamicParameters() {
         const auto& config = dependantModelInstance->getModelConfig();
         if (config.getBatchingMode() == Mode::AUTO || config.anyShapeSetToAuto()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Node name: {} used model name: {} with dynamic batch/shape parameter which is forbidden.",
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Node name: {} used model name: {} with batch/shape parameter set to 'auto' which is forbidden. Use dynamic shape.",
                 pipelineName,
                 dependantNodeInfo.nodeName,
                 dependantNodeInfo.modelName);
