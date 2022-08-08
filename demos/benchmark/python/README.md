@@ -2,20 +2,15 @@
 
 ## Introduction
 
-The benchmark client introduced in this directory is written in Python 3. Benchmark client uses TFServing API and KServe API to communicate with OpenVINO/TFServing/KServe based services.
-It is recommended to use the benchmark client as a docker container. Prior to transmission, the client downloads metadata from the server, which contains a list of available models,
-their versions as well as accepted input and output shapes. Then it generates tensors containing random data with shapes matched
-to the models served by the service. Both the length of the dataset and the workload duration can be specified independently. The
-synthetic data created is then served in a loop iterating over the dataset until the workload length is satisfied. As the main role
-of the client is performance measurement all aspects unrelated to throughput and/or latency are ignored. This means the client does
-not validate the received responses nor does it estimate accuracy as these activities would negatively affect the measured performance
-metrics on the client side.
+The benchmark client introduced in this directory is written in Python 3. Benchmark client uses TFServing API and KServe API to communicate with OpenVINO/TFServing/KServe based services. It is recommended to use the benchmark client as a docker container. Prior to transmission, the client downloads metadata from the server, which contains a list of available models, their versions as well as accepted input and output shapes. Then it generates tensors containing random data with shapes matched to the models served by the service. Both the length of the dataset and the workload duration can be specified independently. The synthetic data created is then served in a loop iterating over the dataset until the workload length is satisfied. As the main role of the client is performance measurement all aspects unrelated to throughput and/or latency are ignored. This means the client does not validate the received responses nor does it estimate accuracy as these activities would negatively affect the measured performance metrics on the client side.
 
 In addition to the standard data format, the client also supports stateful models (recognizing dependencies between consecutive
-inference requests) as well as binary input for select file formats (PNG and JPEG). Both channel types, insecure and certificate
-secured, are supported. Secrets/certificates have to be mounted on a separated volume as well as their path has to be specified by
-command line. The secure connection can be used, for example, to benchmark the Nginx OVMS plugin, which can be build from public 
-source with the built-in Nginx reverse proxy load balancer.
+inference requests) as well as binary input for select file formats (PNG and JPEG).
+
+![](README-img-urandom.png "urandom generated input image") ![](README-img-xrandom.png "xrandom generated input image")
+
+
+Furtermore the client supports multiple precisions e.g. `FP16`, `FP32`, `FP64`, `INT8`, `INT64`, `UINT64` and more. Both channel types, insecure and certificate secured, are supported. Secrets/certificates have to be mounted on a separated volume as well as their path has to be specified by command line. The secure connection can be used, for example, to benchmark the Nginx OVMS plugin, which can be build from public source with the built-in Nginx reverse proxy load balancer.
 
 A single docker container can run many parallel clients in separate processes. Measured metrics (especially throughput, latency,
 and counters) are collected from all client processes and then combined upon which they can be printed in JSON format/syntax for
