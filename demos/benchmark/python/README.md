@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The benchmark client introduced in this directory is written in Python 3. Benchmark client uses TFServing API and KServe API to communicate with OpenVINO/TFServing/KServe based services. It is recommended to use the benchmark client as a docker container. Prior to transmission, the client downloads metadata from the server, which contains a list of available models, their versions as well as accepted input and output shapes. Then it generates tensors containing random data with shapes matched to the models served by the service. Both the length of the dataset and the workload duration can be specified independently. The synthetic data created is then served in a loop iterating over the dataset until the workload length is satisfied. As the main role of the client is performance measurement all aspects unrelated to throughput and/or latency are ignored. This means the client does not validate the received responses nor does it estimate accuracy as these activities would negatively affect the measured performance metrics on the client side.
+The benchmark client introduced in this directory is written in Python 3. Benchmark client uses TFServing API and KServe API to communicate with model servers. It is recommended to use the benchmark client as a docker container. Prior to transmission, the client downloads metadata from the server, which contains a list of available models, their versions as well as accepted input and output shapes. Then it generates tensors containing random data with shapes matched to the models served by the service. Both the length of the dataset and the workload duration can be specified independently. The synthetic data created is then served in a loop iterating over the dataset until the workload length is satisfied. As the main role of the client is performance measurement all aspects unrelated to throughput and/or latency are ignored. This means the client does not validate the received responses nor does it estimate accuracy as these activities would negatively affect the measured performance metrics on the client side.
 
 In addition to the standard data format, the client also supports stateful models (recognizing dependencies between consecutive
 inference requests) as well as binary input for select file formats (PNG and JPEG).
@@ -143,7 +143,7 @@ different batch sizes in a single workload. The switches `-b`, `--bs` can be use
 to specify this parameter.
 
 The workload can be generated only if its length is specified by iteration number
-`-n`, `--steps_number` or duration length `-t`, `--duration`. The see report also on warmup time window use `--report_warmup` switch. Example for 8 requests
+`-n`, `--steps_number` or duration length `-t`, `--duration`. To see report also on warmup time window use `--report_warmup` switch. Example for 8 requests
 will be generated as follows (remember to add `--print_all` to show metrics in stdout):
 ```bash
 docker run --network host benchmark_client -a localhost -r 30002 -m resnet50-binary-0001 -p 30001 -n 8 --report_warmup --print_all
