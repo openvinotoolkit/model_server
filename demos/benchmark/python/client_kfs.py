@@ -160,18 +160,6 @@ class KFS_Client(BaseClient):
                 single_input_bytes = bytes()
                 if "dtype" not in xbatches[index][1]:
                     raise NotImplementedError("KFS / binary")
-                    # for binary_data in xbatches[index][0]:
-                    #     single_input_bytes += binary_data
-                    # shape = self.inputs[input_name]["shape"]
-                    # shape[0] = batch_length
-                    # CONCLUSION:
-                    # Resnet50Int8, bs1 - Invalid content size of tensor proto - Expected: 602112 bytes; Actual: 150865 bytes;
-                    # (expected 1x3x224x224x4 - 1 batch of 3x224x224 images with 4 bytes per pixel without compression)
-                    # Resnet50Int8, bs4 - Invalid content size of tensor proto - Expected: 2408448 bytes; Actual: 603460 bytes;
-                    # (expected 4x3x224x224x4 - 4 batches of 3x224x224 images with 4 bytes per pixel without compression)
-                    # VehicleAnalysis, bs1 - Invalid content size of tensor proto - Expected: 3145728 bytes; Actual: 176670 bytes;
-                    # (expected 1x3x512x512x4 - 4 batches of 3x224x224 images with 4 bytes per pixel without compression)
-                    # TODO: consider shape = [len(single_input_bytes)]
                 else:
                     if self.inputs[input_name]["dtype"] == self.DTYPE_INT_8: np_dtype = "int8"
                     elif self.inputs[input_name]["dtype"] == self.DTYPE_INT_32: np_dtype = "int32"
@@ -196,17 +184,8 @@ class KFS_Client(BaseClient):
                 output.name = output_name
                 request.outputs.append(output)
 
-            # TODO CHECK!
             if self.stateful_length > 0:
                 raise NotImplementedError("KFS / stateful")
-            #     request.parameters["sequence_id"].int64_param = self.stateful_id
-            #     if self.stateful_counter == 0:
-            #         request.parameters["sequence_start"].bool_param = True
-            #     elif self.stateful_counter >= int(self.stateful_length) - 1:
-            #         request.parameters["sequence_end"].bool_param = True
-            #         self.stateful_id += self.stateful_hop
-            #         self.stateful_counter = -1
-            #     self.stateful_counter += 1
 
             self.requests.append((batch_length, request))
         del self.xdata
