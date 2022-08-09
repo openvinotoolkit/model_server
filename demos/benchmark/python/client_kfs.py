@@ -184,13 +184,13 @@ class KFS_Client(BaseClient):
                 output.name = output_name
                 request.outputs.append(output)
 
-            # TODO!
+
             if self.stateful_length > 0:
                 raise NotImplementedError("KFS / stateful")
 
             self.requests.append((batch_length, request))
         del self.xdata
 
-    # ovrride
+    # override
     def predict(self, request, timeout):
         return self.stub.ModelInfer(request, timeout=timeout)
