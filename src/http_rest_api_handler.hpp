@@ -76,6 +76,7 @@ public:
 
     Status parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version);
     static void parseParams(rapidjson::Value&, rapidjson::Document&);
+    static std::string preprocessInferRequest(std::string request_body);
 
     void registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&)>);
     void registerAll();

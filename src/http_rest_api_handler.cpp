@@ -153,29 +153,22 @@ void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
             if (i->value.IsInt64()) {
                 Value value(i->value.GetInt64());
                 param.AddMember("int64_param", value, doc.GetAllocator());
-                scope["parameters"].RemoveMember(i->name.GetString());
-                scope["parameters"].AddMember(name, param, doc.GetAllocator());
             }
             if (i->value.IsString()) {
                 Value value(i->value.GetString(), doc.GetAllocator());
                 param.AddMember("string_param", value, doc.GetAllocator());
-                scope["parameters"].RemoveMember(i->name.GetString());
-                scope["parameters"].AddMember(name, param, doc.GetAllocator());
             }
             if (i->value.IsBool()) {
                 Value value(i->value.GetBool());
                 param.AddMember("bool_param", value, doc.GetAllocator());
-                scope["parameters"].RemoveMember(i->name.GetString());
-                scope["parameters"].AddMember(name, param, doc.GetAllocator());
             }
+            scope["parameters"].RemoveMember(i->name.GetString());
+            scope["parameters"].AddMember(name, param, doc.GetAllocator());
         }
     }
 }
 
-Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-    ::inference::ModelInferRequest grpc_request;
-    ::inference::ModelInferResponse grpc_response;
-
+std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body){
     static std::map<std::string, std::string> types = {
         {"BOOL", "bool_contents"},
         {"INT8", "int_contents"},
@@ -192,7 +185,6 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
 
     Document doc;
     doc.Parse(request_body.c_str());
-    SPDLOG_DEBUG("Processing REST request for model: {}; ", doc.GetParseError());
     Value& inputs = doc["inputs"];
     for (SizeType i = 0; i < inputs.Size(); i++) {
         Value data = inputs[i].GetObject()["data"].GetArray();
@@ -211,12 +203,21 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     doc.Accept(writer);
 
-    std::string request(buffer.GetString());
+    return buffer.GetString();
+}
+
+Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    ::inference::ModelInferRequest grpc_request;
+    ::inference::ModelInferResponse grpc_response;
+
+    std::string request(preprocessInferRequest(request_body));
+
     google::protobuf::util::JsonParseOptions opts;
     opts.ignore_unknown_fields = true;
     google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);
     std::string modelName(request_components.model_name);
     std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
+    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
     grpc_request.set_model_name(modelName);
     grpc_request.set_model_version(modelVersion);
     kfsGrpcImpl.ModelInfer(nullptr, &grpc_request, &grpc_response);
