@@ -45,7 +45,7 @@ except ModuleNotFoundError:
 def get_client(xargs):
     if xargs["api"] == "TFS": return TFS_Client
     elif xargs["api"] == "KFS": return KFS_Client
-    elif xargs["api"] == "REST": raise NotImplementedError("TOOD - add REST support")
+    elif xargs["api"] == "REST": raise NotImplementedError("TODO - add REST support")
     else: return TFS_Client # default client API
 
 

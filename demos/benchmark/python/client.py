@@ -303,7 +303,7 @@ class BaseClient(metaclass=abc.ABCMeta):
             try: batch.append(content[content_offset + i])
             except IndexError:
                 if len(batch) == 0:
-                    self.print_warning(f"Not enought data in create all batches. " +
+                    self.print_warning(f"Not enough data in create all batches. " +
                                        f"Number of entries in file ({content_offset + i}) " +
                                        f"is smaller then required batches {self.batchsizes} " +
                                        f"with --dataset_length {self.dataset_length}")
