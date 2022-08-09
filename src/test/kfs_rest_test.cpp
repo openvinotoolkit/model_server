@@ -183,7 +183,7 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
     ASSERT_EQ(c, 1);
 }
 
-TEST_F(HttpRestApiHandlerTest, inferRequest){
+TEST_F(HttpRestApiHandlerTest, inferRequest) {
     std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[0,1,2,3,4,5,6,7,8,9]}],\"parameters\":{\"binary_data_output\":1}}";
 
     std::string exp = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[],\"contents\":{\"fp32_contents\":[0,1,2,3,4,5,6,7,8,9]}}],\"parameters\":{\"binary_data_output\":{\"int64_param\":1}}}";

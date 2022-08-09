@@ -168,7 +168,7 @@ void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
     }
 }
 
-std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body){
+std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body) {
     static std::map<std::string, std::string> types = {
         {"BOOL", "bool_contents"},
         {"INT8", "int_contents"},
