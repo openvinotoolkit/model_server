@@ -51,8 +51,8 @@ private:
 
 class RestApiRequestDispatcher {
 public:
-    RestApiRequestDispatcher(int timeout_in_ms) {
-        handler_ = std::make_unique<HttpRestApiHandler>(timeout_in_ms);
+    RestApiRequestDispatcher(ovms::Server& ovmsServer, int timeout_in_ms) {
+        handler_ = std::make_unique<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
     }
 
     net_http::RequestHandler dispatch(net_http::ServerRequestInterface* req) {
@@ -99,7 +99,7 @@ private:
     std::unique_ptr<HttpRestApiHandler> handler_;
 };
 
-std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, int timeout_in_ms) {
+std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
     auto options = std::make_unique<net_http::ServerOptions>();
     options->AddPort(static_cast<uint32_t>(port));
     options->SetAddress(address);
@@ -112,7 +112,7 @@ std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address
     }
 
     std::shared_ptr<RestApiRequestDispatcher> dispatcher =
-        std::make_shared<RestApiRequestDispatcher>(timeout_in_ms);
+        std::make_shared<RestApiRequestDispatcher>(ovmsServer, timeout_in_ms);
 
     net_http::RequestHandlerOptions handler_options;
     server->RegisterRequestDispatcher(

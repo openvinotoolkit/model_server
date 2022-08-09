@@ -72,6 +72,10 @@ void register_loggers(const std::string log_level, std::vector<spdlog::sink_ptr>
 }
 
 void configure_logger(const std::string log_level, const std::string log_path) {
+    static bool wasRun = false;
+    if (wasRun)
+        return;
+    wasRun = true;
     std::vector<spdlog::sink_ptr> sinks;
     sinks.push_back(std::make_shared<spdlog::sinks::stdout_sink_st>());
     if (!log_path.empty()) {

@@ -24,6 +24,7 @@
 #include <boost/algorithm/string.hpp>
 #include <sysexits.h>
 
+#include "logging.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -167,7 +168,9 @@ Config& Config::parse(int argc, char** argv) {
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
         if (result->count("version")) {
-            std::cout << PROJECT_NAME << std::endl;
+            std::string project_name(PROJECT_NAME);
+            std::string project_version(PROJECT_VERSION);
+            std::cout << project_name + " " + project_version << std::endl;
             std::cout << "OpenVINO backend " << OPENVINO_NAME << std::endl;
             exit(EX_OK);
         }

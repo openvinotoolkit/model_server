@@ -27,10 +27,6 @@
 #include "shape.hpp"
 
 namespace ovms {
-class ModelInstanceUnloadGuard;
-Status getModelInstance(const ::inference::ModelInferRequest* request,
-    std::shared_ptr<ovms::ModelInstance>& modelInstance,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
 
 std::optional<Dimension> getRequestBatchSize(const ::inference::ModelInferRequest* request, const size_t batchSizeIndex);
 
