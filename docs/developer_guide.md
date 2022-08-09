@@ -293,7 +293,7 @@ Debugging options are available. Click on the required option :
 	bazel build //src:ovms -c dbg
 	```
 	```bash
-    gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /models
+	gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /models
 	```
     > **NOTE**: For best results, use the makefile parameter `BAZEL_BUILD_TYPE=dbg` to build the dependencies in debug mode as shown above
 
