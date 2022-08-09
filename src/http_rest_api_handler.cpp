@@ -66,6 +66,14 @@ const std::string HttpRestApiHandler::kfs_modelmetadataRegexExp =
 const std::string HttpRestApiHandler::kfs_inferRegexExp =
     R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(infer)))";
 
+
+const std::string HttpRestApiHandler::kfs_serverreadyRegexExp =
+    R"(/v2/health/ready)";
+const std::string HttpRestApiHandler::kfs_serverliveRegexExp =
+    R"(/v2/health/live)";
+const std::string HttpRestApiHandler::kfs_servermetadataRegexExp =
+    R"(/v2)";
+
 const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics)";
 
 HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms) :
@@ -76,6 +84,9 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     kfs_modelreadyRegex(kfs_modelreadyRegexExp),
     kfs_modelmetadataRegex(kfs_modelmetadataRegexExp),
     kfs_inferRegex(kfs_inferRegexExp),
+    kfs_serverreadyRegex(kfs_serverreadyRegexExp),
+    kfs_serverliveRegex(kfs_serverliveRegexExp),
+    kfs_servermetadataRegex(kfs_servermetadataRegexExp),
     metricsRegex(metricsRegexExp),
     timeout_in_ms(timeout_in_ms),
     ovmsServer(ovmsServer),
@@ -151,10 +162,51 @@ void HttpRestApiHandler::registerAll() {
     registerHandler(KFS_Infer, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
         return processInferKFSRequest(request_components, response, request_body);
     });
+    registerHandler(KFS_GetServerReady, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+        return processServerReadyKFSRequest(request_components, response, request_body);
+    });
+    registerHandler(KFS_GetServerLive, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+        return processServerLiveKFSRequest(request_components, response, request_body);
+    });
+    registerHandler(KFS_GetServerMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+        return processServerMetadataKFSRequest(request_components, response, request_body);
+    });
     registerHandler(Metrics, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
         return processMetrics(request_components, response, request_body);
     });
 }
+
+Status HttpRestApiHandler::processServerReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    ::inference::ServerReadyRequest grpc_request;
+    ::inference::ServerReadyResponse grpc_response;
+    kfsGrpcImpl.ServerReady(nullptr, &grpc_request, &grpc_response);
+    if (grpc_response.ready()) {
+        return StatusCode::OK;
+    }
+    return StatusCode::MODEL_NOT_LOADED;
+}
+
+Status HttpRestApiHandler::processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    ::inference::ServerLiveRequest grpc_request;
+    ::inference::ServerLiveResponse grpc_response;
+    kfsGrpcImpl.ServerLive(nullptr, &grpc_request, &grpc_response);
+    if (grpc_response.live()) {
+        return StatusCode::OK;
+    }
+    return StatusCode::INTERNAL_ERROR;
+}
+
+Status HttpRestApiHandler::processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    ::inference::ServerMetadataRequest grpc_request;
+    ::inference::ServerMetadataResponse grpc_response;
+    kfsGrpcImpl.ServerMetadata(nullptr, &grpc_request, &grpc_response);
+    std::string output;
+    google::protobuf::util::JsonPrintOptions opts;
+    google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
+    response = output;
+    return StatusCode::OK;
+}
+
 void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
     Value::ConstMemberIterator itr = scope.FindMember("parameters");
     if (itr != scope.MemberEnd()) {
@@ -582,6 +634,18 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         }
         if (std::regex_match(request_path, sm, configStatusRegex)) {
             requestComponents.type = ConfigStatus;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, kfs_serverliveRegex)) {
+            requestComponents.type = KFS_GetServerLive;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, kfs_serverreadyRegex)) {
+            requestComponents.type = KFS_GetServerReady;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, kfs_servermetadataRegex)) {
+            requestComponents.type = KFS_GetServerMetadata;
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, kfs_modelmetadataRegex)) {

@@ -152,6 +152,33 @@ TEST_F(HttpRestApiHandlerTest, RegexParseInfer) {
     ASSERT_EQ(comp.model_name, "dummy");
 }
 
+TEST_F(HttpRestApiHandlerTest, RegexParseServerMetadata) {
+    std::string request = "/v2";
+    ovms::HttpRequestComponents comp;
+
+    handler->parseRequestComponents(comp, "GET", request);
+
+    ASSERT_EQ(comp.type, ovms::KFS_GetServerMetadata);
+}
+
+TEST_F(HttpRestApiHandlerTest, RegexParseServerReady) {
+    std::string request = "/v2/health/ready";
+    ovms::HttpRequestComponents comp;
+
+    handler->parseRequestComponents(comp, "GET", request);
+
+    ASSERT_EQ(comp.type, ovms::KFS_GetServerReady);
+}
+
+TEST_F(HttpRestApiHandlerTest, RegexParseServerLive) {
+    std::string request = "/v2/health/live";
+    ovms::HttpRequestComponents comp;
+
+    handler->parseRequestComponents(comp, "GET", request);
+
+    ASSERT_EQ(comp.type, ovms::KFS_GetServerLive);
+}
+
 TEST_F(HttpRestApiHandlerTest, dispatchMetadata) {
     std::string request = "/v2/models/dummy/versions/1/";
     ovms::HttpRequestComponents comp;
