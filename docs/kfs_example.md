@@ -53,6 +53,17 @@ virtualenv .venv
 pip install -r requirements.txt
 ```
 
+#### Run the Client to get server readiness
+```Bash
+python3 ./kfs_grpc_server_ready.py --grpc_port 9000 --grpc_address localhost
+```
+
+#### Script Output
+```Bash
+Server Ready: True
+```
+
+
 #### Run the Client to get model readiness
 ```bash
 python3 ./kfs_grpc_model_ready.py --grpc_port 9000 --grpc_address localhost --model_name resnet

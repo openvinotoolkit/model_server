@@ -1,7 +1,7 @@
-# RESTful API {#ovms_docs_rest_api}
+# TensorFlow Serving compatible RESTful API {#ovms_docs_rest_api_tfs}
 
 ## Introduction
-In addition with [gRPC APIs](./model_server_grpc_api.md) OpenVINO&trade; model server also supports RESTful APIs which follows the documentation from [tensorflow serving REST API](https://www.tensorflow.org/tfx/serving/api_rest). Both row and column formats of the request are implemented in these APIs. REST API is recommended when the primary goal is in reducing the number of client-side python dependencies and simpler application code.
+In addition to [gRPC APIs](./model_server_grpc_api_tfs.md) OpenVINO&trade; model server also supports RESTful APIs which follows the documentation from [tensorflow serving REST API](https://www.tensorflow.org/tfx/serving/api_rest). Both row and column formats of the request are implemented in these APIs. REST API is recommended when the primary goal is in reducing the number of client-side python dependencies and simpler application code.
 
 > **Note** : Only numerical data type is supported.
 
@@ -150,7 +150,7 @@ Read more about [Get Model Metadata API usage](https://github.com/openvinotoolki
 ## Predict API <a name="predict"></a>
 **Description**
 
-Endpoint for running an inference with loaded models or [DAGs](./model_server_rest_api.md).
+Endpoint for running an inference with loaded models or [DAGs](./dag_scheduler.md).
 
 **URL**
 ```

@@ -21,8 +21,7 @@ from tritonclient.grpc import service_pb2
 from tritonclient.grpc import service_pb2_grpc
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Sends requests via TFS gRPC API using images in numpy format. '
-                                                 'It displays performance statistics and optionally the model accuracy')
+    parser = argparse.ArgumentParser(description='Sends requests via KServe gRPC API to check if model is in Ready state.')
     parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
     parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
     parser.add_argument('--model_name', default='resnet', help='Define model name, must be same as is in service. default: resnet',
