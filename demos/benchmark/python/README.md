@@ -7,8 +7,7 @@ The benchmark client introduced in this directory is written in Python 3. Benchm
 In addition to the standard data format, the client also supports stateful models (recognizing dependencies between consecutive
 inference requests) as well as binary input for select file formats (PNG and JPEG).
 
-![urandom generated input image](demos/benchmark/python/README-img-urandom.png) ![xrandom generated input image](demos/benchmark/python/README-img-xrandom.png)
-
+![](README-img-urandom.png "urandom generated input image") ![](README-img-xrandom.png "xrandom generated input image")
 
 Furthermore the client supports multiple precisions: `FP16`, `FP32`, `FP64`, `INT8`, `INT16`, `INT32`, `INT64`, `UINT8`, `UINT16`, `UINT32`, `UINT64`. Both channel types, insecure and certificate secured, are supported. Secrets/certificates have to be mounted on a separated volume as well as their path has to be specified by command line. The secure connection can be used, for example, to benchmark the Nginx OVMS plugin, which can be build from public source with the built-in Nginx reverse proxy load balancer.
 
