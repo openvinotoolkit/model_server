@@ -30,8 +30,8 @@ MetricCounter::MetricCounter(const Labels& labels, prometheus::Counter& counterI
     Metric(labels),
     counterImpl(counterImpl) {}
 
-void MetricCounter::increment() {
-    this->counterImpl.Increment();
+void MetricCounter::increment(double value) {
+    this->counterImpl.Increment(value);
 }
 
 /// Gauge implementation
@@ -40,12 +40,12 @@ MetricGauge::MetricGauge(const Labels& labels, prometheus::Gauge& gaugeImpl) :
     Metric(labels),
     gaugeImpl(gaugeImpl) {}
 
-void MetricGauge::increment() {
-    this->gaugeImpl.Increment();
+void MetricGauge::increment(double value) {
+    this->gaugeImpl.Increment(value);
 }
 
-void MetricGauge::decrement() {
-    this->gaugeImpl.Decrement();
+void MetricGauge::decrement(double value) {
+    this->gaugeImpl.Decrement(value);
 }
 
 /// Histogram implementation

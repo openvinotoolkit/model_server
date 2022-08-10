@@ -27,19 +27,121 @@ using namespace ovms;
 using testing::ContainsRegex;
 using testing::HasSubstr;
 
-TEST(Metrics, FamilyName) {
+TEST(MetricsCommon, FamilyName) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricCounter>("name", "desc");
     EXPECT_EQ(family->getName(), "name");
 }
 
-TEST(Metrics, FamilyDesc) {
+TEST(MetricsCommon, FamilyDesc) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricCounter>("name", "desc");
     EXPECT_EQ(family->getDesc(), "desc");
 }
 
-TEST(Metrics, CounterMetrics) {
+TEST(MetricsCounter, IncrementDefault) {
+    MetricRegistry registry;
+    auto metric = registry.createFamily<MetricCounter>("name", "desc")->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    metric->increment();
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 1\n"));
+    metric->increment();
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 2\n"));
+}
+
+TEST(MetricsCounter, Increment) {
+    MetricRegistry registry;
+    auto metric = registry.createFamily<MetricCounter>("name", "desc")->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    metric->increment(24.43);
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 24.43\n"));
+    metric->increment(13.57);
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 38\n"));
+}
+
+TEST(MetricsCounter, IncrementNegative) {
+    MetricRegistry registry;
+    auto metric = registry.createFamily<MetricCounter>("name", "desc")->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    metric->increment(-24.43);
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+}
+
+TEST(MetricsGauge, IncrementDefault) {
+    MetricRegistry registry;
+    auto metric = registry.createFamily<MetricGauge>("name", "desc")->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    metric->increment();
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 1\n"));
+    metric->increment();
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 2\n"));
+}
+
+TEST(MetricsGauge, Increment) {
+    MetricRegistry registry;
+    auto metric = registry.createFamily<MetricGauge>("name", "desc")->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    metric->increment(24.43);
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 24.43\n"));
+    metric->increment(13.57);
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 38\n"));
+}
+
+TEST(MetricsGauge, IncrementNegative) {
+    MetricRegistry registry;
+    auto metric = registry.createFamily<MetricGauge>("name", "desc")->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    metric->increment(-24.43);
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} -24.43\n"));
+}
+
+TEST(MetricsGauge, DecrementDefault) {
+    MetricRegistry registry;
+    auto metric = registry.createFamily<MetricGauge>("name", "desc")->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    metric->decrement();
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} -1\n"));
+    metric->decrement();
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} -2\n"));
+}
+
+TEST(MetricsGauge, Decrement) {
+    MetricRegistry registry;
+    auto metric = registry.createFamily<MetricGauge>("name", "desc")->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    metric->decrement(24.43);
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} -24.43\n"));
+    metric->decrement(13.57);
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} -38\n"));
+}
+
+TEST(MetricsGauge, DecrementNegative) {
+    MetricRegistry registry;
+    auto metric = registry.createFamily<MetricGauge>("name", "desc")->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    metric->decrement(-24.43);
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 24.43\n"));
+}
+
+TEST(MetricsHistogram, Observe) {
+    MetricRegistry registry;
+    auto metric = registry.createFamily<MetricHistogram>("name", "desc")->addMetric({{"label", "value"}}, {1.0, 10.0});
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"1\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"10\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_count{label=\"value\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_sum{label=\"value\"} 0\n"));
+    metric->observe(0.01);
+    metric->observe(5);
+    metric->observe(12);
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"1\"} 1\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"10\"} 2\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"} 3\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_count{label=\"value\"} 3\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_sum{label=\"value\"} 17.01\n"));
+}
+
+TEST(MetricsFlow, Counter) {
     MetricRegistry registry;
     auto pass_family = registry.createFamily<MetricCounter>("infer_pass", "number of passed inferences");
     auto fail_family = registry.createFamily<MetricCounter>("infer_fail", "number of failed inferences");
@@ -82,7 +184,7 @@ TEST(Metrics, CounterMetrics) {
     EXPECT_THAT(registry.collect(), HasSubstr("infer_fail{api=\"tfs\",protocol=\"grpc\"} 8\n"));
 }
 
-TEST(Metrics, GaugeMetrics) {
+TEST(MetricsFlow, Gauge) {
     MetricRegistry registry;
     auto nireq_family = registry.createFamily<MetricGauge>("nireq_in_use", "number of inference requests in use");
     auto pipe_family = registry.createFamily<MetricGauge>("pipelines_running", "number of pipelines currently being executed");
@@ -138,7 +240,7 @@ TEST(Metrics, GaugeMetrics) {
     EXPECT_THAT(registry.collect(), HasSubstr("pipelines_running{pipeline_name=\"face_blur\"} 16\n"));
 }
 
-TEST(Metrics, HistogramMetrics) {
+TEST(MetricsFlow, Histogram) {
     MetricRegistry registry;
     auto deserialization_family = registry.createFamily<MetricHistogram>("deserialization", "time spent in deserialization");
 
@@ -172,7 +274,6 @@ TEST(Metrics, HistogramMetrics) {
     EXPECT_THAT(registry.collect(), ContainsRegex("deserialization_sum\\{model_name=\"resnet\",model_version=\"1\"\\} 3156.3.*\\n"));
 }
 
-// // TODO: Increase/decrease by value for Counter/Gauge
 // // TODO: Removal of reported metric
 // // TODO: Corner cases
 // // TODO: Multithreading, test for possible data race

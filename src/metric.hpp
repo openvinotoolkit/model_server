@@ -44,7 +44,7 @@ public:
     MetricCounter(const Labels& labels, prometheus::Counter& counterImpl);
 
     // API
-    void increment();
+    void increment(double value = 1.0f);
 
 private:
     // Prometheus internals
@@ -56,8 +56,8 @@ public:
     MetricGauge(const Labels& labels, prometheus::Gauge& gaugeImpl);
 
     // API
-    void increment();
-    void decrement();
+    void increment(double value = 1.0f);
+    void decrement(double value = 1.0f);
 
 private:
     // Prometheus internals
