@@ -8,6 +8,10 @@
     <div id="switcher-python" class="switcher-anchor">Python</div>
 @endsphinxdirective
 
+@sphinxdirective
+
+.. tab:: TensorFlow Serving API  
+
 When creating a Python-based client application, there are two packages on PyPi that can be used with OpenVINO Model Server:
 - [tensorflow-serving-api](https://pypi.org/project/tensorflow-serving-api/)
 - [ovmsclient](https://pypi.org/project/ovmsclient/)
@@ -207,6 +211,12 @@ When creating a Python-based client application, there are two packages on PyPi 
 @endsphinxdirective
 
 For complete usage examples see [ovmsclient samples](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/client/python/ovmsclient/samples).
+
+.. tab:: KServe API
+
+Hello there
+
+@endsphinxdirective
 
 ## C++ Client
 

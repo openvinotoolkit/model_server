@@ -1,6 +1,6 @@
 # KServe API usage samples{#ovms_docs_kserve_samples}
 
-OpenVINO Model Server 2022.2 release introduce preview of support for [KServe API](https://github.com/kserve/kserve/tree/master/docs/predict-api/v2).
+OpenVINO Model Server 2022.2 release introduced support for [KServe API](https://github.com/kserve/kserve/tree/master/docs/predict-api/v2).
 
 This guide shows how to interact with KServe API endpoints on both gRPC and HTTP interfaces. It covers following topics:
 - <a href="#grpc-api">GRPC API Examples </a>
