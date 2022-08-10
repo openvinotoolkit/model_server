@@ -34,6 +34,7 @@ public:
 
     std::shared_ptr<MetricFamily> createFamily(MetricKind kind, const std::string& name, const std::string& description);
 
+    // Returns all collected metrics in  Prometheus Text Exposition Format.
     std::string collect() const;
 
 private:

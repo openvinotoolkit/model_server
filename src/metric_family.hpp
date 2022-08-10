@@ -29,6 +29,7 @@ class Registry;
 namespace ovms {
 
 class Metric;
+class Labels;
 class MetricFamily {
     MetricKind kind;
     std::string name, description;

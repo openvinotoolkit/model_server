@@ -41,7 +41,7 @@ const std::string& MetricFamily::getDesc() const {
     return this->description;
 }
 
-std::shared_ptr<Metric> MetricFamily::addMetric(const std::map<std::string, std::string>& labels) {
+std::shared_ptr<Metric> MetricFamily::addMetric(const Metric::Labels& labels) {
     switch (this->getKind()) {
     case MetricKind::COUNTER: {
         prometheus::Counter& counterImpl = prometheus::BuildCounter()

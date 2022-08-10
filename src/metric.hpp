@@ -26,10 +26,14 @@ class Gauge;
 namespace ovms {
 
 class Metric {
-    std::map<std::string, std::string> labels;
+public:
+    using Labels = std::map<std::string, std::string>;
+
+private:
+    Labels labels;
 
 public:
-    Metric(const std::map<std::string, std::string>& labels);
+    Metric(const Labels& labels);
 
     bool hasLabel(const std::string& label) const;
 
@@ -39,7 +43,7 @@ public:
 
 class MetricCounter : public Metric {
 public:
-    MetricCounter(const std::map<std::string, std::string>& labels, prometheus::Counter& counterImpl);
+    MetricCounter(const Labels& labels, prometheus::Counter& counterImpl);
 
     void increment() override;
     void decrement() override;
@@ -51,7 +55,7 @@ private:
 
 class MetricGauge : public Metric {
 public:
-    MetricGauge(const std::map<std::string, std::string>& labels, prometheus::Gauge& gaugeImpl);
+    MetricGauge(const Labels& labels, prometheus::Gauge& gaugeImpl);
 
     void increment() override;
     void decrement() override;

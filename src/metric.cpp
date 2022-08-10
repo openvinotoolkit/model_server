@@ -20,14 +20,14 @@
 
 namespace ovms {
 
-Metric::Metric(const std::map<std::string, std::string>& labels) :
+Metric::Metric(const Labels& labels) :
     labels(labels) {}
 
 bool Metric::hasLabel(const std::string& label) const {
     return this->labels.find(label) != this->labels.end();
 }
 
-MetricCounter::MetricCounter(const std::map<std::string, std::string>& labels, prometheus::Counter& counterImpl) :
+MetricCounter::MetricCounter(const Labels& labels, prometheus::Counter& counterImpl) :
     Metric(labels),
     counterImpl(counterImpl) {}
 
@@ -39,7 +39,7 @@ void MetricCounter::decrement() {
     throw std::logic_error("cannot decrement counter");
 }
 
-MetricGauge::MetricGauge(const std::map<std::string, std::string>& labels, prometheus::Gauge& gaugeImpl) :
+MetricGauge::MetricGauge(const Labels& labels, prometheus::Gauge& gaugeImpl) :
     Metric(labels),
     gaugeImpl(gaugeImpl) {}
 

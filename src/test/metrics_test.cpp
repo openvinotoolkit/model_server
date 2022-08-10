@@ -144,6 +144,9 @@ TEST(Metrics, GaugeMetrics) {
     EXPECT_THAT(registry.collect(), HasSubstr("pipelines_running{pipeline_name=\"face_blur\"} 16\n"));
 }
 
+// TODO: Increase/decrease by value for Counter/Gauge
+// TODO: Get rid of inheritence
 // TODO: Removal of reported metric
 // TODO: Corner cases
 // TODO: Multithreading, test for possible data race
+// TODO: License
