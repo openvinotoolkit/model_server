@@ -32,6 +32,7 @@
 
 #include "modelmanager.hpp"
 #include "pipelinedefinition.hpp"
+#include "servablemanagermodule.hpp"
 #include "status.hpp"
 
 using google::protobuf::util::JsonPrintOptions;
@@ -63,7 +64,14 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
 ::grpc::Status ModelServiceImpl::GetModelStatus(
     ::grpc::ServerContext* context, const tensorflow::serving::GetModelStatusRequest* request,
     tensorflow::serving::GetModelStatusResponse* response) {
-    return GetModelStatusImpl::getModelStatus(request, response, ModelManager::getInstance()).grpc();
+    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == module) {
+        return grpc::Status(grpc::StatusCode::NOT_FOUND, SERVABLE_MANAGER_MODULE_NAME + " module not started yet");
+    }
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    // TODO if not succeed then return error
+    auto& manager = servableManagerModule->getServableManager();
+    return GetModelStatusImpl::getModelStatus(request, response, manager).grpc();
 }
 
 Status GetModelStatusImpl::createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request) {
@@ -198,6 +206,9 @@ Status GetModelStatusImpl::serializeModelsStatuses2Json(const std::map<std::stri
 
     return StatusCode::OK;
 }
+
+ModelServiceImpl::ModelServiceImpl(ovms::Server& ovmsServer) :
+    ovmsServer(ovmsServer) {}
 
 ::grpc::Status ModelServiceImpl::HandleReloadConfigRequest(
     ::grpc::ServerContext* context, const tensorflow::serving::ReloadConfigRequest* request,

@@ -40,7 +40,7 @@ CustomNodeSession::CustomNodeSession(const NodeSessionMetadata&& metadata, const
 
 CustomNodeSession::~CustomNodeSession() = default;
 
-std::unordered_map<std::string, shape_t> createOwnedShapesCopy(const TensorMap& tensorMap) {
+static std::unordered_map<std::string, shape_t> createOwnedShapesCopy(const TensorMap& tensorMap) {
     std::unordered_map<std::string, shape_t> tensorsDims;
     for (auto& [name, tensor] : tensorMap) {
         shape_t tensorDims = tensor.get_shape();

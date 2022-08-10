@@ -58,8 +58,6 @@
 namespace ovms {
 
 static uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 2;
-static bool watcherStarted = false;
-static bool cleanerStarted = false;
 
 ModelManager::ModelManager(const std::string& modelCacheDirectory) :
     ieCore(std::make_unique<ov::Core>()),
@@ -141,8 +139,7 @@ void ModelManager::logPluginConfiguration() {
 
 ModelManager::~ModelManager() = default;
 
-Status ModelManager::start() {
-    auto& config = ovms::Config::instance();
+Status ModelManager::start(const Config& config) {
     watcherIntervalSec = config.filesystemPollWaitSeconds();
     sequenceCleaupIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
     resourcesCleanupIntervalSec = config.resourcesCleanerPollWaitSeconds();
@@ -917,8 +914,12 @@ void ModelManager::cleanupResources() {
 }
 
 void ModelManager::join() {
-    if (watcherStarted) {
+    if (watcherStarted)
         exitTrigger.set_value();
+    if (cleanerStarted)
+        cleanerExitTrigger.set_value();
+
+    if (watcherStarted) {
         if (monitor.joinable()) {
             monitor.join();
             watcherStarted = false;
@@ -927,7 +928,6 @@ void ModelManager::join() {
     }
 
     if (cleanerStarted) {
-        cleanerExitTrigger.set_value();
         if (cleanerThread.joinable()) {
             cleanerThread.join();
             cleanerStarted = false;

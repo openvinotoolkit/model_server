@@ -92,7 +92,7 @@ public:
          * 
          * @return std::string 
          */
-    const std::string& configPath() {
+    const std::string& configPath() const {
         if (result->count("config_path"))
             return result->operator[]("config_path").as<std::string>();
         return empty;
@@ -103,7 +103,7 @@ public:
          * 
          * @return uint64_t
          */
-    uint64_t port() {
+    uint64_t port() const {
         return result->operator[]("port").as<uint64_t>();
     }
 
@@ -112,7 +112,7 @@ public:
          * 
          * @return const std::string
          */
-    const std::string cpuExtensionLibraryPath() {
+    const std::string cpuExtensionLibraryPath() const {
         if (result != nullptr && result->count("cpu_extension")) {
             return result->operator[]("cpu_extension").as<std::string>();
         }
@@ -124,7 +124,7 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string grpcBindAddress() {
+    const std::string grpcBindAddress() const {
         if (result->count("grpc_bind_address"))
             return result->operator[]("grpc_bind_address").as<std::string>();
         return "0.0.0.0";
@@ -134,7 +134,7 @@ public:
          * 
          * @return uint64_t
          */
-    uint64_t restPort() {
+    uint64_t restPort() const {
         return result->operator[]("rest_port").as<uint64_t>();
     }
 
@@ -143,7 +143,7 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string restBindAddress() {
+    const std::string restBindAddress() const {
         if (result->count("rest_bind_address"))
             return result->operator[]("rest_bind_address").as<std::string>();
         return "0.0.0.0";
@@ -154,7 +154,7 @@ public:
          * 
          * @return uint
          */
-    uint grpcWorkers() {
+    uint grpcWorkers() const {
         return result->operator[]("grpc_workers").as<uint>();
     }
 
@@ -163,7 +163,7 @@ public:
          * 
          * @return uint
          */
-    uint restWorkers() {
+    uint restWorkers() const {
         return result->operator[]("rest_workers").as<uint>();
     }
 
@@ -172,7 +172,7 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string& modelName() {
+    const std::string& modelName() const {
         if (result->count("model_name"))
             return result->operator[]("model_name").as<std::string>();
         return empty;
@@ -183,7 +183,7 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string& modelPath() {
+    const std::string& modelPath() const {
         if (result->count("model_path"))
             return result->operator[]("model_path").as<std::string>();
         return empty;
@@ -194,7 +194,7 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string& batchSize() {
+    const std::string& batchSize() const {
         if (!result->count("batch_size")) {
             static const std::string d = "0";
             return d;
@@ -207,7 +207,7 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string& shape() {
+    const std::string& shape() const {
         if (result->count("shape"))
             return result->operator[]("shape").as<std::string>();
         return empty;
@@ -218,7 +218,7 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string& layout() {
+    const std::string& layout() const {
         if (result->count("layout"))
             return result->operator[]("layout").as<std::string>();
         return empty;
@@ -229,7 +229,7 @@ public:
          * 
          * @return const std::string&
          */
-    const std::string& modelVersionPolicy() {
+    const std::string& modelVersionPolicy() const {
         if (result->count("model_version_policy"))
             return result->operator[]("model_version_policy").as<std::string>();
         return empty;
@@ -240,7 +240,7 @@ public:
          *
          * @return uint 
          */
-    uint32_t nireq() {
+    uint32_t nireq() const {
         if (!result->count("nireq")) {
             return 0;
         }
@@ -252,7 +252,7 @@ public:
          * 
          * @return const std::string& 
          */
-    const std::string& targetDevice() {
+    const std::string& targetDevice() const {
         return result->operator[]("target_device").as<std::string>();
     }
 
@@ -261,7 +261,7 @@ public:
          * 
          * @return const std::string& 
          */
-    const std::string& pluginConfig() {
+    const std::string& pluginConfig() const {
         if (result->count("plugin_config"))
             return result->operator[]("plugin_config").as<std::string>();
         return empty;
@@ -272,7 +272,7 @@ public:
          *
          * @return bool
          */
-    bool stateful() {
+    bool stateful() const {
         return result->operator[]("stateful").as<bool>();
     }
 
@@ -281,7 +281,7 @@ public:
      *
      * @return uint
      */
-    bool idleSequenceCleanup() {
+    bool idleSequenceCleanup() const {
         return result->operator[]("idle_sequence_cleanup").as<bool>();
     }
 
@@ -290,7 +290,7 @@ public:
          *
          * @return bool
          */
-    bool lowLatencyTransformation() {
+    bool lowLatencyTransformation() const {
         return result->operator[]("low_latency_transformation").as<bool>();
     }
 
@@ -299,7 +299,7 @@ public:
      *
      * @return uint
      */
-    uint32_t maxSequenceNumber() {
+    uint32_t maxSequenceNumber() const {
         if (!result->count("max_sequence_number")) {
             return DEFAULT_MAX_SEQUENCE_NUMBER;
         }
@@ -311,7 +311,7 @@ public:
         *
         * @return const std::string&
         */
-    const std::string& logLevel() {
+    const std::string& logLevel() const {
         if (result->count("log_level"))
             return result->operator[]("log_level").as<std::string>();
         return empty;
@@ -322,7 +322,7 @@ public:
          *
         * @return const std::string&
         */
-    const std::string& logPath() {
+    const std::string& logPath() const {
         if (result->count("log_path"))
             return result->operator[]("log_path").as<std::string>();
         return empty;
@@ -334,7 +334,7 @@ public:
          *
         * @return const std::string&
         */
-    const std::string& tracePath() {
+    const std::string& tracePath() const {
         if (result->count("trace_path"))
             return result->operator[]("trace_path").as<std::string>();
         return empty;
@@ -346,7 +346,7 @@ public:
         *
         * @return const std::string&
         */
-    const std::string& grpcChannelArguments() {
+    const std::string& grpcChannelArguments() const {
         if (result->count("grpc_channel_arguments"))
             return result->operator[]("grpc_channel_arguments").as<std::string>();
         return empty;
@@ -357,7 +357,7 @@ public:
      * 
      * @return uint 
      */
-    uint filesystemPollWaitSeconds() {
+    uint filesystemPollWaitSeconds() const {
         return result->operator[]("file_system_poll_wait_seconds").as<uint>();
     }
 
@@ -366,7 +366,7 @@ public:
      * 
      * @return uint32_t
      */
-    uint32_t sequenceCleanerPollWaitMinutes() {
+    uint32_t sequenceCleanerPollWaitMinutes() const {
         return result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
     }
 
@@ -375,7 +375,7 @@ public:
      * 
      * @return uint32_t
      */
-    uint32_t resourcesCleanerPollWaitSeconds() {
+    uint32_t resourcesCleanerPollWaitSeconds() const {
         return result->operator[]("custom_node_resources_cleaner_interval").as<uint32_t>();
     }
 
@@ -384,7 +384,7 @@ public:
          * 
          * @return const std::string& 
          */
-    const std::string cacheDir() {
+    const std::string cacheDir() const {
         if (result != nullptr && result->count("cache_dir")) {
             return result->operator[]("cache_dir").as<std::string>();
         }

@@ -16,6 +16,7 @@
 #include <gtest/gtest.h>
 
 #include "../kfs_grpc_inference_service.hpp"
+#include "../modelversionstatus.hpp"
 #include "../pipelinedefinition.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
@@ -24,18 +25,37 @@ using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRef;
 
+using ovms::Model;
+using ovms::model_version_t;
+using ovms::ModelInstance;
+using ovms::ModelVersionState;
+
 struct Info {
     ovms::Precision precision;
     ovms::shape_t shape;
 };
 using tensor_desc_map_t = std::unordered_map<std::string, Info>;
 
+static const std::string MODEL_NAME{"UNUSED_NAME"};
+
 class ModelMetadataResponseBuild : public ::testing::Test {
+    class MockModel : public Model {
+    public:
+        MockModel(const std::string& name, std::shared_ptr<ModelInstance> instance) :
+            Model(name, false /*stateful*/, nullptr) {
+            modelVersions.insert({instance->getVersion(), instance});
+        }
+        void addOneVersion(model_version_t version, std::shared_ptr<ModelInstance> instance) {
+            modelVersions.emplace(version, instance);
+        }
+    };
+
+protected:
     class MockModelInstance : public MockModelInstanceChangingStates {
     public:
-        MockModelInstance(ov::Core& ieCore) :
-            MockModelInstanceChangingStates("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
-            status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_MODEL_VERSION, ovms::ModelVersionState::AVAILABLE);
+        MockModelInstance(ov::Core& ieCore, model_version_t version = UNUSED_MODEL_VERSION) :
+            MockModelInstanceChangingStates(MODEL_NAME, version, ieCore) {
+            status = ovms::ModelVersionStatus(MODEL_NAME, this->getVersion(), ovms::ModelVersionState::AVAILABLE);
         }
 
         // Keeps the model in loading state forever
@@ -47,9 +67,9 @@ class ModelMetadataResponseBuild : public ::testing::Test {
         MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
         MOCK_METHOD(const ovms::tensor_map_t&, getOutputsInfo, (), (const, override));
         MOCK_METHOD(const std::string&, getName, (), (const, override));
-        MOCK_METHOD(ovms::model_version_t, getVersion, (), (const, override));
     };
 
+private:
     tensor_desc_map_t inputTensors;
     tensor_desc_map_t outputTensors;
     ovms::tensor_map_t servableInputs;
@@ -58,6 +78,7 @@ class ModelMetadataResponseBuild : public ::testing::Test {
 public:
     void prepare(tensor_desc_map_t inTensors, tensor_desc_map_t outTensors) {
         instance = std::make_shared<NiceMock<MockModelInstance>>(*ieCore);
+        model = std::make_unique<MockModel>(MODEL_NAME, instance);
 
         inputTensors = inTensors;
         outputTensors = outTensors;
@@ -81,8 +102,6 @@ public:
             .WillByDefault(ReturnRef(servableOutputs));
         ON_CALL(*instance, getName())
             .WillByDefault(ReturnRef(modelName));
-        ON_CALL(*instance, getVersion())
-            .WillByDefault(Return(modelVersion));
     }
 
     void prepare() {
@@ -106,9 +125,9 @@ public:
 
 protected:
     std::string modelName = "resnet";
-    ovms::model_version_t modelVersion = 23;
 
     std::shared_ptr<NiceMock<MockModelInstance>> instance;
+    std::unique_ptr<MockModel> model;
     ::inference::ModelMetadataResponse response;
     std::unique_ptr<ov::Core> ieCore;
 
@@ -124,26 +143,53 @@ protected:
 TEST_F(ModelMetadataResponseBuild, BasicResponseMetadata) {
     prepare();
 
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::OK);
 
-    EXPECT_EQ(response.name(), "resnet");
-
+    EXPECT_EQ(response.name(), modelName);
     EXPECT_EQ(response.versions_size(), 1);
-    EXPECT_EQ(response.versions().at(0), "23");
+    EXPECT_EQ(response.versions().at(0), std::to_string(UNUSED_MODEL_VERSION));
 
     EXPECT_EQ(response.platform(), "OpenVINO");
+}
+TEST_F(ModelMetadataResponseBuild, BasicResponseMetadata2Versions) {
+    prepare();
+    // we add version - 1 since the default is the highest. We don't want to bother preparing inputs/outputs info for them as well
+    // for second version - we just want it to be in various states
+    model_version_t secondVersion = instance->getVersion() - 1;
+    auto secondInstance = std::make_shared<MockModelInstanceChangingStates>(modelName, secondVersion, *ieCore);
+    model->addOneVersion(secondVersion, secondInstance);
+    for (auto state : {ModelVersionState::START,
+             ModelVersionState::LOADING,
+             ModelVersionState::AVAILABLE,
+             ModelVersionState::UNLOADING,
+             ModelVersionState::END}) {
+        response.Clear();
+        secondInstance->setState(state);
+        ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::OK);
+
+        EXPECT_EQ(response.name(), modelName);
+        EXPECT_EQ(response.platform(), "OpenVINO");
+        if (state == ModelVersionState::AVAILABLE) {
+            EXPECT_EQ(response.versions_size(), 2) << "failed for state: " << ovms::ModelVersionStateToString(state);
+            EXPECT_EQ(response.versions().at(0), std::to_string(secondVersion)) << "failed for state: " << ovms::ModelVersionStateToString(state) << "failed for state: " << ovms::ModelVersionStateToString(state);
+            EXPECT_EQ(response.versions().at(1), std::to_string(UNUSED_MODEL_VERSION)) << "failed for state: " << ovms::ModelVersionStateToString(state);
+        } else {
+            EXPECT_EQ(response.versions_size(), 1) << "failed for state: " << ovms::ModelVersionStateToString(state);
+            EXPECT_EQ(response.versions().at(0), std::to_string(UNUSED_MODEL_VERSION)) << "failed for state: " << ovms::ModelVersionStateToString(state);
+        }
+    }
 }
 
 TEST_F(ModelMetadataResponseBuild, ModelVersionNotLoadedAnymore) {
     prepare();
     instance->retireModel();
-    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
+    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
 }
 
 TEST_F(ModelMetadataResponseBuild, ModelVersionNotLoadedYet) {
     prepare();
     instance->loadModel(DUMMY_MODEL_CONFIG);
-    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
+    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 }
 
 TEST_F(ModelMetadataResponseBuild, SingleInputSingleOutputValidResponse) {
@@ -151,7 +197,7 @@ TEST_F(ModelMetadataResponseBuild, SingleInputSingleOutputValidResponse) {
     tensor_desc_map_t outputs = tensor_desc_map_t({{"SingleOutput", {ovms::Precision::I32, {1, 2000}}}});
     prepare(inputs, outputs);
 
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::OK);
 
     EXPECT_EQ(response.inputs_size(), 1);
     auto input = response.inputs().at(0);
@@ -175,7 +221,7 @@ TEST_F(ModelMetadataResponseBuild, DoubleInputDoubleOutputValidResponse) {
         {"SecondOutput", {ovms::Precision::FP32, {1, 3, 400, 400}}}});
     prepare(inputs, outputs);
 
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::OK);
 
     EXPECT_EQ(response.inputs_size(), 2);
     auto firstInput = response.inputs().at(0);

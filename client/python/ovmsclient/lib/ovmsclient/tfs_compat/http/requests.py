@@ -174,7 +174,7 @@ def _parse_input_data(values):
     elif isinstance(values, list):
         dense_dimensions = _get_dense_dimensions(values)
         tensor_values = np.array(values)
-        if(list(tensor_values.shape) != dense_dimensions):
+        if (list(tensor_values.shape) != dense_dimensions):
             raise ValueError(f'argument must be a dense tensor: {values} - got shape '
                              f'{list(tensor_values.shape)}, but wanted {dense_dimensions}')
     elif np.isscalar(values):
