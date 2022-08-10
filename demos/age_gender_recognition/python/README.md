@@ -2,7 +2,7 @@
 This article describes how to use OpenVINO&trade; Model Server to execute inference requests sent over the REST API interface. The demo uses a pretrained model from the [Open Model Zoo](https://github.com/openvinotoolkit/open_model_zoo) repository.
 
 ## Download the pretrained model for age and gender recognition
-1. Download both components of the model (xml and bin file) using curl in the `model` directory
+Download both components of the model (xml and bin file) using curl in the `model` directory
 
 ```bash
 curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml -o model/1/age-gender-recognition-retail-0013.bin -o model/1/age-gender-recognition-retail-0013.xml

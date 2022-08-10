@@ -65,13 +65,14 @@ docker run -d --rm -p 8000:8000 -p 9000:9000 openvino/model_server:latest \
 
 Prepare the client:
 ```bash
+git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/client/python/ovmsclient/samples
 pip install -r requirements.txt
 ```
 
 Run the gRPC client sending the binary input:
-```
-python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet
+```bash
+python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet --service_url localhost:9000
 Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
 Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican
 Image ../../../../demos/common/static/images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla
@@ -86,8 +87,8 @@ Image ../../../../demos/common/static/images/golden_retriever.jpeg has been clas
 
 
 Run the REST client sending the binary input:
-```
-python http_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet
+```bash
+python http_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet --service_url localhost:8000
 Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
 Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican
 Image ../../../../demos/common/static/images/gorilla.jpeg has been classified as gorilla, Gorilla gorilla

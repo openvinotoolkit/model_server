@@ -1,5 +1,5 @@
-//*****************************************************************************
-// Copyright 2018-2020 Intel Corporation
+//****************************************************************************
+// Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,12 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
+#include <memory>
 
 #include "server.hpp"
 
-using ovms::Server;
+namespace ovms {
+class Config;
+class ModelManager;
 
-int main(int argc, char** argv) {
-    Server& server = Server::instance();
-    return server.start(argc, argv);
-}
+class ServableManagerModule : public Module {
+protected:
+    mutable std::unique_ptr<ModelManager> servableManager;
+
+public:
+    ServableManagerModule();
+    int start(const ovms::Config& config) override;
+    void shutdown() override;
+    ModelManager& getServableManager() const;
+};
+}  // namespace ovms

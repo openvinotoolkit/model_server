@@ -47,14 +47,14 @@ In case there are valid reasons to enable the model cache also for models with a
 ## Use case example
 
 ### Prepare model
-```
+```bash
 $ curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml -o model/fdsample/1/face-detection-retail-0004.bin -o model/fdsample/1/face-detection-retail-0004.xml
 ```
 
 ### Starting the service
-```
+```bash
 $ mkdir cache
-$ docker run -p 9000:9000 -d -u $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)  -v ${PWD}/model/fdsample:/model:ro -v ${PWD}/cache:/opt/cache:rw openvino/model_server --model_name model --model_path /model/ --target_device GPU --port 9000
+$ docker run -p 9000:9000 -d -u $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v ${PWD}/model/fdsample:/model:ro -v ${PWD}/cache:/opt/cache:rw openvino/model_server:latest-gpu --model_name model --model_path /model --target_device GPU --port 9000
 ```
 
 Expected message in the logs `Model cache is enabled: /opt/cache`.
@@ -63,7 +63,7 @@ The first time the model server container is started, it will populate the cache
 
 Logs from the first initialization - model loading takes ~3.5s
 ```
-[2021-11-12 16:03:43.325][1][serving][info][modelinstance.cpp:558] Loading model: model, version: 1, from path: /model//1, with target device: GPU ...
+[2021-11-12 16:03:43.325][1][serving][info][modelinstance.cpp:558] Loading model: model, version: 1, from path: /model/1, with target device: GPU ...
 [2021-11-12 16:03:43.325][1][serving][info][modelversionstatus.hpp:155] STATUS CHANGE: Version 1 of model model status change. New status: ( "state": "START", "error_code": "OK" )
 [2021-11-12 16:03:43.325][1][serving][info][modelversionstatus.hpp:155] STATUS CHANGE: Version 1 of model model status change. New status: ( "state": "LOADING", "error_code": "OK" )
 [2021-11-12 16:03:43.342][1][serving][info][modelinstance.cpp:175] Final network inputs:
@@ -77,7 +77,7 @@ Input name: data; mapping_name: ; shape: (1,3,300,300); effective shape: (1,3,30
 
 Sequential model server initialization is faster. Based on logs below, it is ~400ms.
 ```
-[2021-11-12 16:06:08.377][1][serving][info][modelinstance.cpp:558] Loading model: model, version: 1, from path: /model//1, with target device: GPU ...
+[2021-11-12 16:06:08.377][1][serving][info][modelinstance.cpp:558] Loading model: model, version: 1, from path: /model/1, with target device: GPU ...
 [2021-11-12 16:06:08.377][1][serving][info][modelversionstatus.hpp:155] STATUS CHANGE: Version 1 of model model status change. New status: ( "state": "START", "error_code": "OK" )
 [2021-11-12 16:06:08.377][1][serving][info][modelversionstatus.hpp:155] STATUS CHANGE: Version 1 of model model status change. New status: ( "state": "LOADING", "error_code": "OK" )
 [2021-11-12 16:06:08.384][1][serving][info][modelinstance.cpp:175] Final network inputs:

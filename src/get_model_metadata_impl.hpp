@@ -35,9 +35,13 @@ using proto_signature_map_t = google::protobuf::Map<std::string, tensorflow::Ten
 class ModelInstance;
 class ModelManager;
 class PipelineDefinition;
+class Server;
 
 class GetModelMetadataImpl {
+    ovms::Server& ovmsServer;
+
 public:
+    GetModelMetadataImpl(ovms::Server& ovmsServer);
     static Status validate(
         const tensorflow::serving::GetModelMetadataRequest* request);
 
@@ -53,9 +57,9 @@ public:
         tensorflow::serving::GetModelMetadataResponse* response,
         const ModelManager& manager);
 
-    static Status getModelStatus(
+    Status getModelStatus(
         const tensorflow::serving::GetModelMetadataRequest* request,
-        tensorflow::serving::GetModelMetadataResponse* response);
+        tensorflow::serving::GetModelMetadataResponse* response) const;
     static Status getModelStatus(
         const tensorflow::serving::GetModelMetadataRequest* request,
         tensorflow::serving::GetModelMetadataResponse* response,

@@ -22,8 +22,8 @@ pip3 install -r requirements.txt
 ### Getting ready with rm_lstm4f stateful model
 
 To run this example you will need to download the rm_lstm4f model with input and score ark files and convert it to IR format.
-1. Download the model from [rm_lstm4f](https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/)
-     
+- Download the model from [rm_lstm4f](https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/)
+
 ```bash
 mkdir models && cd models
 wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoolkit/models_contrib/speech/kaldi/rm_lstm4f/ 
@@ -31,38 +31,39 @@ wget -r -np -nH --cut-dirs=5 -R *index.html* https://download.01.org/openvinotoo
 
 This command downloads following files:
 
-`
+```
 rm_lstm4f.counts rm_lstm4f.nnet rm_lstm4f.mapping rm_lstm4f.md
-`
+```
 
 rm_lstm4f model files in Kaldi format.
 
-`
+```
 test_feat_1_10.ark
-`
+```
 
 [Kaldi's](http://kaldi-asr.org/doc/io.html) binary archive file with input data for the model
 
-`
+```
 test_score_1_10.ark
-`
+```
 
 [Kaldi's](http://kaldi-asr.org/doc/io.html) binary archive file with reference model results
 
-2. [Convert model to IR](https://docs.openvino.ai/2022.1/openvino_inference_engine_samples_speech_sample_README.html)
+- [Convert model to IR](https://docs.openvino.ai/2022.1/openvino_inference_engine_samples_speech_sample_README.html)
  
 ```bash
-docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu18_dev:latest mo --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1
+docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu20_dev:latest mo --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1
 ```
 
-3. Having `rm_lstm4f` model files `.xml` and `.bin` in the IR format present in ```bash $(pwd)/rm_lstm4f/1``` directory,
+- Having `rm_lstm4f` model files `.xml` and `.bin` in the IR format present in ```bash $(pwd)/rm_lstm4f/1``` directory,
 OVMS can be started using the command:
 
 ```bash
 docker run -d --rm -v $(pwd)/rm_lstm4f/:/tmp/model -p 9000:9000 -p 5555:5555 openvino/model_server:latest --stateful --port 9000 --rest_port 5555 --model_name rm_lstm4f --model_path /tmp/model
 ```
 
-4. Return to the demo root directory
+- Return to the demo root directory
+
 ```bash
 cd ..
 ```
@@ -83,10 +84,8 @@ usage: grpc_stateful_client.py [-h] [--input_path INPUT_PATH]
                               [--grpc_port GRPC_PORT]
                               [--input_name INPUT_NAME]
                               [--output_name OUTPUT_NAME]
-                              [--model_name MODEL_NAME]
-                              [--debug DEBUG] 
-                              [--cw_l CW_L]
-                              [--cw_r CW_R]
+                              [--model_name MODEL_NAME] [--debug DEBUG] 
+                              [--cw_l CW_L] [--cw_r CW_R]
                               [--sequence_id SEQUENCE_ID]
 ```
 
@@ -207,15 +206,12 @@ time variance: 0.27
 python rest_stateful_client.py --help
 usage: rest_stateful_client.py [-h] [--input_path INPUT_PATH]
                               [--score_path SCORE_PATH]
-                              [--rest_url REST_URL]
-                              [--rest_port REST_PORT]
+                              [--rest_port REST_PORT] [--rest_url REST_URL]
                               [--input_name INPUT_NAME]
                               [--output_name OUTPUT_NAME]
-                              [--model_name MODEL_NAME]
+                              [--model_name MODEL_NAME] [--debug DEBUG]
                               [--model_version MODEL_VERSION]
-                              [--debug DEBUG] 
-                              [--cw_l CW_L]
-                              [--cw_r CW_R]
+                              [--cw_l CW_L] [--cw_r CW_R]
                               [--sequence_id SEQUENCE_ID]
                               [--client_cert CLIENT_CERT]
                               [--client_key CLIENT_KEY]

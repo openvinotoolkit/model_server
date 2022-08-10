@@ -22,7 +22,7 @@ Get information about the status of served models.
 
 **URL**
 
-```Bash
+```
 GET http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VERSION}
 ```
 
@@ -31,7 +31,7 @@ GET http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VER
 **Response format**
 
 If successful, returns a JSON of following format :
-```Bash
+```
 {
   'model_version_status':[
     {
@@ -47,7 +47,7 @@ If successful, returns a JSON of following format :
 ```
 
 **Usage Example**
-```Bash
+```
 $ curl http://localhost:8001/v1/models/person-detection/versions/1
 {
   'model_version_status':[
@@ -70,7 +70,7 @@ Read more about [Get Model Status API usage](https://github.com/openvinotoolkit/
 Get the metadata of a model in the model server.
 
 **URL**
-```Bash
+```
 GET http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VERSION}/metadata
 ```
 
@@ -81,7 +81,7 @@ GET http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VER
 If successful, returns a JSON representation of [GetModelMetadataResponse](https://github.com/tensorflow/serving/blob/5369880e9143aa00d586ee536c12b04e945a977c/tensorflow_serving/apis/get_model_metadata.proto#L23) protobuf.
 
 **Usage example**
-```Bash
+```
 $ curl http://localhost:8001/v1/models/person-detection/versions/1/metadata
 {
   "modelSpec": {
@@ -232,7 +232,7 @@ Flow after receiving the request:
 
 To trigger reload, an HTTP POST request with the empty body should be sent on the given URL. Example `curl` command:
 
-```Bash
+```
 curl --request POST http://${REST_URL}:${REST_PORT}/v1/config/reload
 ```
 
@@ -322,7 +322,7 @@ GET http://${REST_URL}:${REST_PORT}/v1/config
 **Request**  
 To trigger this API HTTP GET request should be sent on a given URL. Example `curl` command:
 
-```Bash
+```
 curl --request GET http://${REST_URL}:${REST_PORT}/v1/config
 ```
 

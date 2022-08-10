@@ -9,6 +9,18 @@ docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 9001:9001 open
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 9001 --log_level DEBUG
 ```
 
+Example:
+
+```bash
+mkdir -p models/resnet/1
+wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin
+wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
+
+docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 9001:9001 openvino/model_server:latest \
+--model_path /models/resnet/ --model_name resnet --port 9000 --rest_port 9001 --log_level DEBUG
+```
+
+
 **Configuration Arguments for Running Model Server:**
 
 @sphinxdirective

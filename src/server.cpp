@@ -1,4 +1,4 @@
-//*****************************************************************************
+//****************************************************************************
 // Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,10 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include "server.hpp"
+
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <grpcpp/security/server_credentials.h>
@@ -30,6 +34,7 @@
 #include <unistd.h>
 
 #include "config.hpp"
+#include "grpcservermodule.hpp"
 #include "http_server.hpp"
 #include "kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
@@ -37,74 +42,28 @@
 #include "modelmanager.hpp"
 #include "prediction_service.hpp"
 #include "profiler.hpp"
+#include "servablemanagermodule.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 
-using grpc::Server;
 using grpc::ServerBuilder;
 
+namespace ovms {
+const std::string PROFILER_MODULE_NAME = "ProfilerModule";
+const std::string GRPC_SERVER_MODULE_NAME = "GRPCServerModule";
+const std::string HTTP_SERVER_MODULE_NAME = "HTTPServerModule";
+const std::string SERVABLE_MANAGER_MODULE_NAME = "ServableManagerModule";
+}  // namespace ovms
 using namespace ovms;
 
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
 }
 
-uint getGRPCServersCount() {
-    const char* environmentVariableBuffer = std::getenv("GRPC_SERVERS");
-    if (environmentVariableBuffer) {
-        auto result = stou32(environmentVariableBuffer);
-        if (result && result.value() > 0) {
-            return result.value();
-        }
-    }
-
-    return std::max<uint>(1, ovms::Config::instance().grpcWorkers());
-}
-
-bool isPortAvailable(uint64_t port) {
-    struct sockaddr_in addr;
-    int s = socket(AF_INET, SOCK_STREAM, 0);
-    if (s == -1) {
-        return false;
-    }
-
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-
-    if (bind(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        close(s);
-        return false;
-    }
-    close(s);
-    return true;
-}
-
-struct GrpcChannelArgument {
-    std::string key;
-    std::string value;
-};
-
-// Parses a comma separated list of gRPC channel arguments into list of
-// ChannelArgument.
-Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std::vector<GrpcChannelArgument>& result) {
-    const std::vector<std::string> channel_arguments = tokenize(channel_arguments_str, ',');
-
-    for (const std::string& channel_argument : channel_arguments) {
-        std::vector<std::string> key_val = tokenize(channel_argument, '=');
-        if (key_val.size() != 2) {
-            return StatusCode::GRPC_CHANNEL_ARG_WRONG_FORMAT;
-        }
-        erase_spaces(key_val[0]);
-        erase_spaces(key_val[1]);
-        result.push_back({key_val[0], key_val[1]});
-    }
-
-    return StatusCode::OK;
-}
-
-void logConfig(Config& config) {
-    SPDLOG_INFO(PROJECT_NAME);
+void logConfig(const Config& config) {
+    std::string project_name(PROJECT_NAME);
+    std::string project_version(PROJECT_VERSION);
+    SPDLOG_INFO(project_name + " " + project_version);
     SPDLOG_INFO("OpenVINO backend {}", OPENVINO_NAME);
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
     if (config.configPath().empty()) {
@@ -148,7 +107,7 @@ void onIllegal(int status) {
     shutdown_request = 2;
 }
 
-void installSignalHandlers() {
+void installSignalHandlers(ovms::Server& server) {
     static struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = onInterrupt;
     sigemptyset(&sigIntHandler.sa_mask);
@@ -168,131 +127,211 @@ void installSignalHandlers() {
     sigaction(SIGILL, &sigIllHandler, NULL);
 }
 
-std::vector<std::unique_ptr<Server>> startGRPCServer(
-    PredictionServiceImpl& predict_service,
-    ModelServiceImpl& model_service,
-    KFSInferenceServiceImpl& grpcInferenceService) {
-    const int GIGABYTE = 1024 * 1024 * 1024;
+static const int GIGABYTE = 1024 * 1024 * 1024;
 
-    std::vector<GrpcChannelArgument> channel_arguments;
-    auto& config = ovms::Config::instance();
-    auto status = parseGrpcChannelArgs(config.grpcChannelArguments(), channel_arguments);
-    if (!status.ok()) {
-        SPDLOG_ERROR("grpc channel arguments passed in wrong format: {}", config.grpcChannelArguments());
-        exit(1);
-    }
-
-    logConfig(config);
-    auto& manager = ModelManager::getInstance();
-    status = manager.start();
-    if (!status.ok()) {
-        SPDLOG_ERROR("ovms::ModelManager::Start() Error: {}", status.string());
-        exit(1);
-    }
-
-    ServerBuilder builder;
-    builder.SetMaxReceiveMessageSize(GIGABYTE);
-    builder.SetMaxSendMessageSize(GIGABYTE);
-    builder.AddListeningPort(config.grpcBindAddress() + ":" + std::to_string(config.port()), grpc::InsecureServerCredentials());
-    builder.RegisterService(&predict_service);
-    builder.RegisterService(&model_service);
-    builder.RegisterService(&grpcInferenceService);
-    for (const GrpcChannelArgument& channel_argument : channel_arguments) {
-        // gRPC accept arguments of two types, int and string. We will attempt to
-        // parse each arg as int and pass it on as such if successful. Otherwise we
-        // will pass it as a string. gRPC will log arguments that were not accepted.
-        SPDLOG_DEBUG("setting grpc channel argument {}: {}", channel_argument.key, channel_argument.value);
-        try {
-            int i = std::stoi(channel_argument.value);
-            builder.AddChannelArgument(channel_argument.key, i);
-        } catch (std::invalid_argument const& e) {
-            builder.AddChannelArgument(channel_argument.key, channel_argument.value);
-        } catch (std::out_of_range const& e) {
-            SPDLOG_WARN("Out of range parameter {} : {}", channel_argument.key, channel_argument.value);
-        }
-    }
-
-    std::vector<std::unique_ptr<Server>> servers;
-    uint grpcServersCount = getGRPCServersCount();
-    servers.reserve(grpcServersCount);
-    SPDLOG_DEBUG("Starting grpc servers: {}", grpcServersCount);
-
-    if (!isPortAvailable(config.port())) {
-        throw std::runtime_error("Failed to start GRPC server at " + config.grpcBindAddress() + ":" + std::to_string(config.port()));
-    }
-    for (uint i = 0; i < grpcServersCount; ++i) {
-        std::unique_ptr<Server> server = builder.BuildAndStart();
-        if (server == nullptr) {
-            throw std::runtime_error("Failed to start GRPC server at " + std::to_string(config.port()));
-        }
-        servers.push_back(std::move(server));
-    }
-    SPDLOG_INFO("Server started on port {}", config.port());
-
-    return servers;
+ModuleState Module::getState() const {
+    return state;
 }
 
-std::unique_ptr<ovms::http_server> startRESTServer() {
-    auto& config = ovms::Config::instance();
-    if (config.restPort() != 0) {
+// TODO should replace all messages like
+// start REST Server with start HTTP Server
+// start Server with start gRPC server
+// this should be synchronized with validation tests changes
+
+class HTTPServerModule : public Module {
+    std::unique_ptr<ovms::http_server> server;
+    Server& ovmsServer;
+
+public:
+    HTTPServerModule(ovms::Server& ovmsServer) :
+        ovmsServer(ovmsServer) {}
+    int start(const ovms::Config& config) override {
+        state = ModuleState::STARTED_INITIALIZE;
         const std::string server_address = config.restBindAddress() + ":" + std::to_string(config.restPort());
-
         int workers = config.restWorkers() ? config.restWorkers() : 10;
-        SPDLOG_INFO("Will start {} REST workers", workers);
 
-        std::unique_ptr<ovms::http_server> restServer = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), workers);
-        if (restServer != nullptr) {
+        SPDLOG_INFO("Will start {} REST workers", workers);
+        server = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer);
+        if (server != nullptr) {
             SPDLOG_INFO("Started REST server at {}", server_address);
         } else {
-            throw std::runtime_error("Failed to start REST server at " + server_address);
+            SPDLOG_ERROR("Failed to start REST server at " + server_address);
+            return EXIT_FAILURE;
         }
-
-        return restServer;
+        state = ModuleState::INITIALIZED;
+        return EXIT_SUCCESS;
     }
+    void shutdown() override {
+        if (server == nullptr)
+            return;
+        state = ModuleState::STARTED_SHUTDOWN;
+        server->Terminate();
+        server->WaitForTermination();
+        SPDLOG_INFO("Shutdown HTTP server");
+        state = ModuleState::SHUTDOWN;
+    }
+};
 
-    return nullptr;
+bool Server::isReady() const {
+    std::shared_lock lock(modulesMtx);
+    auto it = modules.find(SERVABLE_MANAGER_MODULE_NAME);
+    if (it == modules.end())
+        return false;
+    if (ModuleState::INITIALIZED != it->second->getState())
+        return false;
+    return true;
 }
 
-int server_main(int argc, char** argv) {
-    installSignalHandlers();
-    try {
-        auto& config = ovms::Config::instance().parse(argc, argv);
-        configure_logger(config.logLevel(), config.logPath());
+bool Server::isLive() const {
+    // TODO we might want at some time start REST only/ or respond with true only if both servers started if both are requested to start. This is to be resolved especially if we implement REST API for Kserver & potentially switch to check for starting specific module
+    std::shared_lock lock(modulesMtx);
+    auto it = modules.find(GRPC_SERVER_MODULE_NAME);
+    if (it == modules.end())
+        return false;
+    if (ModuleState::INITIALIZED != it->second->getState())
+        return false;
+    return true;
+}
+
+ModuleState Server::getModuleState(const std::string& name) const {
+    std::shared_lock lock(modulesMtx);
+    auto it = modules.find(name);
+    if (it == modules.end())
+        return ModuleState::NOT_INITIALIZED;
+    return it->second->getState();
+}
+
+const Module* Server::getModule(const std::string& name) const {
+    std::shared_lock lock(modulesMtx);
+    auto it = modules.find(name);
+    if (it == modules.end())
+        return nullptr;
+    return it->second.get();
+}
 
 #ifdef MTR_ENABLED
-        auto profiler = Profiler(config.tracePath());
+class ProfilerModule : public Module {
+    std::unique_ptr<Profiler> profiler;
+
+public:
+    ProfilerModule() = default;
+    int start(const Config& config) override {
+        state = ModuleState::STARTED_INITIALIZE;
+        auto profiler = std::make_unique<Profiler>(config.tracePath());
         if (!profiler.isInitialized()) {
             SPDLOG_ERROR("Cannot open file for profiler, --trace_path: {}", config.tracePath());
             return EXIT_FAILURE;
         }
+        state = ModuleState::INITIALIZED;
+        return EXIT_SUCCESS;
+    }
+    void shutdown() override {
+#ifdef MTR_ENABLED
+        state = ModuleState::STARTED_SHUTDOWN;
+        profiler.reset();
+        state = ModuleState::SHUTDOWN;
+#endif
+    }
+};
 #endif
 
-        PredictionServiceImpl predict_service;
-        ModelServiceImpl model_service;
-        KFSInferenceServiceImpl kfsGrpcInferenceService;
+void Server::setShutdownRequest(int i) {
+    shutdown_request = i;
+}
 
-        auto grpc = startGRPCServer(predict_service, model_service, kfsGrpcInferenceService);
-        auto rest = startRESTServer();
+Server::~Server() = default;
+
+std::unique_ptr<Module> Server::createModule(const std::string& name) {
+#ifdef MTR_ENABLED
+    if (name == PROFILER_MODULE_NAME)
+        return std::make_unique<ProfilerModule>();
+#endif
+    if (name == GRPC_SERVER_MODULE_NAME)
+        return std::make_unique<GRPCServerModule>(*this);
+    if (name == HTTP_SERVER_MODULE_NAME)
+        return std::make_unique<HTTPServerModule>(*this);
+    if (name == SERVABLE_MANAGER_MODULE_NAME)
+        return std::make_unique<ServableManagerModule>();
+    return nullptr;
+}
+
+int Server::startModules(ovms::Config& config) {
+    auto retCode = EXIT_SUCCESS;
+    bool inserted = false;
+    auto it = modules.end();
+#if MTR_ENABLED
+    {
+        auto module = this->createModule(PROFILER_MODULE_NAME);
+        std::unique_lock lock(modulesMtx);
+        std::tie(it, inserted) = this->modules.emplace(PROFILER_MODULE_NAME, std::move(module));
+    }
+    retCode = modules.at(PROFILER_MODULE_NAME)->start(config);
+    if (retCode)
+        return retCode;
+#endif
+    {
+        auto module = this->createModule(GRPC_SERVER_MODULE_NAME);
+        std::unique_lock lock(modulesMtx);
+        std::tie(it, inserted) = this->modules.emplace(GRPC_SERVER_MODULE_NAME, std::move(module));
+    }
+
+    if (!inserted)
+        return EXIT_FAILURE;
+    // if we ever decide not to start GRPC module then we need to implement HTTP responses without using grpc implementations
+    retCode = it->second->start(config);
+    if (retCode)
+        return retCode;
+    if (config.restPort() != 0) {
+        {
+            auto module = this->createModule(HTTP_SERVER_MODULE_NAME);
+            std::unique_lock lock(modulesMtx);
+            std::tie(it, inserted) = this->modules.emplace(HTTP_SERVER_MODULE_NAME, std::move(module));
+        }
+        retCode = it->second->start(config);
+        if (retCode)
+            return retCode;
+    }
+    {
+        auto module = this->createModule(SERVABLE_MANAGER_MODULE_NAME);
+        std::unique_lock lock(modulesMtx);
+        std::tie(it, inserted) = this->modules.emplace(SERVABLE_MANAGER_MODULE_NAME, std::move(module));
+    }
+    retCode = it->second->start(config);
+    return retCode;
+}
+
+void Server::shutdownModules(ovms::Config& config) {
+    modules.at(GRPC_SERVER_MODULE_NAME)->shutdown();
+    if (config.restPort() != 0)
+        modules.at(HTTP_SERVER_MODULE_NAME)->shutdown();
+    modules.at(SERVABLE_MANAGER_MODULE_NAME)->shutdown();
+#ifdef MTR_ENABLED
+    modules.at(PROFILER_MODULE_NAME)->shutdown();
+#endif
+    // FIXME we need to be able to quickly start grpc or start it without port
+    // this is because the OS can have a delay between freeing up port before it can be requested and used again
+    modules.clear();
+}
+
+int Server::start(int argc, char** argv) {
+    ovms::Server& server = ovms::Server::instance();
+    installSignalHandlers(server);
+    try {
+        auto& config = ovms::Config::instance().parse(argc, argv);
+        configure_logger(config.logLevel(), config.logPath());
+        logConfig(config);
+        auto retCode = this->startModules(config);
+        if (retCode)
+            return retCode;
 
         while (!shutdown_request) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
         if (shutdown_request == 2) {
             SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
         }
         SPDLOG_INFO("Shutting down");
-        for (const auto& g : grpc) {
-            g->Shutdown();
-            SPDLOG_INFO("Shutdown gRPC server");
-        }
-
-        if (rest != nullptr) {
-            rest->Terminate();
-            rest->WaitForTermination();
-            SPDLOG_INFO("Shutdown HTTP server");
-        }
-
-        ModelManager::getInstance().join();
+        this->shutdownModules(config);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
         return EXIT_FAILURE;
@@ -300,6 +339,5 @@ int server_main(int argc, char** argv) {
         SPDLOG_ERROR("Unknown exception catch - will now terminate.");
         return EXIT_FAILURE;
     }
-
     return EXIT_SUCCESS;
 }

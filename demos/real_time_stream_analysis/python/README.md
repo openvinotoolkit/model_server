@@ -130,8 +130,6 @@ __Console output:__
 2022-07-25 10:50:09,470 - stream_analyzer - INFO - For 100 received frames - FPS: 24; Frames dropped: 0;
 ```
 
-![minimal example](assets/minimal_example.jpg)
-
 ### Running with visualizer
 
 Streaming analysis app can run with live browser preview that helps to quickly estimate model accuracy. It's done by starting tiny Flask server that displays visualized inference results on HTTP endpoint. 
@@ -170,8 +168,6 @@ __Console output:__
 2022-07-25 10:51:07,919 - stream_analyzer - INFO - For 100 received frames - FPS: 22; Frames dropped: 0;
 2022-07-25 10:51:12,086 - stream_analyzer - INFO - For 100 received frames - FPS: 23; Frames dropped: 0;
 ```
-
-![visualizer example console](assets/visualizer_example_console.jpg)
 
 __Browser preview:__
 

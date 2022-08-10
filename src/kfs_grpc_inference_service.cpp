@@ -26,18 +26,49 @@
 #include "pipelinedefinition.hpp"
 #include "prediction_service_utils.hpp"
 #include "serialization.hpp"
+#include "servablemanagermodule.hpp"
+#include "server.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
+#include "version.hpp"
 
 namespace ovms {
 
-using inference::GRPCInferenceService;
+Status KFSInferenceServiceImpl::getModelInstance(const ::inference::ModelInferRequest* request,
+    std::shared_ptr<ovms::ModelInstance>& modelInstance,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
+    OVMS_PROFILE_FUNCTION();
+    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == module) {
+        return StatusCode::MODEL_NOT_LOADED;  // TODO consider other + add details
+    }
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    // TODO if not succeed then return error
+    auto& manager = servableManagerModule->getServableManager();
+    model_version_t requestedVersion = 0;
+    if (!request->model_version().empty()) {
+        auto versionRead = stoi64(request->model_version());
+        if (versionRead) {
+            requestedVersion = versionRead.value();
+        } else {
+            SPDLOG_DEBUG("requested model: name {}; with version in invalid format: {}", request->model_name(), request->model_version());
+            return StatusCode::MODEL_VERSION_INVALID_FORMAT;
+        }
+    }
+    return manager.getModelInstance(request->model_name(), requestedVersion, modelInstance, modelInstanceUnloadGuardPtr);
+}
 
-Status getPipeline(const ::inference::ModelInferRequest* request,
+Status KFSInferenceServiceImpl::getPipeline(const ::inference::ModelInferRequest* request,
     ::inference::ModelInferResponse* response,
     std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
     OVMS_PROFILE_FUNCTION();
-    ModelManager& manager = ModelManager::getInstance();
+    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == module) {
+        return StatusCode::MODEL_NOT_LOADED;  // TODO consider other + add details
+    }
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    // TODO if not succeed then return error
+    auto& manager = servableManagerModule->getServableManager();
     return manager.createPipeline(pipelinePtr, request->model_name(), request, response);
 }
 
@@ -47,19 +78,23 @@ const std::string PLATFORM = "OpenVINO";
     (void)context;
     (void)request;
     (void)response;
-    std::cout << __FUNCTION__ << ":" << __LINE__ << std::endl;
-    return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    bool isLive = this->ovmsServer.isLive();
+    SPDLOG_DEBUG("Requested Server liveness state: {}", isLive);
+    response->set_live(isLive);
+    return grpc::Status::OK;
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ServerReady(::grpc::ServerContext* context, const ::inference::ServerReadyRequest* request, ::inference::ServerReadyResponse* response) {
     (void)context;
     (void)request;
     (void)response;
-    std::cout << __FUNCTION__ << ":" << __LINE__ << std::endl;
-    return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    bool isReady = this->ovmsServer.isReady();
+    SPDLOG_DEBUG("Requested Server readiness state: {}", isReady);
+    response->set_ready(isReady);
+    return grpc::Status::OK;
 }
 
-Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, ModelManager& manager) {
+Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response, const ModelManager& manager) {
     // Return in response true/false
     // if no version requested give response for default version
     const auto& name = request->name();
@@ -103,7 +138,13 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
 
 ::grpc::Status KFSInferenceServiceImpl::ModelReady(::grpc::ServerContext* context, const ::inference::ModelReadyRequest* request, ::inference::ModelReadyResponse* response) {
     (void)context;
-    auto& manager = ModelManager::getInstance();
+    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == module) {
+        return grpc::Status(grpc::StatusCode::NOT_FOUND, SERVABLE_MANAGER_MODULE_NAME + " module not started yet");
+    }
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    // TODO if not succeed then return error
+    auto& manager = servableManagerModule->getServableManager();
     return this->getModelReady(request, response, manager).grpc();
 }
 
@@ -111,12 +152,19 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
     (void)context;
     (void)request;
     (void)response;
-    std::cout << __FUNCTION__ << ":" << __LINE__ << std::endl;
-    return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    response->set_name(PROJECT_NAME);
+    response->set_version(PROJECT_VERSION);
+    return grpc::Status::OK;
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelMetadata(::grpc::ServerContext* context, const ::inference::ModelMetadataRequest* request, ::inference::ModelMetadataResponse* response) {
-    auto& manager = ModelManager::getInstance();
+    auto module = this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME);
+    if (nullptr == module) {
+        return grpc::Status(grpc::StatusCode::NOT_FOUND, SERVABLE_MANAGER_MODULE_NAME + " module not started yet");
+    }
+    auto servableManagerModule = dynamic_cast<const ServableManagerModule*>(module);
+    // TODO if not succeed then return error
+    auto& manager = servableManagerModule->getServableManager();
     const auto& name = request->name();
     const auto& versionString = request->version();
 
@@ -153,7 +201,7 @@ Status KFSInferenceServiceImpl::getModelReady(const ::inference::ModelReadyReque
             return Status(StatusCode::MODEL_VERSION_MISSING).grpc();
         }
     }
-    return buildResponse(instance, response).grpc();
+    return buildResponse(*model, *instance, response).grpc();
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelInfer(::grpc::ServerContext* context, const ::inference::ModelInferRequest* request, ::inference::ModelInferResponse* response) {
@@ -209,33 +257,46 @@ Status KFSInferenceServiceImpl::buildResponse(
     return StatusCode::OK;
 }
 
+void addReadyVersions(Model& model,
+    ::inference::ModelMetadataResponse* response) {
+    auto modelVersions = model.getModelVersionsMapCopy();
+    for (auto& [modelVersion, modelInstance] : modelVersions) {
+        if (modelInstance.getStatus().getState() == ModelVersionState::AVAILABLE)
+            response->add_versions(std::to_string(modelVersion));
+    }
+}
+
 Status KFSInferenceServiceImpl::buildResponse(
-    std::shared_ptr<ModelInstance> instance,
+    Model& model,
+    ModelInstance& instance,
     ::inference::ModelMetadataResponse* response) {
 
     std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
 
     // 0 meaning immediately return unload guard if possible, otherwise do not wait for available state
-    auto status = instance->waitForLoaded(0, unloadGuard);
+    auto status = instance.waitForLoaded(0, unloadGuard);
     if (!status.ok()) {
         return status;
     }
 
     response->Clear();
-    response->set_name(instance->getName());
-    response->add_versions(std::to_string(instance->getVersion()));
+    response->set_name(instance.getName());
+    addReadyVersions(model, response);
     response->set_platform(PLATFORM);
 
-    for (const auto& input : instance->getInputsInfo()) {
+    for (const auto& input : instance.getInputsInfo()) {
         convert(input, response->add_inputs());
     }
 
-    for (const auto& output : instance->getOutputsInfo()) {
+    for (const auto& output : instance.getOutputsInfo()) {
         convert(output, response->add_outputs());
     }
 
     return StatusCode::OK;
 }
+
+KFSInferenceServiceImpl::KFSInferenceServiceImpl(const Server& server) :
+    ovmsServer(server) {}
 
 Status KFSInferenceServiceImpl::buildResponse(
     PipelineDefinition& pipelineDefinition,

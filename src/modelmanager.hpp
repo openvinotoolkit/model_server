@@ -44,6 +44,7 @@ namespace ovms {
 const uint32_t DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
 const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 
+class Config;
 class IVersionReader;
 class CustomNodeLibraryManager;
 struct FunctorSequenceCleaner;
@@ -52,12 +53,13 @@ struct FunctorResourcesCleaner;
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
 class ModelManager {
-protected:
+public:
     /**
      * @brief A default constructor is private
      */
     ModelManager(const std::string& modelCacheDirectory = "");
 
+protected:
     void logPluginConfiguration();
 
     Status checkStatefulFlagChange(const std::string& modelName, bool configStatefulFlag);
@@ -79,6 +81,8 @@ protected:
 
     GlobalSequencesViewer globalSequencesViewer;
     uint32_t waitForModelLoadedTimeoutMs;
+    bool watcherStarted = false;
+    bool cleanerStarted = false;
 
 private:
     /**
@@ -340,7 +344,7 @@ public:
      * 
      * @return status
      */
-    Status start();
+    Status start(const Config& config);
 
     /**
      * @brief Starts monitoring as new thread

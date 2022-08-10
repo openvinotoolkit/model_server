@@ -33,7 +33,8 @@ usage: face_detection.py [-h] [--input_images_dir INPUT_IMAGES_DIR]
                          [--client_cert CLIENT_CERT] [--client_key CLIENT_KEY]
 
 Demo for face detection requests via TFS gRPC API analyses input images and
-saves images with bounding boxes drawn around detected faces. It relies on face_detection model...
+saves images with bounding boxes drawn around detected faces. It relies on
+face_detection model...
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -348,6 +349,6 @@ time variance: 0.00
 The script will visualize the inference results on the images saved in the directory `output_dir`. Saved images have the
 following naming convention:
 
-`
+```
 [iteration]_[image_in_batch].jpeg
-`
+```
