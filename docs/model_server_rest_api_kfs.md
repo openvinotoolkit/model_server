@@ -228,6 +228,7 @@ $request_output =
 ```
 
 **Response Format**
+
 If successful:
 
 ```json
