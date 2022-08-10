@@ -12,7 +12,7 @@ This guide shows how to convert TensorFlow models and deploy them with the OpenV
 ### Preparing the Model
 
 Download the model
-```Bash
+```bash
 wget http://download.tensorflow.org/models/official/20181001_resnet/savedmodels/resnet_v2_fp32_savedmodel_NHWC.tar.gz
 
 tar -xvzf resnet_v2_fp32_savedmodel_NHWC.tar.gz 
@@ -23,7 +23,7 @@ rmdir resnet_v2_fp32_savedmodel_NHWC/
 *Note:* Directories operations are not necessary for the preparation, but in this guide the directories are simplified.
 
 Convert the TensorFlow model to Intermediate Representation format using model_optimizer tool:
-```Bash
+```bash
 docker run -u $(id -u):$(id -g) -v ${PWD}/resnet_v2/:/resnet openvino/ubuntu20_dev:2022.1.0 mo --saved_model_dir /resnet/ --output_dir /resnet/models/resnet/1/ --input_shape=[1,224,224,3] --mean_values=[123.68,116.78,103.94] --reverse_input_channels
 ```
 
@@ -35,32 +35,35 @@ docker run -u $(id -u):$(id -g) -v ${PWD}/resnet_v2/:/resnet openvino/ubuntu20_d
 *Note:* You can find out more about [TensorFlow Model conversion into Intermediate Representation](https://docs.openvino.ai/2022.1/openvino_docs_MO_DG_prepare_model_convert_model_Convert_Model_From_TensorFlow.html) if your model is stored in other formats.
 
 This operation will create model files in `${PWD}/resnet_v2/models/resnet/1/` folder.
-```Bash
-saved_model.bin
-saved_model.mapping
-saved_model.xml
+```bash
+tree resnet_v2/models/resnet/1
+resnet_v2/models/resnet/1
+├── saved_model.bin
+├── saved_model.mapping
+└── saved_model.xml
 ```
 
 ### OVMS Deployment
 Pull the latest openvino model_server image from dockerhub
-```Bash
+```bash
 docker pull openvino/model_server:latest
 ```
 
 Deploy OVMS using the following command:
-```Bash
+```bash
 docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_server:latest --model_path /models/resnet --model_name resnet --port 9000
 ```
 
 ### Running the inference requests from the client
 
-```Bash
-cd client/python/ovmsclient/samples
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/client/python/ovmsclient/samples
 virtualenv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
 
-python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet
+python grpc_predict_binary_resnet.py --images_dir ../../../../demos/common/static/images --model_name resnet --service_url localhost:9000
 
 Image ../../../../demos/common/static/images/magnetic_compass.jpeg has been classified as magnetic compass
 Image ../../../../demos/common/static/images/pelican.jpeg has been classified as pelican

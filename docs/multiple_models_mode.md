@@ -58,7 +58,7 @@ An example of the configuration file:
 When the Docker container has the config file mounted, it can be started - the command is minimalistic, as arguments are read from the config file. 
 Note that models with a cloud storage path require setting specific environmental variables.
 
-```bash
+```
 
 docker run --rm -d -v /models/:/opt/ml:ro -p 9001:9001 -p 8001:8001 -v <config.json>:/opt/ml/config.json openvino/model_server:latest \
 --config_path /opt/ml/config.json --port 9001 --rest_port 8001

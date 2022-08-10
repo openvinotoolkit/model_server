@@ -21,9 +21,9 @@ Always verify if your model is supported by the VPU Plugins and convert it to th
 
 Here is an example of this process:
 
-```Bash
+```bash
 
-git clone https://github.com/openvinotoolkit/model_server
+git clone https://github.com/openvinotoolkit/model_server.git
 
 cd model_server   
    

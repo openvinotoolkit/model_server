@@ -10,7 +10,7 @@ OpenVINO’s [Model Optimizer](https://docs.openvino.ai/2022.1/openvino_docs_MO_
 
 The models need to be placed and mounted in a particular directory structure and according to the following rules:
 
-```bash
+```
 tree models/
 models/
 ├── model1

@@ -349,6 +349,6 @@ time variance: 0.00
 The script will visualize the inference results on the images saved in the directory `output_dir`. Saved images have the
 following naming convention:
 
-`
+```
 [iteration]_[image_in_batch].jpeg
-`
+```
