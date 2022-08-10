@@ -14,7 +14,10 @@
 # limitations under the License.
 #
 #! /bin/bash
-echo "OVMS benchmark client 1.17"
+
+# version is set in VERSION file
+XCLIENT_VERSION=2.6
+echo "Client $XCLIENT_VERSION"
 
 PROXY="no"
 OPTIONS="$@"

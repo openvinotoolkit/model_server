@@ -23,14 +23,14 @@ from http import HTTPStatus
 import grpc
 import requests
 from retry.api import retry_call
-from tritonclient.grpc import service_pb2, service_pb2_grpc
+from tritonclient.grpc import service_pb2, service_pb2_grpc, InferResult
 try:
     from ovms_benchmark_client.client import BaseClient
 except ModuleNotFoundError:
     from client import BaseClient
 
 
-class NvTrtClient(BaseClient):
+class KFS_Client(BaseClient):
     """
     Inference client for benchmarks
     for Triton Inference Server
@@ -38,8 +38,19 @@ class NvTrtClient(BaseClient):
 
     # override
     status_endpoint = "/v2/repository/index"
+    DTYPE_FLOAT_64 = "FP64"
     DTYPE_FLOAT_32 = "FP32"
+    DTYPE_FLOAT_16 = "FP16"
+
+    DTYPE_INT_8 = "INT8"
+    DTYPE_INT_16 = "INT16"
     DTYPE_INT_32 = "INT32"
+    DTYPE_INT_64 = "INT64"
+
+    DTYPE_UINT_8 = "UINT8"
+    DTYPE_UINT_16 = "UINT16"
+    DTYPE_UINT_32 = "UINT32"
+    DTYPE_UINT_64 = "UINT64"
 
     # override
     def get_stub(self):
@@ -97,12 +108,12 @@ class NvTrtClient(BaseClient):
         self.print_info(response)
         for resp_input in response.inputs:
             self.inputs[resp_input.name] = {
-                "shape": [1] + [abs(int(i)) for i in resp_input.shape],
+                "shape": [abs(int(i)) for i in resp_input.shape],
                 "dtype": str(resp_input.datatype)
             }
         for resp_output in response.outputs:
             self.outputs[resp_output.name] = {
-                "shape": [1] + [abs(int(i)) for i in resp_output.shape],
+                "shape": [abs(int(i)) for i in resp_output.shape],
                 "dtype": str(resp_output.datatype)
             }
 
@@ -119,60 +130,67 @@ class NvTrtClient(BaseClient):
         print(f"{self.json_prefix}###{self.worker_id}###METADATA###{jout}")
         return metadict
 
+
     # override
     def prepare_batch_requests(self):
         for key, values in self.xdata.items():
             assert len(values) == self.dataset_length, f"{key} data has wrong length"
 
+        # self.xdata -> {
+        #     input-name-0: [ (data-0-0, meta-0-0), (data-0-1, meta-0-1), ...  ],
+        #     input-name-1: [ (data-1-0, meta-1-0), (data-1-1, meta-1-1), ...  ],
+        # }
+
         for index in range(self.dataset_length):
+            batch_index = index % len(self.batchsizes)
+            batch_length = self.batchsizes[batch_index]
+
             request = service_pb2.ModelInferRequest()
-            request.model_name = self.model_name
             request.model_version = str(self.model_version)
+            request.model_name = self.model_name
 
-            all_input_bytes = []
+            batch_input_bytes = []
             for input_name, xbatches in self.xdata.items():
-                if self.inputs[input_name]["dtype"] == self.DTYPE_FLOAT_32:
-                    np_dtype = "float32"
-                elif self.inputs[input_name]["dtype"] == self.DTYPE_INT_32:
-                    np_dtype = "int8"
+                assert len(xbatches[index][0]) == batch_length
+
+                # xbatches -> [ (data-0-0, meta-0-0), (data-0-1, meta-0-1), ...  ]
+                # meta_data <- xbatches[index][1]  ->  ["dtype", "shape"]
+                # pure_data <- xbatches[index][0]
+
+                single_input_bytes = bytes()
+                if "dtype" not in xbatches[index][1]:
+                    raise NotImplementedError("KFS / binary")
                 else:
-                    raise ValueError(f"not supported type: {self.inputs[input_name]['dtype']}")
+                    if self.inputs[input_name]["dtype"] == self.DTYPE_INT_8: np_dtype = "int8"
+                    elif self.inputs[input_name]["dtype"] == self.DTYPE_INT_32: np_dtype = "int32"
+                    elif self.inputs[input_name]["dtype"] == self.DTYPE_FLOAT_32: np_dtype = "float32"
+                    else: raise ValueError(f"not supported type: {xbatches[index][1]['dtype']}")
 
-                input_bytes = bytes()
-                data = xbatches[index][0]
-                img_bytes = data[0].astype(np_dtype).tobytes()
-                input_bytes += img_bytes
-                shape = data[0].shape
+                    for numeric_data in xbatches[index][0]:
+                        single_input_bytes += numeric_data.astype(np_dtype).tobytes()
+                    shape = xbatches[index][1]["shape"]
 
-                request_input = service_pb2.ModelInferRequest().InferInputTensor()
-                request_input.name = input_name
-                request_input.datatype = self.inputs[input_name]["dtype"]
-                request_input.shape.extend(shape)
-                request.inputs.extend([request_input])
-                all_input_bytes.append(input_bytes)
-            request.raw_input_contents.extend(all_input_bytes)
+                single_input_request = service_pb2.ModelInferRequest().InferInputTensor()
+                single_input_request.datatype = self.inputs[input_name]["dtype"]
+                single_input_request.name = input_name
+                single_input_request.shape.extend(shape)
+
+                request.inputs.append(single_input_request)
+                batch_input_bytes.append(single_input_bytes)
+            request.raw_input_contents.extend(batch_input_bytes)
 
             for output_name in self.outputs:
                 output = service_pb2.ModelInferRequest().InferRequestedOutputTensor()
                 output.name = output_name
-                request.outputs.extend([output])
+                request.outputs.append(output)
+
 
             if self.stateful_length > 0:
-                request.parameters["sequence_id"].int64_param = self.stateful_id
-                if self.stateful_counter == 0:
-                    request.parameters["sequence_start"].bool_param = True
-                elif self.stateful_counter >= int(self.stateful_length) - 1:
-                    request.parameters["sequence_end"].bool_param = True
-                    self.stateful_id += self.stateful_hop
-                    self.stateful_counter = -1
-                self.stateful_counter += 1
+                raise NotImplementedError("KFS / stateful")
 
-            batch_index = index % len(self.batchsizes)
-            batch_length = self.batchsizes[batch_index]
             self.requests.append((batch_length, request))
-
         del self.xdata
 
-    # ovrride
+    # override
     def predict(self, request, timeout):
         return self.stub.ModelInfer(request, timeout=timeout)
