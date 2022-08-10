@@ -113,7 +113,6 @@ cc_library(
         "metric.hpp",
         "metric_family.cpp",
         "metric_family.hpp",
-        "metric_kind.hpp",
         "metric_registry.cpp",
         "metric_registry.hpp",
         "model.cpp",

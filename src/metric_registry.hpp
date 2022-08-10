@@ -21,12 +21,10 @@
 
 #include <prometheus/registry.h>
 
-#include "metric_kind.hpp"
-
 namespace ovms {
 
 class MetricFamilyBase;
-template <typename T>
+template <typename MetricType>
 class MetricFamily;
 
 class MetricRegistry {
@@ -35,11 +33,11 @@ class MetricRegistry {
 public:
     MetricRegistry();
 
-    template <typename T>
-    std::shared_ptr<MetricFamily<T>> createFamily(MetricKind kind, const std::string& name, const std::string& description) {
-        std::shared_ptr<MetricFamilyBase> family = std::make_shared<MetricFamily<T>>(kind, name, description, this->registryImpl);
+    template <typename MetricType>
+    std::shared_ptr<MetricFamily<MetricType>> createFamily(const std::string& name, const std::string& description) {
+        std::shared_ptr<MetricFamilyBase> family = std::make_shared<MetricFamily<MetricType>>(name, description, this->registryImpl);
         this->families.emplace_back(family);
-        return std::dynamic_pointer_cast<MetricFamily<T>>(family);
+        return std::dynamic_pointer_cast<MetricFamily<MetricType>>(family);
     }
 
     // Returns all collected metrics in "Prometheus Text Exposition Format".

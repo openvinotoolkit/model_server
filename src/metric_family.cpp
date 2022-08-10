@@ -24,56 +24,6 @@
 
 namespace ovms {
 
-// MetricFamily::MetricFamily(MetricKind kind, const std::string& name, const std::string& description, prometheus::Registry& registryImplRef) :
-//     kind(kind),
-//     name(name),
-//     description(description),
-//     registryImplRef(registryImplRef) {}
-
-// MetricKind MetricFamily::getKind() const {
-//     return this->kind;
-// }
-
-// const std::string& MetricFamily::getName() const {
-//     return this->name;
-// }
-
-// const std::string& MetricFamily::getDesc() const {
-//     return this->description;
-// }
-
-// template <typename T>
-// std::shared_ptr<T> MetricFamily<T>::addMetric(const Metric::Labels& labels, const Metric::BucketBoundaries& bucketBoundaries) {
-//     switch (this->getKind()) {
-//     case MetricKind::COUNTER: {
-//         prometheus::Counter& counterImpl = prometheus::BuildCounter()
-//                                                .Name(this->getName())
-//                                                .Help(this->getDesc())
-//                                                .Register(this->registryImplRef)
-//                                                .Add(labels);
-//         return this->metrics.emplace_back(std::make_shared<T>(labels, counterImpl));
-//     }
-//     case MetricKind::GAUGE: {
-//         prometheus::Gauge& gaugeImpl = prometheus::BuildGauge()
-//                                            .Name(this->getName())
-//                                            .Help(this->getDesc())
-//                                            .Register(this->registryImplRef)
-//                                            .Add(labels);
-//         return this->metrics.emplace_back(std::make_shared<T>(labels, gaugeImpl));
-//     }
-//     case MetricKind::HISTOGRAM: {
-//         prometheus::Histogram& histogramImpl = prometheus::BuildHistogram()
-//                                                     .Name(this->getName())
-//                                                     .Help(this->getDesc())
-//                                                     .Register(this->registryImplRef)
-//                                                     .Add(labels, bucketBoundaries);
-//         return this->metrics.emplace_back(std::make_shared<T>(labels, bucketBoundaries, histogramImpl));
-//     }
-//     default:
-//         throw std::runtime_error("not implemented");
-//     }
-// }
-
 template <>
 std::shared_ptr<MetricCounter> MetricFamily<MetricCounter>::addMetric(const Metric::Labels& labels, const Metric::BucketBoundaries& bucketBoundaries) {
     prometheus::Counter& counterImpl = prometheus::BuildCounter()

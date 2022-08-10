@@ -20,40 +20,32 @@
 #include <string>
 #include <vector>
 
-#include "metric_kind.hpp"
-
 namespace prometheus {
 class Registry;
 }
 
 namespace ovms {
 
-class Metric;
-class Labels;
-
 class MetricFamilyBase {
 public:
     virtual ~MetricFamilyBase() = default;
 };
 
-template <typename T>
+template <typename MetricType>
 class MetricFamily : public MetricFamilyBase {
-    MetricKind kind;
     std::string name, description;
-    std::vector<std::shared_ptr<T>> metrics;
+    std::vector<std::shared_ptr<MetricType>> metrics;
 
 public:
-    MetricFamily(MetricKind kind, const std::string& name, const std::string& description, prometheus::Registry& registryImplRef) :
-        kind(kind),
+    MetricFamily(const std::string& name, const std::string& description, prometheus::Registry& registryImplRef) :
         name(name),
         description(description),
         registryImplRef(registryImplRef) {}
 
-    MetricKind getKind() const { return this->kind; }
     const std::string& getName() const { return this->name; }
     const std::string& getDesc() const { return this->description; }
 
-    std::shared_ptr<T> addMetric(const std::map<std::string, std::string>& labels = {}, const std::vector<double>& bucketBoundaries = {});
+    std::shared_ptr<MetricType> addMetric(const std::map<std::string, std::string>& labels = {}, const std::vector<double>& bucketBoundaries = {});
 
 private:
     // Prometheus internals
