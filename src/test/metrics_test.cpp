@@ -26,6 +26,7 @@
 using namespace ovms;
 
 using testing::HasSubstr;
+using testing::ContainsRegex;
 
 TEST(Metrics, FamilyKind) {
     MetricRegistry registry;
@@ -142,6 +143,39 @@ TEST(Metrics, GaugeMetrics) {
     EXPECT_THAT(registry.collect(), HasSubstr("nireq_in_use{model_name=\"dummy\",model_version=\"2\"} 15\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("pipelines_running{pipeline_name=\"ocr\"} 12\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("pipelines_running{pipeline_name=\"face_blur\"} 16\n"));
+}
+
+TEST(Metrics, HistogramMetrics) {
+    MetricRegistry registry;
+    auto deserialization_family = registry.createFamily(MetricKind::HISTOGRAM, "deserialization", "time spent in deserialization");
+
+    auto metric = deserialization_family->addMetric({
+        {"model_name", "resnet"},
+        {"model_version", "1"},
+    }, {0.1, 1.0, 10.0, 100.0});
+
+    for (int i = 0; i < 30; i++) {
+        metric->observe(0.2);
+        metric->observe(105);
+        metric->observe(0.01);
+    }
+
+    // Metadata
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP deserialization time spent in deserialization\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE deserialization histogram\n"));
+
+    // Buckets
+    EXPECT_THAT(registry.collect(), HasSubstr("deserialization_bucket{model_name=\"resnet\",model_version=\"1\",le=\"0.1\"} 30\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("deserialization_bucket{model_name=\"resnet\",model_version=\"1\",le=\"1\"} 60\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("deserialization_bucket{model_name=\"resnet\",model_version=\"1\",le=\"10\"} 60\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("deserialization_bucket{model_name=\"resnet\",model_version=\"1\",le=\"100\"} 60\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("deserialization_bucket{model_name=\"resnet\",model_version=\"1\",le=\"+Inf\"} 90\n"));
+
+    // Count
+    EXPECT_THAT(registry.collect(), HasSubstr("deserialization_count{model_name=\"resnet\",model_version=\"1\"} 90\n"));
+
+    // Sum
+    EXPECT_THAT(registry.collect(), ContainsRegex("deserialization_sum\\{model_name=\"resnet\",model_version=\"1\"\\} 3156.3.*\\n"));
 }
 
 // TODO: Increase/decrease by value for Counter/Gauge

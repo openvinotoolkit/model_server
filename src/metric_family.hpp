@@ -42,7 +42,7 @@ public:
     const std::string& getName() const;
     const std::string& getDesc() const;
 
-    std::shared_ptr<Metric> addMetric(const std::map<std::string, std::string>& labels);
+    std::shared_ptr<Metric> addMetric(const std::map<std::string, std::string>& labels = {}, const std::vector<double>& bucketBoundaries = {});
 
 private:
     // Prometheus internals

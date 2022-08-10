@@ -17,10 +17,12 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 namespace prometheus {
 class Counter;
 class Gauge;
+class Histogram;
 }  // namespace prometheus
 
 namespace ovms {
@@ -28,6 +30,7 @@ namespace ovms {
 class Metric {
 public:
     using Labels = std::map<std::string, std::string>;
+    using BucketBoundaries = std::vector<double>;
 
 private:
     Labels labels;
@@ -39,6 +42,7 @@ public:
 
     virtual void increment() = 0;
     virtual void decrement() = 0;
+    virtual void observe(double value) = 0;
 };
 
 class MetricCounter : public Metric {
@@ -47,6 +51,7 @@ public:
 
     void increment() override;
     void decrement() override;
+    void observe(double value) override;
 
 private:
     // Prometheus internals
@@ -59,10 +64,25 @@ public:
 
     void increment() override;
     void decrement() override;
+    void observe(double value) override;
 
 private:
     // Prometheus internals
     prometheus::Gauge& gaugeImpl;
+};
+
+class MetricHistogram : public Metric {
+    BucketBoundaries bucketBoundaries;
+public:
+    MetricHistogram(const Labels& labels, const BucketBoundaries& bucketBoundaries, prometheus::Histogram& histogramImpl);
+
+    void increment() override;
+    void decrement() override;
+    void observe(double value) override;
+
+private:
+    // Prometheus internals
+    prometheus::Histogram& histogramImpl;
 };
 
 }  // namespace ovms

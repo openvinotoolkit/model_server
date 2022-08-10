@@ -19,7 +19,8 @@ namespace ovms {
 
 enum class MetricKind {
     COUNTER,
-    GAUGE
+    GAUGE,
+    HISTOGRAM
 };
 
 }  // namespace ovms

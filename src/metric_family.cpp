@@ -17,6 +17,7 @@
 
 #include <prometheus/counter.h>
 #include <prometheus/gauge.h>
+#include <prometheus/histogram.h>
 #include <prometheus/registry.h>
 
 #include "metric.hpp"
@@ -41,7 +42,7 @@ const std::string& MetricFamily::getDesc() const {
     return this->description;
 }
 
-std::shared_ptr<Metric> MetricFamily::addMetric(const Metric::Labels& labels) {
+std::shared_ptr<Metric> MetricFamily::addMetric(const Metric::Labels& labels, const Metric::BucketBoundaries& bucketBoundaries) {
     switch (this->getKind()) {
     case MetricKind::COUNTER: {
         prometheus::Counter& counterImpl = prometheus::BuildCounter()
@@ -58,6 +59,14 @@ std::shared_ptr<Metric> MetricFamily::addMetric(const Metric::Labels& labels) {
                                            .Register(this->registryImplRef)
                                            .Add(labels);
         return this->metrics.emplace_back(std::make_shared<MetricGauge>(labels, gaugeImpl));
+    }
+    case MetricKind::HISTOGRAM: {
+        prometheus::Histogram& histogramImpl = prometheus::BuildHistogram()
+                                                    .Name(this->getName())
+                                                    .Help(this->getDesc())
+                                                    .Register(this->registryImplRef)
+                                                    .Add(labels, bucketBoundaries);
+        return this->metrics.emplace_back(std::make_shared<MetricHistogram>(labels, bucketBoundaries, histogramImpl));
     }
     default:
         throw std::runtime_error("not implemented");
