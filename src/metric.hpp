@@ -40,18 +40,16 @@ public:
 
     bool hasLabel(const std::string& label) const;
 
-    virtual void increment() = 0;
-    virtual void decrement() = 0;
-    virtual void observe(double value) = 0;
+    // virtual void increment() = 0;
+    // virtual void decrement() = 0;
+    // virtual void observe(double value) = 0;
 };
 
 class MetricCounter : public Metric {
 public:
     MetricCounter(const Labels& labels, prometheus::Counter& counterImpl);
 
-    void increment() override;
-    void decrement() override;
-    void observe(double value) override;
+    void increment();
 
 private:
     // Prometheus internals
@@ -62,9 +60,8 @@ class MetricGauge : public Metric {
 public:
     MetricGauge(const Labels& labels, prometheus::Gauge& gaugeImpl);
 
-    void increment() override;
-    void decrement() override;
-    void observe(double value) override;
+    void increment();
+    void decrement();
 
 private:
     // Prometheus internals
@@ -73,12 +70,11 @@ private:
 
 class MetricHistogram : public Metric {
     BucketBoundaries bucketBoundaries;
+
 public:
     MetricHistogram(const Labels& labels, const BucketBoundaries& bucketBoundaries, prometheus::Histogram& histogramImpl);
 
-    void increment() override;
-    void decrement() override;
-    void observe(double value) override;
+    void observe(double value);
 
 private:
     // Prometheus internals

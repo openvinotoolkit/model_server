@@ -30,19 +30,30 @@ namespace ovms {
 
 class Metric;
 class Labels;
-class MetricFamily {
+
+class MetricFamilyBase {
+public:
+    virtual ~MetricFamilyBase() = default;
+};
+
+template <typename T>
+class MetricFamily : public MetricFamilyBase {
     MetricKind kind;
     std::string name, description;
-    std::vector<std::shared_ptr<Metric>> metrics;
+    std::vector<std::shared_ptr<T>> metrics;
 
 public:
-    MetricFamily(MetricKind kind, const std::string& name, const std::string& description, prometheus::Registry& registryImplRef);
+    MetricFamily(MetricKind kind, const std::string& name, const std::string& description, prometheus::Registry& registryImplRef) :
+        kind(kind),
+        name(name),
+        description(description),
+        registryImplRef(registryImplRef) {}
 
-    MetricKind getKind() const;
-    const std::string& getName() const;
-    const std::string& getDesc() const;
+    MetricKind getKind() const { return this->kind; }
+    const std::string& getName() const { return this->name; }
+    const std::string& getDesc() const { return this->description; }
 
-    std::shared_ptr<Metric> addMetric(const std::map<std::string, std::string>& labels = {}, const std::vector<double>& bucketBoundaries = {});
+    std::shared_ptr<T> addMetric(const std::map<std::string, std::string>& labels = {}, const std::vector<double>& bucketBoundaries = {});
 
 private:
     // Prometheus internals

@@ -25,31 +25,31 @@
 
 using namespace ovms;
 
-using testing::HasSubstr;
 using testing::ContainsRegex;
+using testing::HasSubstr;
 
 TEST(Metrics, FamilyKind) {
     MetricRegistry registry;
-    auto family = registry.createFamily(MetricKind::COUNTER, "name", "desc");
+    auto family = registry.createFamily<MetricCounter>(MetricKind::COUNTER, "name", "desc");
     EXPECT_EQ(family->getKind(), MetricKind::COUNTER);
 }
 
 TEST(Metrics, FamilyName) {
     MetricRegistry registry;
-    auto family = registry.createFamily(MetricKind::COUNTER, "name", "desc");
+    auto family = registry.createFamily<MetricCounter>(MetricKind::COUNTER, "name", "desc");
     EXPECT_EQ(family->getName(), "name");
 }
 
 TEST(Metrics, FamilyDesc) {
     MetricRegistry registry;
-    auto family = registry.createFamily(MetricKind::COUNTER, "name", "desc");
+    auto family = registry.createFamily<MetricCounter>(MetricKind::COUNTER, "name", "desc");
     EXPECT_EQ(family->getDesc(), "desc");
 }
 
 TEST(Metrics, CounterMetrics) {
     MetricRegistry registry;
-    auto pass_family = registry.createFamily(MetricKind::COUNTER, "infer_pass", "number of passed inferences");
-    auto fail_family = registry.createFamily(MetricKind::COUNTER, "infer_fail", "number of failed inferences");
+    auto pass_family = registry.createFamily<MetricCounter>(MetricKind::COUNTER, "infer_pass", "number of passed inferences");
+    auto fail_family = registry.createFamily<MetricCounter>(MetricKind::COUNTER, "infer_fail", "number of failed inferences");
 
     auto metric = pass_family->addMetric({
         {"protocol", "grpc"},
@@ -91,8 +91,8 @@ TEST(Metrics, CounterMetrics) {
 
 TEST(Metrics, GaugeMetrics) {
     MetricRegistry registry;
-    auto nireq_family = registry.createFamily(MetricKind::GAUGE, "nireq_in_use", "number of inference requests in use");
-    auto pipe_family = registry.createFamily(MetricKind::GAUGE, "pipelines_running", "number of pipelines currently being executed");
+    auto nireq_family = registry.createFamily<MetricGauge>(MetricKind::GAUGE, "nireq_in_use", "number of inference requests in use");
+    auto pipe_family = registry.createFamily<MetricGauge>(MetricKind::GAUGE, "pipelines_running", "number of pipelines currently being executed");
 
     auto metric = nireq_family->addMetric({
         {"model_name", "resnet"},
@@ -147,12 +147,13 @@ TEST(Metrics, GaugeMetrics) {
 
 TEST(Metrics, HistogramMetrics) {
     MetricRegistry registry;
-    auto deserialization_family = registry.createFamily(MetricKind::HISTOGRAM, "deserialization", "time spent in deserialization");
+    auto deserialization_family = registry.createFamily<MetricHistogram>(MetricKind::HISTOGRAM, "deserialization", "time spent in deserialization");
 
     auto metric = deserialization_family->addMetric({
-        {"model_name", "resnet"},
-        {"model_version", "1"},
-    }, {0.1, 1.0, 10.0, 100.0});
+                                                        {"model_name", "resnet"},
+                                                        {"model_version", "1"},
+                                                    },
+        {0.1, 1.0, 10.0, 100.0});
 
     for (int i = 0; i < 30; i++) {
         metric->observe(0.2);
@@ -178,9 +179,8 @@ TEST(Metrics, HistogramMetrics) {
     EXPECT_THAT(registry.collect(), ContainsRegex("deserialization_sum\\{model_name=\"resnet\",model_version=\"1\"\\} 3156.3.*\\n"));
 }
 
-// TODO: Increase/decrease by value for Counter/Gauge
-// TODO: Get rid of inheritence
-// TODO: Removal of reported metric
-// TODO: Corner cases
-// TODO: Multithreading, test for possible data race
-// TODO: License
+// // TODO: Increase/decrease by value for Counter/Gauge
+// // TODO: Removal of reported metric
+// // TODO: Corner cases
+// // TODO: Multithreading, test for possible data race
+// // TODO: License

@@ -25,14 +25,22 @@
 
 namespace ovms {
 
+class MetricFamilyBase;
+template <typename T>
 class MetricFamily;
+
 class MetricRegistry {
-    std::vector<std::shared_ptr<MetricFamily>> families;
+    std::vector<std::shared_ptr<MetricFamilyBase>> families;
 
 public:
     MetricRegistry();
 
-    std::shared_ptr<MetricFamily> createFamily(MetricKind kind, const std::string& name, const std::string& description);
+    template <typename T>
+    std::shared_ptr<MetricFamily<T>> createFamily(MetricKind kind, const std::string& name, const std::string& description) {
+        std::shared_ptr<MetricFamilyBase> family = std::make_shared<MetricFamily<T>>(kind, name, description, this->registryImpl);
+        this->families.emplace_back(family);
+        return std::dynamic_pointer_cast<MetricFamily<T>>(family);
+    }
 
     // Returns all collected metrics in "Prometheus Text Exposition Format".
     std::string collect() const;

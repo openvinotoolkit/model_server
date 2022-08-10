@@ -23,9 +23,9 @@ namespace ovms {
 
 MetricRegistry::MetricRegistry() = default;
 
-std::shared_ptr<MetricFamily> MetricRegistry::createFamily(MetricKind kind, const std::string& name, const std::string& description) {
-    return this->families.emplace_back(std::make_shared<MetricFamily>(kind, name, description, this->registryImpl));
-}
+// std::shared_ptr<MetricFamily> MetricRegistry::createFamily(MetricKind kind, const std::string& name, const std::string& description) {
+//     return this->families.emplace_back(std::make_shared<MetricFamily>(kind, name, description, this->registryImpl));
+// }
 
 std::string MetricRegistry::collect() const {
     prometheus::TextSerializer serializer;
