@@ -24,10 +24,6 @@ namespace ovms {
 Metric::Metric(const Labels& labels) :
     labels(labels) {}
 
-bool Metric::hasLabel(const std::string& label) const {
-    return this->labels.find(label) != this->labels.end();
-}
-
 /// Counter implementation
 
 MetricCounter::MetricCounter(const Labels& labels, prometheus::Counter& counterImpl) :
@@ -37,14 +33,6 @@ MetricCounter::MetricCounter(const Labels& labels, prometheus::Counter& counterI
 void MetricCounter::increment() {
     this->counterImpl.Increment();
 }
-
-// void MetricCounter::decrement() {
-//     throw std::logic_error("cannot decrement counter");
-// }
-
-// void MetricCounter::observe(double value) {
-//     throw std::logic_error("cannot observe counter");
-// }
 
 /// Gauge implementation
 
@@ -60,24 +48,12 @@ void MetricGauge::decrement() {
     this->gaugeImpl.Decrement();
 }
 
-// void MetricGauge::observe(double value) {
-//     throw std::logic_error("cannot observe gauge");
-// }
-
 /// Histogram implementation
 
 MetricHistogram::MetricHistogram(const Labels& labels, const BucketBoundaries& bucketBoundaries, prometheus::Histogram& histogramImpl) :
     Metric(labels),
     bucketBoundaries(bucketBoundaries),
     histogramImpl(histogramImpl) {}
-
-// void MetricHistogram::increment() {
-//     throw std::logic_error("cannot increment histogram");
-// }
-
-// void MetricHistogram::decrement() {
-//     throw std::logic_error("cannot decrement histogram");
-// }
 
 void MetricHistogram::observe(double value) {
     this->histogramImpl.Observe(value);

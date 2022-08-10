@@ -33,22 +33,17 @@ public:
     using BucketBoundaries = std::vector<double>;
 
 private:
-    Labels labels;
+    Labels labels;  // TODO: Remove?
 
 public:
     Metric(const Labels& labels);
-
-    bool hasLabel(const std::string& label) const;
-
-    // virtual void increment() = 0;
-    // virtual void decrement() = 0;
-    // virtual void observe(double value) = 0;
 };
 
 class MetricCounter : public Metric {
 public:
     MetricCounter(const Labels& labels, prometheus::Counter& counterImpl);
 
+    // API
     void increment();
 
 private:
@@ -60,6 +55,7 @@ class MetricGauge : public Metric {
 public:
     MetricGauge(const Labels& labels, prometheus::Gauge& gaugeImpl);
 
+    // API
     void increment();
     void decrement();
 
@@ -74,6 +70,7 @@ class MetricHistogram : public Metric {
 public:
     MetricHistogram(const Labels& labels, const BucketBoundaries& bucketBoundaries, prometheus::Histogram& histogramImpl);
 
+    // API
     void observe(double value);
 
 private:
