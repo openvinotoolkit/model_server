@@ -15,30 +15,11 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
-#include <string>
-#include <vector>
-
-#include <prometheus/registry.h>
-
-#include "metric_kind.hpp"
-
 namespace ovms {
 
-class MetricFamily;
-class MetricRegistry {
-    std::vector<std::shared_ptr<MetricFamily>> families;
-
-public:
-    MetricRegistry();
-
-    std::shared_ptr<MetricFamily> createFamily(MetricKind kind, const std::string& name, const std::string& description);
-
-    std::string collect() const;
-
-private:
-    // Prometheus internals
-    prometheus::Registry registryImpl;
+enum class MetricKind {
+    COUNTER,
+    GAUGE
 };
 
 }  // namespace ovms

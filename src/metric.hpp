@@ -15,30 +15,50 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
+#include <map>
 #include <string>
-#include <vector>
 
-#include <prometheus/registry.h>
-
-#include "metric_kind.hpp"
+namespace prometheus {
+class Counter;
+class Gauge;
+}  // namespace prometheus
 
 namespace ovms {
 
-class MetricFamily;
-class MetricRegistry {
-    std::vector<std::shared_ptr<MetricFamily>> families;
+class Metric {
+    std::map<std::string, std::string> labels;
 
 public:
-    MetricRegistry();
+    Metric(const std::map<std::string, std::string>& labels);
 
-    std::shared_ptr<MetricFamily> createFamily(MetricKind kind, const std::string& name, const std::string& description);
+    bool hasLabel(const std::string& label) const;
 
-    std::string collect() const;
+    virtual void increment() = 0;
+    virtual void decrement() = 0;
+};
+
+class MetricCounter : public Metric {
+public:
+    MetricCounter(const std::map<std::string, std::string>& labels, prometheus::Counter& counterImpl);
+
+    void increment() override;
+    void decrement() override;
 
 private:
     // Prometheus internals
-    prometheus::Registry registryImpl;
+    prometheus::Counter& counterImpl;
+};
+
+class MetricGauge : public Metric {
+public:
+    MetricGauge(const std::map<std::string, std::string>& labels, prometheus::Gauge& gaugeImpl);
+
+    void increment() override;
+    void decrement() override;
+
+private:
+    // Prometheus internals
+    prometheus::Gauge& gaugeImpl;
 };
 
 }  // namespace ovms

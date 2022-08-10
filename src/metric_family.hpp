@@ -15,30 +15,37 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include <prometheus/registry.h>
-
 #include "metric_kind.hpp"
+
+namespace prometheus {
+class Registry;
+}
 
 namespace ovms {
 
-class MetricFamily;
-class MetricRegistry {
-    std::vector<std::shared_ptr<MetricFamily>> families;
+class Metric;
+class MetricFamily {
+    MetricKind kind;
+    std::string name, description;
+    std::vector<std::shared_ptr<Metric>> metrics;
 
 public:
-    MetricRegistry();
+    MetricFamily(MetricKind kind, const std::string& name, const std::string& description, prometheus::Registry& registryImplRef);
 
-    std::shared_ptr<MetricFamily> createFamily(MetricKind kind, const std::string& name, const std::string& description);
+    MetricKind getKind() const;
+    const std::string& getName() const;
+    const std::string& getDesc() const;
 
-    std::string collect() const;
+    std::shared_ptr<Metric> addMetric(const std::map<std::string, std::string>& labels);
 
 private:
     // Prometheus internals
-    prometheus::Registry registryImpl;
+    prometheus::Registry& registryImplRef;
 };
 
 }  // namespace ovms
