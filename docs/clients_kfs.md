@@ -8,9 +8,7 @@
     <div id="switcher-python" class="switcher-anchor">Python</div>
 @endsphinxdirective
 
-@sphinxdirective
-
-When creating a Python-based client application, you can use Triton client library- [tritonclient](https://pypi.org/project/tritonclient/).
+When creating a Python-based client application, you can use Triton client library - [tritonclient](https://pypi.org/project/tritonclient/).
 
 ### Install the Package
 @sphinxdirective
@@ -56,9 +54,6 @@ When creating a Python-based client application, you can use Triton client libra
         
 @endsphinxdirective
 
-
-@endsphinxdirective
-
 ### Request Model Metadata
 
 @sphinxdirective
@@ -76,21 +71,16 @@ When creating a Python-based client application, you can use Triton client libra
 
 @sphinxdirective
 
-.. tab:: ovmsclient
-
 .. code-block:: python
 
         import numpy as np
         import tritonclient.grpc as grpcclient
 
         client = grpcclient.InferenceServerClient("localhost:9000")
-        inputs = []
         data = np.array([1.0, 2.0, ..., 1000.0])
         infer_input = grpcclient.InferInput("input_name", data.shape, "FP32")
         infer_input.set_data_from_numpy(data)
-        inputs.append(infer_input)
-        results = client.infer("model_name", inputs)
-
+        results = client.infer("model_name", [infer_input])
 
 @endsphinxdirective
 
