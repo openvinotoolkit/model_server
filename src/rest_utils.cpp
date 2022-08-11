@@ -220,8 +220,21 @@ Status makeJsonFromPredictResponse(
         for (const auto& parameter : response_proto.parameters()) {
             rapidjson::Value param_value, param_key;
             param_key = rapidjson::StringRef(parameter.first.c_str());
-            param_value = rapidjson::StringRef(parameter.second.string_param().c_str());
-            response.AddMember(parameter.first.c_str(), param_value, response.GetAllocator());
+            switch(parameter.second.parameter_choice_case())
+            {
+                case inference::InferParameter::ParameterChoiceCase::kBoolParam:
+                    param_value = parameter.second.bool_param();
+                    break;
+                case inference::InferParameter::ParameterChoiceCase::kInt64Param:
+                    param_value = parameter.second.int64_param();
+                    break;
+                case inference::InferParameter::ParameterChoiceCase::kStringParam:
+                    param_value = rapidjson::StringRef(parameter.second.string_param().c_str());
+                    break;
+                default:
+                    break; //return param error
+            }
+            parameters.AddMember(param_key, param_value, response.GetAllocator());
         }
         response.AddMember("parameters", parameters, response.GetAllocator());
     }
@@ -250,6 +263,31 @@ Status makeJsonFromPredictResponse(
         output.AddMember("shape", tensor_shape, response.GetAllocator());
         output.AddMember("datatype", tensor_datatype, response.GetAllocator());
 
+        if(tensor.parameters_size() > 0)
+        {   
+            rapidjson::Value parameters(rapidjson::kArrayType);
+
+            for (const auto& parameter : tensor.parameters()) {
+                rapidjson::Value param_value, param_key;
+                param_key = rapidjson::StringRef(parameter.first.c_str());
+                switch(parameter.second.parameter_choice_case())
+                {
+                    case inference::InferParameter::ParameterChoiceCase::kBoolParam:
+                        param_value = parameter.second.bool_param();
+                        break;
+                    case inference::InferParameter::ParameterChoiceCase::kInt64Param:
+                        param_value = parameter.second.int64_param();
+                        break;
+                    case inference::InferParameter::ParameterChoiceCase::kStringParam:
+                        param_value = rapidjson::StringRef(parameter.second.string_param().c_str());
+                        break;
+                    default:
+                        break; //return param error
+                }
+                parameters.AddMember(param_key, param_value, response.GetAllocator());
+            }
+            output.AddMember("parameters", parameters, response.GetAllocator());
+        }
 
         if(tensor.datatype() == "FP32") {
             if (seekDataInValField) {
