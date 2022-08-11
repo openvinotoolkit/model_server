@@ -66,7 +66,7 @@ TEST(MetricsCounter, DISABLED_IncrementRemoved) {
     auto metric = family->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
     family->remove(metric);
-    metric->increment(24.43);
+    metric->increment(24.43);  // Not allowed, removing metric from family invalidates the metric.
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
 }
 
@@ -165,6 +165,16 @@ TEST(MetricsGauge, Increment) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 38\n"));
 }
 
+TEST(MetricsGauge, DISABLED_IncrementRemoved) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricGauge>("name", "desc");
+    auto metric = family->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    family->remove(metric);
+    metric->increment(24.43);
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
+}
+
 TEST(MetricsGauge, IncrementNegativeAmount) {
     MetricRegistry registry;
     auto metric = registry.createFamily<MetricGauge>("name", "desc")->addMetric({{"label", "value"}});
@@ -191,6 +201,16 @@ TEST(MetricsGauge, Decrement) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} -24.43\n"));
     metric->decrement(13.57);
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} -38\n"));
+}
+
+TEST(MetricsGauge, DISABLED_DecrementRemoved) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricGauge>("name", "desc");
+    auto metric = family->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    family->remove(metric);
+    metric->decrement(24.43);
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
 }
 
 TEST(MetricsGauge, DecrementNegativeAmount) {
@@ -284,6 +304,16 @@ TEST(MetricsHistogram, Observe) {
     EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"} 3\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("name_count{label=\"value\"} 3\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("name_sum{label=\"value\"} 17.01\n"));
+}
+
+TEST(MetricsHistogram, DISABLED_ObserveRemoved) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricHistogram>("name", "desc");
+    auto metric = family->addMetric({{"label", "value"}}, {1.0, 10.0});
+    EXPECT_THAT(registry.collect(), HasSubstr("name_sum{label=\"value\"} 0\n"));
+    family->remove(metric);
+    metric->observe(0.01);
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{label=\"value\"}")));
 }
 
 TEST(MetricsHistogram, RemoveMetric) {
