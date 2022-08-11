@@ -47,13 +47,12 @@ public:
 
     std::shared_ptr<MetricType> addMetric(const std::map<std::string, std::string>& labels = {}, const std::vector<double>& bucketBoundaries = {});
 
-    bool remove(std::shared_ptr<MetricType> metric) {
-        return false;
-    }
+    bool remove(std::shared_ptr<MetricType> metric);
 
 private:
     // Prometheus internals
     prometheus::Registry& registryImplRef;
+    void* familyImplRef;
 };
 
 }  // namespace ovms

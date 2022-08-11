@@ -26,32 +26,53 @@ namespace ovms {
 
 template <>
 std::shared_ptr<MetricCounter> MetricFamily<MetricCounter>::addMetric(const Metric::Labels& labels, const Metric::BucketBoundaries& bucketBoundaries) {
-    prometheus::Counter& counterImpl = prometheus::BuildCounter()
-                                           .Name(this->getName())
-                                           .Help(this->getDesc())
-                                           .Register(this->registryImplRef)
-                                           .Add(labels);
+    prometheus::Family<prometheus::Counter>& familyImpl = prometheus::BuildCounter()
+                                                .Name(this->getName())
+                                                .Help(this->getDesc())
+                                                .Register(this->registryImplRef);
+    this->familyImplRef = (void*) & familyImpl;
+    prometheus::Counter& counterImpl = familyImpl.Add(labels);
     return this->metrics.emplace_back(std::make_shared<MetricCounter>(labels, counterImpl));
 }
 
 template <>
 std::shared_ptr<MetricGauge> MetricFamily<MetricGauge>::addMetric(const Metric::Labels& labels, const Metric::BucketBoundaries& bucketBoundaries) {
-    prometheus::Gauge& gaugeImpl = prometheus::BuildGauge()
-                                       .Name(this->getName())
-                                       .Help(this->getDesc())
-                                       .Register(this->registryImplRef)
-                                       .Add(labels);
+    prometheus::Family<prometheus::Gauge>& familyImpl = prometheus::BuildGauge()
+                                                            .Name(this->getName())
+                                                            .Help(this->getDesc())
+                                                            .Register(this->registryImplRef);
+    this->familyImplRef = (void*) & familyImpl;
+    prometheus::Gauge& gaugeImpl = familyImpl.Add(labels);
     return this->metrics.emplace_back(std::make_shared<MetricGauge>(labels, gaugeImpl));
 }
 
 template <>
 std::shared_ptr<MetricHistogram> MetricFamily<MetricHistogram>::addMetric(const Metric::Labels& labels, const Metric::BucketBoundaries& bucketBoundaries) {
-    prometheus::Histogram& histogramImpl = prometheus::BuildHistogram()
-                                               .Name(this->getName())
-                                               .Help(this->getDesc())
-                                               .Register(this->registryImplRef)
-                                               .Add(labels, bucketBoundaries);
+    prometheus::Family<prometheus::Histogram>& familyImpl = prometheus::BuildHistogram()
+                                                            .Name(this->getName())
+                                                            .Help(this->getDesc())
+                                                            .Register(this->registryImplRef);
+    this->familyImplRef = (void*) & familyImpl;
+    prometheus::Histogram& histogramImpl = familyImpl.Add(labels, bucketBoundaries);
     return this->metrics.emplace_back(std::make_shared<MetricHistogram>(labels, bucketBoundaries, histogramImpl));
+}
+
+template <>
+bool MetricFamily<MetricCounter>::remove(std::shared_ptr<MetricCounter> metric) {
+    ((prometheus::Family<prometheus::Counter>*) this->familyImplRef)->Remove(&metric->counterImpl);
+    return true;
+}
+
+template <>
+bool MetricFamily<MetricGauge>::remove(std::shared_ptr<MetricGauge> metric) {
+    ((prometheus::Family<prometheus::Gauge>*) this->familyImplRef)->Remove(&metric->gaugeImpl);
+    return true;
+}
+
+template <>
+bool MetricFamily<MetricHistogram>::remove(std::shared_ptr<MetricHistogram> metric) {
+    ((prometheus::Family<prometheus::Histogram>*) this->familyImplRef)->Remove(&metric->histogramImpl);
+    return true;
 }
 
 }  // namespace ovms

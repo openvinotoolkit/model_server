@@ -27,6 +27,8 @@ class Histogram;
 
 namespace ovms {
 
+template <typename T> class MetricFamily;
+
 class Metric {
 public:
     using Labels = std::map<std::string, std::string>;
@@ -49,6 +51,8 @@ public:
 private:
     // Prometheus internals
     prometheus::Counter& counterImpl;
+
+    friend class MetricFamily<MetricCounter>;
 };
 
 class MetricGauge : public Metric {
@@ -62,6 +66,8 @@ public:
 private:
     // Prometheus internals
     prometheus::Gauge& gaugeImpl;
+
+    friend class MetricFamily<MetricGauge>;
 };
 
 class MetricHistogram : public Metric {
@@ -76,6 +82,8 @@ public:
 private:
     // Prometheus internals
     prometheus::Histogram& histogramImpl;
+
+    friend class MetricFamily<MetricHistogram>;
 };
 
 }  // namespace ovms

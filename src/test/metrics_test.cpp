@@ -82,8 +82,8 @@ TEST(MetricsCounter, RemoveMetric) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("name{other=\"data\"} 0\n"));
     EXPECT_TRUE(family->remove(metric1));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
     EXPECT_THAT(registry.collect(), HasSubstr("name{other=\"data\"}"));
 }
@@ -204,8 +204,8 @@ TEST(MetricsGauge, RemoveMetric) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("name{other=\"data\"} 0\n"));
     EXPECT_TRUE(family->remove(metric1));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
     EXPECT_THAT(registry.collect(), HasSubstr("name{other=\"data\"}"));
 }
@@ -300,6 +300,8 @@ TEST(MetricsHistogram, RemoveMetric) {
     EXPECT_THAT(registry.collect(), HasSubstr("name_sum{other=\"data\"} 0\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("name_count{other=\"data\"} 0\n"));
     EXPECT_TRUE(family->remove(metric1));
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"10\"}")));
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"}")));
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{label=\"value\"}")));
