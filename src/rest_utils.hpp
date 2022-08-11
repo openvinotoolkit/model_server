@@ -20,6 +20,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
 #pragma GCC diagnostic pop
 
 #include "rest_parser.hpp"
@@ -30,6 +31,10 @@ Status makeJsonFromPredictResponse(
     tensorflow::serving::PredictResponse& response_proto,
     std::string* response_json,
     Order order);
+
+Status makeJsonFromPredictResponse(
+    const ::inference::ModelInferResponse& response_proto,
+    std::string* response_json);
 
 Status decodeBase64(std::string& bytes, std::string& decodedBytes);
 
