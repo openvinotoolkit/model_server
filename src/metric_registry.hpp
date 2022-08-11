@@ -40,6 +40,11 @@ public:
         return std::dynamic_pointer_cast<MetricFamily<MetricType>>(family);
     }
 
+    template <typename MetricType>
+    bool remove(std::shared_ptr<MetricFamily<MetricType>> family) {
+        return false;
+    }
+
     // Returns all collected metrics in "Prometheus Text Exposition Format".
     std::string collect() const;
 

@@ -26,6 +26,7 @@ using namespace ovms;
 
 using testing::ContainsRegex;
 using testing::HasSubstr;
+using testing::Not;
 
 TEST(MetricsCommon, FamilyName) {
     MetricRegistry registry;
@@ -65,6 +66,72 @@ TEST(MetricsCounter, IncrementNegative) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
     metric->increment(-24.43);
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+}
+
+TEST(MetricsCounter, RemoveMetric) {
+    MetricRegistry registry;
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{other=\"data\"}")));
+    auto family = registry.createFamily<MetricCounter>("name", "desc");
+    auto metric1 = family->addMetric({{"label", "value"}});
+    auto metric2 = family->addMetric({{"other", "data"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name{other=\"data\"} 0\n"));
+    EXPECT_TRUE(family->remove(metric1));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), HasSubstr("name{other=\"data\"}"));
+}
+
+TEST(MetricsCounter, RemoveRemovedMetric) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricCounter>("name", "desc");
+    auto metric = family->addMetric({{"label", "value"}});
+    EXPECT_TRUE(family->remove(metric));
+    EXPECT_FALSE(family->remove(metric));
+}
+
+TEST(MetricsCounter, RemoveFamily) {
+    MetricRegistry registry;
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP fam")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE fam")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{other=\"data\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("fam{other=\"data\"}")));
+    auto family1 = registry.createFamily<MetricCounter>("name", "desc");
+    auto family2 = registry.createFamily<MetricCounter>("fam", "desc");
+    auto metric1 = family1->addMetric({{"label", "value"}});
+    auto metric2 = family1->addMetric({{"other", "data"}});
+    auto metric3 = family2->addMetric({{"other", "data"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP fam"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE fam"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name{other=\"data\"} 0"));
+    EXPECT_THAT(registry.collect(), HasSubstr("fam{other=\"data\"} 0"));
+    EXPECT_TRUE(registry.remove(family1));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP fam"));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE fam"));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{other=\"data\"}")));
+    EXPECT_THAT(registry.collect(), HasSubstr("fam{other=\"data\"}"));
+}
+
+TEST(MetricsCounter, RemoveRemovedFamily) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricCounter>("name", "desc");
+    EXPECT_TRUE(registry.remove(family));
+    EXPECT_FALSE(registry.remove(family));
 }
 
 TEST(MetricsGauge, IncrementDefault) {
@@ -123,6 +190,72 @@ TEST(MetricsGauge, DecrementNegative) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 24.43\n"));
 }
 
+TEST(MetricsGauge, RemoveMetric) {
+    MetricRegistry registry;
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{other=\"data\"}")));
+    auto family = registry.createFamily<MetricGauge>("name", "desc");
+    auto metric1 = family->addMetric({{"label", "value"}});
+    auto metric2 = family->addMetric({{"other", "data"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name{other=\"data\"} 0\n"));
+    EXPECT_TRUE(family->remove(metric1));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), HasSubstr("name{other=\"data\"}"));
+}
+
+TEST(MetricsGauge, RemoveRemovedMetric) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricGauge>("name", "desc");
+    auto metric = family->addMetric({{"label", "value"}});
+    EXPECT_TRUE(family->remove(metric));
+    EXPECT_FALSE(family->remove(metric));
+}
+
+TEST(MetricsGauge, RemoveFamily) {
+    MetricRegistry registry;
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP fam")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE fam")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{other=\"data\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("fam{other=\"data\"}")));
+    auto family1 = registry.createFamily<MetricGauge>("name", "desc");
+    auto family2 = registry.createFamily<MetricGauge>("fam", "desc");
+    auto metric1 = family1->addMetric({{"label", "value"}});
+    auto metric2 = family1->addMetric({{"other", "data"}});
+    auto metric3 = family2->addMetric({{"other", "data"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP fam"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE fam"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name{other=\"data\"} 0"));
+    EXPECT_THAT(registry.collect(), HasSubstr("fam{other=\"data\"} 0"));
+    EXPECT_TRUE(registry.remove(family1));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP fam"));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE fam"));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{other=\"data\"}")));
+    EXPECT_THAT(registry.collect(), HasSubstr("fam{other=\"data\"}"));
+}
+
+TEST(MetricsGauge, RemoveRemovedFamily) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricGauge>("name", "desc");
+    EXPECT_TRUE(registry.remove(family));
+    EXPECT_FALSE(registry.remove(family));
+}
+
 TEST(MetricsHistogram, Observe) {
     MetricRegistry registry;
     auto metric = registry.createFamily<MetricHistogram>("name", "desc")->addMetric({{"label", "value"}}, {1.0, 10.0});
@@ -139,6 +272,115 @@ TEST(MetricsHistogram, Observe) {
     EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"} 3\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("name_count{label=\"value\"} 3\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("name_sum{label=\"value\"} 17.01\n"));
+}
+
+TEST(MetricsHistogram, RemoveMetric) {
+    MetricRegistry registry;
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"10\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_count{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{other=\"data\",le=\"10\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{other=\"data\",le=\"+Inf\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{other=\"data\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_count{other=\"data\"}")));
+    auto family = registry.createFamily<MetricHistogram>("name", "desc");
+    auto metric1 = family->addMetric({{"label", "value"}}, {10});
+    auto metric2 = family->addMetric({{"other", "data"}}, {10});
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"10\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_sum{label=\"value\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_count{label=\"value\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{other=\"data\",le=\"10\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{other=\"data\",le=\"+Inf\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_sum{other=\"data\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_count{other=\"data\"} 0\n"));
+    EXPECT_TRUE(family->remove(metric1));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"10\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_count{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{other=\"data\",le=\"10\"}"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{other=\"data\",le=\"+Inf\"}"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_sum{other=\"data\"}"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_count{other=\"data\"}"));
+}
+
+TEST(MetricsHistogram, RemoveRemovedMetric) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricHistogram>("name", "desc");
+    auto metric = family->addMetric({{"label", "value"}});
+    EXPECT_TRUE(family->remove(metric));
+    EXPECT_FALSE(family->remove(metric));
+}
+
+TEST(MetricsHistogram, RemoveFamily) {
+    MetricRegistry registry;
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP fam")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE fam")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"10\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_count{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{other=\"data\",le=\"10\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{other=\"data\",le=\"+Inf\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{other=\"data\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_count{other=\"data\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("fam_bucket{other=\"data\",le=\"10\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("fam_bucket{other=\"data\",le=\"+Inf\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("fam_sum{other=\"data\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("fam_count{other=\"data\"}")));
+    auto family1 = registry.createFamily<MetricHistogram>("name", "desc");
+    auto family2 = registry.createFamily<MetricHistogram>("fam", "desc");
+    auto metric1 = family1->addMetric({{"label", "value"}}, {10});
+    auto metric2 = family1->addMetric({{"other", "data"}}, {10});
+    auto metric3 = family2->addMetric({{"other", "data"}}, {10});
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP fam"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE fam"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"10\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_sum{label=\"value\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_count{label=\"value\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{other=\"data\",le=\"10\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{other=\"data\",le=\"+Inf\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_sum{other=\"data\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_count{other=\"data\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("fam_bucket{other=\"data\",le=\"10\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("fam_bucket{other=\"data\",le=\"+Inf\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("fam_sum{other=\"data\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("fam_count{other=\"data\"} 0\n"));
+    EXPECT_TRUE(registry.remove(family1));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP fam"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE fam"));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"10\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_count{label=\"value\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{other=\"data\",le=\"10\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{other=\"data\",le=\"+Inf\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{other=\"data\"}")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_count{other=\"data\"}")));
+    EXPECT_THAT(registry.collect(), HasSubstr("fam_bucket{other=\"data\",le=\"10\"}"));
+    EXPECT_THAT(registry.collect(), HasSubstr("fam_bucket{other=\"data\",le=\"+Inf\"}"));
+    EXPECT_THAT(registry.collect(), HasSubstr("fam_sum{other=\"data\"}"));
+    EXPECT_THAT(registry.collect(), HasSubstr("fam_count{other=\"data\"}"));
+}
+
+TEST(MetricsHistogram, RemoveRemovedFamily) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricHistogram>("name", "desc");
+    EXPECT_TRUE(registry.remove(family));
+    EXPECT_FALSE(registry.remove(family));
 }
 
 TEST(MetricsFlow, Counter) {
