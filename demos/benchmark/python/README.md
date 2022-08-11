@@ -48,6 +48,7 @@ workspace
 
 To build the docker image and tag it as `benchmark_client` run:
 ```
+git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/benchmark/python
 docker build . -t benchmark_client
 ```
@@ -55,7 +56,7 @@ docker build . -t benchmark_client
 ## Selected Commands
 
 To check available options use `-h`, `--help` switches:
-```bash
+```
   docker run benchmark_client --help
 
   [-h] [-i ID] [-c CONCURRENCY] [-a SERVER_ADDRESS]
