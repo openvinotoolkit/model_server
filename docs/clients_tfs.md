@@ -17,13 +17,13 @@ When creating a Python-based client application, there are two packages on PyPi 
 
 .. tab:: ovmsclient  
 
-.. code-block:: sh
+    .. code-block:: sh
 
         pip3 install ovmsclient 
 
 .. tab:: tensorflow-serving-api  
 
-.. code-block:: sh  
+    .. code-block:: sh  
 
         pip3 install tensorflow-serving-api 
 
@@ -35,7 +35,7 @@ When creating a Python-based client application, there are two packages on PyPi 
 
 .. tab:: ovmsclient
 
-.. code-block:: python
+    .. code-block:: python
 
         from ovmsclient import make_grpc_client
 
@@ -45,7 +45,7 @@ When creating a Python-based client application, there are two packages on PyPi 
 
 .. tab:: tensorflow-serving-api
 
-.. code-block:: python
+    .. code-block:: python
 
         import grpc
         from tensorflow_serving.apis import model_service_pb2_grpc, get_model_status_pb2
@@ -76,7 +76,7 @@ When creating a Python-based client application, there are two packages on PyPi 
 
 .. tab:: ovmsclient
 
-.. code-block:: python
+    .. code-block:: python
 
         from ovmsclient import make_grpc_client
 
@@ -86,7 +86,7 @@ When creating a Python-based client application, there are two packages on PyPi 
 
 .. tab:: tensorflow-serving-api
 
-.. code-block:: python
+    .. code-block:: python
 
         import grpc
         from tensorflow_serving.apis import prediction_service_pb2_grpc, get_model_metadata_pb2
@@ -137,7 +137,7 @@ When creating a Python-based client application, there are two packages on PyPi 
 
 .. tab:: ovmsclient
 
-.. code-block:: python
+    .. code-block:: python
 
         from ovmsclient import make_grpc_client
 
@@ -150,7 +150,7 @@ When creating a Python-based client application, there are two packages on PyPi 
 
 .. tab:: tensorflow-serving-api
 
-.. code-block:: python
+    .. code-block:: python
 
         import grpc
         from tensorflow_serving.apis import prediction_service_pb2_grpc, predict_pb2
@@ -175,7 +175,7 @@ When creating a Python-based client application, there are two packages on PyPi 
 
 .. tab:: ovmsclient
 
-.. code-block:: python
+    .. code-block:: python
 
         import numpy as np
         from ovmsclient import make_grpc_client
@@ -188,7 +188,7 @@ When creating a Python-based client application, there are two packages on PyPi 
 
 .. tab:: tensorflow-serving-api  
 
-.. code-block:: python
+    .. code-block:: python
 
         import grpc
         from tensorflow_serving.apis import prediction_service_pb2_grpc, predict_pb2

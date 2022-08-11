@@ -18,7 +18,7 @@ Get information about server liveness.
 
 **URL**
 
-```Bash
+```
 GET http://${REST_URL}:${REST_PORT}/v2/health/live
 ```
 
@@ -27,7 +27,7 @@ GET http://${REST_URL}:${REST_PORT}/v2/health/live
 The information about server liveness is provided in the response status code. If server is alive, status code is 200. Otherwise it's 4xx. Response does not have any content in the body.
 
 **Usage Example**
-```Bash
+```
 $ curl -i http://localhost:5000/v2/health/live
 
 HTTP/1.1 200 OK
@@ -45,7 +45,7 @@ Get information about server readiness.
 
 **URL**
 
-```Bash
+```
 GET http://${REST_URL}:${REST_PORT}/v2/health/ready
 ```
 
@@ -54,7 +54,7 @@ GET http://${REST_URL}:${REST_PORT}/v2/health/ready
 The information about server readiness is provided in the response status code. If server is ready, status code is 200. Otherwise it's 4xx. Response does not have any content in the body.
 
 **Usage Example**
-```Bash
+```
 $ curl -i http://localhost:5000/v2/health/ready
 
 HTTP/1.1 200 OK
@@ -72,7 +72,7 @@ Get information about the server.
 
 **URL**
 
-```Bash
+```
 GET http://${REST_URL}:${REST_PORT}/v2
 ```
 
@@ -80,7 +80,7 @@ GET http://${REST_URL}:${REST_PORT}/v2
 
 If successful:
 
-```json
+```JSON
 {
   "name" : $string,
   "version" : $string,
@@ -89,14 +89,14 @@ If successful:
 ```
 
 Else:
-```json
+```JSON
 {
   "error": $string
 }
 ```
 
 **Usage Example**
-```Bash
+```
 $ curl http://localhost:5000/v2
 
 TO DO...
@@ -113,7 +113,7 @@ Get information about model readiness.
 
 **URL**
 
-```Bash
+```
 GET http://${REST_URL}:${REST_PORT}/v2/models/${MODEL_NAME}[/versions/${MODEL_VERSION}]/ready
 ```
 
@@ -122,7 +122,7 @@ GET http://${REST_URL}:${REST_PORT}/v2/models/${MODEL_NAME}[/versions/${MODEL_VE
 The information about model readiness is provided in the response status code. If model is ready for inference, status code is 200. Otherwise it's 4xx. Response does not have any content in the body.
 
 **Usage Example**
-```Bash
+```
 $ curl -i http://localhost:5000/v2/models/resnet/ready
 
 HTTP/1.1 200 OK
@@ -141,7 +141,7 @@ See also [code samples](https://github.com/openvinotoolkit/model_server/blob/rel
 Get information about the model.
 
 **URL**
-```Bash
+```
 GET http://${REST_URL}:${REST_PORT}/v2/models/${MODEL_NAME}[/versions/${MODEL_VERSION}]
 ```
 
@@ -150,7 +150,7 @@ GET http://${REST_URL}:${REST_PORT}/v2/models/${MODEL_NAME}[/versions/${MODEL_VE
 **Response format**
 
 If successful:
-```json
+```JSON
 {
   "name" : $string,
   "versions" : [ $string, ... ] #optional,
@@ -161,7 +161,7 @@ If successful:
 ```
 
 where:
-```json
+```JSON
 $metadata_tensor =
 {
   "name" : $string,
@@ -171,14 +171,14 @@ $metadata_tensor =
 ```
 
 Else:
-```json
+```JSON
 {
   "error": $string
 }
 ```
 
 **Usage example**
-```Bash
+```
 $ curl http://localhost:5000/v1/models/person-detection/versions/1/metadata
 
 TODO...
@@ -200,7 +200,7 @@ POST http://${REST_URL}:${REST_PORT}/v2/models/${MODEL_NAME}[/versions/${MODEL_V
 ```
 
 **Request Body Format**
-```json
+```JSON
 {
   "id" : $string #optional,
   "parameters" : $parameters #optional,
@@ -210,7 +210,7 @@ POST http://${REST_URL}:${REST_PORT}/v2/models/${MODEL_NAME}[/versions/${MODEL_V
 ``` 
 
 where:
-```json
+```JSON
 $request_input =
 {
   "name" : $string,
@@ -231,7 +231,7 @@ $request_output =
 
 If successful:
 
-```json
+```JSON
 {
   "model_name" : $string,
   "model_version" : $string #optional,
@@ -242,7 +242,7 @@ If successful:
 ```
 
 where:
-```json
+```JSON
 $response_output =
 {
   "name" : $string,
@@ -255,7 +255,7 @@ $response_output =
 
 Else:
 
-```json
+```JSON
 {
   "error": <error message string>
 }

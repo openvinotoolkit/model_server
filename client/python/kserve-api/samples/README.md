@@ -23,14 +23,15 @@ This guide shows how to interact with KServe API endpoints on both gRPC and HTTP
 ## Before you run the samples
 
 ### Clone OpenVINO&trade; Model Server GitHub repository and enter model_server directory.
-```
+```Bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 ```
 ### Download the Pretrained Model
 Download the model files and store them in the `models` directory
 ```Bash
-curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
+mkdir -p models/resnet/1
+curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
 ```
 
 ### Pull the Latest Model Server Image
@@ -388,7 +389,7 @@ python3 ./http_model_metadata.py --http_port 5000 --http_address localhost --mod
 TODO
 ```
 
-### Run the Client to get model metadata <a name="http-model-infer"></a>
+### Run the Client to perform inference <a name="http-model-infer"></a>
 
 - Command
 

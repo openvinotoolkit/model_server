@@ -31,15 +31,15 @@ GET http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VER
 **Response format**
 
 If successful, returns a JSON of following format :
-```
+```JSON
 {
-  'model_version_status':[
+  "model_version_status":[
     {
-      'version': <model version>|<string>,
-      'state': <model state>|<string>,
-      'status': {
-        'error_code': <error code>|<string>,
-        'error_message': <error message>|<string>
+      "version": <model version>|<string>,
+      "state": <model state>|<string>,
+      "status": {
+        "error_code": <error code>|<string>,
+        "error_message": <error message>|<string>
       }
     }
   ]
