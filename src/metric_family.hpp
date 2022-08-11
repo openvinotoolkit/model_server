@@ -36,7 +36,7 @@ public:
 template <typename MetricType>
 class MetricFamily : public MetricFamilyBase {
     std::string name, description;
-    std::vector<std::shared_ptr<MetricType>> metrics;
+    //std::vector<std::shared_ptr<MetricType>> metrics;
 
 public:
     MetricFamily(const std::string& name, const std::string& description, prometheus::Registry& registryImplRef) :

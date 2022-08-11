@@ -60,7 +60,17 @@ TEST(MetricsCounter, Increment) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 38\n"));
 }
 
-TEST(MetricsCounter, IncrementNegative) {
+TEST(MetricsCounter, DISABLED_IncrementRemoved) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricCounter>("name", "desc");
+    auto metric = family->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    family->remove(metric);
+    metric->increment(24.43);
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
+}
+
+TEST(MetricsCounter, IncrementNegativeAmount) {
     MetricRegistry registry;
     auto metric = registry.createFamily<MetricCounter>("name", "desc")->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
@@ -155,7 +165,7 @@ TEST(MetricsGauge, Increment) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 38\n"));
 }
 
-TEST(MetricsGauge, IncrementNegative) {
+TEST(MetricsGauge, IncrementNegativeAmount) {
     MetricRegistry registry;
     auto metric = registry.createFamily<MetricGauge>("name", "desc")->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
@@ -183,7 +193,7 @@ TEST(MetricsGauge, Decrement) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} -38\n"));
 }
 
-TEST(MetricsGauge, DecrementNegative) {
+TEST(MetricsGauge, DecrementNegativeAmount) {
     MetricRegistry registry;
     auto metric = registry.createFamily<MetricGauge>("name", "desc")->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));

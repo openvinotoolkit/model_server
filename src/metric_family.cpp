@@ -30,9 +30,10 @@ std::shared_ptr<MetricCounter> MetricFamily<MetricCounter>::addMetric(const Metr
                                                               .Name(this->getName())
                                                               .Help(this->getDesc())
                                                               .Register(this->registryImplRef);
-    this->familyImplRef = (void*)&familyImpl;
+    this->familyImplRef = static_cast<void*>(&familyImpl);
     prometheus::Counter& counterImpl = familyImpl.Add(labels);
-    return this->metrics.emplace_back(std::make_shared<MetricCounter>(labels, counterImpl));
+    //return this->metrics.emplace_back(std::make_shared<MetricCounter>(labels, counterImpl));
+    return std::make_shared<MetricCounter>(labels, counterImpl);
 }
 
 template <>
@@ -41,9 +42,10 @@ std::shared_ptr<MetricGauge> MetricFamily<MetricGauge>::addMetric(const Metric::
                                                             .Name(this->getName())
                                                             .Help(this->getDesc())
                                                             .Register(this->registryImplRef);
-    this->familyImplRef = (void*)&familyImpl;
+    this->familyImplRef = static_cast<void*>(&familyImpl);
     prometheus::Gauge& gaugeImpl = familyImpl.Add(labels);
-    return this->metrics.emplace_back(std::make_shared<MetricGauge>(labels, gaugeImpl));
+    //return this->metrics.emplace_back(std::make_shared<MetricGauge>(labels, gaugeImpl));
+    return std::make_shared<MetricGauge>(labels, gaugeImpl);
 }
 
 template <>
@@ -52,9 +54,10 @@ std::shared_ptr<MetricHistogram> MetricFamily<MetricHistogram>::addMetric(const 
                                                                 .Name(this->getName())
                                                                 .Help(this->getDesc())
                                                                 .Register(this->registryImplRef);
-    this->familyImplRef = (void*)&familyImpl;
+    this->familyImplRef = static_cast<void*>(&familyImpl);
     prometheus::Histogram& histogramImpl = familyImpl.Add(labels, bucketBoundaries);
-    return this->metrics.emplace_back(std::make_shared<MetricHistogram>(labels, bucketBoundaries, histogramImpl));
+    //return this->metrics.emplace_back(std::make_shared<MetricHistogram>(labels, bucketBoundaries, histogramImpl));
+    return std::make_shared<MetricHistogram>(labels, bucketBoundaries, histogramImpl);
 }
 
 template <>
