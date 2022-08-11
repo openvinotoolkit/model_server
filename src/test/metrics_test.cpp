@@ -165,7 +165,7 @@ TEST(MetricsGauge, Increment) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 38\n"));
 }
 
-TEST(MetricsGauge, DISABLED_IncrementRemoved) {
+TEST(MetricsGauge, IncrementRemoved) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricGauge>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
@@ -203,7 +203,7 @@ TEST(MetricsGauge, Decrement) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} -38\n"));
 }
 
-TEST(MetricsGauge, DISABLED_DecrementRemoved) {
+TEST(MetricsGauge, DecrementRemoved) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricGauge>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
@@ -306,7 +306,7 @@ TEST(MetricsHistogram, Observe) {
     EXPECT_THAT(registry.collect(), HasSubstr("name_sum{label=\"value\"} 17.01\n"));
 }
 
-TEST(MetricsHistogram, DISABLED_ObserveRemoved) {
+TEST(MetricsHistogram, ObserveRemoved) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricHistogram>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}}, {1.0, 10.0});

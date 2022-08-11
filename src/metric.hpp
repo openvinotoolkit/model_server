@@ -38,6 +38,9 @@ public:
 private:
     Labels labels;
 
+protected:
+    bool enabled = true;
+
 public:
     Metric(const Labels& labels);
 
