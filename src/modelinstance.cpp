@@ -36,6 +36,9 @@
 #include "layout.hpp"
 #include "layout_configuration.hpp"
 #include "logging.hpp"
+#include "metric.hpp"
+#include "metric_family.hpp"
+#include "metric_registry.hpp"
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "prediction_service_utils.hpp"
@@ -1157,6 +1160,17 @@ Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestPr
     return StatusCode::OK;
 }
 
+class MyMetrics {
+public:
+    MetricRegistry r;
+
+    std::shared_ptr<MetricCounter> infer_ok;
+
+    MyMetrics() {
+        this->infer_ok = this->r.createFamily<MetricCounter>("infer_ok", "desc")->addMetric({{"model_name", "resnet"}});
+    }
+};
+
 Status ModelInstance::infer(const ::inference::ModelInferRequest* requestProto,
     ::inference::ModelInferResponse* responseProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
@@ -1205,6 +1219,9 @@ Status ModelInstance::infer(const ::inference::ModelInferRequest* requestProto,
 
     SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         requestProto->model_name(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
+
+    static MyMetrics metrics;
+    metrics.infer_ok->increment();
 
     return StatusCode::OK;
 }
