@@ -26,6 +26,8 @@ class Registry;
 
 namespace ovms {
 
+class MetricRegistry;
+
 class MetricFamilyBase {
 public:
     virtual ~MetricFamilyBase() = default;
@@ -53,6 +55,8 @@ private:
     // Prometheus internals
     prometheus::Registry& registryImplRef;
     void* familyImplRef;
+
+    friend class MetricRegistry;
 };
 
 }  // namespace ovms

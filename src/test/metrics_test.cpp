@@ -130,6 +130,7 @@ TEST(MetricsCounter, RemoveFamily) {
 TEST(MetricsCounter, RemoveRemovedFamily) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricCounter>("name", "desc");
+    family->addMetric();
     EXPECT_TRUE(registry.remove(family));
     EXPECT_FALSE(registry.remove(family));
 }
@@ -252,6 +253,7 @@ TEST(MetricsGauge, RemoveFamily) {
 TEST(MetricsGauge, RemoveRemovedFamily) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricGauge>("name", "desc");
+    family->addMetric();
     EXPECT_TRUE(registry.remove(family));
     EXPECT_FALSE(registry.remove(family));
 }
@@ -381,6 +383,7 @@ TEST(MetricsHistogram, RemoveFamily) {
 TEST(MetricsHistogram, RemoveRemovedFamily) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricHistogram>("name", "desc");
+    family->addMetric();
     EXPECT_TRUE(registry.remove(family));
     EXPECT_FALSE(registry.remove(family));
 }

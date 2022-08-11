@@ -41,9 +41,7 @@ public:
     }
 
     template <typename MetricType>
-    bool remove(std::shared_ptr<MetricFamily<MetricType>> family) {
-        return false;
-    }
+    bool remove(std::shared_ptr<MetricFamily<MetricType>> family);
 
     // Returns all collected metrics in "Prometheus Text Exposition Format".
     std::string collect() const;

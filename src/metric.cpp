@@ -24,6 +24,10 @@ namespace ovms {
 Metric::Metric(const Labels& labels) :
     labels(labels) {}
 
+const Metric::Labels& Metric::getLabels() const {
+    return this->labels;
+}
+
 /// Counter implementation
 
 MetricCounter::MetricCounter(const Labels& labels, prometheus::Counter& counterImpl) :

@@ -27,7 +27,8 @@ class Histogram;
 
 namespace ovms {
 
-template <typename T> class MetricFamily;
+template <typename T>
+class MetricFamily;
 
 class Metric {
 public:
@@ -35,10 +36,12 @@ public:
     using BucketBoundaries = std::vector<double>;
 
 private:
-    Labels labels;  // TODO: Remove?
+    Labels labels;
 
 public:
     Metric(const Labels& labels);
+
+    const Labels& getLabels() const;
 };
 
 class MetricCounter : public Metric {

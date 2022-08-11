@@ -15,21 +15,34 @@
 //*****************************************************************************
 #include "metric_registry.hpp"
 
+#include <prometheus/family.h>
 #include <prometheus/text_serializer.h>
 
+#include "metric.hpp"
 #include "metric_family.hpp"
 
 namespace ovms {
 
 MetricRegistry::MetricRegistry() = default;
 
-// std::shared_ptr<MetricFamily> MetricRegistry::createFamily(MetricKind kind, const std::string& name, const std::string& description) {
-//     return this->families.emplace_back(std::make_shared<MetricFamily>(kind, name, description, this->registryImpl));
-// }
-
 std::string MetricRegistry::collect() const {
     prometheus::TextSerializer serializer;
     return serializer.Serialize(this->registryImpl.Collect());
+}
+
+template <>
+bool MetricRegistry::remove(std::shared_ptr<MetricFamily<MetricCounter>> family) {
+    return this->registryImpl.Remove(*(prometheus::Family<prometheus::Counter>*)family->familyImplRef);
+}
+
+template <>
+bool MetricRegistry::remove(std::shared_ptr<MetricFamily<MetricGauge>> family) {
+    return this->registryImpl.Remove(*(prometheus::Family<prometheus::Gauge>*)family->familyImplRef);
+}
+
+template <>
+bool MetricRegistry::remove(std::shared_ptr<MetricFamily<MetricHistogram>> family) {
+    return this->registryImpl.Remove(*(prometheus::Family<prometheus::Histogram>*)family->familyImplRef);
 }
 
 }  // namespace ovms
