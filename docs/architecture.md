@@ -17,6 +17,14 @@
 Google Cloud Storage (GCS), Amazon S3, or Azure Blob Storage is supported. For more details, refer to [Preparing the Model Repository](./models_repository.md).  
 - OpenVINO&trade; Model Server is suitable for landing in the Kubernetes environment. It can be also hosted on a bare metal server, virtual machine, or inside a docker container.
 
-- The only two exposed network interfaces are [gRPC](./model_server_grpc_api.md) and [RESTful API](./model_server_rest_api.md). 
-They _do not_ include authorization, authentication, or data encryption. There is, however,
-a [documented method](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/extras/nginx-mtls-auth) for including NGINX reverse proxy with mTLS traffic termination.
+- The only two exposed network interfaces are **gRPC API**:
+
+    * TensorFlow Serving compatible API(./model_server_grpc_api_tfs.md)
+    * KServe compatible API(./model_server_grpc_api_kfs.md)
+
+    ... and **RESTful API**:
+
+    * TensorFlow Serving compatible API(./model_server_rest_api_tfs.md)
+    * KServe compatible API(./model_server_rest_api_kfs.md) 
+
+    They _do not_ include authorization, authentication, or data encryption. There is, however, a [documented method](https://github.com/openvinotoolkit/model_server/tree/releases/2022/1/extras/nginx-mtls-auth) for including NGINX reverse proxy with mTLS traffic termination.

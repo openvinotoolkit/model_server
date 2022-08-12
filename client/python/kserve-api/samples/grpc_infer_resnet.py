@@ -52,7 +52,7 @@ if __name__ == '__main__':
                         dest='model_name')
     parser.add_argument('--pipeline_name', default='', help='Define pipeline name, must be same as is in service',
                         dest='pipeline_name')
-    parser.add_argument('--dag-batch-size-auto', default=False, action='store_true', help='add demultiplexer dimension at front', dest='dag-batch-size-auto')
+    parser.add_argument('--dag-batch-size-auto', default=False, action='store_true', help='Add demultiplexer dimension at front', dest='dag-batch-size-auto')
 
     args = vars(parser.parse_args())
 

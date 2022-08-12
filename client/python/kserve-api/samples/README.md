@@ -1,4 +1,4 @@
-# KServe API usage samples{#ovms_docs_kserve_samples}
+# KServe API usage samples
 
 OpenVINO Model Server 2022.2 release introduced support for [KServe API](https://github.com/kserve/kserve/tree/master/docs/predict-api/v2).
 
@@ -43,7 +43,7 @@ docker pull openvino/model_server:latest
 ### Start the Model Server Container with Downloaded Model and Dynamic Batch Size
 Start the server container with the image pulled in the previous step and mount the `models` directory :
 ```Bash
-docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 5000:5000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9000 --rest_port 5000
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 5000:5000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 5000
 ```
 
 ### Prepare virtualenv
@@ -228,7 +228,7 @@ optional arguments:
   --pipeline_name PIPELINE_NAME
                         Define pipeline name, must be same as is in service
   --dag-batch-size-auto
-                        add demultiplexer dimension at front
+                        Add demultiplexer dimension at front
 ```
 
 - Usage Example
@@ -463,7 +463,7 @@ optional arguments:
   --pipeline_name PIPELINE_NAME
                         Define pipeline name, must be same as is in service
   --dag-batch-size-auto
-                        add demultiplexer dimension at front
+                        Add demultiplexer dimension at front
 ```
 
 - Usage Example

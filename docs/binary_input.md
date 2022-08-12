@@ -50,8 +50,10 @@ Blob data precision from binary input decoding is set automatically based on the
 
 ## API specification
 
-- [gRPC API Reference Guide](./model_server_grpc_api.md)
-- [REST API Reference Guide](./model_server_rest_api.md)
+- [TensorFlow Serving gRPC API Reference Guide](./model_server_grpc_api_tfs.md)
+- [Kserve gRPC API Reference Guide](./model_server_grpc_api_kfs.md)
+- [TensorFlow Serving REST API Reference Guide](./model_server_rest_api_tfs.md)
+- [Kserve REST API Reference Guide](./model_server_rest_api_kfs.md)
 
 ## Usage example with binary input
 
