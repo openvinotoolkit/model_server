@@ -60,24 +60,24 @@ TEST(MetricsCounter, Increment) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 38\n"));
 }
 
-// Disabled since using metric after removal is undefined behavior.
-TEST(MetricsCounter, DISABLED_IncrementRemovedMetric) {
+TEST(MetricsCounter, IncrementRemovedMetric) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricCounter>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
     family->remove(metric);
+    GTEST_SKIP_("Skipped: Using metric after removal is undefined behavior");
     metric->increment(24.43);
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
 }
 
-// Disabled since using family after removal is undefined behavior.
-TEST(MetricsCounter, DISABLED_IncrementRemovedFamily) {
+TEST(MetricsCounter, IncrementRemovedFamily) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricCounter>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
     registry.remove(family);
+    GTEST_SKIP_("Skipped: Using metric after removal is undefined behavior");
     metric->increment(24.43);
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
 }
@@ -204,24 +204,24 @@ TEST(MetricsGauge, Increment) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 38\n"));
 }
 
-// Disabled since using metric after removal is undefined behavior.
-TEST(MetricsGauge, DISABLED_IncrementRemovedMetric) {
+TEST(MetricsGauge, IncrementRemovedMetric) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricGauge>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
     family->remove(metric);
+    GTEST_SKIP_("Skipped: Using metric after removal is undefined behavior");
     metric->increment(24.43);
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
 }
 
-// Disabled since using metric after removal is undefined behavior.
-TEST(MetricsGauge, DISABLED_IncrementRemovedFamily) {
+TEST(MetricsGauge, IncrementRemovedFamily) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricGauge>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
     registry.remove(family);
+    GTEST_SKIP_("Skipped: Using metric after removal is undefined behavior");
     metric->increment(24.43);
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
 }
@@ -254,24 +254,25 @@ TEST(MetricsGauge, Decrement) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} -38\n"));
 }
 
-// Disabled since using metric after removal is undefined behavior.
-TEST(MetricsGauge, DISABLED_DecrementRemovedMetric) {
+TEST(MetricsGauge, DecrementRemovedMetric) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricGauge>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
     family->remove(metric);
+    GTEST_SKIP_("Skipped: Using metric after removal is undefined behavior");
     metric->decrement(24.43);
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
 }
 
 // Disabled since using metric after removal is undefined behavior.
-TEST(MetricsGauge, DISABLED_DecrementRemovedFamily) {
+TEST(MetricsGauge, DecrementRemovedFamily) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricGauge>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
     registry.remove(family);
+    GTEST_SKIP_("Skipped: Using metric after removal is undefined behavior");
     metric->decrement(24.43);
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
 }
@@ -400,24 +401,24 @@ TEST(MetricsHistogram, Observe) {
     EXPECT_THAT(registry.collect(), HasSubstr("name_sum{label=\"value\"} 17.01\n"));
 }
 
-// Disabled since using metric after removal is undefined behavior.
-TEST(MetricsHistogram, DISABLED_ObserveRemovedMetric) {
+TEST(MetricsHistogram, ObserveRemovedMetric) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricHistogram>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}}, {1.0, 10.0});
     EXPECT_THAT(registry.collect(), HasSubstr("name_sum{label=\"value\"} 0\n"));
     family->remove(metric);
+    GTEST_SKIP_("Skipped: Using metric after removal is undefined behavior");
     metric->observe(0.01);
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{label=\"value\"}")));
 }
 
-// Disabled since using metric after removal is undefined behavior.
-TEST(MetricsHistogram, DISABLED_ObserveRemovedFamily) {
+TEST(MetricsHistogram, ObserveRemovedFamily) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricHistogram>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}}, {1.0, 10.0});
     EXPECT_THAT(registry.collect(), HasSubstr("name_sum{label=\"value\"} 0\n"));
     registry.remove(family);
+    GTEST_SKIP_("Skipped: Using metric after removal is undefined behavior");
     metric->observe(0.01);
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{label=\"value\"}")));
 }
