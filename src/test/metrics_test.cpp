@@ -60,7 +60,8 @@ TEST(MetricsCounter, Increment) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 38\n"));
 }
 
-TEST(MetricsCounter, IncrementRemovedMetric) {
+// Disabled since using metric after removal is undefined behavior.
+TEST(MetricsCounter, DISABLED_IncrementRemovedMetric) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricCounter>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
@@ -70,7 +71,7 @@ TEST(MetricsCounter, IncrementRemovedMetric) {
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
 }
 
-// TODO: Fix
+// Disabled since using family after removal is undefined behavior.
 TEST(MetricsCounter, DISABLED_IncrementRemovedFamily) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricCounter>("name", "desc");
@@ -102,7 +103,7 @@ TEST(MetricsCounter, RemoveMetric) {
     EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("name{other=\"data\"} 0\n"));
-    EXPECT_TRUE(family->remove(metric1));
+    family->remove(metric1);
     EXPECT_THAT(registry.collect(), HasSubstr("# HELP name"));
     EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
@@ -113,8 +114,8 @@ TEST(MetricsCounter, RemoveRemovedMetric) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricCounter>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
-    EXPECT_TRUE(family->remove(metric));
-    EXPECT_FALSE(family->remove(metric));
+    family->remove(metric);
+    family->remove(metric);
 }
 
 TEST(MetricsCounter, RemoveFamily) {
@@ -203,7 +204,8 @@ TEST(MetricsGauge, Increment) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 38\n"));
 }
 
-TEST(MetricsGauge, IncrementRemovedMetric) {
+// Disabled since using metric after removal is undefined behavior.
+TEST(MetricsGauge, DISABLED_IncrementRemovedMetric) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricGauge>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
@@ -213,7 +215,7 @@ TEST(MetricsGauge, IncrementRemovedMetric) {
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
 }
 
-// TODO: Fix
+// Disabled since using metric after removal is undefined behavior.
 TEST(MetricsGauge, DISABLED_IncrementRemovedFamily) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricGauge>("name", "desc");
@@ -252,7 +254,8 @@ TEST(MetricsGauge, Decrement) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} -38\n"));
 }
 
-TEST(MetricsGauge, DecrementRemovedMetric) {
+// Disabled since using metric after removal is undefined behavior.
+TEST(MetricsGauge, DISABLED_DecrementRemovedMetric) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricGauge>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
@@ -262,7 +265,7 @@ TEST(MetricsGauge, DecrementRemovedMetric) {
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
 }
 
-// TODO: Fix
+// Disabled since using metric after removal is undefined behavior.
 TEST(MetricsGauge, DISABLED_DecrementRemovedFamily) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricGauge>("name", "desc");
@@ -294,7 +297,7 @@ TEST(MetricsGauge, RemoveMetric) {
     EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("name{other=\"data\"} 0\n"));
-    EXPECT_TRUE(family->remove(metric1));
+    family->remove(metric1);
     EXPECT_THAT(registry.collect(), HasSubstr("# HELP name"));
     EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
@@ -305,8 +308,8 @@ TEST(MetricsGauge, RemoveRemovedMetric) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricGauge>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
-    EXPECT_TRUE(family->remove(metric));
-    EXPECT_FALSE(family->remove(metric));
+    family->remove(metric);
+    family->remove(metric);
 }
 
 TEST(MetricsGauge, RemoveFamily) {
@@ -397,7 +400,8 @@ TEST(MetricsHistogram, Observe) {
     EXPECT_THAT(registry.collect(), HasSubstr("name_sum{label=\"value\"} 17.01\n"));
 }
 
-TEST(MetricsHistogram, ObserveRemovedMetric) {
+// Disabled since using metric after removal is undefined behavior.
+TEST(MetricsHistogram, DISABLED_ObserveRemovedMetric) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricHistogram>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}}, {1.0, 10.0});
@@ -407,7 +411,7 @@ TEST(MetricsHistogram, ObserveRemovedMetric) {
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{label=\"value\"}")));
 }
 
-// TODO: Fix
+// Disabled since using metric after removal is undefined behavior.
 TEST(MetricsHistogram, DISABLED_ObserveRemovedFamily) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricHistogram>("name", "desc");
@@ -443,7 +447,7 @@ TEST(MetricsHistogram, RemoveMetric) {
     EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{other=\"data\",le=\"+Inf\"} 0\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("name_sum{other=\"data\"} 0\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("name_count{other=\"data\"} 0\n"));
-    EXPECT_TRUE(family->remove(metric1));
+    family->remove(metric1);
     EXPECT_THAT(registry.collect(), HasSubstr("# HELP name"));
     EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"10\"}")));
@@ -460,8 +464,8 @@ TEST(MetricsHistogram, RemoveRemovedMetric) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricHistogram>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
-    EXPECT_TRUE(family->remove(metric));
-    EXPECT_FALSE(family->remove(metric));
+    family->remove(metric);
+    family->remove(metric);
 }
 
 TEST(MetricsHistogram, RemoveFamily) {

@@ -39,9 +39,6 @@ public:
 
     const Labels& getLabels() const;
 
-protected:
-    bool removed = false;
-
 private:
     Labels labels;
 };

@@ -58,36 +58,21 @@ std::shared_ptr<MetricHistogram> MetricFamily<MetricHistogram>::addMetric(const 
 }
 
 template <>
-bool MetricFamily<MetricCounter>::remove(std::shared_ptr<MetricCounter> metric) {
+void MetricFamily<MetricCounter>::remove(std::shared_ptr<MetricCounter> metric) {
     auto family = static_cast<prometheus::Family<prometheus::Counter>*>(this->familyImplRef);
-    if (family->Has(metric->getLabels())) {
-        family->Remove(&metric->counterImpl);
-        metric->removed = true;
-        return true;
-    }
-    return false;
+    family->Remove(&metric->counterImpl);
 }
 
 template <>
-bool MetricFamily<MetricGauge>::remove(std::shared_ptr<MetricGauge> metric) {
+void MetricFamily<MetricGauge>::remove(std::shared_ptr<MetricGauge> metric) {
     auto family = static_cast<prometheus::Family<prometheus::Gauge>*>(this->familyImplRef);
-    if (family->Has(metric->getLabels())) {
-        family->Remove(&metric->gaugeImpl);
-        metric->removed = true;
-        return true;
-    }
-    return false;
+    family->Remove(&metric->gaugeImpl);
 }
 
 template <>
-bool MetricFamily<MetricHistogram>::remove(std::shared_ptr<MetricHistogram> metric) {
+void MetricFamily<MetricHistogram>::remove(std::shared_ptr<MetricHistogram> metric) {
     auto family = static_cast<prometheus::Family<prometheus::Histogram>*>(this->familyImplRef);
-    if (family->Has(metric->getLabels())) {
-        family->Remove(&metric->histogramImpl);
-        metric->removed = true;
-        return true;
-    }
-    return false;
+    family->Remove(&metric->histogramImpl);
 }
 
 }  // namespace ovms
