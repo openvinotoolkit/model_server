@@ -10,6 +10,7 @@ This guide shows how to interact with KServe API endpoints on both gRPC and HTTP
   - <a href="#grpc-model-ready">grpc_model_ready.py</a>
   - <a href="#grpc-model-metadata">grpc_model_metadata.py</a>
   - <a href="#grpc-model-infer">grpc_infer_resnet.py</a>
+  - <a href="#grpc-model-infer-binary">grpc_infer_binary_resnet.py</a>
 - <a href="#http-api">HTTP API Example</a>
   - <a href="#http-server-live">http_server_live.py</a>
   - <a href="#http-server-ready">http_server_ready.py</a>
@@ -17,6 +18,7 @@ This guide shows how to interact with KServe API endpoints on both gRPC and HTTP
   - <a href="#http-model-ready">http_model_ready.py</a>
   - <a href="#http-model-metadata">http_model_metadata.py</a>
   - <a href="#http-model-infer">http_infer_resnet.py</a>
+  - <a href="#http-model-infer-binary">http_infer_binary_resnet.py</a>
 
 > **Note:** Some of the samples will use [ResNet50](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/resnet50-binary-0001/README.md).
 
@@ -40,7 +42,7 @@ Pull the latest version of OpenVINO&trade; Model Server from Docker Hub :
 docker pull openvino/model_server:latest
 ```
 
-### Start the Model Server Container with Downloaded Model and Dynamic Batch Size
+### Start the Model Server Container with Downloaded Model
 Start the server container with the image pulled in the previous step and mount the `models` directory :
 ```Bash
 docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 5000:5000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 5000
@@ -193,7 +195,7 @@ outputs {
 - Command
 
 ```Bash
-python grpc_infer_resnet.py --help
+python3 grpc_infer_resnet.py --help
 usage: grpc_infer_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH [--labels_numpy_path LABELS_NUMPY_PATH] [--grpc_address GRPC_ADDRESS]
                             [--grpc_port GRPC_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--transpose_input {False,True}]
                             [--transpose_method {nchw2nhwc,nhwc2nchw}] [--iterations ITERATIONS] [--batchsize BATCHSIZE] [--model_name MODEL_NAME]
@@ -234,7 +236,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python grpc_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
+python3 grpc_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
@@ -282,6 +284,96 @@ time percentile 90: 26.30 ms; speed percentile 90: 38.02 fps
 time percentile 50: 23.50 ms; speed percentile 50: 42.55 fps
 time standard deviation: 1.94
 time variance: 3.76
+Classification accuracy: 100.00
+```
+
+
+### Run the Client to perform inference <a name="grpc-model-infer-binary"></a>
+
+Using binary inputs feautre requires model to accept input in layout NHWC. The model used in other clients has native layout NCWH, therefore it must be adjusted on model server start up. For samples that use binary inputs, please start docker container with `--layout NHWC:NCHW` parameter:
+
+```Bash
+docker run --rm -v $(pwd)/models:/models -p 9001:9001 -p 5001:5001 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9001 --rest_port 5001 --layout NHWC:NCHW
+```
+
+- Command
+
+```Bash
+python3 grpc_infer_binary_resnet.py --help
+usage: grpc_infer_binary_resnet.py [-h] [--images_list IMAGES_LIST] [--labels_numpy_path LABELS_NUMPY_PATH] [--grpc_address GRPC_ADDRESS]
+                                   [--grpc_port GRPC_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--batchsize BATCHSIZE]
+                                   [--model_name MODEL_NAME] [--pipeline_name PIPELINE_NAME]
+
+Sends requests via KFS gRPC API using images in format supported by OpenCV. It displays performance statistics and optionally the model accuracy
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --images_list IMAGES_LIST
+                        path to a file with a list of labeled images
+  --labels_numpy_path LABELS_NUMPY_PATH
+                        numpy in shape [n,1] - can be used to check model accuracy
+  --grpc_address GRPC_ADDRESS
+                        Specify url to grpc service. default:localhost
+  --grpc_port GRPC_PORT
+                        Specify port to grpc service. default: 9000
+  --input_name INPUT_NAME
+                        Specify input tensor name. default: input
+  --output_name OUTPUT_NAME
+                        Specify output name. default: resnet_v1_50/predictions/Reshape_1
+  --batchsize BATCHSIZE
+                        Number of images in a single request. default: 1
+  --model_name MODEL_NAME
+                        Define model name, must be same as is in service. default: resnet
+  --pipeline_name PIPELINE_NAME
+                        Define pipeline name, must be same as is in service
+```
+
+- Usage Example
+
+```Bash
+python3 grpc_infer_binary_resnet.py --grpc_port 9001 --images_list resnet_input_images.txt  --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
+Start processing:
+        Model name: resnet
+Iteration 0; Processing time: 27.09 ms; speed 36.92 fps
+imagenet top results in a single batch:
+         0 airliner 404 ; Correct match.
+Iteration 1; Processing time: 27.62 ms; speed 36.20 fps
+imagenet top results in a single batch:
+         0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
+Iteration 2; Processing time: 25.33 ms; speed 39.48 fps
+imagenet top results in a single batch:
+         0 bee 309 ; Correct match.
+Iteration 3; Processing time: 23.54 ms; speed 42.47 fps
+imagenet top results in a single batch:
+         0 golden retriever 207 ; Correct match.
+Iteration 4; Processing time: 21.62 ms; speed 46.25 fps
+imagenet top results in a single batch:
+         0 gorilla, Gorilla gorilla 366 ; Correct match.
+Iteration 5; Processing time: 24.28 ms; speed 41.18 fps
+imagenet top results in a single batch:
+         0 magnetic compass 635 ; Correct match.
+Iteration 6; Processing time: 23.52 ms; speed 42.51 fps
+imagenet top results in a single batch:
+         0 peacock 84 ; Correct match.
+Iteration 7; Processing time: 24.10 ms; speed 41.49 fps
+imagenet top results in a single batch:
+         0 pelican 144 ; Correct match.
+Iteration 8; Processing time: 25.36 ms; speed 39.44 fps
+imagenet top results in a single batch:
+         0 snail 113 ; Correct match.
+Iteration 9; Processing time: 32.67 ms; speed 30.61 fps
+imagenet top results in a single batch:
+         0 zebra 340 ; Correct match.
+
+processing time for all iterations
+average time: 25.10 ms; average speed: 39.84 fps
+median time: 24.50 ms; median speed: 40.82 fps
+max time: 32.00 ms; min speed: 31.25 fps
+min time: 21.00 ms; max speed: 47.62 fps
+time percentile 90: 27.50 ms; speed percentile 90: 36.36 fps
+time percentile 50: 24.50 ms; speed percentile 50: 40.82 fps
+time standard deviation: 2.88
+time variance: 8.29
 Classification accuracy: 100.00
 ```
 
