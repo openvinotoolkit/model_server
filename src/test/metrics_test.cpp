@@ -66,7 +66,7 @@ TEST(MetricsCounter, IncrementRemoved) {
     auto metric = family->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
     family->remove(metric);
-    metric->increment(24.43);  // Not allowed, removing metric from family invalidates the metric.
+    metric->increment(24.43);
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
 }
 
@@ -561,7 +561,5 @@ TEST(MetricsFlow, Histogram) {
     EXPECT_THAT(registry.collect(), ContainsRegex("deserialization_sum\\{model_name=\"resnet\",model_version=\"1\"\\} 3156.3.*\\n"));
 }
 
-// // TODO: Removal of reported metric
-// // TODO: Corner cases
 // // TODO: Multithreading, test for possible data race
 // // TODO: License

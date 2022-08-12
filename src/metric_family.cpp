@@ -62,7 +62,7 @@ bool MetricFamily<MetricCounter>::remove(std::shared_ptr<MetricCounter> metric) 
     auto family = static_cast<prometheus::Family<prometheus::Counter>*>(this->familyImplRef);
     if (family->Has(metric->getLabels())) {
         family->Remove(&metric->counterImpl);
-        metric->enabled = false;
+        metric->removed = true;
         return true;
     }
     return false;
@@ -73,7 +73,7 @@ bool MetricFamily<MetricGauge>::remove(std::shared_ptr<MetricGauge> metric) {
     auto family = static_cast<prometheus::Family<prometheus::Gauge>*>(this->familyImplRef);
     if (family->Has(metric->getLabels())) {
         family->Remove(&metric->gaugeImpl);
-        metric->enabled = false;
+        metric->removed = true;
         return true;
     }
     return false;
@@ -84,7 +84,7 @@ bool MetricFamily<MetricHistogram>::remove(std::shared_ptr<MetricHistogram> metr
     auto family = static_cast<prometheus::Family<prometheus::Histogram>*>(this->familyImplRef);
     if (family->Has(metric->getLabels())) {
         family->Remove(&metric->histogramImpl);
-        metric->enabled = false;
+        metric->removed = true;
         return true;
     }
     return false;

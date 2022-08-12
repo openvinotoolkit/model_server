@@ -40,7 +40,7 @@ public:
     const Labels& getLabels() const;
 
 protected:
-    bool enabled = true;
+    bool removed = false;
 
 private:
     Labels labels;

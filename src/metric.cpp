@@ -35,7 +35,7 @@ MetricCounter::MetricCounter(const Labels& labels, prometheus::Counter& counterI
     counterImpl(counterImpl) {}
 
 void MetricCounter::increment(double value) {
-    if (!this->enabled) {
+    if (this->removed) {
         return;
     }
     this->counterImpl.Increment(value);
@@ -48,14 +48,14 @@ MetricGauge::MetricGauge(const Labels& labels, prometheus::Gauge& gaugeImpl) :
     gaugeImpl(gaugeImpl) {}
 
 void MetricGauge::increment(double value) {
-    if (!this->enabled) {
+    if (this->removed) {
         return;
     }
     this->gaugeImpl.Increment(value);
 }
 
 void MetricGauge::decrement(double value) {
-    if (!this->enabled) {
+    if (!this->removed) {
         return;
     }
     this->gaugeImpl.Decrement(value);
@@ -69,7 +69,7 @@ MetricHistogram::MetricHistogram(const Labels& labels, const BucketBoundaries& b
     histogramImpl(histogramImpl) {}
 
 void MetricHistogram::observe(double value) {
-    if (!this->enabled) {
+    if (this->removed) {
         return;
     }
     this->histogramImpl.Observe(value);
