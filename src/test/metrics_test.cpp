@@ -13,7 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <future>
+#include <memory>
+#include <thread>
 #include <utility>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -698,5 +702,79 @@ TEST(MetricsFlow, Histogram) {
     EXPECT_THAT(registry.collect(), ContainsRegex("deserialization_sum\\{model_name=\"resnet\",model_version=\"1\"\\} 3156.3.*\\n"));
 }
 
-// // TODO: Multithreading, test for possible data race
-// // TODO: License
+TEST(MetricsFlow, MultipleThreads) {
+    // Preparation
+    const int numberOfWorkers = 30;
+    const int numberOfFamilies = 20;
+    const int numberOfMetricsPerFamily = 5;
+
+    std::vector<std::unique_ptr<std::thread>> workers;
+    std::vector<std::promise<void>> signals(numberOfWorkers);
+
+    std::vector<std::shared_ptr<MetricCounter>> counterMetrics;
+    std::vector<std::shared_ptr<MetricGauge>> gaugeMetrics;
+    std::vector<std::shared_ptr<MetricHistogram>> histogramMetrics;
+
+    MetricRegistry registry;
+    for (int i = 0; i < numberOfFamilies; i++) {
+        auto familyC = registry.createFamily<MetricCounter>(std::string{"family_name_c_"} + std::to_string(i), "desc");
+        for (int j = 0; j < numberOfMetricsPerFamily; j++)
+            counterMetrics.emplace_back(familyC->addMetric({{std::string{"metric_label_name"}, std::string{"metric_value_"} + std::to_string(j)}}));
+        auto familyG = registry.createFamily<MetricGauge>(std::string{"family_name_g_"} + std::to_string(i), "desc");
+        for (int j = 0; j < numberOfMetricsPerFamily; j++)
+            gaugeMetrics.emplace_back(familyG->addMetric({{std::string{"metric_label_name"}, std::string{"metric_value_"} + std::to_string(j)}}));
+        auto familyH = registry.createFamily<MetricHistogram>(std::string{"family_name_h_"} + std::to_string(i), "desc");
+        for (int j = 0; j < numberOfMetricsPerFamily; j++)
+            histogramMetrics.emplace_back(familyH->addMetric({{std::string{"metric_label_name"}, std::string{"metric_value_"} + std::to_string(j)}}, {0.1, 1.0, 10.0}));
+    }
+
+    // Parallel execution
+    const int numberOfOperations = 1000;
+    for (int i = 0; i < numberOfWorkers; i++)
+        workers.emplace_back(std::make_unique<std::thread>([this, i, &signals, &counterMetrics, &gaugeMetrics, &histogramMetrics]() {
+            signals[i].get_future().get();
+            for (int j = 0; j < numberOfOperations; j++) {
+                for (auto& metric : counterMetrics)
+                    metric->increment(1.5);
+                for (auto& metric : gaugeMetrics) {
+                    metric->increment(3.25);
+                    metric->decrement(2.25);
+                }
+                for (auto& metric : histogramMetrics) {
+                    metric->observe(0.05);
+                    metric->observe(0.5);
+                    metric->observe(5.0);
+                    metric->observe(50.0);
+                }
+            }
+        }));
+
+    std::for_each(signals.begin(), signals.end(), [](auto& sig) { sig.set_value(); });
+    std::for_each(workers.begin(), workers.end(), [](auto& thread) { thread->join(); });
+
+    // Expect
+    std::string content = registry.collect();
+    for (int i = 0; i < numberOfFamilies; i++) {
+        for (int j = 0; j < numberOfMetricsPerFamily; j++) {
+            // Counters
+            // numberOfWorkers * numberOfOperations * 1.5 = 45000
+            EXPECT_THAT(content, HasSubstr(std::string{"family_name_c_"} + std::to_string(i) + std::string{"{metric_label_name=\"metric_value_"} + std::to_string(j) + std::string{"\"} 45000\n"}));
+
+            // Gauges
+            // numberOfWorkers * numberOfOperations * (3.25 - 2.25) = 30000
+            EXPECT_THAT(content, HasSubstr(std::string{"family_name_g_"} + std::to_string(i) + std::string{"{metric_label_name=\"metric_value_"} + std::to_string(j) + std::string{"\"} 30000\n"}));
+
+            // Histograms
+            auto prefix = std::string{"family_name_h_"} + std::to_string(i) + std::string{"_bucket{metric_label_name=\"metric_value_"} + std::to_string(j);
+            EXPECT_THAT(content, HasSubstr(prefix + std::string{"\",le=\"0.1\"} 30000\n"}));    // numberOfWorkers * numberOfOperations * 1 (observation)
+            EXPECT_THAT(content, HasSubstr(prefix + std::string{"\",le=\"1\"} 60000\n"}));      // numberOfWorkers * numberOfOperations * 2 (observations)
+            EXPECT_THAT(content, HasSubstr(prefix + std::string{"\",le=\"10\"} 90000\n"}));     // numberOfWorkers * numberOfOperations * 3 (observations)
+            EXPECT_THAT(content, HasSubstr(prefix + std::string{"\",le=\"+Inf\"} 120000\n"}));  // numberOfWorkers * numberOfOperations * 4 (observations)
+
+            // numberOfWorkers * numberOfOperations * 4 (observations)
+            EXPECT_THAT(content, HasSubstr(std::string{"family_name_h_"} + std::to_string(i) + std::string{"_count{metric_label_name=\"metric_value_"} + std::to_string(j) + std::string{"\"} 120000\n"}));
+            // numberOfWorkers * numberOfOperations * (0.05 + 0.5 + 5.0 + 50.0) = 1666500.0
+            EXPECT_THAT(content, ContainsRegex(std::string{"family_name_h_"} + std::to_string(i) + std::string{"_sum\\{metric_label_name=\"metric_value_"} + std::to_string(j) + std::string{"\"\\} 1666500.*\\n"}));
+        }
+    }
+}
