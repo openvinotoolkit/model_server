@@ -206,20 +206,26 @@ std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body)
     return buffer.GetString();
 }
 
-Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+::inference::ModelInferRequest HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string request_body){
     ::inference::ModelInferRequest grpc_request;
-    ::inference::ModelInferResponse grpc_response;
-
+    
     std::string request(preprocessInferRequest(request_body));
 
     google::protobuf::util::JsonParseOptions opts;
     opts.ignore_unknown_fields = true;
     google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);
+    grpc_request.set_model_name(modelName);
+    grpc_request.set_model_version(modelVersion);
+    return grpc_request;
+}
+
+Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+
     std::string modelName(request_components.model_name);
     std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
-    grpc_request.set_model_name(modelName);
-    grpc_request.set_model_version(modelVersion);
+    ::inference::ModelInferRequest grpc_request(prepareGrpcRequest(modelName, modelVersion, request_body));
+    ::inference::ModelInferResponse grpc_response;
     kfsGrpcImpl.ModelInfer(nullptr, &grpc_request, &grpc_response);
     std::string output;
     google::protobuf::util::JsonPrintOptions opts_out;
