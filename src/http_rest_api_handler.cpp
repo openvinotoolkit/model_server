@@ -206,9 +206,9 @@ std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body)
     return buffer.GetString();
 }
 
-::inference::ModelInferRequest HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string request_body){
+::inference::ModelInferRequest HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string request_body) {
     ::inference::ModelInferRequest grpc_request;
-    
+
     std::string request(preprocessInferRequest(request_body));
 
     google::protobuf::util::JsonParseOptions opts;

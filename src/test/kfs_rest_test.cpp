@@ -193,7 +193,7 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
 
     ASSERT_EQ(grpc_request.model_name(), modelName);
     ASSERT_EQ(grpc_request.model_version(), modelVersion);
-    auto params = grpc_request.parameters(); 
+    auto params = grpc_request.parameters();
     auto bdo = params["binary_data_output"];
     ASSERT_EQ(bdo.int64_param(), 1);
     ASSERT_EQ(grpc_request.inputs()[0].name(), "b");
@@ -202,7 +202,7 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
     ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
     ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 10);
     int i = 0;
-    for(auto content:grpc_request.inputs()[0].contents().fp32_contents()){
+    for (auto content : grpc_request.inputs()[0].contents().fp32_contents()) {
         ASSERT_EQ(content, i++);
     }
 
