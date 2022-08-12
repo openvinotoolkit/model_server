@@ -193,25 +193,7 @@ Status makeJsonFromPredictResponse(
     return StatusCode::OK;
 }
 
-Status makeJsonFromPredictResponse(
-    const ::inference::ModelInferResponse& response_proto,
-    std::string* response_json) {
-    Timer timer;
-    using std::chrono::microseconds;
-    timer.start("convert");
-
-    rapidjson::Document response;
-    response.SetObject();
-    rapidjson::Value model_name, id;
-    model_name = rapidjson::StringRef(response_proto.model_name().c_str());
-    id = rapidjson::StringRef(response_proto.id().c_str());
-    response.AddMember("model_name", model_name, response.GetAllocator());
-    response.AddMember("id", id, response.GetAllocator());
-    if (response_proto.model_version().length() > 0) {
-        rapidjson::Value model_version;
-        model_version = rapidjson::StringRef(response_proto.model_version().c_str());
-        response.AddMember("model_version", model_version, response.GetAllocator());
-    }
+Status parseParameters(const ::inference::ModelInferResponse& response_proto, rapidjson::Value& value, rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator>& allocator) {
     if (response_proto.parameters_size() > 0) {
         rapidjson::Value parameters(rapidjson::kArrayType);
 
@@ -231,16 +213,27 @@ Status makeJsonFromPredictResponse(
             default:
                 break;  // return param error
             }
-            parameters.AddMember(param_key, param_value, response.GetAllocator());
+            parameters.AddMember(param_key, param_value, allocator);
         }
-        response.AddMember("parameters", parameters, response.GetAllocator());
+        value.AddMember("parameters", parameters, allocator);
     }
+
+    return StatusCode::OK;
+}
+
+template <typename ValueType>
+void fillTensorDataWithValuesFromRawContents(rapidjson::Value& tensor_data, const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator>& allocator){
+    for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(ValueType))
+        tensor_data.PushBack(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)), allocator);
+}
+
+Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapidjson::Document& response){
     rapidjson::Value outputs(rapidjson::kArrayType);
 
     bool seekDataInValField = false;
     if (response_proto.raw_output_contents_size() == 0)
         seekDataInValField = true;
-
+    
     int tensor_it = 0;
     for (const auto& tensor : response_proto.outputs()) {
         size_t dataTypeSize = KFSDataTypeSize(tensor.datatype());
@@ -260,28 +253,10 @@ Status makeJsonFromPredictResponse(
         output.AddMember("shape", tensor_shape, response.GetAllocator());
         output.AddMember("datatype", tensor_datatype, response.GetAllocator());
 
-        if (tensor.parameters_size() > 0) {
-            rapidjson::Value parameters(rapidjson::kArrayType);
-
-            for (const auto& parameter : tensor.parameters()) {
-                rapidjson::Value param_value, param_key;
-                param_key = rapidjson::StringRef(parameter.first.c_str());
-                switch (parameter.second.parameter_choice_case()) {
-                case inference::InferParameter::ParameterChoiceCase::kBoolParam:
-                    param_value = parameter.second.bool_param();
-                    break;
-                case inference::InferParameter::ParameterChoiceCase::kInt64Param:
-                    param_value = parameter.second.int64_param();
-                    break;
-                case inference::InferParameter::ParameterChoiceCase::kStringParam:
-                    param_value = rapidjson::StringRef(parameter.second.string_param().c_str());
-                    break;
-                default:
-                    break;  // return param error
-                }
-                parameters.AddMember(param_key, param_value, response.GetAllocator());
-            }
-            output.AddMember("parameters", parameters, response.GetAllocator());
+        auto status = parseParameters(response_proto, output, response.GetAllocator());
+        if(!status.ok())
+        {
+            return status;
         }
 
         if (tensor.datatype() == "FP32") {
@@ -293,8 +268,7 @@ Status makeJsonFromPredictResponse(
                     tensor_data.PushBack(number, response.GetAllocator());
                 }
             } else {
-                for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(float))
-                    tensor_data.PushBack(*(reinterpret_cast<const float*>(response_proto.raw_output_contents(tensor_it).data() + i)), response.GetAllocator());
+                fillTensorDataWithValuesFromRawContents<float>(tensor_data, response_proto, tensor_it, response.GetAllocator());
             }
         } else if (tensor.datatype() == "INT64") {
             if (seekDataInValField) {
@@ -305,8 +279,7 @@ Status makeJsonFromPredictResponse(
                     tensor_data.PushBack(number, response.GetAllocator());
                 }
             } else {
-                for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(int64_t))
-                    tensor_data.PushBack(*(reinterpret_cast<const int64_t*>(response_proto.raw_output_contents(tensor_it).data() + i)), response.GetAllocator());
+                fillTensorDataWithValuesFromRawContents<int64_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
             }
         } else if (tensor.datatype() == "INT32") {
             if (seekDataInValField) {
@@ -317,8 +290,7 @@ Status makeJsonFromPredictResponse(
                     tensor_data.PushBack(number, response.GetAllocator());
                 }
             } else {
-                for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(int32_t))
-                    tensor_data.PushBack(*(reinterpret_cast<const int32_t*>(response_proto.raw_output_contents(tensor_it).data() + i)), response.GetAllocator());
+                fillTensorDataWithValuesFromRawContents<int32_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
             }
         } else if (tensor.datatype() == "INT16") {
             if (seekDataInValField) {
@@ -329,8 +301,7 @@ Status makeJsonFromPredictResponse(
                     tensor_data.PushBack(number, response.GetAllocator());
                 }
             } else {
-                for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(int16_t))
-                    tensor_data.PushBack(*(reinterpret_cast<const int16_t*>(response_proto.raw_output_contents(tensor_it).data() + i)), response.GetAllocator());
+                fillTensorDataWithValuesFromRawContents<int16_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
             }
         } else if (tensor.datatype() == "INT8") {
             if (seekDataInValField) {
@@ -341,8 +312,7 @@ Status makeJsonFromPredictResponse(
                     tensor_data.PushBack(number, response.GetAllocator());
                 }
             } else {
-                for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(int8_t))
-                    tensor_data.PushBack(*(reinterpret_cast<const int8_t*>(response_proto.raw_output_contents(tensor_it).data() + i)), response.GetAllocator());
+                fillTensorDataWithValuesFromRawContents<int8_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
             }
         } else if (tensor.datatype() == "UINT64") {
             if (seekDataInValField) {
@@ -353,8 +323,7 @@ Status makeJsonFromPredictResponse(
                     tensor_data.PushBack(number, response.GetAllocator());
                 }
             } else {
-                for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(uint64_t))
-                    tensor_data.PushBack(*(reinterpret_cast<const uint64_t*>(response_proto.raw_output_contents(tensor_it).data() + i)), response.GetAllocator());
+                fillTensorDataWithValuesFromRawContents<uint64_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
             }
         } else if (tensor.datatype() == "UINT32") {
             if (seekDataInValField) {
@@ -365,8 +334,7 @@ Status makeJsonFromPredictResponse(
                     tensor_data.PushBack(number, response.GetAllocator());
                 }
             } else {
-                for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(uint32_t))
-                    tensor_data.PushBack(*(reinterpret_cast<const uint32_t*>(response_proto.raw_output_contents(tensor_it).data() + i)), response.GetAllocator());
+                fillTensorDataWithValuesFromRawContents<uint32_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
             }
         } else if (tensor.datatype() == "UINT16") {
             if (seekDataInValField) {
@@ -389,8 +357,7 @@ Status makeJsonFromPredictResponse(
                     tensor_data.PushBack(number, response.GetAllocator());
                 }
             } else {
-                for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(uint8_t))
-                    tensor_data.PushBack(*(reinterpret_cast<const uint8_t*>(response_proto.raw_output_contents(tensor_it).data() + i)), response.GetAllocator());
+                fillTensorDataWithValuesFromRawContents<uint8_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
             }
         } else if (tensor.datatype() == "FP64") {
             if (seekDataInValField) {
@@ -401,8 +368,7 @@ Status makeJsonFromPredictResponse(
                     tensor_data.PushBack(number, response.GetAllocator());
                 }
             } else {
-                for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(double))
-                    tensor_data.PushBack(*(reinterpret_cast<const double*>(response_proto.raw_output_contents(tensor_it).data() + i)), response.GetAllocator());
+                fillTensorDataWithValuesFromRawContents<double>(tensor_data, response_proto, tensor_it, response.GetAllocator());
             }
         } else {
             return StatusCode::REST_UNSUPPORTED_PRECISION;
@@ -414,6 +380,41 @@ Status makeJsonFromPredictResponse(
     }
 
     response.AddMember("outputs", outputs, response.GetAllocator());
+    return StatusCode::OK;
+}
+
+Status makeJsonFromPredictResponse(
+    const ::inference::ModelInferResponse& response_proto,
+    std::string* response_json) {
+    Timer timer;
+    using std::chrono::microseconds;
+    timer.start("convert");
+
+    rapidjson::Document response;
+    response.SetObject();
+    rapidjson::Value model_name, id;
+    model_name = rapidjson::StringRef(response_proto.model_name().c_str());
+    id = rapidjson::StringRef(response_proto.id().c_str());
+    response.AddMember("model_name", model_name, response.GetAllocator());
+    response.AddMember("id", id, response.GetAllocator());
+    if (response_proto.model_version().length() > 0) {
+        rapidjson::Value model_version;
+        model_version = rapidjson::StringRef(response_proto.model_version().c_str());
+        response.AddMember("model_version", model_version, response.GetAllocator());
+    }
+
+    auto status = parseParameters(response_proto, response, response.GetAllocator());
+    if(!status.ok())
+    {
+        return status;
+    }
+
+    status = parseOutputs(response_proto, response);
+    if(!status.ok())
+    {
+        return status;
+    }
+
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     response.Accept(writer);
