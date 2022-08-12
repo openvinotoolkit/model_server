@@ -55,7 +55,7 @@ void MetricGauge::increment(double value) {
 }
 
 void MetricGauge::decrement(double value) {
-    if (!this->removed) {
+    if (this->removed) {
         return;
     }
     this->gaugeImpl.Decrement(value);
