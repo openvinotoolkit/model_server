@@ -229,7 +229,7 @@ Status makeJsonFromPredictResponse(
                 param_value = rapidjson::StringRef(parameter.second.string_param().c_str());
                 break;
             default:
-                break;  //return param error
+                break;  // return param error
             }
             parameters.AddMember(param_key, param_value, response.GetAllocator());
         }
@@ -277,7 +277,7 @@ Status makeJsonFromPredictResponse(
                     param_value = rapidjson::StringRef(parameter.second.string_param().c_str());
                     break;
                 default:
-                    break;  //return param error
+                    break;  // return param error
                 }
                 parameters.AddMember(param_key, param_value, response.GetAllocator());
             }
