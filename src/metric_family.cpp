@@ -32,7 +32,6 @@ std::shared_ptr<MetricCounter> MetricFamily<MetricCounter>::addMetric(const Metr
                                                               .Register(this->registryImplRef);
     this->familyImplRef = static_cast<void*>(&familyImpl);
     prometheus::Counter& counterImpl = familyImpl.Add(labels);
-    //return this->metrics.emplace_back(std::make_shared<MetricCounter>(labels, counterImpl));
     return std::make_shared<MetricCounter>(labels, counterImpl);
 }
 
@@ -44,7 +43,6 @@ std::shared_ptr<MetricGauge> MetricFamily<MetricGauge>::addMetric(const Metric::
                                                             .Register(this->registryImplRef);
     this->familyImplRef = static_cast<void*>(&familyImpl);
     prometheus::Gauge& gaugeImpl = familyImpl.Add(labels);
-    //return this->metrics.emplace_back(std::make_shared<MetricGauge>(labels, gaugeImpl));
     return std::make_shared<MetricGauge>(labels, gaugeImpl);
 }
 
@@ -56,7 +54,6 @@ std::shared_ptr<MetricHistogram> MetricFamily<MetricHistogram>::addMetric(const 
                                                                 .Register(this->registryImplRef);
     this->familyImplRef = static_cast<void*>(&familyImpl);
     prometheus::Histogram& histogramImpl = familyImpl.Add(labels, bucketBoundaries);
-    //return this->metrics.emplace_back(std::make_shared<MetricHistogram>(labels, bucketBoundaries, histogramImpl));
     return std::make_shared<MetricHistogram>(labels, bucketBoundaries, histogramImpl);
 }
 

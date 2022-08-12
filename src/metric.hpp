@@ -35,16 +35,15 @@ public:
     using Labels = std::map<std::string, std::string>;
     using BucketBoundaries = std::vector<double>;
 
-private:
-    Labels labels;
+    Metric(const Labels& labels);
+
+    const Labels& getLabels() const;
 
 protected:
     bool enabled = true;
 
-public:
-    Metric(const Labels& labels);
-
-    const Labels& getLabels() const;
+private:
+    Labels labels;
 };
 
 class MetricCounter : public Metric {

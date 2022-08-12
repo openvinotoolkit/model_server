@@ -17,29 +17,21 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
 #include <prometheus/registry.h>
 
 namespace ovms {
 
-//class MetricFamilyBase;
 template <typename MetricType>
 class MetricFamily;
 
 class MetricRegistry {
-    //std::vector<std::shared_ptr<MetricFamilyBase>> families;
-
 public:
     MetricRegistry();
 
     template <typename MetricType>
     std::shared_ptr<MetricFamily<MetricType>> createFamily(const std::string& name, const std::string& description) {
         return std::make_shared<MetricFamily<MetricType>>(name, description, this->registryImpl);
-        //std::shared_ptr<MetricFamilyBase> family = std::make_shared<MetricFamily<MetricType>>(name, description, this->registryImpl);
-        //this->families.emplace_back(family);
-        //return std::dynamic_pointer_cast<MetricFamily<MetricType>>(
-        //    std::make_shared<MetricFamily<MetricType>>(name, description, this->registryImpl));
     }
 
     template <typename MetricType>
