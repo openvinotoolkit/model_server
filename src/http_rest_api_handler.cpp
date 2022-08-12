@@ -220,7 +220,6 @@ std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body)
 }
 
 Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-
     std::string modelName(request_components.model_name);
     std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
