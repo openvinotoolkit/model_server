@@ -20,6 +20,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
 #pragma GCC diagnostic pop
 

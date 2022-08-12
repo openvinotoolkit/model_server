@@ -16,10 +16,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "test_utils.hpp"
-
-#include "../rest_utils.hpp"
 #include "../logging.hpp"
+#include "../rest_utils.hpp"
+#include "test_utils.hpp"
 
 using namespace ovms;
 
@@ -38,7 +37,7 @@ TEST_F(Base64DecodeTest, WrongLength) {
     EXPECT_EQ(decodeBase64(bytes, decodedBytes), StatusCode::REST_BASE64_DECODE_ERROR);
 }
 
-class MakeJsonFromPredictResponseRawTest  : public ::testing::TestWithParam<ovms::Order> {
+class MakeJsonFromPredictResponseRawTest : public ::testing::TestWithParam<ovms::Order> {
 protected:
     tensorflow::serving::PredictResponse proto;
     std::string json;
@@ -129,13 +128,13 @@ const char* rawPositiveFirstOrderResponseColumn = R"({
 })";
 
 std::string getJsonResponseInFirstOrder(ovms::Order order, const char* firstOrderRow, const char* firstOrderColumn) {
-    switch(order){
-        case Order::ROW:
-            return firstOrderRow;
-        case Order::COLUMN:
-            return firstOrderColumn;
-        default:
-            return "";
+    switch (order) {
+    case Order::ROW:
+        return firstOrderRow;
+    case Order::COLUMN:
+        return firstOrderColumn;
+    default:
+        return "";
     }
 }
 
@@ -192,13 +191,13 @@ const char* rawPositiveSecondOrderResponseColumn = R"({
 })";
 
 std::string getJsonResponseInSecondOrder(ovms::Order order, const char* secondOrderRow, const char* secondOrderColumn) {
-    switch(order){
-        case Order::ROW:
-            return secondOrderRow;
-        case Order::COLUMN:
-            return secondOrderColumn;
-        default:
-            return "";
+    switch (order) {
+    case Order::ROW:
+        return secondOrderRow;
+    case Order::COLUMN:
+        return secondOrderColumn;
+    default:
+        return "";
     }
 }
 
@@ -212,15 +211,14 @@ TEST_P(MakeJsonFromPredictResponseRawTest, PositiveNamed) {
     EXPECT_TRUE(is_in_first_order || is_in_second_order);
 }
 
-
 std::string getJsonResponseDependsOnOrder(ovms::Order order, const char* rowOrderResponse, const char* columnOrderResponse) {
-    switch(order){
-        case Order::ROW:
-            return rowOrderResponse;
-        case Order::COLUMN:
-            return  columnOrderResponse;
-        default:
-            return "";
+    switch (order) {
+    case Order::ROW:
+        return rowOrderResponse;
+    case Order::COLUMN:
+        return columnOrderResponse;
+    default:
+        return "";
     }
 }
 
@@ -261,13 +259,13 @@ TEST_P(MakeJsonFromPredictResponseRawTest, Positive_Noname) {
 std::vector<ovms::Order> SupportedOrders = {Order::ROW, Order::COLUMN};
 
 std::string toString(ovms::Order order) {
-    switch(order){
-        case Order::ROW:
-            return "ROW";
-        case Order::COLUMN:
-            return  "COLUMN";
-        default:
-            return "";
+    switch (order) {
+    case Order::ROW:
+        return "ROW";
+    case Order::COLUMN:
+        return "COLUMN";
+    default:
+        return "";
     }
 }
 
@@ -546,7 +544,6 @@ protected:
         two_uint32_vals->add_uint32_val(1);
     }
 };
-
 
 TEST_F(MakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_ColumnOrder_ContainSingleUint64Val) {
     proto.mutable_outputs()->erase("two_uint32_vals");
