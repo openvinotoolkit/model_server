@@ -146,12 +146,12 @@ if __name__ == '__main__':
                 mark_message = ""
                 if args.get('labels_numpy_path') is not None:
                     total_executed += 1
-                    if ma == lbs[i]:
+                    if ma == lb[i]:
                         matched_count += 1
                         mark_message = "; Correct match."
                     else:
                         mark_message = "; Incorrect match. Should be {} {}".format(lb[i], classes.imagenet_classes[lb[i]] )
-                print("\t",i, classes.imagenet_classes[ma],ma, mark_message)
+                print("\t", i, classes.imagenet_classes[ma], ma, mark_message)
             # Comment out this section for non imagenet datasets
 
     print_statistics(processing_times, batch_size)

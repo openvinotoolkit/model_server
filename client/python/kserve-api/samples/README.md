@@ -194,7 +194,41 @@ outputs {
 
 ```Bash
 python grpc_infer_resnet.py --help
-TODO
+usage: grpc_infer_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH [--labels_numpy_path LABELS_NUMPY_PATH] [--grpc_address GRPC_ADDRESS]
+                            [--grpc_port GRPC_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--transpose_input {False,True}]
+                            [--transpose_method {nchw2nhwc,nhwc2nchw}] [--iterations ITERATIONS] [--batchsize BATCHSIZE] [--model_name MODEL_NAME]
+                            [--pipeline_name PIPELINE_NAME] [--dag-batch-size-auto]
+
+Sends requests via KFS gRPC API using images in numpy format. It displays performance statistics and optionally the model accuracy
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --images_numpy_path IMAGES_NUMPY_PATH
+                        numpy in shape [n,w,h,c] or [n,c,h,w]
+  --labels_numpy_path LABELS_NUMPY_PATH
+                        numpy in shape [n,1] - can be used to check model accuracy
+  --grpc_address GRPC_ADDRESS
+                        Specify url to grpc service. default:localhost
+  --grpc_port GRPC_PORT
+                        Specify port to grpc service. default: 9000
+  --input_name INPUT_NAME
+                        Specify input tensor name. default: input
+  --output_name OUTPUT_NAME
+                        Specify output name. default: resnet_v1_50/predictions/Reshape_1
+  --transpose_input {False,True}
+                        Set to False to skip NHWC>NCHW or NCHW>NHWC input transposing. default: True
+  --transpose_method {nchw2nhwc,nhwc2nchw}
+                        How the input transposition should be executed: nhwc2nchw or nchw2nhwc
+  --iterations ITERATIONS
+                        Number of requests iterations, as default use number of images in numpy memmap. default: 0 (consume all frames)
+  --batchsize BATCHSIZE
+                        Number of images in a single request. default: 1
+  --model_name MODEL_NAME
+                        Define model name, must be same as is in service. default: resnet
+  --pipeline_name PIPELINE_NAME
+                        Define pipeline name, must be same as is in service
+  --dag-batch-size-auto
+                        add demultiplexer dimension at front
 ```
 
 - Usage Example
@@ -395,7 +429,41 @@ TODO
 
 ```Bash
 python3 ./http_infer_resnet.py --help
-TODO
+usage: http_infer_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH [--labels_numpy_path LABELS_NUMPY_PATH] [--http_address HTTP_ADDRESS]
+                            [--http_port HTTP_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--transpose_input {False,True}]
+                            [--transpose_method {nchw2nhwc,nhwc2nchw}] [--iterations ITERATIONS] [--batchsize BATCHSIZE] [--model_name MODEL_NAME]
+                            [--pipeline_name PIPELINE_NAME] [--dag-batch-size-auto]
+
+Sends requests via KFS REST API using images in numpy format. It displays performance statistics and optionally the model accuracy
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --images_numpy_path IMAGES_NUMPY_PATH
+                        numpy in shape [n,w,h,c] or [n,c,h,w]
+  --labels_numpy_path LABELS_NUMPY_PATH
+                        numpy in shape [n,1] - can be used to check model accuracy
+  --http_address HTTP_ADDRESS
+                        Specify url to http service. default:localhost
+  --http_port HTTP_PORT
+                        Specify port to http service. default: 5000
+  --input_name INPUT_NAME
+                        Specify input tensor name. default: input
+  --output_name OUTPUT_NAME
+                        Specify output name. default: resnet_v1_50/predictions/Reshape_1
+  --transpose_input {False,True}
+                        Set to False to skip NHWC>NCHW or NCHW>NHWC input transposing. default: True
+  --transpose_method {nchw2nhwc,nhwc2nchw}
+                        How the input transposition should be executed: nhwc2nchw or nchw2nhwc
+  --iterations ITERATIONS
+                        Number of requests iterations, as default use number of images in numpy memmap. default: 0 (consume all frames)
+  --batchsize BATCHSIZE
+                        Number of images in a single request. default: 1
+  --model_name MODEL_NAME
+                        Define model name, must be same as is in service. default: resnet
+  --pipeline_name PIPELINE_NAME
+                        Define pipeline name, must be same as is in service
+  --dag-batch-size-auto
+                        add demultiplexer dimension at front
 ```
 
 - Usage Example
