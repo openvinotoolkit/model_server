@@ -60,7 +60,7 @@ TEST(MetricsCounter, Increment) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 38\n"));
 }
 
-TEST(MetricsCounter, DISABLED_IncrementRemoved) {
+TEST(MetricsCounter, IncrementRemoved) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricCounter>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});

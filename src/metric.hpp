@@ -49,6 +49,8 @@ private:
 class MetricCounter : public Metric {
 public:
     MetricCounter(const Labels& labels, prometheus::Counter& counterImpl);
+    MetricCounter(const MetricCounter&) = delete;
+    MetricCounter(MetricCounter&&) = delete;
 
     // API
     void increment(double value = 1.0f);
@@ -63,6 +65,8 @@ private:
 class MetricGauge : public Metric {
 public:
     MetricGauge(const Labels& labels, prometheus::Gauge& gaugeImpl);
+    MetricGauge(const MetricGauge&) = delete;
+    MetricGauge(MetricCounter&&) = delete;
 
     // API
     void increment(double value = 1.0f);
@@ -80,6 +84,8 @@ class MetricHistogram : public Metric {
 
 public:
     MetricHistogram(const Labels& labels, const BucketBoundaries& bucketBoundaries, prometheus::Histogram& histogramImpl);
+    MetricHistogram(const MetricHistogram&) = delete;
+    MetricHistogram(MetricCounter&&) = delete;
 
     // API
     void observe(double value);

@@ -28,6 +28,8 @@ class MetricFamily;
 class MetricRegistry {
 public:
     MetricRegistry();
+    MetricRegistry(const MetricRegistry&) = delete;
+    MetricRegistry(MetricRegistry&&) = delete;
 
     template <typename MetricType>
     std::shared_ptr<MetricFamily<MetricType>> createFamily(const std::string& name, const std::string& description) {

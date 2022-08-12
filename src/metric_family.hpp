@@ -28,13 +28,8 @@ namespace ovms {
 
 class MetricRegistry;
 
-class MetricFamilyBase {
-public:
-    virtual ~MetricFamilyBase() = default;
-};
-
 template <typename MetricType>
-class MetricFamily : public MetricFamilyBase {
+class MetricFamily {
     std::string name, description;
 
 public:
@@ -42,6 +37,8 @@ public:
         name(name),
         description(description),
         registryImplRef(registryImplRef) {}
+    MetricFamily(const MetricFamily&) = delete;
+    MetricFamily(MetricFamily&&) = delete;
 
     const std::string& getName() const { return this->name; }
     const std::string& getDesc() const { return this->description; }
