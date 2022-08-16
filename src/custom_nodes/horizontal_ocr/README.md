@@ -14,6 +14,7 @@ This custom node can be used to process video frames via [camera example](../../
 
 You can build the shared library of the custom node simply by running command in the context of custom node examples directory:
 ```
+git clone https://github.com/openvinotoolkit/model_server && cd model_server/src/custom_nodes
 make NODES=horizontal_ocr
 ```
 It will compile the library inside a docker container and save the results in `lib/<OS>/` folder.

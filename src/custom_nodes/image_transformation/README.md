@@ -15,6 +15,7 @@ In other cases conversion applies which reduces performance of this node.
 
 You can build the shared library of the custom node simply by running command in the context of custom node examples directory:
 ```
+git clone https://github.com/openvinotoolkit/model_server && cd model_server/src/custom_nodes
 make NODES=image_transformation
 ```
 It will compile the library inside a docker container and save the results in `lib/<OS>/` folder.

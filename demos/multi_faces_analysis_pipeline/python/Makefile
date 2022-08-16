@@ -32,9 +32,10 @@ setup_repository:
 	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/emotions-recognition-retail-0003/FP32/emotions-recognition-retail-0003.xml -o workspace/emotion-recognition-retail-0003/1/emotions-recognition-retail-0003.xml
 	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/emotions-recognition-retail-0003/FP32/emotions-recognition-retail-0003.bin -o workspace/emotion-recognition-retail-0003/1/emotions-recognition-retail-0003.bin
 # Build custom node
-	cd ../../../src/custom_nodes/model_zoo_intel_object_detection && \
-	make && \
-	mv lib ../../../demos/multi_faces_analysis_pipeline/python/workspace/lib
+	cd ../../../src/custom_nodes && \
+	make BASE_OS=ubuntu NODES=model_zoo_intel_object_detection && \
+	mkdir -p ../../demos/multi_faces_analysis_pipeline/python/workspace/lib && \
+	mv lib/ubuntu/libcustom_node_model_zoo_intel_object_detection.so ../../demos/multi_faces_analysis_pipeline/python/workspace/lib/libcustom_node_model_zoo_intel_object_detection.so
 # Copy configuration file to workspace directory
 	cp config.json workspace/.
 

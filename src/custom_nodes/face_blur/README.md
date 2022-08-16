@@ -24,6 +24,7 @@ All [OpenVINO Model Zoo](https://github.com/openvinotoolkit/open_model_zoo/tree/
 
 You can build the shared library of the custom node simply by running command in the context of custom node examples directory:
 ```
+git clone https://github.com/openvinotoolkit/model_server && cd model_server/src/custom_nodes
 make NODES=face_blur
 ```
 It will compile the library inside a docker container and save the results in `lib/<OS>/` folder.
