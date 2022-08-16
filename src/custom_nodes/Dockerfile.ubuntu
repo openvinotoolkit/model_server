@@ -14,13 +14,15 @@
 # limitations under the License.
 #
 
-FROM registry.access.redhat.com/ubi8/ubi:8.5
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && yum update -d6 -y && yum install -d6 -y gcc-c++ curl xz
+FROM ubuntu:20.04
+
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y build-essential curl
 
 # Build OpenCV from source
+RUN DEBIAN_FRONTEND=noninteractive apt install -y git cmake \
+    && rm -rf /var/lib/apt/lists/*
 ARG OPENCV_BRANCH="4.6.0"
 
-RUN yum install -d6 -y git cmake
 WORKDIR /opt
 RUN git clone https://github.com/opencv/opencv.git --depth 1 -b ${OPENCV_BRANCH} /opt/opencv_repo
 
@@ -39,12 +41,12 @@ ARG NODE_NAME=model_zoo_intel_object_detection
 WORKDIR /
 COPY ./queue.hpp ./queue.hpp
 COPY ./common /custom_nodes/common
-COPY . /custom_nodes/${NODE_NAME}/
+COPY ./${NODE_NAME} /custom_nodes/${NODE_NAME}/
 COPY custom_node_interface.h /
 WORKDIR /custom_nodes/common
-RUN g++ -c -std=c++17 *.cpp ${OPS} -I/opt/opencv/include/opencv4/
+RUN g++ -c -std=c++17 *.cpp ${OPS} -I/opt/opencv/include/opencv4
 WORKDIR /custom_nodes/${NODE_NAME}/
 RUN mkdir -p /custom_nodes/lib
-RUN g++ -c -std=c++17 ${NODE_NAME}.cpp ${OPS} -I/opt/opencv/include/opencv4/
+RUN g++ -c -std=c++17 ${NODE_NAME}.cpp ${OPS} -I/opt/opencv/include/opencv4
 RUN g++ -shared ${OPS} -o /custom_nodes/lib/libcustom_node_${NODE_NAME}.so ${NODE_NAME}.o /custom_nodes/common/*.o \
-    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4/ -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs

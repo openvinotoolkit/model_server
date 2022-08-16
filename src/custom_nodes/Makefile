@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022 Intel Corporation
+# Copyright (c) 2021 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,11 +14,13 @@
 # limitations under the License.
 #
 
-HEADER_FILE_PATH ?= ../../custom_node_interface.h
-OPENCV_BUILD_FLAGS ?= ../../opencv_cmake_flags.txt
+HEADER_FILE_PATH ?= ../custom_node_interface.h
+OPENCV_BUILD_FLAGS ?= ../opencv_cmake_flags.txt
 
 BASE_OS ?= ubuntu
 OPENCV_BRANCH ?= 4.6.0
+
+NODE_NAME=model_zoo_intel_object_detection
 
 .PHONY: default build
 
@@ -27,12 +29,10 @@ default: docker_build
 docker_build:
 	@cp $(HEADER_FILE_PATH) ./custom_node_interface.h
 	@cp $(OPENCV_BUILD_FLAGS) ./opencv_cmake_flags.txt
-	@cp -r ../../queue.hpp ./queue.hpp
-	@cp -r ../common ./common
-	@docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} --build-arg OPENCV_BRANCH=${OPENCV_BRANCH} .
-	@rm -Rf lib
-	@docker cp $$(docker create --rm custom_node_build_image:latest):/custom_nodes/lib/ .
-	@rm -rf ./common
+	@cp -r ../queue.hpp ./queue.hpp
+	@docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} --build-arg OPENCV_BRANCH=$(OPENCV_BRANCH) --build-arg NODE_NAME=$(NODE_NAME) .
+	@mkdir -p ./lib/$(BASE_OS)
+	@docker cp $$(docker create --rm custom_node_build_image:latest):/custom_nodes/lib/libcustom_node_$(NODE_NAME).so ./lib/$(BASE_OS)/
 	@rm ./queue.hpp
 	@rm opencv_cmake_flags.txt
 	@rm custom_node_interface.h
