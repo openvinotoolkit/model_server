@@ -36,25 +36,25 @@ docker pull openvino/model_server:latest
 
 ### Build a Custom Node
 
-1. Go to the custom node directory:
+1. Go to the custom node examples directory:
     ```bash
-    cd src/custom_nodes/image_transformation/
+    cd src/custom_nodes
     ``` 
 
 3. Build the custom node:
     ```bash
-    make
+    make BASE_OS=ubuntu NODES=image_transformation
     ```
 
 4. Copy the custom node to the `models` repository:
     ```bash
-    cp lib/libcustom_node_image_transformation.so ../../../models
+    cp lib/ubuntu/libcustom_node_image_transformation.so ../../models/libcustom_node_image_transformation.so
     ```
 
 #### Create Model Server Configuration File
 Go to the `models` directory:
 ```bash
-cd ../../../models
+cd ../../models
 ```
 
 Create a new file named `config.json` in the `models` directory:

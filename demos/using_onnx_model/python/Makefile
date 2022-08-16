@@ -26,9 +26,10 @@ server_preprocessing:
 # Download ONNX ResNet50 model
 	curl --fail -L --create-dir https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-caffe2-v1-9.onnx -o workspace/resnet50-onnx/1/resnet50-caffe2-v1-9.onnx
 # Build custom node
-	cd ../../../src/custom_nodes/image_transformation && \
-	make && \
-	mv lib ../../../demos/using_onnx_model/python/workspace/lib
+	cd ../../../src/custom_nodes && \
+	make BASE_OS=ubuntu NODES=image_transformation && \
+	mkdir -p ../../demos/using_onnx_model/python/workspace/lib && \
+	mv lib/ubuntu/libcustom_node_image_transformation.so ../../demos/using_onnx_model/python/workspace/lib/libcustom_node_image_transformation.so
 # Copy configuration file to workspace directory
 	cp config.json workspace/.
 
