@@ -35,6 +35,7 @@ all:
 		docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} --build-arg OPENCV_BRANCH=$(OPENCV_BRANCH) --build-arg NODE_NAME=$$NODE_NAME . ; \
 		mkdir -p ./lib/$(BASE_OS) ; \
 		docker cp $$(docker create --rm custom_node_build_image:latest):/custom_nodes/lib/libcustom_node_$$NODE_NAME.so ./lib/$(BASE_OS)/ ; \
+		echo "Built $$NODE_NAME" ; \
 	done
 	@rm ./queue.hpp
 	@rm opencv_cmake_flags.txt

@@ -7,6 +7,8 @@ DAG pipeline.
 Additionally to the detected text boxes, in the two additional outputs are returned their coordinates with information about geometry
 and confidence levels for the filtered list of detections.  
 
+**NOTE** Examplary [configuration file](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/optical_character_recognition/python/config.json) is available in [optical character recognition demo](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/optical_character_recognition/python/).
+
 # Building custom node library
 
 You can build the shared library of the custom node simply by running command in the context of custom node examples directory:
@@ -14,9 +16,9 @@ You can build the shared library of the custom node simply by running command in
 git clone https://github.com/openvinotoolkit/model_server && cd model_server/src/custom_nodes
 make NODES=east_ocr
 ```
-It will compile the library inside a docker container and save the results in `lib` folder.
+It will compile the library inside a docker container and save the results in `lib/<OS>/` folder.
 
-You can also select base OS between RH 8.5 (redhat) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable. Pick appropriate OS matching the system running Model Server. Example:
+You can also select base OS between RH 8.5 (redhat) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable.
 ```
 make BASE_OS=redhat NODES=east_ocr
 ```
