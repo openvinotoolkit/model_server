@@ -8,17 +8,19 @@ Additionally to the detected text boxes, in the two additional outputs are retur
 
 This custom node can be used to process video frames via [camera example](../../../demos/horizontal_text_detection/python/README.md).
 
+**NOTE** Examplary [configuration file](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/horizontal_text_detection/python/config.json) is available in [demo with camera](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/horizontal_text_detection/python/).
+
 # Building custom node library
 
-You can build the shared library of the custom node simply by running command in this custom node folder context:
+You can build the shared library of the custom node simply by running command in the context of custom node examples directory:
 ```
-make
+make NODES=horizontal_ocr
 ```
-It will compile the library inside a docker container and save the results in `lib` folder.
+It will compile the library inside a docker container and save the results in `lib/<OS>/` folder.
 
-You can also select base OS between RH 8.4 (redhat) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable.
+You can also select base OS between RH 8.5 (redhat) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable.
 ```
-make BASE_OS=redhat
+make BASE_OS=redhat NODES=horizontal_ocr
 ```
 
 # Custom node inputs
