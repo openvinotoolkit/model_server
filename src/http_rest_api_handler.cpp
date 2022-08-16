@@ -228,6 +228,7 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     kfsGrpcImpl.ModelInfer(nullptr, &grpc_request, &grpc_response);
     std::string output;
     google::protobuf::util::JsonPrintOptions opts_out;
+    // TODO #KFS_CLEANUP replace with proper implementation
     google::protobuf::util::MessageToJsonString(grpc_response, &output, opts_out);
     response = output;
     return StatusCode::OK;
