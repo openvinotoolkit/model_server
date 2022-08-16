@@ -9,15 +9,16 @@ and confidence levels for the filtered list of detections.
 
 # Building custom node library
 
-You can build the shared library of the custom node simply by running command in this custom node folder context:
+You can build the shared library of the custom node simply by running command in the context of custom node examples directory:
 ```
-make
+git clone https://github.com/openvinotoolkit/model_server && cd model_server/src/custom_nodes
+make NODES=east_ocr
 ```
 It will compile the library inside a docker container and save the results in `lib` folder.
 
-You can also select base OS between RH 8.4 (redhat) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable.
+You can also select base OS between RH 8.5 (redhat) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable. Pick appropriate OS matching the system running Model Server. Example:
 ```
-make BASE_OS=redhat
+make BASE_OS=redhat NODES=east_ocr
 ```
 
 # Custom node inputs
