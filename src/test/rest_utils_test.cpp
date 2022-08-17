@@ -654,9 +654,7 @@ protected:
         proto.set_id("id");
 
         output1 = proto.add_outputs();
-        ;
         output2 = proto.add_outputs();
-        ;
 
         output1->set_datatype("FP32");
         output2->set_datatype("INT8");
@@ -1086,7 +1084,7 @@ TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Option
         }
     ]
 })");
-};
+}
 
 TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_OptionalStringParameter) {
     auto protoParameters = proto.mutable_parameters();
