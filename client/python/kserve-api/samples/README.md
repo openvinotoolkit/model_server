@@ -450,12 +450,19 @@ optional arguments:
                         Specify port to HTTP service. default: 5000
 ```
 
+<!---
+TO DO: Complete and uncomment when endpoint ready
+
 - Usage Example
 
 ```Bash
 python3 ./http_server_metadata.py --http_port 5000 --http_address localhost
-TODO
+
+<command output>
+
 ```
+
+--->
 
 ### Run the Client to get model readiness <a name="http-model-ready"></a>
 
@@ -507,14 +514,18 @@ optional arguments:
   --model_version MODEL_VERSION
                         Define model version. If not specified, the default version will be taken from model server
 ```
+<!---
+TO DO: Complete and uncomment when endpoint ready
 
 - Usage Example
 
 ```Bash
 python3 ./http_model_metadata.py --http_port 5000 --http_address localhost --model_name resnet
-TODO
+
+<command output>
 ```
 
+--->
 ### Run the Client to perform inference <a name="http-model-infer"></a>
 
 - Command
@@ -558,8 +569,13 @@ optional arguments:
                         Add demultiplexer dimension at front
 ```
 
+<!---
+TO DO: Complete and uncomment when endpoint ready
+
 - Usage Example
 
 ```Bash
 TODO
 ```
+
+--->

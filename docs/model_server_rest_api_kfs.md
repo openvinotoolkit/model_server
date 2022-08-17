@@ -95,12 +95,17 @@ Else:
 }
 ```
 
+<!---
+TO DO: Complete and uncomment when endpoint ready
+
 **Usage Example**
 ```
 $ curl http://localhost:5000/v2
 
-TO DO...
+<command output>
 ```
+
+--->
 
 For detailed description of the response contents see [KServe API docs](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#server-metadata).
 
@@ -177,13 +182,17 @@ Else:
 }
 ```
 
+<!---
+TO DO: Complete and uncomment when endpoint ready
+
 **Usage example**
 ```
 $ curl http://localhost:5000/v1/models/person-detection/versions/1/metadata
 
-TODO...
-
+<command output>
 ```
+
+--->
 
 For detailed description of the response contents see [KServe API docs](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#model-metadata).
 
