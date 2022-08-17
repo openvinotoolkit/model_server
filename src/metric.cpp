@@ -24,24 +24,14 @@ namespace ovms {
 Metric::Metric(const Labels& labels) :
     labels(labels) {}
 
-const Metric::Labels& Metric::getLabels() const {
-    return this->labels;
-}
-
-/// Counter implementation
-
-MetricCounter::MetricCounter(const Labels& labels, prometheus::Counter& counterImpl) :
-    Metric(labels),
+MetricCounter::MetricCounter(prometheus::Counter& counterImpl) :
     counterImpl(counterImpl) {}
 
 void MetricCounter::increment(double value) {
     this->counterImpl.Increment(value);
 }
 
-/// Gauge implementation
-
-MetricGauge::MetricGauge(const Labels& labels, prometheus::Gauge& gaugeImpl) :
-    Metric(labels),
+MetricGauge::MetricGauge(prometheus::Gauge& gaugeImpl) :
     gaugeImpl(gaugeImpl) {}
 
 void MetricGauge::increment(double value) {
@@ -52,11 +42,7 @@ void MetricGauge::decrement(double value) {
     this->gaugeImpl.Decrement(value);
 }
 
-/// Histogram implementation
-
-MetricHistogram::MetricHistogram(const Labels& labels, const BucketBoundaries& bucketBoundaries, prometheus::Histogram& histogramImpl) :
-    Metric(labels),
-    bucketBoundaries(bucketBoundaries),
+MetricHistogram::MetricHistogram(prometheus::Histogram& histogramImpl) :
     histogramImpl(histogramImpl) {}
 
 void MetricHistogram::observe(double value) {

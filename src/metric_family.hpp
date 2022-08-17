@@ -30,27 +30,18 @@ class MetricRegistry;
 
 template <typename MetricType>
 class MetricFamily {
-    std::string name, description;
-
 public:
-    MetricFamily(const std::string& name, const std::string& description, prometheus::Registry& registryImplRef) :
-        name(name),
-        description(description),
-        registryImplRef(registryImplRef) {}
+    MetricFamily(const std::string& name, const std::string& description, prometheus::Registry& registryImplRef);
     MetricFamily(const MetricFamily&) = delete;
     MetricFamily(MetricFamily&&) = delete;
-
-    const std::string& getName() const { return this->name; }
-    const std::string& getDesc() const { return this->description; }
 
     std::shared_ptr<MetricType> addMetric(const std::map<std::string, std::string>& labels = {}, const std::vector<double>& bucketBoundaries = {});
 
     void remove(std::shared_ptr<MetricType> metric);
 
 private:
-    // Prometheus internals
     prometheus::Registry& registryImplRef;
-    void* familyImplRef;
+    void* familyImplRef;  // This is reference to prometheus::Family<T> where T is prometheus::Counter/Gauge/Histogram depending on MetricType.
 
     friend class MetricRegistry;
 };

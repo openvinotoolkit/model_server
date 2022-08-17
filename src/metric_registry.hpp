@@ -43,7 +43,6 @@ public:
     std::string collect() const;
 
 private:
-    // Prometheus internals
     prometheus::Registry registryImpl;
 };
 

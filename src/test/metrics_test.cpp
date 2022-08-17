@@ -32,18 +32,6 @@ using testing::ContainsRegex;
 using testing::HasSubstr;
 using testing::Not;
 
-TEST(MetricsCommon, FamilyName) {
-    MetricRegistry registry;
-    auto family = registry.createFamily<MetricCounter>("name", "desc");
-    EXPECT_EQ(family->getName(), "name");
-}
-
-TEST(MetricsCommon, FamilyDesc) {
-    MetricRegistry registry;
-    auto family = registry.createFamily<MetricCounter>("name", "desc");
-    EXPECT_EQ(family->getDesc(), "desc");
-}
-
 TEST(MetricsCounter, IncrementDefault) {
     MetricRegistry registry;
     auto metric = registry.createFamily<MetricCounter>("name", "desc")->addMetric({{"label", "value"}});

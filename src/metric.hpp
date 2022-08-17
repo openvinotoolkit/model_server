@@ -37,58 +37,48 @@ public:
 
     Metric(const Labels& labels);
 
-    const Labels& getLabels() const;
-
 private:
     Labels labels;
 };
 
-class MetricCounter : public Metric {
+class MetricCounter {
 public:
-    MetricCounter(const Labels& labels, prometheus::Counter& counterImpl);
+    MetricCounter(prometheus::Counter& counterImpl);
     MetricCounter(const MetricCounter&) = delete;
     MetricCounter(MetricCounter&&) = delete;
 
-    // API
     void increment(double value = 1.0f);
 
 private:
-    // Prometheus internals
     prometheus::Counter& counterImpl;
 
     friend class MetricFamily<MetricCounter>;
 };
 
-class MetricGauge : public Metric {
+class MetricGauge {
 public:
-    MetricGauge(const Labels& labels, prometheus::Gauge& gaugeImpl);
+    MetricGauge(prometheus::Gauge& gaugeImpl);
     MetricGauge(const MetricGauge&) = delete;
     MetricGauge(MetricCounter&&) = delete;
 
-    // API
     void increment(double value = 1.0f);
     void decrement(double value = 1.0f);
 
 private:
-    // Prometheus internals
     prometheus::Gauge& gaugeImpl;
 
     friend class MetricFamily<MetricGauge>;
 };
 
-class MetricHistogram : public Metric {
-    BucketBoundaries bucketBoundaries;
-
+class MetricHistogram {
 public:
-    MetricHistogram(const Labels& labels, const BucketBoundaries& bucketBoundaries, prometheus::Histogram& histogramImpl);
+    MetricHistogram(prometheus::Histogram& histogramImpl);
     MetricHistogram(const MetricHistogram&) = delete;
     MetricHistogram(MetricCounter&&) = delete;
 
-    // API
     void observe(double value);
 
 private:
-    // Prometheus internals
     prometheus::Histogram& histogramImpl;
 
     friend class MetricFamily<MetricHistogram>;
