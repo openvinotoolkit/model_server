@@ -193,70 +193,81 @@ Status makeJsonFromPredictResponse(
     return StatusCode::OK;
 }
 
-Status parseResponseParameters(const ::inference::ModelInferResponse& response_proto, rapidjson::Value& value, rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator>& allocator) {
+Status parseResponseParameters(const ::inference::ModelInferResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
     if (response_proto.parameters_size() > 0) {
-        rapidjson::Value parameters(rapidjson::kObjectType);
+        writer.Key("parameters");
+        writer.StartObject();
 
         for (const auto& protoParameter : response_proto.parameters()) {
-            rapidjson::Value param_value, param_key;
-            param_key = rapidjson::StringRef(protoParameter.first.c_str());
+            writer.Key(protoParameter.first.c_str());
             switch (protoParameter.second.parameter_choice_case()) {
             case inference::InferParameter::ParameterChoiceCase::kBoolParam:
-                param_value = protoParameter.second.bool_param();
+                writer.Bool(protoParameter.second.bool_param());
                 break;
             case inference::InferParameter::ParameterChoiceCase::kInt64Param:
-                param_value = protoParameter.second.int64_param();
+                writer.Int(protoParameter.second.int64_param());
                 break;
             case inference::InferParameter::ParameterChoiceCase::kStringParam:
-                param_value = rapidjson::StringRef(protoParameter.second.string_param().c_str());
+                writer.String(protoParameter.second.string_param().c_str());
                 break;
             default:
                 break;  // return param error
             }
-            parameters.AddMember(param_key, param_value, allocator);
         }
-        value.AddMember("parameters", parameters, allocator);
+        writer.EndObject();
     }
 
     return StatusCode::OK;
 }
 
-Status parseOutputParameters(const inference::ModelInferResponse_InferOutputTensor& output, rapidjson::Value& value, rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator>& allocator) {
+Status parseOutputParameters(const inference::ModelInferResponse_InferOutputTensor& output, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
     if (output.parameters_size() > 0) {
-        rapidjson::Value parameters(rapidjson::kObjectType);
+        writer.Key("parameters");
+        writer.StartObject();
 
         for (const auto& protoParameter : output.parameters()) {
-            rapidjson::Value param_value, param_key;
-            param_key = rapidjson::StringRef(protoParameter.first.c_str());
+            writer.Key(protoParameter.first.c_str());
             switch (protoParameter.second.parameter_choice_case()) {
             case inference::InferParameter::ParameterChoiceCase::kBoolParam:
-                param_value = protoParameter.second.bool_param();
+                writer.Bool(protoParameter.second.bool_param());
                 break;
             case inference::InferParameter::ParameterChoiceCase::kInt64Param:
-                param_value = protoParameter.second.int64_param();
+                writer.Int(protoParameter.second.int64_param());
                 break;
             case inference::InferParameter::ParameterChoiceCase::kStringParam:
-                param_value = rapidjson::StringRef(protoParameter.second.string_param().c_str());
+                writer.String(protoParameter.second.string_param().c_str());
                 break;
             default:
                 break;  // return param error
             }
-            parameters.AddMember(param_key, param_value, allocator);
         }
-        value.AddMember("parameters", parameters, allocator);
+        writer.EndObject();
     }
 
     return StatusCode::OK;
 }
 
 template <typename ValueType>
-void fillTensorDataWithValuesFromRawContents(rapidjson::Value& tensor_data, const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator>& allocator) {
+void fillTensorDataWithIntValuesFromRawContents(const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
     for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(ValueType))
-        tensor_data.PushBack(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)), allocator);
+        writer.Int(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)));
 }
 
-Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapidjson::Document& response) {
-    rapidjson::Value outputs(rapidjson::kArrayType);
+template <typename ValueType>
+void fillTensorDataWithUintValuesFromRawContents(const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+    for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(ValueType))
+        writer.Int(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)));
+}
+
+template <typename ValueType>
+void fillTensorDataWithFloatValuesFromRawContents(const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+    for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(ValueType))
+        writer.Double(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)));
+}
+
+Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+    writer.Key("outputs");
+    writer.StartArray();
 
     bool seekDataInValField = false;
     if (response_proto.raw_output_contents_size() == 0)
@@ -266,40 +277,43 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
     for (const auto& tensor : response_proto.outputs()) {
         size_t dataTypeSize = KFSDataTypeSize(tensor.datatype());
         size_t expectedContentSize = dataTypeSize;
-        rapidjson::Value tensor_shape(rapidjson::kArrayType);
         for (int i = 0; i < tensor.shape().size(); i++) {
             expectedContentSize *= tensor.shape().at(i);
-            tensor_shape.PushBack(tensor.shape().at(i), response.GetAllocator());
         }
         size_t expectedElementsNumber = dataTypeSize > 0 ? expectedContentSize / dataTypeSize : 0;
 
         if (!seekDataInValField && (response_proto.raw_output_contents(tensor_it).size() != expectedContentSize))
             return StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE;
 
-        rapidjson::Value output(rapidjson::kObjectType);
-        rapidjson::Value tensor_name, tensor_datatype;
-        tensor_name = rapidjson::StringRef(tensor.name().c_str());
-        tensor_datatype = rapidjson::StringRef(tensor.datatype().c_str());
-        rapidjson::Value tensor_data(rapidjson::kArrayType);
-        output.AddMember("name", tensor_name, response.GetAllocator());
-        output.AddMember("shape", tensor_shape, response.GetAllocator());
-        output.AddMember("datatype", tensor_datatype, response.GetAllocator());
+        writer.StartObject();
+        writer.Key("name");
+        writer.String(tensor.name().c_str());
+        writer.Key("shape");
+        writer.StartArray();
+        for (int i = 0; i < tensor.shape().size(); i++) {
+            writer.Int(tensor.shape().at(i));
+        }
+        writer.EndArray();
+        writer.Key("datatype");
+        writer.String(tensor.datatype().c_str());
 
-        auto status = parseOutputParameters(tensor, output, response.GetAllocator());
+        auto status = parseOutputParameters(tensor, writer);
         if (!status.ok()) {
             return status;
         }
 
+        writer.Key("data");
+        writer.StartArray();
         if (tensor.datatype() == "FP32") {
             if (seekDataInValField) {
                 auto status = checkValField(tensor.contents().fp32_contents_size(), expectedElementsNumber);
                 if (!status.ok())
                     return status;
                 for (auto& number : tensor.contents().fp32_contents()) {
-                    tensor_data.PushBack(number, response.GetAllocator());
+                     writer.Double(number);
                 }
             } else {
-                fillTensorDataWithValuesFromRawContents<float>(tensor_data, response_proto, tensor_it, response.GetAllocator());
+                fillTensorDataWithFloatValuesFromRawContents<float>(response_proto, tensor_it, writer);
             }
         } else if (tensor.datatype() == "INT64") {
             if (seekDataInValField) {
@@ -307,10 +321,10 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
                 if (!status.ok())
                     return status;
                 for (auto& number : tensor.contents().int64_contents()) {
-                    tensor_data.PushBack(number, response.GetAllocator());
+                    writer.Int(number);
                 }
             } else {
-                fillTensorDataWithValuesFromRawContents<int64_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
+                fillTensorDataWithIntValuesFromRawContents<int64_t>(response_proto, tensor_it, writer);
             }
         } else if (tensor.datatype() == "INT32") {
             if (seekDataInValField) {
@@ -318,10 +332,10 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
                 if (!status.ok())
                     return status;
                 for (auto& number : tensor.contents().int_contents()) {
-                    tensor_data.PushBack(number, response.GetAllocator());
+                    writer.Int(number);
                 }
             } else {
-                fillTensorDataWithValuesFromRawContents<int32_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
+                fillTensorDataWithIntValuesFromRawContents<int32_t>(response_proto, tensor_it, writer);
             }
         } else if (tensor.datatype() == "INT16") {
             if (seekDataInValField) {
@@ -329,10 +343,10 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
                 if (!status.ok())
                     return status;
                 for (auto& number : tensor.contents().int_contents()) {
-                    tensor_data.PushBack(number, response.GetAllocator());
+                    writer.Int(number);
                 }
             } else {
-                fillTensorDataWithValuesFromRawContents<int16_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
+                fillTensorDataWithIntValuesFromRawContents<int16_t>(response_proto, tensor_it, writer);
             }
         } else if (tensor.datatype() == "INT8") {
             if (seekDataInValField) {
@@ -340,10 +354,10 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
                 if (!status.ok())
                     return status;
                 for (auto& number : tensor.contents().int_contents()) {
-                    tensor_data.PushBack(number, response.GetAllocator());
+                    writer.Int(number);
                 }
             } else {
-                fillTensorDataWithValuesFromRawContents<int8_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
+                fillTensorDataWithIntValuesFromRawContents<int8_t>(response_proto, tensor_it, writer);
             }
         } else if (tensor.datatype() == "UINT64") {
             if (seekDataInValField) {
@@ -351,10 +365,10 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
                 if (!status.ok())
                     return status;
                 for (auto& number : tensor.contents().uint64_contents()) {
-                    tensor_data.PushBack(number, response.GetAllocator());
+                    writer.Uint(number);
                 }
             } else {
-                fillTensorDataWithValuesFromRawContents<uint64_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
+                fillTensorDataWithUintValuesFromRawContents<uint64_t>(response_proto, tensor_it, writer);
             }
         } else if (tensor.datatype() == "UINT32") {
             if (seekDataInValField) {
@@ -362,10 +376,10 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
                 if (!status.ok())
                     return status;
                 for (auto& number : tensor.contents().uint_contents()) {
-                    tensor_data.PushBack(number, response.GetAllocator());
+                    writer.Uint(number);
                 }
             } else {
-                fillTensorDataWithValuesFromRawContents<uint32_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
+                fillTensorDataWithUintValuesFromRawContents<uint32_t>(response_proto, tensor_it, writer);
             }
         } else if (tensor.datatype() == "UINT16") {
             if (seekDataInValField) {
@@ -373,10 +387,10 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
                 if (!status.ok())
                     return status;
                 for (auto& number : tensor.contents().uint_contents()) {
-                    tensor_data.PushBack(number, response.GetAllocator());
+                    writer.Uint(number);
                 }
             } else {
-                fillTensorDataWithValuesFromRawContents<uint16_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
+                fillTensorDataWithUintValuesFromRawContents<uint16_t>(response_proto, tensor_it, writer);
             }
         } else if (tensor.datatype() == "UINT8") {
             if (seekDataInValField) {
@@ -384,10 +398,10 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
                 if (!status.ok())
                     return status;
                 for (auto& number : tensor.contents().uint_contents()) {
-                    tensor_data.PushBack(number, response.GetAllocator());
+                    writer.Uint(number);
                 }
             } else {
-                fillTensorDataWithValuesFromRawContents<uint8_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
+                fillTensorDataWithUintValuesFromRawContents<uint8_t>(response_proto, tensor_it, writer);
             }
         } else if (tensor.datatype() == "FP64") {
             if (seekDataInValField) {
@@ -395,21 +409,19 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
                 if (!status.ok())
                     return status;
                 for (auto& number : tensor.contents().fp64_contents()) {
-                    tensor_data.PushBack(number, response.GetAllocator());
+                    writer.Double(number);
                 }
             } else {
-                fillTensorDataWithValuesFromRawContents<double>(tensor_data, response_proto, tensor_it, response.GetAllocator());
+                fillTensorDataWithFloatValuesFromRawContents<double>(response_proto, tensor_it, writer);
             }
         } else {
             return StatusCode::REST_UNSUPPORTED_PRECISION;
         }
-
-        output.AddMember("data", tensor_data, response.GetAllocator());
-        outputs.PushBack(output, response.GetAllocator());
+        writer.EndArray();
+        writer.EndObject();
         tensor_it++;
     }
-
-    response.AddMember("outputs", outputs, response.GetAllocator());
+    writer.EndArray();
     return StatusCode::OK;
 }
 
@@ -420,20 +432,19 @@ Status makeJsonFromPredictResponse(
     using std::chrono::microseconds;
     timer.start("convert");
 
-    rapidjson::Document response;
-    response.SetObject();
-    rapidjson::Value model_name, id;
-    model_name = rapidjson::StringRef(response_proto.model_name().c_str());
-    id = rapidjson::StringRef(response_proto.id().c_str());
-    response.AddMember("model_name", model_name, response.GetAllocator());
-    response.AddMember("id", id, response.GetAllocator());
+    rapidjson::StringBuffer buffer;
+    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.Key("model_name");
+    writer.String(response_proto.model_name().c_str());
+    writer.Key("id");
+    writer.String(response_proto.id().c_str());
     if (response_proto.model_version().length() > 0) {
-        rapidjson::Value model_version;
-        model_version = rapidjson::StringRef(response_proto.model_version().c_str());
-        response.AddMember("model_version", model_version, response.GetAllocator());
+        writer.Key("model_version");
+        writer.String(response_proto.model_version().c_str());
     }
 
-    auto status = parseResponseParameters(response_proto, response, response.GetAllocator());
+    auto status = parseResponseParameters(response_proto, writer);
     if (!status.ok()) {
         return status;
     }
@@ -443,15 +454,13 @@ Status makeJsonFromPredictResponse(
         return StatusCode::REST_PROTO_TO_STRING_ERROR;
     }
 
-    status = parseOutputs(response_proto, response);
+    status = parseOutputs(response_proto, writer);
     if (!status.ok()) {
         return status;
     }
 
-    rapidjson::StringBuffer buffer;
-    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
-    response.Accept(writer);
-    *response_json = buffer.GetString();
+    writer.EndObject();
+    response_json->assign(buffer.GetString());
 
     timer.stop("convert");
     SPDLOG_DEBUG("GRPC to HTTP response conversion: {:.3f} ms", timer.elapsed<microseconds>("convert") / 1000);
