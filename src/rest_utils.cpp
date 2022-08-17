@@ -310,7 +310,7 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
                 if (!status.ok())
                     return status;
                 for (auto& number : tensor.contents().fp32_contents()) {
-                     writer.Double(number);
+                    writer.Double(number);
                 }
             } else {
                 fillTensorDataWithFloatValuesFromRawContents<float>(response_proto, tensor_it, writer);
