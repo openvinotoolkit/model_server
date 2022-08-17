@@ -52,24 +52,24 @@ MetricFamily<MetricHistogram>::MetricFamily(const std::string& name, const std::
 }
 
 template <>
-std::shared_ptr<MetricCounter> MetricFamily<MetricCounter>::addMetric(const Metric::Labels& labels, const Metric::BucketBoundaries& bucketBoundaries) {
+std::shared_ptr<MetricCounter> MetricFamily<MetricCounter>::addMetric(const MetricLabels& labels, const BucketBoundaries& bucketBoundaries) {
     auto familyImpl = static_cast<prometheus::Family<prometheus::Counter>*>(this->familyImplRef);
     prometheus::Counter& counterImpl = familyImpl->Add(labels);
-    return std::make_shared<MetricCounter>(counterImpl);
+    return std::shared_ptr<MetricCounter>(new MetricCounter(counterImpl));
 }
 
 template <>
-std::shared_ptr<MetricGauge> MetricFamily<MetricGauge>::addMetric(const Metric::Labels& labels, const Metric::BucketBoundaries& bucketBoundaries) {
+std::shared_ptr<MetricGauge> MetricFamily<MetricGauge>::addMetric(const MetricLabels& labels, const BucketBoundaries& bucketBoundaries) {
     auto familyImpl = static_cast<prometheus::Family<prometheus::Gauge>*>(this->familyImplRef);
     prometheus::Gauge& gaugeImpl = familyImpl->Add(labels);
-    return std::make_shared<MetricGauge>(gaugeImpl);
+    return std::shared_ptr<MetricGauge>(new MetricGauge(gaugeImpl));
 }
 
 template <>
-std::shared_ptr<MetricHistogram> MetricFamily<MetricHistogram>::addMetric(const Metric::Labels& labels, const Metric::BucketBoundaries& bucketBoundaries) {
+std::shared_ptr<MetricHistogram> MetricFamily<MetricHistogram>::addMetric(const MetricLabels& labels, const BucketBoundaries& bucketBoundaries) {
     auto familyImpl = static_cast<prometheus::Family<prometheus::Histogram>*>(this->familyImplRef);
     prometheus::Histogram& histogramImpl = familyImpl->Add(labels, bucketBoundaries);
-    return std::make_shared<MetricHistogram>(histogramImpl);
+    return std::shared_ptr<MetricHistogram>(new MetricHistogram(histogramImpl));
 }
 
 template <>

@@ -26,16 +26,22 @@ class Registry;
 
 namespace ovms {
 
+using MetricLabels = std::map<std::string, std::string>;
+using BucketBoundaries = std::vector<double>;
+
 class MetricRegistry;
 
 template <typename MetricType>
 class MetricFamily {
-public:
+private:
     MetricFamily(const std::string& name, const std::string& description, prometheus::Registry& registryImplRef);
     MetricFamily(const MetricFamily&) = delete;
     MetricFamily(MetricFamily&&) = delete;
 
-    std::shared_ptr<MetricType> addMetric(const std::map<std::string, std::string>& labels = {}, const std::vector<double>& bucketBoundaries = {});
+public:
+    std::shared_ptr<MetricType> addMetric(
+        const MetricLabels& labels = {},
+        const BucketBoundaries& bucketBoundaries = {});
 
     void remove(std::shared_ptr<MetricType> metric);
 

@@ -15,9 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include <map>
 #include <string>
-#include <vector>
 
 namespace prometheus {
 class Counter;
@@ -30,23 +28,13 @@ namespace ovms {
 template <typename T>
 class MetricFamily;
 
-class Metric {
-public:
-    using Labels = std::map<std::string, std::string>;
-    using BucketBoundaries = std::vector<double>;
-
-    Metric(const Labels& labels);
-
-private:
-    Labels labels;
-};
-
 class MetricCounter {
-public:
+private:
     MetricCounter(prometheus::Counter& counterImpl);
     MetricCounter(const MetricCounter&) = delete;
     MetricCounter(MetricCounter&&) = delete;
 
+public:
     void increment(double value = 1.0f);
 
 private:

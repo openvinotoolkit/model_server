@@ -21,9 +21,6 @@
 
 namespace ovms {
 
-Metric::Metric(const Labels& labels) :
-    labels(labels) {}
-
 MetricCounter::MetricCounter(prometheus::Counter& counterImpl) :
     counterImpl(counterImpl) {}
 
