@@ -244,6 +244,10 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
             tensor_shape.PushBack(tensor.shape().at(i), response.GetAllocator());
         }
         size_t expectedElementsNumber = dataTypeSize > 0 ? expectedContentSize / dataTypeSize : 0;
+
+        if (!seekDataInValField && (response_proto.raw_output_contents(tensor_it).size() != expectedContentSize))
+            return StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE;
+
         rapidjson::Value output(rapidjson::kObjectType);
         rapidjson::Value tensor_name, tensor_datatype;
         tensor_name = rapidjson::StringRef(tensor.name().c_str());
@@ -409,6 +413,11 @@ Status makeJsonFromPredictResponse(
         return status;
     }
 
+    if(response_proto.outputs_size() == 0){
+        SPDLOG_ERROR("Creating json from tensors failed: No outputs found.");
+        return StatusCode::REST_PROTO_TO_STRING_ERROR;
+    }
+
     status = parseOutputs(response_proto, response);
     if(!status.ok())
     {
@@ -416,7 +425,7 @@ Status makeJsonFromPredictResponse(
     }
 
     rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
     response.Accept(writer);
     *response_json = buffer.GetString();
 
