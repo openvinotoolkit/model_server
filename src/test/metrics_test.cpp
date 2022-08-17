@@ -195,6 +195,33 @@ family2{label="value"} 1
     EXPECT_EQ(registry.collect(), expected);
 }
 
+TEST(MetricsCounter, CreateFamilyWithSameNameSameMetricType) {
+    MetricRegistry registry;
+    EXPECT_NE(registry.createFamily<MetricCounter>("family", "desc"), nullptr);
+    EXPECT_NE(registry.createFamily<MetricCounter>("family", "desc"), nullptr);
+    EXPECT_EQ(registry.collect().size(), 0);
+}
+
+TEST(MetricsCounter, MultipleFamiliesWithSameNameReferToSameMetric) {
+    MetricRegistry registry;
+    auto family1 = registry.createFamily<MetricCounter>("family", "desc");
+    auto family2 = registry.createFamily<MetricCounter>("family", "desc");
+    family1->addMetric()->increment();
+    family2->addMetric()->increment();
+    std::string expected = R"(# HELP family desc
+# TYPE family counter
+family 2
+)";
+    EXPECT_EQ(registry.collect(), expected);
+}
+
+TEST(MetricsCounter, CreateFamilyWithSameNameDifferentMetricTypeReturnsNull) {
+    MetricRegistry registry;
+    EXPECT_NE(registry.createFamily<MetricGauge>("family", "desc"), nullptr);
+    EXPECT_EQ(registry.createFamily<MetricCounter>("family", "desc"), nullptr);
+    EXPECT_EQ(registry.collect().size(), 0);
+}
+
 TEST(MetricsGauge, IncrementDefault) {
     MetricRegistry registry;
     auto metric = registry.createFamily<MetricGauge>("name", "desc")->addMetric({{"label", "value"}});
@@ -407,6 +434,33 @@ family2{label="value"} -1
     EXPECT_EQ(registry.collect(), expected);
 }
 
+TEST(MetricsGauge, CreateFamilyWithSameNameSameMetricType) {
+    MetricRegistry registry;
+    EXPECT_NE(registry.createFamily<MetricGauge>("family", "desc"), nullptr);
+    EXPECT_NE(registry.createFamily<MetricGauge>("family", "desc"), nullptr);
+    EXPECT_EQ(registry.collect().size(), 0);
+}
+
+TEST(MetricsGauge, MultipleFamiliesWithSameNameReferToSameMetric) {
+    MetricRegistry registry;
+    auto family1 = registry.createFamily<MetricGauge>("family", "desc");
+    auto family2 = registry.createFamily<MetricGauge>("family", "desc");
+    family1->addMetric()->decrement();
+    family2->addMetric()->decrement();
+    std::string expected = R"(# HELP family desc
+# TYPE family gauge
+family -2
+)";
+    EXPECT_EQ(registry.collect(), expected);
+}
+
+TEST(MetricsGauge, CreateFamilyWithSameNameDifferentMetricTypeReturnsNull) {
+    MetricRegistry registry;
+    EXPECT_NE(registry.createFamily<MetricCounter>("family", "desc"), nullptr);
+    EXPECT_EQ(registry.createFamily<MetricGauge>("family", "desc"), nullptr);
+    EXPECT_EQ(registry.collect().size(), 0);
+}
+
 TEST(MetricsHistogram, Observe) {
     MetricRegistry registry;
     auto metric = registry.createFamily<MetricHistogram>("name", "desc")->addMetric({{"label", "value"}}, {1.0, 10.0});
@@ -595,6 +649,35 @@ family2_bucket{label="value",le="2"} 1
 family2_bucket{label="value",le="+Inf"} 1
 )";
     EXPECT_EQ(registry.collect(), expected);
+}
+
+TEST(MetricsHistogram, CreateFamilyWithSameNameSameMetricType) {
+    MetricRegistry registry;
+    EXPECT_NE(registry.createFamily<MetricHistogram>("family", "desc"), nullptr);
+    EXPECT_NE(registry.createFamily<MetricHistogram>("family", "desc"), nullptr);
+    EXPECT_EQ(registry.collect().size(), 0);
+}
+
+TEST(MetricsHistogram, MultipleFamiliesWithSameNameReferToSameMetric) {
+    MetricRegistry registry;
+    auto family1 = registry.createFamily<MetricHistogram>("family", "desc");
+    auto family2 = registry.createFamily<MetricHistogram>("family", "desc");
+    family1->addMetric({}, {})->observe(2.5);
+    family2->addMetric({}, {})->observe(3.5);
+    std::string expected = R"(# HELP family desc
+# TYPE family histogram
+family_count 2
+family_sum 6
+family_bucket{le="+Inf"} 2
+)";
+    EXPECT_EQ(registry.collect(), expected);
+}
+
+TEST(MetricsHistogram, CreateFamilyWithSameNameDifferentMetricTypeReturnsNull) {
+    MetricRegistry registry;
+    EXPECT_NE(registry.createFamily<MetricCounter>("family", "desc"), nullptr);
+    EXPECT_EQ(registry.createFamily<MetricHistogram>("family", "desc"), nullptr);
+    EXPECT_EQ(registry.collect().size(), 0);
 }
 
 TEST(MetricsFlow, Counter) {

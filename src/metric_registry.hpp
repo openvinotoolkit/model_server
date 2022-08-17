@@ -33,8 +33,12 @@ public:
 
     template <typename MetricType>
     std::shared_ptr<MetricFamily<MetricType>> createFamily(const std::string& name, const std::string& description) {
-        return std::shared_ptr<MetricFamily<MetricType>>(
-            new MetricFamily<MetricType>(name, description, this->registryImpl));
+        try {
+            return std::shared_ptr<MetricFamily<MetricType>>(
+                new MetricFamily<MetricType>(name, description, this->registryImpl));
+        } catch (std::invalid_argument&) {
+            return nullptr;
+        }
     }
 
     template <typename MetricType>
