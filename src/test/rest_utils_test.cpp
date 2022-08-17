@@ -16,10 +16,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "test_utils.hpp"
-
-#include "../rest_utils.hpp"
 #include "../logging.hpp"
+#include "../rest_utils.hpp"
+#include "test_utils.hpp"
 
 using namespace ovms;
 
@@ -38,7 +37,7 @@ TEST_F(Base64DecodeTest, WrongLength) {
     EXPECT_EQ(decodeBase64(bytes, decodedBytes), StatusCode::REST_BASE64_DECODE_ERROR);
 }
 
-class TFSMakeJsonFromPredictResponseRawTest  : public ::testing::TestWithParam<ovms::Order> {
+class TFSMakeJsonFromPredictResponseRawTest : public ::testing::TestWithParam<ovms::Order> {
 protected:
     TFSResponseType proto;
     std::string json;
@@ -128,14 +127,14 @@ const char* rawPositiveFirstOrderResponseColumn = R"({
     }
 })";
 
-std::string getJsonResponseInFirstOrder(ovms::Order order, const char* firstOrderRow, const char* firstOrderColumn) {
-    switch(order){
-        case Order::ROW:
-            return firstOrderRow;
-        case Order::COLUMN:
-            return firstOrderColumn;
-        default:
-            return "";
+std::string getJsonResponseDependsOnOrder(ovms::Order order, const char* rowOrderResponse, const char* columnOrderResponse) {
+    switch (order) {
+    case Order::ROW:
+        return rowOrderResponse;
+    case Order::COLUMN:
+        return columnOrderResponse;
+    default:
+        return "";
     }
 }
 
@@ -191,37 +190,14 @@ const char* rawPositiveSecondOrderResponseColumn = R"({
     }
 })";
 
-std::string getJsonResponseInSecondOrder(ovms::Order order, const char* secondOrderRow, const char* secondOrderColumn) {
-    switch(order){
-        case Order::ROW:
-            return secondOrderRow;
-        case Order::COLUMN:
-            return secondOrderColumn;
-        default:
-            return "";
-    }
-}
-
 TEST_P(TFSMakeJsonFromPredictResponseRawTest, PositiveNamed) {
     auto order = GetParam();
     ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, order), StatusCode::OK);
-    bool is_in_first_order = (json == getJsonResponseInFirstOrder(order, rawPositiveFirstOrderResponseRow, rawPositiveFirstOrderResponseColumn));
+    bool is_in_first_order = (json == getJsonResponseDependsOnOrder(order, rawPositiveFirstOrderResponseRow, rawPositiveFirstOrderResponseColumn));
 
-    bool is_in_second_order = (json == getJsonResponseInSecondOrder(order, rawPositiveSecondOrderResponseRow, rawPositiveSecondOrderResponseColumn));
+    bool is_in_second_order = (json == getJsonResponseDependsOnOrder(order, rawPositiveSecondOrderResponseRow, rawPositiveSecondOrderResponseColumn));
 
     EXPECT_TRUE(is_in_first_order || is_in_second_order);
-}
-
-
-std::string getJsonResponseDependsOnOrder(ovms::Order order, const char* rowOrderResponse, const char* columnOrderResponse) {
-    switch(order){
-        case Order::ROW:
-            return rowOrderResponse;
-        case Order::COLUMN:
-            return  columnOrderResponse;
-        default:
-            return "";
-    }
 }
 
 const char* rawPositiveNonameResponseRow = R"({
@@ -261,13 +237,13 @@ TEST_P(TFSMakeJsonFromPredictResponseRawTest, Positive_Noname) {
 std::vector<ovms::Order> SupportedOrders = {Order::ROW, Order::COLUMN};
 
 std::string toString(ovms::Order order) {
-    switch(order){
-        case Order::ROW:
-            return "ROW";
-        case Order::COLUMN:
-            return  "COLUMN";
-        default:
-            return "";
+    switch (order) {
+    case Order::ROW:
+        return "ROW";
+    case Order::COLUMN:
+        return "COLUMN";
+    default:
+        return "";
     }
 }
 
@@ -547,7 +523,6 @@ protected:
     }
 };
 
-
 TEST_F(TFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_ColumnOrder_ContainSingleUint64Val) {
     proto.mutable_outputs()->erase("two_uint32_vals");
     ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, Order::COLUMN), StatusCode::OK);
@@ -668,7 +643,7 @@ TEST_F(TFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Column
     EXPECT_TRUE(is_in_first_order || is_in_second_order);
 }
 
-class KFSMakeJsonFromPredictResponseRawTest  : public ::testing::Test {
+class KFSMakeJsonFromPredictResponseRawTest : public ::testing::Test {
 protected:
     KFSResponseType proto;
     std::string json;
@@ -678,8 +653,10 @@ protected:
         proto.set_model_name("model");
         proto.set_id("id");
 
-        output1 = proto.add_outputs();;
-        output2 = proto.add_outputs();;
+        output1 = proto.add_outputs();
+        ;
+        output2 = proto.add_outputs();
+        ;
 
         output1->set_datatype("FP32");
         output2->set_datatype("INT8");
@@ -778,7 +755,7 @@ class KFSMakeJsonFromPredictResponsePrecisionTest : public ::testing::Test {
 protected:
     KFSResponseType proto;
     std::string json;
-    KFSOutputTensorType *output;
+    KFSOutputTensorType* output;
 
     void SetUp() override {
         proto.set_model_name("model");
@@ -1016,25 +993,6 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Uint64) {
 })");
 }
 
-
-// TEST_F(TFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_KFS) {
-//     ::inference::ModelInferResponse response;
-//     auto* existingProto = response.add_outputs();
-//     existingProto->set_name("DUPA");
-//     existingProto->set_datatype("FP32");
-//     float data = 92.5f;
-//     auto* output_contents1 = existingProto->mutable_contents()->mutable_fp32_contents()->Add();
-//     *output_contents1 = data;
-//     auto* output_contents2 = existingProto->mutable_contents()->mutable_fp32_contents()->Add();
-//     *output_contents2 = data;
-//     existingProto->mutable_shape()->Add(2);
-//     //output->mutable_tensor_content()->assign(reinterpret_cast<const char*>(&data), sizeof(uint64_t));
-
-//     std::string response_json;
-//     ASSERT_EQ(makeJsonFromPredictResponse(response, &response_json), StatusCode::OK);
-//     SPDLOG_ERROR(response_json);
-// }
-
 class KFSMakeJsonFromPredictResponseValTest : public ::testing::Test {
 protected:
     KFSResponseType proto;
@@ -1065,7 +1023,6 @@ protected:
         *two_uint32_vals_2 = 1;
     }
 };
-
 
 TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Positive) {
     ASSERT_EQ(makeJsonFromPredictResponse(proto, &json), StatusCode::OK);
@@ -1130,3 +1087,126 @@ TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Option
     ]
 })");
 };
+
+TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_OptionalStringParameter) {
+    auto protoParameters = proto.mutable_parameters();
+    (*protoParameters)["key"].set_string_param("param");
+    auto outputParameters = single_uint64_val->mutable_parameters();
+    (*outputParameters)["key"].set_string_param("param");
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json), StatusCode::OK);
+    EXPECT_EQ(json, R"({
+    "model_name": "model",
+    "id": "id",
+    "parameters": {
+        "key": "param"
+    },
+    "outputs": [
+        {
+            "name": "single_uint64_val",
+            "shape": [
+                1
+            ],
+            "datatype": "UINT64",
+            "parameters": {
+                "key": "param"
+            },
+            "data": [
+                5000000000
+            ]
+        },
+        {
+            "name": "two_uint32_vals",
+            "shape": [
+                2
+            ],
+            "datatype": "UINT32",
+            "data": [
+                4000000000,
+                1
+            ]
+        }
+    ]
+})");
+}
+
+TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_OptionalIntParameter) {
+    auto protoParameters = proto.mutable_parameters();
+    (*protoParameters)["key"].set_int64_param(100);
+    auto outputParameters = single_uint64_val->mutable_parameters();
+    (*outputParameters)["key"].set_int64_param(100);
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json), StatusCode::OK);
+    EXPECT_EQ(json, R"({
+    "model_name": "model",
+    "id": "id",
+    "parameters": {
+        "key": 100
+    },
+    "outputs": [
+        {
+            "name": "single_uint64_val",
+            "shape": [
+                1
+            ],
+            "datatype": "UINT64",
+            "parameters": {
+                "key": 100
+            },
+            "data": [
+                5000000000
+            ]
+        },
+        {
+            "name": "two_uint32_vals",
+            "shape": [
+                2
+            ],
+            "datatype": "UINT32",
+            "data": [
+                4000000000,
+                1
+            ]
+        }
+    ]
+})");
+}
+
+TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_OptionalBoolParameter) {
+    auto protoParameters = proto.mutable_parameters();
+    (*protoParameters)["key"].set_bool_param(true);
+    auto outputParameters = single_uint64_val->mutable_parameters();
+    (*outputParameters)["key"].set_bool_param(true);
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json), StatusCode::OK);
+    EXPECT_EQ(json, R"({
+    "model_name": "model",
+    "id": "id",
+    "parameters": {
+        "key": true
+    },
+    "outputs": [
+        {
+            "name": "single_uint64_val",
+            "shape": [
+                1
+            ],
+            "datatype": "UINT64",
+            "parameters": {
+                "key": true
+            },
+            "data": [
+                5000000000
+            ]
+        },
+        {
+            "name": "two_uint32_vals",
+            "shape": [
+                2
+            ],
+            "datatype": "UINT32",
+            "data": [
+                4000000000,
+                1
+            ]
+        }
+    ]
+})");
+}

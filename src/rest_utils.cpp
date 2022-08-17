@@ -27,8 +27,8 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/util/json_tensor.h"
 #pragma GCC diagnostic pop
-
 #include "precision.hpp"
+#include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
 #include "tfs_frontend/tfs_utils.hpp"
 #include "timer.hpp"
 
@@ -193,22 +193,50 @@ Status makeJsonFromPredictResponse(
     return StatusCode::OK;
 }
 
-Status parseParameters(const ::inference::ModelInferResponse& response_proto, rapidjson::Value& value, rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator>& allocator) {
+Status parseResponseParameters(const ::inference::ModelInferResponse& response_proto, rapidjson::Value& value, rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator>& allocator) {
     if (response_proto.parameters_size() > 0) {
-        rapidjson::Value parameters(rapidjson::kArrayType);
+        rapidjson::Value parameters(rapidjson::kObjectType);
 
-        for (const auto& parameter : response_proto.parameters()) {
+        for (const auto& protoParameter : response_proto.parameters()) {
             rapidjson::Value param_value, param_key;
-            param_key = rapidjson::StringRef(parameter.first.c_str());
-            switch (parameter.second.parameter_choice_case()) {
+            param_key = rapidjson::StringRef(protoParameter.first.c_str());
+            switch (protoParameter.second.parameter_choice_case()) {
             case inference::InferParameter::ParameterChoiceCase::kBoolParam:
-                param_value = parameter.second.bool_param();
+                param_value = protoParameter.second.bool_param();
                 break;
             case inference::InferParameter::ParameterChoiceCase::kInt64Param:
-                param_value = parameter.second.int64_param();
+                param_value = protoParameter.second.int64_param();
                 break;
             case inference::InferParameter::ParameterChoiceCase::kStringParam:
-                param_value = rapidjson::StringRef(parameter.second.string_param().c_str());
+                param_value = rapidjson::StringRef(protoParameter.second.string_param().c_str());
+                break;
+            default:
+                break;  // return param error
+            }
+            parameters.AddMember(param_key, param_value, allocator);
+        }
+        value.AddMember("parameters", parameters, allocator);
+    }
+
+    return StatusCode::OK;
+}
+
+Status parseOutputParameters(const inference::ModelInferResponse_InferOutputTensor& output, rapidjson::Value& value, rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator>& allocator) {
+    if (output.parameters_size() > 0) {
+        rapidjson::Value parameters(rapidjson::kObjectType);
+
+        for (const auto& protoParameter : output.parameters()) {
+            rapidjson::Value param_value, param_key;
+            param_key = rapidjson::StringRef(protoParameter.first.c_str());
+            switch (protoParameter.second.parameter_choice_case()) {
+            case inference::InferParameter::ParameterChoiceCase::kBoolParam:
+                param_value = protoParameter.second.bool_param();
+                break;
+            case inference::InferParameter::ParameterChoiceCase::kInt64Param:
+                param_value = protoParameter.second.int64_param();
+                break;
+            case inference::InferParameter::ParameterChoiceCase::kStringParam:
+                param_value = rapidjson::StringRef(protoParameter.second.string_param().c_str());
                 break;
             default:
                 break;  // return param error
@@ -222,18 +250,18 @@ Status parseParameters(const ::inference::ModelInferResponse& response_proto, ra
 }
 
 template <typename ValueType>
-void fillTensorDataWithValuesFromRawContents(rapidjson::Value& tensor_data, const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator>& allocator){
+void fillTensorDataWithValuesFromRawContents(rapidjson::Value& tensor_data, const ::inference::ModelInferResponse& response_proto, int tensor_it, rapidjson::MemoryPoolAllocator<rapidjson::CrtAllocator>& allocator) {
     for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(ValueType))
         tensor_data.PushBack(*(reinterpret_cast<const ValueType*>(response_proto.raw_output_contents(tensor_it).data() + i)), allocator);
 }
 
-Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapidjson::Document& response){
+Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapidjson::Document& response) {
     rapidjson::Value outputs(rapidjson::kArrayType);
 
     bool seekDataInValField = false;
     if (response_proto.raw_output_contents_size() == 0)
         seekDataInValField = true;
-    
+
     int tensor_it = 0;
     for (const auto& tensor : response_proto.outputs()) {
         size_t dataTypeSize = KFSDataTypeSize(tensor.datatype());
@@ -257,9 +285,8 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
         output.AddMember("shape", tensor_shape, response.GetAllocator());
         output.AddMember("datatype", tensor_datatype, response.GetAllocator());
 
-        auto status = parseParameters(response_proto, output, response.GetAllocator());
-        if(!status.ok())
-        {
+        auto status = parseOutputParameters(tensor, output, response.GetAllocator());
+        if (!status.ok()) {
             return status;
         }
 
@@ -349,8 +376,7 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
                     tensor_data.PushBack(number, response.GetAllocator());
                 }
             } else {
-                for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(uint16_t))
-                    tensor_data.PushBack(*(reinterpret_cast<const uint16_t*>(response_proto.raw_output_contents(tensor_it).data() + i)), response.GetAllocator());
+                fillTensorDataWithValuesFromRawContents<uint16_t>(tensor_data, response_proto, tensor_it, response.GetAllocator());
             }
         } else if (tensor.datatype() == "UINT8") {
             if (seekDataInValField) {
@@ -407,20 +433,18 @@ Status makeJsonFromPredictResponse(
         response.AddMember("model_version", model_version, response.GetAllocator());
     }
 
-    auto status = parseParameters(response_proto, response, response.GetAllocator());
-    if(!status.ok())
-    {
+    auto status = parseResponseParameters(response_proto, response, response.GetAllocator());
+    if (!status.ok()) {
         return status;
     }
 
-    if(response_proto.outputs_size() == 0){
+    if (response_proto.outputs_size() == 0) {
         SPDLOG_ERROR("Creating json from tensors failed: No outputs found.");
         return StatusCode::REST_PROTO_TO_STRING_ERROR;
     }
 
     status = parseOutputs(response_proto, response);
-    if(!status.ok())
-    {
+    if (!status.ok()) {
         return status;
     }
 
