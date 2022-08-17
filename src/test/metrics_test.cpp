@@ -32,6 +32,11 @@ using testing::ContainsRegex;
 using testing::HasSubstr;
 using testing::Not;
 
+TEST(Metrics, RegistryEmpty) {
+    MetricRegistry registry;
+    EXPECT_EQ(registry.collect().size(), 0);
+}
+
 TEST(MetricsCounter, IncrementDefault) {
     MetricRegistry registry;
     auto metric = registry.createFamily<MetricCounter>("name", "desc")->addMetric({{"label", "value"}});
@@ -84,10 +89,6 @@ TEST(MetricsCounter, IncrementNegativeAmount) {
 
 TEST(MetricsCounter, RemoveMetric) {
     MetricRegistry registry;
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{other=\"data\"}")));
     auto family = registry.createFamily<MetricCounter>("name", "desc");
     auto metric1 = family->addMetric({{"label", "value"}});
     auto metric2 = family->addMetric({{"other", "data"}});
@@ -102,23 +103,28 @@ TEST(MetricsCounter, RemoveMetric) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{other=\"data\"} 0\n"));
 }
 
+TEST(MetricsCounter, RemoveLastMetricRemovesFamily) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricCounter>("name", "desc");
+    auto metric = family->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    family->remove(metric);
+    EXPECT_EQ(registry.collect().size(), 0);
+}
+
 TEST(MetricsCounter, RemoveRemovedMetric) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricCounter>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
     family->remove(metric);
     family->remove(metric);
+    EXPECT_EQ(registry.collect().size(), 0);
 }
 
-TEST(MetricsCounter, RemoveFamily) {
+TEST(MetricsCounter, RemoveEntireFamilyOfMetrics) {
     MetricRegistry registry;
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP fam")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE fam")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{other=\"data\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("fam{other=\"data\"}")));
     auto family1 = registry.createFamily<MetricCounter>("name", "desc");
     auto family2 = registry.createFamily<MetricCounter>("fam", "desc");
     auto metric1 = family1->addMetric({{"label", "value"}});
@@ -147,11 +153,11 @@ TEST(MetricsCounter, RemoveRemovedFamily) {
     family->addMetric();
     EXPECT_TRUE(registry.remove(family));
     EXPECT_FALSE(registry.remove(family));
+    EXPECT_EQ(registry.collect().size(), 0);
 }
 
 TEST(MetricsCounter, RevertingMetricResetsValue) {
     MetricRegistry registry;
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
     auto family = registry.createFamily<MetricCounter>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
@@ -164,7 +170,6 @@ TEST(MetricsCounter, RevertingMetricResetsValue) {
 
 TEST(MetricsCounter, RevertingFamilyResetsValue) {
     MetricRegistry registry;
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
     auto family = registry.createFamily<MetricCounter>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
@@ -174,6 +179,20 @@ TEST(MetricsCounter, RevertingFamilyResetsValue) {
     family = registry.createFamily<MetricCounter>("name", "desc");
     metric = family->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+}
+
+TEST(MetricsCounter, CorrectOrderOfTextRepresentation) {
+    MetricRegistry registry;
+    registry.createFamily<MetricCounter>("family1", "desc")->addMetric({{"label", "value"}})->increment();
+    registry.createFamily<MetricCounter>("family2", "desc")->addMetric({{"label", "value"}})->increment();
+    std::string expected = R"(# HELP family1 desc
+# TYPE family1 counter
+family1{label="value"} 1
+# HELP family2 desc
+# TYPE family2 counter
+family2{label="value"} 1
+)";
+    EXPECT_EQ(registry.collect(), expected);
 }
 
 TEST(MetricsGauge, IncrementDefault) {
@@ -257,7 +276,6 @@ TEST(MetricsGauge, DecrementRemovedMetric) {
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
 }
 
-// Disabled since using metric after removal is undefined behavior.
 TEST(MetricsGauge, DecrementRemovedFamily) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricGauge>("name", "desc");
@@ -279,10 +297,6 @@ TEST(MetricsGauge, DecrementNegativeAmount) {
 
 TEST(MetricsGauge, RemoveMetric) {
     MetricRegistry registry;
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{other=\"data\"}")));
     auto family = registry.createFamily<MetricGauge>("name", "desc");
     auto metric1 = family->addMetric({{"label", "value"}});
     auto metric2 = family->addMetric({{"other", "data"}});
@@ -297,23 +311,28 @@ TEST(MetricsGauge, RemoveMetric) {
     EXPECT_THAT(registry.collect(), HasSubstr("name{other=\"data\"} 0\n"));
 }
 
+TEST(MetricsGauge, RemoveLastMetricRemovesFamily) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricGauge>("name", "desc");
+    auto metric = family->addMetric({{"label", "value"}});
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+    family->remove(metric);
+    EXPECT_EQ(registry.collect().size(), 0);
+}
+
 TEST(MetricsGauge, RemoveRemovedMetric) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricGauge>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
     family->remove(metric);
     family->remove(metric);
+    EXPECT_EQ(registry.collect().size(), 0);
 }
 
-TEST(MetricsGauge, RemoveFamily) {
+TEST(MetricsGauge, RemoveEntireFamilyOfMetrics) {
     MetricRegistry registry;
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP fam")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE fam")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{other=\"data\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("fam{other=\"data\"}")));
     auto family1 = registry.createFamily<MetricGauge>("name", "desc");
     auto family2 = registry.createFamily<MetricGauge>("fam", "desc");
     auto metric1 = family1->addMetric({{"label", "value"}});
@@ -342,11 +361,11 @@ TEST(MetricsGauge, RemoveRemovedFamily) {
     family->addMetric();
     EXPECT_TRUE(registry.remove(family));
     EXPECT_FALSE(registry.remove(family));
+    EXPECT_EQ(registry.collect().size(), 0);
 }
 
 TEST(MetricsGauge, RevertingMetricResetsValue) {
     MetricRegistry registry;
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
     auto family = registry.createFamily<MetricGauge>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
@@ -361,7 +380,6 @@ TEST(MetricsGauge, RevertingMetricResetsValue) {
 
 TEST(MetricsGauge, RevertingFamilyResetsValue) {
     MetricRegistry registry;
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name{label=\"value\"}")));
     auto family = registry.createFamily<MetricGauge>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
@@ -373,6 +391,20 @@ TEST(MetricsGauge, RevertingFamilyResetsValue) {
     family = registry.createFamily<MetricGauge>("name", "desc");
     metric = family->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name{label=\"value\"} 0\n"));
+}
+
+TEST(MetricsGauge, CorrectOrderOfTextRepresentation) {
+    MetricRegistry registry;
+    registry.createFamily<MetricGauge>("family1", "desc")->addMetric({{"label", "value"}})->increment();
+    registry.createFamily<MetricGauge>("family2", "desc")->addMetric({{"label", "value"}})->decrement();
+    std::string expected = R"(# HELP family1 desc
+# TYPE family1 gauge
+family1{label="value"} 1
+# HELP family2 desc
+# TYPE family2 gauge
+family2{label="value"} -1
+)";
+    EXPECT_EQ(registry.collect(), expected);
 }
 
 TEST(MetricsHistogram, Observe) {
@@ -417,16 +449,6 @@ TEST(MetricsHistogram, ObserveRemovedFamily) {
 
 TEST(MetricsHistogram, RemoveMetric) {
     MetricRegistry registry;
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"10\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{label=\"value\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_count{label=\"value\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{other=\"data\",le=\"10\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{other=\"data\",le=\"+Inf\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{other=\"data\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_count{other=\"data\"}")));
     auto family = registry.createFamily<MetricHistogram>("name", "desc");
     auto metric1 = family->addMetric({{"label", "value"}}, {10});
     auto metric2 = family->addMetric({{"other", "data"}}, {10});
@@ -453,32 +475,31 @@ TEST(MetricsHistogram, RemoveMetric) {
     EXPECT_THAT(registry.collect(), HasSubstr("name_count{other=\"data\"} 0\n"));
 }
 
+TEST(MetricsHistogram, RemoveLastMetricRemovesFamily) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricHistogram>("name", "desc");
+    auto metric = family->addMetric({{"label", "value"}}, {10});
+    EXPECT_THAT(registry.collect(), HasSubstr("# HELP name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("# TYPE name"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"10\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_sum{label=\"value\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("name_count{label=\"value\"} 0\n"));
+    family->remove(metric);
+    EXPECT_EQ(registry.collect().size(), 0);
+}
+
 TEST(MetricsHistogram, RemoveRemovedMetric) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricHistogram>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}});
     family->remove(metric);
     family->remove(metric);
+    EXPECT_EQ(registry.collect().size(), 0);
 }
 
-TEST(MetricsHistogram, RemoveFamily) {
+TEST(MetricsHistogram, RemoveEntireFamilyOfMetrics) {
     MetricRegistry registry;
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP name")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE name")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# HELP fam")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("# TYPE fam")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"10\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{label=\"value\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_count{label=\"value\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{other=\"data\",le=\"10\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{other=\"data\",le=\"+Inf\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_sum{other=\"data\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_count{other=\"data\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("fam_bucket{other=\"data\",le=\"10\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("fam_bucket{other=\"data\",le=\"+Inf\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("fam_sum{other=\"data\"}")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("fam_count{other=\"data\"}")));
     auto family1 = registry.createFamily<MetricHistogram>("name", "desc");
     auto family2 = registry.createFamily<MetricHistogram>("fam", "desc");
     auto metric1 = family1->addMetric({{"label", "value"}}, {10});
@@ -525,11 +546,11 @@ TEST(MetricsHistogram, RemoveRemovedFamily) {
     family->addMetric();
     EXPECT_TRUE(registry.remove(family));
     EXPECT_FALSE(registry.remove(family));
+    EXPECT_EQ(registry.collect().size(), 0);
 }
 
 TEST(MetricsHistogram, RevertingMetricResetsValue) {
     MetricRegistry registry;
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"}")));
     auto family = registry.createFamily<MetricHistogram>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}}, {2.2});
     EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"} 0\n"));
@@ -544,7 +565,6 @@ TEST(MetricsHistogram, RevertingMetricResetsValue) {
 
 TEST(MetricsHistogram, RevertingFamilyResetsValue) {
     MetricRegistry registry;
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"}")));
     auto family = registry.createFamily<MetricHistogram>("name", "desc");
     auto metric = family->addMetric({{"label", "value"}}, {2.2});
     EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"} 0\n"));
@@ -555,6 +575,26 @@ TEST(MetricsHistogram, RevertingFamilyResetsValue) {
     family = registry.createFamily<MetricHistogram>("name", "desc");
     metric = family->addMetric({{"label", "value"}});
     EXPECT_THAT(registry.collect(), HasSubstr("name_bucket{label=\"value\",le=\"+Inf\"} 0\n"));
+}
+
+TEST(MetricsHistogram, CorrectOrderOfTextRepresentation) {
+    MetricRegistry registry;
+    registry.createFamily<MetricHistogram>("family1", "desc")->addMetric({{"label", "value"}}, {1.0})->observe(5.2);
+    registry.createFamily<MetricHistogram>("family2", "desc")->addMetric({{"label", "value"}}, {2.0})->observe(0.2);
+    std::string expected = R"(# HELP family1 desc
+# TYPE family1 histogram
+family1_count{label="value"} 1
+family1_sum{label="value"} 5.2
+family1_bucket{label="value",le="1"} 0
+family1_bucket{label="value",le="+Inf"} 1
+# HELP family2 desc
+# TYPE family2 histogram
+family2_count{label="value"} 1
+family2_sum{label="value"} 0.2
+family2_bucket{label="value",le="2"} 1
+family2_bucket{label="value",le="+Inf"} 1
+)";
+    EXPECT_EQ(registry.collect(), expected);
 }
 
 TEST(MetricsFlow, Counter) {
