@@ -27,8 +27,16 @@ This guide shows how to interact with KServe API endpoints on both gRPC and HTTP
 ### Clone OpenVINO&trade; Model Server GitHub repository and enter model_server directory.
 ```Bash
 git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
 ```
+
+### Prepare virtualenv
+```Bash
+cd model_server/client/python/kserve-api/samples
+virtualenv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+```
+
 ### Download the Pretrained Model
 Download the model files and store them in the `models` directory
 ```Bash
@@ -46,14 +54,6 @@ docker pull openvino/model_server:latest
 Start the server container with the image pulled in the previous step and mount the `models` directory :
 ```Bash
 docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 5000:5000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 5000
-```
-
-### Prepare virtualenv
-```Bash
-cd client/python/kserve-api/samples
-virtualenv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
 ```
 
 Once you finish above steps, you are ready to run the samples.
