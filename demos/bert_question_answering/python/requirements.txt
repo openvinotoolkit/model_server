@@ -1,2 +1,3 @@
 tensorflow-serving-api
 validators
+protobuf>=3.18,<4.0.0
