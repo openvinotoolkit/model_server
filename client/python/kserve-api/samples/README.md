@@ -293,7 +293,7 @@ Classification accuracy: 100.00
 Using binary inputs feautre requires model to accept input in layout NHWC. The model used in other clients has native layout NCWH, therefore it must be adjusted on model server start up. For samples that use binary inputs, please start docker container with `--layout NHWC:NCHW` parameter:
 
 ```Bash
-docker run --rm -v $(pwd)/models:/models -p 9001:9001 -p 5001:5001 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9001 --rest_port 5001 --layout NHWC:NCHW
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 5000:5000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --batch_size auto --port 9000 --rest_port 5000 --layout NHWC:NCHW
 ```
 
 - Command
@@ -331,7 +331,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 grpc_infer_binary_resnet.py --grpc_port 9001 --images_list resnet_input_images.txt  --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
+python3 grpc_infer_binary_resnet.py --grpc_port 9000 --images_list resnet_input_images.txt  --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet
 Start processing:
         Model name: resnet
 Iteration 0; Processing time: 27.09 ms; speed 36.92 fps
