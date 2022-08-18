@@ -321,10 +321,11 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
                 if (!status.ok())
                     return status;
                 for (auto& number : tensor.contents().int64_contents()) {
-                    writer.Int(number);
+                    writer.Int64(number);
                 }
             } else {
-                fillTensorDataWithIntValuesFromRawContents<int64_t>(response_proto, tensor_it, writer);
+                for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(int64_t))
+                    writer.Int64(*(reinterpret_cast<const int64_t*>(response_proto.raw_output_contents(tensor_it).data() + i)));
             }
         } else if (tensor.datatype() == "INT32") {
             if (seekDataInValField) {
@@ -365,10 +366,11 @@ Status parseOutputs(const ::inference::ModelInferResponse& response_proto, rapid
                 if (!status.ok())
                     return status;
                 for (auto& number : tensor.contents().uint64_contents()) {
-                    writer.Uint(number);
+                    writer.Uint64(number);
                 }
             } else {
-                fillTensorDataWithUintValuesFromRawContents<uint64_t>(response_proto, tensor_it, writer);
+                for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(uint64_t))
+                    writer.Uint64(*(reinterpret_cast<const uint64_t*>(response_proto.raw_output_contents(tensor_it).data() + i)));
             }
         } else if (tensor.datatype() == "UINT32") {
             if (seekDataInValField) {
@@ -434,6 +436,7 @@ Status makeJsonFromPredictResponse(
 
     rapidjson::StringBuffer buffer;
     rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+    writer.SetFormatOptions(rapidjson::kFormatSingleLineArray);
     writer.StartObject();
     writer.Key("model_name");
     writer.String(response_proto.model_name().c_str());

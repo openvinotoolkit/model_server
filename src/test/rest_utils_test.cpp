@@ -230,7 +230,6 @@ TEST_P(TFSMakeJsonFromPredictResponseRawTest, Positive_Noname) {
     auto order = GetParam();
     proto.mutable_outputs()->erase("output2");
     ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, order), StatusCode::OK);
-    SPDLOG_ERROR(json);
     EXPECT_EQ(json, getJsonResponseDependsOnOrder(order, rawPositiveNonameResponseRow, rawPositiveNonameResponseColumn));
 }
 
@@ -690,47 +689,17 @@ TEST_F(KFSMakeJsonFromPredictResponseRawTest, Positive) {
     EXPECT_EQ(json, R"({
     "model_name": "model",
     "id": "id",
-    "outputs": [
-        {
+    "outputs": [{
             "name": "output1",
-            "shape": [
-                2,
-                1,
-                4
-            ],
+            "shape": [2, 1, 4],
             "datatype": "FP32",
-            "data": [
-                5.0,
-                10.0,
-                -3.0,
-                2.5,
-                9.0,
-                55.5,
-                -0.5,
-                -1.5
-            ]
-        },
-        {
+            "data": [5.0, 10.0, -3.0, 2.5, 9.0, 55.5, -0.5, -1.5]
+        }, {
             "name": "output2",
-            "shape": [
-                2,
-                5
-            ],
+            "shape": [2, 5],
             "datatype": "INT8",
-            "data": [
-                5,
-                2,
-                3,
-                8,
-                -2,
-                -100,
-                0,
-                125,
-                4,
-                -1
-            ]
-        }
-    ]
+            "data": [5, 2, 3, 8, -2, -100, 0, 125, 4, -1]
+        }]
 })");
 }
 
@@ -775,24 +744,17 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Float) {
     EXPECT_EQ(json, R"({
     "model_name": "model",
     "id": "id",
-    "outputs": [
-        {
+    "outputs": [{
             "name": "output",
-            "shape": [
-                1,
-                1
-            ],
+            "shape": [1, 1],
             "datatype": "FP32",
-            "data": [
-                92.5
-            ]
-        }
-    ]
+            "data": [92.5]
+        }]
 })");
 }
 
 TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Double) {
-    double data = 15.99;
+    double data = 50000000000.99;
     output->set_datatype("FP64");
     auto* output_contents = proto.add_raw_output_contents();
     output_contents->assign(reinterpret_cast<const char*>(&data), sizeof(double));
@@ -800,19 +762,12 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Double) {
     EXPECT_EQ(json, R"({
     "model_name": "model",
     "id": "id",
-    "outputs": [
-        {
+    "outputs": [{
             "name": "output",
-            "shape": [
-                1,
-                1
-            ],
+            "shape": [1, 1],
             "datatype": "FP64",
-            "data": [
-                15.99
-            ]
-        }
-    ]
+            "data": [50000000000.99]
+        }]
 })");
 }
 
@@ -825,19 +780,12 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Int32) {
     EXPECT_EQ(json, R"({
     "model_name": "model",
     "id": "id",
-    "outputs": [
-        {
+    "outputs": [{
             "name": "output",
-            "shape": [
-                1,
-                1
-            ],
+            "shape": [1, 1],
             "datatype": "INT32",
-            "data": [
-                -82
-            ]
-        }
-    ]
+            "data": [-82]
+        }]
 })");
 }
 
@@ -850,19 +798,12 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Int16) {
     EXPECT_EQ(json, R"({
     "model_name": "model",
     "id": "id",
-    "outputs": [
-        {
+    "outputs": [{
             "name": "output",
-            "shape": [
-                1,
-                1
-            ],
+            "shape": [1, 1],
             "datatype": "INT16",
-            "data": [
-                -945
-            ]
-        }
-    ]
+            "data": [-945]
+        }]
 })");
 }
 
@@ -875,19 +816,12 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Int8) {
     EXPECT_EQ(json, R"({
     "model_name": "model",
     "id": "id",
-    "outputs": [
-        {
+    "outputs": [{
             "name": "output",
-            "shape": [
-                1,
-                1
-            ],
+            "shape": [1, 1],
             "datatype": "INT8",
-            "data": [
-                -53
-            ]
-        }
-    ]
+            "data": [-53]
+        }]
 })");
 }
 
@@ -900,19 +834,12 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Uint8) {
     EXPECT_EQ(json, R"({
     "model_name": "model",
     "id": "id",
-    "outputs": [
-        {
+    "outputs": [{
             "name": "output",
-            "shape": [
-                1,
-                1
-            ],
+            "shape": [1, 1],
             "datatype": "UINT8",
-            "data": [
-                250
-            ]
-        }
-    ]
+            "data": [250]
+        }]
 })");
 }
 
@@ -925,19 +852,12 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Int64) {
     EXPECT_EQ(json, R"({
     "model_name": "model",
     "id": "id",
-    "outputs": [
-        {
+    "outputs": [{
             "name": "output",
-            "shape": [
-                1,
-                1
-            ],
+            "shape": [1, 1],
             "datatype": "INT64",
-            "data": [
-                -658324
-            ]
-        }
-    ]
+            "data": [-658324]
+        }]
 })");
 }
 
@@ -950,19 +870,12 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Uint32) {
     EXPECT_EQ(json, R"({
     "model_name": "model",
     "id": "id",
-    "outputs": [
-        {
+    "outputs": [{
             "name": "output",
-            "shape": [
-                1,
-                1
-            ],
+            "shape": [1, 1],
             "datatype": "UINT32",
-            "data": [
-                1245353
-            ]
-        }
-    ]
+            "data": [1245353]
+        }]
 })");
 }
 
@@ -975,19 +888,12 @@ TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Uint64) {
     EXPECT_EQ(json, R"({
     "model_name": "model",
     "id": "id",
-    "outputs": [
-        {
+    "outputs": [{
             "name": "output",
-            "shape": [
-                1,
-                1
-            ],
+            "shape": [1, 1],
             "datatype": "UINT64",
-            "data": [
-                63456412
-            ]
-        }
-    ]
+            "data": [63456412]
+        }]
 })");
 }
 
@@ -1027,29 +933,17 @@ TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Positi
     EXPECT_EQ(json, R"({
     "model_name": "model",
     "id": "id",
-    "outputs": [
-        {
+    "outputs": [{
             "name": "single_uint64_val",
-            "shape": [
-                1
-            ],
+            "shape": [1],
             "datatype": "UINT64",
-            "data": [
-                5000000000
-            ]
-        },
-        {
+            "data": [5000000000]
+        }, {
             "name": "two_uint32_vals",
-            "shape": [
-                2
-            ],
+            "shape": [2],
             "datatype": "UINT32",
-            "data": [
-                4000000000,
-                1
-            ]
-        }
-    ]
+            "data": [4000000000, 1]
+        }]
 })");
 }
 
@@ -1060,29 +954,17 @@ TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Option
     "model_name": "model",
     "id": "id",
     "model_version": "version",
-    "outputs": [
-        {
+    "outputs": [{
             "name": "single_uint64_val",
-            "shape": [
-                1
-            ],
+            "shape": [1],
             "datatype": "UINT64",
-            "data": [
-                5000000000
-            ]
-        },
-        {
+            "data": [5000000000]
+        }, {
             "name": "two_uint32_vals",
-            "shape": [
-                2
-            ],
+            "shape": [2],
             "datatype": "UINT32",
-            "data": [
-                4000000000,
-                1
-            ]
-        }
-    ]
+            "data": [4000000000, 1]
+        }]
 })");
 }
 
@@ -1098,32 +980,20 @@ TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Option
     "parameters": {
         "key": "param"
     },
-    "outputs": [
-        {
+    "outputs": [{
             "name": "single_uint64_val",
-            "shape": [
-                1
-            ],
+            "shape": [1],
             "datatype": "UINT64",
             "parameters": {
                 "key": "param"
             },
-            "data": [
-                5000000000
-            ]
-        },
-        {
+            "data": [5000000000]
+        }, {
             "name": "two_uint32_vals",
-            "shape": [
-                2
-            ],
+            "shape": [2],
             "datatype": "UINT32",
-            "data": [
-                4000000000,
-                1
-            ]
-        }
-    ]
+            "data": [4000000000, 1]
+        }]
 })");
 }
 
@@ -1139,32 +1009,20 @@ TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Option
     "parameters": {
         "key": 100
     },
-    "outputs": [
-        {
+    "outputs": [{
             "name": "single_uint64_val",
-            "shape": [
-                1
-            ],
+            "shape": [1],
             "datatype": "UINT64",
             "parameters": {
                 "key": 100
             },
-            "data": [
-                5000000000
-            ]
-        },
-        {
+            "data": [5000000000]
+        }, {
             "name": "two_uint32_vals",
-            "shape": [
-                2
-            ],
+            "shape": [2],
             "datatype": "UINT32",
-            "data": [
-                4000000000,
-                1
-            ]
-        }
-    ]
+            "data": [4000000000, 1]
+        }]
 })");
 }
 
@@ -1180,31 +1038,19 @@ TEST_F(KFSMakeJsonFromPredictResponseValTest, MakeJsonFromPredictResponse_Option
     "parameters": {
         "key": true
     },
-    "outputs": [
-        {
+    "outputs": [{
             "name": "single_uint64_val",
-            "shape": [
-                1
-            ],
+            "shape": [1],
             "datatype": "UINT64",
             "parameters": {
                 "key": true
             },
-            "data": [
-                5000000000
-            ]
-        },
-        {
+            "data": [5000000000]
+        }, {
             "name": "two_uint32_vals",
-            "shape": [
-                2
-            ],
+            "shape": [2],
             "datatype": "UINT32",
-            "data": [
-                4000000000,
-                1
-            ]
-        }
-    ]
+            "data": [4000000000, 1]
+        }]
 })");
 }
