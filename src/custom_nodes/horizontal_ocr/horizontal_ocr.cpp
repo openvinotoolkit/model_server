@@ -177,8 +177,8 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     NODE_ASSERT(imageTensor->dims[0] == 1, "input image batch must be 1");
     uint64_t _imageHeight = imageTensor->dims[originalImageLayout == "NCHW" ? 2 : 1];
     uint64_t _imageWidth = imageTensor->dims[originalImageLayout == "NCHW" ? 3 : 2];
-    NODE_ASSERT(_imageHeight <= std::numeric_limits<int>::max(), "image height is too large");
-    NODE_ASSERT(_imageWidth <= std::numeric_limits<int>::max(), "image width is too large");
+    NODE_ASSERT(_imageHeight <= static_cast<uint64_t>(std::numeric_limits<int>::max()), "image height is too large");
+    NODE_ASSERT(_imageWidth <= static_cast<uint64_t>(std::numeric_limits<int>::max()), "image width is too large");
     int imageHeight = static_cast<int>(_imageHeight);
     int imageWidth = static_cast<int>(_imageWidth);
 

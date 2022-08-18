@@ -1,5 +1,6 @@
 .venv
 .pytest_cache
+.devcontainer
 .vscode
 .vs
 .idea
