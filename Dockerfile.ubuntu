@@ -98,9 +98,9 @@ tar xvf boost_1_69_0.tar.gz && cd boost_1_69_0 && ./bootstrap.sh && \
 --with-log --with-locale \
 install
 
-####### Azure SDK
 COPY third_party /ovms/third_party/
 
+####### Azure SDK
 WORKDIR /azure
 RUN apt update && apt-get install -y uuid uuid-dev
 RUN git clone https://github.com/Microsoft/cpprestsdk.git && cd cpprestsdk && git checkout tags/v2.10.18 -b v2.10.18 && git submodule update --init
@@ -128,22 +128,12 @@ RUN make --jobs=$JOBS
 
 ####### End of AWS S3 SDK
 
-# Build OpenCV from source (for binary inputs and custom nodes)
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive \
-    apt-get install -y --no-install-recommends \
-        cmake \
-    && rm -rf /var/lib/apt/lists/*
-ARG OPENCV_BRANCH="4.6.0"
+####### Build OpenCV
 WORKDIR /opt
-RUN git clone https://github.com/opencv/opencv.git --depth 1 -b ${OPENCV_BRANCH} /opt/opencv_repo
-COPY src/opencv_cmake_flags.txt /opt/opencv_repo
-WORKDIR /opt/opencv_repo/build
-# hadolint ignore=SC2046
-RUN cmake $(cat /opt/opencv_repo/opencv_cmake_flags.txt) /opt/opencv_repo && \
-    make "-j$(nproc)" && \
-    make install
-# End of OpenCV building
+RUN cp /ovms/third_party/opencv/install_opencv.sh /opt/ && \
+    cp /ovms/third_party/opencv/opencv_cmake_flags.txt /opt/
+RUN chmod +x install_opencv.sh && ./install_opencv.sh
+####### End of OpenCV
 
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL

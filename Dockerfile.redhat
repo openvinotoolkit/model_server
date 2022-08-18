@@ -89,9 +89,9 @@ RUN wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.
 		--with-log --with-locale \
 		install
 
-####### Azure SDK
 COPY third_party /ovms/third_party/
 
+####### Azure SDK
 WORKDIR /azure
 RUN git clone https://github.com/Microsoft/cpprestsdk.git && cd cpprestsdk && git checkout tags/v2.10.16 -b v2.10.16 && git submodule update --init
 
@@ -118,17 +118,12 @@ RUN mv .deps/install/lib64 .deps/install/lib
 
 ####### End of AWS S3 SDK
 
-# Build OpenCV from source (for binary inputs and custom nodes)
-ARG OPENCV_BRANCH="4.6.0"
+####### Build OpenCV
 WORKDIR /opt
-RUN git clone https://github.com/opencv/opencv.git --depth 1 -b ${OPENCV_BRANCH} /opt/opencv_repo
-COPY src/opencv_cmake_flags.txt /opt/opencv_repo
-WORKDIR /opt/opencv_repo/build
-# hadolint ignore=SC2046
-RUN cmake $(cat /opt/opencv_repo/opencv_cmake_flags.txt) /opt/opencv_repo && \
-    make "-j$(nproc)" && \
-    make install
-# End of OpenCV building
+RUN cp /ovms/third_party/opencv/install_opencv.sh /opt/ && \
+    cp /ovms/third_party/opencv/opencv_cmake_flags.txt /opt/
+RUN chmod +x install_opencv.sh && ./install_opencv.sh
+####### End of OpenCV
 
 ARG ov_use_binary=1
 ARG DLDT_PACKAGE_URL
