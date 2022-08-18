@@ -28,9 +28,10 @@ setup_repository:
 	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/text-recognition-0014/FP32/text-recognition-0014.bin -o workspace/text-recognition-0014/1/text-recognition-0014.bin
 	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/text-recognition-0014/FP32/text-recognition-0014.xml -o workspace/text-recognition-0014/1/text-recognition-0014.xml
 # Build custom node
-	cd ../../../src/custom_nodes/horizontal_ocr && \
-	make && \
-	mv lib ../../../demos/horizontal_text_detection/python/workspace/lib
+	cd ../../../src/custom_nodes && \
+	make BASE_OS=ubuntu NODES=horizontal_ocr && \
+	mkdir -p ../../demos/horizontal_text_detection/python/workspace/lib && \
+	mv lib/ubuntu/libcustom_node_horizontal_ocr.so ../../demos/horizontal_text_detection/python/workspace/lib/libcustom_node_horizontal_ocr.so
 # Copy configuration file to workspace directory
 	cp config.json workspace/.
 

@@ -107,22 +107,22 @@ Custom nodes are loaded into OVMS as dynamic library implementing OVMS API from 
 It can use OpenCV libraries included in OVMS or it could use other thirdparty components.
 
 The custom node east_ocr can be built inside a docker container via the following procedure:
-- go to the custom node source code folder [src/custom_nodes/east_ocr](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/src/custom_nodes/east_ocr)
-- run `make` command
+- go to the directory with custom node examples [src/custom_node](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/src/custom_nodes)
+- run `make` command:
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server/src/custom_nodes/east_ocr
-make
-cd ../../../../
+cd model_server/src/custom_nodes
+make BASE_OS=ubuntu NODES=east_ocr
+cd ../../../
 ```
 
 This command will export the compiled library in `./lib` folder.
 Copy this `lib` folder to the same location with `text-recognition` and `east_icdar2015_resnet_v1_50_rbox`.
 
 ```bash
-mkdir -p OCR/east_fp32
-cp -R model_server/src/custom_nodes/east_ocr/lib OCR/lib
+mkdir -p OCR/east_fp32 OCR/lib
+cp -R model_server/src/custom_nodes/lib/ubuntu/libcustom_node_east_ocr.so OCR/lib/
 cp -R text-recognition OCR/text-recognition
 cp -R EAST/IR/1 OCR/east_fp32/1
 ```
@@ -132,7 +132,7 @@ cp -R EAST/IR/1 OCR/east_fp32/1
 The configuration file for running the OCR demo is stored in [config.json](config.json)
 Copy this file along with the model files and the custom node library like presented below:
 ```bash
-cp model_server/src/custom_nodes/east_ocr/config.json OCR
+cp model_server/demos/optical_character_recognition/python/config.json OCR
 ```
 ```bash
 OCR

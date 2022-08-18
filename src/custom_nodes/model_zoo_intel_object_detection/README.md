@@ -25,17 +25,20 @@ All [OpenVINO Model Zoo](https://github.com/openvinotoolkit/open_model_zoo/tree/
 Public [OpenVINO Model Zoo](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/public) object detection models with output tensor shape: `[1, 1, 100, 7]`:
 - ssdlite_mobilenet_v2
 
+**NOTE** Examplary configuration files are available in [vehicle analysis pipeline demo](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/horizontal_text_detection/python/config.json) and [multiple faces analysis demo](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/demos/multi_faces_analysis_pipeline/python/config.json).
+
 # Building custom node library
 
-You can build the shared library of the custom node simply by running command in this custom node folder context:
+You can build the shared library of the custom node simply by running command in the context of custom node examples directory:
 ```
-make
+git clone https://github.com/openvinotoolkit/model_server && cd model_server/src/custom_nodes
+make NODES=model_zoo_intel_object_detection
 ```
-It will compile the library inside a docker container and save the results in `lib` folder.
+It will compile the library inside a docker container and save the results in `lib/<OS>/` folder.
 
-You can also select base OS between RH 8.4 (redhat) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable.
+You can also select base OS between RH 8.5 (redhat) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable.
 ```
-make BASE_OS=redhat
+make BASE_OS=redhat NODES=model_zoo_intel_object_detection
 ```
 
 # Custom node inputs
