@@ -94,7 +94,7 @@ class TestSingleModelInferenceGc:
         response = stub.GetModelStatus(request, 10)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]
-        assert version_status.version == 1
+        assert version_status.version == 2
         assert version_status.state == ModelVersionState.AVAILABLE
         assert version_status.status.error_code == ErrorCode.OK
         assert version_status.status.error_message == ERROR_MESSAGE[
