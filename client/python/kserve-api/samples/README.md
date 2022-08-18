@@ -201,7 +201,7 @@ usage: grpc_infer_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH [--labels
                             [--transpose_method {nchw2nhwc,nhwc2nchw}] [--iterations ITERATIONS] [--batchsize BATCHSIZE] [--model_name MODEL_NAME]
                             [--pipeline_name PIPELINE_NAME] [--dag-batch-size-auto]
 
-Sends requests via KFS gRPC API using images in numpy format. It displays performance statistics and optionally the model accuracy
+Sends requests via KServe gRPC API using images in numpy format. It displays performance statistics and optionally the model accuracy
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -304,7 +304,7 @@ usage: grpc_infer_binary_resnet.py [-h] [--images_list IMAGES_LIST] [--labels_nu
                                    [--grpc_port GRPC_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--batchsize BATCHSIZE]
                                    [--model_name MODEL_NAME] [--pipeline_name PIPELINE_NAME]
 
-Sends requests via KFS gRPC API using images in format supported by OpenCV. It displays performance statistics and optionally the model accuracy
+Sends requests via KServe gRPC API using images in format supported by OpenCV. It displays performance statistics and optionally the model accuracy
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -537,7 +537,7 @@ usage: http_infer_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH [--labels
                             [--transpose_method {nchw2nhwc,nhwc2nchw}] [--iterations ITERATIONS] [--batchsize BATCHSIZE] [--model_name MODEL_NAME]
                             [--pipeline_name PIPELINE_NAME] [--dag-batch-size-auto]
 
-Sends requests via KFS REST API using images in numpy format. It displays performance statistics and optionally the model accuracy
+Sends requests via KServe REST API using images in numpy format. It displays performance statistics and optionally the model accuracy
 
 optional arguments:
   -h, --help            show this help message and exit

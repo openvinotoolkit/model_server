@@ -25,7 +25,7 @@ import tritonclient.http as httpclient
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Sends requests via KFS REST API using images in numpy format. '
+    parser = argparse.ArgumentParser(description='Sends requests via KServe REST API using images in numpy format. '
                                                  'It displays performance statistics and optionally the model accuracy')
     parser.add_argument('--images_numpy_path', required=True, help='numpy in shape [n,w,h,c] or [n,c,h,w]')
     parser.add_argument('--labels_numpy_path', required=False, help='numpy in shape [n,1] - can be used to check model accuracy')
