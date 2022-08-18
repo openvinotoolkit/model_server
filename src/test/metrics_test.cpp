@@ -123,6 +123,21 @@ TEST(MetricsCounter, RemoveRemovedMetric) {
     EXPECT_EQ(registry.collect().size(), 0);
 }
 
+TEST(MetricsCounter, RemoveFamilyFromWrongRegistry) {
+    MetricRegistry registry1;
+    MetricRegistry registry2;
+    auto family1 = registry1.createFamily<MetricCounter>("name", "desc");
+    EXPECT_FALSE(registry2.remove(family1));
+}
+
+TEST(MetricsCounter, RemoveMetricFromWrongFamily) {
+    MetricRegistry registry;
+    auto family1 = registry.createFamily<MetricCounter>("name1", "desc");
+    auto family2 = registry.createFamily<MetricCounter>("name2", "desc");
+    auto metric = family1->addMetric();
+    family2->remove(metric);
+}
+
 TEST(MetricsCounter, RemoveEntireFamilyOfMetrics) {
     MetricRegistry registry;
     auto family1 = registry.createFamily<MetricCounter>("name", "desc");
@@ -219,7 +234,20 @@ TEST(MetricsCounter, CreateFamilyWithSameNameDifferentMetricTypeReturnsNull) {
     MetricRegistry registry;
     EXPECT_NE(registry.createFamily<MetricGauge>("family", "desc"), nullptr);
     EXPECT_EQ(registry.createFamily<MetricCounter>("family", "desc"), nullptr);
-    EXPECT_EQ(registry.collect().size(), 0);
+}
+
+TEST(MetricsCounter, MultipleMetricWithSameLabelsReferToSameCounter) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricCounter>("family", "desc");
+    auto metric1 = family->addMetric({{"name", "resnet"}});
+    auto metric2 = family->addMetric({{"name", "resnet"}});
+    metric1->increment();
+    metric2->increment();
+    std::string expected = R"(# HELP family desc
+# TYPE family counter
+family{name="resnet"} 2
+)";
+    EXPECT_EQ(registry.collect(), expected);
 }
 
 TEST(MetricsGauge, IncrementDefault) {
@@ -358,6 +386,21 @@ TEST(MetricsGauge, RemoveRemovedMetric) {
     EXPECT_EQ(registry.collect().size(), 0);
 }
 
+TEST(MetricsGauge, RemoveFamilyFromWrongRegistry) {
+    MetricRegistry registry1;
+    MetricRegistry registry2;
+    auto family1 = registry1.createFamily<MetricGauge>("name", "desc");
+    EXPECT_FALSE(registry2.remove(family1));
+}
+
+TEST(MetricsGauge, RemoveMetricFromWrongFamily) {
+    MetricRegistry registry;
+    auto family1 = registry.createFamily<MetricGauge>("name1", "desc");
+    auto family2 = registry.createFamily<MetricGauge>("name2", "desc");
+    auto metric = family1->addMetric();
+    family2->remove(metric);
+}
+
 TEST(MetricsGauge, RemoveEntireFamilyOfMetrics) {
     MetricRegistry registry;
     auto family1 = registry.createFamily<MetricGauge>("name", "desc");
@@ -458,7 +501,20 @@ TEST(MetricsGauge, CreateFamilyWithSameNameDifferentMetricTypeReturnsNull) {
     MetricRegistry registry;
     EXPECT_NE(registry.createFamily<MetricCounter>("family", "desc"), nullptr);
     EXPECT_EQ(registry.createFamily<MetricGauge>("family", "desc"), nullptr);
-    EXPECT_EQ(registry.collect().size(), 0);
+}
+
+TEST(MetricsGauge, MultipleMetricWithSameLabelsReferToSameCounter) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricGauge>("family", "desc");
+    auto metric1 = family->addMetric({{"name", "resnet"}});
+    auto metric2 = family->addMetric({{"name", "resnet"}});
+    metric1->decrement();
+    metric2->decrement();
+    std::string expected = R"(# HELP family desc
+# TYPE family gauge
+family{name="resnet"} -2
+)";
+    EXPECT_EQ(registry.collect(), expected);
 }
 
 TEST(MetricsHistogram, Observe) {
@@ -603,6 +659,21 @@ TEST(MetricsHistogram, RemoveRemovedFamily) {
     EXPECT_EQ(registry.collect().size(), 0);
 }
 
+TEST(MetricsHistogram, RemoveFamilyFromWrongRegistry) {
+    MetricRegistry registry1;
+    MetricRegistry registry2;
+    auto family1 = registry1.createFamily<MetricHistogram>("name", "desc");
+    EXPECT_FALSE(registry2.remove(family1));
+}
+
+TEST(MetricsHistogram, RemoveMetricFromWrongFamily) {
+    MetricRegistry registry;
+    auto family1 = registry.createFamily<MetricHistogram>("name1", "desc");
+    auto family2 = registry.createFamily<MetricHistogram>("name2", "desc");
+    auto metric = family1->addMetric();
+    family2->remove(metric);
+}
+
 TEST(MetricsHistogram, RevertingMetricResetsValue) {
     MetricRegistry registry;
     auto family = registry.createFamily<MetricHistogram>("name", "desc");
@@ -655,7 +726,6 @@ TEST(MetricsHistogram, CreateFamilyWithSameNameSameMetricType) {
     MetricRegistry registry;
     EXPECT_NE(registry.createFamily<MetricHistogram>("family", "desc"), nullptr);
     EXPECT_NE(registry.createFamily<MetricHistogram>("family", "desc"), nullptr);
-    EXPECT_EQ(registry.collect().size(), 0);
 }
 
 TEST(MetricsHistogram, MultipleFamiliesWithSameNameReferToSameMetric) {
@@ -677,7 +747,41 @@ TEST(MetricsHistogram, CreateFamilyWithSameNameDifferentMetricTypeReturnsNull) {
     MetricRegistry registry;
     EXPECT_NE(registry.createFamily<MetricCounter>("family", "desc"), nullptr);
     EXPECT_EQ(registry.createFamily<MetricHistogram>("family", "desc"), nullptr);
-    EXPECT_EQ(registry.collect().size(), 0);
+}
+
+// Removing metric from wrong family.
+// Removing family from wrong registry.
+TEST(MetricsHistogram, MultipleMetricWithSameLabelsAndBucketsReferToSameValue) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricHistogram>("family", "desc");
+    auto metric1 = family->addMetric({{"name", "resnet"}}, {});
+    auto metric2 = family->addMetric({{"name", "resnet"}}, {});
+    metric1->observe(1.2);
+    metric2->observe(2.4);
+    std::string expected = R"(# HELP family desc
+# TYPE family histogram
+family_count{name="resnet"} 2
+family_sum{name="resnet"} 3.6
+family_bucket{name="resnet",le="+Inf"} 2
+)";
+    EXPECT_EQ(registry.collect(), expected);
+}
+
+TEST(MetricsHistogram, MultipleMetricWithSameLabelsButDifferentBucketsReferToSameValue) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricHistogram>("family", "desc");
+    auto metric2 = family->addMetric({{"name", "resnet"}}, {0.1});
+    auto metric1 = family->addMetric({{"name", "resnet"}}, {0.2}); // Different bucket
+    metric1->observe(1.2);
+    metric2->observe(2.4);
+    std::string expected = R"(# HELP family desc
+# TYPE family histogram
+family_count{name="resnet"} 2
+family_sum{name="resnet"} 3.6
+family_bucket{name="resnet",le="0.1"} 0
+family_bucket{name="resnet",le="+Inf"} 2
+)";
+    EXPECT_EQ(registry.collect(), expected);
 }
 
 TEST(MetricsFlow, Counter) {
