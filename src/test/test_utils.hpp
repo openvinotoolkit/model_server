@@ -131,6 +131,7 @@ constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to t
 using KFSRequestType = ::inference::ModelInferRequest;
 using KFSResponseType = ::inference::ModelInferResponse;
 using KFSInputTensorType = ::inference::ModelInferRequest_InferInputTensor;
+using KFSOutputTensorType = ::inference::ModelInferResponse_InferOutputTensor;
 using KFSShapeType = google::protobuf::RepeatedField<int64_t>;
 using KFSInputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferRequest_InferInputTensor>;
 using KFSOutputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferResponse_InferOutputTensor>;
