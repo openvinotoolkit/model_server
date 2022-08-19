@@ -21,6 +21,7 @@ set -e
 
 os=${os:-auto}
 opencv_branch=${opencv_branch:-4.6.0}
+work_dir=${work_dir:-/opt}
 
 
 #===================================================================================================
@@ -41,20 +42,23 @@ fi
 # OpenCV installation
 
 if [ "$os" == "ubuntu20.04" ] ; then
-    DEBIAN_FRONTEND=noninteractive apt install -y git cmake \
+    export DEBIAN_FRONTEND=noninteractive
+    apt update && apt install -y build-essential git cmake \
         && rm -rf /var/lib/apt/lists/*
 elif [ "$os" == "rhel8" ] ; then
-    yum install -d6 -y git cmake
+    yum install -d6 -y git cmake gcc-c++
 else
     echo "Internal script error: unsupported OS" >&2
     exit 3
 fi
 
-cd /opt
-git clone https://github.com/opencv/opencv.git --depth 1 -b $opencv_branch /opt/opencv_repo
-mkdir -p /opt/opencv_repo/build
-cd /opt/opencv_repo/build
-cmake $(cat /opt/opencv_cmake_flags.txt) /opt/opencv_repo && \
+current_working_dir=$(pwd)
+
+cd $work_dir
+git clone https://github.com/opencv/opencv.git --depth 1 -b $opencv_branch $work_dir/opencv_repo
+mkdir -p $work_dir/opencv_repo/build
+cd $work_dir/opencv_repo/build
+cmake $(cat $current_working_dir/opencv_cmake_flags.txt) $work_dir/opencv_repo && \
     make "-j$(nproc)" && \
     make install
 

@@ -119,9 +119,7 @@ RUN mv .deps/install/lib64 .deps/install/lib
 ####### End of AWS S3 SDK
 
 ####### Build OpenCV
-WORKDIR /opt
-RUN cp /ovms/third_party/opencv/install_opencv.sh /opt/ && \
-    cp /ovms/third_party/opencv/opencv_cmake_flags.txt /opt/
+WORKDIR /ovms/third_party/opencv
 RUN chmod +x install_opencv.sh && ./install_opencv.sh
 ####### End of OpenCV
 
