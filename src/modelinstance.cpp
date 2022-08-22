@@ -1164,6 +1164,45 @@ Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
     return StatusCode::OK;
 }
 
+#include <cstring>
+Status ModelInstance::infer(float* data, float* output) {
+    OVMS_PROFILE_FUNCTION();
+    Timer timer;
+    using std::chrono::microseconds;
+    timer.start("get infer request");
+    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue());
+    int executingInferId = executingStreamIdGuard.getId();
+    ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    timer.stop("get infer request");
+    SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>("get infer request") / 1000);
+    timer.start("deserialize");
+    static ov::Shape shape{1,10};
+    ov::element::Type precision = ov::element::Type_t::f32;
+    ov::Tensor tensor(precision,
+                      shape,
+                      (void*)data);
+    inferRequest.set_tensor("b", tensor);
+    timer.stop("deserialize");
+    SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>("deserialize") / 1000);
+    timer.start("prediction");
+    auto status = performInference(inferRequest);
+    timer.stop("prediction");
+    if (!status.ok())
+        return status;
+    SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>("prediction") / 1000);
+    timer.start("serialize");
+    auto otensor = inferRequest.get_tensor("a");
+    std::memcpy((void*)output, otensor.data(), otensor.get_byte_size());
+    timer.stop("serialize");
+    SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
+        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>("serialize") / 1000);
+    SPDLOG_ERROR("ER");
+    return StatusCode::OK;
+}
+
 Status ModelInstance::infer(const tensorflow::serving::PredictRequest* requestProto,
     tensorflow::serving::PredictResponse* responseProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
