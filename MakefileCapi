@@ -1,0 +1,42 @@
+all:
+	g++ -pthread --std=c++17  -I./src -L./bazel-bin/src/ -L/usr/local/lib -L/opt/intel/openvino/runtime/lib/intel64/ -fPIC src/main2.cpp -L/opt/opencv/lib/ \
+	-lovms_lib \
+	-lovms_shared \
+	-lopenvino \
+	-lopenvino_c \
+	-lopenvino_gapi_preproc \
+	-lopenvino \
+	-lazurestorage \
+	-lcpprest \
+	-lboost_thread \
+	-lboost_regex \
+	-lboost_system \
+	-lboost_log \
+	-lboost_atomic \
+	-lboost_chrono \
+	-lboost_date_time \
+	-lopenvino \
+	-lopenvino_intel_hddl_plugin \
+	-lopenvino_c \
+	-lopenvino_ov_c \
+	-lopenvino_intel_gpu_plugin \
+	-lopenvino_intel_gna_plugin \
+	-lopenvino_intel_cpu_plugin \
+	-lopenvino_hetero_plugin \
+	-lopenvino_tensorflow_fe \
+	-lopenvino_paddle_frontend \
+	-lopenvino_onnx_frontend \
+	-lopenvino_ir_frontend \
+	-lopenvino_intel_myriad_plugin \
+	-lopenvino_gapi_preproc \
+	-lopenvino_auto_plugin \
+	-lopenvino_auto_batch_plugin \
+	-lgna \
+	-lstdc++fs \
+	-lopencv_core \
+	-lopencv_imgcodecs \
+	-lopencv_imgproc \
+	-lssl \
+	-lcrypto \
+	-ldl \
+	2>&1 | tee log; wc -l log
