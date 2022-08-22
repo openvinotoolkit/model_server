@@ -149,7 +149,6 @@ void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
     if (itr != scope.MemberEnd()) {
         for (Value::ConstMemberIterator i = scope["parameters"].MemberBegin(); i != scope["parameters"].MemberEnd(); ++i) {
             Value param(rapidjson::kObjectType);
-            Value name(i->name.GetString(), doc.GetAllocator());
             if (i->value.IsInt64()) {
                 Value value(i->value.GetInt64());
                 param.AddMember("int64_param", value, doc.GetAllocator());
@@ -162,8 +161,7 @@ void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
                 Value value(i->value.GetBool());
                 param.AddMember("bool_param", value, doc.GetAllocator());
             }
-            scope["parameters"].RemoveMember(i->name.GetString());
-            scope["parameters"].AddMember(name, param, doc.GetAllocator());
+            scope["parameters"].GetObject()[i->name.GetString()] = param;
         }
     }
 }

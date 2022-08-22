@@ -184,7 +184,8 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
 }
 
 TEST_F(HttpRestApiHandlerTest, inferRequest) {
-    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[0,1,2,3,4,5,6,7,8,9]}],\"parameters\":{\"binary_data_output\":1}}";
+
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[0,1,2,3,4,5,6,7,8,9]}],\"parameters\":{\"binary_data_output\":1, \"bool_test\":true, \"string_test\":\"test\"}}";
 
     std::string modelName("dummy");
     std::string modelVersion("1");
@@ -194,8 +195,9 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
     ASSERT_EQ(grpc_request.model_name(), modelName);
     ASSERT_EQ(grpc_request.model_version(), modelVersion);
     auto params = grpc_request.parameters();
-    auto bdo = params["binary_data_output"];
-    ASSERT_EQ(bdo.int64_param(), 1);
+    ASSERT_EQ(params["binary_data_output"].int64_param(), 1);
+    ASSERT_EQ(params["bool_test"].bool_param(), true);
+    ASSERT_EQ(params["string_test"].string_param(), "test");
     ASSERT_EQ(grpc_request.inputs()[0].name(), "b");
     ASSERT_EQ(grpc_request.inputs()[0].datatype(), "FP32");
 
