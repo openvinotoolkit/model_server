@@ -184,7 +184,6 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
 }
 
 TEST_F(HttpRestApiHandlerTest, inferRequest) {
-
     std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[0,1,2,3,4,5,6,7,8,9]}],\"parameters\":{\"binary_data_output\":1, \"bool_test\":true, \"string_test\":\"test\"}}";
 
     std::string modelName("dummy");
