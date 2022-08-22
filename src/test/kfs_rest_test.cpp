@@ -207,8 +207,4 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
     for (auto content : grpc_request.inputs()[0].contents().fp32_contents()) {
         ASSERT_EQ(content, i++);
     }
-
-
-    std::string output(HttpRestApiHandler::preprocessInferRequest(request_body));
-    ASSERT_EQ(output,exp);
 }
