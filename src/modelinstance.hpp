@@ -554,5 +554,7 @@ public:
     ModelMetricReporter& getMetricReporter() const { return *this->reporter; }
 
     uint32_t getNumOfStreams() const;
+
+    Status infer(float* data, float* output);
 };
 }  // namespace ovms
