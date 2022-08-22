@@ -209,9 +209,6 @@ const Module* Server::getModule(const std::string& name) const {
     return it->second.get();
 }
 
-public:
-    ProfilerModule() = default;
-    int start(const Config& config) override {
 #ifdef MTR_ENABLED
 class ProfilerModule : public Module {
     std::unique_ptr<Profiler> profiler;
@@ -315,17 +312,6 @@ void Server::shutdownModules(ovms::Config& config) {
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
     modules.clear();
 }
-
-int Server::start(int argc, char** argv) {
-    ovms::Server& server = ovms::Server::instance();
-    installSignalHandlers(server);
-    try {
-        auto& config = ovms::Config::instance().parse(argc, argv);
-        configure_logger(config.logLevel(), config.logPath());
-        logConfig(config);
-        auto retCode = this->startModules(config);
-        if (retCode)
-            return retCode;
 
 int Server::start(int argc, char** argv) {
     ovms::Server& server = ovms::Server::instance();

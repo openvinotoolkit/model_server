@@ -281,42 +281,6 @@ TEST(Server, ServerMetadata) {
 
     ovms::Server& server = ovms::Server::instance();
     std::thread t([&argv, &server]() {
-        ASSERT_EQ(EXIT_SUCCESS, server.start(9, argv));
-    });
-    auto start = std::chrono::high_resolution_clock::now();
-    while ((server.getModuleState(ovms::GRPC_SERVER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-    }
-
-    grpc::ChannelArguments args;
-    std::string address = "localhost:9178";
-    std::unique_ptr<inference::GRPCInferenceService::Stub> stub(inference::GRPCInferenceService::NewStub(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args)));
-    ClientContext context;
-    ::inference::ServerMetadataRequest request;
-    ::inference::ServerMetadataResponse response;
-
-    auto status = stub->ServerMetadata(&context, request, &response);
-    ovms::Server::instance().setShutdownRequest(1);
-    t.join();
-    ASSERT_EQ(status.error_code(), grpc::StatusCode::OK);
-    EXPECT_EQ(response.name(), PROJECT_NAME);
-    EXPECT_EQ(response.version(), PROJECT_VERSION);
-    EXPECT_EQ(response.extensions().size(), 0);
-}
-
-TEST(Server, ServerMetadata) {
-    char* argv[] = {
-        (char*)"OpenVINO Model Server",
-        (char*)"--model_name",
-        (char*)"dummy",
-        (char*)"--model_path",
-        (char*)"/ovms/src/test/dummy",
-        (char*)"--port",
-        (char*)"9178",
-        nullptr};
-
-    ovms::Server& server = ovms::Server::instance();
-    std::thread t([&argv, &server]() {
         server.start(7, argv);
     });
     auto start = std::chrono::high_resolution_clock::now();
