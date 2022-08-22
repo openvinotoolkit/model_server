@@ -103,6 +103,11 @@ uint getGRPCServersCount(const ovms::Config& config) {
     return std::max<uint>(1, config.grpcWorkers());
 }
 
+GRPCServerModule::~GRPCServerModule() {
+    if (state != ModuleState::SHUTDOWN)
+        this->shutdown();
+}
+
 GRPCServerModule::GRPCServerModule(Server& server) :
     server(server),
     tfsPredictService(this->server),
@@ -171,6 +176,7 @@ void GRPCServerModule::shutdown() {
         server->Shutdown();
         SPDLOG_INFO("Shutdown gRPC server");
     }
+    servers.clear();
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", GRPC_SERVER_MODULE_NAME);
 }

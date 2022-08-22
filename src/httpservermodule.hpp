@@ -1,5 +1,5 @@
 //****************************************************************************
-// Copyright 2022 Intel Corporation
+// Copyright 2020-2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,35 +13,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
+
 #include <memory>
 #include <utility>
-#include <vector>
 
-#include <grpcpp/server.h>
-
-#include "model_service.hpp"
-#include "prediction_service.hpp"
-#include "servablemanagermodule.hpp"
-#include "server.hpp"
+#include "http_server.hpp"
 
 namespace ovms {
+class Server;
 class Config;
-
-class GRPCServerModule : public Module {
-    Server& server;
-    PredictionServiceImpl tfsPredictService;
-    ModelServiceImpl tfsModelService;
-    mutable KFSInferenceServiceImpl kfsGrpcInferenceService;
-    std::vector<std::unique_ptr<grpc::Server>> servers;
+// TODO should replace all messages like
+// start REST Server with start HTTP Server
+// start Server with start gRPC server
+// this should be synchronized with validation tests changes
+class HTTPServerModule : public Module {
+    std::unique_ptr<ovms::http_server> server;
+    Server& ovmsServer;
 
 public:
-    GRPCServerModule(Server& server);
-    ~GRPCServerModule();
-    int start(const ovms::Config& config) override;
+    HTTPServerModule(Server& ovmsServer);
+    ~HTTPServerModule();
+    int start(const Config& config) override;
     void shutdown() override;
-
-    const GetModelMetadataImpl& getTFSModelMetadataImpl() const;
-    KFSInferenceServiceImpl& getKFSGrpcImpl() const;
 };
-}  // namespace ovms
+}  //namespace ovms

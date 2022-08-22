@@ -36,6 +36,7 @@
 #include "config.hpp"
 #include "grpcservermodule.hpp"
 #include "http_server.hpp"
+#include "httpservermodule.hpp"
 #include "kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "model_service.hpp"
@@ -133,45 +134,6 @@ ModuleState Module::getState() const {
     return state;
 }
 
-// TODO should replace all messages like
-// start REST Server with start HTTP Server
-// start Server with start gRPC server
-// this should be synchronized with validation tests changes
-
-class HTTPServerModule : public Module {
-    std::unique_ptr<ovms::http_server> server;
-    Server& ovmsServer;
-
-public:
-    HTTPServerModule(ovms::Server& ovmsServer) :
-        ovmsServer(ovmsServer) {}
-    int start(const ovms::Config& config) override {
-        state = ModuleState::STARTED_INITIALIZE;
-        const std::string server_address = config.restBindAddress() + ":" + std::to_string(config.restPort());
-        int workers = config.restWorkers() ? config.restWorkers() : 10;
-
-        SPDLOG_INFO("Will start {} REST workers", workers);
-        server = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer);
-        if (server != nullptr) {
-            SPDLOG_INFO("Started REST server at {}", server_address);
-        } else {
-            SPDLOG_ERROR("Failed to start REST server at " + server_address);
-            return EXIT_FAILURE;
-        }
-        state = ModuleState::INITIALIZED;
-        return EXIT_SUCCESS;
-    }
-    void shutdown() override {
-        if (server == nullptr)
-            return;
-        state = ModuleState::STARTED_SHUTDOWN;
-        server->Terminate();
-        server->WaitForTermination();
-        SPDLOG_INFO("Shutdown HTTP server");
-        state = ModuleState::SHUTDOWN;
-    }
-};
-
 bool Server::isReady() const {
     std::shared_lock lock(modulesMtx);
     auto it = modules.find(SERVABLE_MANAGER_MODULE_NAME);
@@ -227,7 +189,8 @@ public:
     }
     void shutdown() override {
 #ifdef MTR_ENABLED
-        state = ModuleState::STARTED_SHUTDOWN;
+        if (state == ModuleState::SHUTDOWN)
+            return state = ModuleState::STARTED_SHUTDOWN;
         profiler.reset();
         state = ModuleState::SHUTDOWN;
 #endif
@@ -300,14 +263,30 @@ int Server::startModules(ovms::Config& config) {
     return retCode;
 }
 
-void Server::shutdownModules(ovms::Config& config) {
-    modules.at(GRPC_SERVER_MODULE_NAME)->shutdown();
-    if (config.restPort() != 0)
-        modules.at(HTTP_SERVER_MODULE_NAME)->shutdown();
-    modules.at(SERVABLE_MANAGER_MODULE_NAME)->shutdown();
-#ifdef MTR_ENABLED
-    modules.at(PROFILER_MODULE_NAME)->shutdown();
-#endif
+void Server::ensureModuleShutdown(const std::string& name) {
+    auto it = modules.find(name);
+    if (it != modules.end())
+        it->second->shutdown();
+}
+
+class ModulesShutdownGuard {
+    Server& server;
+
+public:
+    ModulesShutdownGuard(Server& server) :
+        server(server) {}
+    ~ModulesShutdownGuard() {
+        this->server.shutdownModules();
+    }
+};
+
+void Server::shutdownModules() {
+    // we want very precise order of modules shutdown
+    // first we should stop incoming new requests
+    ensureModuleShutdown(GRPC_SERVER_MODULE_NAME);
+    ensureModuleShutdown(HTTP_SERVER_MODULE_NAME);
+    ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
+    ensureModuleShutdown(PROFILER_MODULE_NAME);
     // FIXME we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
     modules.clear();
@@ -320,6 +299,7 @@ int Server::start(int argc, char** argv) {
         auto& config = ovms::Config::instance().parse(argc, argv);
         configure_logger(config.logLevel(), config.logPath());
         logConfig(config);
+        ModulesShutdownGuard shutdownGuard(*this);
         auto retCode = this->startModules(config);
         if (retCode)
             return retCode;
@@ -331,7 +311,6 @@ int Server::start(int argc, char** argv) {
             SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
         }
         SPDLOG_INFO("Shutting down");
-        this->shutdownModules(config);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
         return EXIT_FAILURE;

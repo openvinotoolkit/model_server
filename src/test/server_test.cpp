@@ -178,17 +178,20 @@ public:
 }  // namespace
 using ovms::SERVABLE_MANAGER_MODULE_NAME;
 
+void randomizePort(std::string& port) {
+    std::mt19937_64 eng{std::random_device{}()};
+    std::uniform_int_distribution<> dist{0, 9};
+    for (auto j : {1, 2, 3}) {
+        char* digitToRandomize = (char*)port.c_str() + j;
+        *digitToRandomize += dist(eng);
+    }
+}
+
 TEST(Server, ServerAliveBeforeLoadingModels) {
     // purpose of this test is to ensure that the server responds with alive=true before loading any models.
     // this is to make sure that eg. k8s won't restart container until all models are loaded because of not being alivea
     std::string port = "9000";
-    const char* testPort = port.c_str();
-    std::mt19937_64 eng{std::random_device{}()};
-    std::uniform_int_distribution<> dist{0, 9};
-    for (auto j : {1, 2, 3}) {
-        char* digitToRandomize = (char*)testPort + j;
-        *digitToRandomize += dist(eng);
-    }
+    randomizePort(port);
 
     char* argv[] = {
         (char*)"OpenVINO Model Server",
@@ -269,6 +272,8 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
 }
 
 TEST(Server, ServerMetadata) {
+    std::string port = "9000";
+    randomizePort(port);
     char* argv[] = {
         (char*)"OpenVINO Model Server",
         (char*)"--model_name",
@@ -276,12 +281,12 @@ TEST(Server, ServerMetadata) {
         (char*)"--model_path",
         (char*)"/ovms/src/test/dummy",
         (char*)"--port",
-        (char*)"9178",
+        (char*)port.c_str(),
         nullptr};
 
     ovms::Server& server = ovms::Server::instance();
     std::thread t([&argv, &server]() {
-        server.start(7, argv);
+        ASSERT_EQ(EXIT_SUCCESS, server.start(7, argv));
     });
     auto start = std::chrono::high_resolution_clock::now();
     while ((ovms::Server::instance().getModuleState("GRPCServerModule") != ovms::ModuleState::INITIALIZED) &&
@@ -289,7 +294,7 @@ TEST(Server, ServerMetadata) {
     }
 
     grpc::ChannelArguments args;
-    std::string address = "localhost:9178";
+    std::string address = std::string("localhost:") + port;
     std::unique_ptr<inference::GRPCInferenceService::Stub> stub(inference::GRPCInferenceService::NewStub(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args)));
     ClientContext context;
     ::inference::ServerMetadataRequest request;
@@ -302,4 +307,30 @@ TEST(Server, ServerMetadata) {
     EXPECT_EQ(response.name(), PROJECT_NAME);
     EXPECT_EQ(response.version(), PROJECT_VERSION);
     EXPECT_EQ(response.extensions().size(), 0);
+}
+
+TEST(Server, ProperShutdownInCaseOfStartError) {
+    std::string port = "9000";
+    std::string restPort = "9000";
+    randomizePort(port);
+    randomizePort(restPort);
+    char* argv[] = {
+        (char*)"OpenVINO Model Server",
+        (char*)"--model_name",
+        (char*)"dummy",
+        (char*)"--model_path",
+        (char*)"NON_EXISTING_PATH",
+        (char*)"--port",
+        (char*)port.c_str(),
+        (char*)"--rest_port",
+        (char*)restPort.c_str(),
+        (char*)"--log_level",
+        (char*)"DEBUG",
+        nullptr};
+    ovms::Server& server = ovms::Server::instance();
+    std::thread t([&argv, &server]() {
+        ASSERT_EQ(EXIT_FAILURE, server.start(11, argv));
+    });
+    t.join();
+    // this test should not hang
 }

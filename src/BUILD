@@ -93,6 +93,8 @@ cc_library(
         "http_rest_api_handler.hpp",
         "http_server.cpp",
         "http_server.hpp",
+        "httpservermodule.cpp",
+        "httpservermodule.hpp",
         "layout.cpp",
         "layout.hpp",
         "layout_configuration.cpp",

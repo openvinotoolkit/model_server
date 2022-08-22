@@ -1,0 +1,64 @@
+//****************************************************************************
+// Copyright 2020-2021 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+#include "httpservermodule.hpp"
+
+#include <utility>
+
+#include "config.hpp"
+#include "http_server.hpp"
+#include "logging.hpp"
+#include "server.hpp"
+
+namespace ovms {
+// TODO should replace all messages like
+// start REST Server with start HTTP Server
+// start Server with start gRPC server
+// this should be synchronized with validation tests changes
+HTTPServerModule::HTTPServerModule(ovms::Server& ovmsServer) :
+    ovmsServer(ovmsServer) {}
+int HTTPServerModule::start(const ovms::Config& config) {
+    state = ModuleState::STARTED_INITIALIZE;
+    const std::string server_address = config.restBindAddress() + ":" + std::to_string(config.restPort());
+    int workers = config.restWorkers() ? config.restWorkers() : 10;
+
+    SPDLOG_INFO("Will start {} REST workers", workers);
+    server = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer);
+    if (server != nullptr) {
+        SPDLOG_INFO("Started REST server at {}", server_address);
+    } else {
+        SPDLOG_ERROR("Failed to start REST server at " + server_address);
+        return EXIT_FAILURE;
+    }
+    state = ModuleState::INITIALIZED;
+    return EXIT_SUCCESS;
+}
+void HTTPServerModule::shutdown() {
+    if (server == nullptr)
+        return;
+    SPDLOG_INFO("{} shutting down", HTTP_SERVER_MODULE_NAME);
+    state = ModuleState::STARTED_SHUTDOWN;
+    server->Terminate();
+    server->WaitForTermination();
+    server.reset();
+    SPDLOG_INFO("Shutdown HTTP server");
+    state = ModuleState::SHUTDOWN;
+}
+
+HTTPServerModule::~HTTPServerModule() {
+    if (state != ModuleState::SHUTDOWN)
+        this->shutdown();
+}
+}  // namespace ovms
