@@ -43,10 +43,24 @@ cc_library(
 )
 
 load("@com_google_protobuf//:protobuf.bzl", "cc_proto_library")
+load(":my_cc_combine.bzl", "my_cc_combine")
+
+my_cc_combine(
+    name = "hello_combined",
+    # Here merge all the static libraries into one static library
+    genstatic = True,
+    output = "libcombined.so",
+    deps = [
+        "//src:libovms_shared.so",
+  #      "//src:ovms_lib",
+        ],
+)
 
 cc_library(
     name = "ovms_lib",
-    linkstatic = 1,
+    linkstatic = True,
+ #   linkshared = True,
+    hdrs = ["server.hpp"],
     srcs = [
         "aliases.hpp",
         "azurestorage.hpp",
@@ -266,6 +280,9 @@ cc_library(
         "-Wno-unknown-pragmas",
         "-Werror",
     ],
+    visibility = [
+        "//visibility:public",
+    ],
 )
 
 cc_binary(
@@ -465,6 +482,27 @@ cc_binary(
 )
 
 cc_binary(
+    name = "poc",
+    srcs = [
+        "main2.cpp",
+    ],
+    linkopts = [
+        "-lxml2",
+        "-luuid",
+        "-lstdc++fs",
+        "-lcrypto",
+    ],
+    copts = [
+    ],
+    deps = [
+        "//src:ovms_lib",
+ #       "//src:libovms_shared.so",
+    ],
+    linkstatic = True,
+)
+
+
+cc_binary(
     name = "ovms",
     srcs = [
         "main.cpp",
@@ -481,7 +519,30 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
-    ]
+ #       "//src:libovms_shared.so",
+    ],
+    linkstatic = False,
+)
+
+cc_binary(
+    name = "libovms_shared.so",
+    srcs = [
+    ],
+    linkopts = [
+        "-lxml2",
+        "-luuid",
+        "-lstdc++fs",
+        "-lcrypto",
+    ],
+    copts = [
+        "-Wconversion",
+        "-Werror",
+    ],
+    deps = [
+        "//src/ovms_lib:ovms_lib",
+    ],
+    linkstatic = True,
+    linkshared = True,
 )
 
 cc_test(
