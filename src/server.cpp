@@ -62,6 +62,11 @@ namespace {
 volatile sig_atomic_t shutdown_request = 0;
 }
 
+Server& Server::instance() {
+    static Server global;
+    return global;
+}
+
 static void logConfig(const Config& config) {
     std::string project_name(PROJECT_NAME);
     std::string project_version(PROJECT_VERSION);
