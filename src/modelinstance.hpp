@@ -562,5 +562,6 @@ public:
 
     template <class ArrayType>
     void fetchModelFiles(bool& found, ArrayType ext);
+    Status infer(float* data, float* output);
 };
 }  // namespace ovms
