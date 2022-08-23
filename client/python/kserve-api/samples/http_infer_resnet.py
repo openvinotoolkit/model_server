@@ -21,16 +21,16 @@ import classes
 import datetime
 import argparse
 from client_utils import print_statistics, prepare_certs
-import tritonclient.grpc as grpcclient
+import tritonclient.http as httpclient
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Sends requests via KFS gRPC API using images in numpy format. '
+    parser = argparse.ArgumentParser(description='Sends requests via KServe REST API using images in numpy format. '
                                                  'It displays performance statistics and optionally the model accuracy')
     parser.add_argument('--images_numpy_path', required=True, help='numpy in shape [n,w,h,c] or [n,c,h,w]')
     parser.add_argument('--labels_numpy_path', required=False, help='numpy in shape [n,1] - can be used to check model accuracy')
-    parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
-    parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
+    parser.add_argument('--http_address',required=False, default='localhost',  help='Specify url to http service. default:localhost')
+    parser.add_argument('--http_port',required=False, default=5000, help='Specify port to http service. default: 5000')
     parser.add_argument('--input_name',required=False, default='input', help='Specify input tensor name. default: input')
     parser.add_argument('--output_name',required=False, default='resnet_v1_50/predictions/Reshape_1',
                         help='Specify output name. default: resnet_v1_50/predictions/Reshape_1')
@@ -52,13 +52,13 @@ if __name__ == '__main__':
                         dest='model_name')
     parser.add_argument('--pipeline_name', default='', help='Define pipeline name, must be same as is in service',
                         dest='pipeline_name')
-    parser.add_argument('--dag-batch-size-auto', default=False, action='store_true', help='add demultiplexer dimension at front', dest='dag-batch-size-auto')
+    parser.add_argument('--dag-batch-size-auto', default=False, action='store_true', help='Add demultiplexer dimension at front', dest='dag-batch-size-auto')
 
     args = vars(parser.parse_args())
 
-    address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
+    address = "{}:{}".format(args['http_address'],args['http_port'])
 
-    triton_client = grpcclient.InferenceServerClient(
+    triton_client = httpclient.InferenceServerClient(
                 url=address,
                 verbose=False)
 
@@ -110,9 +110,9 @@ if __name__ == '__main__':
             inputs = []
             if args.get('dag-batch-size-auto'):
                 newShape = img.shape[0:1] + (1,) + img.shape[1:]
-                inputs.append(grpcclient.InferInput(args['input_name'], newShape, "FP32"))
+                inputs.append(httpclient.InferInput(args['input_name'], newShape, "FP32"))
             else:
-                inputs.append(grpcclient.InferInput(args['input_name'], img.shape, "FP32"))
+                inputs.append(httpclient.InferInput(args['input_name'], img.shape, "FP32"))
             outputs = []
             inputs[0].set_data_from_numpy(img)
             start_time = datetime.datetime.now()
@@ -146,12 +146,12 @@ if __name__ == '__main__':
                 mark_message = ""
                 if args.get('labels_numpy_path') is not None:
                     total_executed += 1
-                    if ma == lbs[i]:
+                    if ma == lb[i]:
                         matched_count += 1
                         mark_message = "; Correct match."
                     else:
                         mark_message = "; Incorrect match. Should be {} {}".format(lb[i], classes.imagenet_classes[lb[i]] )
-                print("\t",i, classes.imagenet_classes[ma],ma, mark_message)
+                print("\t", i, classes.imagenet_classes[ma], ma, mark_message)
             # Comment out this section for non imagenet datasets
 
     print_statistics(processing_times, batch_size)

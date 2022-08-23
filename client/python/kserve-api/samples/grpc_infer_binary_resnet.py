@@ -50,7 +50,7 @@ def as_numpy(response, name):
     return None
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Sends requests via KFS gRPC API using images in format supported by OpenCV. '
+    parser = argparse.ArgumentParser(description='Sends requests via KServe gRPC API using images in format supported by OpenCV. '
                                                  'It displays performance statistics and optionally the model accuracy')
     parser.add_argument('--images_list', required=False, default='input_images.txt', help='path to a file with a list of labeled images')
     parser.add_argument('--labels_numpy_path', required=False, help='numpy in shape [n,1] - can be used to check model accuracy')

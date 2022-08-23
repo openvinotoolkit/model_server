@@ -121,7 +121,7 @@ In order to successfully infer the sequence, perform these actions:
 
 ### Inference via gRPC <a name="stateful_grpc"></a>
 
-Inference on stateful models via gRPC is very similar to inference on stateless models (_see [gRPC API](model_server_grpc_api.md) for reference_). The difference is that requests to stateful models must containt additional inputs with information necessary for proper sequence handling.
+Inference on stateful models via gRPC is very similar to inference on stateless models (_see [gRPC API](model_server_grpc_api_tfs.md) for reference_). The difference is that requests to stateful models must contain additional inputs with information necessary for proper sequence handling.
 
 `sequence_id` and `sequence_control_input` must be added to gRPC request inputs as [TensorProtos](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto).
 
@@ -204,7 +204,7 @@ See [grpc_stateful_client.py](https://github.com/openvinotoolkit/model_server/bl
 
 ### Inference via HTTP <a name="stateful_http"></a>
 
-Inference on stateful models via HTTP is very similar to inference on stateless models (_see [REST API](model_server_rest_api.md) for reference_). The difference is that requests to stateful models must containt additional inputs with information necessary for proper sequence handling.
+Inference on stateful models via HTTP is very similar to inference on stateless models (_see [REST API](model_server_rest_api_tfs.md) for reference_). The difference is that requests to stateful models must containt additional inputs with information necessary for proper sequence handling.
 
 `sequence_id` and `sequence_control_input` must be added to HTTP request by adding new `key:value` pair in `inputs` field of JSON body. 
 

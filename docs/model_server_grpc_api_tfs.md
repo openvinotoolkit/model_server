@@ -1,7 +1,7 @@
-# gRPC API {#ovms_docs_grpc_api}
+# TensorFlow Serving compatible gRPC API {#ovms_docs_grpc_api_tfs}
 
 ## Introduction 
-This document gives information about OpenVINO&trade; Model Server gRPC API. It is documented in the proto buffer files in [tensorflow_serving_api](https://github.com/tensorflow/serving/tree/r2.9/tensorflow_serving/apis). 
+This document gives information about OpenVINO&trade; Model Server gRPC API compatible with TensorFlow Serving. It is documented in the proto buffer files in [tensorflow_serving_api](https://github.com/tensorflow/serving/tree/r2.9/tensorflow_serving/apis). 
 Using the gRPC interface is recommended for optimal performance due to its faster implementation of input data deserialization. gRPC achieves lower latency, especially with larger input messages like images. 
 
 This document covers following API's endpoints coming from Tensorflow Serving gRPC API:
@@ -11,15 +11,6 @@ This document covers following API's endpoints coming from Tensorflow Serving gR
 
 > **NOTE**: The implementations for *Predict*, *GetModelMetadata* and *GetModelStatus* function calls are currently available. 
 These are the most generic function calls and should address most of the usage scenarios.
-
-Additionally in 2022.2 release of OpenVINO Model Server there is preview support for KServe gRPC API which is documented in [KServe](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md) repository.
-This includes following endpoints:
-
-* <a href="#kfs-model-metadata">Kserve Model Metadata API </a>
-* <a href="#kfs-inference">KServe Inference API</a>
-
-> **NOTE**: Only the implementations for *Inference* and *ModelMetadata* function calls are currently available as preview with the remaining API calls coming in next release.
-
 
 ## Model Status API <a name="model-status"></a>
 
@@ -54,18 +45,6 @@ Endpoint for running an inference with loaded models or [DAGs](./dag_scheduler.m
 Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/releases/2022/1/client/python/tensorflow-serving-api/samples/README.md#predict-api)
 
 Check [how binary data is handled in OpenVINO Model Server](./binary_input.md)
-
-
-## KServe Model Metadata API <a name="kfs-model-metadata"></a>
-Gets information about the served models. Model name and model version are accepted as parameters.
-
-Check KServe documentation for more [details](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#model-metadata-1).
-
-## KServe Inference API <a name="kfs-inference"></a>
-Run inference with requested model or [DAGs](./dag_scheduler.md).
-Check KServe documentation for more [details](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#inference-1) about API.
-
-Details and examples of getting model metadata and inference with KServe API is available [here](kfs_example.md).
 
 ## See Also
 
