@@ -177,20 +177,18 @@ void HttpRestApiHandler::registerAll() {
 }
 
 Status HttpRestApiHandler::processServerReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-    ::inference::ServerReadyRequest grpc_request;
-    ::inference::ServerReadyResponse grpc_response;
-    kfsGrpcImpl.ServerReady(nullptr, &grpc_request, &grpc_response);
-    if (grpc_response.ready()) {
+    bool isReady = this->ovmsServer.isReady();
+    SPDLOG_DEBUG("Requested Server readiness state: {}", isReady);
+    if (isReady) {
         return StatusCode::OK;
     }
     return StatusCode::MODEL_NOT_LOADED;
 }
 
 Status HttpRestApiHandler::processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-    ::inference::ServerLiveRequest grpc_request;
-    ::inference::ServerLiveResponse grpc_response;
-    kfsGrpcImpl.ServerLive(nullptr, &grpc_request, &grpc_response);
-    if (grpc_response.live()) {
+    bool isLive = this->ovmsServer.isLive();
+    SPDLOG_DEBUG("Requested Server liveness state: {}", isLive);
+    if (isLive) {
         return StatusCode::OK;
     }
     return StatusCode::INTERNAL_ERROR;
@@ -199,10 +197,16 @@ Status HttpRestApiHandler::processServerLiveKFSRequest(const HttpRequestComponen
 Status HttpRestApiHandler::processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
     ::inference::ServerMetadataRequest grpc_request;
     ::inference::ServerMetadataResponse grpc_response;
-    kfsGrpcImpl.ServerMetadata(nullptr, &grpc_request, &grpc_response);
+    ::grpc::Status gstatus = kfsGrpcImpl.ServerMetadata(nullptr, &grpc_request, &grpc_response);
+    if(!gstatus.ok()){
+        return StatusCode::INTERNAL_ERROR;
+    }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts;
-    google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
+    google::protobuf::util::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
+    if(!status.ok()){
+        return StatusCode::INTERNAL_ERROR;
+    }
     response = output;
     return StatusCode::OK;
 }
