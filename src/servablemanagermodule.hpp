@@ -28,6 +28,7 @@ protected:
 
 public:
     ServableManagerModule();
+    ~ServableManagerModule();
     int start(const ovms::Config& config) override;
     void shutdown() override;
     ModelManager& getServableManager() const;

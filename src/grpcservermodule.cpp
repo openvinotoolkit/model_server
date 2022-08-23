@@ -104,8 +104,7 @@ uint getGRPCServersCount(const ovms::Config& config) {
 }
 
 GRPCServerModule::~GRPCServerModule() {
-    if (state != ModuleState::SHUTDOWN)
-        this->shutdown();
+    this->shutdown();
 }
 
 GRPCServerModule::GRPCServerModule(Server& server) :
@@ -170,6 +169,8 @@ int GRPCServerModule::start(const ovms::Config& config) {
 }
 
 void GRPCServerModule::shutdown() {
+    if (state == ModuleState::SHUTDOWN)
+        return;
     state = ModuleState::STARTED_SHUTDOWN;
     SPDLOG_INFO("{} shutting down", GRPC_SERVER_MODULE_NAME);
     for (const auto& server : servers) {

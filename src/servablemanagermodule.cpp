@@ -44,12 +44,19 @@ int ServableManagerModule::start(const ovms::Config& config) {
     return EXIT_FAILURE;
 }
 void ServableManagerModule::shutdown() {
+    if (state == ModuleState::SHUTDOWN)
+        return;
     state = ModuleState::STARTED_SHUTDOWN;
     SPDLOG_INFO("{} shutting down", SERVABLE_MANAGER_MODULE_NAME);
     servableManager->join();
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", SERVABLE_MANAGER_MODULE_NAME);
 }
+
+ServableManagerModule::~ServableManagerModule() {
+    this->shutdown();
+}
+
 ModelManager& ServableManagerModule::getServableManager() const {
     return *servableManager;
 }
