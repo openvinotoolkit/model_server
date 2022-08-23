@@ -26,7 +26,7 @@ Example command with blob storage `az://<container_name>/<model_path>:`
 docker run --rm -d -p 9001:9001 \
 -e AZURE_STORAGE_CONNECTION_STRING="${AZURE_STORAGE_CONNECTION_STRING}" \
 openvino/model_server:latest \
---model_path az://models/onnx_matmul --model_name onnx_matmul --port 9001
+--model_path az://container/model_path --model_name az_model --port 9001
 ```
 
 Example command with file storage `azfs://<share>/<model_path>:`
@@ -35,7 +35,7 @@ Example command with file storage `azfs://<share>/<model_path>:`
 docker run --rm -d -p 9001:9001 \
 -e AZURE_STORAGE_CONNECTION_STRING="${AZURE_STORAGE_CONNECTION_STRING}" \
 openvino/model_server:latest \
---model_path azfs://models-fs/onnx_matmul --model_name onnx_matmul --port 9001
+--model_path azfs://share/model_path --model_name az_model --port 9001
 ```
 Add `-e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy"` to docker run command for proxy cloud storage connection.
 
@@ -60,7 +60,7 @@ docker run --rm -d -p 9001:9001 \
 -e GOOGLE_APPLICATION_CREDENTIALS="${GOOGLE_APPLICATION_CREDENTIALS}" \
 -v ${PWD}/credentials:/credentials:ro \
 openvino/model_server:latest \
---model_path gs://ovms-test/argmax --model_name argmax --port 9001
+--model_path gs://bucket/model_path --model_name gs_model --port 9001
 ```
 
 ### Amazon S3 and MinIO Storage
@@ -83,7 +83,7 @@ docker run --rm -d -p 9001:9001 \
 -e AWS_REGION="${AWS_REGION}" \
 -e S3_ENDPOINT="${S3_ENDPOINT}" \
 openvino/model_server:latest \
---model_path s3://inference/onnx_matmul --model_name onnx_matmul --port 9001
+--model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
 
 You can also use anonymous access to public S3 paths.
@@ -93,7 +93,7 @@ Example command with `s3://<public_bucket>/<model_path>:`
 ```bash
 docker run --rm -d -p 9001:9001 \
 openvino/model_server:latest \
---model_path s3://ovms-public-models/face-detection --model_name face-detection --port 9001
+--model_path s3://public_bucket/model_path --model_name s3_model --port 9001
 ```
 
 or set up a profile credentials file in the docker image described here
@@ -108,6 +108,6 @@ docker run --rm -d -p 9001:9001 \
 -e S3_ENDPOINT="${S3_ENDPOINT}" \
 -v ${HOME}/.aws/credentials:/home/ovms/.aws/credentials \
 openvino/model_server:latest \
---model_path s3://inference/onnx_matmul --model_name onnx_matmul --port 9001
+--model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
 
