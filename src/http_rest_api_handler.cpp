@@ -198,13 +198,13 @@ Status HttpRestApiHandler::processServerMetadataKFSRequest(const HttpRequestComp
     ::inference::ServerMetadataRequest grpc_request;
     ::inference::ServerMetadataResponse grpc_response;
     ::grpc::Status gstatus = kfsGrpcImpl.ServerMetadata(nullptr, &grpc_request, &grpc_response);
-    if(!gstatus.ok()){
+    if (!gstatus.ok()) {
         return StatusCode::INTERNAL_ERROR;
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts;
     google::protobuf::util::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
-    if(!status.ok()){
+    if (!status.ok()) {
         return StatusCode::INTERNAL_ERROR;
     }
     response = output;
