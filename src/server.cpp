@@ -196,6 +196,10 @@ public:
         state = ModuleState::SHUTDOWN;
 #endif
     }
+    ~ProfilerModule() {
+        if (state != SHUTDOWN)
+                this->shutdown();
+    }
 };
 #endif
 

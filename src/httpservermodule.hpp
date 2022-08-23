@@ -18,10 +18,10 @@
 #include <memory>
 #include <utility>
 
+#include "server.hpp"
 #include "http_server.hpp"
 
 namespace ovms {
-class Server;
 class Config;
 // TODO should replace all messages like
 // start REST Server with start HTTP Server

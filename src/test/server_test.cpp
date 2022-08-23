@@ -96,18 +96,31 @@ public:
         ASSERT_EQ(status.error_code(), expectedStatus);
         EXPECT_EQ(response.ready(), ready);
     }
+
+    void verifyServerMetadata(grpc::StatusCode expectedStatus = grpc::StatusCode::OK) {
+        ClientContext context;
+        ::inference::ServerMetadataRequest request;
+        ::inference::ServerMetadataResponse response;
+        ASSERT_NE(nullptr, stub_);
+        auto status = stub_->ServerMetadata(&context, request, &response);
+        ASSERT_EQ(status.error_code(), expectedStatus);
+        EXPECT_EQ(response.name(), PROJECT_NAME);
+        EXPECT_EQ(response.version(), PROJECT_VERSION);
+        EXPECT_EQ(response.extensions().size(), 0);
+    }
 };
 
 void requestServerAlive(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
     grpc::ChannelArguments args;
     std::string address = std::string("localhost") + ":" + grpcPort;
+    SPDLOG_INFO("Verifying if server is live on address: {}", address);
     ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args));
     client.verifyLive(status, expectedStatus);
 }
 void requestServerReady(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
     grpc::ChannelArguments args;
     std::string address = std::string("localhost") + ":" + grpcPort;
-    SPDLOG_DEBUG("Verying if server is ready on address: {}", address);
+    SPDLOG_INFO("Veryfying if server is ready on address: {}", address);
     ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args));
     client.verifyReady(status, expectedStatus);
 }
@@ -115,9 +128,17 @@ void requestServerReady(const char* grpcPort, grpc::StatusCode status = grpc::St
 void requestModelReady(const char* grpcPort, const std::string& modelName, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
     grpc::ChannelArguments args;
     std::string address = std::string("localhost") + ":" + grpcPort;
-    SPDLOG_DEBUG("Verying if server is ready on address: {}", address);
+    SPDLOG_INFO("Verifying if server is ready on address: {}", address);
     ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args));
     client.verifyModelReady(modelName, status, expectedStatus);
+}
+
+void checkServerMetadata(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK) {
+    grpc::ChannelArguments args;
+    std::string address = std::string("localhost") + ":" + grpcPort;
+    SPDLOG_INFO("Verifying if server responds with correct metadata on address: {}", address);
+    ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args));
+    client.verifyServerMetadata(status);
 }
 
 TEST(Server, ServerNotAliveBeforeStart) {
@@ -295,18 +316,10 @@ TEST(Server, ServerMetadata) {
 
     grpc::ChannelArguments args;
     std::string address = std::string("localhost:") + port;
-    std::unique_ptr<inference::GRPCInferenceService::Stub> stub(inference::GRPCInferenceService::NewStub(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args)));
-    ClientContext context;
-    ::inference::ServerMetadataRequest request;
-    ::inference::ServerMetadataResponse response;
-
-    auto status = stub->ServerMetadata(&context, request, &response);
+    requestServerAlive(port.c_str(), grpc::StatusCode::OK, true);
+    checkServerMetadata(port.c_str(), grpc::StatusCode::OK);
     ovms::Server::instance().setShutdownRequest(1);
     t.join();
-    ASSERT_EQ(status.error_code(), grpc::StatusCode::OK);
-    EXPECT_EQ(response.name(), PROJECT_NAME);
-    EXPECT_EQ(response.version(), PROJECT_VERSION);
-    EXPECT_EQ(response.extensions().size(), 0);
 }
 
 TEST(Server, ProperShutdownInCaseOfStartError) {
