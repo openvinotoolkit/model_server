@@ -140,6 +140,17 @@ TEST_F(HttpRestApiHandlerTest, RegexParseMetadata) {
     ASSERT_EQ(comp.model_name, "dummy");
 }
 
+TEST_F(HttpRestApiHandlerTest, RegexParseInfer) {
+    std::string request = "/v2/models/dummy/versions/1/infer";
+    ovms::HttpRequestComponents comp;
+
+    handler->parseRequestComponents(comp, "POST", request);
+
+    ASSERT_EQ(comp.type, ovms::KFS_Infer);
+    ASSERT_EQ(comp.model_version, 1);
+    ASSERT_EQ(comp.model_name, "dummy");
+}
+
 TEST_F(HttpRestApiHandlerTest, dispatchMetadata) {
     std::string request = "/v2/models/dummy/versions/1/";
     ovms::HttpRequestComponents comp;
@@ -170,4 +181,29 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
     handler->dispatchToProcessor(std::string(), &discard, comp);
 
     ASSERT_EQ(c, 1);
+}
+
+TEST_F(HttpRestApiHandlerTest, inferRequest) {
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,10],\"datatype\":\"FP32\",\"data\":[0,1,2,3,4,5,6,7,8,9]}],\"parameters\":{\"binary_data_output\":1, \"bool_test\":true, \"string_test\":\"test\"}}";
+
+    std::string modelName("dummy");
+    std::string modelVersion("1");
+
+    ::inference::ModelInferRequest grpc_request(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body));
+
+    ASSERT_EQ(grpc_request.model_name(), modelName);
+    ASSERT_EQ(grpc_request.model_version(), modelVersion);
+    auto params = grpc_request.parameters();
+    ASSERT_EQ(params["binary_data_output"].int64_param(), 1);
+    ASSERT_EQ(params["bool_test"].bool_param(), true);
+    ASSERT_EQ(params["string_test"].string_param(), "test");
+    ASSERT_EQ(grpc_request.inputs()[0].name(), "b");
+    ASSERT_EQ(grpc_request.inputs()[0].datatype(), "FP32");
+
+    ASSERT_EQ(grpc_request.inputs()[0].shape()[0], 1);
+    ASSERT_EQ(grpc_request.inputs()[0].shape()[1], 10);
+    int i = 0;
+    for (auto content : grpc_request.inputs()[0].contents().fp32_contents()) {
+        ASSERT_EQ(content, i++);
+    }
 }

@@ -42,6 +42,10 @@
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
 
+using rapidjson::Document;
+using rapidjson::SizeType;
+using rapidjson::Value;
+
 namespace ovms {
 
 const std::string HttpRestApiHandler::predictionRegexExp =
@@ -55,6 +59,8 @@ const std::string HttpRestApiHandler::kfs_modelreadyRegexExp =
     R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(ready)))";
 const std::string HttpRestApiHandler::kfs_modelmetadataRegexExp =
     R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/)?)";
+const std::string HttpRestApiHandler::kfs_inferRegexExp =
+    R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(infer)))";
 HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms) :
     predictionRegex(predictionRegexExp),
     modelstatusRegex(modelstatusRegexExp),
@@ -62,6 +68,7 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     configStatusRegex(configStatusRegexExp),
     kfs_modelreadyRegex(kfs_modelreadyRegexExp),
     kfs_modelmetadataRegex(kfs_modelmetadataRegexExp),
+    kfs_inferRegex(kfs_inferRegexExp),
     timeout_in_ms(timeout_in_ms),
     ovmsServer(ovmsServer),
 
@@ -131,8 +138,103 @@ void HttpRestApiHandler::registerAll() {
         return processModelReadyKFSRequest(request_components, response, request_body);
     });
     registerHandler(KFS_GetModelMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
-        return processModelReadyKFSRequest(request_components, response, request_body);
+        return processModelMetadataKFSRequest(request_components, response, request_body);
     });
+    registerHandler(KFS_Infer, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) -> Status {
+        return processInferKFSRequest(request_components, response, request_body);
+    });
+}
+void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
+    Value::ConstMemberIterator itr = scope.FindMember("parameters");
+    if (itr != scope.MemberEnd()) {
+        for (Value::ConstMemberIterator i = scope["parameters"].MemberBegin(); i != scope["parameters"].MemberEnd(); ++i) {
+            Value param(rapidjson::kObjectType);
+            if (i->value.IsInt64()) {
+                Value value(i->value.GetInt64());
+                param.AddMember("int64_param", value, doc.GetAllocator());
+            }
+            if (i->value.IsString()) {
+                Value value(i->value.GetString(), doc.GetAllocator());
+                param.AddMember("string_param", value, doc.GetAllocator());
+            }
+            if (i->value.IsBool()) {
+                Value value(i->value.GetBool());
+                param.AddMember("bool_param", value, doc.GetAllocator());
+            }
+            scope["parameters"].GetObject()[i->name.GetString()] = param;
+        }
+    }
+}
+
+std::string HttpRestApiHandler::preprocessInferRequest(std::string request_body) {
+    static std::map<std::string, std::string> types = {
+        {"BOOL", "bool_contents"},
+        {"INT8", "int_contents"},
+        {"INT16", "int_contents"},
+        {"INT32", "int_contents"},
+        {"INT64", "int64_contents"},
+        {"UINT8", "uint_contents"},
+        {"UINT16", "uint_contents"},
+        {"UINT32", "uint_contents"},
+        {"UINT64", "uint64_contents"},
+        {"FP32", "fp32_contents"},
+        {"FP64", "fp64_contents"},
+        {"BYTES", "bytes_contents"}};
+
+    Document doc;
+    doc.Parse(request_body.c_str());
+    Value& inputs = doc["inputs"];
+    for (SizeType i = 0; i < inputs.Size(); i++) {
+        Value data = inputs[i].GetObject()["data"].GetArray();
+        Value contents(rapidjson::kObjectType);
+        Value datatype(types[inputs[i].GetObject()["datatype"].GetString()].c_str(), doc.GetAllocator());
+        contents.AddMember(datatype, data, doc.GetAllocator());
+        inputs[i].AddMember("contents", contents, doc.GetAllocator());
+        parseParams(inputs[i], doc);
+    }
+    Value& outputs = doc["outputs"];
+    for (SizeType i = 0; i < outputs.Size(); i++) {
+        parseParams(outputs[i], doc);
+    }
+    parseParams(doc, doc);
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    return buffer.GetString();
+}
+
+::inference::ModelInferRequest HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string request_body) {
+    ::inference::ModelInferRequest grpc_request;
+
+    std::string request(preprocessInferRequest(request_body));
+
+    google::protobuf::util::JsonParseOptions opts;
+    opts.ignore_unknown_fields = true;
+    google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);
+    grpc_request.set_model_name(modelName);
+    grpc_request.set_model_version(modelVersion);
+    return grpc_request;
+}
+
+Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    std::string modelName(request_components.model_name);
+    std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
+    SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
+    ::inference::ModelInferRequest grpc_request(prepareGrpcRequest(modelName, modelVersion, request_body));
+    ::inference::ModelInferResponse grpc_response;
+    const ::grpc::Status gstatus = kfsGrpcImpl.ModelInfer(nullptr, &grpc_request, &grpc_response);
+    if (!gstatus.ok()) {
+        return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+    }
+    std::string output;
+    google::protobuf::util::JsonPrintOptions opts_out;
+    Status status = ovms::makeJsonFromPredictResponse(grpc_response, &output);
+    if (status != StatusCode::OK) {
+        return status;
+    }
+    response = output;
+    return StatusCode::OK;
 }
 
 Status HttpRestApiHandler::dispatchToProcessor(
@@ -160,11 +262,11 @@ Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponen
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
 
     kfsGrpcImpl.ModelReady(nullptr, &grpc_request, &grpc_response);
-    std::string output;
-    google::protobuf::util::JsonPrintOptions opts;
-    google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
-    response = output;
-    return StatusCode::OK;
+
+    if (grpc_response.ready()) {
+        return StatusCode::OK;
+    }
+    return StatusCode::MODEL_VERSION_NOT_LOADED_YET;
 }
 
 Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
@@ -189,7 +291,6 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
     const std::string& request_path) {
     std::smatch sm;
     requestComponents.http_method = http_method;
-
     if (http_method != "POST" && http_method != "GET") {
         return StatusCode::REST_UNSUPPORTED_METHOD;
     }
@@ -219,6 +320,15 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         }
         if (std::regex_match(request_path, sm, configReloadRegex)) {
             requestComponents.type = ConfigReload;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, kfs_inferRegex, std::regex_constants::match_any)) {
+            requestComponents.type = KFS_Infer;
+            requestComponents.model_name = sm[1];
+            std::string model_version_str = sm[2];
+            auto status = parseModelVersion(model_version_str, requestComponents.model_version);
+            if (!status.ok())
+                return status;
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, modelstatusRegex))
