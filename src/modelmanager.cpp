@@ -148,7 +148,8 @@ Status ModelManager::start(const Config& config) {
         resourcesCleanupIntervalSec = 1;
     }
     Status status;
-    if (config.configPath() != "") {
+    bool startFromConfigFile = (config.configPath() != "");
+    if (startFromConfigFile) {
         status = startFromFile(config.configPath());
     } else {
         status = startFromConfig();
@@ -157,16 +158,15 @@ Status ModelManager::start(const Config& config) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't start model manager");
         return status;
     }
-
-    startWatcher();
+    startWatcher(startFromConfigFile);
     startCleaner();
     return status;
 }
 
-void ModelManager::startWatcher() {
+void ModelManager::startWatcher(bool watchConfigFile) {
     if ((!watcherStarted) && (watcherIntervalSec > 0)) {
         std::future<void> exitSignal = exitTrigger.get_future();
-        std::thread t(std::thread(&ModelManager::watcher, this, std::move(exitSignal)));
+        std::thread t(std::thread(&ModelManager::watcher, this, std::move(exitSignal), watchConfigFile));
         watcherStarted = true;
         monitor = std::move(t);
     }
@@ -839,16 +839,18 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     return StatusCode::OK;
 }
 
-void ModelManager::watcher(std::future<void> exitSignal) {
+void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started model manager thread");
 
     while (exitSignal.wait_for(std::chrono::seconds(watcherIntervalSec)) == std::future_status::timeout) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle begin");
         std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
-        bool isNeeded;
-        configFileReloadNeeded(isNeeded);
-        if (isNeeded) {
-            loadConfig(configFilename);
+        if (watchConfigFile) {
+            bool isNeeded;
+            configFileReloadNeeded(isNeeded);
+            if (isNeeded) {
+                loadConfig(configFilename);
+            }
         }
         updateConfigurationWithoutConfigFile();
 

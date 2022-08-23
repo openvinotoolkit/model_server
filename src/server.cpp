@@ -218,7 +218,7 @@ public:
     int start(const Config& config) override {
         state = ModuleState::STARTED_INITIALIZE;
         auto profiler = std::make_unique<Profiler>(config.tracePath());
-        if (!profiler.isInitialized()) {
+        if (!profiler->isInitialized()) {
             SPDLOG_ERROR("Cannot open file for profiler, --trace_path: {}", config.tracePath());
             return EXIT_FAILURE;
         }
