@@ -536,7 +536,7 @@ TEST_F(HttpRestApiHandlerTest, serverLive) {
     std::string response;
     ovms::Status status = handler->dispatchToProcessor(request, &response, comp);
 
-    ASSERT_EQ(status, server->isLive() ? ovms::StatusCode::OK : ovms::StatusCode::INTERNAL_ERROR);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
 }
 
 TEST_F(HttpRestApiHandlerTest, serverMetadata) {
