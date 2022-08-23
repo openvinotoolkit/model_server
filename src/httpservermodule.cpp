@@ -32,6 +32,7 @@ HTTPServerModule::HTTPServerModule(ovms::Server& ovmsServer) :
     ovmsServer(ovmsServer) {}
 int HTTPServerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
+    SPDLOG_INFO("{} starting", HTTP_SERVER_MODULE);
     const std::string server_address = config.restBindAddress() + ":" + std::to_string(config.restPort());
     int workers = config.restWorkers() ? config.restWorkers() : 10;
 
@@ -44,6 +45,7 @@ int HTTPServerModule::start(const ovms::Config& config) {
         return EXIT_FAILURE;
     }
     state = ModuleState::INITIALIZED;
+    SPDLOG_INFO("{} started", HTTP_SERVER_MODULE);
     return EXIT_SUCCESS;
 }
 void HTTPServerModule::shutdown() {

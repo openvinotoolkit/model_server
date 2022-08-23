@@ -190,7 +190,8 @@ public:
     void shutdown() override {
 #ifdef MTR_ENABLED
         if (state == ModuleState::SHUTDOWN)
-            return state = ModuleState::STARTED_SHUTDOWN;
+            return;
+        state = ModuleState::STARTED_SHUTDOWN;
         profiler.reset();
         state = ModuleState::SHUTDOWN;
 #endif
