@@ -224,13 +224,13 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     ::inference::ModelInferRequest grpc_request(prepareGrpcRequest(modelName, modelVersion, request_body));
     ::inference::ModelInferResponse grpc_response;
     const ::grpc::Status gstatus = kfsGrpcImpl.ModelInfer(nullptr, &grpc_request, &grpc_response);
-    if(!gstatus.ok()){
+    if (!gstatus.ok()) {
         return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts_out;
     Status status = ovms::makeJsonFromPredictResponse(grpc_response, &output);
-    if(status != StatusCode::OK){
+    if (status != StatusCode::OK) {
         return status;
     }
     response = output;
