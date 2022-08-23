@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "httpservermodule.hpp"
 
+#include <string>
 #include <utility>
 
 #include "config.hpp"

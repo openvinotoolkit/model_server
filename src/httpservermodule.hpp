@@ -1,3 +1,4 @@
+#pragma once
 //****************************************************************************
 // Copyright 2020-2021 Intel Corporation
 //
@@ -36,4 +37,4 @@ public:
     int start(const Config& config) override;
     void shutdown() override;
 };
-}  //namespace ovms
+}  // namespace ovms
