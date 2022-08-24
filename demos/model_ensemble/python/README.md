@@ -221,7 +221,6 @@ By analyzing debug logs and timestamps it is seen that GoogleNet and ResNet mode
 docker logs <container_id>
 [2022-02-28 11:30:20.159][485][serving][debug][prediction_service.cpp:69] Processing gRPC request for model: image_classification_pipeline; version: 0
 [2022-02-28 11:30:20.159][485][serving][debug][prediction_service.cpp:80] Requested model: image_classification_pipeline does not exist. Searching for pipeline with that name...
-[2022-02-28 11:30:20.159][485][serving][debug][modelmanager.cpp:1305] Requesting pipeline: image_classification_pipeline;
 [2022-02-28 11:30:20.160][485][dag_executor][debug][pipeline.cpp:83] Started execution of pipeline: image_classification_pipeline
 [2022-02-28 11:30:20.160][485][serving][debug][modelmanager.cpp:1280] Requesting model: resnet; version: 0.
 [2022-02-28 11:30:20.160][485][serving][debug][modelmanager.cpp:1280] Requesting model: googlenet; version: 0.

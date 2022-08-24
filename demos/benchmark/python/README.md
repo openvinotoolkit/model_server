@@ -59,24 +59,23 @@ To check available options use `-h`, `--help` switches:
 ```bash
   docker run benchmark_client --help
 
-  usage: main.py [-h] [-i ID] [-c CONCURRENCY] [-a SERVER_ADDRESS]
-  [-p GRPC_PORT] [-r REST_PORT] [-l] [-b [BS [BS ...]]]
-  [-s [SHAPE [SHAPE ...]]] [-d [DATA [DATA ...]]] [-j]
-  [-m MODEL_NAME] [-k DATASET_LENGTH] [-v MODEL_VERSION]
-  [-n STEPS_NUMBER] [-t DURATION] [-u WARMUP] [-w WINDOW]
-  [-e ERROR_LIMIT] [-x ERROR_EXPOSITION]
-  [--max_throughput MAX_THROUGHPUT] [--max_value MAX_VALUE]
-  [--min_value MIN_VALUE] [--xrand XRAND] [--dump_png]
-  [--step_timeout STEP_TIMEOUT]
-  [--metadata_timeout METADATA_TIMEOUT] [-Y DB_ENDPOINT]
-  [-y [DB_METADATA [DB_METADATA ...]]] [--print_all]
-  [--print_time] [--report_warmup] [--certs_dir CERTS_DIR]
-  [-q STATEFUL_LENGTH] [--stateful_id STATEFUL_ID]
-  [--stateful_hop STATEFUL_HOP] [--sync_interval SYNC_INTERVAL]
-  [--quantile_list [QUANTILE_LIST [QUANTILE_LIST ...]]]
-  [--hist_factor HIST_FACTOR] [--hist_base HIST_BASE]
-  [--internal_version] [--unbuffered] [--api {TFS,KFS,REST}]
-
+usage: main.py [-h] [-i ID] [-c CONCURRENCY] [-a SERVER_ADDRESS]
+               [-p GRPC_PORT] [-r REST_PORT] [-l] [-b [BS [BS ...]]]
+               [-s [SHAPE [SHAPE ...]]] [-d [DATA [DATA ...]]] [-j]
+               [-m MODEL_NAME] [-k DATASET_LENGTH] [-v MODEL_VERSION]
+               [-n STEPS_NUMBER] [-t DURATION] [-u WARMUP] [-w WINDOW]
+               [-e ERROR_LIMIT] [-x ERROR_EXPOSITION]
+               [--max_throughput MAX_THROUGHPUT] [--max_value MAX_VALUE]
+               [--min_value MIN_VALUE] [--xrand XRAND] [--dump_png]
+               [--step_timeout STEP_TIMEOUT]
+               [--metadata_timeout METADATA_TIMEOUT] [-Y DB_ENDPOINT]
+               [-y [DB_METADATA [DB_METADATA ...]]] [--print_all]
+               [--print_time] [--report_warmup] [--certs_dir CERTS_DIR]
+               [-q STATEFUL_LENGTH] [--stateful_id STATEFUL_ID]
+               [--stateful_hop STATEFUL_HOP] [--sync_interval SYNC_INTERVAL]
+               [--quantile_list [QUANTILE_LIST [QUANTILE_LIST ...]]]
+               [--hist_factor HIST_FACTOR] [--hist_base HIST_BASE]
+               [--internal_version] [--unbuffered] [--api {TFS,KFS,REST}]
 
 This is benchmarking client which uses TFS/KFS API to communicate with
 OVMS/TFS/KFS-based-services.
