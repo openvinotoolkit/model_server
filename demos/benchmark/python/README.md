@@ -59,7 +59,7 @@ To check available options use `-h`, `--help` switches:
 ```bash
   docker run benchmark_client --help
 
-  [-h] [-i ID] [-c CONCURRENCY] [-a SERVER_ADDRESS]
+  usage: main.py [-h] [-i ID] [-c CONCURRENCY] [-a SERVER_ADDRESS]
   [-p GRPC_PORT] [-r REST_PORT] [-l] [-b [BS [BS ...]]]
   [-s [SHAPE [SHAPE ...]]] [-d [DATA [DATA ...]]] [-j]
   [-m MODEL_NAME] [-k DATASET_LENGTH] [-v MODEL_VERSION]
