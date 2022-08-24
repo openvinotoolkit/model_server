@@ -617,8 +617,8 @@ public:
 };
 
 TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenResourcesIntervalIsShorterAndWaitTimeIsGreaterThanSequenceWaitTime) {
-    uint32_t resourcesIntervalMiliseconds = 29;
-    uint32_t sequenceIntervalMiliseconds = 37;
+    uint32_t resourcesIntervalMiliseconds = 200;
+    uint32_t sequenceIntervalMiliseconds = 252;
     const float WAIT_MULTIPLIER_FACTOR = 1.2;
 
     EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
@@ -636,8 +636,8 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenRe
 }
 
 TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesWhenResourcesIntervalIsShorterAndWaitTimeIsShorterThanSequenceInterval) {
-    uint32_t resourcesIntervalMiliseconds = 29;
-    uint32_t sequenceIntervalMiliseconds = 37;
+    uint32_t resourcesIntervalMiliseconds = 229;
+    uint32_t sequenceIntervalMiliseconds = 367;
     const float WAIT_MULTIPLIER_FACTOR = 1.2;
 
     EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(0);
@@ -655,8 +655,8 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesWhenResourcesInte
 }
 
 TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenSequenceIntervalIsShorterAndWaitTimeIsGreaterThanResurcesInterval) {
-    uint32_t resourcesIntervalMiliseconds = 37;
-    uint32_t sequenceIntervalMiliseconds = 29;
+    uint32_t resourcesIntervalMiliseconds = 237;
+    uint32_t sequenceIntervalMiliseconds = 229;
     const float WAIT_MULTIPLIER_FACTOR = 1.2;
 
     EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
@@ -674,8 +674,8 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenSe
 }
 
 TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupSequenceWhenSequenceIntervalIsShorterAndWaitTimeIsShorterThanResourcesInterval) {
-    uint32_t resourcesIntervalMiliseconds = 37;
-    uint32_t sequenceIntervalMiliseconds = 29;
+    uint32_t resourcesIntervalMiliseconds = 337;
+    uint32_t sequenceIntervalMiliseconds = 229;
     const float WAIT_MULTIPLIER_FACTOR = 1.2;
 
     EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
@@ -693,8 +693,8 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupSequenceWhenSequenceInterv
 }
 
 TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenIntervalsAreEqualAndWaitTimeIsGreaterThanInterval) {
-    uint32_t resourcesIntervalMiliseconds = 29;
-    uint32_t sequenceIntervalMiliseconds = 29;
+    uint32_t resourcesIntervalMiliseconds = 290;
+    uint32_t sequenceIntervalMiliseconds = 290;
     const float WAIT_MULTIPLIER_FACTOR = 1.2;
 
     EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
