@@ -120,7 +120,7 @@ RUN mv .deps/install/lib64 .deps/install/lib
 
 ####### Build OpenCV
 WORKDIR /ovms/third_party/opencv
-RUN chmod +x install_opencv.sh && ./install_opencv.sh
+RUN ./install_opencv.sh
 ####### End of OpenCV
 
 ARG ov_use_binary=1
