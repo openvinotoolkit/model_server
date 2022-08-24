@@ -14,34 +14,27 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+
 #include <memory>
 #include <utility>
-#include <vector>
 
-#include <grpcpp/server.h>
-
-#include "model_service.hpp"
-#include "prediction_service.hpp"
-#include "servablemanagermodule.hpp"
+#include "http_server.hpp"
 #include "server.hpp"
 
 namespace ovms {
 class Config;
-
-class GRPCServerModule : public Module {
-    Server& server;
-    PredictionServiceImpl tfsPredictService;
-    ModelServiceImpl tfsModelService;
-    mutable KFSInferenceServiceImpl kfsGrpcInferenceService;
-    std::vector<std::unique_ptr<grpc::Server>> servers;
+// TODO should replace all messages like
+// start REST Server with start HTTP Server
+// start Server with start gRPC server
+// this should be synchronized with validation tests changes
+class HTTPServerModule : public Module {
+    std::unique_ptr<ovms::http_server> server;
+    Server& ovmsServer;
 
 public:
-    GRPCServerModule(Server& server);
-    ~GRPCServerModule();
-    int start(const ovms::Config& config) override;
+    HTTPServerModule(Server& ovmsServer);
+    ~HTTPServerModule();
+    int start(const Config& config) override;
     void shutdown() override;
-
-    const GetModelMetadataImpl& getTFSModelMetadataImpl() const;
-    KFSInferenceServiceImpl& getKFSGrpcImpl() const;
 };
 }  // namespace ovms

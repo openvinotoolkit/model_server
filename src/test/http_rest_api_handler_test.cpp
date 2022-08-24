@@ -59,8 +59,7 @@ public:
     ServerShutdownGuard(ovms::Server& ovmsServer) :
         ovmsServer(ovmsServer) {}
     ~ServerShutdownGuard() {
-        auto& config = ovms::Config::instance();
-        ovmsServer.shutdownModules(config);
+        ovmsServer.shutdownModules();
     }
 };
 

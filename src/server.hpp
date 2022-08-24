@@ -73,6 +73,9 @@ public:
     // TODO potentially to be hiden under protected and exposed only in tests by inheritance
     // #KFS_CLEANUP
     int startModules(ovms::Config& config);
-    void shutdownModules(ovms::Config& config);
+    void shutdownModules();
+
+private:
+    void ensureModuleShutdown(const std::string& name);
 };
 }  // namespace ovms
