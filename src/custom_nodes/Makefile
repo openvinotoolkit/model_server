@@ -15,10 +15,10 @@
 #
 
 HEADER_FILE_PATH ?= ../custom_node_interface.h
-OPENCV_BUILD_FLAGS ?= ../opencv_cmake_flags.txt
+OPENCV_BUILD_FLAGS ?= ../../third_party/opencv/opencv_cmake_flags.txt
+OPENCV_INSTALL_SCRIPT ?= ../../third_party/opencv/install_opencv.sh
 
 BASE_OS ?= ubuntu
-OPENCV_BRANCH ?= 4.6.0
 
 NODES ?= add_one east_ocr face_blur horizontal_ocr image_transformation model_zoo_intel_object_detection
 
@@ -27,16 +27,18 @@ NODES ?= add_one east_ocr face_blur horizontal_ocr image_transformation model_zo
 default: all
 
 all:
-	@cp $(HEADER_FILE_PATH) ./custom_node_interface.h
-	@cp $(OPENCV_BUILD_FLAGS) ./opencv_cmake_flags.txt
+	@cp $(HEADER_FILE_PATH) .
+	@cp $(OPENCV_BUILD_FLAGS) .
+	@cp $(OPENCV_INSTALL_SCRIPT) .
 	@cp -r ../queue.hpp ./queue.hpp
 	for NODE_NAME in $(NODES); do \
 		echo "Building $$NODE_NAME" ; \
-		docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} --build-arg OPENCV_BRANCH=$(OPENCV_BRANCH) --build-arg NODE_NAME=$$NODE_NAME . ; \
+		docker build -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} --build-arg NODE_NAME=$$NODE_NAME . ; \
 		mkdir -p ./lib/$(BASE_OS) ; \
 		docker cp $$(docker create --rm custom_node_build_image:latest):/custom_nodes/lib/libcustom_node_$$NODE_NAME.so ./lib/$(BASE_OS)/ ; \
 		echo "Built $$NODE_NAME" ; \
 	done
 	@rm ./queue.hpp
+	@rm install_opencv.sh
 	@rm opencv_cmake_flags.txt
 	@rm custom_node_interface.h
