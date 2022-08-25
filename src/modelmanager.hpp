@@ -110,7 +110,7 @@ private:
     /**
      * @brief Watcher thread for monitor changes in config
      */
-    void watcher(std::future<void> exitSignal);
+    void watcher(std::future<void> exitSignal, bool watchConfigFile);
 
     /**
      * @brief Cleaner thread for sequence and resources cleanup
@@ -350,7 +350,7 @@ public:
      * @brief Starts monitoring as new thread
      * 
      */
-    void startWatcher();
+    void startWatcher(bool watchConfigFile);
 
     /**
      * @brief Gracefully finish the thread

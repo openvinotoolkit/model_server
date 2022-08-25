@@ -506,7 +506,7 @@ TEST(ModelManager, ConfigReloadingShouldAddNewModel) {
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
 
     auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    manager.startWatcher(true);
     auto models = manager.getModels().size();
     EXPECT_EQ(models, 1);
     EXPECT_EQ(status, ovms::StatusCode::OK);
@@ -948,7 +948,7 @@ TEST(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFromJs
     manager.registerVersionToLoad(1);
     manager.registerVersionToLoad(2);
     auto status = manager.startFromFile(fileToReload);
-    manager.startWatcher();
+    manager.startWatcher(true);
     auto models = manager.getModels();
     ASSERT_EQ(models.size(), 2);
     ASSERT_EQ(status, ovms::StatusCode::OK);
