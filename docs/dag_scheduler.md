@@ -51,7 +51,8 @@ processing using OpenCV, which is included in OVMS, or include other third-party
  by adding their definition to the pipeline configuration. The configuration includes a path to the compiled binary with the `.so` extension. 
 Custom nodes are not versioned, meaning one custom node library is bound to one name. To load another version, another name needs to be used.
 
-Learn more about developing custom node in the [custom node developer guide](custom_node_development.md)
+    OpenVINO Model Server docker image comes with prebuilt custom nodes that you can use out-of-the-box in your pipeline. See the list of built-in custom nodes and
+    learn more about developing custom nodes yourself in the [custom node developer guide](custom_node_development.md).
 
 ## Demultiplexing data
 
