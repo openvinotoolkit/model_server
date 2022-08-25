@@ -104,6 +104,8 @@ Example command with `s3://<bucket>/<model_path>:`
 ```bash
 docker run --rm -d -p 9001:9001 \
 -e AWS_PROFILE="${AWS_PROFILE}" \
+-e AWS_REGION="${AWS_REGION}" \
+-e S3_ENDPOINT="${S3_ENDPOINT}" \
 -v ${HOME}/.aws/credentials:/home/ovms/.aws/credentials \
 openvino/model_server:latest \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001
