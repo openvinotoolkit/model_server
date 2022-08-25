@@ -58,7 +58,7 @@ Example command with `gs://<bucket>/<model_path>:`
 ```bash
 docker run --rm -d -p 9001:9001 \
 -e GOOGLE_APPLICATION_CREDENTIALS="${GOOGLE_APPLICATION_CREDENTIALS}" \
--v ${PWD}/credentials:/credentials:ro \
+-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
 openvino/model_server:latest \
 --model_path gs://bucket/model_path --model_name gs_model --port 9001
 ```
