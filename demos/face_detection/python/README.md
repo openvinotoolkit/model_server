@@ -10,13 +10,6 @@ the functionality of dynamic shape in OpenVINO Model Server and how to process t
 
 The example relies on the model [face-detection-retail-0004](https://docs.openvinotoolkit.org/2022.1/omz_models_model_face_detection_retail_0004.html).
 
-
-Clone the repository and enter face_detection directory
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server/demos/face_detection/python
-```
-
 Prepare environment:
 ```bash
 pip install -r ../../common/python/requirements.txt
