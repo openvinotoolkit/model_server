@@ -295,21 +295,19 @@ Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const char*
     return StatusCode::OK;
 }
 
-::inference::ModelInferRequest HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string request_body) {
-    ::inference::ModelInferRequest grpc_request;
-
+Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::string modelVersion, const std::string request_body, ::inference::ModelInferRequest& grpc_request) {
     google::protobuf::util::JsonParseOptions opts;
     opts.ignore_unknown_fields = true;
     auto jsonClosingBracket = request_body.find_last_of("}");
     bool dataAfterHeader = ((jsonClosingBracket != std::string::npos) && (jsonClosingBracket != (request_body.length() - 1)));
     if(dataAfterHeader) {
-        std::string request(preprocessInferRequest(request_body.substr(0, jsonClosingBracket + 1).c_str()));
+        size_t endOfJson = jsonClosingBracket + 1;
+        std::string request(preprocessInferRequest(request_body.substr(0, endOfJson).c_str()));
         google::protobuf::util::JsonStringToMessage(request, &grpc_request, opts);
-        auto binaryInputsString = request_body.substr(jsonClosingBracket + 1, request_body.length());
-        SPDLOG_WARN("String after JSON = {}", binaryInputsString);
-        auto status = addBinaryInputs(grpc_request, &(request_body[jsonClosingBracket + 1]), binaryInputsString.length());
+        auto binaryInputsString = request_body.substr(endOfJson, request_body.length());
+        auto status = addBinaryInputs(grpc_request, &(request_body[endOfJson]), request_body.length() - endOfJson);
         if(!status.ok()) {
-             SPDLOG_ERROR("Binary inputs error");
+            return status;
         }
     }
     else
@@ -322,14 +320,15 @@ Status addBinaryInputs(::inference::ModelInferRequest& grpc_request, const char*
     SPDLOG_ERROR("JSON : {}", req);
     grpc_request.set_model_name(modelName);
     grpc_request.set_model_version(modelVersion);
-    return grpc_request;
+    return StatusCode::OK;
 }
 
 Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
     std::string modelName(request_components.model_name);
     std::string modelVersion(std::to_string(request_components.model_version.value_or(0)));
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersion);
-    ::inference::ModelInferRequest grpc_request(prepareGrpcRequest(modelName, modelVersion, request_body));
+    ::inference::ModelInferRequest grpc_request;
+    prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request);
     ::inference::ModelInferResponse grpc_response;
     const ::grpc::Status gstatus = kfsGrpcImpl.ModelInfer(nullptr, &grpc_request, &grpc_response);
     if (!gstatus.ok()) {

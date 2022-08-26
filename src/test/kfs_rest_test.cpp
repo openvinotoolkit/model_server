@@ -189,7 +189,8 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
     std::string modelName("dummy");
     std::string modelVersion("1");
 
-    ::inference::ModelInferRequest grpc_request(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body));
+    ::inference::ModelInferRequest grpc_request;
+    HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request);
 
     ASSERT_EQ(grpc_request.model_name(), modelName);
     ASSERT_EQ(grpc_request.model_version(), modelVersion);
