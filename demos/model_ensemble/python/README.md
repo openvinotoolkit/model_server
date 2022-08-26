@@ -140,7 +140,7 @@ In the `model_config_list` section, three models are defined as usual. We can re
 
 Run command to start the Model Server
 ```bash
-docker run --rm -v $(pwd)/models/:/models:ro -p 9100:9100 -p 8100:8100 openvino/model_server:latest --config_path /models/config.json --port 9100 --rest_port 8100
+docker run --rm -v $(pwd)/models/:/models:ro -p 9100:9100 -p 8100:8100 openvino/model_server:latest --config_path /models/config.json --port 9100 --rest_port 8100 --log_level DEBUG
 ```
 
 ## Step 4: Requesting the service
@@ -221,7 +221,6 @@ By analyzing debug logs and timestamps it is seen that GoogleNet and ResNet mode
 docker logs <container_id>
 [2022-02-28 11:30:20.159][485][serving][debug][prediction_service.cpp:69] Processing gRPC request for model: image_classification_pipeline; version: 0
 [2022-02-28 11:30:20.159][485][serving][debug][prediction_service.cpp:80] Requested model: image_classification_pipeline does not exist. Searching for pipeline with that name...
-[2022-02-28 11:30:20.159][485][serving][debug][modelmanager.cpp:1305] Requesting pipeline: image_classification_pipeline;
 [2022-02-28 11:30:20.160][485][dag_executor][debug][pipeline.cpp:83] Started execution of pipeline: image_classification_pipeline
 [2022-02-28 11:30:20.160][485][serving][debug][modelmanager.cpp:1280] Requesting model: resnet; version: 0.
 [2022-02-28 11:30:20.160][485][serving][debug][modelmanager.cpp:1280] Requesting model: googlenet; version: 0.

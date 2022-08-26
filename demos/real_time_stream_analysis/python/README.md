@@ -161,7 +161,7 @@ __Console output:__
 2022-07-25 10:50:52,352 - inference_manager - INFO - Starting inference executors monitoring thread
 2022-07-25 10:50:52,360 - inference_manager - INFO - Inference Manager initialized successfully
 2022-07-25 10:50:52,360 - http_visualizer - INFO - Starting Flask webserver...
- * Running on http://localhost:5000 (Press CTRL+C to quit)
+ * Running on http://localhost:5000
 2022-07-25 10:50:55,239 - stream_analyzer - INFO - For 100 received frames - FPS: 24; Frames dropped: 0;
 2022-07-25 10:50:59,413 - stream_analyzer - INFO - For 100 received frames - FPS: 23; Frames dropped: 0;
 2022-07-25 10:51:03,571 - stream_analyzer - INFO - For 100 received frames - FPS: 24; Frames dropped: 0;
