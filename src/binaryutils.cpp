@@ -229,7 +229,7 @@ Status validateTensor(const std::shared_ptr<TensorInfo>& tensorInfo,
         return StatusCode::INVALID_BATCH_SIZE;
     }
 
-    for (size_t i = 0; i <  (size_t)src.contents().bytes_contents_size(); i++) {
+    for (size_t i = 0; i < (size_t)src.contents().bytes_contents_size(); i++) {
         if (src.contents().bytes_contents(i).size() <= 0) {
             return StatusCode::BYTES_CONTENTS_EMPTY;
         }
