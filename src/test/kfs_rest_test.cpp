@@ -38,31 +38,25 @@ using ovms::Server;
 namespace {
 class MockedServableManagerModule : public ovms::ServableManagerModule {
 public:
-    mutable std::unique_ptr<ovms::ModelManager> servableManager;
-    MockedServableManagerModule() : servableManager(std::make_unique<ovms::ModelManager>()) {}
+    MockedServableManagerModule() = default;
     int start(const Config& config) override {
         state = ModuleState::STARTED_INITIALIZE;
         SPDLOG_INFO("Mocked {} starting", SERVABLE_MANAGER_MODULE_NAME);
-        //servableManager->start(config);
-        //auto model = servableManager->findModelByName("dummy");
-        //servableManager->findModelByName("dummy");
         // we don't start ModelManager since we don't use it here
         state = ModuleState::INITIALIZED;
         return EXIT_SUCCESS;
     }
-    ovms::ModelManager& getServableManager() const {
-        return *servableManager;
-    }
 };
 class MockedGRPCServerModule : public ovms::GRPCServerModule {
 public:
-    mutable ovms::KFSInferenceServiceImpl kfsGrpcInferenceService;
     MockedGRPCServerModule(ovms::Server& server) :
-        GRPCServerModule(server),
-        kfsGrpcInferenceService(server) {}
-    mutable std::unique_ptr<ovms::ModelManager> servableManager;
-    ovms::KFSInferenceServiceImpl& getKFSGrpcImpl() const {
-        return this->kfsGrpcInferenceService;
+        GRPCServerModule(server) {}
+    int start(const Config& config) override {
+        state = ModuleState::STARTED_INITIALIZE;
+        SPDLOG_INFO("Mocked {} starting", SERVABLE_MANAGER_MODULE_NAME);
+        // we don't start ModelManager since we don't use it here
+        state = ModuleState::INITIALIZED;
+        return EXIT_SUCCESS;
     }
 };
 class MockedServer : public Server {
@@ -231,7 +225,7 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
     ASSERT_EQ(std::string(doc["name"].GetString()), "dummy");
     ASSERT_EQ(std::string(doc["versions"].GetArray()[0].GetString()), "1");
     ASSERT_EQ(std::string(doc["platform"].GetString()), "OpenVINO");
-    
+
     ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["name"].GetString()), "b");
     ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
     ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray()[0].GetString()), "1");
@@ -256,7 +250,7 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
     doc.Parse(response.c_str());
     auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
     int i = 1;
-    for(auto& data:output){
+    for (auto& data : output) {
         ASSERT_EQ(data.GetFloat(), i++);
     }
 }
